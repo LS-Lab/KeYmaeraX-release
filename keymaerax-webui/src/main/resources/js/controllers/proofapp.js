@@ -3,8 +3,8 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
   $scope.theme = {css: 'app', name: 'KeYmaera X', fontSize: 14};
 
   $scope.themes = [
-    {css: 'app', name: 'KeYmaera X', fontSize: 14},
-    {css: 'presentation', name: 'High Contrast', fontSize: 18}
+    {css: 'app', name: 'KeYmaera X', fontSize: 14, renderMargins: [40,80]},
+    {css: 'presentation', name: 'High Contrast', fontSize: 18, renderMargins: [30,60]}
   ];
 
   setTheme = function(newTheme) {
@@ -12,6 +12,7 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
     if (savedTheme.length > 0) {
       $scope.theme = savedTheme[0];
       $scope.theme.fontSize = newTheme.themeFontSize;
+      $scope.theme.renderMargins = newTheme.renderMargins;
       $(document.documentElement).get(0).style.setProperty('--lsfontsize',newTheme.themeFontSize + 'px');
     }
   }
@@ -21,8 +22,8 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
   });
 
   $scope.selectTheme = function(theme) {
-    if (theme.css && theme.fontSize) {
-      $http.post('/users/' + sessionService.getUser() + '/theme', {css: theme.css, fontSize: theme.fontSize}).then(function(response) {
+    if (theme.css && theme.fontSize && theme.renderMargins) {
+      $http.post('/users/' + sessionService.getUser() + '/theme', {css: theme.css, fontSize: theme.fontSize, renderMargins: theme.renderMargins}).then(function(response) {
         setTheme(response.data);
       });
     }

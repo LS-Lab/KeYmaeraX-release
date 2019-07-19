@@ -182,7 +182,7 @@ object RestApi extends Logging {
       post {
         entity(as[String]) { themeStr => {
           val theme = themeStr.parseJson.asJsObject.fields.map({case (k,v) => k -> v.toString})
-          val request = new SetUserThemeRequest(database, userId, theme("css"), theme("fontSize"))
+          val request = new SetUserThemeRequest(database, userId, theme("css"), theme("fontSize"), theme("renderMargins"))
           completeRequest(request, t)
         }}}
   }}

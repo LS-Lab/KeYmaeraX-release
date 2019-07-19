@@ -575,19 +575,26 @@ class GetUserThemeRequest(db: DBAbstraction, userName: String) extends UserReque
     val config = db.getConfiguration(userName).config
     new PlainResponse(
       "themeCss" -> config.getOrElse("themeCss", "\"app\"").parseJson,
-      "themeFontSize" -> config.getOrElse("themeFontSize", "14").parseJson) :: Nil
+      "themeFontSize" -> config.getOrElse("themeFontSize", "14").parseJson,
+      "renderMargins" -> config.getOrElse("renderMargins", "[40,80]").parseJson
+    ) :: Nil
   }
 }
 
 /** Sets the UI theme. @note ReadRequest allows changing theme in guest mode for presentation purposes. */
-class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String, themeFontSize: String)
+class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String, themeFontSize: String, renderMargins: String)
     extends UserRequest(userName) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration(userName)
-    db.updateConfiguration(new ConfigurationPOJO(userName, config.config.updated("themeCss", themeCss).updated("themeFontSize", themeFontSize)))
+    db.updateConfiguration(new ConfigurationPOJO(userName,
+      config.config.updated("themeCss", themeCss).
+        updated("themeFontSize", themeFontSize).
+        updated("renderMargins", renderMargins)))
     new PlainResponse(
       "themeCss" -> themeCss.parseJson,
-      "themeFontSize" -> themeFontSize.parseJson) :: Nil
+      "themeFontSize" -> themeFontSize.parseJson,
+      "renderMargins" -> renderMargins.parseJson
+    ) :: Nil
   }
 }
 
@@ -1260,10 +1267,12 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
       }
     }
 
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
       AgendaItem(n.id.toString, "Conjecture: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
-    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed) :: Nil
+    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -1278,7 +1287,8 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
     val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, "Unnamed Goal", proofId) :: Nil
-    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false) :: Nil
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -1296,7 +1306,9 @@ class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: St
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
-      case Some(node) => NodeChildrenResponse(proofId, node) :: Nil
+      case Some(node) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        NodeChildrenResponse(proofId, node, marginLeft, marginRight) :: Nil
     }
   }
 }
@@ -1340,7 +1352,9 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId).flatMap(_.parent) match {
-      case Some(parent) => new ProofTaskParentResponse(parent)::Nil
+      case Some(parent) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        new ProofTaskParentResponse(parent, marginLeft, marginRight)::Nil
       case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root")::Nil
     }
   }
@@ -1358,7 +1372,8 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
       node = node.get.parent
     }
     val parentsRemaining = 0
-    new GetPathAllResponse(path.reverse, parentsRemaining)::Nil
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+    new GetPathAllResponse(path.reverse, parentsRemaining, marginLeft, marginRight)::Nil
   }
 }
 
@@ -1376,7 +1391,9 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
     }
     currNode match {
       case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
-      case Some(n) => new GetBranchRootResponse(n) :: Nil
+      case Some(n) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        new GetBranchRootResponse(n, marginLeft, marginRight) :: Nil
     }
 
   }
@@ -1388,7 +1405,9 @@ class ProofNodeSequentRequest(db: DBAbstraction, userId: String, proofId: String
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
-      case Some(node) => ProofNodeSequentResponse(proofId, node) :: Nil
+      case Some(node) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        ProofNodeSequentResponse(proofId, node, marginLeft, marginRight) :: Nil
     }
   }
 }
@@ -1413,9 +1432,10 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
           DerivationInfo.locate(parentTactic) match {
-            case Some(ptInfo) => ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
+            case Some(ptInfo) => ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil, marginLeft, marginRight) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
           }
         } else {
@@ -1425,7 +1445,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, "Unnamed Goal", proofId))
 
-          ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
+          ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
         }
     }
   }
@@ -1439,7 +1459,8 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
       AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString))
     //@todo fill in parent step for empty ""
-    new ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems) :: Nil
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+    ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -1874,6 +1895,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
 
   override protected def doResultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     executor.synchronized {
       val response = executor.wait(taskId) match {
         case Some(Left(BelleProvable(_, _))) =>
@@ -1883,7 +1905,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
             case Some(node) =>
               //@todo construct provable (expensive!)
               //assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
-              TaskResultResponse(proofId, node, progress=true)
+              TaskResultResponse(proofId, node, marginLeft, marginRight, progress=true)
           }
 //          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
 //          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
@@ -1895,7 +1917,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           val node = tree.root//findNode(nodeId).get
           //val positionLocator = if (parentNode.subgoals.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
-          TaskResultResponse(subId.toString, node, progress = true)
+          TaskResultResponse(subId.toString, node, marginLeft, marginRight, progress = true)
         case Some(Right(error: BelleThrowable)) => new TacticErrorResponse(error.getMessage, "", error)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }

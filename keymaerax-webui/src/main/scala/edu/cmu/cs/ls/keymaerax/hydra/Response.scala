@@ -453,7 +453,7 @@ case class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, s
       "type" -> JsString("taskstatus"))
 }
 
-case class TaskResultResponse(proofId: String, parent: ProofTreeNode, progress: Boolean = true) extends Response {
+case class TaskResultResponse(proofId: String, parent: ProofTreeNode, marginLeft: Int, marginRight: Int, progress: Boolean = true) extends Response {
   private lazy val openChildren = parent.children.filter(_.numSubgoals > 0)
 
   def getJson = JsObject(
@@ -462,29 +462,29 @@ case class TaskResultResponse(proofId: String, parent: ProofTreeNode, progress: 
       "id" -> JsString(parent.id.toString),
       "children" -> JsArray(openChildren.map(c => JsString(c.id.toString)):_*)
     ),
-    "newNodes" -> JsArray(nodesJson(openChildren).map(_._2):_*),
+    "newNodes" -> JsArray(nodesJson(openChildren, marginLeft, marginRight).map(_._2):_*),
     "progress" -> JsBoolean(progress),
     "type" -> JsString("taskresult")
   )
 }
 
-case class NodeChildrenResponse(proofId: String, parent: ProofTreeNode) extends Response {
+case class NodeChildrenResponse(proofId: String, parent: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "parent" -> JsObject(
       "id" -> JsString(parent.id.toString),
       "children" -> JsArray(parent.children.map(c => JsString(c.id.toString)):_*)
     ),
-    "newNodes" -> JsArray(nodesJson(parent.children).map(_._2):_*),
+    "newNodes" -> JsArray(nodesJson(parent.children, marginLeft, marginRight).map(_._2):_*),
     "progress" -> JsBoolean(true)
   )
 }
 
-case class ProofNodeSequentResponse(proofId: String, node: ProofTreeNode) extends Response {
+case class ProofNodeSequentResponse(proofId: String, node: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(node.id.toString),
-    "sequent" -> (node.goal match { case None => JsNull case Some(goal) => sequentJson(goal, 40, 80) })
+    "sequent" -> (node.goal match { case None => JsNull case Some(goal) => sequentJson(goal, marginLeft, marginRight) })
   )
 }
 
@@ -731,15 +731,15 @@ object Helpers {
   }
 
   /** Only first node's sequent is printed. */
-  def nodesJson(nodes: List[ProofTreeNode]): List[(String, JsValue)] = {
+  def nodesJson(nodes: List[ProofTreeNode], marginLeft: Int, marginRight: Int): List[(String, JsValue)] = {
     if (nodes.isEmpty) Nil
-    else nodeJson(nodes.head) +: nodes.tail.map(nodeJson(_, withSequent=false))
+    else nodeJson(nodes.head, withSequent=true, marginLeft, marginRight) +: nodes.tail.map(nodeJson(_, withSequent=false, marginLeft, marginRight))
   }
 
-  def nodeJson(node: ProofTreeNode, withSequent: Boolean = true): (String, JsValue) = {
+  def nodeJson(node: ProofTreeNode, withSequent: Boolean, marginLeft: Int, marginRight: Int): (String, JsValue) = {
     val id = JsString(node.id.toString)
     val sequent =
-      if (withSequent) node.goal match { case None => JsNull case Some(goal) => sequentJson(goal, 40, 80) }
+      if (withSequent) node.goal match { case None => JsNull case Some(goal) => sequentJson(goal, marginLeft, marginRight) }
       else JsNull
     val childrenIds = JsArray(node.children.map(s => JsString(s.id.toString)):_*)
     val parent = node.parent.map(n => JsString(n.id.toString)).getOrElse(JsNull)
@@ -812,11 +812,11 @@ object Helpers {
 }
 
 case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
-                                 agenda: List[AgendaItem], closed: Boolean) extends Response {
+                                 agenda: List[AgendaItem], closed: Boolean, marginLeft: Int, marginRight: Int) extends Response {
   override val schema = Some("agendaawesome.js")
 
   private lazy val proofTree = {
-    val theNodes: List[(String, JsValue)] = nodeJson(root, withSequent=false) +: nodesJson(leaves)
+    val theNodes: List[(String, JsValue)] = nodeJson(root, withSequent=false, marginLeft, marginRight) +: nodesJson(leaves, marginLeft, marginRight)
     JsObject(
       "id" -> proofIdJson(proofId),
       "nodes" -> JsObject(theNodes.toMap),
@@ -842,20 +842,20 @@ class SetAgendaItemNameResponse(item: AgendaItemPOJO) extends Response {
   def getJson: JsValue = agendaItemJson(item)
 }
 
-class ProofTaskParentResponse (parent: ProofTreeNode) extends Response {
-  def getJson: JsValue = nodeJson(parent)._2
+class ProofTaskParentResponse (parent: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
+  def getJson: JsValue = nodeJson(parent, withSequent=true, marginLeft, marginRight)._2
 }
 
-class GetPathAllResponse(path: List[ProofTreeNode], parentsRemaining: Int) extends Response {
+class GetPathAllResponse(path: List[ProofTreeNode], parentsRemaining: Int, marginLeft: Int, marginRight: Int) extends Response {
   def getJson: JsValue =
     JsObject (
       "numParentsUntilComplete" -> JsNumber(parentsRemaining),
-      "path" -> JsArray(path.map(nodeJson(_)._2):_*)
+      "path" -> JsArray(path.map(nodeJson(_, withSequent=true, marginLeft, marginRight)._2):_*)
     )
 }
 
-class GetBranchRootResponse(node: ProofTreeNode) extends Response {
-  def getJson: JsValue = nodeJson(node)._2
+class GetBranchRootResponse(node: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
+  def getJson: JsValue = nodeJson(node, withSequent=true, marginLeft, marginRight)._2
 }
 
 case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
@@ -1308,9 +1308,10 @@ case class GetTacticResponse(tacticText: String) extends Response {
 }
 
 case class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, stepsTactic: String,
-                                tree: List[ProofTreeNode], openGoals: List[AgendaItem]) extends Response {
+                                tree: List[ProofTreeNode], openGoals: List[AgendaItem],
+                                marginLeft: Int, marginRight: Int) extends Response {
   private lazy val proofTree = {
-    val theNodes: List[(String, JsValue)] = nodesJson(tree)
+    val theNodes: List[(String, JsValue)] = nodesJson(tree, marginLeft, marginRight)
     JsObject(
       "nodes" -> JsObject(theNodes.toMap),
       "root" -> JsString(tree.head.id.toString))
