@@ -548,10 +548,12 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
 
   protected def docOf(term: Term): Doc = term match {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
+    case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
     case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineOrEmpty + docOf(c), ")").nested(2)).grouped
     case Pair(l, r)             => wrapDoc((Doc.lineOrEmpty + docOf(l) + Doc.text(ppOp(term)) + Doc.lineOrEmpty + docOf(r) + Doc.lineOrEmpty).nested(2).grouped, term)
     case t@Neg(Number(n))       => Doc.text(pp(HereP, term))
     case t: UnaryCompositeTerm  => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
+    case t@Power(base, exp)     => (wrapLeftDoc(t, docOf(base)) + Doc.text(ppOp(t)) + wrapRightDoc(t, docOf(exp))).grouped
     case t: BinaryCompositeTerm => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.lineOrSpace + wrapRightDoc(t, docOf(t.right))).grouped
     case _ => Doc.text(pp(HereP, term))
   }
