@@ -549,28 +549,28 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   protected def docOf(term: Term): Doc = term match {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
-    case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineOrEmpty + docOf(c), ")").nested(2)).grouped
-    case Pair(l, r)             => wrapDoc((Doc.lineOrEmpty + docOf(l) + Doc.text(ppOp(term)) + Doc.lineOrEmpty + docOf(r) + Doc.lineOrEmpty).nested(2).grouped, term)
+    case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
+    case Pair(l, r)             => wrapDoc((Doc.lineBreak + docOf(l) + Doc.text(ppOp(term)) + Doc.lineBreak + docOf(r) + Doc.lineBreak).nested(2).grouped, term)
     case t@Neg(Number(n))       => Doc.text(pp(HereP, term))
     case t: UnaryCompositeTerm  => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
     case t@Power(base, exp)     => (wrapLeftDoc(t, docOf(base)) + Doc.text(ppOp(t)) + wrapRightDoc(t, docOf(exp))).grouped
-    case t: BinaryCompositeTerm => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.lineOrSpace + wrapRightDoc(t, docOf(t.right))).grouped
+    case t: BinaryCompositeTerm => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line + wrapRightDoc(t, docOf(t.right))).grouped
     case _ => Doc.text(pp(HereP, term))
   }
 
   protected def docOf(formula: Formula): Doc = formula match {
     case True|False|DotFormula  => Doc.text(ppOp(formula))
-    case PredOf(p, c)           => (Doc.text(p.asString) + Doc.lineOrEmpty + encloseText("(", docOf(c), ")").nested(2)).grouped
-    case PredicationalOf(p, c)  => (Doc.text(p.asString) + Doc.lineOrEmpty + encloseText("{", docOf(c), "}").nested(2)).grouped
-    case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.lineOrSpace + wrapRightDoc(f, docOf(f.right))).grouped
+    case PredOf(p, c)           => (Doc.text(p.asString) + Doc.lineBreak + encloseText("(", docOf(c), ")").nested(2)).grouped
+    case PredicationalOf(p, c)  => (Doc.text(p.asString) + Doc.lineBreak + encloseText("{", docOf(c), "}").nested(2)).grouped
+    case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line + wrapRightDoc(f, docOf(f.right))).grouped
     case DifferentialFormula(g) => encloseText("(", docOf(g), ")" + ppOp(formula))
     case f: Quantified          => Doc.text(ppOp(formula)) + Doc.space + Doc.intercalate(Doc.comma+Doc.space, f.vars.map(docOf(_))) +
       Doc.line + wrapChildDoc(f, docOf(f.child))
-    case f: Box                 => (wrapDoc(docOf(f.program), f) + Doc.lineOrEmpty + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
-    case f: Diamond             => (wrapDoc(docOf(f.program), f) + Doc.lineOrEmpty + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
+    case f: Box                 => (wrapDoc(docOf(f.program), f) + Doc.lineBreak + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
+    case f: Diamond             => (wrapDoc(docOf(f.program), f) + Doc.lineBreak + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
     case UnitPredicational(name,space) => Doc.text(name) + encloseText("(", Doc.text(space.toString), ")")
     case t: UnaryCompositeFormula => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
-    case t: BinaryCompositeFormula=> (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.lineOrSpace + wrapRightDoc(t, docOf(t.right))).grouped
+    case t: BinaryCompositeFormula=> (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line + wrapRightDoc(t, docOf(t.right))).grouped
   }
 
   protected def statementDoc(s: Doc): Doc = if (OpSpec.statementSemicolon) s + Doc.text(";") else s
