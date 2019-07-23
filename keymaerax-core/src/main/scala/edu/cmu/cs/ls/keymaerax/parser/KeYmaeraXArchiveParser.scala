@@ -43,7 +43,9 @@ object KeYmaeraXArchiveParser {
   case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, problemContent: String,
                                 defs: Declaration,
                                 model: Expression, tactics: List[(String, String, BelleExpr)],
-                                info: Map[String, String])
+                                info: Map[String, String]) {
+    def isExercise: Boolean = kind=="exercise"
+  }
 
   /** Name is alphanumeric name and index. */
   type Name = (String, Option[Int])
@@ -833,7 +835,7 @@ object KeYmaeraXArchiveParser {
           else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
 
         //@todo "Exercise"->"exercise"???
-        val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"theorem")
+        val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"exercise")
 
         // double-check that the extracted problem text still parses
 
