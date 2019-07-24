@@ -17,6 +17,16 @@ class OrbitalAlgebraToolTests extends TacticTestBase  {
     tool.groebnerBasis(List(x,y,Variable("z"))) shouldBe List("z", "5+y+y^2+x+x*y+x*y^2", "1/9+y+2/3*a*b+a^2*b^2").map(_.asTerm)
   }
 
+  it should "compute groebner basis univariate" in withMathematica { _ =>
+    val x1 = "100".asTerm
+    val x2 = "(x^2+2*x+1)^(20-14)".asTerm
+    val y = "x^2".asTerm
+    val tool = new OrbitalAlgebraTool()
+
+    tool.groebnerBasis(List(x1,y)) shouldBe List("100").map(_.asTerm)
+    tool.groebnerBasis(List(x2,y)) shouldBe List("1/144").map(_.asTerm)
+  }
+
   it should "compute polynomial remainder" in withMathematica { _ =>
     val x = "x^(2-1)+x+(x+y)^2+1/2".asTerm
     val y = "x+3+y".asTerm

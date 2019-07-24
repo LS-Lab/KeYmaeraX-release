@@ -8,7 +8,7 @@ import orbital.util.KeyValuePair
 import scala.collection.JavaConverters._
 
 /**
- * A link to the Orbital for algebra tools
+ * A link to Orbital for its algebra tools
  */
 
 class OrbitalAlgebraTool() extends AlgebraTool{
@@ -19,6 +19,7 @@ class OrbitalAlgebraTool() extends AlgebraTool{
     val arr = 1.until(vmap.size).foldLeft(Array(vf.rational(n,m)).asInstanceOf[Object])( (res,i) => Array(res))
     vf.polynomial(arr)
   }
+
   // emap gives the indeterminates of an underlying coefficient ring
   // vmap gives the indeterminates of the polynomial ring over this coefficient ring
   // both assumed to be non-empty
@@ -67,7 +68,13 @@ class OrbitalAlgebraTool() extends AlgebraTool{
       if (vn==0) Number(0)
       else {
         val cof = if (vd == 1) Number(vn) else Divide(Number(vn), Number(vd))
-        val k = kv.getKey.asInstanceOf[Vector].iterator().asScala.toList.map(_.asInstanceOf[Integer].intValue())
+        val k =
+          if(kv.getKey.isInstanceOf[Vector])
+            kv.getKey.asInstanceOf[Vector].iterator().asScala.toList.map(_.asInstanceOf[Integer].intValue())
+          else if(kv.getKey.isInstanceOf[Integer])
+            List(kv.getKey.asInstanceOf[Integer].intValue())
+          else
+            ???
         val xis = (cof::k.zipWithIndex.map( i =>
           if(i._1==0)  Number(1)
           else if(i._1 == 1) vunmap(i._2).asInstanceOf[Term]
@@ -95,7 +102,6 @@ class OrbitalAlgebraTool() extends AlgebraTool{
     val orbitalpolys = polynomials.map( p => mapWith(p,varmap))
     val orbitalgrob = AlgebraicAlgorithms.groebnerBasis(orbitalpolys.toSet.asJava,AlgebraicAlgorithms.DEGREE_REVERSE_LEXICOGRAPHIC)
 
-    //println(orbitalgrob)
     val grob = orbitalgrob.iterator().asScala.toList.map( _.asInstanceOf[Polynomial])
 
     grob.map(p => unmapWith(p,varunmap))
