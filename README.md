@@ -127,7 +127,7 @@ In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Re
 [Uniform substitution at one fell swoop](https://lfcps.org/pub/dGL-usubst-one.pdf).
 In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, volume 11716 of LNCS. Springer, 2019.
 
-KeYmaera X uses the Pegasus tool for invariant generation [if the appropriate software is installed](https://lfcps.org/pub/Pegasus.pdf):
+KeYmaera X uses the Pegasus tool for invariant generation [if the appropriate software is installed](http://pegasus.keymaeraX.org/):
 
 12. Andrew Sogokon, Stefan Mitsch, Yong Kiam Tan, Katherine Cordwell and André Platzer. 
 [Pegasus: A framework for sound continuous invariant generation](https://lfcps.org/pub/Pegasus.pdf). 
