@@ -62,30 +62,27 @@ object KeYmaeraX {
   private type OptionMap = Map[Symbol, Any]
 
   /** Usage -help information.
-    *
     * @note Formatted to 80 characters terminal width. */
-  val usage: String = "KeYmaera X Prover" + " " + VERSION +
-    """
-      |
-      |Usage: java -jar keymaerax.jar
+  val usage: String =
+    """Usage: java -jar keymaerax.jar
+      |  -ui [web server options] |
       |  -prove file.kyx [-out file.kyp] [-timeout seconds] [-verbose] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
       |     [-quantitative ctrl|model|plant] |
-      |  -ui [web server options] |
       |  -striphints file.kyx -out fileout.kyx
       |
       |Actions:
-      |  -prove     run prover on given archive
-      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
-      |  -codegen   generate executable code from given model file
       |  -ui        start web user interface with optional server arguments (default)
+      |  -prove     run prover on given archive of models or proofs
+      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
+      |  -codegen   generate executable C code from given model file
       |  -striphints remove all proof annotations from the model
       |  -parse     return error code 0 if the given model file parses
       |  -bparse    return error code 0 if given bellerophon tactic file parses
-      |  -repl      prove interactively from REPL command line
-      |  -coasterx  verify roller coasters
+      |  -repl      prove given model interactively from REPL command line
+      |  -coasterx  verify roller coasters with CoasterX
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for real arithmetic
@@ -107,8 +104,7 @@ object KeYmaeraX {
       |  -license  Show license agreement for using this software
       |
       |Copyright (c) Carnegie Mellon University.
-      |Use option -license to show the license conditions.
-      |""".stripMargin
+      |Use option -license to show the license conditions.""".stripMargin
 
 
   private def launched() {
@@ -600,7 +596,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
     val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName).
-      filter(entry => entry.kind != "Exercise" && entry.kind != "exercise")
+      filter(entry => !entry.isExercise)
 
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 

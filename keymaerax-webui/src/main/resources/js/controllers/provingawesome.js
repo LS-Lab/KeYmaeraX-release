@@ -10,6 +10,18 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   $scope.proofId = $routeParams.proofId;
   sequentProofData.clear(); // @note we load a new proof, so clear agenda and proof tree
 
+  $scope.taskExplanation = {
+    selection: "Rule"
+  };
+  $scope.stepAxiom = function() {
+        var selectedItem = sequentProofData.agenda.selectedItem()
+        if (selectedItem) {
+          var explanationNodeId = selectedItem.deduction.sections[0].path[0];
+          var node = sequentProofData.proofTree.node(explanationNodeId);
+          return [node.rule];
+        } else return [];
+      }
+
   $scope.intro.introOptions = {
     steps: [
     {

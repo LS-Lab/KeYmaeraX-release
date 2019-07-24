@@ -238,7 +238,7 @@ private case class DOUBLE_QUOTES_STRING(var s: String) extends Terminal("<string
   override def regexp: Regex = DOUBLE_QUOTES_STRING_PAT.regexp
 }
 private object DOUBLE_QUOTES_STRING_PAT {
-  def regexp: Regex = """\"(.*)\"""".r
+  def regexp: Regex = """\"([^\"]*)\"""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private object PERIOD extends Terminal(".") {
