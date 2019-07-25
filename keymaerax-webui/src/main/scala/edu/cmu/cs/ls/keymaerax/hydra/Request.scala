@@ -668,6 +668,12 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     val examples =
+    new ExamplePOJO(6, "MOD19",
+      "Marktoberdorf 2019 Tutorial Examples",
+      //"/keymaerax-projects/lfcps-turorial/README.md",
+      "",
+      "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
+      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
     new ExamplePOJO(5, "POPL 2019 Tutorial",
       "Programming CPS With Proofs",
       //"/keymaerax-projects/popltutorial/README.md",

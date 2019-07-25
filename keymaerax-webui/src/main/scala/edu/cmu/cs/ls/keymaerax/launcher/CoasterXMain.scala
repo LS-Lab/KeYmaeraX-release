@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInit
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX.shutdownProver
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
-import scala.collection.immutable.Nil
+import scala.collection.immutable.{List, Nil}
 
 /** Command-line functionality of CoasterX, both for repeatability evaluation purposes and general usage
  *
@@ -281,6 +281,100 @@ object CoasterXMain {
     Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
   }
 
+  private def exit(status: Int): Nothing = {sys.exit(status)}
+
+  /** Prints help messages for command line options. */
+  private def optionErrorReporter(option: String) = {
+    val noValueMessage = "[Error] No value specified for " + option + " option. "
+    option match {
+      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
+      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
+      case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage); exit(1)
+      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
+      case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
+      case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage); exit(1)
+      case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
+      case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
+      case "-tool" => println(noValueMessage + "Please use: -tool mathematica|z3\n\n" + usage); exit(1)
+      case _ =>  println("[Error] Unknown option " + option + "\n\n" + usage); exit(1)
+    }
+  }
+
+  val usage: String =
+    """Usage: java -jar keymaerax.jar
+      |  -ui [web server options] |
+      |  -prove file.kyx [-out file.kyp] [-timeout seconds] [-verbose] |
+      |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
+      |     [-sandbox] [-fallback prg] |
+      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
+      |     [-quantitative ctrl|model|plant] |
+      |  -striphints file.kyx -out fileout.kyx
+      |
+      |Actions:
+      |  -ui        start web user interface with optional server arguments (default)
+      |  -prove     run prover on given archive of models or proofs
+      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
+      |  -codegen   generate executable C code from given model file
+      |  -striphints remove all proof annotations from the model
+      |  -parse     return error code 0 if the given model file parses
+      |  -bparse    return error code 0 if given bellerophon tactic file parses
+      |  -repl      prove given model interactively from REPL command line
+      |
+      |Additional options:
+      |  -tool mathematica|z3 choose which tool to use for real arithmetic
+      |  -mathkernel MathKernel(.exe) path to Mathematica kernel executable
+      |  -jlink path/to/jlinkNativeLib path to Mathematica J/Link library directory
+      |  -timeout  how many seconds to try proving before giving up, forever if <=0
+      |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
+      |  -vars     use ordered list of variables, treating others as constant functions
+      |  -interval guard reals by interval arithmetic in floating point (recommended)
+      |  -nointerval skip interval arithmetic presuming no floating point errors
+      |  -savept path export proof term s-expression from -prove to given path
+      |  -launch   use present JVM instead of launching one with a bigger stack
+      |  -lax      use lax mode with more flexible parser, printer, prover etc.
+      |  -strict   use strict mode with no flexibility in prover
+      |  -debug    use debug mode with exhaustive messages
+      |  -nodebug  disable debug mode to suppress intermediate messages
+      |  -security use security manager imposing some runtime security restrictions
+      |  -help     Display this usage information
+      |  -license  Show license agreement for using this software
+      |
+      |Copyright (c) Carnegie Mellon University.
+      |Use option -license to show the license conditions.""".stripMargin
+
+  // Separate argument parsing function so that options (e.g. the -tactic option) can be different for coasterx vs.
+  // regular usage
+  private def nextCoasterOption(map: OptionMap, list: List[String]): OptionMap = {
+    //-coasterx (-component component-name [-formula] [-tactic] [-stats] | -coaster filename.rctx -feet-per-unit X [-velocity V] [-formula] [-stats] | -table2)
+    list match {
+      case "-debug-level" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('debugLevel -> value), tail)
+        else optionErrorReporter("-debug-level")
+      case "-component" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "component", 'in -> value), tail)
+        else optionErrorReporter("-component")
+      case "-table" :: tail => nextCoasterOption(map ++ Map('coasterxMode -> "table"), tail)
+      case "-formula" :: tail => nextCoasterOption(map ++ Map('doFormula -> "true"), tail)
+      case "-tactic" :: tail => nextCoasterOption(map ++ Map('doTactic -> "true"), tail)
+      case "-stats" :: tail => nextCoasterOption(map ++ Map('doStats -> "true"), tail)
+      case "-compare-reuse" :: tail => nextCoasterOption(map ++ Map('compareReuse -> "true"), tail)
+      case "-num-runs" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('numRuns -> value), tail)
+        else optionErrorReporter("-num-runs")
+      case "-coaster" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "coaster", 'in -> value), tail)
+        else optionErrorReporter("-coaster")
+      case "-naive-arith" :: tail =>
+        nextCoasterOption(map ++ Map('naiveArith -> "true"), tail)
+      case "-feet-per-unit" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('feetPerUnit -> value), tail)
+        else optionErrorReporter("-feet-per-unit")
+      case "-velocityFPS" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('velocity -> value), tail)
+        else optionErrorReporter("-velocityFPS")
+      case _ => map
+    }
+  }
 
   def main(options:Map[Symbol,Any]):Unit = {
     if (options.contains('help) || !options.contains('coasterxMode)) {

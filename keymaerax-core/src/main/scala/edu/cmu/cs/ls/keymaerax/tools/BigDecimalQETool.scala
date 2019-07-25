@@ -22,8 +22,9 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case Minus(a, b) => eval(a) - eval(b)
     case Neg(a) => -eval(a)
     case Times(a, b) => eval(a) * eval(b)
-    case Power(a, Number(n)) if n.isValidInt => eval(a) pow n.toIntExact
+    case Power(a, Number(n)) if n.isValidInt && n>=0 => eval(a) pow n.toIntExact
     case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
+    case Divide(a, b) => throw new IllegalArgumentException("Division is not guaranteed to be representable without error: " + t)
   }
   def eval(fml: Formula) : Boolean = fml match {
     case LessEqual(s, t) => eval(s) <= eval(t)
@@ -35,6 +36,7 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case And(f, g) => eval(f) && eval(g)
     case Or(f, g) => eval(f) || eval(g)
     case True => true
+    case False => false
   }
 
   def qeEvidence(formula: Formula) = (if (eval(formula)) True else formula, new Evidence {

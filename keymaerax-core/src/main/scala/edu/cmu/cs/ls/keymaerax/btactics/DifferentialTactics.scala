@@ -1223,9 +1223,11 @@ private object DifferentialTactics extends Logging {
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
   private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
+  private lazy val barrierCond2: ProvableSig = remember("h_() = k_() -> max(g_()*g_(),h_()) > 0 -> f_() > 0 ->  ((-(g_()*h_())/max(g_()*g_(),h_())) * f_() + 0) * g_() + f_() * k_() >=0".asFormula,QE,namespace).fact
 
   def dgBarrier: DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
+
 
     val (system,dom,post) = seq.sub(pos) match {
       case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
@@ -1242,64 +1244,74 @@ private object DifferentialTactics extends Logging {
     //p>=0 or p>0
     val cf = property.asInstanceOf[ComparisonFormula]
 
-    if(cf.isInstanceOf[GreaterEqual])
-      ODEInvariance.sAIclosedPlus(bound = 1)(pos)
+    val barrier = cf.left
 
-    else {
-      val barrier = cf.left
+    val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
 
-      val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
+    val zero = Number(0)
+    //The special max term
+    val barrierAlg = FuncOf(maxF, Pair(Times(barrier, barrier), lie))
+    val barrierFml = Greater(barrierAlg, zero)
+    //The cofactor
+    val cofactor = Divide(Times(barrier, lie), barrierAlg)
 
-      val zero = Number(0)
-      //The special max term
-      val barrierAlg = FuncOf(maxF, Pair(Times(barrier, barrier), lie))
-      val barrierFml = Greater(barrierAlg, zero)
-      //The cofactor
-      val cofactor = Divide(Times(barrier, lie), barrierAlg)
+    // First cut in the barrier property, then use dgdbx on it
+    // Barrier condition is checked first to make it fail faster
+    val pre = dC(barrierFml)(pos) < (
+      skip, /* diffWeakenG faster but loses assumptions*/ dW(pos) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
+    ) & starter
 
-      // First cut in the barrier property, then use dgdbx on it
-      // Barrier condition is checked first to make it fail faster
-      val pre = dC(barrierFml)(pos) < (
-        skip, /* diffWeakenG faster but loses assumptions*/ dW(pos) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
-      ) & starter
+    // Same as dgDbx but bypasses extra checks since we already know
+    /** The ghost variable */
+    val gvy = "dbxy_".asVariable
+    /** Another ghost variable */
+    val gvz = "dbxz_".asVariable
 
-      // Same as dgDbx but bypasses extra checks since we already know
-      /** The ghost variable */
-      val gvy = "dbxy_".asVariable
-      /** Another ghost variable */
-      val gvz = "dbxz_".asVariable
+    val one = Number(1)
+    val two = Number(2)
 
-      val one = Number(1)
-      val two = Number(2)
+    //Postcond:
+    val gtz = Greater(gvy, zero)
+    val pcy = And(gtz, cf.reapply(Times(gvy, barrier), zero))
+    val pcz = Equal(Times(gvy, Power(gvz, two)), one)
 
-      //Postcond:
-      val gtz = Greater(gvy, zero)
-      val pcy = And(gtz, cf.reapply(Times(gvy, barrier), zero))
-      val pcz = Equal(Times(gvy, Power(gvz, two)), one)
+    //Construct the diff ghost y' = -qy
+    val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(cofactor), gvy))
 
-      //Construct the diff ghost y' = -qy
-      val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(cofactor), gvy))
+    def inspectAndCut : DependentTactic = "ANON" by ((seq:Sequent) => {
+      val k = seq.succ(0)(PosInExpr(1::1::0::1::1::Nil)).asInstanceOf[Term]
+      cutR(Equal(lie,k))(1)
+    })
 
-      //Diff ghost z' = qz/2
-      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
-      pre &
-        DifferentialTactics.dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
-        existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
-        dC(gtz)(pos) < (
-          boxAnd(pos) & andR(pos) < (
-            diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
-            diffInd('full)(pos)
-          )
-          ,
-          DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
-            existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
-            diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
-              < (
-              hideL('Llast) & QE,
-              cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+    //Diff ghost z' = qz/2
+    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
+    pre &
+      DifferentialTactics.dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+      existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
+      dC(gtz)(pos) < (
+        boxAnd(pos) & andR(pos) < (
+          diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
+          diffInd('diffInd)(pos)
+          <(
+            hideL('Llast) & QE,
+            cohideOnlyL('Llast) & andL(-1) & andL(-1) & hideL(-2) &
+            cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
+            implyRi & implyRi & inspectAndCut
+            <(
+              QE,
+              byUS(barrierCond2)
             )
+          )
         )
-    }
+        ,
+        DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
+          existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
+          diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
+          < (
+            hideL('Llast) & QE,
+            cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+          )
+      )
   })
 
   /** Find Q|- p' = q p + r, and proves |- Q -> r~0 with appropriate
