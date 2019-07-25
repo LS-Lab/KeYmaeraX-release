@@ -24,8 +24,8 @@ class RingsAlgebraTool() extends AlgebraTool{
   private def uniqueNames(names:List[NamedSymbol]) : (Map[NamedSymbol,String],Map[Int,Term]) = {
     val ls = names.zipWithIndex.map( p =>
       p._1 match {
-        case v:Variable => (p._1,"VAR"+p._2)
-        case _ => (p._1,"FUNC"+p._2)
+        case v:Variable => (p._1,"AVAR"+p._2)
+        case _ => (p._1,"BFUNC"+p._2)
       }
     )
 

@@ -32,8 +32,7 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "do a ghost with Z3" ignore withZ3 { _ =>
-    //@note Z3 does not implement AlgebraTool
+  it should "do a ghost with Z3" in withZ3 { _ =>
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
@@ -43,7 +42,7 @@ class ODETests extends TacticTestBase {
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
   }}
 
-  it should "prove a barrier certificate" in withMathematica { _ =>
+  it should "prove a barrier certificate" in withQE { _ =>
     val fml =
       """
         |x^2 <= 1/2 & y^2 <= 1/3 ->
