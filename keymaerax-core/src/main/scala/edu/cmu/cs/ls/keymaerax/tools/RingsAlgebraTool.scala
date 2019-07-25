@@ -41,6 +41,8 @@ class RingsAlgebraTool() extends AlgebraTool{
 
   private def toRing(term:Term, ring:MultivariateRing[Rational[BigInteger]], mapper: Map[NamedSymbol,String]) : MultivariatePolynomial[Rational[BigInteger]] = {
     term match {
+      case Neg(l) =>
+        ring.negate(toRing(l,ring,mapper))
       case Plus(l,r) =>
         ring.add(toRing(l,ring,mapper),toRing(r,ring,mapper))
       case Minus(l,r) =>
@@ -145,6 +147,8 @@ class RingsAlgebraTool() extends AlgebraTool{
   }
 
   override def groebnerBasis(polynomials: List[Term]): List[Term] = {
+
+    if(polynomials.isEmpty) return List()
     //@note sort for stable results
     val syms = polynomials.flatMap(p => StaticSemantics.symbols(p)).distinct.sorted
 

@@ -1329,15 +1329,24 @@ private object DifferentialTactics extends Logging {
 
     //The sign of the remainder for a Darboux argument
     //e.g., tests r >= 0 for p'>=gp (Darboux inequality)
-    val pr = property match {
-      case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(r,zero)),timeoutQE)
-      case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(r,zero)),timeoutQE)
-      case LessEqual(_, _) => proveBy(Imply(dom,LessEqual(r,zero)),timeoutQE)
-      case Less(_, _) => proveBy(Imply(And(dom,property),LessEqual(r,zero)),timeoutQE)
-      case Equal(_,_) => proveBy(Imply(dom,Equal(r,zero)),timeoutQE)
-      //todo: is there a special case of open DI that would work for disequalities?
-      case NotEqual(_,_) => proveBy(Imply(dom,Equal(r,zero)),timeoutQE)
-      case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+    val pr = try {
+      property match {
+        case GreaterEqual(_, _) => {
+          proveBy(Imply(dom, GreaterEqual(r, zero)), timeoutQE)
+        }
+        case Greater(_, _) => proveBy(Imply(And(dom, property), GreaterEqual(r, zero)), timeoutQE)
+        case LessEqual(_, _) => proveBy(Imply(dom, LessEqual(r, zero)), timeoutQE)
+        case Less(_, _) => proveBy(Imply(And(dom, property), LessEqual(r, zero)), timeoutQE)
+        case Equal(_, _) => proveBy(Imply(dom, Equal(r, zero)), timeoutQE)
+        //todo: is there a special case of open DI that would work for disequalities?
+        case NotEqual(_, _) => proveBy(Imply(dom, Equal(r, zero)), timeoutQE)
+        case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+      }
+    }
+    catch {
+      //todo: Instead of eliminating quantifiers, Z3 will throw an exception that isn't caught by ?(timeoutQE)
+      //This is a workaround
+      case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] =>  proveBy(False, skip)
     }
 
     if(pr.isProved)
@@ -1346,15 +1355,22 @@ private object DifferentialTactics extends Logging {
       // Fall-back check if straightforward DI would work
       // This is needed, because one can e.g. get p'>=0 without having r>=0 when domain constraints are possible
       // todo: is it possible to improve the Darboux (in)equality generation heuristic to automatically cover this case?
-      val pr = property match {
-        case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(lie,zero)),timeoutQE)
-        case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(lie,zero)),timeoutQE)
-        case LessEqual(_, _) => proveBy(Imply(dom,LessEqual(lie,zero)),timeoutQE)
-        case Less(_, _) => proveBy(Imply(And(dom,property),LessEqual(lie,zero)),timeoutQE)
-        case Equal(_,_) => proveBy(Imply(dom,Equal(lie,zero)),timeoutQE)
-        //todo: is there a special case of open DI that would work for disequalities?
-        case NotEqual(_,_) => proveBy(Imply(dom,Equal(lie,zero)),timeoutQE)
-        case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+      val pr = try {
+        property match {
+          case GreaterEqual(_, _) => proveBy(Imply(dom, GreaterEqual(lie, zero)), timeoutQE)
+          case Greater(_, _) => proveBy(Imply(And(dom, property), GreaterEqual(lie, zero)), timeoutQE)
+          case LessEqual(_, _) => proveBy(Imply(dom, LessEqual(lie, zero)), timeoutQE)
+          case Less(_, _) => proveBy(Imply(And(dom, property), LessEqual(lie, zero)), timeoutQE)
+          case Equal(_, _) => proveBy(Imply(dom, Equal(lie, zero)), timeoutQE)
+          //todo: is there a special case of open DI that would work for disequalities?
+          case NotEqual(_, _) => proveBy(Imply(dom, Equal(lie, zero)), timeoutQE)
+          case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+        }
+      }
+      catch {
+        //todo: Instead of eliminating quantifiers, Z3 will throw an exception that isn't caught by ?(timeoutQE)
+        //This is a workaround
+        case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] =>  proveBy(False, skip)
       }
       if(pr.isProved)
         return (pr,Number(0),lie)
@@ -1602,7 +1618,6 @@ private object DifferentialTactics extends Logging {
     * @return (q,r) where Q |- poly = q*div + r , q,r are polynomials
     */
   def domQuoRem(poly: Term, div: Term, dom: Formula): (Term,Term) = {
-    //TODO: remove dependence on algebra tool
     if (ToolProvider.algebraTool().isEmpty) {
       throw new BelleThrowable(s"duoQuoRem requires a AlgebraTool, but got None")
       // val polynorm = PolynomialArith.normalise(poly,true)._1
