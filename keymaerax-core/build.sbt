@@ -25,6 +25,8 @@ libraryDependencies += "org.apache.logging.log4j" %% "log4j-api-scala" % "11.0"
 
 libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.1"
 
+libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
+
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////
