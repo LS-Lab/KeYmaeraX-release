@@ -82,7 +82,6 @@ object KeYmaeraX {
       |  -parse     return error code 0 if the given model file parses
       |  -bparse    return error code 0 if given bellerophon tactic file parses
       |  -repl      prove given model interactively from REPL command line
-      |  -coasterx  verify roller coasters with CoasterX
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for real arithmetic
@@ -135,9 +134,6 @@ object KeYmaeraX {
             else options ++ configFromFile("mathematica"))
         }
         codegen(options)
-      } else if (options.get('mode).contains("coasterx")) {
-        CoasterXMain.main(options)
-        shutdownProver()
       }
       else if (!options.get('mode).contains("ui") ) {
         try {
@@ -177,39 +173,6 @@ object KeYmaeraX {
     })
   }
 
-  // Separate argument parsing function so that options (e.g. the -tactic option) can be different for coasterx vs.
-  // regular usage
-  private def nextCoasterOption(map: OptionMap, list: List[String]): OptionMap = {
-    //-coasterx (-component component-name [-formula] [-tactic] [-stats] | -coaster filename.rctx -feet-per-unit X [-velocity V] [-formula] [-stats] | -table2)
-    list match {
-      case "-debug-level" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('debugLevel -> value), tail)
-        else optionErrorReporter("-debug-level")
-      case "-component" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "component", 'in -> value), tail)
-        else optionErrorReporter("-component")
-      case "-table" :: tail => nextCoasterOption(map ++ Map('coasterxMode -> "table"), tail)
-      case "-formula" :: tail => nextCoasterOption(map ++ Map('doFormula -> "true"), tail)
-      case "-tactic" :: tail => nextCoasterOption(map ++ Map('doTactic -> "true"), tail)
-      case "-stats" :: tail => nextCoasterOption(map ++ Map('doStats -> "true"), tail)
-      case "-compare-reuse" :: tail => nextCoasterOption(map ++ Map('compareReuse -> "true"), tail)
-      case "-num-runs" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('numRuns -> value), tail)
-        else optionErrorReporter("-num-runs")
-      case "-coaster" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "coaster", 'in -> value), tail)
-        else optionErrorReporter("-coaster")
-      case "-naive-arith" :: tail =>
-        nextCoasterOption(map ++ Map('naiveArith -> "true"), tail)
-      case "-feet-per-unit" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('feetPerUnit -> value), tail)
-        else optionErrorReporter("-feet-per-unit")
-      case "-velocityFPS" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('velocity -> value), tail)
-        else optionErrorReporter("-velocityFPS")
-      case _ => map
-    }
-  }
 
   private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
@@ -239,8 +202,6 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
       case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
-      case "-coasterx" :: tail =>
-        nextCoasterOption(map ++ Map('mode -> "coasterx"), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
