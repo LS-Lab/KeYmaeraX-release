@@ -34,8 +34,8 @@ class RingsAlgebraToolTests extends TacticTestBase  {
     val tool = new RingsAlgebraTool()
 
     val res = tool.polynomialReduce(x,List(y,z))
-    res._1 shouldBe List("a","0").map(_.asTerm)
-    res._2 shouldBe "b()+f".asTerm
+    res._1 shouldBe List("b()","1").map(_.asTerm)
+    res._2 shouldBe "-1*b()".asTerm
   }
 
   it should "compute univariate quotient remainder" in withMathematica { _ =>

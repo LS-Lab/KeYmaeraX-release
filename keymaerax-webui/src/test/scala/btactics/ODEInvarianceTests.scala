@@ -505,8 +505,7 @@ class ODEInvarianceTests extends TacticTestBase {
     proveBy(seq, odeInvariant(1)) shouldBe 'proved
   }
 
-  //TODO: investigate why this fails on Z3
-  it should "prove example where Darboux heuristic fails" in withMathematica { _ =>
+  it should "prove example where Darboux heuristic fails" in withZ3 { _ =>
     val seq = "2*g()*x<=2*g()*H()-v_0^2&x>=0, g()>0, 1>=c(), c()>=0, r()>=0, x=0, v=-c()*v_0\n  ==>  [{x'=v,v'=-g()-r()*v^2&x>=0&v>=0}]2*g()*x<=2*g()*H()-v^2".asSequent
     val pr = proveBy(seq, odeInvariant(1))
     pr shouldBe 'proved

@@ -20,12 +20,14 @@ class RingsAlgebraTool() extends AlgebraTool{
 //    val arr = 1.until(vmap.size).foldLeft(Array(vf.rational(n,m)).asInstanceOf[Object])( (res,i) => Array(res))
 //    vf.polynomial(arr)
 //  }
-//
+  private def varprefix = "AVAR"
+  private def funcprefix = "BFUNC"
+
   private def uniqueNames(names:List[NamedSymbol]) : (Map[NamedSymbol,String],Map[Int,Term]) = {
     val ls = names.zipWithIndex.map( p =>
       p._1 match {
-        case v:Variable => (p._1,"AVAR"+p._2)
-        case _ => (p._1,"BFUNC"+p._2)
+        case v:Variable => (p._1,varprefix+p._2)
+        case _ => (p._1,funcprefix+p._2)
       }
     )
 
@@ -128,20 +130,20 @@ class RingsAlgebraTool() extends AlgebraTool{
 
     val (mapper,unmapper) = uniqueNames(vars++funcs)
 
-    //It should always be VAR(XXX)
-    val varindex = mapper(x).drop(3).toInt
+    //It should always be AVAR(XXX)
+    val varindex = mapper(x).drop(varprefix.length).toInt
 
     implicit val ring = MultivariateRing(Q,mapper.values.toArray.sorted)
 
     val ringterm = toRing(term,ring,mapper).asUnivariate(varindex)
     val ringdiv = toRing(div,ring,mapper).asUnivariate(varindex)
 
-    val uniring = UnivariateRing(ringterm.ring,"VAR"+varindex)
+    val uniring = UnivariateRing(ringterm.ring,varprefix+varindex)
 
     val res = uniring.divideAndRemainder(ringterm,ringdiv)
 
-    val mringquo = multiringify("VAR"+varindex,res(0),ring)
-    val mringrem = multiringify("VAR"+varindex,res(1),ring)
+    val mringquo = multiringify(varprefix+varindex,res(0),ring)
+    val mringrem = multiringify(varprefix+varindex,res(1),ring)
 
     (fromRing(mringquo,unmapper),fromRing(mringrem,unmapper))
   }
