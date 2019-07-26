@@ -94,6 +94,10 @@ output {
   min-height: 30px;
 }
 
+.navbar-toggle {
+  padding: 0px 5px;
+}
+
 .navbar-brand {
   font-size: 130%;
   height: 30px;
@@ -101,7 +105,13 @@ output {
 }
 
 .navbar-nav > li > a {
+  padding: 10px 0px 0px 15px;
+}
+
+@media (min-width: 768px) {
+.navbar-nav > li > a {
   padding: 5px 15px 5px 5px;
+}
 }
 
 .k4-tactics-navbar {

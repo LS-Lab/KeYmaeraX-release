@@ -52,18 +52,22 @@
     <div class="col-md-12">
         <!-- Tool box -->
         <div class="navbar navbar-default k4-tactics-navbar">
-            <div class="navbar-inner">
-            <div class="container-fluid">
-                <span class="brand navbar-brand k4-tactics-brand">
-                    <span editable-text="proofName" onbeforesave="saveProofName($data)">
-                        {{proofName}}
-                    </span>
-                </span>
-                <div class="nav">
-                    <ul class="nav navbar-nav k4-tactics-nav-first" id="provingautomation">
-                        <li><a ng-click="doTactic(undefined, 'master')"
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#tacticnavbar">
+                        <span class="fa fa-bars"></span>
+                    </button>
+                    <div class="nav brand navbar-brand k4-tactics-brand">
+                        <span editable-text="proofName" onbeforesave="saveProofName($data)">
+                            {{proofName}}
+                        </span>
+                    </div>
+                </div>
+                <div class="collapse navbar-collapse" id="tacticnavbar">
+                    <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
+                        <li class="nav-item"><a ng-click="doTactic(undefined, 'master')"
                                data-intro="Automatic search" data-position="top"><span class="fa fa-play"> Auto</span></a></li>
-                        <li><a ng-click="doTactic(undefined, 'unfold')"
+                        <li class="nav-item"><a ng-click="doTactic(undefined, 'unfold')"
                                data-intro="Unfold all operators" data-position="top"
                                uib-popover-template="fetchRuleHelp('unfold')"
                                popover-class="k4-rulemenu-helppopover"
@@ -71,37 +75,33 @@
                             <span class="fa fa-map-o"> Unfold</span>
                             </a>
                         </li>
-                        <li><a ng-click="onTacticScript('prop;done',false)"
+                        <li class="nav-item"><a ng-click="onTacticScript('prop;done',false)"
                                data-intro="Prove propositionally" data-position="top"><span class="fa fa-magic"> Prop-Auto</span></a></li>
-                        <li><a ng-click="doTactic(undefined, 'fullSimplify')"
+                        <li class="nav-item"><a ng-click="doTactic(undefined, 'fullSimplify')"
                                data-intro="Simplify formulas" data-position="top"><span class="fa fa-compress"> Simplify</span></a></li>
-                        <li><a ng-click="undoLastStep()"
+                        <li class="nav-item"><a ng-click="undoLastStep()"
                                data-intro="Undo" data-position="top"><span class="fa fa-undo"> Step back</span></a></li>
-                        <li><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
+                        <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
                                data-intro="Switch edit/prove" data-position="top"><i class="fa fa-pencil"></i> Edit</a></li>
-                        <li class="active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
+                        <li class="nav-item active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
                             <i ng-class="{'fa':true, 'fa-pencil': !stickyEdit(), 'fa-pencil-square': stickyEdit()}"
                                uib-tooltip="Toggle to stay in edit mode"
                                ng-click="$event.stopPropagation();setStickyEdit(!stickyEdit())"></i> Edit</a>
                         </li>
-                        <li><a ng-click="openProofstepBrowser()"
+                        <li class="nav-item"><a ng-click="openProofstepBrowser()"
                                data-intro="Browse all proof steps" data-position="top"><span class="fa fa-binoculars"> Browse...</span></a></li>
-                        <li><a ng-click="openModelEditor(agenda.modelId)"
+                        <li class="nav-item"><a ng-click="openModelEditor(agenda.modelId)"
                                data-intro="View and edit model" data-position="top"><span class="fa fa-keyboard-o"> Model...</span></a></li>
                     </ul>
-                    <ul class="nav navbar-nav k4-tactics-nav-first pull-right">
-                        <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>
-                    </ul>
-                </div>
-                <div class="nav-collapse" uib-collapse="isNavbarCollapsed">
-                    <ul class="nav navbar-nav k4-tactics-nav-last" id="provingbasictactics"
+                    <ul class="nav navbar-nav k4-tactics-nav-last mr-auto" id="provingbasictactics"
                         data-intro="Basic tactics for propositional reasoning, hybrid programs, differential equations, and arithmetic."
                         data-position="right">
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic(undefined, 'prop')"                                  uib-popover-template="fetchRuleHelp('prop')"
+                                <li><a ng-click="doTactic(undefined, 'prop')"
+                                       uib-popover-template="fetchRuleHelp('prop')"
                                   popover-class="k4-rulemenu-helppopover"
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                   <span>Exhaustive</span><code class="pull-right">prop</code></a></li>
@@ -110,7 +110,8 @@
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                        <span>Cut ...</span><code class="pull-right">cut</code></a></li>
-                                <li><a ng-click="doTactic(undefined, 'id')"                                  uib-popover-template="fetchRuleHelp('id')"
+                                <li><a ng-click="doTactic(undefined, 'id')"
+                                       uib-popover-template="fetchRuleHelp('id')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                     <span>Identity</span><code class="pull-right">id</code></a></li>
@@ -202,7 +203,7 @@
                                     <span>False</span><code class="pull-right">closeFalse</code></a></li>
                             </ul>
                         </li>
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false" disabledtooltip="First-order Logic">Quantifier <span class="caret"></span></a>
                             <ul class="dropdown-menu">
@@ -235,7 +236,7 @@
                                 <!--<li><a ng-click="doSearch('*0', 'L')"><span>&times;0</span><code class="pull-right">*0</code></a></li>-->
                             </ul>
                         </li>
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Hybrid Program <span class="caret"></span></a>
                             <ul class="dropdown-menu">
@@ -317,7 +318,7 @@
                                 <!--<li><a ng-click="doSearch('DiamondChoice', 'R')"><span>&rang;++&lang;</span><code class="pull-right">choiced</code></a></li>-->
                             </ul>
                         </li>
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equation <span class="caret"></span></a>
                             <ul class="dropdown-menu">
@@ -357,7 +358,7 @@
                                   <span>Diff. Ghost ...</span><code class="pull-right">dG</code></a></li>
                             </ul>
                         </li>
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Tools
                                 <i class="fa fa-spinner fa-spin fa-fw"
@@ -430,22 +431,19 @@
                         </li>
                     </ul>
                 </div>
-                <div class="nav">
-                    <ul class="nav navbar-nav k4-tactics-nav-last">
-                        <li ng-controller="ProofMessagesCtrl">
-                            <k4-auto-hide-alert message="proofMessage.text"
-                                                causeMsg="proofMessage.causeMsg"
-                                                details="proofMessage.details"
-                                                task-stepwise-request="proofMessage.taskStepwiseRequest"
-                                                is-visible="proofMessage.isVisible" timeout="-1">
-                            </k4-auto-hide-alert>
-                        </li>
-
-                    </ul>
-                </div>
-            </div>
+<!--            </div>-->
             </div>
         </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12" ng-controller="ProofMessagesCtrl">
+        <k4-auto-hide-alert message="proofMessage.text"
+                            causeMsg="proofMessage.causeMsg"
+                            details="proofMessage.details"
+                            task-stepwise-request="proofMessage.taskStepwiseRequest"
+                            is-visible="proofMessage.isVisible" timeout="-1">
+        </k4-auto-hide-alert>
     </div>
 </div>
 
