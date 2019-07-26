@@ -389,7 +389,8 @@ del {
   right: 1em;
   top: -1.5ex;
   width: 1em;
-  margin-right: -1em;
+  max-width: 1em;
+  margin-right: -1.3em;
 }
 .k4-has-step.k4-chase-hover > span > .k4-op:after {
   content: "\f013"; /* fontawesome cog */
@@ -400,7 +401,8 @@ del {
   right: 1em;
   top: -1.5ex;
   width: 1em;
-  margin-right: -1em;
+  max-width: 1em;
+  margin-right: -1.3em;
 }
 /* Mark top-level operator in programs */
 .k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
@@ -412,7 +414,8 @@ del {
   right: 1em;
   top: -1.5ex;
   width: 1em;
-  margin-right: -1em;
+  max-width: 1em;
+  margin-right: -1.3em;
 }
 .k4-has-step.k4-chase-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
   content: "\f013"; /* fontawesome cog */
@@ -423,7 +426,8 @@ del {
   right: 1em;
   top: -1.5ex;
   width: 1em;
-  margin-right: -1em;
+  max-width: 1em;
+  margin-right: -1.3em;
 }
 
 .k4-term-op {
