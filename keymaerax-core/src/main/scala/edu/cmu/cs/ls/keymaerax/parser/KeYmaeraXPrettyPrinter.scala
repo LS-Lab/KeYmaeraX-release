@@ -551,7 +551,10 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
     case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
     case Pair(l, r)             => wrapDoc((Doc.lineBreak + docOf(l) + Doc.text(ppOp(term)) + Doc.lineBreak + docOf(r) + Doc.lineBreak).nested(2).grouped, term)
-    case t@Neg(Number(n))       => Doc.text(pp(HereP, term))
+    case Neg(Number(_))         => Doc.text(pp(HereP, term))
+    case t: Neg if !negativeBrackets =>
+      val c = pp(HereP, t.child)
+      Doc.text(ppOp(t) + (if (c.charAt(0).isDigit) " " else "")) + wrapChildDoc(t, docOf(t.child)).grouped
     case t: UnaryCompositeTerm  => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
     case t@Power(base, exp)     => (wrapLeftDoc(t, docOf(base)) + Doc.text(ppOp(t)) + wrapRightDoc(t, docOf(exp))).grouped
     case t: BinaryCompositeTerm => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line + wrapRightDoc(t, docOf(t.right))).grouped
