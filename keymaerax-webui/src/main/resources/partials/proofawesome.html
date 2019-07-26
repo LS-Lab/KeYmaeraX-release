@@ -66,32 +66,45 @@
                 <div class="collapse navbar-collapse" id="tacticnavbar">
                     <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'master')"
-                               data-intro="Automatic search" data-position="top"><span class="fa fa-play"> Auto</span></a></li>
+                                                data-intro="Automatic search" data-position="top">
+                            <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
+                        </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'unfold')"
                                data-intro="Unfold all operators" data-position="top"
                                uib-popover-template="fetchRuleHelp('unfold')"
                                popover-class="k4-rulemenu-helppopover"
                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                            <span class="fa fa-map-o"> Unfold</span>
+                            <span class="fa fa-map-o"><span class="k4-btn-optional-text"> Unfold</span></span>
                             </a>
                         </li>
                         <li class="nav-item"><a ng-click="onTacticScript('prop;done',false)"
-                               data-intro="Prove propositionally" data-position="top"><span class="fa fa-magic"> Prop-Auto</span></a></li>
+                                                data-intro="Prove propositionally" data-position="top">
+                            <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop-Auto</span></span></a>
+                        </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'fullSimplify')"
-                               data-intro="Simplify formulas" data-position="top"><span class="fa fa-compress"> Simplify</span></a></li>
+                                                data-intro="Simplify formulas" data-position="top">
+                            <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span></a></li>
                         <li class="nav-item"><a ng-click="undoLastStep()"
-                               data-intro="Undo" data-position="top"><span class="fa fa-undo"> Step back</span></a></li>
+                               data-intro="Undo" data-position="top">
+                            <span class="fa fa-undo"><span class="k4-btn-optional-text"> Step back</span></span></a>
+                        </li>
                         <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
-                               data-intro="Switch edit/prove" data-position="top"><i class="fa fa-pencil"></i> Edit</a></li>
+                               data-intro="Switch edit/prove" data-position="top">
+                            <span class="fa fa-pencil"></span><span class="k4-btn-optional-text"> Edit</span></a>
+                        </li>
                         <li class="nav-item active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
-                            <i ng-class="{'fa':true, 'fa-pencil': !stickyEdit(), 'fa-pencil-square': stickyEdit()}"
+                            <span ng-class="{'fa':true, 'fa-pencil': !stickyEdit(), 'fa-pencil-square': stickyEdit()}"
                                uib-tooltip="Toggle to stay in edit mode"
-                               ng-click="$event.stopPropagation();setStickyEdit(!stickyEdit())"></i> Edit</a>
+                                  ng-click="$event.stopPropagation();setStickyEdit(!stickyEdit())"></span><span class="k4-btn-optional-text"> Edit</span></a>
                         </li>
                         <li class="nav-item"><a ng-click="openProofstepBrowser()"
-                               data-intro="Browse all proof steps" data-position="top"><span class="fa fa-binoculars"> Browse...</span></a></li>
+                                                data-intro="Browse all proof steps" data-position="top">
+                            <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse...</span></span></a>
+                        </li>
                         <li class="nav-item"><a ng-click="openModelEditor(agenda.modelId)"
-                               data-intro="View and edit model" data-position="top"><span class="fa fa-keyboard-o"> Model...</span></a></li>
+                               data-intro="View and edit model" data-position="top">
+                            <span class="fa fa-keyboard-o"><span class="k4-btn-optional-text"> Model...</span></span></a>
+                        </li>
                     </ul>
                     <ul class="nav navbar-nav k4-tactics-nav-last mr-auto" id="provingbasictactics"
                         data-intro="Basic tactics for propositional reasoning, hybrid programs, differential equations, and arithmetic."

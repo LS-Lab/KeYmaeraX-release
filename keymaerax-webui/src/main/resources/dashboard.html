@@ -44,7 +44,7 @@
         <div class="collapse navbar-collapse" id="mainnavbar">
             <ul class="nav navbar-nav nav-pills">
                 <!--<li ng-class="{active: theview == 'dashboard'}"><a href="dashboard.html?#/dashboard">Dashboard</a></li>-->
-                <li ng-class="{nav-item: true, active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
+                <li ng-class="{'nav-item': true, active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
                 <!--<li><a href="#">Lemmas</a></li>-->
                 <!-- TODO nav pill shows how many updates where made to proofs since last logged in. Currently, it shows the number of OPEN proofs! -->
                 <li class="nav-item" ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><!--<span class="badge pull-right">{{ open_proof_count }}</span>-->Proofs</a></li>
@@ -55,8 +55,8 @@
                     <a class="dropdown-toggle" data-toggle="dropdown">Theme <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
                         <li>Font size: <input type="number" name="fontsize" min="10" max="100" size="3" ng-model="theme.fontSize" ng-change="selectTheme(theme)">px</li>
-                        <li>Left width: <input type="number" name="leftmargin" min="10" max="200" size="3" ng-model="theme.renderMargins[0]" ng-change="selectTheme(theme)"></li>
-                        <li>Right width: <input type="number" name="rightmargin" min="10" max="200" size="3" ng-model="theme.renderMargins[1]" ng-change="selectTheme(theme)"></li>
+                        <li>Left width: <input type="number" name="leftmargin" max="200" size="3" ng-model="theme.renderMargins[0]" ng-change="selectTheme(theme)"></li>
+                        <li>Right width: <input type="number" name="rightmargin" max="200" size="3" ng-model="theme.renderMargins[1]" ng-change="selectTheme(theme)"></li>
                         <li class="divider"></li>
                         <li ng-repeat="t in themes"><a ng-click="selectTheme(t)"><i ng-show="theme.name === t.name" class="k4-menu-icon fa fa-check"></i> {{t.name}}</a></li>
                     </ul>
