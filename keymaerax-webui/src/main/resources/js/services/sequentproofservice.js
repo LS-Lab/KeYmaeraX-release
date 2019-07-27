@@ -206,6 +206,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       stickyEdit: false
     },
 
+    characterMeasure: {
+      show: false
+    },
+
     /** Prunes the proof tree at the specified goal, executes onPruned when the tree is pruned */
     prune: function(userId, proofId, nodeId, onPruned) {
       //@note make model available in closure of function success

@@ -6,7 +6,7 @@
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
         <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                     sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
-                    read-only="readOnly" collapsed="false"
+                    read-only="readOnly" collapsed="false" abbreviate="false"
                     on-apply-tactic="onApplyTactic(formulaId, tacticId)"
                     on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"
                     on-apply-two-position-tactic="onApplyTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequent>
@@ -59,7 +59,7 @@
         <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
             <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                         sequent="proofTree.nodesMap[step].getSequent()"
-                        read-only="true" collapsed="true"></k4-sequent>
+                        read-only="true" collapsed="true" abbreviate="false"></k4-sequent>
             <div ng-include="'siblinglinks.html'" replace-include></div>
         </div>
     </div>
@@ -105,7 +105,7 @@
         <div class="col-md-12" id="seq_{{proofTree.htmlNodeId(step)}}">
             <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                         sequent="proofTree.nodesMap[step].getSequent()"
-                        read-only="true" collapsed="true"></k4-sequent>
+                        read-only="true" collapsed="true" abbreviate="false"></k4-sequent>
         </div>
     </div>
     <!-- fetch parent of incomplete section (if exists), collapse/uncollapse for unfinished sections/last section-->
@@ -192,7 +192,7 @@
     <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step.id)}}" ng-if="step !== undefined">
         <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                     sequent="step.sequent"
-                    read-only="true" collapsed="true"></k4-sequent>
+                    read-only="true" collapsed="true" abbreviate="false"></k4-sequent>
         <div ng-include="'siblinglinks.html'" replace-include></div>
     </div>
     <div class="col-md-12 k4-proofrow-annotation" ng-if="step === undefined">

@@ -180,8 +180,8 @@ angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($s
   $scope.modelWithErrorMsg = function() {
     var lines = $.map(model.split('\n'), function(e, i) { return ("00" + (i+1)).slice(-3) + ': ' + e; });
     if (error.location) {
-      var lineStr = error.location.line + ': ';
-      var errorColumnIdx = error.location.column >= 0 ? error.location.column + lineStr.length :
+      // line numbers are always 000:_ (5 chars)
+      var errorColumnIdx = error.location.column >= 0 ? error.location.column + 5 :
         error.location.line >= 0 ? lines[error.location.line-1].length+1 : lines[lines.length-1].length+1;
       var inlineErrorMsg = new Array(errorColumnIdx).join(' ') + '^----' + error.textStatus;
       if (error.location.line >= 0) lines.splice(error.location.line, 0, inlineErrorMsg);

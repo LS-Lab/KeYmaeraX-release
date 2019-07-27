@@ -35,36 +35,37 @@
 <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#mainnavbar">
+                <span class="fa fa-bars"></span>
             </button>
             <a class="navbar-brand" href="/">KeYmaera X</a>
         </div>
         <!-- Collect the nav links, forms, and other content for toggling -->
-        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <div class="collapse navbar-collapse" id="mainnavbar">
             <ul class="nav navbar-nav nav-pills">
                 <!--<li ng-class="{active: theview == 'dashboard'}"><a href="dashboard.html?#/dashboard">Dashboard</a></li>-->
-                <li ng-class="{active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
+                <li ng-class="{'nav-item': true, active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
                 <!--<li><a href="#">Lemmas</a></li>-->
                 <!-- TODO nav pill shows how many updates where made to proofs since last logged in. Currently, it shows the number of OPEN proofs! -->
-                <li ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><!--<span class="badge pull-right">{{ open_proof_count }}</span>-->Proofs</a></li>
+                <li class="nav-item" ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><!--<span class="badge pull-right">{{ open_proof_count }}</span>-->Proofs</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 <!--<li><a href="#">Profile</a></li>-->
-                <li class="dropdown">
+                <li class="nav-item dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown">Theme <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
                         <li>Font size: <input type="number" name="fontsize" min="10" max="100" size="3" ng-model="theme.fontSize" ng-change="selectTheme(theme)">px</li>
-                        <li>Left width: <input type="number" name="leftmargin" min="10" max="200" size="3" ng-model="theme.renderMargins[0]" ng-change="selectTheme(theme)"></li>
-                        <li>Right width: <input type="number" name="rightmargin" min="10" max="200" size="3" ng-model="theme.renderMargins[1]" ng-change="selectTheme(theme)"></li>
+                        <li>Left width: <input type="number" name="leftmargin" min="0" max="200" size="3"
+                                               ng-model="theme.renderMargins[0]" ng-change="selectTheme(theme)"
+                                               ng-click="showCharacterMeasure(true)" ng-blur="showCharacterMeasure(false)"></li>
+                        <li>Right width: <input type="number" name="rightmargin" min="0" max="200" size="3"
+                                                ng-model="theme.renderMargins[1]" ng-change="selectTheme(theme)"
+                                                ng-click="showCharacterMeasure(true)" ng-blur="showCharacterMeasure(false)"></li>
                         <li class="divider"></li>
                         <li ng-repeat="t in themes"><a ng-click="selectTheme(t)"><i ng-show="theme.name === t.name" class="k4-menu-icon fa fa-check"></i> {{t.name}}</a></li>
                     </ul>
                 </li>
-                <li class="dropdown">
+                <li class="nav-item dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown">Help <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
                         <!--<li><a href="#">Examples</a></li>-->
@@ -85,17 +86,17 @@
                         <li><a href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download KeYmaera&#160;X</a></li>
                     </ul>
                 </li>
-                <li class="dropdown">
+                <li class="nav-item">
                     <a>
                         <i class="fa fa-question-circle" ng-click="showOverlayHelp()"
                            uib-tooltip="Quick usage help" tooltip-placement="auto bottom">
                         </i>
                     </a>
                 </li>
-                <li class="dropdown">
+                <li class="nav-item">
                     <a ng-click="shutdown()" ng-show="isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>
                 </li>
-                <li class="dropdown">
+                <li class="nav-item">
                     <a ng-click="logoff()" uib-tooltip="Log off" tooltip-placement="auto bottom"><i class="fa fa-sign-out"></i></a>
                 </li>
             </ul>

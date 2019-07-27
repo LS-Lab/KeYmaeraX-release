@@ -369,6 +369,14 @@ object RestApi extends Logging {
     }
   }}}
 
+  val deleteAllModels: SessionToken=>Route = (t : SessionToken) => path("models" / "user" / Segment / "delete" / "all") { userId => { pathEnd {
+    get {
+      //@note potential performance bottleneck: loads all models just to get ids
+      val request = new DeleteAllModelsRequest(database, userId)
+      completeRequest(request, t)
+    }
+  }}}
+
   //endregion
 
   //region Proofs
@@ -1133,6 +1141,7 @@ object RestApi extends Logging {
     browseProofRoot       ::
     browseNodeChildren    ::
     deleteModelProofSteps ::
+    deleteAllModels       ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

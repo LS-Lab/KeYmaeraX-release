@@ -557,9 +557,11 @@ object Helpers {
       }
     }
 
+    private def printHtmlWS(): String = advanceWS().replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;")
+
     /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
     def printWS(check: String = ""): String = {
-      val result = advanceWS().replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;")
+      val result = printHtmlWS()
       assert(format.startsWith(check), s"'$format' did not start with '$check'")
       format = format.substring(check.length)
       result
@@ -567,7 +569,7 @@ object Helpers {
 
     /** Prints whitespace prefix and formats `next` according to the format string. */
     def print(next: String): String = {
-      advanceWS() + next.map(c => printWS(c.toString) + c).reduceOption(_+_).getOrElse("")
+      printHtmlWS() + next.map(c => printWS(if (c != ' ') c.toString else "") + c).reduceOption(_ + _).getOrElse("")
     }
   }
 

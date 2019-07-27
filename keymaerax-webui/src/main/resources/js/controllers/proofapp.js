@@ -1,4 +1,4 @@
-angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$http', 'sessionService', function ($scope, $http, sessionService) {
+angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$http', '$routeParams', 'sessionService', 'sequentProofData', function ($scope, $http, $routeParams, sessionService, sequentProofData) {
 
   $scope.theme = {css: 'app', name: 'KeYmaera X', fontSize: 14};
 
@@ -22,11 +22,16 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
   });
 
   $scope.selectTheme = function(theme) {
-    if (theme.css && theme.fontSize && theme.renderMargins) {
+    if (theme.css && theme.fontSize && theme.renderMargins && theme.renderMargins[0] && theme.renderMargins[1]) {
       $http.post('/users/' + sessionService.getUser() + '/theme', {css: theme.css, fontSize: theme.fontSize, renderMargins: theme.renderMargins}).then(function(response) {
         setTheme(response.data);
+        sequentProofData.fetchAgenda($scope, sessionService.getUser(), $routeParams.proofId);
       });
     }
+  }
+
+  $scope.showCharacterMeasure = function(doShow) {
+    sequentProofData.characterMeasure.show = doShow;
   }
 
 }])

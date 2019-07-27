@@ -27,5 +27,11 @@ trait InvGenTool {
 
   /** Finds counterexamples to an ODE safety conjecture. */
   def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]]
+
+  /** Returns the sufficient/necessary condition for postCond to be invariant (left of pair)
+    * also returns necessary conditions for the safety question to be true at all with those assumptions (right of pair)
+    * In either case, all formulas in the returned list must be valid
+    * */
+  def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula])
 }
 

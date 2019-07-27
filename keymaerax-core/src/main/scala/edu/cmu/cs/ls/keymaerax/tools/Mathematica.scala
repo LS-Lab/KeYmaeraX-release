@@ -172,6 +172,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
   override def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)],Seq[(Formula, String)]]] = mPegasus.invgen(ode, assumptions, postCond)
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = mPegasus.lzzCheck(ode, inv)
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = mPegasus.refuteODE(ode, assumptions, postCond)
+  override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = mPegasus.genODECond(ode, assumptions, postCond)
 
 
   /** Restarts the MathKernel with the current configuration */

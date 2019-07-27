@@ -818,6 +818,14 @@ class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) ext
   }
 }
 
+class DeleteAllModelsRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with WriteRequest {
+  override def resultingResponses(): List[Response] = {
+    val allModels = db.getModelList(userId).map(_.modelId)
+    allModels.foreach(db.deleteModel)
+    BooleanResponse(flag = true) :: Nil
+  }
+}
+
 class DeleteModelProofStepsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
     val deletedSteps = db.getProofsForModel(modelId).map(p => db.deleteProofSteps(p.proofId)).sum

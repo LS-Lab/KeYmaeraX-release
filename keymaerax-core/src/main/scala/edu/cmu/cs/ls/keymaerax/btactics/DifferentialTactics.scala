@@ -1757,7 +1757,7 @@ private object DifferentialTactics extends Logging {
     * @see [[FormulaTools.closure]]
     *
     */
-  def dCClosure(cutInterior:Boolean = true): DependentPositionTactic = "dCClosure" byWithInput (cutInterior,(pos:Position,seq: Sequent) => {
+  def dCClosure(cutInterior:Boolean = true): DependentPositionTactic = "dCClosure" by ((pos:Position,seq: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dCClosure expects to be called on top-level succedent")
 
     val (ode,p_fml,post) = seq.sub(pos) match {

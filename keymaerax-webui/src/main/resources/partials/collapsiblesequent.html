@@ -18,11 +18,11 @@
     <!-- Antecedent -->
     <div class="col-md-3">
         <!-- Collapse button -->
-        <a ng-class="{'k4-sequent-caret-inline': readOnly, 'k4-sequent-caret-left': !readOnly}"
-           ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">
-            <small><span ng-class="{'fa fa-caret-right': collapsed, 'fa fa-caret-down': !collapsed}"></span></small>
-        </a>
-        <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
+<!--        <a ng-class="{'k4-sequent-caret-inline': readOnly, 'k4-sequent-caret-left': !readOnly}"-->
+<!--           ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">-->
+<!--            <small><span ng-class="{'fa fa-caret-right': collapsed, 'fa fa-caret-down': !collapsed}"></span></small>-->
+<!--        </a>-->
+        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideL')"
@@ -40,9 +40,9 @@
                         <span class="fa fa-copy"></span></a>
                     </li>
                 </ul>
-                <div class="k4-formula-content col-md-12">
+                <div class="k4-formula-content">
                     <ul><li>{{f.id}}:</li></ul>
-                    <k4-formula class="k4-formula-container pull-right"
+                    <k4-formula class="k4-formula-container"
                             k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="userId" proof-id="proofId" node-id="nodeId"
                             formula="f.formula" highlight="!collapsed" collapsed="collapsed"
@@ -52,8 +52,8 @@
                 </div>
             </div>
             <div class="col-md-12 k4-formula nohover" ng-if="readOnly || collapsed">
-                <div class="k4-formula-content col-md-12">
-                    <k4-formula class="k4-formula-container pull-right" user-id="userId" proof-id="proofId" node-id="nodeId"
+                <div class="k4-formula-content">
+                    <k4-formula class="k4-formula-container" user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="collapsed"></k4-formula>
                 </div>
             </div>
@@ -62,7 +62,7 @@
 
     <!-- Turnstile -->
     <div class="col-md-1" ng-if="sequent.ante.length > 0 || sequent.succ.length > 0">
-        <div class="row k4-flexrow pull-right">
+        <div class="row k4-flexrow">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(undefined, 'QE')"
@@ -98,7 +98,7 @@
 
     <!-- Succedent -->
     <div class="col-md-8">
-        <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
+        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideR')"
@@ -125,7 +125,7 @@
                 </div>
             </div>
             <div class="col-md-12 k4-formula nohover" ng-if="readOnly || collapsed">
-                <div class="row k4-formula-content">
+                <div class="k4-formula-content">
                     <k4-formula class="k4-formula-container"
                                 user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="false" collapsed="collapsed"></k4-formula>
