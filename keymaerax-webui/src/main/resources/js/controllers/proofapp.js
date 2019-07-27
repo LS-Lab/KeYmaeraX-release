@@ -30,4 +30,8 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
     }
   }
 
+  $scope.showCharacterMeasure = function(doShow) {
+    sequentProofData.characterMeasure.show = doShow;
+  }
+
 }])

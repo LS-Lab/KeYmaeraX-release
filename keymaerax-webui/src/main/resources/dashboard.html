@@ -55,8 +55,12 @@
                     <a class="dropdown-toggle" data-toggle="dropdown">Theme <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
                         <li>Font size: <input type="number" name="fontsize" min="10" max="100" size="3" ng-model="theme.fontSize" ng-change="selectTheme(theme)">px</li>
-                        <li>Left width: <input type="number" name="leftmargin" max="200" size="3" ng-model="theme.renderMargins[0]" ng-change="selectTheme(theme)"></li>
-                        <li>Right width: <input type="number" name="rightmargin" max="200" size="3" ng-model="theme.renderMargins[1]" ng-change="selectTheme(theme)"></li>
+                        <li>Left width: <input type="number" name="leftmargin" max="200" size="3"
+                                               ng-model="theme.renderMargins[0]" ng-change="selectTheme(theme)"
+                                               ng-click="showCharacterMeasure(true)" ng-blur="showCharacterMeasure(false)"></li>
+                        <li>Right width: <input type="number" name="rightmargin" max="200" size="3"
+                                                ng-model="theme.renderMargins[1]" ng-change="selectTheme(theme)"
+                                                ng-click="showCharacterMeasure(true)" ng-blur="showCharacterMeasure(false)"></li>
                         <li class="divider"></li>
                         <li ng-repeat="t in themes"><a ng-click="selectTheme(t)"><i ng-show="theme.name === t.name" class="k4-menu-icon fa fa-check"></i> {{t.name}}</a></li>
                     </ul>

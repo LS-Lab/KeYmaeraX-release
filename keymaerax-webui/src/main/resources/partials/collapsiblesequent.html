@@ -22,7 +22,7 @@
 <!--           ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">-->
 <!--            <small><span ng-class="{'fa fa-caret-right': collapsed, 'fa fa-caret-down': !collapsed}"></span></small>-->
 <!--        </a>-->
-        <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
+        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideL')"
@@ -98,7 +98,7 @@
 
     <!-- Succedent -->
     <div class="col-md-8">
-        <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
+        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideR')"
