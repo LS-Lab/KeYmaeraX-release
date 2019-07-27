@@ -116,12 +116,12 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     steps: [
     {
         element: '#modelarchiving',
-        intro: "Extract all models (with or without) their proofs into a .kya archive file.",
+        intro: "Extract all models (with or without) their proofs into a .kyx archive file.",
         position: 'bottom'
     },
     {
         element: '#modelupload',
-        intro: "Upload .kyx model files or .kya archive files.",
+        intro: "Upload .kyx model files or .kyx archive files.",
         position: 'bottom'
     },
     {
@@ -233,7 +233,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
@@ -242,7 +242,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
@@ -252,7 +252,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/downloadAllModels/withProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kya');
+      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
@@ -262,7 +262,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/model/" + modelId + "/downloadProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kya');
+      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
