@@ -256,7 +256,7 @@ object HyDRAInitializer extends Logging {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     tool.toLowerCase() match {
       case "mathematica" => mathematicaConfig
-      case "wolframengine" => mathematicaConfig
+      case "wolframengine" => wolframEngineConfig
       case "wolframscript" => Map.empty
       case "z3" => Map.empty
       case t => throw new Exception("Unknown tool '" + t + "'")
@@ -277,6 +277,16 @@ object HyDRAInitializer extends Logging {
     }
   }
 
+  def wolframEngineConfig: ToolProvider.Configuration = {
+    getWolframEngineLinkName match {
+      case Some(l) => getWolframEngineLibDir match {
+        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir, "tcpip" -> getWolframEngineTcpip)
+        case None => Map("linkName" -> l, "tcpip" -> getWolframEngineTcpip)
+      }
+      case None => DefaultConfiguration.defaultWolframEngineConfig
+    }
+  }
+
   private def getMathematicaLinkName: Option[String] = {
     Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME)
   }
@@ -287,6 +297,18 @@ object HyDRAInitializer extends Logging {
 
   private def getMathematicaTcpip: String = {
     Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
+  }
+
+  private def getWolframEngineLinkName: Option[String] = {
+    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_LINK_NAME)
+  }
+
+  private def getWolframEngineLibDir: Option[String] = {
+    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)
+  }
+
+  private def getWolframEngineTcpip: String = {
+    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("false")
   }
 }
 
