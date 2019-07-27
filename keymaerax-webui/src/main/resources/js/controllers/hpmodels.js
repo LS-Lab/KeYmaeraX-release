@@ -267,6 +267,25 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
 
+  $scope.deleteAll = function() {
+      var modalInstance = $uibModal.open({
+        templateUrl: 'partials/deleteallmodelsdialog.html',
+        controller: 'DeleteAllModelsDialogCtrl',
+        size: 'sm'
+      });
+
+      modalInstance.result.then(function () {
+        // modal ok
+        spinnerService.show('modelDeleteAllSpinner');
+        $http.get("/models/user/" + $scope.userId + "/delete/all").then(function(response) {
+           $route.reload();
+        })
+        .finally(function() { spinnerService.hide('modelDeleteAllSpinner'); });
+      }, function () {
+        // modal dismissed
+      });
+    }
+
   $scope.openTactic = function (modelid) {
       var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeltacticdialog.html',
@@ -444,4 +463,9 @@ angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', func
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };
+});
+
+angular.module('keymaerax.controllers').controller('DeleteAllModelsDialogCtrl', function ($scope, $uibModalInstance) {
+  $scope.ok = function () { $uibModalInstance.close(); };
+  $scope.cancel = function () { $uibModalInstance.dismiss('cancel'); };
 });

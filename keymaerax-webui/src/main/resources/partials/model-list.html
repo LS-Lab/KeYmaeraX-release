@@ -23,6 +23,14 @@
         </div>
         <div class="spinner-please-wait">Exporting archive, please wait...</div>
     </spinner>
+    <spinner name="modelDeleteAllSpinner" ng-cloak>
+        <div class="spinner-overlay"></div>
+        <div class="spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="spinner-please-wait">Deleting database entries, please wait...</div>
+    </spinner>
     <!-- Default panel contents -->
     <div class="panel-heading">
         <div class="row">
@@ -37,6 +45,9 @@
                     <a class="btn btn-default"
                        ng-click="downloadAllProofs()"
                        uib-tooltip="Export all models and proofs into a single archive (.kyx)"><i class="fa fa-archive"></i> Export all</a>
+                    <a class="btn btn-danger"
+                       ng-click="deleteAll()"
+                       uib-tooltip="Delete all models and proofs from the database"><i class="fa fa-trash"></i> Delete all</a>
                 </span>
             </div>
         </div>
