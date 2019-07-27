@@ -209,7 +209,7 @@ class ODETests extends TacticTestBase {
     //@note now throws exception instead of stuttering
     the [BelleThrowable] thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1)) should have message
       """[Bellerophon Runtime] [Bellerophon User-Generated Message] ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.
-        |Expected 1 subgoal matching a condition at position 1 but got 1 subgoals, or sole subgoal formula [{x'=x^x&true}][x:=x;]x>0 does not match""".stripMargin
+        |Expected 1 subgoal matching a condition at position 1 but got 1 subgoals, or sole subgoal formula [{x'=x^x&true}]x>0 does not match""".stripMargin
   }
 
   it should "neither stutter nor fail evolution domain simplification on empty evolution domain constraint with Mathematica" in withMathematica { _ =>
