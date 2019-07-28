@@ -32,14 +32,28 @@
             </div>
         </div>
         <div class="row k4-sequentRuleConclusion">
-            <div class="col-md-4 k4-nobreak k4-sequentRuleAnte">
-                <span ng-repeat="ante in stepDeriv.conclusion.ante">
-                    <span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
-            </div>
-            <div class="col-md-1">&#8866;</div>
-            <div class="col-md-7 k4-nobreak k4-sequentRuleSucc">
-                <span class="k4-nobreak" ng-repeat="succ in stepDeriv.conclusion.succ">
-                    <span ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
+            <div class="col-md-12">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div ng-repeat="conclusion in [stepDeriv.conclusion]">
+                            <div class="row">
+                                <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+                                    <span ng-repeat="ante in conclusion.ante">
+                                        <span ng-bind-html="ante"></span>
+                                        {{$last ? '' : ','}}
+                                    </span>
+                                </span>
+                                <span class="col-md-1">&#8866;</span>
+                                <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+                                    <span ng-repeat="succ in conclusion.succ">
+                                        <span ng-bind-html="succ"></span>
+                                        {{$last ? '' : ','}}
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
