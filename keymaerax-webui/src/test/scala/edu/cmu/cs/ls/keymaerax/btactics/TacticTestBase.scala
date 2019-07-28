@@ -65,13 +65,20 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       "tcpip" -> Configuration(Configuration.Keys.MATH_LINK_TCPIP))
   }
 
+  def configFileWolframEngineConfig: Map[String, String] = {
+    Map(
+      "linkName" -> Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
+      "libDir" -> Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR),
+      "tcpip" -> Configuration(Configuration.Keys.WOLFRAMENGINE_TCPIP))
+  }
+
   // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
   private val WOLFRAM = System.getProperty("WOLFRAM", "Mathematica")
 
   //@note Initialize once per test class, but only if requested in a withMathematica call
   private var mathematicaProvider =
     if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
-    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new WolframEngineToolProvider(configFileMathematicaConfig))
+    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new WolframEngineToolProvider(configFileWolframEngineConfig))
     else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new WolframScriptToolProvider)
     else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
