@@ -1710,7 +1710,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case Some(mismatch) => BooleanResponse(flag=false, Some(mismatch))
       }
     } catch {
-      case ex: ParseException => BooleanResponse(flag=false, Some(ex.msg))
+      case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
     }
   }
 
