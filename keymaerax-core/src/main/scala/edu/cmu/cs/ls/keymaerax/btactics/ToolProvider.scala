@@ -183,25 +183,39 @@ class PolyaToolProvider extends PreferredToolProvider({ val p = new Polya; p.ini
   def tool(): Polya = tools().head.asInstanceOf[Polya]
 }
 
+/** Base class for Wolfram tools with alternative names. */
+abstract class WolframToolProvider(tool: Tool, alternativeNames: List[String]) extends PreferredToolProvider(tool :: Nil) {
+  protected def alternativeTool[T](name: Option[String], factory: Option[String] => Option[T]): Option[T] = factory(name) match {
+    case None => name match {
+      case Some(t) if alternativeNames.contains(t) => defaultTool().filter(_.isInstanceOf[T]).map(_.asInstanceOf[Tool with T])
+      case _ => None
+    }
+    case t => t
+  }
+  override def qeTool(name: Option[String] = None): Option[QETool] = alternativeTool(name, super.qeTool)
+  override def invGenTool(name: Option[String] = None): Option[InvGenTool] = alternativeTool(name, super.invGenTool)
+}
+
+
 /** A tool provider that initializes tools to Mathematica.
   * @param config The Mathematica configuration (linkName, libDir).
   * @author Stefan Mitsch
   */
-class MathematicaToolProvider(config: Configuration) extends PreferredToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "Mathematica"); m.init(config); m :: Nil }) {
+class MathematicaToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "Mathematica"); m.init(config); m }, "WolframEngine" :: "WolframScript" :: Nil) {
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
 /** A tool provider that initializes tools to Wolfram Engine.
   * @author Stefan Mitsch
   */
-class WolframEngineToolProvider(config: Configuration) extends PreferredToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "WolframEngine"); m.init(config); m :: Nil }) {
+class WolframEngineToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "WolframEngine"); m.init(config); m }, "Mathematica" :: "WolframScript" :: Nil) {
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
 /** A tool provider that initializes tools to Wolfram Script backend.
   * @author Stefan Mitsch
   */
-class WolframScriptToolProvider extends PreferredToolProvider({ val m = new Mathematica(new WolframScript, "WolframScript"); m.init(Map.empty); m :: Nil }) {
+class WolframScriptToolProvider extends WolframToolProvider({ val m = new Mathematica(new WolframScript, "WolframScript"); m.init(Map.empty); m}, "Mathematica" :: "WolframEngine" :: Nil) {
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
