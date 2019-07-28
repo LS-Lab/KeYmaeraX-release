@@ -217,6 +217,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
 
       scope.deductionPath.isCollapsed = true;
+
+      scope.manyDigits = '|123456789'.repeat(15);
+      scope.characterWidthSequent = {
+        ante: [ { formula: { json: { plain: scope.manyDigits, text: scope.manyDigits }, string: scope.manyDigits } } ],
+        succ: [ { formula: { json: { plain: scope.manyDigits, text: scope.manyDigits }, string: scope.manyDigits } } ]
+      };
+
+      scope.characterMeasure = sequentProofData.characterMeasure
     }
 
     return {

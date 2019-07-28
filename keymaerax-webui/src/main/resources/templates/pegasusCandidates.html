@@ -1,0 +1,33 @@
+<div class="modal-header">
+    <h3 class="modal-title">ODE Invariants and Invariant Candidates</h3>
+</div>
+<div class="modal-body" ng-if="candidates.length > 0" ng-cloak>
+    <p>
+        In the panels below, found invariants and invariant candidates are listed.
+        Each panel contains an invariant (chain) or invariant candidate (chain).
+        The lists of formulas are given in the order of their recommended differential cuts:
+        use <code>dC</code> to supply the formulas one-by-one in the order given, and use the recommended method to
+        prove the invariant (or <code>ODE</code> to automatically search for a proof).
+    </p>
+    <div ng-class="{'panel': true, 'panel-default': c.isInv, 'panel-warning': !c.isInv}" ng-repeat="c in candidates">
+        <div class="panel-heading">
+            <h4 class="panel-title" ng-if="c.isInv" ng-cloak>Invariant</h4>
+            <h4 class="panel-title" ng-if="!c.isInv" ng-cloak>Candidate (may not be sufficient)</h4>
+        </div>
+        <div class="panel-body">
+            <ol>
+                <li ng-repeat="fml in c.fmls">
+                    <p ng-if="fml.method !== '' && fml.method !=='Unknown'">Prove with <code>{{fml.method}}</code></p>
+                    <p ng-if="fml.method === '' || fml.method ==='Unknown'">Prove with <code>ODE</code></p>
+                    <code>{{fml.text}}</code>
+                </li>
+            </ol>
+        </div>
+    </div>
+</div>
+<div class="modal-body" ng-if="candidates.length <= 0" ng-cloak>
+    <p>No invariant (candidates) found.</p>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary" ng-click="cancel()">Ok</button>
+</div>

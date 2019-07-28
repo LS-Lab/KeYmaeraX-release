@@ -16,7 +16,8 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
     }
 }]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$http', 'sessionService', function ($scope, $uibModal, $http, sessionService) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$http', 'sessionService',
+    function ($scope, $uibModal, $http, sessionService) {
   $scope.intro = {
     introOptions: {},
     firstTime: false

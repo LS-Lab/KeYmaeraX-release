@@ -62,30 +62,26 @@ object KeYmaeraX {
   private type OptionMap = Map[Symbol, Any]
 
   /** Usage -help information.
-    *
     * @note Formatted to 80 characters terminal width. */
-  val usage: String = "KeYmaera X Prover" + " " + VERSION +
-    """
-      |
-      |Usage: java -jar keymaerax.jar
+  val usage: String =
+    """Usage: java -jar keymaerax.jar
+      |  -ui [web server options] |
       |  -prove file.kyx [-out file.kyp] [-timeout seconds] [-verbose] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
       |     [-quantitative ctrl|model|plant] |
-      |  -ui [web server options] |
       |  -striphints file.kyx -out fileout.kyx
       |
       |Actions:
-      |  -prove     run prover on given archive
-      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
-      |  -codegen   generate executable code from given model file
       |  -ui        start web user interface with optional server arguments (default)
+      |  -prove     run prover on given archive of models or proofs
+      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
+      |  -codegen   generate executable C code from given model file
       |  -striphints remove all proof annotations from the model
       |  -parse     return error code 0 if the given model file parses
       |  -bparse    return error code 0 if given bellerophon tactic file parses
-      |  -repl      prove interactively from REPL command line
-      |  -coasterx  verify roller coasters
+      |  -repl      prove given model interactively from REPL command line
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for real arithmetic
@@ -107,8 +103,7 @@ object KeYmaeraX {
       |  -license  Show license agreement for using this software
       |
       |Copyright (c) Carnegie Mellon University.
-      |Use option -license to show the license conditions.
-      |""".stripMargin
+      |Use option -license to show the license conditions.""".stripMargin
 
 
   private def launched() {
@@ -139,9 +134,6 @@ object KeYmaeraX {
             else options ++ configFromFile("mathematica"))
         }
         codegen(options)
-      } else if (options.get('mode).contains("coasterx")) {
-        CoasterXMain.main(options)
-        shutdownProver()
       }
       else if (!options.get('mode).contains("ui") ) {
         try {
@@ -183,39 +175,6 @@ object KeYmaeraX {
     })
   }
 
-  // Separate argument parsing function so that options (e.g. the -tactic option) can be different for coasterx vs.
-  // regular usage
-  private def nextCoasterOption(map: OptionMap, list: List[String]): OptionMap = {
-    //-coasterx (-component component-name [-formula] [-tactic] [-stats] | -coaster filename.rctx -feet-per-unit X [-velocity V] [-formula] [-stats] | -table2)
-    list match {
-      case "-debug-level" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('debugLevel -> value), tail)
-        else optionErrorReporter("-debug-level")
-      case "-component" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "component", 'in -> value), tail)
-        else optionErrorReporter("-component")
-      case "-table" :: tail => nextCoasterOption(map ++ Map('coasterxMode -> "table"), tail)
-      case "-formula" :: tail => nextCoasterOption(map ++ Map('doFormula -> "true"), tail)
-      case "-tactic" :: tail => nextCoasterOption(map ++ Map('doTactic -> "true"), tail)
-      case "-stats" :: tail => nextCoasterOption(map ++ Map('doStats -> "true"), tail)
-      case "-compare-reuse" :: tail => nextCoasterOption(map ++ Map('compareReuse -> "true"), tail)
-      case "-num-runs" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('numRuns -> value), tail)
-        else optionErrorReporter("-num-runs")
-      case "-coaster" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "coaster", 'in -> value), tail)
-        else optionErrorReporter("-coaster")
-      case "-naive-arith" :: tail =>
-        nextCoasterOption(map ++ Map('naiveArith -> "true"), tail)
-      case "-feet-per-unit" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('feetPerUnit -> value), tail)
-        else optionErrorReporter("-feet-per-unit")
-      case "-velocityFPS" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('velocity -> value), tail)
-        else optionErrorReporter("-velocityFPS")
-      case _ => map
-    }
-  }
 
   private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
@@ -245,8 +204,6 @@ object KeYmaeraX {
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
       case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
-      case "-coasterx" :: tail =>
-        nextCoasterOption(map ++ Map('mode -> "coasterx"), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
@@ -619,7 +576,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
     val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName).
-      filter(entry => entry.kind != "Exercise" && entry.kind != "exercise")
+      filter(entry => !entry.isExercise)
 
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 

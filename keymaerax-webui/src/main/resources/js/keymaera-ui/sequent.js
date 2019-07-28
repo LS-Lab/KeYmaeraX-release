@@ -10,6 +10,7 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             sequent: '=',
             readOnly: '=?',
             collapsed: '=?',
+            abbreviate: '=?',
             onApplyTactic: '&',
             onApplyInputTactic: '&',
             onApplyTwoPositionTactic: '&'

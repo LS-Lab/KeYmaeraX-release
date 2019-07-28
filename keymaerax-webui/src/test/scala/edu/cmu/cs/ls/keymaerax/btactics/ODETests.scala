@@ -32,8 +32,7 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "do a ghost with Z3" ignore withZ3 { _ =>
-    //@note Z3 does not implement AlgebraTool
+  it should "do a ghost with Z3" in withZ3 { _ =>
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
@@ -43,7 +42,7 @@ class ODETests extends TacticTestBase {
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
   }}
 
-  it should "prove a barrier certificate" in withMathematica { _ =>
+  it should "prove a barrier certificate" in withQE { _ =>
     val fml =
       """
         |x^2 <= 1/2 & y^2 <= 1/3 ->
@@ -210,7 +209,7 @@ class ODETests extends TacticTestBase {
     //@note now throws exception instead of stuttering
     the [BelleThrowable] thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1)) should have message
       """[Bellerophon Runtime] [Bellerophon User-Generated Message] ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.
-        |Expected 1 subgoal matching a condition at position 1 but got 1 subgoals, or sole subgoal formula [{x'=x^x&true}][x:=x;]x>0 does not match""".stripMargin
+        |Expected 1 subgoal matching a condition at position 1 but got 1 subgoals, or sole subgoal formula [{x'=x^x&true}]x>0 does not match""".stripMargin
   }
 
   it should "neither stutter nor fail evolution domain simplification on empty evolution domain constraint with Mathematica" in withMathematica { _ =>
@@ -296,23 +295,23 @@ class ODETests extends TacticTestBase {
     // split cases
     ("x>=1&y=10&a=-2 -> [{x'=y,y'=a+y^2-y&y>=0}](x>=1&y>=0)", "Any"),
     // auto-ghost
-    ("x>0->[{x'=-x}]x>0", "Mathematica"),
+    ("x>0->[{x'=-x}]x>0", "Any"),
     ("x>0->[{x'=x}]x>0", "Any"),
-    ("x>0->[{x'=-5*x}]x>0", "Mathematica"),
+    ("x>0->[{x'=-5*x}]x>0", "Any"),
     ("x>0->[{x'=5*x}]x>0", "Any"),
     ("x>0->[{x'=x+1}]x>0", "Any"),
-    ("z>0->[{z'=-z}]z>0", "Mathematica"),
+    ("z>0->[{z'=-z}]z>0", "Any"),
     ("z>0->[{z'=z}]z>0", "Any"),
     ("z>0->[{z'=z+1}]z>0", "Any"),
     //"x>0->[{x'=-x+1}]x>0",
-    ("x>0&a()>0->[{x'=-a()*x}]x>0", "Mathematica"),
-    ("x>0&a>0->[{x'=-a*x}]x>0", "Mathematica"),
-    ("x>0->[{x'=-a*x,a'=4&a>0}]x>0", "Mathematica"),
-    ("x>0->[{x'=-a*x,a'=-4&a>0}]x>0", "Mathematica"),
-    ("x>0&a()<0->[{x'=a()*x}]x>0", "Mathematica"),
-    ("x>0&a<0->[{x'=a*x}]x>0", "Mathematica"),
-    ("x>0&a()>0&c()<0->[{x'=a()*c()*x}]x>0", "Mathematica"),
-    ("x>0&a>0&c<0->[{x'=a*c*x}]x>0", "Mathematica"),
+    ("x>0&a()>0->[{x'=-a()*x}]x>0", "Any"),
+    ("x>0&a>0->[{x'=-a*x}]x>0", "Any"),
+    ("x>0->[{x'=-a*x,a'=4&a>0}]x>0", "Any"),
+    ("x>0->[{x'=-a*x,a'=-4&a>0}]x>0", "Any"),
+    ("x>0&a()<0->[{x'=a()*x}]x>0", "Any"),
+    ("x>0&a<0->[{x'=a*x}]x>0", "Any"),
+    ("x>0&a()>0&c()<0->[{x'=a()*c()*x}]x>0", "Any"),
+    ("x>0&a>0&c<0->[{x'=a*c*x}]x>0", "Any"),
     //("x>0&a>0&b>=0->[{x'=a*x+b}]x>0", "Any"),
     //"x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0",
     //"x>0&a<0&b>=0->[{x'=a*x+b}]x>0",
@@ -321,14 +320,14 @@ class ODETests extends TacticTestBase {
     // diffcut
     //"x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0",
     // misc
-    ("x>0->[{x'=-x+1}]x>0", "Mathematica"),
+    ("x>0->[{x'=-x+1}]x>0", "Any"),
     //("x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0", "Mathematica"), @note DGauto can prove, but not ODE
     //("x>0&a<0&b>=0->[{x'=a*x+b}]x>0", "Mathematica"), @note DGauto can prove, but not ODE
-    ("x^3>0&a<0&b>0->[{x'=a*x+b}]x^3>0", "Mathematica"),
+    ("x^3>0&a<0&b>0->[{x'=a*x+b}]x^3>0", "Any"),
     ("x>0->[{x'=x^3+x}]x>0", "Any"),
-    ("x>0->[{x'=-x^3-x}]x>0", "Mathematica"),
+    ("x>0->[{x'=-x^3-x}]x>0", "Any"),
     ("x^3>0->[{x'=x^3+x^4}]x^3>0", "Any"),
-    ("x^3>0->[{x'=-x^3-x^4}]x^3>0", "Mathematica"),
+    ("x^3>0->[{x'=-x^3-x^4}]x^3>0", "Any"),
     // exams
     ("x>=1|x^3>=8->[{x'=x^4+x^2}](x>=1|x^3>=8)", "Any"),
     ("x^3-4*x*y>=99->[{x'=4*x,y'=3*x^2-4*y}]x^3-4*x*y>=99", "Any"),
@@ -352,7 +351,7 @@ class ODETests extends TacticTestBase {
     ("d1^2+d2^2=w()^2*p^2&d1=-w()*x2&d2=w()*x1 -> [{x1'=d1,x2'=d2,d1'=-w()*d2,d2'=w()*d1}](d1^2+d2^2=w()^2*p^2&d1=-w()*x2&d2=w()*x1)", "Any"),
     ("d1^2+d2^2=w^2*p^2&d1=-w*x2&d2=w*x1 -> [{x1'=d1,x2'=d2,d1'=-w*d2,d2'=w*d1}](d1^2+d2^2=w^2*p^2&d1=-w*x2&d2=w*x1)", "Any"),
     // more
-    ("x>-1->[{x'=-x-1}]x>-1", "Mathematica"),
+    ("x>-1->[{x'=-x-1}]x>-1", "Any"),
     // improved
     ("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8", "Any"),
     ("x>=1->[{x'=x^2+2*x^4}]x^3>=x^2", "Any") // @generalize(x>=1)&dI

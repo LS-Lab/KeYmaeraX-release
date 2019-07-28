@@ -27,6 +27,8 @@ libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.1"
 
 libraryDependencies += "io.spray" %% "spray-json" % "1.3.4"
 
+libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
+
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -47,31 +47,31 @@ If[USEDW && TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Print[
 Do[p=SIMPLIFY[A0[[i]],H0]; 
 
 (* DC check 0 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p==0]],vars,Reals]]) && (TrueQ[LZZ`InvS[p==0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p==0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p==0, f, vars, H0]]),
 Print["DC on ", p==0];
 Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p==0), Reals]}, Delete[A0,i], Join[cuts,{p==0}]]]
 ];
 
 (* DC strict check 1 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>0]],vars,Reals]]) && (TrueQ[LZZ`InvS[p>0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>0, f, vars, H0]]),
 Print["DC on ", p>0];
 Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p>0), Reals]}, Delete[A0,i], Join[cuts,{p>0}]]]
 ];
 
 (* DC strict check 2 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvS[p<0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<0, f, vars, H0]]),
 Print["DC on ", p<0];
 Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<0), Reals]}, Delete[A0,i], Join[cuts,{p<0}]]]
 ];
 
 (* DC nonstrict check 1 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvS[p>=0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
 Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]}, Delete[A0,i], Join[cuts,{p>=0}]]]
 ];
 
 (* DC nonstrict check 2 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<=0]],vars,Reals]]) && (TrueQ[LZZ`InvS[p<=0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
 Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]}, Delete[A0,i], Join[cuts,{p<=0}]]]
 ];
@@ -120,19 +120,19 @@ If[TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Throw[H0] ];
 Do[p=A0[[i]];
 
 (* DC check 1 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvS[p>=0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
 Throw[DWCLZR[precond,postcond,{f,vars,(H0 && p>=0)}, Delete[A0,i]]]
 ];
 
 (* DC check 2 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvS[p<=0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
 Throw[DWCLZR[precond,postcond,{f,vars, (H0 && p<=0)}, Delete[A0,i]]]
 ]; 
 
 (* DDC check 
-If[TrueQ[TrueQ[LZZ`InvS[p==0, f, vars, H0]] && TrueQ[LZZ`InvS[p==0, -f, vars, H0]]],
+If[TrueQ[TrueQ[LZZ`InvSFast[p==0, f, vars, H0]] && TrueQ[LZZ`InvSFast[p==0, -f, vars, H0]]],
 Print["DDC on ", p==0];
 GT=DWCLZR[precond,postcond,{f,vars, (H0 && p<0 )},Delete[A0,i]];
 EQ=DWCLZR[precond,postcond,{f,vars, (H0 && p==0)},Delete[A0,i]];

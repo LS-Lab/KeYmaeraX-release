@@ -25,7 +25,8 @@ Begin["`Private`"];
 FirstIntegrals[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat},
 {pre, { vf, vars, Q }, post} = problem;
 
-deg = 10;
+(* Heuristic *)
+deg = Max[10-Length[vars],1];
 rat = 10000;
 
 (* Create rationalization function wrappers *)
@@ -46,7 +47,10 @@ Union[maxVs,minVs]
 SummandFacts[problem_List]:=DeleteDuplicates[Join[QualitativeAbstraction`SummandFactors[problem], Flatten[QualitativeAbstraction`SFactorList[problem]]]]
 
 
-DbxPoly[problem_List] := QualitativeAbstraction`DarbouxPolynomials[problem, 5, 10]
+DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat},
+{pre, { vf, vars, Q }, post} = problem;
+QualitativeAbstraction`DarbouxPolynomials[problem, 10, Max[10-Length[vars],1]]
+]
 
 
 (* Round to precisions 2,4,6,8 *)
@@ -58,6 +62,8 @@ If[Length[cr] > 0,Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]
 
 BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS},
   {pre, { vf, vars, Q }, post} = problem;
+  If[pre===True,Return[{}]];
+  If[post===False,Return[{}]];
   polySOS=BarrierCertificates`SOSBarrierMATLAB[problem];
   Flatten[Map[RoundPolys[#,vars]&,polySOS]]
 ]]

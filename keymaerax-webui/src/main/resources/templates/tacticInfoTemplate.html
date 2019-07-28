@@ -70,6 +70,8 @@
             <div class="pull-right">
             <span ng-if="tactic.selectedDerivation().derivation.help"
                   uib-popover-html="tactic.selectedDerivation().derivation.help"
+                  popover-append-to-body="true"
+                  popover-class="k4-axiomtactichelp-popover"
                   popover-placement="bottom-right"
                   popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
                 <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>

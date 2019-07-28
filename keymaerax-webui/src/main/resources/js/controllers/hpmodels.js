@@ -116,12 +116,12 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     steps: [
     {
         element: '#modelarchiving',
-        intro: "Extract all models (with or without) their proofs into a .kya archive file.",
+        intro: "Extract all models (with or without) their proofs into a .kyx archive file.",
         position: 'bottom'
     },
     {
         element: '#modelupload',
-        intro: "Upload .kyx model files or .kya archive files.",
+        intro: "Upload .kyx model files or .kyx archive files.",
         position: 'bottom'
     },
     {
@@ -233,7 +233,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
@@ -242,7 +242,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/downloadAllModels/noProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kya');
+      FileSaver.saveAs(data, 'models_' + currentDateString() + '.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
@@ -252,7 +252,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/downloadAllModels/withProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kya');
+      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
@@ -262,10 +262,29 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('modelProofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/model/" + modelId + "/downloadProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kya');
+      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kyx');
     })
     .finally(function() { spinnerService.hide('modelProofExportSpinner'); });
   }
+
+  $scope.deleteAll = function() {
+      var modalInstance = $uibModal.open({
+        templateUrl: 'partials/deleteallmodelsdialog.html',
+        controller: 'DeleteAllModelsDialogCtrl',
+        size: 'sm'
+      });
+
+      modalInstance.result.then(function () {
+        // modal ok
+        spinnerService.show('modelDeleteAllSpinner');
+        $http.get("/models/user/" + $scope.userId + "/delete/all").then(function(response) {
+           $route.reload();
+        })
+        .finally(function() { spinnerService.hide('modelDeleteAllSpinner'); });
+      }, function () {
+        // modal dismissed
+      });
+    }
 
   $scope.openTactic = function (modelid) {
       var modalInstance = $uibModal.open({
@@ -444,4 +463,9 @@ angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', func
   });
 
   $scope.ok = function () { $uibModalInstance.close(); };
+});
+
+angular.module('keymaerax.controllers').controller('DeleteAllModelsDialogCtrl', function ($scope, $uibModalInstance) {
+  $scope.ok = function () { $uibModalInstance.close(); };
+  $scope.cancel = function () { $uibModalInstance.dismiss('cancel'); };
 });

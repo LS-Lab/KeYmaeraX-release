@@ -182,7 +182,7 @@ object RestApi extends Logging {
       post {
         entity(as[String]) { themeStr => {
           val theme = themeStr.parseJson.asJsObject.fields.map({case (k,v) => k -> v.toString})
-          val request = new SetUserThemeRequest(database, userId, theme("css"), theme("fontSize"))
+          val request = new SetUserThemeRequest(database, userId, theme("css"), theme("fontSize"), theme("renderMargins"))
           completeRequest(request, t)
         }}}
   }}
@@ -365,6 +365,14 @@ object RestApi extends Logging {
       val allModels = database.getModelList(userId).map(_.modelId)
       val request = new ExtractModelSolutionsRequest(database, userId, allModels,
         withProofs = proofs == "withProofs", exportEmptyProof = true)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val deleteAllModels: SessionToken=>Route = (t : SessionToken) => path("models" / "user" / Segment / "delete" / "all") { userId => { pathEnd {
+    get {
+      //@note potential performance bottleneck: loads all models just to get ids
+      val request = new DeleteAllModelsRequest(database, userId)
       completeRequest(request, t)
     }
   }}}
@@ -769,6 +777,24 @@ object RestApi extends Logging {
       }}
     }
 
+    val odeConditions: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "odeConditions") { (userId, proofId, nodeId) => {
+      pathEnd {
+        get {
+          val request = new ODEConditionsRequest(database, userId, proofId, nodeId)
+          completeRequest(request, t)
+        }
+      }}
+    }
+
+    val pegasusCandidates: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pegasusCandidates") { (userId, proofId, nodeId) => {
+      pathEnd {
+        get {
+          val request = new PegasusCandidatesRequest(database, userId, proofId, nodeId)
+          completeRequest(request, t)
+        }
+      }}
+    }
+
     val setupSimulation: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "setupSimulation") { (userId, proofId, nodeId) => {
       pathEnd {
         get {
@@ -1155,6 +1181,8 @@ object RestApi extends Logging {
     extractLemma          ::
     downloadProblemSolution ::
     counterExample        ::
+    odeConditions         ::
+    pegasusCandidates     ::
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
@@ -1170,6 +1198,7 @@ object RestApi extends Logging {
     browseProofRoot       ::
     browseNodeChildren    ::
     deleteModelProofSteps ::
+    deleteAllModels       ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

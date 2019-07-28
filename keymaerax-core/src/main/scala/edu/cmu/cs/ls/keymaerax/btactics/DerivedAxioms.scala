@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, OnAll, PosInExpr, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import edu.cmu.cs.ls.keymaerax.core._
@@ -1099,6 +1099,18 @@ object DerivedAxioms extends Logging {
   )*/
 
   /**
+    * {{{Axiom "[':=] differential assign y".
+    *    [y_':=f();]p(y_') <-> p(f())
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val assignDAxiomby = derivedAxiom("[':=] differential assign y",
+    Sequent(IndexedSeq(), IndexedSeq("[y_':=f();]p(y_') <-> p(f())".asFormula)),
+    byUS(assignDAxiomb))
+
+  /**
     * {{{Axiom "<':=> differential assign".
     *    <v':=t();>p(v') <-> p(t())
     * End.
@@ -1421,6 +1433,15 @@ object DerivedAxioms extends Logging {
     */
   lazy val existsGeneralize = derivedAxiom("exists generalize",
     Sequent(IndexedSeq(), IndexedSeq("p_(f()) -> (\\exists x_ p_(x_))".asFormula)),
+    useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+      implyR(SuccPos(0)) &
+      notR(SuccPos(0)) &
+      useAt("all instantiate", PosInExpr(0::Nil))(-2) &
+      prop
+  )
+
+  lazy val existsGeneralizey = derivedAxiom("exists generalize y",
+    Sequent(IndexedSeq(), IndexedSeq("p_(f()) -> (\\exists y_ p_(y_))".asFormula)),
     useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
       implyR(SuccPos(0)) &
       notR(SuccPos(0)) &
@@ -2321,6 +2342,106 @@ object DerivedAxioms extends Logging {
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1) &
       byUS(", commute")
+  )
+
+  private val dbx_internal = Variable("y_", None, Real)
+  /**
+    * {{{Axiom "DBX>".
+    *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e)'>=g*e
+    * End.
+    * }}}
+    * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[darbouxOpenGt]]
+    */
+  lazy val darbouxGt = derivedAxiom("DBX>",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
+    implyR(1) & implyR(1) &
+      dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
+      useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+        //(Variable("y_",None,Real), dbx_internal) ::
+        (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
+          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(BigDecimal(0))) :: Nil))(-1) &
+      //The following replicates functionality of existsR(Number(1))(1)
+      // 1) Stutter
+      cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
+        cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1) <(
+          //2) assignb
+          useAt("[:=] assign equality y")(1) &
+          ProofRuleTactics.skolemizeR(1) & implyR(1),
+          //3) finish up
+          cohide(1) & CMon(PosInExpr(Nil)) &
+          byUS("exists generalize y",(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+          )
+        ,
+        cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS("[:=] self assign y") & done
+        ) &
+      useAt(CoreAxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+      useAt(", commute")(-1) & //@note since DG inverse differential ghost has flipped order
+      cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
+        useAt("DI differential invariant")(1) & implyR(1) & andR(1) <(
+          hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>0".asFormula,"y()=1".asFormula), IndexedSeq("e()*y()^2>0".asFormula)), QE & done)),
+          derive(1, PosInExpr(1::Nil)) &
+          useAt(", commute")(1) & useAt("DE differential effect (system) y")(1) &
+          useAt(assignDAxiomby, PosInExpr(0::Nil))(1, PosInExpr(1::Nil)) &
+          cohide2(-1,1) & monb &
+          // DebuggingTactics.print("DI finished") &
+          byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("ep()>=g()*e()".asFormula), IndexedSeq("ep()*y()^2 + e()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
+          ),
+        implyR(1) &
+        // DebuggingTactics.print("new post") &
+        cohide2(-4, 1) & monb & byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>0".asFormula), IndexedSeq("e()>0".asFormula)), QE & done))
+        )
+  )
+
+  /**
+    * {{{Axiom "DBX> open".
+    *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e>0 -> (e)'>=g*e)
+    * End.
+    * }}}
+    * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[darbouxGt]]
+    */
+  lazy val darbouxOpenGt = derivedAxiom("DBX> open",
+    Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
+    implyR(1) & implyR(1) &
+      dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
+      useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+        //(Variable("y_",None,Real), dbx_internal) ::
+        (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
+          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(BigDecimal(0))) :: Nil))(-1) &
+      //The following replicates functionality of existsR(Number(1))(1)
+      // 1) Stutter
+      cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
+        cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1) <(
+          //2) assignb
+          useAt("[:=] assign equality y")(1) &
+            ProofRuleTactics.skolemizeR(1) & implyR(1),
+          //3) finish up
+          cohide(1) & CMon(PosInExpr(Nil)) &
+            byUS("exists generalize y",(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
+          )
+        ,
+        cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS("[:=] self assign y") & done
+        ) &
+      useAt(CoreAxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+      useAt(", commute")(-1) & //@note since DG inverse differential ghost has flipped order
+      cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
+        useAt("DIo open differential invariance >")(1) <(
+          testb(1) & implyR(1) & hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>0".asFormula,"y()=1".asFormula), IndexedSeq("e()*y()^2>0".asFormula)), QE & done)),
+          implyR(1) & hideL(-4) &
+          derive(1, PosInExpr(1::1::Nil)) &
+          useAt(", commute")(1) & useAt("DE differential effect (system) y")(1) &
+          useAt(assignDAxiomby, PosInExpr(0::Nil))(1, PosInExpr(1::Nil)) &
+          cohide2(-1,1) & monb &
+          // DebuggingTactics.print("DI finished") &
+          byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e() > 0 -> ep()>=g()*e()".asFormula), IndexedSeq("e()*y()^2 >0 -> ep()*y()^2 + e()*(2*y()^(2-1)*((-g()/2)*y()+0))>=0".asFormula)), QE & done))
+          ),
+        implyR(1) &
+          // DebuggingTactics.print("new post") &
+          cohide2(-4, 1) & monb & byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()*y()^2>0".asFormula), IndexedSeq("e()>0".asFormula)), QE & done))
+        )
   )
 
   /**

@@ -119,6 +119,10 @@ object SetLattice {
       //@note if no differential symbols were excluded (such as in V\cup V' or topVarsDiffVars),
       //@note then the lattice is already closed under ' so only literal symbols are augmented with '
       CoFiniteSet(excluded, extendToDifferentialSymbols(symbols))
+    case CoFiniteSet(excluded, symbols) if excluded.forall(x => !x.isInstanceOf[BaseVariable] || excluded.contains(DifferentialSymbol(x))) =>
+      //@note if no differential symbols were excluded (such as in V\cup V' or topVarsDiffVars),
+      //@note then the lattice is already closed under ' so only literal symbols are augmented with '
+      sl
     case sl:CoFiniteSet[Variable] =>
       assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite: " + sl); ???
   }

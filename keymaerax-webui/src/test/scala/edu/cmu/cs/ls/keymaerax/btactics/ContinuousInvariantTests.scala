@@ -183,6 +183,15 @@ class ContinuousInvariantTests extends TacticTestBase {
     proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1)).subgoals.loneElement shouldBe "==> false".asSequent
   }
 
+  it should "generate necessary formulas" in withMathematica { tool =>
+    val (invnec,seqnec) = tool.genODECond(
+      "{x'=1}".asProgram.asInstanceOf[ODESystem],
+      "x=1".asFormula :: Nil,
+      "x=1".asFormula)
+
+    invnec shouldBe List("x=1->(1+-1*x < 0|1+-1*x=0)&-1+x < 0".asFormula,"x!=1->!(1+-1*x < 0&(-1+x < 0|-1+x=0))".asFormula)
+    seqnec shouldBe List("true".asFormula,"x=1->(1+-1*x < 0|1+-1*x=0)&-1+x < 0".asFormula, "x!=1->!(1+-1*x < 0&(-1+x < 0|-1+x=0))".asFormula)
+  }
 
 //  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
 //    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)

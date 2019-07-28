@@ -149,12 +149,12 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     case _ => super.wrap(text, expr)
   }
 
-  protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
-    case FuncOf(f, Nothing) => f.asString + "()"
-    case t: Power =>
-      wrapLeft(t, pp(q++0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" + wrapRight(t, pp(q++1, t.right)) + s"$HTML_OPEN/sup$HTML_CLOSE"
+  protected override def pp(q: PosInExpr, term: Term): String = term match {
+    case FuncOf(f, Nothing) => emit(q, f.asString + "()")
+    case t: Power => emit(q, wrapLeft(t, pp(q++0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" +
+      wrapRight(t, pp(q++1, t.right)) + s"$HTML_OPEN/sup$HTML_CLOSE")
     case _ => super.pp(q, term)
-  })
+  }
 
   private def wrap(id: String, content: String, plain: Boolean, editable: Boolean): String =
     if (plain && editable)

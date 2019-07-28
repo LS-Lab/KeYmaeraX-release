@@ -35,7 +35,9 @@ class BelleThrowable(message: => String, cause: Throwable = null) extends Prover
 
 /** Signals an unexpected proof state (e.g., an open goal that should have been closed). */
 class BelleUnexpectedProofStateError(message: => String, val proofState: Provable, cause: Throwable = null)
-  extends BelleThrowable(message, cause)
+  extends BelleThrowable(message, cause) {
+    override def toString: String = "message " + proofState.prettyString
+}
 
 /** Syntactic and semantic errors in bellerophon tactics, such as forgetting to provide an expected position.
   * BelleInterpreter will raise the error to the user's attention. */

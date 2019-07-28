@@ -65,6 +65,7 @@ class InvariantGeneratorTests extends TacticTestBase {
       }
       override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = true
       override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = None
+      override def genODECond(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = (Nil,Nil)
     }
 
     ToolProvider.setProvider(new MathematicaToolProvider(configFileMathematicaConfig) {
@@ -113,6 +114,7 @@ class InvariantGeneratorTests extends TacticTestBase {
           }
           override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = ???
           override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = ???
+          override def genODECond(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = ???
         })
       }
     }

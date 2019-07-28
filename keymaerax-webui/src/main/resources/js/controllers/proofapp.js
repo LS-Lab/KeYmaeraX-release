@@ -1,10 +1,10 @@
-angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$http', 'sessionService', function ($scope, $http, sessionService) {
+angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$http', '$routeParams', 'sessionService', 'sequentProofData', function ($scope, $http, $routeParams, sessionService, sequentProofData) {
 
   $scope.theme = {css: 'app', name: 'KeYmaera X', fontSize: 14};
 
   $scope.themes = [
-    {css: 'app', name: 'KeYmaera X', fontSize: 14},
-    {css: 'presentation', name: 'High Contrast', fontSize: 18}
+    {css: 'app', name: 'KeYmaera X', fontSize: 14, renderMargins: [40,80]},
+    {css: 'presentation', name: 'High Contrast', fontSize: 18, renderMargins: [30,60]}
   ];
 
   setTheme = function(newTheme) {
@@ -12,6 +12,7 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
     if (savedTheme.length > 0) {
       $scope.theme = savedTheme[0];
       $scope.theme.fontSize = newTheme.themeFontSize;
+      $scope.theme.renderMargins = newTheme.renderMargins;
       $(document.documentElement).get(0).style.setProperty('--lsfontsize',newTheme.themeFontSize + 'px');
     }
   }
@@ -21,11 +22,16 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
   });
 
   $scope.selectTheme = function(theme) {
-    if (theme.css && theme.fontSize) {
-      $http.post('/users/' + sessionService.getUser() + '/theme', {css: theme.css, fontSize: theme.fontSize}).then(function(response) {
+    if (theme.css && theme.fontSize && theme.renderMargins && theme.renderMargins[0] && theme.renderMargins[1]) {
+      $http.post('/users/' + sessionService.getUser() + '/theme', {css: theme.css, fontSize: theme.fontSize, renderMargins: theme.renderMargins}).then(function(response) {
         setTheme(response.data);
+        sequentProofData.fetchAgenda($scope, sessionService.getUser(), $routeParams.proofId);
       });
     }
+  }
+
+  $scope.showCharacterMeasure = function(doShow) {
+    sequentProofData.characterMeasure.show = doShow;
   }
 
 }])

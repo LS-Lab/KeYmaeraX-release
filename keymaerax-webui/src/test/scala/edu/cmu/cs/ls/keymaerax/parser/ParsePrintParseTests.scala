@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -128,5 +127,10 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       // asFormula runs the parser, but declares the variables occurring in the formula
       KeYmaeraXPrettyPrinter(expected).asFormula shouldBe expected
     }
+  }
+
+  "Prettier printer" should "print spaces to disambiguate negation from negative number" in {
+    new KeYmaeraXPrettierPrinter(50)("-(1*10)<=20".asFormula) shouldBe "- 1 * 10 <= 20"
+    new KeYmaeraXPrettierPrinter(50)("-x<=20".asFormula) shouldBe "-x <= 20"
   }
 }

@@ -164,6 +164,57 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     }
   }
 
+  override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = {
+    require(postCond.isFOL, "Unable to refute ODE, expected FOL post conditions but got " + postCond.prettyString)
+    require(assumptions.forall(_.isFOL), "Unable to refute ODE, expected FOL assumptions but got " + assumptions)
+
+    // LHS of ODEs
+    val odevars = DifferentialHelper.getPrimedVariables(ode)
+
+    val rhs = DifferentialHelper.atomicOdes(ode).map(_.e)
+    // All things that need to be considered as parameters (or variables)
+    val fmlvars = (assumptions :+ postCond :+ ode.constraint).flatMap(StaticSemantics.symbols)
+    val trmvars = rhs.flatMap(StaticSemantics.symbols)
+
+    val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
+      .map({
+        case f@Function(_,_,Unit,_,_) =>
+          FuncOf(f,Nothing) //for k2m conversion to work reliably on constants
+        case e => e
+      } )
+
+    val stringodeVars = "{" + odevars.map(k2m(_)).mkString(", ") + "}"
+    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
+    val vectorField = "{" + rhs.map(k2m(_)).mkString(", ") + "}"
+    val problem =
+      k2m(assumptions.reduceOption(And).getOrElse(True)) + "," +
+        k2m(postCond) + "," +
+        vectorField + ", " +
+        stringodeVars + ", " +
+        k2m(ode.constraint)
+
+    val command = s"""
+                     |$setPathsCmd
+                     |Needs["Refute`","Refute.m"];
+                     |Refute`SeqFml[$problem]""".stripMargin.trim()
+
+    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+
+    try {
+      val (output, result) = runUnchecked(command)
+      result match {
+        case And(Equal(_,n:Number), And(And(And( And(i1,i2),n1) ,n2) ,n3)) => {
+          assert(n.value.toInt == 5)
+          (List(i1,i2),List(n1,n2,n3))
+        }
+        case _ => {
+          logger.warn("Incorrect pattern returned: " + output)
+          (List(),List())
+        }
+      }
+    }
+  }
+
   private def init(): Unit = {
     // copy Pegasus Mathematica notebooks
     val pegasusTempDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
@@ -173,6 +224,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val pegasusResourceNames =
       "Primitives/BarrierCertificates.m" ::
       "Primitives/DarbouxPolynomials.m" ::
+      "Primitives/Dependency.m" ::
       "Primitives/DiscreteAbstraction.m" ::
       "Primitives/FirstIntegrals.m" ::
       "Primitives/LZZ.m" ::

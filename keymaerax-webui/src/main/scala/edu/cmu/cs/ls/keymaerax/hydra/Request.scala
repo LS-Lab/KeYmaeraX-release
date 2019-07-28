@@ -289,6 +289,59 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
   }
 }
 
+class ODEConditionsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case Some(node) =>
+        try {
+          node.goal match {
+            case Some(sequent) => sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
+              case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
+                case Some(tool) =>
+                  val (sufficient, necessary) = tool.genODECond(ode, sequent.ante, post)
+                  new ODEConditionsResponse(sufficient, necessary) :: Nil
+                case None => new ODEConditionsResponse(Nil, Nil) :: Nil
+              }
+              case None => new ErrorResponse("ODE system needed to search for ODE conditions, but succedent does not contain an ODE system or ODE system may not be at top level. Please perform additional proof steps until ODE system is at top level.") :: Nil
+            }
+            case None => new ErrorResponse("ODE system needed to search for ODE conditions, but goal is empty.") :: Nil
+          }
+        } catch {
+          case _: MathematicaComputationAbortedException => new ErrorResponse("ODE conditions search timeout.") :: Nil
+        }
+    }
+  }
+}
+
+class PegasusCandidatesRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case Some(node) =>
+        try {
+          node.goal match {
+            case Some(sequent) => sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
+              case Some(Box(ode: ODESystem, post)) if post.isFOL => ToolProvider.invGenTool() match {
+                case Some(tool) =>
+                  val invs = tool.invgen(ode, sequent.ante, post)
+                  new PegasusCandidatesResponse(invs) :: Nil
+                case None => new PegasusCandidatesResponse(Nil) :: Nil
+              }
+              case Some(Box(_, post)) if !post.isFOL => new ErrorResponse("Post-condition in FOL is needed to search for invariants; please perform further proof steps until the post-condition of the ODE is a formula in first-order logic.") :: Nil
+              case None => new ErrorResponse("ODE system needed to search for invariant candidates, but succedent does not contain an ODE system or ODE system may not be at top level. Please perform additional proof steps until ODE system is at top level.") :: Nil
+            }
+            case None => new ErrorResponse("ODE system needed to search for invariant candidates, but goal is empty.") :: Nil
+          }
+        } catch {
+          case _: MathematicaComputationAbortedException => new ErrorResponse("ODE invariant search timeout.") :: Nil
+        }
+    }
+  }
+}
+
 class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with RegisteredOnlyRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
@@ -613,19 +666,26 @@ class GetUserThemeRequest(db: DBAbstraction, userName: String) extends UserReque
     val config = db.getConfiguration(userName).config
     new PlainResponse(
       "themeCss" -> config.getOrElse("themeCss", "\"app\"").parseJson,
-      "themeFontSize" -> config.getOrElse("themeFontSize", "14").parseJson) :: Nil
+      "themeFontSize" -> config.getOrElse("themeFontSize", "14").parseJson,
+      "renderMargins" -> config.getOrElse("renderMargins", "[40,80]").parseJson
+    ) :: Nil
   }
 }
 
 /** Sets the UI theme. @note ReadRequest allows changing theme in guest mode for presentation purposes. */
-class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String, themeFontSize: String)
+class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String, themeFontSize: String, renderMargins: String)
     extends UserRequest(userName) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration(userName)
-    db.updateConfiguration(new ConfigurationPOJO(userName, config.config.updated("themeCss", themeCss).updated("themeFontSize", themeFontSize)))
+    db.updateConfiguration(new ConfigurationPOJO(userName,
+      config.config.updated("themeCss", themeCss).
+        updated("themeFontSize", themeFontSize).
+        updated("renderMargins", renderMargins)))
     new PlainResponse(
       "themeCss" -> themeCss.parseJson,
-      "themeFontSize" -> themeFontSize.parseJson) :: Nil
+      "themeFontSize" -> themeFontSize.parseJson,
+      "renderMargins" -> renderMargins.parseJson
+    ) :: Nil
   }
 }
 
@@ -713,6 +773,12 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     val examples =
+    new ExamplePOJO(6, "MOD19",
+      "Marktoberdorf 2019 Tutorial Examples",
+      //"/keymaerax-projects/lfcps-turorial/README.md",
+      "",
+      "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
+      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
     new ExamplePOJO(5, "POPL 2019 Tutorial",
       "Programming CPS With Proofs",
       //"/keymaerax-projects/popltutorial/README.md",
@@ -854,6 +920,14 @@ class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) ext
     //db.getProofsForModel(id).foreach(proof => TaskManagement.forceDeleteTask(proof.proofId.toString))
     val success = db.deleteModel(id)
     BooleanResponse(success) :: Nil
+  }
+}
+
+class DeleteAllModelsRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with WriteRequest {
+  override def resultingResponses(): List[Response] = {
+    val allModels = db.getModelList(userId).map(_.modelId)
+    allModels.foreach(db.deleteModel)
+    BooleanResponse(flag = true) :: Nil
   }
 }
 
@@ -1312,10 +1386,12 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
       }
     }
 
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
       AgendaItem(n.id.toString, "Conjecture: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
-    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed) :: Nil
+    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -1330,7 +1406,8 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
     val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, "Unnamed Goal", proofId) :: Nil
-    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false) :: Nil
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -1348,7 +1425,9 @@ class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: St
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
-      case Some(node) => NodeChildrenResponse(proofId, node) :: Nil
+      case Some(node) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        NodeChildrenResponse(proofId, node, marginLeft, marginRight) :: Nil
     }
   }
 }
@@ -1392,7 +1471,9 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId).flatMap(_.parent) match {
-      case Some(parent) => new ProofTaskParentResponse(parent)::Nil
+      case Some(parent) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        new ProofTaskParentResponse(parent, marginLeft, marginRight)::Nil
       case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root")::Nil
     }
   }
@@ -1410,7 +1491,8 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
       node = node.get.parent
     }
     val parentsRemaining = 0
-    new GetPathAllResponse(path.reverse, parentsRemaining)::Nil
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+    new GetPathAllResponse(path.reverse, parentsRemaining, marginLeft, marginRight)::Nil
   }
 }
 
@@ -1428,7 +1510,9 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
     }
     currNode match {
       case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
-      case Some(n) => new GetBranchRootResponse(n) :: Nil
+      case Some(n) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        new GetBranchRootResponse(n, marginLeft, marginRight) :: Nil
     }
 
   }
@@ -1440,7 +1524,9 @@ class ProofNodeSequentRequest(db: DBAbstraction, userId: String, proofId: String
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
-      case Some(node) => ProofNodeSequentResponse(proofId, node) :: Nil
+      case Some(node) =>
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+        ProofNodeSequentResponse(proofId, node, marginLeft, marginRight) :: Nil
     }
   }
 }
@@ -1465,9 +1551,10 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)
+        val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
           DerivationInfo.locate(parentTactic) match {
-            case Some(ptInfo) => ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
+            case Some(ptInfo) => ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil, marginLeft, marginRight) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
           }
         } else {
@@ -1477,7 +1564,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, "Unnamed Goal", proofId))
 
-          ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
+          ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
         }
     }
   }
@@ -1491,7 +1578,8 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
       AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString))
     //@todo fill in parent step for empty ""
-    new ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems) :: Nil
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
+    ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
   }
 }
 
@@ -1674,7 +1762,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case Some(mismatch) => BooleanResponse(flag=false, Some(mismatch))
       }
     } catch {
-      case ex: ParseException => BooleanResponse(flag=false, Some(ex.msg))
+      case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
     }
   }
 
@@ -1934,6 +2022,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
 
   override protected def doResultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
+    val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     executor.synchronized {
       val response = executor.wait(taskId) match {
         case Some(Left(BelleProvable(_, _))) =>
@@ -1943,7 +2032,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
             case Some(node) =>
               //@todo construct provable (expensive!)
               //assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
-              TaskResultResponse(proofId, node, progress=true)
+              TaskResultResponse(proofId, node, marginLeft, marginRight, progress=true)
           }
 //          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
 //          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
@@ -1955,7 +2044,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           val node = tree.root//findNode(nodeId).get
           //val positionLocator = if (parentNode.subgoals.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
-          TaskResultResponse(subId.toString, node, progress = true)
+          TaskResultResponse(subId.toString, node, marginLeft, marginRight, progress = true)
         case Some(Right(error: BelleThrowable)) => new TacticErrorResponse(error.getMessage, "", error)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
@@ -2017,7 +2106,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val proofbackupPath = Paths.get(Configuration.KEYMAERAX_HOME_PATH + File.separator + "proofbackup")
     if (!Files.exists(proofbackupPath)) Files.createDirectories(proofbackupPath)
 
-    val proofName = model.name + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
+    val sanitizedModelName = model.name.replaceAll("\\W", "_")
+    val proofName = sanitizedModelName + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
     var i = 0
     var uniqueProofName = proofName
     while (Files.exists(proofbackupPath.resolve(uniqueProofName))) {
