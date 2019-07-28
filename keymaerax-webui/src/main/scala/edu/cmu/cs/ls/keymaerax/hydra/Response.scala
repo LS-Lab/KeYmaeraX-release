@@ -29,6 +29,7 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable
+import scala.collection.immutable.Seq
 import scala.util.Try
 import scala.util.matching.Regex.Match
 import scala.xml.Elem
@@ -1103,6 +1104,20 @@ class ODEConditionsResponse(sufficient: List[Formula], necessary: List[Formula])
   override def getJson: JsValue = JsObject(
     "sufficient" -> JsArray(sufficient.map(f => JsObject("text" -> JsString(f.prettyString))).toVector),
     "necessary" -> JsArray(necessary.map(f => JsObject("text" -> JsString(f.prettyString))).toVector)
+  )
+}
+
+class PegasusCandidatesResponse(candidates: Seq[Either[Seq[(Formula, String)],Seq[(Formula, String)]]]) extends Response {
+  //@todo formula JSON with HTML formatting in UI
+  override def getJson: JsValue = JsObject(
+    "candidates" -> JsArray(candidates.map({
+      case Left(invs) => JsObject(
+        "fmls" -> JsArray(invs.map(f => JsObject("text" -> JsString(f._1.prettyString), "method" -> JsString(f._2))).toVector),
+        "isInv" -> JsBoolean(true))
+      case Right(invs) => JsObject(
+        "fmls" -> JsArray(invs.map(f => JsObject("text" -> JsString(f._1.prettyString), "method" -> JsString(f._2))).toVector),
+        "isInv" -> JsBoolean(false))
+    }).toVector)
   )
 }
 

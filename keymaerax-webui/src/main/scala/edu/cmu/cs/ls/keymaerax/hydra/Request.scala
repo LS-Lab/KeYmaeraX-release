@@ -317,6 +317,32 @@ class ODEConditionsRequest(db: DBAbstraction, userId: String, proofId: String, n
   }
 }
 
+class PegasusCandidatesRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case Some(node) =>
+        try {
+          node.goal match {
+            case Some(sequent) => sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
+              case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
+                case Some(tool) =>
+                  val invs = tool.invgen(ode, sequent.ante, post)
+                  new PegasusCandidatesResponse(invs) :: Nil
+                case None => new PegasusCandidatesResponse(Nil) :: Nil
+              }
+              case None => new ErrorResponse("ODE system needed to search for invariant candidates, but succedent does not contain an ODE system or ODE system may not be at top level. Please perform additional proof steps until ODE system is at top level.") :: Nil
+            }
+            case None => new ErrorResponse("ODE system needed to search for invariant candidates, but goal is empty.") :: Nil
+          }
+        } catch {
+          case _: MathematicaComputationAbortedException => new ErrorResponse("ODE invariant search timeout.") :: Nil
+        }
+    }
+  }
+}
+
 class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with RegisteredOnlyRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)

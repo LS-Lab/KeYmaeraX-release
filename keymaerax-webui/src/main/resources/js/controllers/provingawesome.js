@@ -699,6 +699,33 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
     }
 
+    $scope.getPegasusODECandidates = function() {
+          spinnerService.show('odeConditionsSpinner');
+          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/pegasusCandidates')
+            .then(function(response) {
+              $uibModal.open({
+                templateUrl: 'templates/pegasusCandidates.html',
+                controller: 'PegasusCandidatesCtrl',
+                size: 'lg',
+                resolve: {
+                  candidates: function() { return response.data.candidates; }
+                }
+              });
+            })
+            .catch(function(err) {
+              $uibModal.open({
+                templateUrl: 'templates/modalMessageTemplate.html',
+                controller: 'ModalMessageCtrl',
+                size: 'md',
+                resolve: {
+                  title: function() { return "Unable to find Pegasus invariant candidates"; },
+                  message: function() { return err.data.textStatus; }
+                }
+              })
+            })
+            .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
+        }
+
     $scope.downloadProblemSolution = function() {
         $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/download').success(function (data) {
             $uibModal.open({

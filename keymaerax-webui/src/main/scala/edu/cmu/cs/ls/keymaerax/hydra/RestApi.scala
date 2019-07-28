@@ -786,6 +786,15 @@ object RestApi extends Logging {
       }}
     }
 
+    val pegasusCandidates: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pegasusCandidates") { (userId, proofId, nodeId) => {
+      pathEnd {
+        get {
+          val request = new PegasusCandidatesRequest(database, userId, proofId, nodeId)
+          completeRequest(request, t)
+        }
+      }}
+    }
+
     val setupSimulation: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "setupSimulation") { (userId, proofId, nodeId) => {
       pathEnd {
         get {
@@ -1136,6 +1145,7 @@ object RestApi extends Logging {
     downloadProblemSolution ::
     counterExample        ::
     odeConditions         ::
+    pegasusCandidates     ::
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
