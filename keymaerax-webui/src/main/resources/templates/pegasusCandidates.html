@@ -1,7 +1,7 @@
 <div class="modal-header">
     <h3 class="modal-title">ODE Invariants and Invariant Candidates</h3>
 </div>
-<div class="modal-body">
+<div class="modal-body" ng-if="candidates.length > 0" ng-cloak>
     <p>
         In the panels below, found invariants and invariant candidates are listed.
         Each panel contains an invariant (chain) or invariant candidate (chain).
@@ -24,6 +24,9 @@
             </ol>
         </div>
     </div>
+</div>
+<div class="modal-body" ng-if="candidates.length <= 0" ng-cloak>
+    <p>No invariant (candidates) found.</p>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Ok</button>
