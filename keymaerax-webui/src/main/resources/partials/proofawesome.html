@@ -46,6 +46,17 @@
         <!--<button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>-->
     </div>
 </spinner>
+<spinner name="odeConditionsSpinner" ng-cloak>
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">
+        Searching for ODE conditions, please wait...<br/>
+        <!--<button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>-->
+    </div>
+</spinner>
 <div>
 <div  ng-controller="TaskCtrl">
 <div class="row">
@@ -416,6 +427,12 @@
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                         <span>Find Assumptions</span><code class="pull-right">pQE</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="getODEConditions()" uib-popover-template="fetchRuleHelp('odeConditions')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Find ODE Conditions</span>
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>

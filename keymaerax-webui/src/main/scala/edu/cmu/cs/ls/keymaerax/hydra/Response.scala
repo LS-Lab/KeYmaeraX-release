@@ -1098,6 +1098,14 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
   }
 }
 
+class ODEConditionsResponse(sufficient: List[Formula], necessary: List[Formula]) extends Response {
+  //@todo formula JSON with HTML formatting in UI
+  override def getJson: JsValue = JsObject(
+    "sufficient" -> JsArray(sufficient.map(f => JsObject("text" -> JsString(f.prettyString))).toVector),
+    "necessary" -> JsArray(necessary.map(f => JsObject("text" -> JsString(f.prettyString))).toVector)
+  )
+}
+
 class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends Response {
   def getJson = JsObject(
     "initial" -> JsString(initial.prettyString),

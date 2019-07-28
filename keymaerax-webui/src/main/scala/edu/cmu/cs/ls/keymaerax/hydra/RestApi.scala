@@ -777,6 +777,15 @@ object RestApi extends Logging {
       }}
     }
 
+    val odeConditions: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "odeConditions") { (userId, proofId, nodeId) => {
+      pathEnd {
+        get {
+          val request = new ODEConditionsRequest(database, userId, proofId, nodeId)
+          completeRequest(request, t)
+        }
+      }}
+    }
+
     val setupSimulation: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "setupSimulation") { (userId, proofId, nodeId) => {
       pathEnd {
         get {
@@ -1126,6 +1135,7 @@ object RestApi extends Logging {
     extractLemma          ::
     downloadProblemSolution ::
     counterExample        ::
+    odeConditions         ::
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
