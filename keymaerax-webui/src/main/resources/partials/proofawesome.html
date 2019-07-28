@@ -558,9 +558,11 @@
                                 <div class="col-md-2">
                                     <div class="btn-group-sm">
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
-                                               uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic)">Tactic</label>
+                                               uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic)"
+                                               tooltip-placement="auto top">Tactic</label>
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
-                                               uib-btn-radio="'Rule'" uib-tooltip="Display the last proof rule, which produced the current conjecture">Rule</label>
+                                               uib-btn-radio="'Rule'" uib-tooltip="Display the last proof rule, which produced the current conjecture"
+                                               tooltip-placement="auto top">Rule</label>
                                     </div>
                                 </div>
                                 <div ng-if="taskExplanation.selection=='Tactic'" ng-cloak>
