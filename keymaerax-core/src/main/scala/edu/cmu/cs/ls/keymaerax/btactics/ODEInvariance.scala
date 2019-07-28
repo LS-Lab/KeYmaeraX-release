@@ -839,6 +839,7 @@ object ODEInvariance {
       cohideR(pos) & DW(1) & G(1) & QE
   })
 
+  private val cauchy_schwartz_lem = remember("b()>=0 & c()>=0 & a()*a() <= b()*c() -> (a()+u()*v())*(a()+u()*v()) <= (b()+u()*u())*(c()+v()*v())".asFormula,QE).fact
   /**
     * Pre-prove the symbolic lemmas for n-dimensional Cauchy Schwartz
     * Note: this lemma proves pretty quickly e.g. for n=10
@@ -862,7 +863,10 @@ object ODEInvariance {
     val unorm = dot_prod(us,us)
     val vnorm = dot_prod(vs,vs)
     val fml1 = LessEqual(Times(dp,dp), Times(unorm,vnorm))
-    val pr1 = proveBy(fml1 , QE)
+    val pr1 = proveBy(fml1,
+      ((useAt(cauchy_schwartz_lem,PosInExpr(1::Nil))(1) & andR(1) <(prove_sos_positive, andR(1) <(prove_sos_positive,skip)))*) & QE)
+    //val pr1 = proveBy(fml1 , QE)
+    //println(pr1)
     val sgn = And(GreaterEqual(unorm,Number(0)),GreaterEqual(vnorm,Number(0)))
 
     val pr = proveBy(And(fml1,sgn),andR(1) <( by(pr1), prove_sos_positive))
