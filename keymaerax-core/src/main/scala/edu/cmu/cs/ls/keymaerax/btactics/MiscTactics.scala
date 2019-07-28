@@ -140,9 +140,12 @@ object DebuggingTactics {
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition at position pos. */
   def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      if (provable.subgoals.size != 1 || !cond(provable.subgoals.head, pos)) {
+      if (provable.subgoals.size != 1){
         throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
-          provable.subgoals.size + " subgoals, or sole subgoal formula " + provable.subgoals.head.at(pos)._2 + " does not match")
+          provable.subgoals.size + " subgoals")
+      }
+      else if (!cond(provable.subgoals.head, pos)) {
+        throw new BelleUserGeneratedError(message + "\nAn (internal) check failed at the subgoal formula " + provable.subgoals.head.at(pos)._2)
       }
       provable
     }
