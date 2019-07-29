@@ -21,6 +21,7 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("CPSWeek", "classpath:/examples/tutorials/cpsweek/cpsweek.kyx"),
   new TutorialRegressionTester("DLDS", "classpath:/keymaerax-projects/dlds/dlds.kya"),
   new TutorialRegressionTester("POPL", "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx"),
+  new TutorialRegressionTester("LFCPS", s"$GITHUB_PROJECTS_RAW_PATH/lfcps-tutorial/lfcps-tutorial.kyx"),
   // Course
   new TutorialRegressionTester("FCPS17-05", s"$COURSE17_PATH/05-dynax.kya"),
   new TutorialRegressionTester("FCPS17-07", s"$COURSE17_PATH/07-loops.kya"),
