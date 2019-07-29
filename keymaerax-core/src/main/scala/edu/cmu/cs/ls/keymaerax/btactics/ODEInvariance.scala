@@ -826,7 +826,7 @@ object ODEInvariance {
 
     val (f2, propt) = semiAlgNormalize(post)
     val conjs = flattenConjunctions(f2)
-    require(conjs.forall(f => f.isInstanceOf[Equal]), "dRI requires only equations in postcondition")
+    require(conjs.forall(f => f.isInstanceOf[Equal]), "dRI requires only conjunctions of equations in postcondition")
     val polys = conjs.map(f => f.asInstanceOf[Equal].left)
     val (r,groebner,cofactors) = rank(sys,polys)
 
