@@ -1034,9 +1034,23 @@ object SimplifierV3 {
   private lazy val maxGtNorm:ProvableSig = remember("f_()>0|g_()>0<->max((f_(),g_()))>0".asFormula,QE,namespace).fact
   private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
 
+  //Equational normalizers
+  private lazy val andEqNorm:ProvableSig = remember("f_()=0 & g_()=0 <-> f_()^2 + g_()^2=0".asFormula,QE,namespace).fact
+  private lazy val orEqNorm:ProvableSig = remember( "f_()=0 | g_()=0 <-> f_() * g_() = 0".asFormula,QE,namespace).fact
+
+
   // Normalizes a formula recursively (under And/Or) to have >=0 on RHS
   // This is (very) lightly optimized to avoid generating additional 0s
   // if they are already present which may be annoying
+
+  private def algNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match {
+      case Equal(l, r) => if (r == Number(0)) List() else List(eqNorm)
+      case And(l, r) => List(andEqNorm)
+      case Or(l, r) => List(orEqNorm)
+      case _ => throw new IllegalArgumentException("cannot normalize " + f + " to have 0 on RHS (must be a conjunction/disjunction of atomic equations)")
+    }
+  }
 
   private def semiAlgNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     f match{
@@ -1119,6 +1133,7 @@ object SimplifierV3 {
   val baseNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(emptyFaxs)(_)
   val ineqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(ineqNormalizeIndex)(_)
   val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
+  val algNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(algNormalizeIndex)(_)
   val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
   val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
   val maxMinGtNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGtNormalizeIndex)(_)
