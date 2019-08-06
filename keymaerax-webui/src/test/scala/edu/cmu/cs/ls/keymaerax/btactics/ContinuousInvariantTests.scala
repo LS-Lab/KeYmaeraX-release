@@ -199,6 +199,13 @@ class ContinuousInvariantTests extends TacticTestBase {
     pr.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
+  it should "correctly detect invariance question with domains" in withMathematica { _ =>
+    val fml = "x < y -> [{x'= C(), y' = 1 & y < 5}] x < 5".asFormula
+    val pr = proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(true)(1))
+
+    pr.subgoals.loneElement shouldBe "==> false".asSequent
+  }
+
   it should "generate necessary formulas" in withMathematica { tool =>
     val (invnec,seqnec) = tool.genODECond(
       "{x'=1}".asProgram.asInstanceOf[ODESystem],

@@ -700,14 +700,6 @@ private object DifferentialTactics extends Logging {
     }, "Invariant fast-check failed")
   }
 
-  //Filter out irrelevant assumptions
-  private def relFilter(asm: List[(Formula,Set[NamedSymbol])], vs:Set[NamedSymbol], acc: List[(Formula,Set[NamedSymbol])]) : List[(Formula,Set[NamedSymbol])] = {
-    val relevant = asm.filter( p => p._2.intersect(vs).nonEmpty)
-    val irrelevant = asm.filterNot( p => p._2.intersect(vs).nonEmpty)
-    if(relevant.isEmpty) return acc
-    relFilter(irrelevant, relevant.foldLeft(vs)((s,p) =>s.union(p._2)), acc++relevant)
-  }
-
   /** ODE invariance check
     * @return Returns True if it determines that the only possibilty is for postcondition to
     *         be invariant at the position it is called
@@ -717,17 +709,12 @@ private object DifferentialTactics extends Logging {
     seq.sub(pos) match {
       case Some(Box(ode:ODESystem, post)) => {
         val assms = seq.ante.flatMap(flattenConjunctions(_)).toList
-        val assmsWithVars = assms.map(f => (f,(StaticSemantics.freeVars(f).toSet ++ StaticSemantics.signature(f))))
-        val odeBV = StaticSemantics.boundVars(ode)
-        val vars = StaticSemantics.vars(ode).toSet ++ StaticSemantics.signature(ode) ++
-          StaticSemantics.freeVars(post).toSet ++ StaticSemantics.signature(post)
-        //First, filter irrelevant assms
-        val assmsRel = relFilter(assmsWithVars,vars,List()).map(_._1)
         //Track constant assumptions separately
-        val assmsRelConst = assmsRel.filter(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
-        val assmsRelRest = assmsRel.filterNot(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
-        val conjConst = assmsRelConst.foldLeft(True:Formula)( (f,a) => And(f,a))
-        val conjRest = assmsRelRest.foldLeft(True:Formula)( (f,a) => And(f,a))
+        val odeBV = StaticSemantics.boundVars(ode)
+        val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
+        val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
+        val conjConst = assmsConst.foldLeft(ode.constraint)( (f,a) => And(f,a))
+        val conjRest = assmsRest.foldLeft(True:Formula)( (f,a) => And(f,a))
         val detectEquiv = proveBy(Imply(conjConst,Equiv(conjRest,post)), timeoutCEXQE)
         detectEquiv.isProved
       }
