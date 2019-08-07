@@ -116,15 +116,14 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0) ==> (-b())*(t_^2/2)+v*t_+x <= m()".asSequent
 
     val initCond = proveBy(result.subgoals.head, TactixLibrary.partialQE)
-    initCond.subgoals.loneElement shouldBe "==> b()<=0|b()>0&(v<=0|v>0&((t_<=0|(0 < t_&t_<=v*b()^-1)&(x<=1/2*(-2*t_*v+t_^2*b()+2*m())|x>m()))|t_>v*b()^-1))".asSequent
-    // explain in tutorial: mostly crap that violates our assumptions, but m>=... and b=t_^-1*v_0 look interesting -> transform
+    initCond.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v>=0) ==> v<=0|v>0&((t_<=0|(0 < t_&t_<=v*b()^-1)&x<=1/2*(-2*t_*v+t_^2*b()+2*m()))|t_>v*b()^-1)".asSequent
 
     val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b()=v/t_ & t_>0 & m() >= -b()/2*t_^2+v*t_+x".asFormula)(1))
-    simpler.subgoals.loneElement shouldBe "==> b()=v/t_ & t_>0 & m() >= -b()/2*t_^2+v*t_+x".asSequent
+    simpler.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v>=0) ==> b()=v/t_ & t_>0 & m() >= -b()/2*t_^2+v*t_+x".asSequent
 
     // now let's transform once again and put in t_ = v/b
-    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b()>0 & t_=v/b() & v>0 & m()-x >= v^2/(2*b())".asFormula)(1))
-    cond.subgoals.loneElement shouldBe "==> b()>0 & t_=v/b() & v>0 & m()-x >= v^2/(2*b())".asSequent
+    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("t_=v/b() & v>0 & m()-x >= v^2/(2*b())".asFormula)(1))
+    cond.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v>=0) ==> t_=v/b() & v>0 & m()-x >= v^2/(2*b())".asSequent
   }
 
   it should "prove braking automatically with the correct condition" in withQE { _ =>
@@ -138,14 +137,14 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals.loneElement shouldBe "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, Q(x,v), t_>=0, \\forall s_ (0<=s_&s_<=t_ -> A()*s_+v>=0 & s_+0<=ep()) ==> (A()*t_+v)^2 <= 2*b()*(m()-(A()*(t_^2/2)+v*t_+x))".asSequent
 
     val initCond = proveBy(result.subgoals.head, hideL(-5, "Q(x,v)".asFormula) & TactixLibrary.partialQE)
-    initCond.subgoals.loneElement shouldBe "==> t_<=0|t_>0&(ep() < t_|ep()>=t_&((v < 0|v=0&(A()<=0|A()>0&(b()<=0|b()>0&(m() < x|m()>=1/2*b()^-1*(t_^2*A()^2+2*x*b()+t_^2*A()*b())))))|v>0&(A() < 0|A()>=0&(b()<=0|b()>0&(m() < 1/2*b()^-1*(v^2+2*x*b())|m()>=1/2*b()^-1*(v^2+2*t_*v*A()+t_^2*A()^2+2*t_*v*b()+2*x*b()+t_^2*A()*b()))))))".asSequent
+    initCond.subgoals.loneElement shouldBe "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_->A()*s_+v>=0&s_<=ep()) ==> t_<=0|t_>0&(ep() < t_|ep()>=t_&((v < 0|v=0&(A()<=0|A()>0&(m() < x|m()>=1/2*b()^-1*(t_^2*A()^2+2*x*b()+t_^2*A()*b()))))|v>0&(m() < 1/2*b()^-1*(v^2+2*x*b())|m()>=1/2*b()^-1*(v^2+2*t_*v*A()+t_^2*A()^2+2*t_*v*b()+2*x*b()+t_^2*A()*b()))))".asSequent
 
     // now get rid of stuff that violates our assumptions and transform into nicer shape
-    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b()>0 & A()>=0 & t_>=0 & m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asFormula)(1))
-    simpler.subgoals.loneElement shouldBe "==> b()>0 & A()>=0 & t_>=0 & m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asSequent
+    val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asFormula)(1))
+    simpler.subgoals.loneElement shouldBe "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_->A()*s_+v>=0&s_<=ep()) ==> m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asSequent
 
-    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("b()>0 & A()>=0 & t_>=0 & m()-x >= v^2/(2*b())+(A()/b()+1)*(A()/2*t_^2 + v*t_)".asFormula)(1))
-    cond.subgoals.loneElement shouldBe "==> b()>0 & A()>=0 & t_>=0 & m()-x >= v^2/(2*b())+(A()/b()+1)*(A()/2*t_^2 + v*t_)".asSequent
+    val cond = proveBy(simpler.subgoals.head, TactixLibrary.transform("m()-x >= v^2/(2*b())+(A()/b()+1)*(A()/2*t_^2 + v*t_)".asFormula)(1))
+    cond.subgoals.loneElement shouldBe "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_->A()*s_+v>=0&s_<=ep()) ==> m()-x >= v^2/(2*b())+(A()/b()+1)*(A()/2*t_^2 + v*t_)".asSequent
   }
 
   it should "prove acceleration automatically with the correct condition" in withQE { _ =>

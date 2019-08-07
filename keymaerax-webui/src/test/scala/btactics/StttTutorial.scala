@@ -19,6 +19,8 @@ import testHelper.ParserFactory._
 import scala.collection.immutable._
 import scala.language.postfixOps
 
+import org.scalatest.LoneElement._
+
 /**
  * Tutorial test cases.
  *
@@ -123,22 +125,16 @@ class StttTutorial extends TacticTestBase {
     val tactic = implyR('_) & SaturateTactic(andL('_)) & chase('R) & normalize & OnAll(solve('R))
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
-    intermediate.subgoals(0) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "true".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()*(t_^2/2)+v*t_+x<=S())".asFormula))
-    intermediate.subgoals(1) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "v=0".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S())".asFormula))
-    intermediate.subgoals(2) shouldBe Sequent(
-      IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())*(t_^2/2)+v*t_+x<=S())".asFormula))
+    intermediate.subgoals(0) shouldBe "v>=0, A()>0, B()>0, true, x<=S(), true ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()*(t_^2/2)+v*t_+x<=S())".asSequent
+    intermediate.subgoals(1) shouldBe "v>=0, A()>0, B()>0, true, x<=S(), v=0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S())".asSequent
+    intermediate.subgoals(2) shouldBe "v>=0, A()>0, B()>0, true, x<=S() ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())*(t_^2/2)+v*t_+x<=S())".asSequent
 
     val brake = proveBy(intermediate.subgoals(2), TactixLibrary.partialQE)
-    brake.subgoals should have size 1
-    brake.subgoals.head shouldBe Sequent(
-      IndexedSeq(),
-      // here is our evolution domain constraint ------------------------------------------------v
-      IndexedSeq("(x < S()&(v<=0|v>0&((B()<=0|(0 < B()&B() < -1*v^2*(2*x+-2*S())^-1)&A()<=0)|B()>=-1*v^2*(2*x+-2*S())^-1))|x=S()&(v<=0|v>0&(B()<=0|B()>0&A()<=0)))|x>S()".asFormula))
+    // here is the most interesting condition of our invariant candidate --------------------v
+    brake.subgoals.loneElement shouldBe "v>=0, A()>0, B()>0, x<=S() ==> x < S()&(v<=0|v>0&B()>=(-v^2)*(2*x+-2*S())^-1)|x=S()&v<=0".asSequent
+    // transform into nicer shape
+    val result = proveBy(brake, TactixLibrary.transform("x + v^2/(2*B()) <= S()".asFormula)(1))
+    result.subgoals.loneElement shouldBe "v>=0, A()>0, B()>0, x<=S() ==> x + v^2/(2*B()) <= S()".asSequent
   }}
 
   it should "stop at correct spot when tactic is parsed from file" in withQE { _ => withDatabase { db =>
