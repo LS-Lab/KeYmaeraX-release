@@ -700,9 +700,10 @@ private object DifferentialTactics extends Logging {
     }, "Invariant fast-check failed")
   }
 
-  /** ODE invariance check
+  /** Invariance check
     * @return Returns True if it determines that the only possibilty is for postcondition to
-    *         be invariant at the position it is called
+    *         be invariant at the position it is called (either a loop invariant or ODE invariant)
+    *         This can be used to prevent (unnecessary) invariant generation for loops or ODEs from happening
     *         Return False in all other cases (including when the sequent or position are not of the expected shape)
     */
   private def invCheck(pos:Position, seq:Sequent) : Boolean = {
@@ -718,6 +719,19 @@ private object DifferentialTactics extends Logging {
         val detectEquiv = proveBy(Imply(conjConst,Equiv(conjRest,post)), timeoutCEXQE)
         detectEquiv.isProved
       }
+
+      case Some(Box(l:Loop, post)) => {
+        val assms = seq.ante.flatMap(flattenConjunctions(_)).toList
+        //Track constant assumptions separately
+        val loopBV = StaticSemantics.boundVars(l)
+        val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
+        val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
+        val conjConst = assmsConst.foldLeft(True:Formula)( (f,a) => And(f,a))
+        val conjRest = assmsRest.foldLeft(True:Formula)( (f,a) => And(f,a))
+        val detectEquiv = proveBy(Imply(conjConst,Equiv(conjRest,post)), timeoutCEXQE)
+        detectEquiv.isProved
+      }
+
       case _ => false
     }
   }
