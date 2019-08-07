@@ -43,7 +43,7 @@
     </div>
     <div class="spinner-please-wait">
         Searching for counterexample, please wait...<br/>
-        <!--<button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>-->
+        <button class="btn btn-default" ng-click="runningRequest.canceller.resolve('usercancelled')"><i class="fa fa-stop"></i> Stop</button>
     </div>
 </spinner>
 <spinner name="odeConditionsSpinner" ng-cloak>
@@ -54,7 +54,7 @@
     </div>
     <div class="spinner-please-wait">
         Searching for ODE conditions, please wait...<br/>
-        <!--<button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>-->
+        <button class="btn btn-default" ng-click="runningRequest.canceller.resolve('usercancelled')"><i class="fa fa-stop"></i> Stop</button>
     </div>
 </spinner>
 <div>

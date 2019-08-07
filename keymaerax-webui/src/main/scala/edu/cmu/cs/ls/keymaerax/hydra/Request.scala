@@ -669,6 +669,14 @@ class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with 
   }
 }
 
+//@todo Detect closed connections and request timeouts server-side
+class CancelToolRequest() extends Request with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val allCancelled = ToolProvider.tools().map(_.cancel()).reduce(_ && _)
+    BooleanResponse(flag = allCancelled) :: Nil
+  }
+}
+
 class Z3ConfigStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("Z3", true) :: Nil
 }

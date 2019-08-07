@@ -65,7 +65,8 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
       return response;
     },
     responseError: function(rejection) {
-      if (rejection.status == -1) {
+      // user cancelled has status==-1 just like server unavailable (both are abort, but user cancelled is resolved from a timeout promise with value=='usercancelled')
+      if (rejection.status == -1 && (!rejection.config.timeout || !rejection.config.timeout.$$state || rejection.config.timeout.$$state.value != 'usercancelled')) {
         // server unavailable
         if (!pollRequests.includes(rejection.config.url)) {
           var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
@@ -80,6 +81,10 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
           });
         }
         return $q.reject(rejection);
+      } else if (rejection.status == -1 && (rejection.config.timeout && rejection.config.timeout.$$state && rejection.config.timeout.$$state.value == 'usercancelled')) {
+        // notify server that request was cancelled so that long-running tool computations are cancelled as well
+        var $http = $injector.get('$http');
+        $http.get("tools/cancel");
       } else if (rejection.status === 500) {
         // report uncaught server-side exception
         var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency

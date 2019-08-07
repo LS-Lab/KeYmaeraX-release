@@ -10,6 +10,10 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   $scope.proofId = $routeParams.proofId;
   sequentProofData.clear(); // @note we load a new proof, so clear agenda and proof tree
 
+  $scope.runningRequest = {
+    canceller: undefined
+  }
+
   $scope.taskExplanation = {
     selection: "Rule"
   };
@@ -651,8 +655,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     //@todo duplicate with sequent.js#getCounterExample
     $scope.getCounterExample = function() {
+      var requestCanceller = $q.defer();
+      $scope.$parent.runningRequest.canceller = requestCanceller;
       spinnerService.show('counterExampleSpinner');
-      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample')
+      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample', { timeout: requestCanceller.promise })
         .then(function(response) {
           var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
           $uibModal.open({
@@ -672,8 +678,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.getODEConditions = function() {
+      var requestCanceller = $q.defer();
+      $scope.$parent.runningRequest.canceller = requestCanceller;
       spinnerService.show('odeConditionsSpinner');
-      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/odeConditions')
+      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/odeConditions', { timeout: requestCanceller.promise })
         .then(function(response) {
           $uibModal.open({
             templateUrl: 'templates/odeConditions.html',
@@ -686,45 +694,51 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           });
         })
         .catch(function(err) {
-          $uibModal.open({
-            templateUrl: 'templates/modalMessageTemplate.html',
-            controller: 'ModalMessageCtrl',
-            size: 'md',
-            resolve: {
-              title: function() { return "Unable to find ODE conditions"; },
-              message: function() { return err.data.textStatus; }
-            }
-          })
+          if (err.data != null) {
+            $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Unable to find ODE conditions"; },
+                message: function() { return err.data.textStatus; }
+              }
+            })
+          } // request cancelled by user
         })
         .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
     }
 
     $scope.getPegasusODECandidates = function() {
-          spinnerService.show('odeConditionsSpinner');
-          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/pegasusCandidates')
-            .then(function(response) {
-              $uibModal.open({
-                templateUrl: 'templates/pegasusCandidates.html',
-                controller: 'PegasusCandidatesCtrl',
-                size: 'lg',
-                resolve: {
-                  candidates: function() { return response.data.candidates; }
-                }
-              });
+      var requestCanceller = $q.defer();
+      $scope.$parent.runningRequest.canceller = requestCanceller;
+      spinnerService.show('odeConditionsSpinner');
+      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/pegasusCandidates', { timout: requestCanceller.promise })
+        .then(function(response) {
+          $uibModal.open({
+            templateUrl: 'templates/pegasusCandidates.html',
+            controller: 'PegasusCandidatesCtrl',
+            size: 'lg',
+            resolve: {
+              candidates: function() { return response.data.candidates; }
+            }
+          });
+        })
+        .catch(function(err) {
+          if (err.data != null) {
+            $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Unable to find Pegasus invariant candidates"; },
+                message: function() { return err.data.textStatus; }
+              }
             })
-            .catch(function(err) {
-              $uibModal.open({
-                templateUrl: 'templates/modalMessageTemplate.html',
-                controller: 'ModalMessageCtrl',
-                size: 'md',
-                resolve: {
-                  title: function() { return "Unable to find Pegasus invariant candidates"; },
-                  message: function() { return err.data.textStatus; }
-                }
-              })
-            })
-            .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
-        }
+          } // else request cancelled by user
+        })
+        .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
+    }
 
     $scope.downloadProblemSolution = function() {
         $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/download').success(function (data) {
