@@ -202,7 +202,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t => t match {
         case FuncOf(func, _) if fn.sort == Real => func == fn
-        case PredOf(func, _) if fn.sort == Bool => func == fn
+        case PredOf(func, arg) if fn.sort == Bool && arg != Nothing => func == fn
         case _ => false }) match {
       case Some((_, e: Term)) => allFnToVar(fml.replaceAll(e, Variable(fn.name, fn.index, Real)), fn)
       case Some((_, e: Formula)) => allFnToVar(fml.replaceAll(e, PredOf(Function(fn.name, fn.index, Unit, Bool), Nothing)), fn) //@todo beware of name clashes
