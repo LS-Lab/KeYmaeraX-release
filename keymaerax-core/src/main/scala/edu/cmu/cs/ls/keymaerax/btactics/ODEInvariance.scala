@@ -824,10 +824,18 @@ object ODEInvariance {
       case _ => throw new BelleThrowable("dRI only applicable for box ODE in succedent")
     }
 
-    val (f2, propt) = semiAlgNormalize(post)
+    val (f2, _) = semiAlgNormalize(post)
     val conjs = flattenConjunctions(f2)
-    require(conjs.forall(f => f.isInstanceOf[Equal]), "dRI requires only equations in postcondition")
-    val polys = conjs.map(f => f.asInstanceOf[Equal].left)
+    val polys = {
+      if (conjs.forall(f => f.isInstanceOf[Equal]))
+        conjs.map(f => f.asInstanceOf[Equal].left)
+      else {
+        //TODO: this is not the best way to go about proving this
+        val (f2, _) = algNormalize(post)
+        require(f2.isInstanceOf[Equal], "dRI requires only equations in postcondition")
+        List(f2.asInstanceOf[Equal].left)
+      }
+    }
     val (r,groebner,cofactors) = rank(sys,polys)
 
     //println(r,groebner,cofactors)
