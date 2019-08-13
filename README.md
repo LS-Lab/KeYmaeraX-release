@@ -96,6 +96,7 @@ In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Provin
 5. André Platzer.
 [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/).
 Springer, Cham, 2018.
+[DOI](https://doi.org/10.1007/978-3-319-63588-0)
 
 The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus in [Isabelle/HOL](https://github.com/LS-Lab/Isabelle-dL) and [Coq](https://github.com/LS-Lab/Coq-dL).
 
@@ -124,7 +125,7 @@ This software uses faster generalized uniform substitution algorithms:
 In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
 
 11. André Platzer.
-[Uniform substitution at one fell swoop](https://lfcps.org/pub/dGL-usubst-one.pdf).
+[Uniform substitution at one fell swoop](https://doi.org/10.1007/978-3-030-29436-6_25).
 In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, volume 11716 of LNCS. Springer, 2019.
 
 KeYmaera X uses the Pegasus tool for invariant generation [if the appropriate software is installed](http://pegasus.keymaeraX.org/):
