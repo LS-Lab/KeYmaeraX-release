@@ -18,13 +18,14 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     selection: "Rule"
   };
   $scope.stepAxiom = function() {
-        var selectedItem = sequentProofData.agenda.selectedItem()
-        if (selectedItem) {
-          var explanationNodeId = selectedItem.deduction.sections[0].path[0];
-          var node = sequentProofData.proofTree.node(explanationNodeId);
-          return [node.rule];
-        } else return [];
-      }
+    var selectedItem = sequentProofData.agenda.selectedItem()
+    if (selectedItem) {
+      var explanationNodeId = selectedItem.deduction.sections[0].path[0];
+      var node = sequentProofData.proofTree.node(explanationNodeId);
+      if (node) return [node.rule];
+      else return [];
+    } else return [];
+  }
 
   $scope.intro.introOptions = {
     steps: [
