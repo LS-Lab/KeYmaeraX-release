@@ -2042,6 +2042,8 @@ class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: Strin
         case None => new ErrorResponse("Proof does not have any steps yet") :: Nil
         case Some(node) =>
           node.pruneBelow()
+          val info = db.getProofInfo(proofId)
+          db.updateProofInfo(info.copy(closed = false))
           val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId)
           new PruneBelowResponse(item) :: Nil
       }
