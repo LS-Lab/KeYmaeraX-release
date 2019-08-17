@@ -384,12 +384,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       });
     }
 
-    $scope.undoLastStep = function() {
-      var nodeId = sequentProofData.agenda.selectedId();
-      var node = sequentProofData.agenda.itemsMap[nodeId];
-      var top = node.deduction.sections[0].path[0];
-      var topParent = sequentProofData.proofTree.nodesMap[top].parent;
-      sequentProofData.prune($scope.userId, $scope.proofId, topParent);
+    $scope.undoLastProofStep = function() {
+      sequentProofData.undoLastProofStep($scope.userId, $scope.proofId);
     };
 
     $scope.setFormulaMode = function(mode) {

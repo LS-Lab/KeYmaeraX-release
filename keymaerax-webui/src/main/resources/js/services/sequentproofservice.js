@@ -210,54 +210,67 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       show: false
     },
 
+    /** Prunes below node `nodeId`, ONLY IN THE UI. Updates the proof tree, agenda, and tactic. */
+    uiPruneBelow: function(userId, proofId, nodeId, proofTree, agenda, tactic, newTopAgendaItem) {
+      // prune proof tree
+      proofTree.pruneBelow(nodeId);
+
+      // update agenda: prune deduction paths
+      var agendaItems = agenda.itemsByProofStep(nodeId);
+      $.each(agendaItems, function(i, item) {
+        var deductionIdx = agenda.deductionIndexOf(item.id, nodeId);
+        var section = item.deduction.sections[deductionIdx.sectionIdx];
+        section.path.splice(0, deductionIdx.pathStepIdx);
+        item.deduction.sections.splice(0, deductionIdx.sectionIdx);
+      });
+
+      // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
+      var newTop = newTopAgendaItem.deduction.sections[0].path[0];
+      $.each(agendaItems, function(i, item) {
+        var oldTop = item.deduction.sections[0].path[0];
+        if (oldTop !== newTop) {
+          console.log("Unexpected deduction start after pruning: expected " + newTop + " but have " + oldTop +
+            " at agenda item " + item.id)
+        }
+        //@todo additionally check that deduction.sections are all the same (might be expensive, though)
+      });
+
+      // delete previous items
+      //@todo preserve previous tab order
+      $.each(agendaItems, function(i, item) {
+        delete agenda.itemsMap[item.id];
+      });
+
+      // update agenda: if available, copy already cached deduction path into the remaining agenda item (new top item)
+      var topDeduction = agendaItems[0] ? agendaItems[0].deduction : newTopAgendaItem.deduction;
+      newTopAgendaItem.deduction = topDeduction;
+      newTopAgendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
+      agenda.itemsMap[newTopAgendaItem.id] = newTopAgendaItem;
+
+      // select new top item
+      agenda.select(newTopAgendaItem);
+
+      // refresh tactic
+      tactic.fetch(userId, proofId);
+    },
+
     /** Prunes the proof tree at the specified goal, executes onPruned when the tree is pruned */
     prune: function(userId, proofId, nodeId, onPruned) {
       //@note make model available in closure of function success
-      var theProofTree = this.proofTree;
-      var theAgenda = this.agenda;
-      var theTactic = this.tactic;
+      var self = this;
 
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').then(function(response) {
-        // prune proof tree
-        theProofTree.pruneBelow(nodeId);
+        self.uiPruneBelow(userId, proofId, nodeId, self.proofTree, self.agenda, self.tactic, response.data.agendaItem);
+      }).then(onPruned);
+    },
 
-        // update agenda: prune deduction paths
-        var agendaItems = theAgenda.itemsByProofStep(nodeId);
-        $.each(agendaItems, function(i, item) {
-          var deductionIdx = theAgenda.deductionIndexOf(item.id, nodeId);
-          var section = item.deduction.sections[deductionIdx.sectionIdx];
-          section.path.splice(0, deductionIdx.pathStepIdx);
-          item.deduction.sections.splice(0, deductionIdx.sectionIdx);
-        });
+    /** Undoes the last proof step, executes onPruned when the tree is pruned */
+    undoLastProofStep: function(userId, proofId, onPruned) {
+      //@note make model available in closure of function success
+      var self = this;
 
-        // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
-        var newTop = response.data.agendaItem.deduction.sections[0].path[0];
-        $.each(agendaItems, function(i, item) {
-          var oldTop = item.deduction.sections[0].path[0];
-          if (oldTop !== newTop) {
-            console.log("Unexpected deduction start after pruning: expected " + newTop + " but have " + oldTop +
-              " at agenda item " + item.id)
-          }
-          //@todo additionally check that deduction.sections are all the same (might be expensive, though)
-        });
-
-        // delete previous items
-        //@todo preserve previous tab order
-        $.each(agendaItems, function(i, item) {
-          delete theAgenda.itemsMap[item.id];
-        });
-
-        // update agenda: if available, copy already cached deduction path into the remaining agenda item (new top item)
-        var topDeduction = agendaItems[0] ? agendaItems[0].deduction : response.data.agendaItem.deduction;
-        response.data.agendaItem.deduction = topDeduction;
-        response.data.agendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
-        theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
-
-        // select new top item
-        theAgenda.select(response.data.agendaItem);
-
-        // refresh tactic
-        theTactic.fetch(userId, proofId);
+      $http.get('proofs/user/' + userId + '/' + proofId + '/undoLastStep').then(function(response) {
+        self.uiPruneBelow(userId, proofId, response.data.agendaItem.id, self.proofTree, self.agenda, self.tactic, response.data.agendaItem);
       }).then(onPruned);
     },
 

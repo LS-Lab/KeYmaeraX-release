@@ -2031,6 +2031,24 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
   }
 }
 
+/** Undoes the last proof step. */
+class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with WriteRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
+    else {
+      val tree = DbProofTree(db, proofId)
+      //@todo do not load all steps
+      tree.nodes.lastOption.flatMap(_.parent) match {
+        case None => new ErrorResponse("Proof does not have any steps yet") :: Nil
+        case Some(node) =>
+          node.pruneBelow()
+          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId)
+          new PruneBelowResponse(item) :: Nil
+      }
+    }
+  }
+}
+
 class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     // @todo return Loading/NotLoaded when appropriate

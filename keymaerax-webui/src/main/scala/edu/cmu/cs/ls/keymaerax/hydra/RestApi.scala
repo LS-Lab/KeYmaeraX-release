@@ -739,6 +739,14 @@ object RestApi extends Logging {
       }
     }}}
 
+    val undoLastProofStep: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "undoLastStep") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new UndoLastProofStepRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+
     val getAgendaItem: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
       get {
         val request = GetAgendaItemRequest(database, userId, proofId, nodeId)
@@ -1156,6 +1164,7 @@ object RestApi extends Logging {
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
+    undoLastProofStep     ::
     modelplex             ::
     modelplexMandatoryVars::
     exportSequent         ::

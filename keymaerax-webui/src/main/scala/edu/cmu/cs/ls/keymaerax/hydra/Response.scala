@@ -1011,9 +1011,10 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
 
   def getJson = JsArray(derivationInfos.map(derivationJson):_*)
 }
+
 class PruneBelowResponse(item: AgendaItem) extends Response {
-  def getJson = JsObject (
-  "agendaItem" -> Helpers.itemJson(item)._2
+  def getJson: JsObject = JsObject(
+    "agendaItem" -> Helpers.itemJson(item)._2
   )
 }
 
