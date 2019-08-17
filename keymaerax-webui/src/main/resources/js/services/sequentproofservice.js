@@ -211,47 +211,53 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     /** Prunes below node `nodeId`, ONLY IN THE UI. Updates the proof tree, agenda, and tactic. */
-    uiPruneBelow: function(userId, proofId, nodeId, proofTree, agenda, tactic, newTopAgendaItem) {
+    uiPruneBelow: function(userId, proofId, nodeId, proofTree, agenda, tactic, newTopAgendaItem, sequentProofData) {
       // prune proof tree
-      proofTree.pruneBelow(nodeId);
+      if (proofTree.nodesMap[nodeId]) {
+        proofTree.pruneBelow(nodeId);
 
-      // update agenda: prune deduction paths
-      var agendaItems = agenda.itemsByProofStep(nodeId);
-      $.each(agendaItems, function(i, item) {
-        var deductionIdx = agenda.deductionIndexOf(item.id, nodeId);
-        var section = item.deduction.sections[deductionIdx.sectionIdx];
-        section.path.splice(0, deductionIdx.pathStepIdx);
-        item.deduction.sections.splice(0, deductionIdx.sectionIdx);
-      });
+        // update agenda: prune deduction paths
+        var agendaItems = agenda.itemsByProofStep(nodeId);
+        $.each(agendaItems, function(i, item) {
+          var deductionIdx = agenda.deductionIndexOf(item.id, nodeId);
+          var section = item.deduction.sections[deductionIdx.sectionIdx];
+          section.path.splice(0, deductionIdx.pathStepIdx);
+          item.deduction.sections.splice(0, deductionIdx.sectionIdx);
+        });
 
-      // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
-      var newTop = newTopAgendaItem.deduction.sections[0].path[0];
-      $.each(agendaItems, function(i, item) {
-        var oldTop = item.deduction.sections[0].path[0];
-        if (oldTop !== newTop) {
-          console.log("Unexpected deduction start after pruning: expected " + newTop + " but have " + oldTop +
-            " at agenda item " + item.id)
-        }
-        //@todo additionally check that deduction.sections are all the same (might be expensive, though)
-      });
+        // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
+        var newTop = newTopAgendaItem.deduction.sections[0].path[0];
+        $.each(agendaItems, function(i, item) {
+          var oldTop = item.deduction.sections[0].path[0];
+          if (oldTop !== newTop) {
+            console.log("Unexpected deduction start after pruning: expected " + newTop + " but have " + oldTop +
+              " at agenda item " + item.id)
+          }
+          //@todo additionally check that deduction.sections are all the same (might be expensive, though)
+        });
 
-      // delete previous items
-      //@todo preserve previous tab order
-      $.each(agendaItems, function(i, item) {
-        delete agenda.itemsMap[item.id];
-      });
+        // delete previous items
+        //@todo preserve previous tab order
+        $.each(agendaItems, function(i, item) {
+          delete agenda.itemsMap[item.id];
+        });
 
-      // update agenda: if available, copy already cached deduction path into the remaining agenda item (new top item)
-      var topDeduction = agendaItems[0] ? agendaItems[0].deduction : newTopAgendaItem.deduction;
-      newTopAgendaItem.deduction = topDeduction;
-      newTopAgendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
-      agenda.itemsMap[newTopAgendaItem.id] = newTopAgendaItem;
+        // update agenda: if available, copy already cached deduction path into the remaining agenda item (new top item)
+        var topDeduction = agendaItems[0] ? agendaItems[0].deduction : newTopAgendaItem.deduction;
+        newTopAgendaItem.deduction = topDeduction;
+        newTopAgendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
+        agenda.itemsMap[newTopAgendaItem.id] = newTopAgendaItem;
 
-      // select new top item
-      agenda.select(newTopAgendaItem);
+        // select new top item
+        agenda.select(newTopAgendaItem);
 
-      // refresh tactic
-      tactic.fetch(userId, proofId);
+        // refresh tactic
+        tactic.fetch(userId, proofId);
+      } else {
+        // undo on a reloaded/partially loaded proof (proof tree does not contain node with ID `nodeId`)
+        sequentProofData.clear();
+        sequentProofData.fetchAgenda(userId, proofId);
+      }
     },
 
     /** Prunes the proof tree at the specified goal, executes onPruned when the tree is pruned */
@@ -260,7 +266,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       var self = this;
 
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').then(function(response) {
-        self.uiPruneBelow(userId, proofId, nodeId, self.proofTree, self.agenda, self.tactic, response.data.agendaItem);
+        self.uiPruneBelow(userId, proofId, nodeId, self.proofTree, self.agenda, self.tactic, response.data.agendaItem, self);
       }).then(onPruned);
     },
 
@@ -270,7 +276,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       var self = this;
 
       $http.get('proofs/user/' + userId + '/' + proofId + '/undoLastStep').then(function(response) {
-        self.uiPruneBelow(userId, proofId, response.data.agendaItem.id, self.proofTree, self.agenda, self.tactic, response.data.agendaItem);
+        self.uiPruneBelow(userId, proofId, response.data.agendaItem.id, self.proofTree, self.agenda, self.tactic, response.data.agendaItem, self);
       }).then(onPruned);
     },
 
@@ -281,13 +287,13 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     /** Fetches the agenda from the server for the purpose of continuing a proof */
-    fetchAgenda: function(scope, userId, proofId) { this.doFetchAgenda(scope, userId, proofId, 'agendaawesome'); },
+    fetchAgenda: function(userId, proofId) { this.doFetchAgenda(userId, proofId, 'agendaawesome'); },
 
     /** Fetches the agenda from the server for the purpose of browsing a proof from root to leaves */
-    fetchBrowseAgenda: function(scope, userId, proofId) { this.doFetchAgenda(scope, userId, proofId, 'browseagenda'); },
+    fetchBrowseAgenda: function(userId, proofId) { this.doFetchAgenda(userId, proofId, 'browseagenda'); },
 
     /** Fetches a proof's agenda of kind `agendaKind` from the server */
-    doFetchAgenda: function(scope, userId, proofId, agendaKind) {
+    doFetchAgenda: function(userId, proofId, agendaKind) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
       this.tactic.fetch(userId, proofId);

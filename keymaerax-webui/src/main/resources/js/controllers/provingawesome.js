@@ -91,7 +91,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           });
       } else {
         spinnerService.show('proofLoadingSpinner');
-        sequentProofData.fetchAgenda($scope, $scope.userId, $scope.proofId);
+        sequentProofData.fetchAgenda($scope.userId, $scope.proofId);
       }
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
@@ -244,7 +244,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
             $rootScope.$broadcast("proof.message", err.data);
           });
       } else {
-        sequentProofData.fetchBrowseAgenda($scope, $scope.userId, $scope.proofId);
+        sequentProofData.fetchBrowseAgenda($scope.userId, $scope.proofId);
       }
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId/browse'});
@@ -253,7 +253,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
     if (taskResult.type === 'taskresult') {
       if ($scope.proofId === taskResult.proofId) {
         if ($scope.runningTask.nodeId === taskResult.parent.id) {
-          sequentProofData.fetchBrowseAgenda($scope, $scope.userId, $scope.proofId);
+          sequentProofData.fetchBrowseAgenda($scope.userId, $scope.proofId);
         } else {
           showMessage($uibModal, "Unexpected tactic result, parent mismatch: expected " +
             $scope.runningTask.nodeId + " but got " + taskResult.parent.id);
@@ -385,7 +385,13 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.undoLastProofStep = function() {
-      sequentProofData.undoLastProofStep($scope.userId, $scope.proofId);
+      sequentProofData.undoLastProofStep($scope.userId, $scope.proofId, function() {
+        // undo may reload entirely
+        //@todo refreshes to empty conjecture
+        $scope.tactic = sequentProofData.tactic;
+        $scope.agenda = sequentProofData.agenda;
+        $scope.proofTree = sequentProofData.proofTree;
+      });
     };
 
     $scope.setFormulaMode = function(mode) {

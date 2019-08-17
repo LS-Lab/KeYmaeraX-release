@@ -25,7 +25,7 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
     if (theme.css && theme.fontSize && theme.renderMargins && theme.renderMargins[0] && theme.renderMargins[1]) {
       $http.post('/users/' + sessionService.getUser() + '/theme', {css: theme.css, fontSize: theme.fontSize, renderMargins: theme.renderMargins}).then(function(response) {
         setTheme(response.data);
-        sequentProofData.fetchAgenda($scope, sessionService.getUser(), $routeParams.proofId);
+        sequentProofData.fetchAgenda(sessionService.getUser(), $routeParams.proofId);
       });
     }
   }
