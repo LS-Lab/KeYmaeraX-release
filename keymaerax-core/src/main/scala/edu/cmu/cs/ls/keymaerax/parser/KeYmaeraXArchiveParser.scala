@@ -577,7 +577,16 @@ object KeYmaeraXArchiveParser {
             val (rbrace@Token(RBRACE, endLoc)) :: remainder = defEnd
             val program: Either[Option[Program], List[Token]] = try {
               if (!prgDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
-                Left(Some(KeYmaeraXParser.programTokenParser(prgDefBlock :+ Token(EOF, endLoc))))
+                try {
+                  Left(Some(KeYmaeraXParser.programTokenParser(prgDefBlock :+ Token(EOF, endLoc))))
+                } catch {
+                  case ex: AssertionError if ex.getMessage.startsWith("assumption failed: binary operator expected for UnitOpSpec(PSEUDO$") =>
+                    // might be an ODESystem without braces
+                    Left(Some(KeYmaeraXParser.programTokenParser(Token(LBRACE) +: prgDefBlock :+ Token(RBRACE) :+ Token(EOF, endLoc))))
+                  case ex: ParseException if ex.msg == "ODE without {}" =>
+                    // ODE without braces
+                    Left(Some(KeYmaeraXParser.programTokenParser(Token(LBRACE) +: prgDefBlock :+ Token(RBRACE) :+ Token(EOF, endLoc))))
+                }
               } else {
                 Right(prgDefBlock :+ Token(EOF, endLoc))
               }

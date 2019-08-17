@@ -147,6 +147,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe empty
   }
 
+  it should "accept ODEs without extra braces" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; Real t; End.
+        | Definitions HP a ::= { x'=x, t'=1 & x<=2 }; End.
+        | Problem [a;]x<=2 End.
+        |End.
+      """.stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("a", None) -> (Some(Unit), Trafo, Some("{ x'=x, t'=1 & x<=2 }".asProgram), UnknownLocation),
+        ("t", None) -> (None, Real, None, UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
   it should "parse definitions with dot arguments" in {
     val input =
       """ArchiveEntry "Entry 1".
@@ -1449,6 +1473,33 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     ) should have message """2:32 Unexpected token cannot be parsed
                             |Found:    } (RBRACE$) at 2:32
                             |Expected: ; (SEMI$)""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions HP acc ::= { x'= }; End.
+        | Problem. true End.
+        |End.""".stripMargin
+    ) should have message """2:31 Missing right-hand side x'=
+                            |Found:    } (RBRACE$) at 2:31
+                            |Expected: $$$T (TERM$)""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions HP acc ::= { x'=7* }; End.
+        | Problem. true End.
+        |End.""".stripMargin
+    ) should have message """2:33 Unexpected token cannot be parsed
+                            |Found:    } (RBRACE$) at 2:33
+                            |Expected: <BeginningOfTerm>""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions HP acc ::= { x'=x, t'= }; End.
+        | Problem. true End.
+        |End.""".stripMargin
+    ) should have message """2:37 Missing right-hand side t'=
+                            |Found:    } (RBRACE$) at 2:37
+                            |Expected: $$$T (TERM$)""".stripMargin
   }
   
   
