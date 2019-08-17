@@ -481,7 +481,7 @@
 <div class="row">
     <div class="col-md-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
-        <uib-tabset justified="true" active="agenda.selectedTab">
+        <uib-tabset justified="true" active="agenda.selectedTab" ng-if="agenda.items().length > 0" ng-cloak>
             <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
                      deselect="agenda.deselect(task)" select="agenda.select(task)">
                 <uib-tab-heading>
@@ -643,6 +643,9 @@
                 </div>
             </uib-tab>
         </uib-tabset>
+        <div ng-if="agenda.items().length <= 0" ng-cloak>
+            <div ng-include="'partials/prooffinisheddialog.html'"></div>
+        </div>
     </div>
 </div>
 

@@ -96,29 +96,6 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
 
-  $scope.$on('agenda.isEmpty', function(event, data) {
-    if (data.proofId == $scope.proofId) {
-      // the current controller is responsible
-      $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
-        if (data.status == 'closed') {
-          var modalInstance = $uibModal.open({
-            templateUrl: 'partials/prooffinisheddialog.html',
-            controller: 'ProofFinishedDialogCtrl',
-            size: 'lg',
-            resolve: {
-                userId: function() { return $scope.userId; },
-                proofId: function() { return $scope.proofId; },
-                proofName: function() { return $scope.proofName; }
-            }
-          });
-        } else {
-          // should never happen
-          showMessage($uibModal, 'Empty agenda even though proof ' + $scope.proofId + ' is not closed (' + data.status + ')')
-        }
-      });
-    }
-  });
-
   $scope.updateFreshProof = function(taskResult) {
     if (taskResult.type === 'taskresult') {
       if ($scope.proofId === taskResult.proofId) {
@@ -336,8 +313,9 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService,
-           derivationInfos, sessionService, Poller) {
+  function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, $location,
+           Tactics, sequentProofData, spinnerService,
+           derivationInfos, sessionService, Poller, FileSaver) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = sessionService.getUser();
     $scope.agenda = sequentProofData.agenda;
@@ -386,6 +364,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.undoLastProofStep = function() {
       sequentProofData.undoLastProofStep($scope.userId, $scope.proofId, function() {
+        $scope.resetProof();
         // undo may reload entirely
         //@todo refreshes to empty conjecture
         $scope.tactic = sequentProofData.tactic;
@@ -796,68 +775,68 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.openModelEditor = function (modelId) {
-        var modalInstance = $uibModal.open({
-          templateUrl: 'partials/modeldialog.html',
-          controller: 'ModelDialogCtrl',
-          size: 'fullscreen',
-          resolve: {
-            userid: function() { return $scope.userId; },
-            modelid: function() { return modelId; },
-            mode: function() { return 'proofedit'; },
-            proofid: function() { return $scope.proofId; }
-          }
-        });
-      };
-  });
-
-angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $uibModalInstance, $location, FileSaver, Blob, userId, proofId, proofName) {
-
-    // empty open proof until fetched from server
-    $scope.proof = {
-      proofId: '',
-      checking: true,
-      //isProved: true/false is reported from server
-      tactic: '',
-      provable: ''
+      var modalInstance = $uibModal.open({
+        templateUrl: 'partials/modeldialog.html',
+        controller: 'ModelDialogCtrl',
+        size: 'fullscreen',
+        resolve: {
+          userid: function() { return $scope.userId; },
+          modelid: function() { return modelId; },
+          mode: function() { return 'proofedit'; },
+          proofid: function() { return $scope.proofId; }
+        }
+      });
     }
 
-    // fetch proof
-    $http.get("/proofs/user/" + userId + "/" + proofId + "/validatedStatus").then(function(response) {
-      $scope.proof = response.data; // no transformation, pass on to HTML as is
+    // all tasks finished
+
+    // empty open proof until fetched from server
+    $scope.proof = {};
+    $scope.resetProof = function() {
+      $scope.proof.proofId = '';
+      $scope.proof.checking = true;
+      //isProved: true/false is reported from server
+      $scope.proof.isProved = undefined;
+      $scope.proof.tactic = '';
+      $scope.proof.provable = '';
+    }
+    $scope.resetProof();
+
+    $scope.$on('agenda.isEmpty', function(event, data) {
+      if (data.proofId == $scope.proofId) {
+        // the current controller is responsible
+        $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
+          if (data.status == 'closed') {
+            // fetch proof
+            $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/validatedStatus").then(function(response) {
+              $scope.proof = response.data; // no transformation, pass on to HTML as is
+            });
+          } else {
+            // should never happen
+            showMessage($uibModal, 'Empty agenda even though proof ' + $scope.proofId + ' is not closed (' + data.status + ')')
+          }
+        });
+      }
     });
 
-    // just close the dialog
-    $scope.cancel = function() { $uibModalInstance.dismiss('cancel'); };
-
     $scope.browseProof = function() {
-      $uibModalInstance.dismiss('cancel');
       $location.path('/proofs/' + $scope.proof.proofId + '/browse');
     };
 
     // don't trust local cache, fetch new from server
-    //@todo duplicate with proofs.js downloadTactic
-    $scope.downloadTactic = function() {
-      $http.get("/proofs/user/" + userId + "/" + proofId + "/extract").then(function(response) {
-        var data = new Blob([response.data.tacticText], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, proofName + '.kyt');
-      });
-    }
-
-    // don't trust local cache, fetch new from server
     //@todo duplicate with proofs.js downloadLemma
     $scope.downloadLemma = function() {
-      $http.get("/proofs/user/" + userId + "/" + proofId + "/lemma").then(function(response) {
+      $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/lemma").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, proofName + '.kyp');
+        FileSaver.saveAs(data, $scope.proofName + '.kyp');
       });
     }
 
     //@todo duplicate with proofs.js downloadPartialProof
     $scope.downloadProofArchive = function() {
-      $http.get("/proofs/user/" + userId + "/" + proofId + "/download").then(function(response) {
+      $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/download").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, proofName + '.kyx');
+        FileSaver.saveAs(data, $scope.proofName + '.kyx');
       });
     }
-});
+  });
