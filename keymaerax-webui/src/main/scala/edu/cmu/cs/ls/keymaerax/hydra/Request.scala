@@ -2044,7 +2044,7 @@ class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: Strin
           node.pruneBelow()
           val info = db.getProofInfo(proofId)
           db.updateProofInfo(info.copy(closed = false))
-          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId)
+          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId, node.allAncestors.map(_.id.toString))
           new PruneBelowResponse(item) :: Nil
       }
     }

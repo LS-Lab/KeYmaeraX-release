@@ -30,6 +30,9 @@ trait ProofTreeNode {
   /** All direct and indirect descendants of this node. */
   def allDescendants: List[ProofTreeNode] = theDescendants
 
+  /** All direct and indirect ancestors of this node. */
+  def allAncestors: List[ProofTreeNode] = theAncestors
+
   /** The number of subgoals in the local provable (fast, doesn't actually load the provable). */
   def numSubgoals: Int
 
@@ -109,6 +112,7 @@ trait ProofTreeNode {
   }
 
   private lazy val theDescendants = children ++ children.flatMap(_.allDescendants)
+  private lazy val theAncestors = parent.toList ++ parent.map(_.allAncestors).getOrElse(Nil)
 }
 
 trait ProofTree {
@@ -506,7 +510,6 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   private var loadedNodes: List[ProofTreeNode] = Nil
 }
 
-case class AgendaItem(id: String, name: String, proofId: String) {
-  // @todo full path
-  def path: List[String] = id::Nil
+case class AgendaItem(id: String, name: String, proofId: String, ancestors: List[String] = Nil) {
+  def path: List[String] = id +: ancestors
 }
