@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -20,6 +20,7 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
+import scala.util.Try
 
 /**
  * Implementation: provides tactics for differential equations.
@@ -34,6 +35,10 @@ private object DifferentialTactics extends Logging {
   // QE with default timeout for use in ODE tactics (timeout in seconds)
   private[btactics] val ODE_QE_TIMEOUT = Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))
   private[btactics] def timeoutQE = QE(Nil, None, Some(ODE_QE_TIMEOUT))
+  // QE with default timeout for use in counterexample tactics (timeout in seconds)
+  private[btactics] val ODE_CEX_TIMEOUT =
+      Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+  private[btactics] def timeoutCEXQE = QE(Nil, None, Some(ODE_CEX_TIMEOUT))
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -695,37 +700,80 @@ private object DifferentialTactics extends Logging {
     }, "Invariant fast-check failed")
   }
 
+  /** Invariance check
+    * @return Returns True if it determines that the only possibilty is for postcondition to
+    *         be invariant at the position it is called (either a loop invariant or ODE invariant)
+    *         This can be used to prevent (unnecessary) invariant generation for loops or ODEs from happening
+    *         Return False in all other cases (including when the sequent or position are not of the expected shape)
+    */
+  private def invCheck(pos:Position, seq:Sequent) : Boolean = {
+    seq.sub(pos) match {
+      case Some(Box(ode:ODESystem, post)) => {
+        val assms = seq.ante.flatMap(flattenConjunctions(_)).toList
+        //Track constant assumptions separately
+        val odeBV = StaticSemantics.boundVars(ode)
+        val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
+        val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
+        val conjConst = assmsConst.foldLeft(ode.constraint)( (f,a) => And(f,a))
+        val conjRest = assmsRest.foldLeft(True:Formula)( (f,a) => And(f,a))
+        val detectEquiv = proveBy(Imply(conjConst,Equiv(conjRest,post)), timeoutCEXQE)
+        detectEquiv.isProved
+      }
+
+      case Some(Box(l:Loop, post)) => {
+        val assms = seq.ante.flatMap(flattenConjunctions(_)).toList
+        //Track constant assumptions separately
+        val loopBV = StaticSemantics.boundVars(l)
+        val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
+        val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
+        val conjConst = assmsConst.foldLeft(True:Formula)( (f,a) => And(f,a))
+        val conjRest = assmsRest.foldLeft(True:Formula)( (f,a) => And(f,a))
+        val detectEquiv = proveBy(Imply(conjConst,Equiv(conjRest,post)), timeoutCEXQE)
+        detectEquiv.isProved
+      }
+
+      case _ => false
+    }
+  }
 
   /** ODE counterexample finder
-    * Fails with an error message if it finds a counterexample at the position it is called
-    * but succeeds in all other cases
-    * (including when the sequent or position are not of the expected shape)
+    * @return Leaves False as the only subgoal if it finds a counterexample to the ODE question at the position it is called
+    *         Succeeds in all other cases (including when the sequent or position are not of the expected shape)
     */
-  lazy val cexCheck: DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
+  def cexCheck(withInvCheck : Boolean = true): DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
     if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
       //todo: currently only works if there is exactly one succedent
       logger.warn("ODE counterexample not called at top-level succedent")
       skip
-    } else if (ToolProvider.invGenTool().isEmpty) {
-      logger.warn("ODE counterexample requires an InvGenTool, but got None")
-      skip
-    } else {
-      val tool = ToolProvider.invGenTool().get
+    }
 
-      seq.sub(pos) match {
-        case Some(Box(ode:ODESystem, post)) =>
-          try {
-            tool.refuteODE(ode, seq.ante, post) match {
-              case None => skip
-              case Some(_) => cut(False) <(closeF, cohideR('Rlast))
+    // Returns quickly without asking counterexample if it is already an invariance question
+    else if(withInvCheck && invCheck(pos,seq)) {
+      cut(False) <(closeF, cohideR('Rlast))
+    }
+
+    else {
+      if (ToolProvider.invGenTool().isEmpty) {
+        logger.warn("ODE counterexample requires an InvGenTool, but got None")
+        skip
+      } else {
+        val tool = ToolProvider.invGenTool().get
+
+        seq.sub(pos) match {
+          case Some(Box(ode: ODESystem, post)) =>
+            try {
+              tool.refuteODE(ode, seq.ante, post) match {
+                case None => skip
+                case Some(_) => cut(False) < (closeF, cohideR('Rlast))
+              }
+            } catch {
+              // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
+              case _: Exception => skip
             }
-          } catch {
-            // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
-            case _: Exception => skip
-          }
-        case _ =>
-          logger.warn("ODE counterexample not called at box ODE in succedent")
-          skip
+          case _ =>
+            logger.warn("ODE counterexample not called at box ODE in succedent")
+            skip
+        }
       }
     }
   })
@@ -951,7 +999,7 @@ private object DifferentialTactics extends Logging {
         // Try to prove postcondition invariant
         odeInvariant()(pos) |
         // Counterexample check
-        cexCheck(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
+        cexCheck(true)(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
           // Some additional cases
           //(solve(pos) & ?(timeoutQE)) |
           ODEInvariance.nilpotentSolve(true)(pos) |

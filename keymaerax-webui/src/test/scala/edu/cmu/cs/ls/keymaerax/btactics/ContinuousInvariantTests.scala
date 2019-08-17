@@ -180,7 +180,37 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   it should "refute as a tactic" in withMathematica { _ =>
     val fml = "x^2+y^2=r()^2 -> [{x'=y,y'=A()*x}] x^2+y^2=r()^2".asFormula
-    proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1)).subgoals.loneElement shouldBe "==> false".asSequent
+    proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(false)(1)).subgoals.loneElement shouldBe "==> false".asSequent
+  }
+
+  it should "find cex differently under a flag" in withMathematica { _ =>
+    val fml = "x != 0 -> [{x'=0}] x^2 > 0".asFormula
+    val pr1 = proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(true)(1))
+    val pr2 = proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(false)(1))
+
+    pr1.subgoals.loneElement shouldBe "==> false".asSequent
+    pr2.subgoals.loneElement shouldBe "x!=0 ==> [{x'=0&true}]x^2>0".asSequent
+  }
+
+  it should "correctly detect invariance question under irrelevant and constant assumptions" in withMathematica { _ =>
+    val fml = "A > 0 & B() > 0 & C() = e() & y + D() = 0 & x != C() & e() = 0 -> [{x'= C()}] x^2 > y + D()".asFormula
+    val pr = proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(true)(1))
+
+    pr.subgoals.loneElement shouldBe "==> false".asSequent
+  }
+
+  it should "correctly detect invariance question with domains" in withMathematica { _ =>
+    val fml = "x < y -> [{x'= C(), y' = 1 & y < 5}] x < 5".asFormula
+    val pr = proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(true)(1))
+
+    pr.subgoals.loneElement shouldBe "==> false".asSequent
+  }
+
+  it should "correctly detect invariance question for loops" in withMathematica { _ =>
+    val fml = "y=5 & x < y -> [{x:=1; x:=x;}*] x < 5".asFormula
+    val pr = proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(true)(1))
+
+    pr.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
   it should "generate necessary formulas" in withMathematica { tool =>
