@@ -241,14 +241,14 @@ object Main {
        |   $backupPath
        |   to a safe place
        |2. Revert to your previous version of KeYmaera X
-       |3. Export your models and proofs into an archive file (.kya) using the Web UI
+       |3. Export your models and proofs into an archive file (.kyx) using the Web UI
        |   model list page's "Export all (with proofs)" button and store the file in
        |   a safe place. If you want to export only select models and proofs, use the export
        |   buttons in the model list instead. If necessary, restore the backup database
        |   from $backupPath back to $defaultName before exporting
        |4. Delete the database ~/.keymaerax/$defaultName
        |5. Upgrade and start KeYmaera X. The models and proofs pages will now be empty.
-       |6. Import the models and proofs from the .kya file of step 3, using the Web UI
+       |6. Import the models and proofs from the .kyx file of step 3, using the Web UI
        |   model list page's upload functionality: "Select file" and then press "Upload"
        |   """.stripMargin
 
@@ -305,7 +305,7 @@ object Main {
       try {
         if (models.nonEmpty) {
           launcherDebug("Reading guest source " + url)
-          val content = DatabasePopulator.readKya(url)
+          val content = DatabasePopulator.readKyx(url)
           launcherDebug("Comparing cached and source content")
           models.flatMap(m => content.find(_.name == m.name) match {
             case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model == m.keyFile => None

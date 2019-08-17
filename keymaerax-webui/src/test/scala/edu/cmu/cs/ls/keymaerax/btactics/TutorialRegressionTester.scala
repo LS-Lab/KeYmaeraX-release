@@ -44,7 +44,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
   private lazy val tutorialEntries = table({
     println("Reading " + url)
     if (url.endsWith(".json")) DatabasePopulator.readTutorialEntries(url)
-    else if (url.endsWith(".kya") || url.endsWith(".kyx")) DatabasePopulator.readKya(url)
+    else if (url.endsWith(".kya") || url.endsWith(".kyx")) DatabasePopulator.readKyx(url)
     else throw new IllegalArgumentException(s"URL must end in either .json, .kya, or .kyx, but got $url")
   })
 

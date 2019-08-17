@@ -851,7 +851,7 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     $scope.downloadProofArchive = function() {
       $http.get("/proofs/user/" + userId + "/" + proofId + "/download").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, proofName + '.kya');
+        FileSaver.saveAs(data, proofName + '.kyx');
       });
     }
 });
