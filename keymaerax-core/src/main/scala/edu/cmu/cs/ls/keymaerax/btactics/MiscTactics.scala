@@ -173,7 +173,7 @@ object DebuggingTactics {
         print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
         if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
         provable
-      } else throw new BelleUnexpectedProofStateError(msg + ": expected proved provable, but got open goals", provable.underlyingProvable)
+      } else throw new BelleUnexpectedProofStateError(msg + ": expected to have proved, but got open goals", provable.underlyingProvable)
     }
   }
 
