@@ -51,12 +51,12 @@
     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
             ng-click="save.cmd=redoProof">Save</button>
     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && modelIsComplete()"
-            ng-click="save.cmd=startProof">Start new proof</button>
+            ng-click="save.cmd=startProof">Start proof</button>
     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
             ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
     <span ng-controller="ModelProofCreateCtrl">
     <button class="btn btn-primary" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
-            ng-click="save.cmd=delayedProveFromTactic(model.id)">Prove with associated tactic</button>
+            ng-click="save.cmd=delayedProveFromTactic(model.id)">Run stored tactic</button>
     </span>
     <button class="btn btn-primary" ng-click="modelDataForm.$cancel();cancel()">Cancel</button>
 </div>

@@ -11,13 +11,13 @@
         </span>
         <span class="pull-right">
             <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+                    ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Export proof</button>
+            <!--button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+                    ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Export lemma</button-->
+            <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
                     ng-click="browseProof()"><i class="fa fa-globe"></i> Browse proof</button>
             <button ng-controller="ModelProofCreateCtrl" ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
                     ng-click="createProof(agenda.modelId, '', '')"><i class="fa fa-undo"></i> Redo proof</button>
-            <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
-                    ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Download lemma</button>
-            <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
-                    ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Download archive</button>
         </span>
     </h3>
 </div>
