@@ -20,8 +20,12 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   $scope.stepAxiom = function() {
     var selectedItem = sequentProofData.agenda.selectedItem()
     if (selectedItem) {
-      var explanationNodeId = selectedItem.deduction.sections[0].path[0];
-      var node = sequentProofData.proofTree.node(explanationNodeId);
+      var node = sequentProofData.proofTree.highlightedNode(); // set in sequentproof.js when hovering over sequent rule annotations
+      if (!node) {
+        // default: show last rule
+        var topNodeId = selectedItem.deduction.sections[0].path[0];
+        node = sequentProofData.proofTree.node(topNodeId);
+      }
       if (node) return [node.rule];
       else return [];
     } else return [];

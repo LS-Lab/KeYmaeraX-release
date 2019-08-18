@@ -134,6 +134,7 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         /** Highlights the operator where the step that created sequent/node `nodeId` was applied. */
         highlightNodeStep: function(nodeId, highlight) {
           var node = this.node(nodeId);
+          node.isHighlighted = highlight;
           var pos = node.rule.pos.replace(/\./g, "\\,");
           var element = $("#seq_"+this.htmlNodeId(node.parent) + " #fml_"+pos);
           if (highlight) {
@@ -144,6 +145,11 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
               else element.addClass("k4-highlight-steppos-modality-prg");
             }
           } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+        },
+        highlightedNode: function() {
+          var theNodes = $.map(this.nodesMap, function(v) {return v;});
+          var highlighted = $.grep(theNodes, function(e, i) { return e.isHighlighted; });
+          return highlighted !== undefined && highlighted.length > 0 ? highlighted[0] : undefined;
         },
 
         paths: function(node) {
