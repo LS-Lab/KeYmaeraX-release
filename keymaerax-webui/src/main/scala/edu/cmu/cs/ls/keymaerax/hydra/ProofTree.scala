@@ -513,3 +513,17 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 case class AgendaItem(id: String, name: String, proofId: String, ancestors: List[String] = Nil) {
   def path: List[String] = id +: ancestors
 }
+object AgendaItem {
+  /** Creates a name from the deriviation info of `codeName`. */
+  def nameOf(codeName: String): String = {
+    Try(DerivationInfo.ofCodeName(codeName)).toOption match {
+      case Some(di) => di.display.name
+      case None => codeName
+    }
+  }
+
+  /** Creates a name from a proof tree node. */
+  def nameOf(node: ProofTreeNode, prefix: String = "", suffix: String = ""): String = {
+    prefix + nameOf(node.makerShortName.getOrElse("").split("\\(").head) + suffix
+  }
+}

@@ -1334,19 +1334,11 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
     val leaves = tree.openGoals
     val closed = tree.openGoals.isEmpty && tree.verifyClosed
 
-    //@todo fetch goal names from DB
-    def agendaItemName(codeName: String): String = {
-      Try(DerivationInfo.ofCodeName(codeName)).toOption match {
-        case Some(di) => di.display.name
-        case None => codeName
-      }
-    }
-
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
 
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
-      AgendaItem(n.id.toString, "Conjecture: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
+      AgendaItem(n.id.toString, AgendaItem.nameOf(n, "Conjecture: "), proofId))
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
@@ -1361,7 +1353,7 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
-    val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, "Unnamed Goal", proofId) :: Nil
+    val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, AgendaItem.nameOf(tree.root, "Conjecture: "), proofId) :: Nil
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false, marginLeft, marginRight) :: Nil
   }
@@ -1518,7 +1510,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           val stepDetails = innerTree.tacticString
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
-            AgendaItem(n.id.toString, "Unnamed Goal", proofId))
+            AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
 
           ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
         }
@@ -1532,7 +1524,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
     tree.load()
     val innerSteps = tree.nodes
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
-      AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString))
+      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId.toString))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
@@ -2024,7 +2016,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
         case Some(node) =>
           node.pruneBelow()
-          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId)
+          val item = AgendaItem(node.id.toString, AgendaItem.nameOf(node), proofId)
           new PruneBelowResponse(item) :: Nil
       }
     }
@@ -2033,6 +2025,13 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
 
 /** Undoes the last proof step. */
 class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with WriteRequest {
+  private def agendaItemName(codeName: String): String = {
+    Try(DerivationInfo.ofCodeName(codeName)).toOption match {
+      case Some(di) => di.display.name
+      case None => codeName
+    }
+  }
+
   override protected def doResultingResponses(): List[Response] = {
     if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
     else {
@@ -2044,7 +2043,8 @@ class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: Strin
           node.pruneBelow()
           val info = db.getProofInfo(proofId)
           db.updateProofInfo(info.copy(closed = false))
-          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId, node.allAncestors.map(_.id.toString))
+          val item = AgendaItem(node.id.toString, AgendaItem.nameOf(node, "Conjecture: "),
+            proofId, node.allAncestors.map(_.id.toString))
           new PruneBelowResponse(item) :: Nil
       }
     }
