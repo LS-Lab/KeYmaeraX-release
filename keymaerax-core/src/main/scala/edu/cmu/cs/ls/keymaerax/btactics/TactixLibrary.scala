@@ -192,6 +192,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
 
+  /** Automated propositional reasoning, only keeps result if proved. */
+  val propAuto: BelleExpr = "propAuto" by (prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods"))
+
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */

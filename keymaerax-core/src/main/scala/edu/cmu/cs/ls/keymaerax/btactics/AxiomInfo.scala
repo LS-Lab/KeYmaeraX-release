@@ -999,6 +999,7 @@ object DerivationInfo {
     PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
     PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
     PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
+    PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}),
     PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
     PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(
       TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,

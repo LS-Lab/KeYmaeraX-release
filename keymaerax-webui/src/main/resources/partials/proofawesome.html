@@ -80,7 +80,7 @@
                                                 data-intro="Automatic search" data-position="top">
                             <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
                         </li>
-                        <li class="nav-item"><a ng-click="onTacticScript('prop;done',false)"
+                        <li class="nav-item"><a ng-click="onTacticScript('propAuto',false)"
                                                 data-intro="Prove propositionally" data-position="top">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop-Auto</span></span></a>
                         </li>
@@ -91,10 +91,6 @@
                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-map-o"><span class="k4-btn-optional-text"> Unfold</span></span>
                             </a>
-                        </li>
-                        <li class="nav-item"><a ng-click="onTacticScript('prop;done({`Not provable propositionally, please try other proof methods`})',false)"
-                                                data-intro="Prove propositionally" data-position="top">
-                            <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop-Auto</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'fullSimplify')"
                                                 data-intro="Simplify formulas" data-position="top">
