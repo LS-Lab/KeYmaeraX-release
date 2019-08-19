@@ -1001,7 +1001,7 @@ private object DifferentialTactics extends Logging {
     seq.sub(pos) match {
       case Some(Box(sys@ODESystem(ode, q), _)) =>
         // Try to prove postcondition invariant
-        odeInvariant()(pos) |
+        odeInvariant()(pos) & done |
         // Counterexample check
         cexCheck(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
           // Some additional cases
