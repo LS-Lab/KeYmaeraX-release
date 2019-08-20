@@ -489,7 +489,7 @@
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
                         <div class="col-md-11" ng-if="$first"
-                             data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. Hover over formulas for tactic advice. Left-click to apply default, right-click for a list of tactics. Alt/Option-click to chase a formula part away. Hover over &#8866; for tactics that transform the entire subgoal."
+                             data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal'><dt>Left-click</dt><dd>to apply default</dd><dt>Right-click</dt><dd>for a list of tactics</dd><dt>Alt/Option-click</dt><dd>to chase a formula part away</dd><dt>Hover over &#8866;</dt><dd>for tactics that transform the entire subgoal</dd></dl>"
                              data-position="bottom">
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
@@ -568,8 +568,7 @@
                                 <div ng-if="taskExplanation.selection=='Tactic'" ng-cloak>
                                 <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel === ''">
                                     <span class="input-group-btn"
-                                          uib-tooltip="Rerun tactic from original conjecture"
-                                          data-intro="Rerun tactic from the start" data-position="right">
+                                          uib-tooltip="Rerun tactic from original conjecture">
                                         <button class="btn btn-default" ng-click="rerunTactic()"
                                                 ng-disabled="prooftree.root === agenda.selectedId()">Rerun</button>
                                     </span>
@@ -581,23 +580,20 @@
                                     <span class="input-group-addon">Execute: </span>
                                     <span class="input-group-btn"
                                           uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one proof step)"
-                                          tooltip-placement="auto top-left"
-                                          data-intro="Run changes in the tactic as a single step." data-position="bottom">
+                                          tooltip-placement="auto top-left">
                                         <button class="btn btn-default" ng-click="executeTacticDiff(false)"
                                                 ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
                                     </span>
                                     <span class="input-group-btn"
                                           uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
-                                          tooltip-placement="auto top-left"
-                                          data-intro="Run changes in the tactic step-by-step." data-position="bottom">
+                                          tooltip-placement="auto top-left">
                                         <button class="btn btn-default" ng-click="executeTacticDiff(true)"
                                                 ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
                                     </span>
                                 </div>
                                 <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel !== ''">
                                     <span class="input-group-btn"
-                                          uib-tooltip="Rerun tactic from original conjecture"
-                                          data-intro="Rerun the tactic from the start" data-position="right">
+                                          uib-tooltip="Rerun tactic from original conjecture">
                                         <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
                                     </span>
                                     <span class="input-group-addon">Replace {{tactic.tacticDel}} with </span>

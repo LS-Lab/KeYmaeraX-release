@@ -1252,3 +1252,11 @@ del {
 .error {
   boder-color: var(--lsblue);
 }
+
+/*
+ * Narrow top overlay help.
+ */
+.chardinjs-tooltip.chardinjs-top {
+  margin-top: 0px !important;
+  padding-bottom: 0px !important;
+}
