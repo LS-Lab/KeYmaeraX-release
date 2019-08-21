@@ -178,7 +178,9 @@ object DebuggingTactics {
   }
 
   /** Placeholder for a tactic string that is not executed. */
-  def pending(tactic: String): BelleExpr = new StringInputTactic("pending", tactic :: Nil) {
+  def pending(tactic: String): BelleExpr = new StringInputTactic("pending",
+      // escape " but avoid double-escape
+      tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\"") :: Nil) {
     override def result(provable: ProvableSig): ProvableSig = provable
   }
 }

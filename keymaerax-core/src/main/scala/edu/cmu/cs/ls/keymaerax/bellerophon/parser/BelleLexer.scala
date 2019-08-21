@@ -128,18 +128,31 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     EXPRESSION.startPattern -> ((s: String, loc: Location, expr: String) => Right(try {
       //Constructing an EXPRESSION results in an attempt to parse expressionString, which might
       //result in a parse error that should be passed back to the user.
-      var opening = expr.sliding(2).count(_ == "{`")
-      var closing = expr.sliding(2).count(_ == "`}")
-      val expression: StringBuilder = new StringBuilder(expr)
-      while (opening-closing > 0) {
-        val remainder = s.substring(expression.length)
-        val matchingClosingIdx = StringUtils.ordinalIndexOf(remainder, "`}", opening - closing)
-        val suffix = remainder.substring(0, matchingClosingIdx + 2)
-        opening += suffix.sliding(2).count(_ == "{`")
-        closing += suffix.sliding(2).count(_ == "`}")
-        expression.append(suffix)
-      }
-      consumeTerminalLength(s, EXPRESSION(expression.toString), loc)
+      if (expr.startsWith("{`")) {
+        // deprecated syntax
+        var opening = expr.sliding(2).count(_ == "{`")
+        var closing = expr.sliding(2).count(_ == "`}")
+        val expression: StringBuilder = new StringBuilder(expr)
+        while (opening-closing > 0) {
+          val remainder = s.substring(expression.length)
+          val matchingClosingIdx = StringUtils.ordinalIndexOf(remainder, "`}", opening - closing)
+          val suffix = remainder.substring(0, matchingClosingIdx + 2)
+          opening += suffix.sliding(2).count(_ == "{`")
+          closing += suffix.sliding(2).count(_ == "`}")
+          expression.append(suffix)
+        }
+        consumeTerminalLength(s, EXPRESSION(expression.toString, "{`" -> "`}"), loc)
+      } else if (expr.startsWith("\"")) {
+        // new syntax (does not support nesting since opening delimiter indistinguishable from closing delimiter)
+        if (expr.endsWith("\\\"")) {
+          var endQuoteIdx = s.indexOf("\"", expr.length)
+          while (endQuoteIdx > 0 && s.charAt(endQuoteIdx - 1) == '\\') {
+            endQuoteIdx = s.indexOf("\"", endQuoteIdx + 1)
+          }
+          if (endQuoteIdx >= 0) consumeTerminalLength(s, EXPRESSION(s.substring(0, endQuoteIdx + 1), "\"" -> "\""), loc)
+          else throw LexException("Missing end delimiter \" in expression " + expr, loc)
+        } else consumeTerminalLength(s, EXPRESSION(expr, "\"" -> "\""), loc)
+      } else throw LexException(s"Unknown starting delimiter in expression $expr", loc)
     } catch {
       case _: Throwable => throw LexException(s"Could not parse expression: $expr", loc)
     })),

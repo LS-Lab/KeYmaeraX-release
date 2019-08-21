@@ -125,18 +125,19 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "Parse a loop tactic and print it back out" in {
     BelleParser("loop({`1=1`}, 1)") shouldBe (round trip TactixLibrary.loop("1=1".asFormula)(1))
+    BelleParser("loop(\"1=1\", 1)") shouldBe (round trip TactixLibrary.loop("1=1".asFormula)(1))
   }
 
   it should "parse a tactic with optional argument specified" in {
     val t = TactixLibrary.discreteGhost("5".asTerm, Some("x".asVariable))(1)
-    val s = "discreteGhost({`5`}, {`x`}, 1)"
-    BelleParser(s) shouldBe (round trip t)
+    BelleParser("discreteGhost({`5`}, {`x`}, 1)") shouldBe (round trip t)
+    BelleParser("discreteGhost(\"5\", \"x\", 1)") shouldBe (round trip t)
   }
 
   it should "parse a tactic without optional argument specified" in {
     val t = TactixLibrary.discreteGhost("5".asTerm, None)(1)
-    val s = "discreteGhost({`5`}, 1)"
-    BelleParser(s) shouldBe (round trip t)
+    BelleParser("discreteGhost({`5`}, 1)") shouldBe (round trip t)
+    BelleParser("discreteGhost(\"5\", 1)") shouldBe (round trip t)
   }
 
   it should "parse OptionArg arguments when option unspecified" in {
@@ -152,15 +153,16 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse nested arguments" in {
-    val s = "pending({`loop({`x>=0`}, 1)`})"
-    val t = BelleParser(s)
-    BelleParser(s) shouldBe (round trip t)
+    BelleParser("pending({`loop({`x>=0`}, 1)`})") shouldBe (round trip DebuggingTactics.pending("loop({`x>=0`}, 1)"))
+    //@note new syntax needs escaping inner " for nesting
+    BelleParser("""pending("loop(\"x>=0\", 1)")""") shouldBe (round trip DebuggingTactics.pending("loop(\"x>=0\", 1)"))
   }
 
   it should "parse nested arguments with line breaks" in {
     val s = "pending({`<(\n nil,\n nil\n, nil)`})"
     val t = BelleParser(s)
     BelleParser(s) shouldBe (round trip t)
+    BelleParser("pending(\"<(\n nil,\n nil\n, nil)\")") shouldBe (round trip t)
   }
 
   //endregion
@@ -740,11 +742,11 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "round trip ghosts" in {
     //@todo should be on tactics is meaningless (compares names, but not arguments)
-    "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, None)(1)) and (print as "dG({`{y'=1}`}, 1)") and (reparse fromPrint))
-    "dG({`y'=1`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG({`{y'=1}`}, {`x*y=5`}, 1)") and (reparse fromPrint))
-    "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG({`{y'=0*y+1}`}, {`x*y^2=1`}, 1)") and (reparse fromPrint))
-    "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, None)(1)) and (print as "dG({`{y'=1/2*y}`}, 1)") and (reparse fromPrint))
-    "dG({`y'=1/2*y`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG({`{y'=1/2*y}`}, {`x*y^2=1`}, 1)") and (reparse fromPrint))
+    "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, None)(1)) and (print as "dG(\"{y'=1}\", 1)") and (reparse fromPrint))
+    "dG({`y'=1`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG(\"{y'=1}\", \"x*y=5\", 1)") and (reparse fromPrint))
+    "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=0*y+1}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
+    "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, None)(1)) and (print as "dG(\"{y'=1/2*y}\", 1)") and (reparse fromPrint))
+    "dG({`y'=1/2*y`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG(\"{y'=1/2*y}\", \"x*y^2=1\", 1)") and (reparse fromPrint))
   }
 
   //endregion

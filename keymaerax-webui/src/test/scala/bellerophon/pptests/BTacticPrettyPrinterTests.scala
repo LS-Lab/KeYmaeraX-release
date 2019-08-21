@@ -49,8 +49,8 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
 
   "transform" should "print with formula" in {
     val tactic = TactixLibrary.transform("x>0".asFormula)(1)
-    BellePrettyPrinter(tactic) shouldBe "transform({`x>0`}, 1)"
-    roundTrip("transform({`x>0`}, 1)")
+    BellePrettyPrinter(tactic) shouldBe "transform(\"x>0\", 1)"
+    roundTrip("transform(\"x>0\", 1)")
   }
 
   "Applied position tactics" should "print position" in {
@@ -61,15 +61,15 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
 
   "Applied position with input tactics" should "print input and position" in {
     val tactic = TactixLibrary.loop("x>0".asFormula)(1)
-    BellePrettyPrinter(tactic) shouldBe "loop({`x>0`}, 1)"
-    roundTrip("loop({`x>0`}, 1)")
+    BellePrettyPrinter(tactic) shouldBe "loop(\"x>0\", 1)"
+    roundTrip("loop(\"x>0\", 1)")
   }
 
   "useLemmaAt" should "print key correctly" in {
-    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", None)(1)) shouldBe "useLemmaAt({`the lemma`}, 1)"
-    roundTrip("useLemmaAt({`the lemma`}, 1)")
-    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1::Nil)))(1)) shouldBe "useLemmaAt({`the lemma`}, {`1`}, 1)"
-    roundTrip("useLemmaAt({`the lemma`}, {`1`}, 1)")
+    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", None)(1)) shouldBe "useLemmaAt(\"the lemma\", 1)"
+    roundTrip("useLemmaAt(\"the lemma\", 1)")
+    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1::Nil)))(1)) shouldBe "useLemmaAt(\"the lemma\", \"1\", 1)"
+    roundTrip("useLemmaAt(\"the lemma\", \"1\", 1)")
   }
 
   "Operator precedence" should "bind saturate * stronger than ;" in { roundTrip("implyR(1) ; andL('L)*") }

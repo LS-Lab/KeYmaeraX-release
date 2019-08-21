@@ -454,11 +454,11 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
 abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExpr with NamedBelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String =
-    s"$name(${inputs.map({case input: Expression => s"{`${input.prettyString}`}" case input => s"{`${input.toString}`}"}).mkString(",")})"
+    s"$name(${inputs.map({case input: Expression => "\"" + input.prettyString + "\"" case input => "\"" + input.toString + "\""}).mkString(",")})"
 }
 abstract class StringInputTactic(override val name: String, val inputs: Seq[String]) extends BuiltInTactic(name) {
   override def prettyString: String =
-    s"$name(${inputs.map(input => s"{`$input`}").mkString(",")})"
+    s"$name(${inputs.map(input => "\"" + input + "\"").mkString(",")})"
 
   override def equals(other: Any): Boolean = other match {
     case o: StringInputTactic => name == o.name && inputs == o.inputs
@@ -479,7 +479,7 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
 }
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
-    if (pt.inputs.nonEmpty) s"${pt.name}(${pt.inputs.map({ case input: Expression => s"{`${input.prettyString}`}" case input => s"{`${input.toString}`}"}).mkString(",")},${locator.prettyString})"
+    if (pt.inputs.nonEmpty) s"${pt.name}(${pt.inputs.map({ case input: Expression => "\"" + input.prettyString + "\"" case input => "\"" + input.toString + "\""}).mkString(",")},${locator.prettyString})"
     else pt.name + "(" + locator.prettyString + ")"
 
   override def equals(other: Any): Boolean = other match {
@@ -707,15 +707,15 @@ case class DefExpression(exprDef: Formula) extends BelleExpr {
     case Equiv(PredOf(_, _), _) => true
     case _ => false
   }, s"Expected either function definition of shape f(x)=t or predicate definition of shape p(x) <-> q, but got ${exprDef.prettyString}")
-  override def prettyString: String = s"def {`${exprDef.prettyString}`}"
+  override def prettyString: String = "def \"" + exprDef.prettyString + "\""
 }
 
 /** Expands a function or predicate. */
 case class ExpandDef(expr: DefExpression) extends BelleExpr {
-  override def prettyString: String = s"expand {`${expr.exprDef match {
+  override def prettyString: String = "expand \"" + (expr.exprDef match {
     case Equal(fn@FuncOf(_, _), _) => fn.prettyString
     case Equiv(p@PredOf(_, _), _) => p.prettyString
-  }}`}"
+  }) + "\""
 }
 
 @deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")

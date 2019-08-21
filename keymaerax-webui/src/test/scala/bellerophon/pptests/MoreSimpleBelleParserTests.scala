@@ -114,7 +114,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     val t = TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)
     val result = t.prettyString
     parser(result) shouldBe t
-    result shouldBe "dG({`{y'=0}`},{`1=1`},1)"
+    result shouldBe "dG(\"{y'=0}\",\"1=1\",1)"
   }
 
   it should "parse multiple nested arguments" in {
