@@ -29,6 +29,7 @@ output {
 .form-control {
   font-size: var(--lsfontsize);
   height: inherit;
+  white-space: nowrap;
 }
 
 .form-group-sm {
@@ -298,6 +299,11 @@ del {
 
 [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
   display: none !important;
+}
+
+.k4-inlineflex-fullwidth {
+  display: inline-flex;
+  width: 100%;
 }
 
 .k4-large-sup {
@@ -1270,4 +1276,9 @@ del {
 .chardinjs-tooltip.chardinjs-top {
   margin-top: 0px !important;
   padding-bottom: 0px !important;
+}
+
+.fileinput {
+  margin-bottom: 0px;
+  display: inherit;
 }
