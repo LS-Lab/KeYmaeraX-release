@@ -521,6 +521,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
+  /** Same as odeInvariant but directly reports an error when it detects that the postcondition should be invariant
+    * but currently unprovable
+    */
+  lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
+
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
