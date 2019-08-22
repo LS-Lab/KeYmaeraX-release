@@ -8,10 +8,25 @@
                       <!--e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>-->
             <h3 class="modal-title" ng-if="mode==='edit' || mode==='exercise'">
                 <span>{{model.name}}</span>
-                <a class="btn btn-link pull-right" ng-click="enableEditing()" ng-if="mode==='edit'"
-                   ng-disabled="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
-                <span class="pull-right text-danger" ng-if="mode==='exercise' && !modelIsComplete()">
+                <span class="text-danger" ng-if="mode==='exercise' && !modelIsComplete()">
                     Fill in the blanks (__________)
+                </span>
+                <a class="btn btn-link" ng-click="enableEditing()" ng-if="mode==='edit'"
+                   ng-disabled="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
+                <span class="pull-right">
+                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit'"
+                            ng-disabled="!modelDataForm.$visible" ng-click="save.cmd=refreshModels">Save</button>
+                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
+                            ng-click="save.cmd=redoProof">Save</button>
+                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && modelIsComplete()"
+                            ng-click="save.cmd=startProof">Start new proof</button>
+                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
+                            ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
+                    <span ng-controller="ModelProofCreateCtrl">
+                    <button class="btn btn-primary" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
+                            ng-click="save.cmd=delayedProveFromTactic(model.id)">Prove with associated tactic</button>
+                    </span>
+                    <button class="btn btn-primary" ng-click="modelDataForm.$cancel();cancel()">Cancel</button>
                 </span>
             </h3>
         </div>
@@ -44,20 +59,5 @@
             <div ui-ace="{theme:'github',mode:'dl',showGutter:true,onLoad:aceLoaded}" ng-model="model.keyFile" id="editor"></div>
         </div>
     </div>
-</div>
-<div class="modal-footer">
-    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit'"
-            ng-disabled="!modelDataForm.$visible" ng-click="save.cmd=refreshModels">Save</button>
-    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
-            ng-click="save.cmd=redoProof">Save</button>
-    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && modelIsComplete()"
-            ng-click="save.cmd=startProof">Start new proof</button>
-    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
-            ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
-    <span ng-controller="ModelProofCreateCtrl">
-    <button class="btn btn-primary" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
-            ng-click="save.cmd=delayedProveFromTactic(model.id)">Prove with associated tactic</button>
-    </span>
-    <button class="btn btn-primary" ng-click="modelDataForm.$cancel();cancel()">Cancel</button>
 </div>
 </form>
