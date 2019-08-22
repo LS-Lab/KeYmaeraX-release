@@ -312,25 +312,34 @@ del {
   table-layout: fixed;
 }
 
-.k4-formula {background: transparent; }
+.k4-formula {
+  background: transparent;
+  display: inline-block;
+}
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
 
 .k4-select-hover {
-  color: var(--lsmainback);
-  background-color:var(--lslightblue);
-  position: relative;
+  background-color: var(--lsmainback);
+  border-style: dashed;
+  border-color: var(--lsmain);
+  border-width: 1px;
+  margin: -1px;
 }
 
 .k4-has-step.k4-prove-hover {
-  color: var(--lsmainback);
-  background-color:var(--lslightblue);
-  position: relative;
+  background-color: var(--lsmainback);
+  border-style: dashed;
+  border-color: var(--lsmain);
+  border-width: 1px;
+  margin: -1px;
 }
 .k4-has-step.k4-chase-hover {
-  color: var(--lsmainback);
-  background-color:var(--lslightblue);
-  position: relative;
+  background-color: var(--lsmainback);
+  border-style: dashed;
+  border-color: var(--lsmain);
+  border-width: 1px;
+  margin: -1px;
 }
 
 .k4-editable.k4-edit-hover {
@@ -378,6 +387,7 @@ del {
 /* Mark top-level operator */
 .k4-has-step.k4-prove-hover > span > .k4-op:after {
   content: "\f063"; /* fontawesome downarrow */
+  color: white;
   font-family: FontAwesome;
   font-size: smaller;
   -webkit-text-stroke: 1px black;
@@ -386,10 +396,11 @@ del {
   top: -1.5ex;
   width: 1em;
   max-width: 1em;
-  margin-right: -1.3em;
+  margin-right: -1em;
 }
 .k4-has-step.k4-chase-hover > span > .k4-op:after {
   content: "\f013"; /* fontawesome cog */
+  color: white;
   font-family: FontAwesome;
   font-size: smaller;
   -webkit-text-stroke: 1px black;
@@ -398,7 +409,7 @@ del {
   top: -1.5ex;
   width: 1em;
   max-width: 1em;
-  margin-right: -1.3em;
+  margin-right: -1em;
 }
 /* Mark top-level operator in programs */
 .k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
@@ -411,7 +422,7 @@ del {
   top: -1.5ex;
   width: 1em;
   max-width: 1em;
-  margin-right: -1.3em;
+  margin-right: -1em;
 }
 .k4-has-step.k4-chase-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
   content: "\f013"; /* fontawesome cog */
@@ -423,7 +434,7 @@ del {
   top: -1.5ex;
   width: 1em;
   max-width: 1em;
-  margin-right: -1.3em;
+  margin-right: -1em;
 }
 
 .k4-term-op {
@@ -476,13 +487,13 @@ del {
 }
 /* Unless a parent is highlighted */
 .k4-has-step.k4-prove-hover span {
-  color: white;
+  /*color: white;*/
 }
 .k4-has-step.k4-chase-hover span {
-  color: white;
+  /*color: white;*/
 }
 .k4-select-hover span {
-  color: white;
+  /*color: white;*/
 }
 
 .k4-axiom-cond {
