@@ -3,6 +3,7 @@
   --lslightblue:#2E6579;        /* Blue (matte) */
   --lsverylightblue:#4699B9;    /* Blue (light matte) */
   --lssuperlightblue:#BACBD9;   /* Blue (matte, almost white) */
+  --lsmegalightblue:#DBEFFF;    /* Blue (matte, whitest) */
   --lsgreen:#5ECEF9;            /* Blue (bright) */
   --lslightgreen:#54B9DF;       /* Blue (bright 2) */
   --lsmain:black;
@@ -320,29 +321,29 @@ del {
 
 .k4-formula {
   background: transparent;
-  display: inline-block;
+  display: inline;
 }
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
 
 .k4-select-hover {
   background-color: var(--lsmainback);
-  border-style: dashed;
+  border-style: none;
   border-color: var(--lsmain);
   border-width: 1px;
   margin: -1px;
 }
 
 .k4-has-step.k4-prove-hover {
-  background-color: var(--lsmainback);
-  border-style: dashed;
+  background-color: var(--lsmegalightblue);
+  border-style: none;
   border-color: var(--lsmain);
   border-width: 1px;
   margin: -1px;
 }
 .k4-has-step.k4-chase-hover {
-  background-color: var(--lsmainback);
-  border-style: dashed;
+  background-color: var(--lsmegalightblue);
+  border-style: none;
   border-color: var(--lsmain);
   border-width: 1px;
   margin: -1px;
@@ -421,6 +422,7 @@ del {
 .k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
   content: "\f063"; /* fontawesome downarrow */
   font-family: FontAwesome;
+  color: white;
   font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
@@ -433,6 +435,7 @@ del {
 .k4-has-step.k4-chase-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
   content: "\f013"; /* fontawesome cog */
   font-family: FontAwesome;
+  color: white;
   font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
