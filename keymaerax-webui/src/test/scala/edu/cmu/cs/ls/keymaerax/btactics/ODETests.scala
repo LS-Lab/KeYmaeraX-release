@@ -564,7 +564,7 @@ class ODETests extends TacticTestBase {
 
   "ODE Counterexample" should "disprove a wrong conjecture" in withMathematica { _ =>
     val fml = "7.1798*x^3-7.1798*y^3+21.539*x^2+21.539*y^2-3081.9<=0 ->  [{ x'=y^2-2*y, y'=x^2+2*x } ]7.1798*x^3-7.1798*y^3+21.539*x^2+21.539*y^2-3081.9<=0".asFormula
-    proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(true)(1)).subgoals.loneElement shouldBe "==> false".asSequent
+    proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1)).subgoals.loneElement shouldBe "==> false".asSequent
     proveBy(fml, implyR(1) & ODE(1)).subgoals.loneElement shouldBe "==> false".asSequent
     proveBy(fml, master()).subgoals.loneElement shouldBe "==> false".asSequent
   }
