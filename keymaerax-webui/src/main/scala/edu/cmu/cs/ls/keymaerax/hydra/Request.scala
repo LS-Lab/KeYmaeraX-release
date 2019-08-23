@@ -1338,7 +1338,7 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
 
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
-      AgendaItem(n.id.toString, AgendaItem.nameOf(n, "Conjecture: "), proofId))
+      AgendaItem(n.id.toString, if (n.parent.contains(tree.root)) "Conjecture: " else AgendaItem.nameOf(n), proofId))
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
@@ -2043,7 +2043,10 @@ class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: Strin
           node.pruneBelow()
           val info = db.getProofInfo(proofId)
           db.updateProofInfo(info.copy(closed = false))
-          val item = AgendaItem(node.id.toString, AgendaItem.nameOf(node, "Conjecture: "),
+          val item = AgendaItem(node.id.toString,
+            if (node.parent.contains(tree.root)) "Conjecture: "
+            else AgendaItem.nameOf(node)
+            ,
             proofId, node.allAncestors.map(_.id.toString))
           new PruneBelowResponse(item) :: Nil
       }
