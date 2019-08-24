@@ -102,6 +102,10 @@ output {
 }
 }
 
+.nav-tabs > li > a {
+  padding: 0px 0px;
+}
+
 .k4-tactics-navbar {
   min-height: inherit;
   margin-bottom: 5px;
