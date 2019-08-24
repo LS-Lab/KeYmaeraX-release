@@ -1,17 +1,22 @@
 <div class="modal-header row">
     <div class="col-md-11">
-        <div class="input-group">
-            <input type="text" ng-model="derivationInfos.filter" placeholder="Search for proof steps"
-                   class="form-control" />
-            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === 'standardDerivation.name'"
-               ng-click="derivationInfos.order = '-standardDerivation.name'"><i class="fa fa-sort-alpha-desc"></i></a>
-            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === '-standardDerivation.name'"
-               ng-click="derivationInfos.order = 'standardDerivation.name'"><i class="fa fa-sort-alpha-asc"></i></a>
+        <div class="modal-title">
+            <div class="input-group">
+                <input type="text" ng-model="derivationInfos.filter" placeholder="Search for proof steps"
+                       class="form-control" />
+                <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === 'standardDerivation.name'"
+                   ng-click="derivationInfos.order = '-standardDerivation.name'"><i class="fa fa-sort-alpha-desc"></i></a>
+                <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === '-standardDerivation.name'"
+                   ng-click="derivationInfos.order = 'standardDerivation.name'"><i class="fa fa-sort-alpha-asc"></i></a>
+            </div>
         </div>
     </div>
     <div class="col-md-1">
-        <a class="pull-right" ng-click="cancel()"><span class="fa fa-close"></span>
-        </a>
+        <div class="modal-title">
+            <span class="pull-right">
+                <a ng-click="cancel()"><span class="fa fa-close"></span></a>
+            </span>
+        </div>
     </div>
 </div>
 <div class="modal-body">
