@@ -75,7 +75,7 @@ Publications
 
 KeYmaera X implements the uniform substitution calculus for differential dynamic logic in order to enable soundness assurance by way of a small trusted LCF-style kernel while still being amenable to automatic theorem proving.
 
-http://www.ls.cs.cmu.edu/publications.html
+https://www.ls.cs.cmu.edu/publications.html
 
 1. André Platzer. 
 [A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
