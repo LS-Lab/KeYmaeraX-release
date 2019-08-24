@@ -731,10 +731,10 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
     //@todo read from the database/some web page?
     val examples =
     new ExamplePOJO(6, "Textbook",
-      "Logical Foundations of Cyber-Physical Systems 2018",
+      "LFCPS 2018 Textbook",
       "",
       "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+      "/examples/tutorials/lfcps-examples.png", 0) ::
     new ExamplePOJO(6, "MOD19",
       "Marktoberdorf 2019 Tutorial Examples",
       //"/keymaerax-projects/lfcps-turorial/README.md",
