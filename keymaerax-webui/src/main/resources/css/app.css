@@ -329,24 +329,15 @@ del {
 .k4-select-hover {
   background-color: var(--lsmainback);
   border-style: none;
-  border-color: var(--lsmain);
-  border-width: 1px;
-  margin: -1px;
 }
 
 .k4-has-step.k4-prove-hover {
   background-color: var(--lsmegalightblue);
   border-style: none;
-  border-color: var(--lsmain);
-  border-width: 1px;
-  margin: -1px;
 }
 .k4-has-step.k4-chase-hover {
   background-color: var(--lsmegalightblue);
   border-style: none;
-  border-color: var(--lsmain);
-  border-width: 1px;
-  margin: -1px;
 }
 
 .k4-editable.k4-edit-hover {
