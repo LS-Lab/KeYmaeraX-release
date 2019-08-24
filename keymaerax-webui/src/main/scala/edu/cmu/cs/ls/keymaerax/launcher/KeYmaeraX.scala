@@ -378,7 +378,7 @@ object KeYmaeraX {
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
         "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
-    ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
+    ToolProvider.setProvider(new MathematicaZ3ToolProvider(mathematicaConfig))
   }
 
   /** Shuts down the backend solver and invariant generator. */

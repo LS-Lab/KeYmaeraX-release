@@ -218,7 +218,7 @@ object HyDRAInitializer extends Logging {
     val provider = tool.toLowerCase() match {
       case "mathematica" =>
         try {
-          val p = new MathematicaToolProvider(config)
+          val p = new MathematicaZ3ToolProvider(config)
           if (!p.tools().forall(_.isInitialized)) {
             val msg =
               """Unable to connect to Mathematica, switching to Z3

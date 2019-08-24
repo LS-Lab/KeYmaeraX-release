@@ -505,7 +505,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
     } else {
       Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
       Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-      ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")))
+      ToolProvider.setProvider(new MathematicaZ3ToolProvider(ToolConfiguration.config("mathematica")))
       new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
@@ -597,7 +597,7 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
       Configuration.set(Configuration.Keys.QE_TOOL, tool)
       val config = ToolConfiguration.config(tool)
       tool match {
-        case "mathematica" => ToolProvider.setProvider(new MathematicaToolProvider(config))
+        case "mathematica" => ToolProvider.setProvider(new MathematicaZ3ToolProvider(config))
         case "z3" => ToolProvider.setProvider(new Z3ToolProvider())
         case _ => ToolProvider.setProvider(new NoneToolProvider)
       }
