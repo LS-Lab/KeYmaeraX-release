@@ -969,7 +969,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
         val code = s"""
            |${CGenerator.printHeader(model.name)}
-           |$controller
+           |${controller._1}
+           |${controller._2}
            |
            |int main() {
            |  /* control loop stub */
@@ -1030,8 +1031,10 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                 |${CGenerator.printHeader(model.name)}
                 |${CGenerator.INCLUDE_STATEMENTS}
                 |$declarations
-                |$fallbackCode
-                |$monitorCode
+                |${fallbackCode._1}
+                |${fallbackCode._2}
+                |${monitorCode._1}
+                |${monitorCode._2}
                 |
                 |state ctrl(state curr, const parameters* const params, const input* const in) {
                 |  /* controller implementation stub: modify curr to return actuator set values */
@@ -1086,7 +1089,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
           val code =
             s"""
               |${CGenerator.printHeader(model.name)}
-              |$monitor
+              |${monitor._1}
+              |${monitor._2}
               |
               |int main() {
               |  /* sandbox stub, select 'sandbox' to auto-generate */

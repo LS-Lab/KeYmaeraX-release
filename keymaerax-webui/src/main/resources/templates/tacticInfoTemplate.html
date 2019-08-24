@@ -20,6 +20,13 @@
             </div>
             <div class="col-md-9" ng-if="tactic.selectedDerivation().derivation.displayInfoParts === null">
                 <span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span>
+                <span ng-if="tactic.selectedDerivation().derivation.help"
+                      class="pull-right"
+                      uib-popover-html="tactic.selectedDerivation().derivation.help"
+                      popover-append-to-body="false"
+                      popover-class="k4-axiomtactichelp-popover"
+                      popover-placement="bottom-right"
+                      popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
             </div>
         </div>
     </div>
@@ -32,7 +39,16 @@
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 </a>
             </div>
-            <div class="col-md-9"><span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span></div>
+            <div class="col-md-9">
+                <span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span>
+                <span ng-if="tactic.selectedDerivation().derivation.help"
+                      class="pull-right"
+                      uib-popover-html="tactic.selectedDerivation().derivation.help"
+                      popover-append-to-body="false"
+                      popover-class="k4-axiomtactichelp-popover"
+                      popover-placement="bottom-right"
+                      popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
+            </div>
         </div>
     </div>
     <div class="panel panel-default panel-sm" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
@@ -70,7 +86,7 @@
             <div class="pull-right">
             <span ng-if="tactic.selectedDerivation().derivation.help"
                   uib-popover-html="tactic.selectedDerivation().derivation.help"
-                  popover-append-to-body="true"
+                  popover-append-to-body="false"
                   popover-class="k4-axiomtactichelp-popover"
                   popover-placement="bottom-right"
                   popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>

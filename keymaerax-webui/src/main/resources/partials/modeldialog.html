@@ -1,12 +1,12 @@
 <form editable-form class="k4-vertical-fill-flex" name="modelDataForm" onbeforesave="checkModelData()"
       onaftersave="save()" shown="save.editable">
 <div class="modal-header">
-    <div class="row" ng-if="mode==='edit' || mode==='exercise'">
+    <div class="row" ng-if="mode==='edit' || mode==='exercise' || mode ==='proofedit'">
         <div class="col-md-12">
             <!--<h3 class="modal-title" ng-if="mode==='edit'">-->
                 <!--<span editable-text="model.name" e-name="modelName"-->
                       <!--e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>-->
-            <h3 class="modal-title" ng-if="mode==='edit' || mode==='exercise'">
+            <h3 class="modal-title">
                 <span>{{model.name}}</span>
                 <span class="text-danger" ng-if="mode==='exercise' && !modelIsComplete()">
                     Fill in the blanks (__________)
@@ -18,7 +18,7 @@
                             ng-disabled="!modelDataForm.$visible" ng-click="save.cmd=refreshModels">Save</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
                             ng-click="save.cmd=redoProof">Save</button>
-                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && modelIsComplete()"
+                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelIsComplete()"
                             ng-click="save.cmd=startProof">Start proof</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
                             ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
@@ -26,7 +26,7 @@
                     <button class="btn btn-primary" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
                             ng-click="save.cmd=delayedProveFromTactic(model.id)">Run stored tactic</button>
                     </span>
-                    <button class="btn btn-primary" ng-click="modelDataForm.$cancel();cancel()">Cancel</button>
+                    <a ng-click="modelDataForm.$cancel();cancel()"><span class="fa fa-close"></span></a>
                 </span>
             </h3>
         </div>

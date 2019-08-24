@@ -18,18 +18,23 @@
 </script>
 <div class="modal-header">
     <div class="row">
-        <div class="col-md-11">
-            <h3>Test Case Synthesis and Analysis</h3>
-        </div>
-        <div class="col-md-1">
-            <a class="pull-right" ng-click="cancel()"><span class="fa fa-close"></span>
-            </a>
+        <div class="col-md-12">
+            <h3 class="modal-title">
+                <span>Test Case Synthesis and Analysis</span>
+                <!-- TODO timeout input -->
+                <span class="pull-right">
+                    <button ng-click="testgenerate()" class="btn btn-primary">Synthesize</button>
+                    <button class="btn btn-primary" ng-disabled="testsynthdata.testCases.caseInfos == undefined"
+                            ng-click="downloadAllCases()"><i class="fa fa-download"></i> Download all</button>
+                    <a ng-click="cancel()"><span class="fa fa-close"></span></a>
+                </span>
+            </h3>
         </div>
     </div>
 </div>
 <div class="modal-body">
     <div class="well">
-        <form class="form-horizontal" ng-submit="testgenerate()">
+        <form class="form-horizontal">
             <div class="form-group">
                 <label for="monitorkind" class="col-md-2 control-label">Monitor Kind</label>
                 <div class="col-md-10">
@@ -67,13 +72,6 @@
                     </span>
                 </div>
             </div>
-            <!-- TODO timeout input -->
-            <div class="form-group">
-                <div class="col-md-offset-2 col-md-10">
-                    <button type="submit" class="btn btn-default">Synthesize</button>
-                </div>
-            </div>
-
         </form>
     </div>
     <div class="well">
@@ -133,10 +131,5 @@
                 chart-legend="false"
                 chart-series="testsynthdata.testCases.plot.series"></canvas>
         </p>
-    </div>
-</div>
-<div class="modal-footer">
-    <button class="btn btn-default" ng-if="testsynthdata.testCases.caseInfos !== undefined"
-            ng-click="downloadAllCases()"><i class="fa fa-download"></i> Download all</button>
     </div>
 </div>
