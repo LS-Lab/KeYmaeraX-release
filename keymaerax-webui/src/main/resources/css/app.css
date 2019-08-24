@@ -2,8 +2,8 @@
   --lsblue:#16303A;             /* A dark blue (almost black) */
   --lslightblue:#2E6579;        /* Blue (matte) */
   --lsverylightblue:#4699B9;    /* Blue (light matte) */
-  --lssuperlightblue:#D2E0EC;   /* Blue (matte, almost white) */
-  --lsmegalightblue:#DBEFFF;    /* Blue (matte, whitest) */
+  --lssuperlightblue:#DBEFFF;   /* Sequent formula hover Blue (matte, almost white) */
+  --lsmegalightblue:#C3DBF1;    /* Active subformula hover Blue (matte, whitest) */
   --lsgreen:#5ECEF9;            /* Blue (bright) */
   --lslightgreen:#54B9DF;       /* Blue (bright 2) */
   --lsmain:black;
@@ -100,10 +100,6 @@ output {
 .navbar-nav > li > a {
   padding: 5px 15px 5px 5px;
 }
-}
-
-.nav-tabs > li > a {
-  padding: 0px 0px;
 }
 
 .k4-tactics-navbar {
@@ -423,27 +419,27 @@ del {
   margin-right: -1em;
 }
 /* Mark top-level operator in programs */
-.k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:before {
+.k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
   content: "\f063"; /* fontawesome downarrow */
   font-family: FontAwesome;
   color: white;
   font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
-  right: 0em;
+  right: 1em;
   top: -1.5ex;
   width: 1em;
   max-width: 1em;
   margin-right: -1em;
 }
-.k4-has-step.k4-chase-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:before {
+.k4-has-step.k4-chase-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
   content: "\f013"; /* fontawesome cog */
   font-family: FontAwesome;
   color: white;
   font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
-  right: 0em;
+  right: 1em;
   top: -1.5ex;
   width: 1em;
   max-width: 1em;
