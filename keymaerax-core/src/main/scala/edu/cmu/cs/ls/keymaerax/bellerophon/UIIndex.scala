@@ -38,7 +38,7 @@ object UIIndex {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
-    val alwaysApplicable = Nil
+    val alwaysApplicable = "chaseAt" :: Nil
     logger.debug("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
       case Differential(t) =>
@@ -102,7 +102,7 @@ object UIIndex {
           }, fml)
           foundPrime
         }
-        val rules = maybeSplit ++  (if (pos.forall(_.isSucc)) "GV" :: "MR" :: Nil else Nil)
+        val rules = maybeSplit ++  (if (pos.forall(_.isSucc)) "GV" :: "MR" :: "chaseAt" :: Nil else Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
