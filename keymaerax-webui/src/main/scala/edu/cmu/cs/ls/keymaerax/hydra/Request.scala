@@ -720,7 +720,8 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
   }
 }
 
-/** List of all predefined tutorials that can directly be imported from the KeYmaera X web UI
+/** List of all predefined tutorials that can directly be imported from the KeYmaera X web UI.
+  * List of tutorials, in order of display.
   *
   * @param db
   * @param userId
@@ -729,6 +730,11 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     val examples =
+    new ExamplePOJO(6, "Textbook",
+      "Logical Foundations of Cyber-Physical Systems 2018",
+      "",
+      "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
+      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
     new ExamplePOJO(6, "MOD19",
       "Marktoberdorf 2019 Tutorial Examples",
       //"/keymaerax-projects/lfcps-turorial/README.md",
