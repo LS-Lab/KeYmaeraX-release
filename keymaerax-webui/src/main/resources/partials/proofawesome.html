@@ -77,15 +77,15 @@
                 <div class="collapse navbar-collapse" id="tacticnavbar">
                     <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'master')"
-                                                data-intro="Automatic search" data-position="top">
+                                                data-intro="<center>Automatic search</center>" data-position="top">
                             <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="onTacticScript('propAuto',false)"
-                                                data-intro="Prove propositionally" data-position="top">
+                                                data-intro="<center>Propositional proof</center>" data-position="top">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop-Auto</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'unfold')"
-                               data-intro="Unfold all operators" data-position="top"
+                               data-intro="<center>Unfold all operators</center>" data-position="top"
                                uib-popover-template="fetchRuleHelp('unfold')"
                                popover-class="k4-rulemenu-helppopover"
                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
@@ -93,14 +93,14 @@
                             </a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'fullSimplify')"
-                                                data-intro="Simplify formulas" data-position="top">
+                                                data-intro="<center>Simplify formulas</center>" data-position="top">
                             <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span></a></li>
                         <li class="nav-item"><a ng-click="undoLastProofStep()"
-                               data-intro="Undo" data-position="top">
+                               data-intro="<center>Undo</center>" data-position="top">
                             <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
-                               data-intro="Switch edit/prove" data-position="top">
+                               data-intro="<center>Switch edit/prove</center>" data-position="top">
                             <span class="fa fa-pencil"></span><span class="k4-btn-optional-text"> Edit</span></a>
                         </li>
                         <li class="nav-item active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
@@ -109,11 +109,11 @@
                                   ng-click="$event.stopPropagation();setStickyEdit(!stickyEdit())"></span><span class="k4-btn-optional-text"> Edit</span></a>
                         </li>
                         <li class="nav-item"><a ng-click="openProofstepBrowser()"
-                                                data-intro="Browse all proof steps" data-position="top">
+                                                data-intro="<center>Browse all rules</center>" data-position="top">
                             <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse...</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="openModelEditor(agenda.modelId)"
-                               data-intro="View and edit model" data-position="top">
+                               data-intro="<center>View and edit model</center>" data-position="top">
                             <span class="fa fa-keyboard-o"><span class="k4-btn-optional-text"> Model...</span></span></a>
                         </li>
                     </ul>
@@ -389,7 +389,7 @@
                                    ng-if="backend.busypoller.data.response.busy"></i>
                                 <span class="caret"></span>
                             </a>
-                            <ul class="dropdown-menu">
+                            <ul class="dropdown-menu dropdown-menu-right">
                                 <li><a ng-click="doTactic(undefined, 'QE')"
                                        uib-popover-template="fetchRuleHelp('QE')"
                                        popover-class="k4-rulemenu-helppopover"
@@ -397,11 +397,11 @@
                                         <span>Real Arithmetic</span><code class="pull-right">QE</code>
                                     </a>
                                 </li>
-                                <li ng-if="tool=='mathematica'"><a ng-click="doInputTactic(undefined, 'QE', [{ param: 'tool', type: 'string', value: 'Mathematica' }])"
+                                <li ng-if="tool=='mathematica'"><a ng-click="doInputTactic(undefined, 'QE', [{ param: 'tool', type: 'string', value: 'M' }])"
                                        uib-popover-template="fetchRuleHelp('QE')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>... in Mathematica</span><code class="pull-right">QE("Mathematica")</code>
+                                    <span>... in Mathematica</span><code class="pull-right">QE("M")</code>
                                 </a>
                                 </li>
                                 <li ng-if="tool=='mathematica'"><a ng-click="doInputTactic(undefined, 'QE', [{ param: 'tool', type: 'string', value: 'Z3' }])"
@@ -489,16 +489,16 @@
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
                         <div class="col-md-11" ng-if="$first"
-                             data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal'><dt>Left-click</dt><dd>to apply default</dd><dt>Right-click</dt><dd>for a list of tactics</dd><dt>Alt/Option-click</dt><dd>to chase a formula part away</dd><dt>Hover over &#8866;</dt><dd>for tactics that transform the entire subgoal</dd></dl>"
+                             data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal'><dt>Left-click</dt><dd>default step</dd><dt>Right-click</dt><dd>list tactics</dd><dt>Alt/Option-click</dt><dd>chase subformula away</dd><dt>Hover &#8866;</dt><dd>transform entire subgoal</dd></dl>"
                              data-position="bottom">
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
+                                <span ng-bind-html="task.name"></span> <!--<small>{{task.id}}</small>-->
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
-                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
+                                <span ng-bind-html="task.name"></span> <!--<small>{{task.id}}</small>-->
                             </span>
                         </div>
                         <div class="col-md-11" ng-if="!$first">
@@ -506,10 +506,10 @@
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
+                                <span ng-bind-html="task.name"></span> <!--<small>{{task.id}}</small>-->
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
-                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
+                                <span ng-bind-html="task.name"></span> <!--<small>{{task.id}}</small>-->
                             </span>
                         </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->

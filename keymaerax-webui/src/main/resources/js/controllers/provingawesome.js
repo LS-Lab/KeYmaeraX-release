@@ -123,9 +123,35 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     if (taskResult.type === 'taskresult') {
       if ($scope.proofId === taskResult.proofId) {
         if ($scope.runningTask.nodeId === taskResult.parent.id) {
-          $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
-          sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
-          sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
+          if (taskResult.newNodes.length >= 10) {
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Large proof step result"; },
+                message: function() { return "Proof step resulted in " + taskResult.newNodes.length +
+                  " additional proof goals. Do you want to keep all goals (displaying may take a long time)?"; },
+                mode: function() { return "yesno"; }
+              }
+            });
+            modalInstance.result.then(
+              function () {
+                $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
+                sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
+                sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
+              },
+              function () {
+                sequentProofData.undoLastProofStep($scope.userId, $scope.proofId, function() {
+                  // nothing to do, didn't update proof tree and tactic yet
+                });
+              }
+            );
+          } else {
+            $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
+            sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
+            sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
+          }
         } else {
           showMessage($uibModal, "Unexpected tactic result, parent mismatch: expected " +
             $scope.runningTask.nodeId + " but got " + taskResult.parent.id);
@@ -448,7 +474,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             size: 'sm',
             resolve: {
               title: function() { return "Immediate error"; },
-              message: function() { return "Tactic did not make progress at all"; }
+              message: function() { return "Tactic did not make progress at all"; },
+              mode: function() { return "ok"; }
             }
           });
         }
@@ -687,7 +714,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
               size: 'md',
               resolve: {
                 title: function() { return "Unable to find ODE conditions"; },
-                message: function() { return err.data.textStatus; }
+                message: function() { return err.data.textStatus; },
+                mode: function() { return "ok"; }
               }
             })
           } // request cancelled by user
@@ -718,7 +746,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
               size: 'md',
               resolve: {
                 title: function() { return "Unable to find Pegasus invariant candidates"; },
-                message: function() { return err.data.textStatus; }
+                message: function() { return err.data.textStatus; },
+                mode: function() { return "ok"; }
               }
             })
           } // else request cancelled by user
@@ -751,7 +780,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           size: 'md',
           resolve: {
             title: function() { return "Connection test successful"; },
-            message: function() { return "The tool connection is operational."; }
+            message: function() { return "The tool connection is operational."; },
+            mode: function() { return "ok"; }
           }
         })
       })
@@ -763,7 +793,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           size: 'md',
           resolve: {
             title: function() { return "Error testing connection"; },
-            message: function() { return err.data.textStatus; }
+            message: function() { return err.data.textStatus; },
+            mode: function() { return "ok"; }
           }
         })
       })
