@@ -5,5 +5,11 @@
     {{message}}
 </div>
 <div class="modal-footer">
-    <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
+    <div ng-if="mode == 'ok'">
+        <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
+    </div>
+    <div ng-if="mode == 'yesno'">
+        <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
+        <button type="submit" class="btn btn-primary" ng-click="cancel()">Cancel</button>
+    </div>
 </div>
