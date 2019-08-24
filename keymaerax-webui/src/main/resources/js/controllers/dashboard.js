@@ -49,7 +49,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
         templateUrl: 'partials/shutdown_dialog.html',
         controller: 'DashboardCtrl.ShutdownDialog',
         backdrop: 'static',
-        size: 'sm'
+        size: 'md'
       });
 
       $http.get("/shutdown");
