@@ -1009,6 +1009,7 @@ object DerivationInfo {
     PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true),
+    new TacticInfo("explore", "explore", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen, keepQEFalse = false)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     InputTacticInfo("QE", "QE",
       List(OptionArg(StringArg("tool")), OptionArg(TermArg("timeout"))),
