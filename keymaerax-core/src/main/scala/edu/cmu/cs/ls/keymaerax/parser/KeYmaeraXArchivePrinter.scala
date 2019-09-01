@@ -111,7 +111,7 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
        #$printedTactics
        #$END_BLOCK""".stripMargin('#')
 
-    if (withComments) {
+    val finalPrint = if (withComments) {
       assert(KeYmaeraXArchiveParser(printed).map(_.model) == KeYmaeraXArchiveParser(entry.problemContent).map(_.model),
         "Expected printed entry and stored problem content to reparse to same model")
 
@@ -141,6 +141,8 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
              #$END_BLOCK""".stripMargin('#')
       }
     } else printed
+
+    "/* Exported from KeYmaera X v" + VERSION + " */\n\n" + finalPrint
   }
 
 
