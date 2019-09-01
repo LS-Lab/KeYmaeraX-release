@@ -1,8 +1,8 @@
 <script type="text/ng-template" id="nameAndCodeNameTooltip.html">
-    <span>Refer to <span ng-bind-html="tactic.selectedDerivation().name"></span> in proof programming by
-        <code>{{tactic.selectedDerivation().codeName}}(pos)</code> with position locator <code>pos</code>.
-        For example, with absolute position <samp>{{tactic.selectedDerivation().codeName}}(1)</samp> or
-        using a search locator <samp>{{tactic.selectedDerivation().codeName}}('L)</samp>.</span>
+    <span><span ng-bind-html="tactic.selectedDerivation().name"></span> in proof programming is
+        <code>{{tactic.selectedDerivation().codeName}}(pos)</code> at position locator <code>pos</code>.
+        For example, at absolute position <samp>{{tactic.selectedDerivation().codeName}}(1)</samp> or
+        search locator <samp>{{tactic.selectedDerivation().codeName}}('R)</samp>.</span>
 </script>
 <div>
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
