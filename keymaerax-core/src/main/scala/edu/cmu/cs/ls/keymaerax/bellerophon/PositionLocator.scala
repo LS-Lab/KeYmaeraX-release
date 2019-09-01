@@ -25,8 +25,8 @@ sealed trait PositionLocator {
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
 case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = pos.prettyString + ((shape, exact) match {
-    case (Some(fml), true) => s"=={`${fml.prettyString}`}"
-    case (Some(fml), false) => s"~={`${fml.prettyString}`}"
+    case (Some(fml), true) => "==\"" + fml.prettyString + "\""
+    case (Some(fml), false) => "~=\"" + fml.prettyString + "\""
     case (None, _) => ""
   })
   override def toPosition(p: ProvableSig): Position = pos
@@ -42,14 +42,14 @@ object Fixed {
 case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = (start, shape, exact) match {
     case (_: AntePosition, None, _) => "'L"
-    case (_: AntePosition, Some(s), true) => s"'L=={`${s.prettyString}`}"
-    case (_: AntePosition, Some(s), false) => s"'L~={`${s.prettyString}`}"
+    case (_: AntePosition, Some(s), true) => "'L==\"" + s.prettyString + "\""
+    case (_: AntePosition, Some(s), false) => "'L~=\"" + s.prettyString + "\""
     case (_: SuccPosition, None, _) => "'R"
-    case (_: SuccPosition, Some(s), true) => s"'R=={`${s.prettyString}`}"
-    case (_: SuccPosition, Some(s), false) => s"'R~={`${s.prettyString}`}"
+    case (_: SuccPosition, Some(s), true) => "'R==\"" + s.prettyString + "\""
+    case (_: SuccPosition, Some(s), false) => "'R~=\"" + s.prettyString + "\""
     case (_, None, _) => "'_"
-    case (_, Some(s), true) => s"'_=={`${s.prettyString}`}"
-    case (_, Some(s), false) => s"'_~={`${s.prettyString}`}"
+    case (_, Some(s), true) => "'_==\"" + s.prettyString + "\""
+    case (_, Some(s), false) => "'_~=\"" + s.prettyString + "\""
   }
 
   override def toPosition(p: ProvableSig): Position = findPosition(p, start)
