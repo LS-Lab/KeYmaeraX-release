@@ -326,7 +326,10 @@
                                   popover-class="k4-rulemenu-helppopover"
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                   <span>[]&and;</span><code class="pull-right">boxAnd</code></a></li>
-                                <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code class="pull-right">GV</code></a></li>
+                                <li><a ng-click="doSearch('GV', 'R')"
+                                  uib-popover-template="fetchRuleHelp('GV')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>Abstract</span><code class="pull-right">GV</code></a></li>
                                 <li><a ng-click="openInputTacticDialog('MR', 'R')"
                                   uib-popover-template="fetchRuleHelp('MR')"
                                   popover-class="k4-rulemenu-helppopover"
