@@ -14,7 +14,7 @@
                 <a class="btn btn-link" ng-click="enableEditing()" ng-if="mode==='edit'"
                    ng-disabled="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
                 <span class="pull-right">
-                    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit'"
+                    <button class="btn btn-default" type="submit" ng-if="!user.isGuest() && mode==='edit'"
                             ng-disabled="!modelDataForm.$visible" ng-click="save.cmd=refreshModels">Save</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
                             ng-click="save.cmd=redoProof">Save</button>
@@ -23,7 +23,7 @@
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
                             ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
                     <span ng-controller="ModelProofCreateCtrl">
-                    <button class="btn btn-primary" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
+                    <button class="btn btn-default" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
                             ng-click="save.cmd=delayedProveFromTactic(model.id)">Run stored tactic</button>
                     </span>
                     <a ng-click="modelDataForm.$cancel();cancel()"><span class="fa fa-close"></span></a>
