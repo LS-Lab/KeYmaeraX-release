@@ -575,7 +575,19 @@
                         <div class="panel panel-default">
                             <div class="panel-heading panel-heading-compact">
                                 <div class="row">
-                                <div class="col-md-2">
+                                <div class="col-md-2" ng-if="taskExplanation.selection=='Tactic'">
+                                    <div class="btn-group-sm">
+                                        <label class="btn btn-secondary" ng-model="taskExplanation.selection"
+                                               uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic)"
+                                               tooltip-placement="auto top">Tactic</label>
+                                        <label class="btn btn-secondary" ng-model="taskExplanation.selection"
+                                               uib-btn-radio="'Rule'" uib-tooltip="Display the last proof rule, which produced the current conjecture"
+                                               tooltip-placement="auto top">
+                                            Rule
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-12" ng-if="taskExplanation.selection=='Rule'">
                                     <div class="btn-group-sm">
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
                                                uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic)"
@@ -586,65 +598,61 @@
                                             Rule&nbsp;<code ng-if="stepAxiom().length > 0 && stepAxiom()[0].codeName !== 'nil'">{{stepAxiom()[0].codeName}}</code>&nbsp;
                                             <span ng-if="stepAxiom().length > 0 && stepAxiom()[0].codeName !== 'nil'"
                                                   uib-popover-template="fetchRuleHelp(stepAxiom()[0].codeName)"
-                                                  popover-class="k4-rulemenu-helppopover"
                                                   popover-placement="auto top-right"
                                                   popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
                                         </label>
                                     </div>
                                 </div>
                                 <div ng-if="taskExplanation.selection=='Tactic'" ng-cloak>
-                                <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel === ''">
-                                    <span class="input-group-btn"
-                                          uib-tooltip="Rerun tactic from original conjecture">
-                                        <button class="btn btn-default" ng-click="rerunTactic()"
-                                                ng-disabled="prooftree.root === agenda.selectedId()">Rerun</button>
-                                    </span>
-                                    <span class="input-group-addon">Fresh steps</span>
-                                    <input type="text" class="form-control k4-abbreviate" placeholder="None"
-                                           ng-shift-enter="executeTacticDiff(false)"
-                                           uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
-                                           tooltip-placement="auto top-left" ng-model="tactic.tacticDiff">
-                                    <span class="input-group-addon">Execute: </span>
-                                    <span class="input-group-btn"
-                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one proof step)"
-                                          tooltip-placement="auto top-left">
-                                        <button class="btn btn-default" ng-click="executeTacticDiff(false)"
-                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
-                                    </span>
-                                    <span class="input-group-btn"
-                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
-                                          tooltip-placement="auto top-left">
-                                        <button class="btn btn-default" ng-click="executeTacticDiff(true)"
-                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
-                                    </span>
-                                </div>
-                                <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel !== ''">
-                                    <span class="input-group-btn"
-                                          uib-tooltip="Rerun tactic from original conjecture">
-                                        <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
-                                    </span>
-                                    <span class="input-group-addon">Replace {{tactic.tacticDel}} with </span>
-                                    <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
-                                           ng-shift-enter="executeTacticDiff(false)"
-                                           uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
-                                           tooltip-placement="top-left" ng-model="tactic.tacticDiff">
-                                    <span class="input-group-addon">Execute: </span>
-                                    <span class="input-group-btn"
-                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one step)"
-                                          tooltip-placement="auto top-left">
-                                        <button class="btn btn-default" ng-click="executeTacticDiff(false)"
-                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
-                                    </span>
-                                    <span class="input-group-btn"
-                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
-                                          tooltip-placement="auto top-left">
-                                        <button class="btn btn-default" ng-click="executeTacticDiff(true)"
-                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
-                                    </span>
-                                </div>
-                                </div>
-                                <div ng-if="taskExplanation.selection=='Rule'" ng-cloak>
-                                    <div class="input-group col-md-10"></div>
+                                    <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel === ''">
+                                        <span class="input-group-btn"
+                                              uib-tooltip="Rerun tactic from original conjecture">
+                                            <button class="btn btn-default" ng-click="rerunTactic()"
+                                                    ng-disabled="prooftree.root === agenda.selectedId()">Rerun</button>
+                                        </span>
+                                        <span class="input-group-addon">Fresh steps</span>
+                                        <input type="text" class="form-control k4-abbreviate" placeholder="None"
+                                               ng-shift-enter="executeTacticDiff(false)"
+                                               uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
+                                               tooltip-placement="auto top-left" ng-model="tactic.tacticDiff">
+                                        <span class="input-group-addon">Execute: </span>
+                                        <span class="input-group-btn"
+                                              uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one proof step)"
+                                              tooltip-placement="auto top-left">
+                                            <button class="btn btn-default" ng-click="executeTacticDiff(false)"
+                                                    ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
+                                        </span>
+                                        <span class="input-group-btn"
+                                              uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
+                                              tooltip-placement="auto top-left">
+                                            <button class="btn btn-default" ng-click="executeTacticDiff(true)"
+                                                    ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
+                                        </span>
+                                    </div>
+                                    <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel !== ''">
+                                        <span class="input-group-btn"
+                                              uib-tooltip="Rerun tactic from original conjecture">
+                                            <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
+                                        </span>
+                                        <span class="input-group-addon">Replace {{tactic.tacticDel}} with </span>
+                                        <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
+                                               ng-shift-enter="executeTacticDiff(false)"
+                                               uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
+                                               tooltip-placement="top-left" ng-model="tactic.tacticDiff">
+                                        <span class="input-group-addon">Execute: </span>
+                                        <span class="input-group-btn"
+                                              uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one step)"
+                                              tooltip-placement="auto top-left">
+                                            <button class="btn btn-default" ng-click="executeTacticDiff(false)"
+                                                    ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
+                                        </span>
+                                        <span class="input-group-btn"
+                                              uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
+                                              tooltip-placement="auto top-left">
+                                            <button class="btn btn-default" ng-click="executeTacticDiff(true)"
+                                                    ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
+                                        </span>
+                                    </div>
                                 </div>
                                 </div>
                             </div>
