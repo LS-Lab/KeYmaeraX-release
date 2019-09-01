@@ -13,9 +13,9 @@
             <div class="col-md-6"><b>All Proofs</b></div>
             <div class="col-md-6">
                 <a class="btn btn-default pull-right" id="proofsarchiving"
-                   data-intro="<strong>Extract</strong> all proofs into a single archive (.kyx, includes all finished or partial proofs with their models)." data-position="left"
+                   data-intro="<strong>Export</strong> all proofs into a single archive (.kyx, includes all finished or partial proofs with their models)." data-position="left"
                    ng-click="downloadAllProofs()"
-                   uib-tooltip="Extract all proofs into a single archive (.kyx)"><i class="fa fa-archive"></i> Extract all</a>
+                   uib-tooltip="Export all proofs into a single archive (.kyx)"><i class="fa fa-archive"></i> Export all</a>
             </div>
         </div>
     </div>
@@ -25,13 +25,13 @@
             <div class="col-md-6"><b>Proofs of Model {{modelId}}</b></div>
             <div class="col-md-6">
                 <span class="pull-right" id="proofsarchiving"
-                      data-intro="Start a <strong>new proof</strong>, or <strong>extract all proofs</strong> into a single archive (.kyx, includes this model and all its finished or partial proofs)." data-position="left">
+                      data-intro="Start a <strong>new proof</strong>, or <strong>export all proofs</strong> into a single archive (.kyx, includes this model and all its finished or partial proofs)." data-position="left">
                     <a class="btn btn-default" ng-controller="ModelProofCreateCtrl"
                        ng-click="createProof(modelId, '', '')"
                        uib-tooltip="Start new proof"><i class="fa fa-gears"></i> Start new proof</a>
                     <a class="btn btn-default"
                        ng-click="downloadModelProofs(modelId)"
-                       uib-tooltip="Extract all proofs into a single archive (.kyx)"><i class="fa fa-archive"></i> Export all</a>
+                       uib-tooltip="Export all proofs into a single archive (.kyx)"><i class="fa fa-archive"></i> Export all</a>
                 </span>
             </div>
         </div>
