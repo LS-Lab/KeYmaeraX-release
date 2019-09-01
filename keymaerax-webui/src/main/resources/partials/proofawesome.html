@@ -80,13 +80,13 @@
                                                 data-intro="<center>Automatic search</center>" data-position="top">
                             <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
                         </li>
-                        <li class="nav-item"><a ng-click="doTactic(undefined, 'explore')"
-                                                data-intro="<center>Until (dis)proved</center>" data-position="top">
-                            <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
-                        </li>
                         <li class="nav-item"><a ng-click="onTacticScript('propAuto',false)"
                                                 data-intro="<center>Propositional proof</center>" data-position="top">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop-Auto</span></span></a>
+                        </li>
+                        <li class="nav-item"><a ng-click="doTactic(undefined, 'explore')"
+                                                data-intro="<center>Until (dis)proved</center>" data-position="top">
+                            <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'unfold')"
                                data-intro="<center>Unfold all operators</center>" data-position="top"
@@ -104,7 +104,10 @@
                             <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
-                               data-intro="<center>Switch edit/prove</center>" data-position="top">
+                            data-intro="<center>Switch edit/prove</center>" data-position="top"
+                            uib-popover-template="fetchRuleHelp('edit')"
+                            popover-class="k4-rulemenu-helppopover"
+                            popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-pencil"></span><span class="k4-btn-optional-text"> Edit</span></a>
                         </li>
                         <li class="nav-item active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
