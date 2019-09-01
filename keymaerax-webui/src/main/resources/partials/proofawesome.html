@@ -104,7 +104,10 @@
                             <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
-                               data-intro="<center>Switch edit/prove</center>" data-position="top">
+                            data-intro="<center>Switch edit/prove</center>" data-position="top"
+                            uib-popover-template="fetchRuleHelp('edit')"
+                            popover-class="k4-rulemenu-helppopover"
+                            popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-pencil"></span><span class="k4-btn-optional-text"> Edit</span></a>
                         </li>
                         <li class="nav-item active"><a ng-click="setFormulaMode('prove')" ng-if="getFormulaMode()=='edit'">
