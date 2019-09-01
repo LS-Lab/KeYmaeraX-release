@@ -74,6 +74,7 @@
                         </span>
                     </div>
                 </div>
+                <!-- Global toolbar with global proof tactics -->
                 <div class="collapse navbar-collapse" id="tacticnavbar">
                     <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'master')"
@@ -124,6 +125,7 @@
                             <span class="fa fa-keyboard-o"><span class="k4-btn-optional-text"> Model...</span></span></a>
                         </li>
                     </ul>
+                <!-- Global list of proof rules, axiom and proof tactics -->
                     <ul class="nav navbar-nav k4-tactics-nav-last mr-auto" id="provingbasictactics"
                         data-intro="Basic tactics for propositional reasoning, hybrid programs, differential equations, and arithmetic."
                         data-position="right">
@@ -229,8 +231,14 @@
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                     <span>False</span><code class="pull-right">closeFalse</code></a></li>
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
-                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
-                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivR', 'R')"
+                                  uib-popover-template="fetchRuleHelp('commuteEquivR')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivL', 'L')"
+                                  uib-popover-template="fetchRuleHelp('commuteEquivL')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
