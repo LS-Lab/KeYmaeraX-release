@@ -346,7 +346,10 @@
                                   popover-class="k4-rulemenu-helppopover"
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                   <span>Generalize ...</span><code class="pull-right">MR</code></a></li>
-                                <li><a ng-click="doSearch('boxd', 'R')"><span>[·]d</span><code class="pull-right">boxd</code></a></li>
+                                <li><a ng-click="doSearch('boxd', 'R')"
+                                  uib-popover-template="fetchRuleHelp('boxd')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>[·]d</span><code class="pull-right">boxd</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="openInputTacticDialog('discreteGhost', 'R')"
                                   uib-popover-template="fetchRuleHelp('discreteGhost')"
