@@ -31,9 +31,9 @@ object LemmaFileMode extends LexerMode
   * @author Andre Platzer
  */
 sealed abstract class Terminal(val img: String) {
-  override def toString: String = getClass.getSimpleName// + "\"" + img + "\""
-  /** Human-readable description followed by internal info */
-  def description: String = img + " (" + toString + ")"
+  override def toString: String = getClass.getSimpleName
+  /** Human-readable description */
+  def description: String = img
   /**
    * @return The regex that identifies this token.
    */

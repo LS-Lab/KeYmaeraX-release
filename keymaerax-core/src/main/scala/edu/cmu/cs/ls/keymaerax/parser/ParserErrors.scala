@@ -28,7 +28,7 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
     //@todo take loc into account to project input to loc
     val lineInfo = if (input == "") "<empty>" else loc match {
       case UnknownLocation => "<unknown>"
-      case _ => assert(loc.line>0 && loc.column>0, "positive location");
+      case _ => assert(loc.line>0 && loc.column>0, "positive location")
         val lines = input.lines.toList
         if (loc.line > lines.size) "<past EOF> at line " + loc.line
         else {
@@ -54,7 +54,7 @@ object ParseException {
 //    new ParseException(msg, loc, found=found + "", expect=expect, after=after + "", state=state + "", cause, hint)
 
   def apply(msg: String, state: ParseState /*, cause: Throwable = null*/): ParseException =
-    new ParseException(msg, state.location, state.la.toString, "", state.topString, state.toString /*, cause*/)
+    new ParseException(msg, state.location, state.la.description, "", state.topString, state.toString /*, cause*/)
 
   def apply(msg: String, state: edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.ParserState/*, cause: Throwable = null*/): ParseException =
     new ParseException(msg, state.location, state.input.headOption.toString, "", state.topString, state.toString /*, cause*/)
