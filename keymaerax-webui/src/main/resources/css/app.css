@@ -18,6 +18,10 @@ body {
   line-height: 1.1;
 }
 
+dl {
+  margin-bottom: 0px;
+}
+
 /* Convert Bootstrap absolute font sizes into relative font sizes */
 pre {
   font-size: 100%;

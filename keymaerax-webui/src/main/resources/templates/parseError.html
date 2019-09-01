@@ -14,8 +14,8 @@
             <dd>{{details.found}}</dd>
         </dl>
     </div>
-    <pre class="k4-vertical-fill-flex">{{modelWithErrorMsg()}}</pre>
-    <div class="k4-vertical-fill-flex">
+    <pre class="k4-vertical-fill-flex k4-overflow-box">{{modelWithErrorMsg()}}</pre>
+    <div ng-class="{'k4-vertical-fill-flex': !stacktraceCollapsed, 'k4-overflow-box': !stacktraceCollapsed}">
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
             <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>
             <i class="fa fa-caret-down" ng-if="!stacktraceCollapsed"></i> Stacktrace
