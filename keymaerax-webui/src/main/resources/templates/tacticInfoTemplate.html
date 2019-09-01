@@ -8,7 +8,7 @@
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <div class="row">
             <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
-                 tooltip-placement="auto top" tooltip-popup-delay="1000">
+                 tooltip-placement="auto top-right" tooltip-popup-delay="1000">
                 <a class="btn btn-link" ng-click="applyTactic(tactic.selectedDerivation().id)">
                     <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
@@ -35,7 +35,7 @@
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
             <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
-                 tooltip-placement="auto top" tooltip-popup-delay="1000">
+                 tooltip-placement="auto top-right" tooltip-popup-delay="1000">
                 <a class="btn btn-link" ng-click="applyTactic(tactic.selectedDerivation().id)">
                     <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
@@ -57,7 +57,7 @@
         <div class="panel-heading panel-heading-compact">
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
-               uib-tooltip-template="'nameAndCodeNameTooltip.html'" tooltip-placement="auto top"
+               uib-tooltip-template="'nameAndCodeNameTooltip.html'" tooltip-placement="auto top-right"
                tooltip-popup-delay="1000"
                ng-click="applyTactic(tactic.selectedDerivation().id)">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
