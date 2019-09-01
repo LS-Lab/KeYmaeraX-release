@@ -766,6 +766,11 @@ del {
   height: 100%;
 }
 
+.modal-fullscreen .modal-header~.modal-nofoot {
+  max-height: 100%;
+  height: 100%;
+}
+
 /* Full-width modal that may exceed screen height */
 .modal-fullwidth {
   width: 98%;
