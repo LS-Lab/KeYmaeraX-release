@@ -215,10 +215,6 @@
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
-                                <!-- do not pull-right longest label: pulling right results in a line break here -->
-                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
-                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
-                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="doTactic(undefined, 'closeTrue')"
                                        uib-popover-template="fetchRuleHelp('closeTrue')"
                                        popover-class="k4-rulemenu-helppopover"
@@ -229,6 +225,9 @@
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                     <span>False</span><code class="pull-right">closeFalse</code></a></li>
+                                <!-- do not pull-right longest label: pulling right results in a line break here -->
+                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
