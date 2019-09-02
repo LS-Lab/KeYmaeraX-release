@@ -805,7 +805,7 @@ object DerivationInfo {
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
     new PositionTacticInfo("GV"
-      , RuleDisplayInfo("G&ouml;del/Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
+      , RuleDisplayInfo("G&ouml;del Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
         , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}),
     new InputPositionTacticInfo("existsR"
@@ -912,7 +912,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("cutLR", "Cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutLR(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("loop",
-      RuleDisplayInfo("Loop Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
+      RuleDisplayInfo("Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("J", "&Delta;")),
           (List("J"),List("[a]J")),
@@ -921,7 +921,7 @@ object DerivationInfo {
     new PositionTacticInfo("loopAuto", "loopAuto",
       {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
     new InputPositionTacticInfo("throughout",
-      RuleDisplayInfo("Loop Induction Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
+      RuleDisplayInfo("Loop Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("j(x)", "&Delta;")),
           (List("j(x)"),List("[a]j(x)")),
