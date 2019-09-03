@@ -594,7 +594,7 @@
                                                tooltip-placement="auto top">Tactic</label>
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
                                                uib-btn-radio="'Rule'" uib-tooltip="Display the last proof rule, which produced the current conjecture"
-                                               tooltip-placement="auto top">
+                                               tooltip-placement="auto top" data-intro="Proof steps are explained here with proof rules and axioms. Click <i class='fa fa-question-circle'></i> for additional details and links to learning resources." data-position="bottom">
                                             Rule&nbsp;<code ng-if="stepAxiom().length > 0 && stepAxiom()[0].codeName !== 'nil'">{{stepAxiom()[0].codeName}}</code>&nbsp;
                                             <span ng-if="stepAxiom().length > 0 && stepAxiom()[0].codeName !== 'nil'"
                                                   uib-popover-template="fetchRuleHelp(stepAxiom()[0].codeName)"
