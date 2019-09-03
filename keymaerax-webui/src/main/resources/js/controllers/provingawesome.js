@@ -26,7 +26,13 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         var topNodeId = selectedItem.deduction.sections[0].path[0];
         node = sequentProofData.proofTree.node(topNodeId);
       }
-      if (node) return [node.rule];
+      if (node) {
+        //@note add name to derivation so that we can display it as a step
+        //@note axioms often have shorter names (->R vs. implyR), tactics often shorter code names (differential cut vs. dC)
+        var displayRuleName = node.rule ? (node.rule.codeName ? (node.rule.name.length <= node.rule.codeName.length ? node.rule.name : node.rule.codeName) : node.rule.name) : undefined;
+        node.rule.derivation.name = displayRuleName;
+        return [node.rule];
+      }
       else return [];
     } else return [];
   }

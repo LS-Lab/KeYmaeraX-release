@@ -1,5 +1,8 @@
 <script type="text/ng-template" id="templates/sequentRuleExplanationTemplate.html">
-    <div class="k4-sequentRule">
+    <div class="k4-sequentRule pull-right">
+        <ul>
+            <li>{{stepDeriv.name}}</li>
+        </ul>
         <div class="row k4-sequentRulePremise">
             <div class="col-md-12">
                 <div class="row" ng-if="stepDeriv.premise.length === 0">
@@ -61,8 +64,8 @@
 
 <script type="text/ng-template" id="templates/stepExplanationPopover.html">
     <div>
-        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'axiom'" ng-bind-html="stepExpl.derivation.formula"></div>
-        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'tactic' &&  stepExpl.derivation.formula" ng-bind-html="stepExpl.derivation.formula"></div>
+        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'axiom'">{{stepExpl.derivation.name}} <span ng-bind-html="stepExpl.derivation.formula"></span></div>
+        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'tactic' &&  stepExpl.derivation.formula">{{stepExpl.derivation.name}} <span ng-bind-html="stepExpl.derivation.formula"></span></div>
         <div class="col-md-12 k4-help-content" ng-if="stepExpl.derivation.type === 'tactic' && !stepExpl.derivation.formula" ng-bind-html="stepExpl.derivation.help"></div>
         <div ng-if="stepExpl.derivation.type === 'sequentrule'">
             <div class="col-md-12" ng-repeat="stepDeriv in [stepExpl.derivation]"

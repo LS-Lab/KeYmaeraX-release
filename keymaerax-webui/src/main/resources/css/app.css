@@ -856,6 +856,33 @@ del {
   border-bottom: none;
 }
 
+.k4-sequentRule {
+  width: calc(100% - 2em);
+}
+
+.k4-sequentRule > ul:first-child {
+  list-style-type: none;
+  padding: 0 0 0 0;
+  margin: -0.5ex 0 0 0;
+  text-align: left;
+  width: 2em;
+  display: block;
+  position: absolute;
+  left: 0em;
+  top: 50%;
+}
+.k4-sequentRule > ul:first-child > li {
+  height: 3ex;
+  font-size: smaller;
+  border: none;
+  color: var(--lsmain);
+  display: block;
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: clip;
+  width: 2em;
+}
+
 .k4-sequentRulePart {
   padding-right: 2em;
 }
