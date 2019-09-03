@@ -365,7 +365,15 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         }
       }
       toPos(locator) match {
-        case Some(pos) => positionTactic.computeResult(provable, pos)
+        case Some(pos) =>
+          try {
+            positionTactic.computeResult(provable, pos)
+          } catch {
+            case _: MatchError =>
+              // trial-and-error fallback for default case in TacticIndex.isApplicable
+              tryAllAfter(provable, locator.copy(start = locator.start.advanceIndex(1)), cause)
+          }
+
         case _ => throw cause
       }
     } else throw cause
@@ -572,14 +580,14 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           }
           toPos(locator) match {
             case Some(pos) => pt.factory(pos) |
-              tryAllAfter(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact), cause)
+              tryAllAfter(locator.copy(start = pos.topLevel.advanceIndex(1)), cause)
             case _ => throw cause
           }
         } else if (cause == null) {
           throw new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
         } else throw cause
       case _ => pt.factory(locator.start).computeExpr(v) |
-        tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), cause)
+        tryAllAfter(locator.copy(start = locator.start.advanceIndex(1)), cause)
     }
   }
 
