@@ -9,8 +9,8 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-12">
-                        <div ng-repeat="premise in stepDeriv.premise">
+                    <div ng-repeat="premise in stepDeriv.premise">
+                        <div ng-class="{'col-md-12': stepDeriv.premise.length==1, 'col-md-6': stepDeriv.premise.length==2, 'col-md-4': stepDeriv.premise.length==3, 'col-md-3': stepDeriv.premise.length==4, 'col-md-2': stepDeriv.premise.length==5, 'col-md-2': stepDeriv.premise.length==6, 'col-md-1': stepDeriv.premise.length>=7}">
                             <div ng-class="{'row': !premise.isClosed, 'row small': premise.isClosed}">
                                 <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
                                     <span ng-repeat="ante in premise.ante">

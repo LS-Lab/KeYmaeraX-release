@@ -8,8 +8,8 @@
             </div>
 
             <div class="row">
-                <div class="col-md-12">
-                    <div ng-repeat="premise in tactic.derivation.premise">
+                <div ng-repeat="premise in tactic.derivation.premise">
+                    <div ng-class="{'col-md-12': tactic.derivation.premise.length==1, 'col-md-6': tactic.derivation.premise.length==2, 'col-md-4': tactic.derivation.premise.length==3, 'col-md-3': tactic.derivation.premise.length==4, 'col-md-2': tactic.derivation.premise.length==5, 'col-md-2': tactic.derivation.premise.length==6, 'col-md-1': tactic.derivation.premise.length>=7}">
                         <div ng-class="{'row': !premise.isClosed, 'row small': premise.isClosed}">
                             <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
                                 <span ng-if="premise.isClosed"><i class="fa fa-magic"></i>&nbsp;</span>
