@@ -55,17 +55,35 @@
         <tr ng-repeat="proof in proofs | orderBy:'name'">
             <td>{{ proof.id }}</td>
             <td>
-                <a class="btn btn-link" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open proof" tooltip-placement="auto top">{{ proof.name }}</a>
+                <div ng-if="$first">
+                <a class="btn btn-link" ng-href="dashboard.html?#/proofs/{{ proof.id }}"
+                   uib-tooltip="Open proof" tooltip-placement="auto top"
+                   data-intro="Open proof" data-position="bottom">
+                    {{ proof.name }}
+                </a>
+                </div>
+                <div ng-if="!$first">
+                    <a class="btn btn-link" ng-href="dashboard.html?#/proofs/{{ proof.id }}"
+                       uib-tooltip="Open proof" tooltip-placement="auto top">{{ proof.name }}</a>
+                </div>
             </td>
             <td>{{ proof.date }}</td>
             <td class="k4-abbreviate">
-                <button class="btn btn-link" ng-click="openTactic(proof.id)">
+                <div ng-if="$first">
+                <button class="btn btn-link" ng-click="openTactic(proof.id)"
+                        data-intro="Display (recorded) tactic" data-position="bottom">
                     Tactic <i class="fa fa-file-code-o"></i>
                 </button>
+                </div>
+                <div ng-if="!$first">
+                    <button class="btn btn-link" ng-click="openTactic(proof.id)">
+                        Tactic <i class="fa fa-file-code-o"></i>
+                    </button>
+                </div>
             </td>
             <td>
                 <div ng-if="$first">
-                <span data-intro="Is there more work to do (<i class='fa fa-pencil'></i>) or is the proof done (<i class='fa fa-check'></i>)?" data-position="left">
+                <span data-intro="Is there more work to do (<i class='fa fa-pencil'></i>) or is the proof done (<i class='fa fa-check'></i>)?" data-position="bottom">
                     <span ng-if="proof.status"><i class="fa fa-check"></i> Proved</span>
                     <span ng-if="proof.status === false"><i class="fa fa-pencil"></i> In Progress</span>
                 </span>
@@ -82,7 +100,6 @@
                 data-position="bottom" ng-if="$first">
                 <span class="pull-right">
                 <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadTactic(proof)" uib-tooltip="Download tactic (.kyt)" tooltip-placement="auto top"><i class="fa fa-download"></i></a>
                 <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (.kyp)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
                 <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download model+proof (.kyx)" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
@@ -91,7 +108,6 @@
             <td ng-if="!$first">
                 <span class="pull-right">
                 <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open" tooltip-placement="auto top"><i class="fa fa-folder-open"></i></a>
-                <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadTactic(proof)" uib-tooltip="Download tactic" tooltip-placement="auto top"><i class="fa fa-download"></i></a>
                 <a ng-class="{'btn':true, 'btn-default':true, 'disabled':!proof.status}" ng-click="downloadLemma(proof)" uib-tooltip="Download lemma (completed proof)" tooltip-placement="auto top"><i class="fa fa-certificate"></i></a>
                 <a class="btn btn-default" ng-click="downloadPartialProof(proof)" uib-tooltip="Download (partial) proof" tooltip-placement="auto top"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-click="deleteProof(proof)" uib-tooltip="Delete" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
