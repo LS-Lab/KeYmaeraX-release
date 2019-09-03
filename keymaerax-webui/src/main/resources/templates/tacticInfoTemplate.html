@@ -54,11 +54,11 @@
         </div>
     </div>
     <div class="panel panel-default panel-sm" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
-        <div class="panel-heading panel-heading-compact">
+        <div class="panel-heading panel-heading-compact"
+             uib-tooltip-template="'nameAndCodeNameTooltip.html'"
+             tooltip-placement="auto top-left" tooltip-popup-delay="1000">
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
-               uib-tooltip-template="'nameAndCodeNameTooltip.html'" tooltip-placement="auto top-left"
-               tooltip-popup-delay="1000"
                ng-click="applyTactic(tactic.selectedDerivation().id)">
                 <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
