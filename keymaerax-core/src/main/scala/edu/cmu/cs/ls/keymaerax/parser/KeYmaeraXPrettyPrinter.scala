@@ -568,7 +568,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line + wrapRightDoc(f, docOf(f.right))).grouped
     case DifferentialFormula(g) => encloseText("(", docOf(g), ")" + ppOp(formula))
     case f: Quantified          => (Doc.text(ppOp(formula)) + Doc.space + Doc.intercalate(Doc.comma+Doc.space, f.vars.map(docOf(_))) +
-      Doc.line + wrapChildDoc(f, docOf(f.child))).grouped
+      (Doc.line + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
     case f: Box                 => (wrapDoc(docOf(f.program), f) + (Doc.lineBreak + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
     case f: Diamond             => (wrapDoc(docOf(f.program), f) + (Doc.lineBreak + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
     case UnitPredicational(name,space) => Doc.text(name) + encloseText("(", Doc.text(space.toString), ")")
