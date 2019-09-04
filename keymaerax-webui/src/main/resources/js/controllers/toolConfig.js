@@ -1,6 +1,11 @@
 angular.module('keymaerax.controllers').controller('ToolConfig',
   function($scope, $http) {
 
+    $scope.systemInfo = {
+      info: undefined,
+      warning: undefined
+    }
+
     $scope.toolStatus = {
       tool: undefined,
       initialized: undefined,
@@ -9,7 +14,8 @@ angular.module('keymaerax.controllers').controller('ToolConfig',
     }
 
     $http.get("/config/systeminfo").then(function(response) {
-      $scope.systemInfo = response.data;
+      $scope.systemInfo.info = response.data;
+      $scope.systemInfo.error = response.data.jvmArchitecture.includes("32");
     });
 
     $scope.toolChange = function() {
