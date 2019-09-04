@@ -466,7 +466,7 @@ class KeymaeraXVersionRequest() extends Request with ReadRequest {
   }
 }
 
-class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibFileName : String) extends LocalhostOnlyRequest with WriteRequest {
+class ConfigureMathematicaRequest(db: DBAbstraction, linkName: String, jlinkLibFileName: String) extends LocalhostOnlyRequest with WriteRequest {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
   }
@@ -503,10 +503,10 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
         if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
     } else {
-      Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
+      Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
       Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
       ToolProvider.setProvider(new MathematicaZ3ToolProvider(ToolConfiguration.config("mathematica")))
-      new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
+      new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
 }
