@@ -584,24 +584,35 @@ class LicensesRequest() extends Request with ReadRequest {
 class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
-    new KvpResponse("tool", Configuration(Configuration.Keys.QE_TOOL)) :: Nil
+    val toolName = Configuration(Configuration.Keys.QE_TOOL)
+    ToolProvider.tool(toolName) match {
+      case Some(tool) =>
+        val initialized = tool.isInitialized
+        if (initialized) new KvpResponse("tool", toolName) :: Nil
+        else new ErrorResponse(toolName + " is not initialized. Please double-check the configuration paths.") :: Nil
+      case _ => new ErrorResponse(toolName + " failed to initialize. Please reselect the desired tool and double-check the configuration paths. Temporarily switched to fallback tools " + ToolProvider.tools().map(_.name).mkString(",")) :: Nil
+    }
   }
 }
 
 class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest with WriteRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
-    if (tool != "mathematica" && tool != "z3") new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3'")::Nil
+    if (tool != "mathematica" && tool != "z3") new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3'") :: Nil
     else {
       assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
       Configuration.set(Configuration.Keys.QE_TOOL, tool)
       val config = ToolConfiguration.config(tool)
-      tool match {
-        case "mathematica" => ToolProvider.setProvider(new MathematicaZ3ToolProvider(config))
-        case "z3" => ToolProvider.setProvider(new Z3ToolProvider())
-        case _ => ToolProvider.setProvider(new NoneToolProvider)
+      try {
+        tool match {
+          case "mathematica" => ToolProvider.setProvider(new MathematicaZ3ToolProvider(config))
+          case "z3" => ToolProvider.setProvider(new Z3ToolProvider())
+          case _ => ToolProvider.setProvider(new NoneToolProvider)
+        }
+        new KvpResponse("tool", tool) :: Nil
+      } catch {
+        case ex: Throwable => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths and that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
       }
-      new KvpResponse("tool", tool) :: Nil
     }
   }
 }

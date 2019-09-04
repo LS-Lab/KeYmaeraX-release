@@ -8,7 +8,7 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
 
     $http.get("/config/mathematica")
       .success(function(data) {
-          if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Failed to retrieve the server's current Mathematica configuration")
+          if (data.errorThrown) showCaughtErrorMessage($uibModal, data, "Failed to retrieve the server's current Mathematica configuration")
           else {
               if (data.linkName !== "" && data.jlinkLibPath !== "") {
                   $scope.linkName = data.linkName;
@@ -37,11 +37,10 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
                     $("#mathematicaConfigurationAlert").hide();
                     $rootScope.mathematicaIsConfigured = data.configured;
-                }
-                else if(data.errorThrown) {
+                    $scope.$parent.getTool();
+                } else if(data.errorThrown) {
                     showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")
-                }
-                else {
+                } else {
                     var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.suggestion.kernelName) > -1 &&
                       data.linkNamePrefix == $scope.linkName
                     var jlinkExists = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.suggestion.jlinkName) > -1 &&

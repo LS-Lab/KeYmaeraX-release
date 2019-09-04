@@ -12,12 +12,16 @@
             <span style="padding-right: 10px;"
                  data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica requires external installation but provides more features)."
                  data-position="right">
-            <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
+            <select name="toolSelect" id="toolSelect" ng-model="toolStatus.tool" ng-change="toolChange()">
                 <option value="mathematica">Mathematica</option>
                 <option value="z3">Z3</option>
             </select>
             </span>
         </form>
+        <div ng-class="{'alert': true, 'alert-success': toolStatus.initialized, 'alert-danger': toolStatus.error}">
+            <span ng-if="toolStatus.initialized">Initialized: <i class="fa fa-check"></i></span>
+            <span ng-if="toolStatus.error">{{toolStatus.error}}</span>
+        </div>
     </div>
     <div class="col-md-8">
         <div class="panel panel-default">
@@ -38,11 +42,11 @@
     </div>
 </div>
 
-<div ng-if="tool==='mathematica'">
+<div ng-if="toolStatus.tool==='mathematica'">
     <div ng-include="'/partials/mathematica_config.html'" ng-controller="MathematicaConfig"></div>
 </div>
 
-<div ng-if="tool==='z3'">
+<div ng-if="toolStatus.tool==='z3'">
     <h2>Z3 Configuration</h2>
     <p><b>Limited functionality with Z3.</b></p>
     <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,
