@@ -1,6 +1,5 @@
 <div ng-if="!readOnly && sequentSuggestions.length > 0" class="row k4-sequent-hint">
     <div class="pull-right">
-        <!-- todo make executable -->
         Hint:
         <span ng-repeat="tactic in sequentSuggestions">
             <abbr title="{{tactic.selectedDerivation().id}}"
