@@ -48,14 +48,17 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             scope.onTactic = function(formulaId, tacticId) {
+              scope.tacticPopover.close();
               scope.onApplyTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
             scope.onInputTactic = function(formulaId, tacticId, input) {
+              scope.tacticPopover.close();
               scope.onApplyInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
 
             scope.onTwoPositionTactic = function(fml1Id, fml2Id, tacticId) {
+              scope.tacticPopover.close();
               scope.onApplyTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: tacticId});
             }
 
@@ -101,6 +104,49 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.isFOL = function(formula) {
               //@todo implement
               return true;
+            }
+
+            scope.formulaAxiomsMap = {};
+            scope.tacticPopover = {
+              openFormulaId: undefined,
+              isOpen: function(formulaId) { return scope.tacticPopover.openFormulaId && scope.tacticPopover.openFormulaId.startsWith(formulaId); },
+              open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
+              formulaId: function() { return scope.tacticPopover.openFormulaId; },
+              close: function() { scope.derivationInfos.infos = []; scope.tacticPopover.openFormulaId = undefined; }
+            }
+
+            scope.fetchFormulaAxioms = function(formulaId, axiomsHandler) {
+              if (scope.formulaAxiomsMap[formulaId] === undefined) {
+                // axioms not fetched yet
+                derivationInfos.formulaDerivationInfos(scope.userId, scope.proofId, scope.nodeId, formulaId)
+                  .then(function(response) {
+                    // first tactic entry in popover should be open by default
+                    if (response.data.length > 0) response.data[0].isOpen = true
+                    scope.formulaAxiomsMap[formulaId] = response.data;
+                    axiomsHandler.call();
+                  });
+              } else {
+                // tactic already cached
+                axiomsHandler.call();
+              }
+            }
+
+            scope.onExprRightClick = function(formulaId) {
+              scope.fetchFormulaAxioms(formulaId, function() {
+                scope.tacticPopover.open(formulaId);
+              });
+            }
+
+            scope.derivationInfos = {
+              filter: undefined,
+              order: 'standardDerivation.name',
+              infos: []
+            };
+
+            scope.browseLemmas = function() {
+              derivationInfos.allDerivationInfos(scope.userId, scope.proofId, scope.nodeId).then(function(response) {
+                scope.derivationInfos.infos = response.data;
+              });
             }
 
             turnstileTooltipOpen = false;

@@ -20,10 +20,7 @@
     </div>
 </div>
 <div class="modal-body">
-    <div class="row" ng-if="formula">
-        <span>Formula: </span><div class="col-md-12"><span ng-bind-html="formula"></span></div>
-    </div>
-    <div class="row" ng-if="!formula">
+    <div class="row">
         <div class="col-md-12">
             <p>Select formula (hover and click to select typical formulas, press <kbd>option/alt</kbd> key and click to select any term or formula)</p>
             <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="nodeId"
