@@ -729,6 +729,7 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
 class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
+    //@note Learner's mode Level=0, Industry mode Level=1
     val examples =
     new ExamplePOJO(6, "Textbook",
       "LFCPS 2018 Textbook",
@@ -740,13 +741,13 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
       //"/keymaerax-projects/lfcps-turorial/README.md",
       "",
       "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
     new ExamplePOJO(5, "POPL 2019 Tutorial",
       "Programming CPS With Proofs",
       //"/keymaerax-projects/popltutorial/README.md",
       "",
       "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
       new ExamplePOJO(0, "STTT Tutorial",
         "Automated stop sign braking for cars",
         "/dashboard.html?#/tutorials",
@@ -772,13 +773,13 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
           //"/keymaerax-projects/dlds/README.md",
           "",
           "classpath:/keymaerax-projects/dlds/dlds.kya",
-          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+          "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
 //        new ExamplePOJO(3, "POPL 2019 Tutorial",
 //          "Programming CPS With Proofs",
 //          //"/keymaerax-projects/popltutorial/README.md",
 //          "",
 //          "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-//          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+//          "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
         Nil
 
     db.getUser(userId) match {
