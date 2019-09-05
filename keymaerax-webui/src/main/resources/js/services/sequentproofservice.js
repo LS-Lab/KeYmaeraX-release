@@ -25,6 +25,10 @@ angular.module('keymaerax.services').factory('Agenda', function() {
     return {
        itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
        selectedTab: "()",
+       clear: function() {
+         this.itemsMap = {};
+         this.selectedTab = "()";
+       },
        selectedId: function() {
          var selected = $.grep(this.items(), function(e, i) { return e.isSelected; });
          if (selected !== undefined && selected.length > 0) return selected[0].id;
@@ -103,6 +107,11 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         nodesMap: {}, // Map[String, PTNode], i.e., { id: { id: String, children: [ref PTNode], parent: ref PTNode } }
         nodeIds: function() { return Object.keys(this.nodesMap); },
         nodes: function() { return $.map(this.nodesMap, function(v) {return v;}); },
+
+        clear: function() {
+          this.root = undefined;
+          this.nodesMap = {};
+        },
 
         /** Prunes below the specified node */
         pruneBelow: function(nodeId) {
@@ -288,8 +297,8 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
     /** Clears all proof data (at proof start). */
     clear: function() {
-      this.proofTree = new ProofTree();
-      this.agenda = new Agenda();
+      this.proofTree.clear();
+      this.agenda.clear();
     },
 
     /** Fetches the agenda from the server for the purpose of continuing a proof */
