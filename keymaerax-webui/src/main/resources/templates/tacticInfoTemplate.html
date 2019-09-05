@@ -80,6 +80,11 @@
                                    code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 <b> ...</b>
             </a>
+            <span ng-repeat="input in tactic.selectedDerivation().derivation.input" class="popover-wrapper">
+                <span ng-if="$first">with</span><span ng-if="$middle">,</span><span ng-if="!$first && $last"> and</span>
+                {{input.param}}&nbsp;&equiv;&nbsp;
+                <a href="#" id="{{input.param}}" e-name="{{input.param}}" editable-text="input.value" e-required>{{input.value || 'empty'}}</a>
+            </span>
             <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}} and confirm each input with <kbd>Enter</kbd></span>
 
             <div class="pull-right">
