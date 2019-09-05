@@ -170,6 +170,11 @@ output {
   font-size: var(--lsfontsize);
 }
 
+/* xeditable popover */
+.popover-wrapper > a {
+  display: inline-flex !important;
+}
+
 .carousel-control {
   font-size: 150%;
 }

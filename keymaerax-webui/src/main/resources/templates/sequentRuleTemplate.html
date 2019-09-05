@@ -18,13 +18,12 @@
                                         <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                                         <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
                                         <span ng-if="readOnly || (premise.isClosed && antePart.isInput && antePart.value() === undefined)">{{antePart.placeholder}}</span>
-                                        <span id="{{antePart.text}}" class="k4-axiomtactic-input"
-                                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}" buttons="no"
-                                              ng-if="!readOnly && !premise.isClosed && antePart.isInput"
-                                              uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
+                                        <span ng-if="!readOnly && !premise.isClosed && antePart.isInput" class="popover-wrapper">
+                                            <a href="#" id="{{antePart.text}}" class="k4-axiomtactic-input"
+                                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
                                               editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
-                                              blur="submit"
-                                              e-required>{{antePart.value || antePart.placeholder}}</span>
+                                              e-required>{{antePart.placeholder}}</a>
+                                        </span>
                                     </span>
                                     {{$last ? '' : ','}}
                                 </span>
@@ -36,13 +35,12 @@
                                         <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                                         <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
                                         <span ng-if="readOnly || (premise.isClosed && succPart.isInput && succPart.value() === undefined)">{{succPart.placeholder}}</span>
-                                        <span id="{{succPart.text}}" class="k4-axiomtactic-input"
-                                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}" buttons="no"
-                                              ng-if="!readOnly && !premise.isClosed && succPart.isInput"
-                                              uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
+                                        <span ng-if="!readOnly && !premise.isClosed && succPart.isInput" class="popover-wrapper">
+                                            <a href="#" id="{{succPart.text}}" class="k4-axiomtactic-input"
+                                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
                                               editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
-                                              blur="submit"
-                                              e-required>{{succPart.value || succPart.placeholder}}</span>
+                                              e-required>{{succPart.placeholder}}</a>
+                                        </span>
                                     </span>
                                     {{$last ? '' : ','}}
                                 </span>
@@ -60,13 +58,12 @@
                     <span ng-repeat="antePart in ante">
                         <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                         <span ng-if="readOnly">{{antePart.placeholder}}</span>
-                        <span id="c{{antePart.text}}" class="k4-axiomtactic-input"
-                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}" buttons="no"
-                              ng-if="!readOnly && antePart.isInput"
-                              uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
+                        <span ng-if="!readOnly && antePart.isInput" class="popover-wrapper">
+                            <a href="#" id="c{{antePart.text}}" class="k4-axiomtactic-input"
+                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
                               editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
-                              blur="submit"
-                              e-required>{{antePart.value || antePart.placeholder}}</span>
+                              e-required>{{antePart.placeholder}}</a>
+                        </span>
                     </span>
                     {{$last ? '' : ','}}
                 </span>
@@ -77,13 +74,12 @@
                     <span ng-repeat="succPart in succ">
                         <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                         <span ng-if="readOnly">{{succPart.placeholder}}</span>
-                        <span id="c{{succPart.text}}" class="k4-axiomtactic-input"
-                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}" buttons="no"
-                              ng-if="!readOnly && succPart.isInput"
-                              uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
+                        <span ng-if="!readOnly && succPart.isInput" class="popover-wrapper">
+                            <a href="#" id="c{{succPart.text}}" class="k4-axiomtactic-input"
+                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
                               editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
-                              blur="submit"
-                              e-required>{{succPart.value || succPart.placeholder}}</span>
+                              e-required>{{succPart.placeholder}}</a>
+                        </span>
                     </span>
                     {{$last ? '' : ','}}
                 </span>
