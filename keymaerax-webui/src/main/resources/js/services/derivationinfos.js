@@ -158,13 +158,15 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
       return result;
     },
 
+    sanitizeValue: function(value) { return value ? value.replace("()", "") : value; },
+
     createInput: function(formula, tactic, inputBoundary) {
       var inputId = formula.slice(inputBoundary.start, inputBoundary.end);
       var inputObject = {
         text: inputId,
         isInput: true,
         placeholder: inputId,
-        value: $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value.replace("()", ""),
+        value: serviceDef.sanitizeValue($.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value),
         saveValue: function(userId, proofId, nodeId, newValue) {
           var input = $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0];
           input.value = newValue;
@@ -183,7 +185,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
       // auto-update all input elements that are scattered around different parts of the premise
       $rootScope.$watch(
         // what to watch
-        function(scope) { return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value.replace("()", ""); },
+        function(scope) { return serviceDef.sanitizeValue($.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value); },
         // what to do on change
         function(newVal, oldVal) { inputObject.value = newVal; }
       );
