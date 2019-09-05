@@ -57,31 +57,34 @@ angular.module('formula')
             }
 
             scope.exprClick = function(event, formulaId, step, editable) {
-              if (scope.modeIsProve() && formulaId && formulaId !== '' && step === 'has-step') {
-                // avoid event propagation once a span with an ID is found
-                event.stopPropagation();
-                spinnerService.show('tacticExecutionSpinner');
-                if (event.altKey) {
-                  // chase
-                  scope.onTactic({formulaId: formulaId, tacticId: 'chaseAt'})
-                } else {
-                  // step
-                  $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
-                    then(function(response) {
-                      if (response.data.length > 0) {
-                        scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
-                      } else {
-                        spinnerService.hide('tacticExecutionSpinner');
-                        scope.onExprRightClick({formulaId: formulaId});
-                      }
-                  });
+              //@note do not click on text selection
+              if (getSelection().toString().length == 0) {
+                if (scope.modeIsProve() && formulaId && formulaId !== '' && step === 'has-step') {
+                  // avoid event propagation once a span with an ID is found
+                  event.stopPropagation();
+                  spinnerService.show('tacticExecutionSpinner');
+                  if (event.altKey) {
+                    // chase
+                    scope.onTactic({formulaId: formulaId, tacticId: 'chaseAt'})
+                  } else {
+                    // step
+                    $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
+                      then(function(response) {
+                        if (response.data.length > 0) {
+                          scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
+                        } else {
+                          spinnerService.hide('tacticExecutionSpinner');
+                          scope.onExprRightClick({formulaId: formulaId});
+                        }
+                    });
+                  }
+                } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable === 'editable') {
+                  // not used
+                } else if (scope.modeIsSelect() && formulaId && formulaId !== ''
+                    && (step === 'has-step' || event.altKey)) {
+                  event.stopPropagation();
+                  scope.onTactic({formulaId: formulaId, tacticId: undefined});
                 }
-              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable === 'editable') {
-                // not used
-              } else if (scope.modeIsSelect() && formulaId && formulaId !== ''
-                  && (step === 'has-step' || event.altKey)) {
-                event.stopPropagation();
-                scope.onTactic({formulaId: formulaId, tacticId: undefined});
               }
             }
 
