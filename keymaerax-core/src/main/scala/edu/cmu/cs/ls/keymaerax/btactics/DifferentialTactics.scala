@@ -1346,6 +1346,7 @@ private object DifferentialTactics extends Logging {
       dC(gtz)(pos) < (
         boxAnd(pos) & andR(pos) < (
           diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
+          Dconstify(
           diffInd('diffInd)(pos)
           <(
             hideL('Llast) & QE,
@@ -1356,7 +1357,7 @@ private object DifferentialTactics extends Logging {
               QE,
               byUS(barrierCond2)
             )
-          )
+          ))(pos)
         )
         ,
         DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
