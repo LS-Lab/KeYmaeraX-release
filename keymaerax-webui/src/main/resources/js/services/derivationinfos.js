@@ -164,7 +164,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
         text: inputId,
         isInput: true,
         placeholder: inputId,
-        value: $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value,
+        value: $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value.replace("()", ""),
         saveValue: function(userId, proofId, nodeId, newValue) {
           var input = $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0];
           input.value = newValue;
@@ -183,7 +183,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
       // auto-update all input elements that are scattered around different parts of the premise
       $rootScope.$watch(
         // what to watch
-        function(scope) { return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value; },
+        function(scope) { return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value.replace("()", ""); },
         // what to do on change
         function(newVal, oldVal) { inputObject.value = newVal; }
       );
