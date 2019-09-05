@@ -858,6 +858,7 @@ del {
 
 .k4-sequentRule {
   width: calc(100% - 2em);
+  text-align: center;
 }
 
 .k4-sequentRule > ul:first-child {
