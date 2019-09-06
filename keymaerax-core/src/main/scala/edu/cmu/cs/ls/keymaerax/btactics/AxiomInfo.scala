@@ -5,14 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.components.ComponentSystem
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -270,25 +268,29 @@ object DerivationInfo {
             ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
           ) : TypedFunc[Expression, TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]]
     ),
-    new InputPositionTacticInfo("dG",
-      RuleDisplayInfo(
-        "Differential Ghost",
-        /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
-        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")) )
-      ),
-      List(ExpressionArg("E", "y"::"x"::"y'"::Nil), FormulaArg("P", "y"::Nil)),
-      _ =>
-        ((f: Expression) =>
-          ((p : Option[Formula]) => f match {
-            case f : Equal => {
-              assert(f.left.isInstanceOf[DifferentialSymbol])
-              val dp = AtomicODE(f.left.asInstanceOf[DifferentialSymbol], f.right)
-              TactixLibrary.dG(dp, p)
-            }
-            case f: DifferentialProgram => TactixLibrary.dG(f.asInstanceOf[DifferentialProgram], p)
-          }) :  TypedFunc[Option[Formula], BelleExpr]
-          ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
-    ),
+    {
+      val converter = (e: Expression) => e match {
+        case Equal(l: DifferentialSymbol, r) => Left(AtomicODE(l, r))
+        case dp: DifferentialProgram => Left(dp)
+        case _ => Right("Expected a differential program y′=f(y), but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("dG",
+        RuleDisplayInfo(
+          "Differential Ghost",
+          /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+          /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")) )
+        ),
+        List(ExpressionArg("E", "y"::"x"::"y'"::Nil, converter), FormulaArg("P", "y"::Nil)),
+        _ =>
+          ((f: Expression) =>
+            ((p : Option[Formula]) => converter(f) match {
+              case Left(dp: DifferentialProgram) => TactixLibrary.dG(dp, p)
+              case Left(e) => throw new IllegalStateException("Expected a differential program, but expression converter produced " + e.prettyString)
+              case Right(msg) => throw new IllegalArgumentException(msg)
+            }) :  TypedFunc[Option[Formula], BelleExpr]
+            ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
+      )
+    },
     PositionTacticInfo("dGi",
       RuleDisplayInfo(
         "Inverse Differential Ghost",
@@ -1302,9 +1304,15 @@ object TacticInfo {
 }
 
 sealed trait ArgInfo {
+  /** Argument sort. */
   val sort: String
+  /** Argument name. */
   val name: String
+  /** A list of allowed fresh symbols. */
   val allowsFresh: List[String]
+  /** Converts an expression into the required format of the tactic (default: no-op). Returns either the converted
+    * expression or an error message. */
+  def convert(e: Expression): Either[Expression, String] = Left(e)
 }
 case class FormulaArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "formula"
@@ -1312,8 +1320,10 @@ case class FormulaArg (override val name: String, override val allowsFresh: List
 case class VariableArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "variable"
 }
-case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
+case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil,
+                          converter: Expression => Either[Expression, String] = e => Left(e)) extends ArgInfo {
   val sort = "expression"
+  override def convert(e: Expression): Either[Expression, String] = converter(e)
 }
 case class TermArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "term"

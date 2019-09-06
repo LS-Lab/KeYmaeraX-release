@@ -1696,12 +1696,12 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => arg -> value.split(",").map(KeYmaeraXParser).toList
       }
 
-      val sortMismatch = arg match {
-        case _: TermArg if exprs.size == 1 && exprs.head.kind == TermKind => None
-        case _: FormulaArg if exprs.size == 1 && exprs.head.kind == FormulaKind => None
-        case _: VariableArg if exprs.size == 1 && exprs.head.kind == TermKind && exprs.head.isInstanceOf[Variable] => None
-        case _: ExpressionArg if exprs.size == 1 => None
-        case ListArg(_, "formula", _) if exprs.forall(_.kind == FormulaKind) => None
+      val sortMismatch = (arg, exprs) match {
+        case (_: TermArg, (t: Term) :: Nil) => arg.convert(t).right.toOption
+        case (_: FormulaArg, (f: Formula) :: Nil) => arg.convert(f).right.toOption
+        case (_: VariableArg, (v: Variable) :: Nil) => arg.convert(v).right.toOption
+        case (_: ExpressionArg, (e: Expression) :: Nil) => arg.convert(e).right.toOption
+        case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
         case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
       }
 
@@ -1740,7 +1740,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
     val paramInfo = expectedInputs.find(_.name == paramName)
     val isIllFormed = paramInfo.isEmpty || paramValue.isEmpty
     if (!isIllFormed) {
-      val input = BelleTermInput(paramValue, expectedInputs.find(_.name == paramName))
+      val input = BelleTermInput(paramValue, paramInfo)
 
       val tree: ProofTree = DbProofTree(db, proofId)
       tree.locate(nodeId) match {
