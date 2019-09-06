@@ -13,16 +13,16 @@
 
                 <div class="row">
                     <div ng-repeat="premise in stepDeriv.premise">
-                        <div ng-class="{'col-md-12': stepDeriv.premise.length==1, 'col-md-6': stepDeriv.premise.length==2, 'col-md-4': stepDeriv.premise.length==3, 'col-md-3': stepDeriv.premise.length==4, 'col-md-2': stepDeriv.premise.length==5, 'col-md-2': stepDeriv.premise.length==6, 'col-md-1': stepDeriv.premise.length>=7}">
-                            <div ng-class="{'row': !premise.isClosed, 'row small': premise.isClosed}">
-                                <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+                        <div ng-class="{'col-sm-12': stepDeriv.premise.length==1, 'col-sm-6': stepDeriv.premise.length==2, 'col-sm-4': stepDeriv.premise.length==3, 'col-sm-3': stepDeriv.premise.length==4, 'col-sm-2': stepDeriv.premise.length==5, 'col-sm-2': stepDeriv.premise.length==6, 'col-sm-1': stepDeriv.premise.length>=7}">
+                            <div ng-class="{'small': premise.isClosed}">
+                                <span class="k4-nobreak k4-sequentRuleAnte">
                                     <span ng-repeat="ante in premise.ante">
                                         <span ng-bind-html="ante"></span>
                                         {{$last ? '' : ','}}
                                     </span>
                                 </span>
-                                <span class="col-md-1">&#8866;</span>
-                                <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+                                <span>&#8866;</span>
+                                <span class="k4-nobreak k4-sequentRuleSucc">
                                     <span ng-repeat="succ in premise.succ">
                                         <span ng-bind-html="succ"></span>
                                         {{$last ? '' : ','}}
@@ -39,21 +39,19 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div ng-repeat="conclusion in [stepDeriv.conclusion]">
-                            <div class="row">
-                                <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
-                                    <span ng-repeat="ante in conclusion.ante">
-                                        <span ng-bind-html="ante"></span>
-                                        {{$last ? '' : ','}}
-                                    </span>
+                            <span class="k4-nobreak k4-sequentRuleAnte">
+                                <span ng-repeat="ante in conclusion.ante">
+                                    <span ng-bind-html="ante"></span>
+                                    {{$last ? '' : ','}}
                                 </span>
-                                <span class="col-md-1">&#8866;</span>
-                                <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
-                                    <span ng-repeat="succ in conclusion.succ">
-                                        <span ng-bind-html="succ"></span>
-                                        {{$last ? '' : ','}}
-                                    </span>
+                            </span>
+                            <span>&#8866;</span>
+                            <span class="k4-nobreak k4-sequentRuleSucc">
+                                <span ng-repeat="succ in conclusion.succ">
+                                    <span ng-bind-html="succ"></span>
+                                    {{$last ? '' : ','}}
                                 </span>
-                            </div>
+                            </span>
                         </div>
                     </div>
                 </div>
