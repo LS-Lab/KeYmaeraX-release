@@ -1154,11 +1154,11 @@ del {
 }
 .k4-formula:not(.nohover):hover .k4-formula-content {
   background: var(--lssuperlightblue);
+  /* invisible border of .k4-formula .k4-formula-content has to match to avoid wobble. */
   border: 1px solid var(--lsblue);
-  padding: 0px; /* 0px+1px border = 1px padding of .k4-formula .k4-formula-content */
 }
 .k4-formula:not(.nohover):hover .k4-formula-content:before {
-    display: none;
+  display: none;
 }
 .k4-formula-content > ul:first-child {
   list-style-type: none;
@@ -1232,15 +1232,15 @@ del {
   color: var(--lsblue);
 }
 .k4-formula .k4-formula-content {
-  padding: 1px;
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
+  border: 1px solid transparent;
   display: block;
 }
 .k4-formula .k4-formula-content-abbreviate {
-  padding: 1px;
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
+  border: 1px solid transparent;
 }
 .k4-formula-container {
   max-width: 100%;
