@@ -230,44 +230,75 @@ object DerivationInfo {
       {case () => HilbertCalculus.useAt("Cont continuous existence")}),
     new CoreAxiomInfo("Uniq uniqueness", "Uniq", "Uniq", unsure,
       {case () => HilbertCalculus.useAt("Uniq uniqueness")}),
-    new InputPositionTacticInfo("autoApproximate",
-      RuleDisplayInfo("Approximate",
-        (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
-        List( (List("&Gamma;"), List("[{X'=F}]", "&Delta;")) )
-      ),
-      List(ExpressionArg("n", Nil)),
-      _ => ((n: Number) => n match {
-        case n:Number => Approximator.autoApproximate(n)
-      }) : TypedFunc[Number, BelleExpr]
-    ),
-    new InputPositionTacticInfo("expApproximate",
-      RuleDisplayInfo("e'=e Approximation",
-        (List("&Gamma;"), List("[{c1,e'=e,c2 & approximate(n)}]", "&Delta;")),
-        List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
-      ),
-      List(ExpressionArg("e", "e"::Nil), ExpressionArg("n", Nil)),
-      _ =>
-        ((e: Expression) =>
-          ((n: Expression) => (n,e) match {
-            case (n:Number,e:Variable) => Approximator.expApproximate(e,n)
-          }) : TypedFunc[Expression, BelleExpr]
-          ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
-    ),
-    new InputPositionTacticInfo("circularApproximate",
-      RuleDisplayInfo("Circular Dynamics Approximation",
-        (List("&Gamma;"), List("[{c1,s'=c,c2,c'=-s,c3 & approximate(n)}]", "&Delta;")),
-        List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
-      ),
-      List(ExpressionArg("s", "s"::Nil), ExpressionArg("c", "c"::Nil), ExpressionArg("n", Nil)),
-      _ =>
-        ((s: Expression) =>
-          ((c: Expression) =>
-            ((n: Expression) => (s,c,n) match {
-              case (s:Variable,c:Variable,n:Number) => Approximator.circularApproximate(s,c,n)
-            }) : TypedFunc[Expression, BelleExpr]
-            ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
-          ) : TypedFunc[Expression, TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]]
-    ),
+    { val converter = (e: Expression) => e match {
+        case n: Number => Left(n)
+        case _ => Right("Expected a number but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("autoApproximate",
+        RuleDisplayInfo("Approximate",
+          (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
+          List( (List("&Gamma;"), List("[{X'=F}]", "&Delta;")) )
+        ),
+        List(ExpressionArg("n", Nil, converter)),
+        _ => ((e: Expression) => converter(e) match {
+          case Left(n: Number) => Approximator.autoApproximate(n)
+          case Right(msg) => throw new IllegalArgumentException(msg)
+        }) : TypedFunc[Number, BelleExpr]
+      )
+    },
+    { val nConverter = (e: Expression) => e match {
+        case n: Number => Left(n)
+        case _ => Right("Expected a number but got " + e.prettyString)
+      }
+      val eConverter = (e: Expression) => e match {
+        case v: Variable => Left(v)
+        case _ => Right("Expected a variable but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("expApproximate",
+        RuleDisplayInfo("e'=e Approximation",
+          (List("&Gamma;"), List("[{c1,e'=e,c2 & approximate(n)}]", "&Delta;")),
+          List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
+        ),
+        List(ExpressionArg("e", "e"::Nil), ExpressionArg("n", Nil, nConverter)),
+        _ =>
+          ((e: Expression) => (eConverter(e) match {
+              case Left(v: Variable) => (n: Expression) => nConverter(n) match {
+                case Left(n: Number) => Approximator.expApproximate(v, n)
+                case Right(msg) => throw new IllegalArgumentException(msg)
+              }
+              case Right(msg) => throw new IllegalArgumentException(msg)
+            }): TypedFunc[Expression, BelleExpr]
+          ): TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
+      )
+    },
+    {
+      val nConverter = (e: Expression) => e match {
+        case n: Number => Left(n)
+        case _ => Right("Expected a number but got " + e.prettyString)
+      }
+      val vConverter = (e: Expression) => e match {
+        case v: Variable => Left(v)
+        case _ => Right("Expected a variable but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("circularApproximate",
+        RuleDisplayInfo("Circular Dynamics Approximation",
+          (List("&Gamma;"), List("[{c1,s'=c,c2,c'=-s,c3 & approximate(n)}]", "&Delta;")),
+          List((List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")))
+        ),
+        List(ExpressionArg("s", "s" :: Nil, vConverter), ExpressionArg("c", "c" :: Nil, vConverter), ExpressionArg("n", Nil, nConverter)),
+        _ =>
+          ((s: Expression) => vConverter(s) match {
+            case Left(sv: Variable) => ((c: Expression) => vConverter(c) match {
+              case Left(cv: Variable) => ((n: Expression) => nConverter(n) match {
+                case Left(nn: Number) => Approximator.circularApproximate(sv, cv, nn)
+                case Right(msg) => throw new IllegalArgumentException(msg)
+              }): TypedFunc[Expression, BelleExpr]
+              case Right(msg) => throw new IllegalArgumentException(msg)
+            }): TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
+            case Right(msg) => throw new IllegalArgumentException(msg)
+          }): TypedFunc[Expression, TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]]
+      )
+    },
     {
       val converter = (e: Expression) => e match {
         case Equal(l: DifferentialSymbol, r) => Left(AtomicODE(l, r))
@@ -283,7 +314,7 @@ object DerivationInfo {
         List(ExpressionArg("E", "y"::"x"::"y'"::Nil, converter), FormulaArg("P", "y"::Nil)),
         _ =>
           ((f: Expression) =>
-            ((p : Option[Formula]) => converter(f) match {
+            ((p: Option[Formula]) => converter(f) match {
               case Left(dp: DifferentialProgram) => TactixLibrary.dG(dp, p)
               case Left(e) => throw new IllegalStateException("Expected a differential program, but expression converter produced " + e.prettyString)
               case Right(msg) => throw new IllegalArgumentException(msg)
