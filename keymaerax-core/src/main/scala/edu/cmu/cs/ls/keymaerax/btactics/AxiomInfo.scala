@@ -309,6 +309,15 @@ object DerivationInfo {
         case None => DifferentialTactics.dgDbxAuto
       }: TypedFunc[Option[Term], BelleExpr]
     ),
+    PositionTacticInfo("diffUnpackEvolDomain",
+      RuleDisplayInfo(
+        "Unpack evolution domain",
+        /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P","&Delta;")),
+        /* premises */ List( (List("&Gamma;","Q"), List("[{x′=f(x) & Q}]P","&Delta;")) )
+      ),
+      _ => DifferentialTactics.diffUnpackEvolutionDomainInitially
+      , needsTool = false
+    ),
     PositionTacticInfo("barrier",
       RuleDisplayInfo(
         "Strict Barrier Certificate",
