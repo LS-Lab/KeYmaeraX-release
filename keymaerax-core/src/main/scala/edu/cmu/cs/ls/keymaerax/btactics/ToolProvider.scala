@@ -205,14 +205,14 @@ abstract class WolframToolProvider(tool: Tool, alternativeNames: List[String]) e
   * @param config The Mathematica configuration (linkName, libDir).
   * @author Stefan Mitsch
   */
-class MathematicaToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "Mathematica"); m.init(config); m }, "WolframEngine" :: "WolframScript" :: "M" :: Nil) {
+class MathematicaToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); m }, "WolframEngine" :: "WolframScript" :: "M" :: Nil) {
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
 /** A tool provider that initializes tools to Wolfram Engine.
   * @author Stefan Mitsch
   */
-class WolframEngineToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "WolframEngine"); m.init(config); m }, "Mathematica" :: "WolframScript" :: "M" :: Nil) {
+class WolframEngineToolProvider(config: Configuration) extends WolframToolProvider({ val m = new Mathematica(new JLinkMathematicaLink("WolframEngine"), "WolframEngine"); m.init(config); m }, "Mathematica" :: "WolframScript" :: "M" :: Nil) {
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
@@ -234,10 +234,10 @@ class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map(
   * @author Stefan Mitsch
   */
 class MathematicaZ3ToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(new JLinkMathematicaLink, "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); m :: z :: m :: Nil }) { }
+  { val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); m :: z :: m :: Nil }) { }
 
 /** A tool provider that provides all Mathematica tools, but favors Z3 for QE unless specifically asked to provide Mathematica.
   * @author Stefan Mitsch
   */
 class Z3MathematicaToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(new JLinkMathematicaLink, "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); z :: m :: Nil }) { }
+  { val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); z :: m :: Nil }) { }

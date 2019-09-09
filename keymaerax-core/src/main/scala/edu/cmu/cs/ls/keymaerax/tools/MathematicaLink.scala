@@ -109,7 +109,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class JLinkMathematicaLink extends MathematicaLink with Logging {
+class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with Logging {
   //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
   private case class Version(major: String, minor: String, revision: String) {
     override def toString: String = s"$major.$minor"
@@ -170,7 +170,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
           }
         MathLinkFactory.createKernelLink(args)
       } else {
-        logger.info("Launching Math Kernel")
+        logger.info("Launching " + engineName)
         val args = ("-linkmode"::"launch"::"-linkname"::linkName + " -mathlink"::Nil).toArray
         MathLinkFactory.createKernelLink(args)
       }
@@ -185,20 +185,20 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
           case Some((true, date)) =>
             isComputing match {
               case Some(true) =>
-                logger.info("Connected to Mathematica v" + version + " (TCPIP=" + tcpip + ", license expires " + date + ")")
+                logger.info("Connected to " + engineName + " v" + version + " (TCPIP=" + tcpip + ", license expires " + date + ")")
                 true // everything ok
-              case Some(false) => logger.error("ERROR: Test computation in Mathematica failed, shutting down.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
-                throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
-              case None => logger.warn("WARNING: Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+              case Some(false) => logger.error("ERROR: Test computation in " + engineName + " failed, shutting down.\n Please start a standalone "  + engineName + " notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+                throw new IllegalStateException("Test computation in "  + engineName + " failed.\n Please start a standalone " + engineName + " notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+              case None => logger.warn("WARNING: Unable to determine state of " + engineName + ", " + engineName + " may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
             }
-          case Some((false, date)) => logger.warn("WARNING: Mathematica seems not activated or Mathematica license might be expired (expires " + date + "), Mathematica may not be working.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n If you experience problems during proofs, please renew your Mathematica license and restart KeYmaera X."); true
+          case Some((false, date)) => logger.warn("WARNING: " + engineName + " seems not activated or license might be expired (expires " + date + "), " + engineName + " may not be working.\n A valid license is necessary to use " + engineName + " as backend of KeYmaera X.\n If you experience problems during proofs, please renew your license and restart KeYmaera X."); true
           //throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
-          case None => logger.warn("WARNING: Mathematica may not be activated or Mathematica license might be expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please check your Mathematica license manually."); true
+          case None => logger.warn("WARNING: " + engineName + " may not be activated or license might be expired.\n A valid license is necessary to use " + engineName + " as backend of KeYmaera X.\n Please check your license manually."); true
         }
       }
     } catch {
       case e: UnsatisfiedLinkError =>
-        logger.error("Shutting down since Mathematica J/Link native library was not found in:\n" + jlinkLibDir +
+        logger.error("Shutting down since " + engineName + " J/Link native library was not found in:\n" + jlinkLibDir +
           "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
           diagnostic +
           "\nPlease provide paths to the J/Link native library in " + Configuration.KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf and restart KeYmaera X.", e)
@@ -206,16 +206,16 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         false
       case e: MathLinkException if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>
         // link did not open, wait a little and retry
-        logger.info("Repeating connection attempt\nMathematica J/Link failed to open " + e +
+        logger.info("Repeating connection attempt\n" + engineName + " J/Link failed to open " + e +
           "\nRepeating connection attempt (remaining trials: " + (remainingTrials-1) + ")\n" + diagnostic)
         Thread.sleep(10000)
         init(linkName, jlinkLibDir, tcpip, remainingTrials-1)
       case e: MathLinkException =>
-        logger.error("Shutting down since Mathematica J/Link errored " + e + "\nPlease double check configuration and Mathematica license.\n" + diagnostic, e)
+        logger.error("Shutting down since " + engineName + " J/Link errored " + e + "\nPlease double check configuration and license.\n" + diagnostic, e)
         shutdown()
         false
       case ex: Throwable =>
-        logger.warn("Unknown error " + ex + "\nMathematica may or may not be working. If you experience problems, please double check configuration paths and Mathematica license.\n" + diagnostic, ex)
+        logger.warn("Unknown error " + ex + "\n" + engineName + " may or may not be working. If you experience problems, please double check configuration paths and license.\n" + diagnostic, ex)
         true
     }
   }
@@ -226,13 +226,13 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
   def shutdown(): Unit = {
     if (ml == null) logger.trace("No need to shut down MathKernel if no link has been initialized")
     else {
-      logger.debug("Shutting down Mathematica...")
+      logger.debug("Shutting down " + engineName + "...")
       val l: KernelLink = ml
       ml = null
       l.abandonEvaluation()
       l.terminateKernel()
       l.close()
-      logger.info("Disconnected from Mathematica")
+      logger.info("Disconnected from " + engineName)
     }
     mathProcess match {
       case Some(p) =>
@@ -299,7 +299,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
       // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
       val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
       try {
-        logger.debug("Sending to Mathematica " + checkErrorMsgCmd)
+        logger.debug("Sending to " + engineName + ": " + checkErrorMsgCmd)
 
         val taskId = executor.schedule(_ => {
           ml.synchronized {
@@ -319,11 +319,11 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
             case ex: ConversionException =>
               executor.remove(taskId)
               // conversion error, but Mathematica still functional
-              throw ToolException("Error converting Mathematica result from " + checkErrorMsgCmd, ex)
+              throw ToolException("Error converting " + engineName + " result from " + checkErrorMsgCmd, ex)
             case ex: IllegalArgumentException =>
               executor.remove(taskId)
               // computation error, but Mathematica still functional
-              throw ToolException("Error executing Mathematica command " + checkErrorMsgCmd, ex)
+              throw ToolException("Error executing " + engineName + " command " + checkErrorMsgCmd, ex)
             case ex: Throwable =>
               logger.warn(ex)
               executor.remove(taskId, force = true)
@@ -331,15 +331,15 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
                 restart()
               } catch {
                 case restartEx: Throwable =>
-                  throw ToolException("Restarting Mathematica failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of Mathematica (Help->Tools). Mathematica error that triggered the restart:\n" + ex.getMessage, restartEx)
+                  throw ToolException("Restarting " + engineName + " failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of " + engineName + " (KeYmaera X->Preferences). " + engineName + " error that triggered the restart:\n" + ex.getMessage, restartEx)
               }
-              throw ToolException("Restarted Mathematica, please rerun the failed command (error details below)", throwable)
+              throw ToolException("Restarted " + engineName + ", please rerun the failed command (error details below)", throwable)
           }
           case None =>
             //@note Thread is interrupted by another thread (e.g., UI button 'stop')
             cancel()
             executor.remove(taskId, force = true)
-            logger.debug("Initiated aborting Mathematica " + checkErrorMsgCmd)
+            logger.debug("Initiated aborting "  + engineName + " " + checkErrorMsgCmd)
             throw new MathematicaComputationExternalAbortException(checkErrorMsgCmd.toString)
         }
       } finally {
@@ -383,14 +383,14 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         } else {
           val head = res.head
           if (head.equals(MathematicaSymbols.CHECK)) {
-            throw new IllegalStateException("Mathematica returned input as answer: " + res.toString)
+            throw new IllegalStateException(engineName + " returned input as answer: " + res.toString)
           } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
             val theResult = res.args.last
             //@todo check with MathematicaToKeYmaera.isAborted
             if (theResult == MathematicaSymbols.ABORTED) throw new MathematicaComputationAbortedException(ctx)
             else (theResult.toString, converter(theResult))
           } else {
-            throw new IllegalStateException("Mathematica returned a stale answer for " + res.toString)
+            throw new IllegalStateException(engineName + " returned a stale answer for " + res.toString)
           }
         }
       })
@@ -408,7 +408,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     val (major, minor) = importResult(
       ml.getExpr,
       version => {
-        logger.debug("Running Mathematica version " + version.toString)
+        logger.debug("Running " + engineName + " version " + version.toString)
         val versionParts = version.toString.split("\\.")
         if (versionParts.length >= 2) (versionParts(0), versionParts(1))
         else ("Unknown", "Unknown")
@@ -424,7 +424,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
     try {
       def toDate(date: Array[MExpr]): Option[LocalDate] = {
-        logger.debug("Mathematica license expires: " + date.mkString)
+        logger.debug(engineName + " license expires: " + date.mkString)
         if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
           Some(LocalDate.of(date(0).asInt(), date(1).asInt(), date(2).asInt()))
         } else {
@@ -448,12 +448,12 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
           case Version("11", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
           case Version("12", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
           case Version(major, minor, _) =>
-            logger.debug("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x, 10.x, and 11.x supported. Mathematica requests may fail if license is expired.")
+            logger.debug("WARNING: Cannot check license expiration date since unknown " + engineName + " version " + major + "." + minor + ", only version 9.x, 10.x, and 11.x supported. " + engineName + " requests may fail if license is expired.")
             None
         }
         //@note date disposed as part of licenseExpirationDate
       } catch {
-        case e: ExprFormatException => logger.warn("WARNING: Unable to determine Mathematica expiration date\n cause: " + e, e); None
+        case e: ExprFormatException => logger.warn("WARNING: Unable to determine " + engineName + " expiration date\n cause: " + e, e); None
       }
 
       ml.evaluate(MathematicaSymbols.LICENSEEXPIRATIONDATE)
@@ -472,7 +472,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
       Some(importResult(ml.getExpr, e => e.integerQ() && e.asInt() == 54))
     } catch {
       //@todo need better error reporting, this way it will never show up on UI
-      case e: Throwable => logger.warn("WARNING: Mathematica may not be functional \n cause: " + e, e); None
+      case e: Throwable => logger.warn("WARNING: " + engineName + " may not be functional \n cause: " + e, e); None
     }
   }
 }
