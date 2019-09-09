@@ -543,6 +543,17 @@ del {
   word-wrap: break-word;
 }
 
+.k4-model-illustration {
+  width: calc(30vw);
+  max-width: calc(30vw);
+}
+
+.k4-model-illustration img {
+  margin: auto;
+  width: calc(30vw);
+  max-width: calc(30vw);
+}
+
 .k4-tacticeditor-error {
   color: black;
   border-bottom: 1px dashed red;

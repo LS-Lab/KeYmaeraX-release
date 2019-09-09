@@ -1,7 +1,12 @@
 <form editable-form class="k4-vertical-fill-flex" name="modelDataForm" onbeforesave="checkModelData()"
       onaftersave="save()" shown="save.editable">
 <div class="modal-header">
-    <div class="row" ng-if="mode==='edit' || mode==='exercise' || mode ==='proofedit'">
+    <div class="row" ng-if="mode==='edit' || mode==='exercise' || mode ==='proofedit'"
+         uib-popover-template="'templates/modelillustration.html'"
+         popover-placement="bottom-right"
+         popover-enable="model.illustrations.length > 0 && model.showModelIllustrations"
+         popover-is-open="model.illustrations.length > 0 && model.showModelIllustrations"
+         popover-trigger="'click'">
         <div class="col-md-12">
             <!--<h3 class="modal-title" ng-if="mode==='edit'">-->
                 <!--<span editable-text="model.name" e-name="modelName"-->

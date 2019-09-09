@@ -349,6 +349,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
 
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
     $scope.model = response.data;
+    $scope.model.showModelIllustrations = true;
     $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
   });
 
@@ -454,6 +455,11 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
       Models.addModels(data);
     });
   };
+
+  $scope.showModelIllustrations = function(show) {
+    $scope.model.showModelIllustrations = show;
+    $scope.$apply(); // required since called from standard JavaScript onerror
+  }
 });
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $uibModalInstance, userid, modelid) {

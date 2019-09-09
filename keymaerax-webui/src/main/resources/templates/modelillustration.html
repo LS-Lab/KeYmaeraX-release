@@ -1,0 +1,8 @@
+<div class="k4-model-illustration">
+    <div uib-carousel interval="-1" no-wrap="false">
+        <div uib-slide ng-repeat="slide in model.illustrations" index="$index">
+            <img ng-src="{{slide}}"
+                 onerror="angular.element(this).scope().showModelIllustrations(false);this.style.display='none';"/>
+        </div>
+    </div>
+</div>
