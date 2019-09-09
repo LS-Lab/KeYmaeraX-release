@@ -168,7 +168,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   private val entries = {
     println("Reading " + url)
     try {
-      DatabasePopulator.readKya(url)
+      DatabasePopulator.readKyx(url)
     } catch {
       case ex: Throwable =>
         println("Failed reading: " + ex.getMessage)

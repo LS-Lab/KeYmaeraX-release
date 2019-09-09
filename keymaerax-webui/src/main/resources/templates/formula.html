@@ -7,13 +7,7 @@
           ng-mouseover="exprMouseOver($event, expr.step, expr.editable)"
           ng-mouseout="exprMouseOut($event)"
           ng-click="exprClick($event, expr.id, expr.step, expr.editable)"
-          ng-right-click="exprRightClick($event, expr.id, expr.step, expr.editable)"
-          uib-popover-template="'templates/axiomPopoverTemplate.html'"
-          popover-is-open="tacticPopover.isOpen(expr.id)"
-          popover-class="k4-axiomtactic-popover"
-          popover-trigger="'none'"
-          popover-append-to-body="true"
-          popover-placement="auto bottom">
+          ng-right-click="exprRightClick($event, expr.id, expr.step, expr.editable)">
         <span ng-if="modeIsEdit() && expr.plain">
             <span editable-text="expr.plain" onbeforesave="editExpr(expr.id, $data)">{{expr.plain}}</span>
         </span>

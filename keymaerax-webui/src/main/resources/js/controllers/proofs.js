@@ -90,7 +90,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     steps:[
     {
         element: '#proofsarchiving',
-        intro: "Extract all proofs into .kya archives.",
+        intro: "Extract all proofs into .kyx archives.",
         position: 'bottom'
     },
     {
@@ -159,7 +159,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
   $scope.downloadPartialProof = function(proof) {
     $http.get("/proofs/user/" + $scope.userId + "/" + proof.id + "/download").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, proof.name + '.kya');
+      FileSaver.saveAs(data, proof.name + '.kyx');
     });
   }
 
@@ -192,7 +192,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     spinnerService.show('proofExportSpinner');
     $http.get("/models/user/" + $scope.userId + "/model/" + modelId + "/downloadProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kya');
+      FileSaver.saveAs(data, modelId + '_' + currentDateString() + '.kyx');
     })
     .finally(function() { spinnerService.hide('proofExportSpinner'); });
   }
@@ -201,7 +201,7 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     spinnerService.show('proofExportSpinner');
     $http.get("/proofs/user/" + $scope.userId + "/downloadAllProofs").then(function(response) {
       var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kya');
+      FileSaver.saveAs(data, 'proofs_'+ currentDateString() +'.kyx');
     })
     .finally(function() { spinnerService.hide('proofExportSpinner'); });
   }

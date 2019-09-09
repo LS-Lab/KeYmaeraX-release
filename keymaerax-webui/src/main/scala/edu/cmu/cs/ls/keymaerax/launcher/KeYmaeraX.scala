@@ -386,18 +386,18 @@ object KeYmaeraX {
 
   /** Initializes Mathematica from command line options, if present; else from default config */
   private def initMathematica(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig(options)))
+    ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(mathematicaConfig(options)) :: new Z3ToolProvider() :: Nil))
   }
 
   /** Initializes Wolfram Engine from command line options. */
   private def initWolframEngine(options: OptionMap): Unit = {
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-    ToolProvider.setProvider(new WolframEngineToolProvider(mathematicaConfig(options)))
+    ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(mathematicaConfig(options)) :: new Z3ToolProvider() :: Nil))
   }
 
   /** Initializes Wolfram Script from command line options. */
   private def initWolframScript(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new WolframScriptToolProvider)
+    ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider :: new Z3ToolProvider() :: Nil))
   }
 
   /** Shuts down the backend solver and invariant generator. */

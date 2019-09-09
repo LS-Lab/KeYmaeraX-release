@@ -9,7 +9,7 @@ var DLHighlightRules = function() {
     var keywords = (
     "ArchiveEntry|Theorem|Lemma|Exercise|SharedDefinitions|Functions|"+
     "Definitions|ProgramVariables|Problem|Tactic|End\\.|@invariant|if|else|Link|"+
-    "Citation|Title|Description|Author|See"
+    "Citation|Title|Description|Author|See|Illustration"
     );
 
     var builtinConstants = ("true|false|Real|Bool|HP");

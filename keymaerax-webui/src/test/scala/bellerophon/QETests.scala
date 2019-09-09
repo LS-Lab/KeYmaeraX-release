@@ -122,7 +122,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "switch between tools" in withDatabase { db =>
-    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
+    val provider = new Z3MathematicaToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
@@ -135,7 +135,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "use the default tool" in withDatabase { db =>
-    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
+    val provider = new Z3MathematicaToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
@@ -147,7 +147,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "switch between tools from parsed tactic" in {
-    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
+    val provider = new Z3MathematicaToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val tactic = BelleParser("andR(1); <(QE({`Z3`}), andR(1) ; <(QE({`Mathematica`}), QE))")
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved

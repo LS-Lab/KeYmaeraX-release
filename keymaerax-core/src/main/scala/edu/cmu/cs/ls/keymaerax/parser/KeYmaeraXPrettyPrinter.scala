@@ -567,10 +567,10 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case PredicationalOf(p, c)  => (Doc.text(p.asString) + Doc.lineBreak + encloseText("{", docOf(c), "}").nested(2)).grouped
     case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line + wrapRightDoc(f, docOf(f.right))).grouped
     case DifferentialFormula(g) => encloseText("(", docOf(g), ")" + ppOp(formula))
-    case f: Quantified          => Doc.text(ppOp(formula)) + Doc.space + Doc.intercalate(Doc.comma+Doc.space, f.vars.map(docOf(_))) +
-      Doc.line + wrapChildDoc(f, docOf(f.child))
-    case f: Box                 => (wrapDoc(docOf(f.program), f) + Doc.lineBreak + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
-    case f: Diamond             => (wrapDoc(docOf(f.program), f) + Doc.lineBreak + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
+    case f: Quantified          => (Doc.text(ppOp(formula)) + Doc.space + Doc.intercalate(Doc.comma+Doc.space, f.vars.map(docOf(_))) +
+      (Doc.line + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
+    case f: Box                 => (wrapDoc(docOf(f.program), f) + (Doc.lineBreak + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
+    case f: Diamond             => (wrapDoc(docOf(f.program), f) + (Doc.lineBreak + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
     case UnitPredicational(name,space) => Doc.text(name) + encloseText("(", Doc.text(space.toString), ")")
     case t: UnaryCompositeFormula => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
     case t: BinaryCompositeFormula=> (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line + wrapRightDoc(t, docOf(t.right))).grouped
@@ -609,5 +609,13 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     }
     doc.render(margin)
   }
+
+  override def stringify(seq: Sequent): String = {
+    val doc = Doc.intercalate(Doc.line,(1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
+      Doc.line + Doc.text(" ==> ") + Doc.line +
+      Doc.intercalate(Doc.line, (1 to seq.succ.length).map(i => Doc.text(+i + ": ") + (Doc.line + docOf(seq.succ(i - 1))).nested(2)))
+    doc.render(margin)
+  }
+
 
 }

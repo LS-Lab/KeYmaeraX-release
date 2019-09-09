@@ -665,7 +665,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
     case SEARCH_ANTECEDENT    => true
     case SEARCH_SUCCEDENT     => true
     case SEARCH_EVERYWHERE    => true
-    case EXPRESSION(_)        => true
+    case EXPRESSION(_, _)     => true
     case _                    => false
   }
 

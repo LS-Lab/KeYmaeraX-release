@@ -49,48 +49,48 @@ class RoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic transform" in {
-    roundTrip(TactixLibrary.transform("x>0".asFormula)(1), "transform({`x>0`}, 1)")
+    roundTrip(TactixLibrary.transform("x>0".asFormula)(1), """transform("x>0", 1)""")
   }
 
   it should "input tactic generalizeb" in {
-    roundTrip(TactixLibrary.generalize("x>0".asFormula)(1), "MR({`x>0`}, 1)")
+    roundTrip(TactixLibrary.generalize("x>0".asFormula)(1), """MR("x>0", 1)""")
   }
 
   it should "input tactic diffCut" in {
-    roundTrip(TactixLibrary.dC("x>0".asFormula)(1), "dC({`x>0`}, 1)")
+    roundTrip(TactixLibrary.dC("x>0".asFormula)(1), """dC("x>0", 1)""")
   }
 
   it should "input tactic dG" in {
-    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), None)(1), "dG({`{x'=5*x+2}`}, 1)")
-    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), Some("x>0".asFormula))(1), "dG({`{x'=5*x+2}`}, {`x>0`}, 1)")
+    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), None)(1), """dG("{x'=5*x+2}", 1)""")
+    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), Some("x>0".asFormula))(1), """dG("{x'=5*x+2}", "x>0", 1)""")
   }
 
   it should "input tactic cut, cutL, cutR" in {
-    roundTrip(TactixLibrary.cut("x>0".asFormula), "cut({`x>0`})")
-    roundTrip(TactixLibrary.cutL("x>0".asFormula)(AntePosition(1).checkTop), "cutL({`x>0`}, -1)")
-    roundTrip(TactixLibrary.cutR("x>0".asFormula)(SuccPosition(1).checkTop), "cutR({`x>0`}, 1)")
-    roundTrip(TactixLibrary.cutLR("x>0".asFormula)(SuccPosition(1).checkTop), "cutLR({`x>0`}, 1)")
+    roundTrip(TactixLibrary.cut("x>0".asFormula), """cut("x>0")""")
+    roundTrip(TactixLibrary.cutL("x>0".asFormula)(AntePosition(1).checkTop), """cutL("x>0", -1)""")
+    roundTrip(TactixLibrary.cutR("x>0".asFormula)(SuccPosition(1).checkTop), """cutR("x>0", 1)""")
+    roundTrip(TactixLibrary.cutLR("x>0".asFormula)(SuccPosition(1).checkTop), """cutLR("x>0", 1)""")
   }
 
   it should "input tactic loop" in {
-    roundTrip(TactixLibrary.loop("x>0".asFormula)(1), "loop({`x>0`}, 1)")
+    roundTrip(TactixLibrary.loop("x>0".asFormula)(1), """loop("x>0", 1)""")
   }
 
   it should "input tactic boundRename" in {
-    roundTrip(TactixLibrary.boundRename("x".asVariable, "y".asVariable)(1), "boundRename({`x`}, {`y`}, 1)")
+    roundTrip(TactixLibrary.boundRename("x".asVariable, "y".asVariable)(1), """boundRename("x", "y", 1)""")
   }
 
   it should "input tactic stutter" in {
     //@todo test with BelleExpr data structure, but DLBySubst is private
-    roundTrip("stutter({`y`}, 1)")
+    roundTrip("""stutter("y", 1)""")
   }
 
   it should "input tactic transform equality" in {
-    roundTrip(ArithmeticSimplification.transformEquality("x=y".asFormula)(1), "transformEquality({`x=y`}, 1)")
+    roundTrip(ArithmeticSimplification.transformEquality("x=y".asFormula)(1), """transformEquality("x=y", 1)""")
   }
 
   it should "input tactic diffInvariant" in {
-    roundTrip(TactixLibrary.diffInvariant("x^2=1".asFormula)(1), "diffInvariant({`x^2=1`}, 1)")
+    roundTrip(TactixLibrary.diffInvariant("x^2=1".asFormula)(1), """diffInvariant("x^2=1", 1)""")
   }
 
   it should "two-position tactic cohide2" in {

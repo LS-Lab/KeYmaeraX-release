@@ -31,9 +31,9 @@ object LemmaFileMode extends LexerMode
   * @author Andre Platzer
  */
 sealed abstract class Terminal(val img: String) {
-  override def toString: String = getClass.getSimpleName// + "\"" + img + "\""
-  /** Human-readable description followed by internal info */
-  def description: String = img + " (" + toString + ")"
+  override def toString: String = getClass.getSimpleName
+  /** Human-readable description */
+  def description: String = img
   /**
    * @return The regex that identifies this token.
    */
@@ -185,7 +185,7 @@ private object IF extends OPERATOR("if")
 private object ELSE extends OPERATOR("else")
 private object SEMI    extends OPERATOR(";")
 private object CHOICE  extends OPERATOR("++") {
-  override def regexp: Regex = """\+\+""".r
+  override def regexp: Regex = """\+\+|\u222A""".r
 }
 //@todo simplify lexer by using silly ^@ notation rather than ^d for now. @ for adversary isn't too bad to remember but doesn't look as good as ^d.
 private object DUAL    extends OPERATOR("^@") {

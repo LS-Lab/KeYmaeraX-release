@@ -8,41 +8,39 @@
             </div>
 
             <div class="row">
-                <div class="col-md-12">
-                    <div ng-repeat="premise in tactic.derivation.premise">
-                        <div ng-class="{'row': !premise.isClosed, 'row small': premise.isClosed}">
-                            <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+                <div ng-repeat="premise in tactic.derivation.premise">
+                    <div ng-class="{'col-sm-12': tactic.derivation.premise.length==1, 'col-sm-6': tactic.derivation.premise.length==2, 'col-sm-4': tactic.derivation.premise.length==3, 'col-sm-3': tactic.derivation.premise.length==4, 'col-sm-2': tactic.derivation.premise.length==5, 'col-sm-2': tactic.derivation.premise.length==6, 'col-sm-1': tactic.derivation.premise.length>=7}">
+                        <div ng-class="{'small': premise.isClosed}">
+                            <span class="k4-nobreak k4-sequentRuleAnte">
                                 <span ng-if="premise.isClosed"><i class="fa fa-magic"></i>&nbsp;</span>
                                 <span ng-repeat="ante in premise.ante">
                                     <span ng-repeat="antePart in ante">
                                         <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                                         <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
                                         <span ng-if="readOnly || (premise.isClosed && antePart.isInput && antePart.value() === undefined)">{{antePart.placeholder}}</span>
-                                        <span id="{{antePart.text}}" class="k4-axiomtactic-input"
-                                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}" buttons="no"
-                                              ng-if="!readOnly && !premise.isClosed && antePart.isInput"
-                                              uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
+                                        <span ng-if="!readOnly && !premise.isClosed && antePart.isInput" class="popover-wrapper">
+                                            <a href="#" id="{{antePart.text}}" class="k4-axiomtactic-input"
+                                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
                                               editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
-                                              blur="submit"
-                                              e-required>{{antePart.value || antePart.placeholder}}</span>
+                                              e-required>{{antePart.placeholder}}</a>
+                                        </span>
                                     </span>
                                     {{$last ? '' : ','}}
                                 </span>
                             </span>
-                            <span class="col-md-1">&#8866;</span>
-                            <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+                            <span>&#8866;</span>
+                            <span class="k4-nobreak k4-sequentRuleSucc">
                                 <span ng-repeat="succ in premise.succ">
                                     <span ng-repeat="succPart in succ">
                                         <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                                         <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
                                         <span ng-if="readOnly || (premise.isClosed && succPart.isInput && succPart.value() === undefined)">{{succPart.placeholder}}</span>
-                                        <span id="{{succPart.text}}" class="k4-axiomtactic-input"
-                                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}" buttons="no"
-                                              ng-if="!readOnly && !premise.isClosed && succPart.isInput"
-                                              uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
+                                        <span ng-if="!readOnly && !premise.isClosed && succPart.isInput" class="popover-wrapper">
+                                            <a href="#" id="{{succPart.text}}" class="k4-axiomtactic-input"
+                                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
                                               editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
-                                              blur="submit"
-                                              e-required>{{succPart.value || succPart.placeholder}}</span>
+                                              e-required>{{succPart.placeholder}}</a>
+                                        </span>
                                     </span>
                                     {{$last ? '' : ','}}
                                 </span>
@@ -54,40 +52,38 @@
         </div>
     </div>
     <div class="row k4-sequentRuleConclusion">
-        <!--<div class="col-md-12 k4-nobreak">-->
-        <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
-            <span ng-repeat="ante in tactic.derivation.conclusion.ante">
-                <span ng-repeat="antePart in ante">
-                    <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
-                    <span ng-if="readOnly">{{antePart.placeholder}}</span>
-                    <span id="c{{antePart.text}}" class="k4-axiomtactic-input"
-                          e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}" buttons="no"
-                          ng-if="!readOnly && antePart.isInput"
-                          uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
-                          editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
-                          blur="submit"
-                          e-required>{{antePart.value || antePart.placeholder}}</span>
+        <div class="col-md-12">
+            <span class="k4-nobreak k4-sequentRuleAnte">
+                <span ng-repeat="ante in tactic.derivation.conclusion.ante">
+                    <span ng-repeat="antePart in ante">
+                        <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
+                        <span ng-if="readOnly">{{antePart.placeholder}}</span>
+                        <span ng-if="!readOnly && antePart.isInput" class="popover-wrapper">
+                            <a href="#" id="c{{antePart.text}}" class="k4-axiomtactic-input"
+                              e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
+                              editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
+                              e-required>{{antePart.placeholder}}</a>
+                        </span>
+                    </span>
+                    {{$last ? '' : ','}}
                 </span>
-                {{$last ? '' : ','}}
             </span>
-        </span>
-        <div class="col-md-1">&#8866;</div>
-        <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
-            <span ng-repeat="succ in tactic.derivation.conclusion.succ">
-                <span ng-repeat="succPart in succ">
-                    <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
-                    <span ng-if="readOnly">{{succPart.placeholder}}</span>
-                    <span id="c{{succPart.text}}" class="k4-axiomtactic-input"
-                          e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}" buttons="no"
-                          ng-if="!readOnly && succPart.isInput"
-                          uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
-                          editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
-                          blur="submit"
-                          e-required>{{succPart.value || succPart.placeholder}}</span>
+            <span>&#8866;</span>
+            <span class="k4-nobreak k4-sequentRuleSucc">
+                <span ng-repeat="succ in tactic.derivation.conclusion.succ">
+                    <span ng-repeat="succPart in succ">
+                        <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
+                        <span ng-if="readOnly">{{succPart.placeholder}}</span>
+                        <span ng-if="!readOnly && succPart.isInput" class="popover-wrapper">
+                            <a href="#" id="c{{succPart.text}}" class="k4-axiomtactic-input"
+                              e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
+                              editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
+                              e-required>{{succPart.placeholder}}</a>
+                        </span>
+                    </span>
+                    {{$last ? '' : ','}}
                 </span>
-                {{$last ? '' : ','}}
             </span>
-        </span>
-        <!--</div>-->
+        </div>
     </div>
 </div>

@@ -173,12 +173,14 @@ object DebuggingTactics {
         print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
         if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
         provable
-      } else throw new BelleUnexpectedProofStateError(msg + ": expected proved provable, but got open goals", provable.underlyingProvable)
+      } else throw new BelleUnexpectedProofStateError(msg + ": expected to have proved, but got open goals", provable.underlyingProvable)
     }
   }
 
   /** Placeholder for a tactic string that is not executed. */
-  def pending(tactic: String): BelleExpr = new StringInputTactic("pending", tactic :: Nil) {
+  def pending(tactic: String): BelleExpr = new StringInputTactic("pending",
+      // escape " but avoid double-escape
+      tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\"") :: Nil) {
     override def result(provable: ProvableSig): ProvableSig = provable
   }
 }
@@ -281,10 +283,13 @@ object Idioms {
   }
 
   /** Executes t if condition is true. */
-  def doIf(condition: ProvableSig => Boolean)(t: BelleExpr): DependentTactic = new DependentTactic("ANON") {
+  def doIf(condition: ProvableSig => Boolean)(t: BelleExpr): DependentTactic = doIfElse(condition)(t,nil)
+
+  /** Executes t if condition is true and f otherwise. */
+  def doIfElse(condition: ProvableSig => Boolean)(t: BelleExpr,f:BelleExpr): DependentTactic = new DependentTactic("ANON") {
     override def computeExpr(provable: ProvableSig): BelleExpr = {
       if (condition(provable)) t
-      else nil
+      else f
     }
   }
 

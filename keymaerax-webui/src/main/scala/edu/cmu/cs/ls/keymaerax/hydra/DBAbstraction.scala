@@ -59,7 +59,7 @@ class UserPOJO(val userName: String, val level: Int)
 
 
 /**
- * Data object for proofs. A proof
+  * Data object for proofs.
   *
   * @param proofId Identifies the proof.
   * @param modelId Identifies the model; if defined, model formula must agree with provable's conclusion
@@ -70,10 +70,11 @@ class UserPOJO(val userName: String, val level: Int)
   * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
   * @param provableId Refers to a provable whose conclusion to prove.
   * @param temporary Indicates whether or not the proof is temporary.
+  * @param tactic The tactic to recreate the proof.
  */
-class ProofPOJO(val proofId:Int, val modelId: Option[Int], val name:String, val description:String,
-                val date:String, val stepCount : Int, val closed : Boolean, val provableId: Option[Int],
-                val temporary: Boolean = false, val tactic: Option[String]) {
+case class ProofPOJO(proofId: Int, modelId: Option[Int], name: String, description: String,
+                     date: String, stepCount: Int, closed: Boolean, provableId: Option[Int],
+                     temporary: Boolean = false, tactic: Option[String]) {
   assert(modelId.isDefined || provableId.isDefined, "Require either model or provable")
 }
 

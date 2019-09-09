@@ -507,17 +507,17 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
       val wolframProvider = toolName match {
         case "wolframengine" =>
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, jlinkTcpip)
-          Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkName)
+          Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
           new WolframEngineToolProvider(ToolConfiguration.config(toolName))
         case "mathematica" =>
           Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
-          Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
+          Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
           new MathematicaToolProvider(ToolConfiguration.config(toolName))
       }
       ToolProvider.setProvider(new MultiToolProvider(wolframProvider :: new Z3ToolProvider() :: Nil))
-      new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
+      new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
 }
@@ -602,7 +602,14 @@ class LicensesRequest() extends Request with ReadRequest {
 class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
-    new KvpResponse("tool", Configuration(Configuration.Keys.QE_TOOL)) :: Nil
+    val toolName = Configuration(Configuration.Keys.QE_TOOL)
+    ToolProvider.tool(toolName) match {
+      case Some(tool) =>
+        val initialized = tool.isInitialized
+        if (initialized) new KvpResponse("tool", toolName) :: Nil
+        else new ErrorResponse(toolName + " is not initialized. Please double-check the configuration paths.") :: Nil
+      case _ => new ErrorResponse(toolName + " failed to initialize. Please reselect the desired tool and double-check the configuration paths. Temporarily switched to fallback tools " + ToolProvider.tools().map(_.name).mkString(",")) :: Nil
+    }
   }
 }
 
@@ -615,21 +622,25 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
       ToolProvider.shutdown()
       Configuration.set(Configuration.Keys.QE_TOOL, tool)
       val config = ToolConfiguration.config(tool)
-      val isConfigured = tool match {
-        case "mathematica" =>
-          ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
-          Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-            Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
-        case "wolframengine" =>
-          ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
-          Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
-            Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
-            Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
-        case "wolframscript" => ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil)); true
-        case "z3" => ToolProvider.setProvider(new Z3ToolProvider()); true
-        case _ => ToolProvider.setProvider(new NoneToolProvider); false
+      try {
+        val isConfigured = tool match {
+          case "mathematica" =>
+            ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+            Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+              Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+          case "wolframengine" =>
+            ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
+            Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
+              Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
+              Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
+          case "wolframscript" => ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil)); true
+          case "z3" => ToolProvider.setProvider(new Z3ToolProvider()); true
+          case _ => ToolProvider.setProvider(new NoneToolProvider); false
+        }
+        new ToolConfigStatusResponse(tool, isConfigured) :: Nil
+      } catch {
+        case ex: Throwable => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths and that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
       }
-      new ToolConfigStatusResponse(tool, isConfigured) :: Nil
     }
   }
 }
@@ -721,6 +732,14 @@ class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with 
   }
 }
 
+//@todo Detect closed connections and request timeouts server-side
+class CancelToolRequest() extends Request with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val allCancelled = ToolProvider.tools().map(_.cancel()).reduce(_ && _)
+    BooleanResponse(flag = allCancelled) :: Nil
+  }
+}
+
 class Z3ConfigStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("z3", true) :: Nil
 }
@@ -764,7 +783,8 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
   }
 }
 
-/** List of all predefined tutorials that can directly be imported from the KeYmaera X web UI
+/** List of all predefined tutorials that can directly be imported from the KeYmaera X web UI.
+  * List of tutorials, in order of display.
   *
   * @param db
   * @param userId
@@ -772,19 +792,25 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
 class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
+    //@note Learner's mode Level=0, Industry mode Level=1
     val examples =
+    new ExamplePOJO(6, "Textbook",
+      "LFCPS 2018 Textbook",
+      "",
+      "classpath:/keymaerax-projects/lfcps/lfcps.kyx",
+      "/examples/tutorials/lfcps-examples.png", 0) ::
     new ExamplePOJO(6, "MOD19",
       "Marktoberdorf 2019 Tutorial Examples",
       //"/keymaerax-projects/lfcps-turorial/README.md",
       "",
       "classpath:/keymaerax-projects/lfcps-tutorial/lfcps-tutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
     new ExamplePOJO(5, "POPL 2019 Tutorial",
       "Programming CPS With Proofs",
       //"/keymaerax-projects/popltutorial/README.md",
       "",
       "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+      "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
       new ExamplePOJO(0, "STTT Tutorial",
         "Automated stop sign braking for cars",
         "/dashboard.html?#/tutorials",
@@ -810,13 +836,13 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
           //"/keymaerax-projects/dlds/README.md",
           "",
           "classpath:/keymaerax-projects/dlds/dlds.kya",
-          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+          "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
 //        new ExamplePOJO(3, "POPL 2019 Tutorial",
 //          "Programming CPS With Proofs",
 //          //"/keymaerax-projects/popltutorial/README.md",
 //          "",
 //          "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-//          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+//          "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
         Nil
 
     db.getUser(userId) match {
@@ -1013,7 +1039,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
         val code = s"""
            |${CGenerator.printHeader(model.name)}
-           |$controller
+           |${controller._1}
+           |${controller._2}
            |
            |int main() {
            |  /* control loop stub */
@@ -1074,8 +1101,10 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                 |${CGenerator.printHeader(model.name)}
                 |${CGenerator.INCLUDE_STATEMENTS}
                 |$declarations
-                |$fallbackCode
-                |$monitorCode
+                |${fallbackCode._1}
+                |${fallbackCode._2}
+                |${monitorCode._1}
+                |${monitorCode._2}
                 |
                 |state ctrl(state curr, const parameters* const params, const input* const in) {
                 |  /* controller implementation stub: modify curr to return actuator set values */
@@ -1130,7 +1159,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
           val code =
             s"""
               |${CGenerator.printHeader(model.name)}
-              |$monitor
+              |${monitor._1}
+              |${monitor._2}
               |
               |int main() {
               |  /* sandbox stub, select 'sandbox' to auto-generate */
@@ -1378,19 +1408,11 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
     val leaves = tree.openGoals
     val closed = tree.openGoals.isEmpty && tree.verifyClosed
 
-    //@todo fetch goal names from DB
-    def agendaItemName(codeName: String): String = {
-      Try(DerivationInfo.ofCodeName(codeName)).toOption match {
-        case Some(di) => di.display.name
-        case None => codeName
-      }
-    }
-
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
 
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
-      AgendaItem(n.id.toString, "Conjecture: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
+      AgendaItem(n.id.toString, if (n.parent.contains(tree.root)) "Conjecture: " else AgendaItem.nameOf(n), proofId))
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
@@ -1405,7 +1427,7 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
-    val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, "Unnamed Goal", proofId) :: Nil
+    val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, AgendaItem.nameOf(tree.root, "Conjecture: "), proofId) :: Nil
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false, marginLeft, marginRight) :: Nil
   }
@@ -1562,7 +1584,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           val stepDetails = innerTree.tacticString
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
-            AgendaItem(n.id.toString, "Unnamed Goal", proofId))
+            AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
 
           ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
         }
@@ -1576,7 +1598,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
     tree.load()
     val innerSteps = tree.nodes
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
-      AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString))
+      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId.toString))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
@@ -1703,8 +1725,8 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   /** Prints a sort as users might expect from other web UI presentations. */
   private def printSort(s: Sort): String = s match {
     case Unit => ""
-    case Real => "R"
-    case Bool => "B"
+    case Real => "Real"
+    case Bool => "Bool"
     case Tuple(l, r) => printSort(l) + "," + printSort(r)
   }
 
@@ -1726,12 +1748,12 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => arg -> value.split(",").map(KeYmaeraXParser).toList
       }
 
-      val sortMismatch = arg match {
-        case _: TermArg if exprs.size == 1 && exprs.head.kind == TermKind => None
-        case _: FormulaArg if exprs.size == 1 && exprs.head.kind == FormulaKind => None
-        case _: VariableArg if exprs.size == 1 && exprs.head.kind == TermKind && exprs.head.isInstanceOf[Variable] => None
-        case _: ExpressionArg if exprs.size == 1 => None
-        case ListArg(_, "formula", _) if exprs.forall(_.kind == FormulaKind) => None
+      val sortMismatch = (arg, exprs) match {
+        case (_: TermArg, (t: Term) :: Nil) => arg.convert(t).right.toOption
+        case (_: FormulaArg, (f: Formula) :: Nil) => arg.convert(f).right.toOption
+        case (_: VariableArg, (v: Variable) :: Nil) => arg.convert(v).right.toOption
+        case (_: ExpressionArg, (e: Expression) :: Nil) => arg.convert(e).right.toOption
+        case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
         case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
       }
 
@@ -1749,13 +1771,11 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
           if (hintFresh.size > allowedFresh.size) {
             val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
               filter(_._2.isDefined)
-            val msg =
-              if (fnVarMismatch.isEmpty) "Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
+            if (fnVarMismatch.isEmpty) {
+              BooleanResponse(flag = false, Some("Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
                 (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
-                else ", is it a typo?")
-              else "Argument " + arg.name + " function/variable mismatch. " +
-                fnVarMismatch.map(m => "Found: " + printNamedSymbol(m._1) + ", expected: " + printNamedSymbol(m._2.get)).mkString(",")
-            BooleanResponse(flag=false, Some(msg))
+                else ", is it a typo?")))
+            } else BooleanResponse(flag=true)
           } else {
             BooleanResponse(flag=true)
           }
@@ -1772,7 +1792,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
     val paramInfo = expectedInputs.find(_.name == paramName)
     val isIllFormed = paramInfo.isEmpty || paramValue.isEmpty
     if (!isIllFormed) {
-      val input = BelleTermInput(paramValue, expectedInputs.find(_.name == paramName))
+      val input = BelleTermInput(paramValue, paramInfo)
 
       val tree: ProofTree = DbProofTree(db, proofId)
       tree.locate(nodeId) match {
@@ -2076,7 +2096,38 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
         case Some(node) =>
           node.pruneBelow()
-          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId)
+          val item = AgendaItem(node.id.toString, AgendaItem.nameOf(node), proofId)
+          new PruneBelowResponse(item) :: Nil
+      }
+    }
+  }
+}
+
+/** Undoes the last proof step. */
+class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with WriteRequest {
+  private def agendaItemName(codeName: String): String = {
+    Try(DerivationInfo.ofCodeName(codeName)).toOption match {
+      case Some(di) => di.display.name
+      case None => codeName
+    }
+  }
+
+  override protected def doResultingResponses(): List[Response] = {
+    if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
+    else {
+      val tree = DbProofTree(db, proofId)
+      //@todo do not load all steps
+      tree.nodes.lastOption.flatMap(_.parent) match {
+        case None => new ErrorResponse("Proof does not have any steps yet") :: Nil
+        case Some(node) =>
+          node.pruneBelow()
+          val info = db.getProofInfo(proofId)
+          db.updateProofInfo(info.copy(closed = false))
+          val item = AgendaItem(node.id.toString,
+            if (node.parent.contains(tree.root)) "Conjecture: "
+            else AgendaItem.nameOf(node)
+            ,
+            proofId, node.allAncestors.map(_.id.toString))
           new PruneBelowResponse(item) :: Nil
       }
     }

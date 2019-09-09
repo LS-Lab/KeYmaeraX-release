@@ -1,11 +1,10 @@
 angular.module('keymaerax.controllers').controller('LemmaBrowserCtrl',
-    function($scope, $uibModalInstance, derivationInfos, sequentProofData, userId, proofId, nodeId, formulaId, formula) {
+    function($scope, $uibModalInstance, derivationInfos, sequentProofData, userId, proofId, nodeId, formulaId) {
 
   $scope.userId = userId;
   $scope.proofId = proofId;
   $scope.nodeId = nodeId;
   $scope.formulaId = formulaId;
-  $scope.formula = formula;
   $scope.sequent = sequentProofData.proofTree.node(nodeId).getSequent();
 
   $scope.derivationInfos = {

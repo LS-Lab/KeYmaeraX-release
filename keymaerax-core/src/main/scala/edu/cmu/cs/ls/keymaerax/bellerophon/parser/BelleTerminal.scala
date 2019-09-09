@@ -125,13 +125,13 @@ private object PARTIAL extends BelleTerminal("partial") {
 }
 
 /** A tactic argument expression. We allow strings, terms, and formulas as arguments. */
-private case class EXPRESSION(exprString: String) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
-  lazy val undelimitedExprString: String = exprString.drop(2).dropRight(2)
+private case class EXPRESSION(exprString: String, delimiters: (String, String)) extends BelleTerminal(exprString) with TACTIC_ARGUMENT {
+  lazy val undelimitedExprString: String = exprString.stripPrefix(delimiters._1).stripSuffix(delimiters._2)
 
   /** Parses the `exprString` as dL expression. May throw a parse exception. */
   lazy val expression: Expression = {
-    assert(exprString.startsWith("{`") && exprString.endsWith("`}"),
-      s"EXPRESSION.regexp should ensure delimited expression begin and end with {` `}, but an EXPRESSION was constructed with argument: $exprString")
+    assert(exprString.startsWith(delimiters._1) && exprString.endsWith(delimiters._2),
+      s"EXPRESSION.regexp should ensure delimited expression begin }and end with $delimiters, but an EXPRESSION was constructed with argument: $exprString")
 
     //Remove delimiters and parse the expression.
     KeYmaeraXParser(undelimitedExprString)
@@ -143,17 +143,13 @@ private case class EXPRESSION(exprString: String) extends BelleTerminal(exprStri
   override def toString = s"EXPRESSION($exprString)"
 
   override def equals(other: Any): Boolean = other match {
-    case EXPRESSION(str) => str == exprString
+    case EXPRESSION(str, _) => str == exprString
     case _ => false
   }
 }
 private object EXPRESSION {
-  def regexp: Regex = """(\{\`[\s\S]*?\`\})""".r
+  def regexp: Regex = """(\{\`[\s\S]*?\`\})|(\"[^\"]*\")""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
-}
-/** For testing only. */
-object EXPRESSION2 {
-  val startPattern: Regex = EXPRESSION.startPattern
 }
 
 object EOF extends BelleTerminal("<EOF>") {

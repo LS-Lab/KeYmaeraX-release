@@ -14,29 +14,13 @@ angular.module('formula')
             formula: '=',
             highlight: '=',
             collapsed: '=?',
+            onExprRightClick: '&',
             onTactic: '&',     // onTactic(formulaId, tacticId)
             onTwoPositionTactic: '&',
             onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
         },
         templateUrl: 'templates/formula.html',
         link: function(scope, element, attrs) {
-            scope.formulaAxiomsMap = {};
-
-            scope.fetchFormulaAxioms = function(formulaId, axiomsHandler) {
-              if (scope.formulaAxiomsMap[formulaId] === undefined) {
-                // axioms not fetched yet
-                derivationInfos.formulaDerivationInfos(scope.userId, scope.proofId, scope.nodeId, formulaId)
-                  .then(function(response) {
-                    // first tactic entry in popover should be open by default
-                    if (response.data.length > 0) response.data[0].isOpen = true
-                    scope.formulaAxiomsMap[formulaId] = response.data;
-                    axiomsHandler.call();
-                  });
-              } else {
-                // tactic already cached
-                axiomsHandler.call();
-              }
-            }
 
             scope.saveValue = function(input, newValue) {
               return input.saveValue(scope.userId, scope.proofId, scope.nodeId, newValue);
@@ -73,42 +57,41 @@ angular.module('formula')
             }
 
             scope.exprClick = function(event, formulaId, step, editable) {
-              if (scope.modeIsProve() && formulaId && formulaId !== '' && step === 'has-step') {
-                // avoid event propagation once a span with an ID is found
-                event.stopPropagation();
-                spinnerService.show('tacticExecutionSpinner');
-                if (event.altKey) {
-                  // chase
-                  scope.onTactic({formulaId: formulaId, tacticId: 'chaseAt'})
-                } else {
-                  // step
-                  $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
-                    then(function(response) {
-                      if (response.data.length > 0) {
-                        scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
-                      } else {
-                        scope.fetchFormulaAxioms(formulaId, function() {
-                          spinnerService.hide('tacticExecutionSpinner')
-                          scope.tacticPopover.open(formulaId);
-                        });
-                      }
-                  });
+              //@note do not click on text selection
+              if (getSelection().toString().length == 0) {
+                if (scope.modeIsProve() && formulaId && formulaId !== '' && step === 'has-step') {
+                  // avoid event propagation once a span with an ID is found
+                  event.stopPropagation();
+                  spinnerService.show('tacticExecutionSpinner');
+                  if (event.altKey) {
+                    // chase
+                    scope.onTactic({formulaId: formulaId, tacticId: 'chaseAt'})
+                  } else {
+                    // step
+                    $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
+                      then(function(response) {
+                        if (response.data.length > 0) {
+                          scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
+                        } else {
+                          spinnerService.hide('tacticExecutionSpinner');
+                          scope.onExprRightClick({formulaId: formulaId});
+                        }
+                    });
+                  }
+                } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable === 'editable') {
+                  // not used
+                } else if (scope.modeIsSelect() && formulaId && formulaId !== ''
+                    && (step === 'has-step' || event.altKey)) {
+                  event.stopPropagation();
+                  scope.onTactic({formulaId: formulaId, tacticId: undefined});
                 }
-              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable === 'editable') {
-                // not used
-              } else if (scope.modeIsSelect() && formulaId && formulaId !== ''
-                  && (step === 'has-step' || event.altKey)) {
-                event.stopPropagation();
-                scope.onTactic({formulaId: formulaId, tacticId: undefined});
               }
             }
 
             scope.exprRightClick = function(event, formulaId, step, editable) {
               if (scope.modeIsProve() && formulaId && formulaId !== '' && step == 'has-step') {
                 event.stopPropagation();
-                scope.fetchFormulaAxioms(formulaId, function() {
-                  scope.tacticPopover.open(formulaId);
-                });
+                scope.onExprRightClick({formulaId: formulaId});
               } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
                 // not used
               }
@@ -140,7 +123,6 @@ angular.module('formula')
                 scope.lemma.selected = item;
               },
               apply: function(formulaId) {
-                scope.tacticPopover.close();
                 scope.onInputTactic({ formulaId: formulaId, tacticId: 'useAt',
                                       input: [{param: 'axiom', value: scope.lemma.selected.name },
                                               {param: 'key', value: '' + scope.lemma.selectedKeyPos() }] });
@@ -152,25 +134,15 @@ angular.module('formula')
             }
 
             scope.applyTactic = function(formulaId, tacticId) {
-              scope.tacticPopover.close();
               scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
             scope.applyInputTactic = function(formulaId, tacticId, input) {
-              scope.tacticPopover.close();
               scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
 
             scope.input = function(formula, tactic) {
               return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === formula; })[0].value;
-            }
-
-            scope.tacticPopover = {
-              openFormulaId: undefined,
-              isOpen: function(formulaId) { return scope.modeIsProve() && scope.tacticPopover.openFormulaId && scope.tacticPopover.openFormulaId === formulaId; },
-              open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
-              formulaId: function() { return scope.tacticPopover.openFormulaId; },
-              close: function() { scope.tacticPopover.openFormulaId = undefined; }
             }
 
             scope.editFormulaPopover = {
@@ -293,28 +265,7 @@ angular.module('formula')
 //              });
             }
 
-            scope.browseLemmas = function() {
-              var modalInstance = $uibModal.open({
-                templateUrl: 'partials/lemmabrowserdialog.html',
-                controller: 'LemmaBrowserCtrl',
-                size: 'lg',
-                resolve: {
-                  userId: function() { return scope.userId; },
-                  proofId: function() { return scope.proofId; },
-                  nodeId: function() { return scope.nodeId; },
-                  formulaId: function() { return scope.tacticPopover.formulaId(); },
-                  formula: function() { return scope.replaceNullaryFn(scope.formula.string); }
-                }
-              });
-              modalInstance.result.then(
-                function (tactic) {
-                  if (tactic.input) scope.onInputTactic(tactic);
-                  else scope.onTactic(tactic);
-                },
-                function () { /* modal dismissed */ }
-              );
-              scope.tacticPopover.close();
-            }
+
 
 //            console.log("Compiling formula")
 //            var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;

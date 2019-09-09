@@ -1,14 +1,15 @@
 <div>
   <p>
-  The <kbd>composeb</kbd> axiom splits the safety of a sequential composition <code>a;b</code>, which runs <code>a</code> followed by <code>b</code>, into successive safety properties <code>[a][b]P</code> showing that after all runs of <code>a</code> it is the case that all runs of <code>b</code> are safe, so satisfy <code>P</code>.
+  <kbd>composeb</kbd> splits the safety of a sequential composition <code>a;b</code>, which runs <code>a</code> followed by <code>b</code>, into successive safety properties <code>[a][b]P</code>.  This shows after all runs of <code>a</code> it is the case that all runs of <code>b</code> are safe, so satisfy <code>P</code>.
+</p>
+<p>
+Other tactics such as <kbd>chase</kbd> and <kbd>unfold</kbd> also use this axiom.
 </p>
 <p>
 See also
 <ul>
-    <li><kbd>MR</kbd> monotonicity tactic instead proves an intermediate condition that always holds after <code>a</code> and is strong enough to imply the safety of <code>b</code>.
-      Using the monotonicity principle can better separate the proof but requires an intermediate condition transporting all required knowledge through <code>a</code> to <code>b</code>.</li>
-    <li><kbd>chase</kbd> tactic equivalently chases formulas away by reducing them to structurally simpler formulas.</li>
-    <li><kbd>unfold</kbd> tactic automatically advances all such easy steps of a proof while stopping at loops and ODEs.</li>
+    <li><kbd>MR</kbd> monotonicity proves an intermediate condition holds after <code>a</code> and implies the safety of <code>b</code>.
+      <kbd>MR</kbd> better separates proofs but requires an intermediate condition transporting all required knowledge through <code>a</code> to <code>b</code>.</li>
 </ul>
 </p>
 </div>

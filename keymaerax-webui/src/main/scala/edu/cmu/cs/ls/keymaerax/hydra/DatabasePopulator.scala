@@ -32,16 +32,16 @@ object DatabasePopulator extends Logging {
 
   /** Imports an archive from URL. Optionally proves the models when tactics are present. */
   def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean, exclude: List[ModelPOJO]): ImportResult = {
-    val result = readKya(url)
+    val result = readKyx(url)
       .filterNot(e => exclude.exists(_.name == e.name))
       .map(DatabasePopulator.importModel(db, user, prove = false))
     ImportResult(result.flatMap(_.left.toOption), result.flatMap(_.right.toOption))
   }
 
-  /** Reads a .kya archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
-  def readKya(url: String): List[TutorialEntry] = {
-    val kya = loadResource(url)
-    val archiveEntries = KeYmaeraXArchiveParser.parse(kya, parseTactics = false)
+  /** Reads a .kyx archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
+  def readKyx(url: String): List[TutorialEntry] = {
+    val kyx = loadResource(url)
+    val archiveEntries = KeYmaeraXArchiveParser.parse(kyx, parseTactics = false)
     archiveEntries.map(toTutorialEntry)
 
   }

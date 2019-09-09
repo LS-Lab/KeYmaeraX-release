@@ -111,19 +111,23 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
        #$printedTactics
        #$END_BLOCK""".stripMargin('#')
 
-    if (withComments) {
+    val finalPrint = if (withComments) {
       assert(KeYmaeraXArchiveParser(printed).map(_.model) == KeYmaeraXArchiveParser(entry.problemContent).map(_.model),
         "Expected printed entry and stored problem content to reparse to same model")
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
         case Some(_) =>
           s"""${entry.problemContent.stripSuffix(END_BLOCK).trim()}
+             #
              #$printedTactics
+             #
              #$END_BLOCK""".stripMargin('#')
         case None if entry.problemContent.contains(PROBLEM_BLOCK.img) =>
           s"""$head "${entry.name}"
              #${entry.problemContent}
+             #
              #$printedTactics
+             #
              #$END_BLOCK""".stripMargin('#')
         case None if !entry.problemContent.contains(PROBLEM_BLOCK.img) =>
           // entry was imported from formula. augment header and blocks but print plain formula content.
@@ -138,9 +142,12 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
              #$END_BLOCK
              #
              #$printedTactics
+             #
              #$END_BLOCK""".stripMargin('#')
       }
     } else printed
+
+    "/* Exported from KeYmaera X v" + VERSION + " */\n\n" + finalPrint
   }
 
 

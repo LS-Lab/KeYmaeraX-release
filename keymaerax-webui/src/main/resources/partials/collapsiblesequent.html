@@ -1,9 +1,8 @@
 <div ng-if="!readOnly && sequentSuggestions.length > 0" class="row k4-sequent-hint">
     <div class="pull-right">
-        <!-- todo make executable -->
         Hint:
         <span ng-repeat="tactic in sequentSuggestions">
-            <abbr class="initialism" title="{{tactic.selectedDerivation().id}}"
+            <abbr title="{{tactic.selectedDerivation().id}}"
                   uib-popover-template="'templates/sequentSuggestionPopoverTemplate.html'"
                   popover-append-to-body="true"
                   popover-trigger="'outsideClick'"
@@ -22,7 +21,13 @@
 <!--           ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">-->
 <!--            <small><span ng-class="{'fa fa-caret-right': collapsed, 'fa fa-caret-down': !collapsed}"></span></small>-->
 <!--        </a>-->
-        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}">
+        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.ante" id="{{f.id}}"
+             uib-popover-template="'templates/axiomPopoverTemplate.html'"
+             popover-is-open="tacticPopover.isOpen(f.id)"
+             popover-class="k4-axiomtactic-popover"
+             popover-trigger="'none'"
+             popover-append-to-body="true"
+             popover-placement="auto bottom-left">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideL')"
@@ -46,6 +51,7 @@
                             k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="userId" proof-id="proofId" node-id="nodeId"
                             formula="f.formula" highlight="!collapsed" collapsed="collapsed"
+                            on-expr-right-click="onExprRightClick(formulaId)"
                             on-tactic="onTactic(formulaId, tacticId)"
                             on-input-tactic="onInputTactic(formulaId, tacticId, input)"
                             on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
@@ -66,11 +72,11 @@
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(undefined, 'QE')"
-                           uib-tooltip="Quantifier elimination" tooltip-placement="top" tooltip-popup-delay="500">
+                           uib-tooltip="Quantifier elimination arithmetic" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-calculator"></span></a>
                     </li>
                     <li><a ng-click="openInputTacticDialog('cut')"
-                           uib-tooltip="Cut" tooltip-placement="top" tooltip-popup-delay="500">
+                           uib-tooltip="Cut in lemma to show" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-scissors"></span></a>
                     </li>
                 </ul>
@@ -98,7 +104,13 @@
 
     <!-- Succedent -->
     <div class="col-md-8">
-        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.succ" id="{{f.id}}">
+        <div ng-class="{'row': true, 'k4-flexrow': true, 'k4-abbreviate': abbreviate}" ng-repeat="f in sequent.succ" id="{{f.id}}"
+             uib-popover-template="'templates/axiomPopoverTemplate.html'"
+             popover-is-open="tacticPopover.isOpen(f.id)"
+             popover-class="k4-axiomtactic-popover"
+             popover-trigger="'none'"
+             popover-append-to-body="true"
+             popover-placement="auto bottom-right">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
                     <li><a ng-click="onTactic(f.id,'hideR')"
@@ -119,6 +131,7 @@
                     <k4-formula class="k4-formula-container"
                                 user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="!collapsed" collapsed="collapsed"
+                                on-expr-right-click="onExprRightClick(formulaId)"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"
                                 on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>

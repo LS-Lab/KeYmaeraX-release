@@ -10,17 +10,32 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   $scope.proofId = $routeParams.proofId;
   sequentProofData.clear(); // @note we load a new proof, so clear agenda and proof tree
 
+  $scope.runningRequest = {
+    canceller: undefined
+  }
+
   $scope.taskExplanation = {
     selection: "Rule"
   };
   $scope.stepAxiom = function() {
-        var selectedItem = sequentProofData.agenda.selectedItem()
-        if (selectedItem) {
-          var explanationNodeId = selectedItem.deduction.sections[0].path[0];
-          var node = sequentProofData.proofTree.node(explanationNodeId);
-          return [node.rule];
-        } else return [];
+    var selectedItem = sequentProofData.agenda.selectedItem()
+    if (selectedItem) {
+      var node = sequentProofData.proofTree.highlightedNode(); // set in sequentproof.js when hovering over sequent rule annotations
+      if (!node) {
+        // default: show last rule
+        var topNodeId = selectedItem.deduction.sections[0].path[0];
+        node = sequentProofData.proofTree.node(topNodeId);
       }
+      if (node) {
+        //@note add name to derivation so that we can display it as a step
+        //@note axioms often have shorter names (->R vs. implyR), tactics often shorter code names (differential cut vs. dC)
+        var displayRuleName = node.rule ? (node.rule.codeName ? (node.rule.name.length <= node.rule.codeName.length ? node.rule.name : node.rule.codeName) : node.rule.name) : undefined;
+        if (node.rule) node.rule.derivation.name = displayRuleName;
+        return [node.rule];
+      }
+      else return [];
+    } else return [];
+  }
 
   $scope.intro.introOptions = {
     steps: [
@@ -87,33 +102,10 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           });
       } else {
         spinnerService.show('proofLoadingSpinner');
-        sequentProofData.fetchAgenda($scope, $scope.userId, $scope.proofId);
+        sequentProofData.fetchAgenda($scope.userId, $scope.proofId);
       }
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
-
-  $scope.$on('agenda.isEmpty', function(event, data) {
-    if (data.proofId == $scope.proofId) {
-      // the current controller is responsible
-      $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
-        if (data.status == 'closed') {
-          var modalInstance = $uibModal.open({
-            templateUrl: 'partials/prooffinisheddialog.html',
-            controller: 'ProofFinishedDialogCtrl',
-            size: 'lg',
-            resolve: {
-                userId: function() { return $scope.userId; },
-                proofId: function() { return $scope.proofId; },
-                proofName: function() { return $scope.proofName; }
-            }
-          });
-        } else {
-          // should never happen
-          showMessage($uibModal, 'Empty agenda even though proof ' + $scope.proofId + ' is not closed (' + data.status + ')')
-        }
-      });
-    }
-  });
 
   $scope.updateFreshProof = function(taskResult) {
     if (taskResult.type === 'taskresult') {
@@ -137,9 +129,35 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     if (taskResult.type === 'taskresult') {
       if ($scope.proofId === taskResult.proofId) {
         if ($scope.runningTask.nodeId === taskResult.parent.id) {
-          $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
-          sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
-          sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
+          if (taskResult.newNodes.length >= 10) {
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Large proof step result"; },
+                message: function() { return "Proof step resulted in " + taskResult.newNodes.length +
+                  " additional proof goals. Do you want to keep all goals (displaying may take a long time)?"; },
+                mode: function() { return "yesno"; }
+              }
+            });
+            modalInstance.result.then(
+              function () {
+                $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
+                sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
+                sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
+              },
+              function () {
+                sequentProofData.undoLastProofStep($scope.userId, $scope.proofId, function() {
+                  // nothing to do, didn't update proof tree and tactic yet
+                });
+              }
+            );
+          } else {
+            $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
+            sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
+            sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
+          }
         } else {
           showMessage($uibModal, "Unexpected tactic result, parent mismatch: expected " +
             $scope.runningTask.nodeId + " but got " + taskResult.parent.id);
@@ -240,7 +258,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
             $rootScope.$broadcast("proof.message", err.data);
           });
       } else {
-        sequentProofData.fetchBrowseAgenda($scope, $scope.userId, $scope.proofId);
+        sequentProofData.fetchBrowseAgenda($scope.userId, $scope.proofId);
       }
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId/browse'});
@@ -249,7 +267,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
     if (taskResult.type === 'taskresult') {
       if ($scope.proofId === taskResult.proofId) {
         if ($scope.runningTask.nodeId === taskResult.parent.id) {
-          sequentProofData.fetchBrowseAgenda($scope, $scope.userId, $scope.proofId);
+          sequentProofData.fetchBrowseAgenda($scope.userId, $scope.proofId);
         } else {
           showMessage($uibModal, "Unexpected tactic result, parent mismatch: expected " +
             $scope.runningTask.nodeId + " but got " + taskResult.parent.id);
@@ -332,8 +350,9 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService,
-           derivationInfos, sessionService, Poller) {
+  function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, $location,
+           Tactics, sequentProofData, spinnerService,
+           derivationInfos, sessionService, Poller, FileSaver) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = sessionService.getUser();
     $scope.agenda = sequentProofData.agenda;
@@ -380,12 +399,15 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       });
     }
 
-    $scope.undoLastStep = function() {
-      var nodeId = sequentProofData.agenda.selectedId();
-      var node = sequentProofData.agenda.itemsMap[nodeId];
-      var top = node.deduction.sections[0].path[0];
-      var topParent = sequentProofData.proofTree.nodesMap[top].parent;
-      sequentProofData.prune($scope.userId, $scope.proofId, topParent);
+    $scope.undoLastProofStep = function() {
+      sequentProofData.undoLastProofStep($scope.userId, $scope.proofId, function() {
+        $scope.resetProof();
+        // undo may reload entirely
+        //@todo refreshes to empty conjecture
+        $scope.tactic = sequentProofData.tactic;
+        $scope.agenda = sequentProofData.agenda;
+        $scope.proofTree = sequentProofData.proofTree;
+      });
     };
 
     $scope.setFormulaMode = function(mode) {
@@ -458,7 +480,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             size: 'sm',
             resolve: {
               title: function() { return "Immediate error"; },
-              message: function() { return "Tactic did not make progress at all"; }
+              message: function() { return "Tactic did not make progress at all"; },
+              mode: function() { return "ok"; }
             }
           });
         }
@@ -651,8 +674,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     //@todo duplicate with sequent.js#getCounterExample
     $scope.getCounterExample = function() {
+      var requestCanceller = $q.defer();
+      $scope.$parent.runningRequest.canceller = requestCanceller;
       spinnerService.show('counterExampleSpinner');
-      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample')
+      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample', { timeout: requestCanceller.promise })
         .then(function(response) {
           var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
           $uibModal.open({
@@ -672,8 +697,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.getODEConditions = function() {
+      var requestCanceller = $q.defer();
+      $scope.$parent.runningRequest.canceller = requestCanceller;
       spinnerService.show('odeConditionsSpinner');
-      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/odeConditions')
+      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/odeConditions', { timeout: requestCanceller.promise })
         .then(function(response) {
           $uibModal.open({
             templateUrl: 'templates/odeConditions.html',
@@ -686,45 +713,53 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           });
         })
         .catch(function(err) {
-          $uibModal.open({
-            templateUrl: 'templates/modalMessageTemplate.html',
-            controller: 'ModalMessageCtrl',
-            size: 'md',
-            resolve: {
-              title: function() { return "Unable to find ODE conditions"; },
-              message: function() { return err.data.textStatus; }
-            }
-          })
+          if (err.data != null) {
+            $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Unable to find ODE conditions"; },
+                message: function() { return err.data.textStatus; },
+                mode: function() { return "ok"; }
+              }
+            })
+          } // request cancelled by user
         })
         .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
     }
 
     $scope.getPegasusODECandidates = function() {
-          spinnerService.show('odeConditionsSpinner');
-          $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/pegasusCandidates')
-            .then(function(response) {
-              $uibModal.open({
-                templateUrl: 'templates/pegasusCandidates.html',
-                controller: 'PegasusCandidatesCtrl',
-                size: 'lg',
-                resolve: {
-                  candidates: function() { return response.data.candidates; }
-                }
-              });
+      var requestCanceller = $q.defer();
+      $scope.$parent.runningRequest.canceller = requestCanceller;
+      spinnerService.show('odeConditionsSpinner');
+      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/pegasusCandidates', { timout: requestCanceller.promise })
+        .then(function(response) {
+          $uibModal.open({
+            templateUrl: 'templates/pegasusCandidates.html',
+            controller: 'PegasusCandidatesCtrl',
+            size: 'lg',
+            resolve: {
+              candidates: function() { return response.data.candidates; }
+            }
+          });
+        })
+        .catch(function(err) {
+          if (err.data != null) {
+            $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Unable to find Pegasus invariant candidates"; },
+                message: function() { return err.data.textStatus; },
+                mode: function() { return "ok"; }
+              }
             })
-            .catch(function(err) {
-              $uibModal.open({
-                templateUrl: 'templates/modalMessageTemplate.html',
-                controller: 'ModalMessageCtrl',
-                size: 'md',
-                resolve: {
-                  title: function() { return "Unable to find Pegasus invariant candidates"; },
-                  message: function() { return err.data.textStatus; }
-                }
-              })
-            })
-            .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
-        }
+          } // else request cancelled by user
+        })
+        .finally(function() { spinnerService.hide('odeConditionsSpinner'); });
+    }
 
     $scope.downloadProblemSolution = function() {
         $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/download').success(function (data) {
@@ -751,7 +786,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           size: 'md',
           resolve: {
             title: function() { return "Connection test successful"; },
-            message: function() { return "The tool connection is operational."; }
+            message: function() { return "The tool connection is operational."; },
+            mode: function() { return "ok"; }
           }
         })
       })
@@ -763,7 +799,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           size: 'md',
           resolve: {
             title: function() { return "Error testing connection"; },
-            message: function() { return err.data.textStatus; }
+            message: function() { return err.data.textStatus; },
+            mode: function() { return "ok"; }
           }
         })
       })
@@ -780,68 +817,68 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.openModelEditor = function (modelId) {
-        var modalInstance = $uibModal.open({
-          templateUrl: 'partials/modeldialog.html',
-          controller: 'ModelDialogCtrl',
-          size: 'fullscreen',
-          resolve: {
-            userid: function() { return $scope.userId; },
-            modelid: function() { return modelId; },
-            mode: function() { return 'proofedit'; },
-            proofid: function() { return $scope.proofId; }
-          }
-        });
-      };
-  });
-
-angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $uibModalInstance, $location, FileSaver, Blob, userId, proofId, proofName) {
-
-    // empty open proof until fetched from server
-    $scope.proof = {
-      proofId: '',
-      checking: true,
-      //isProved: true/false is reported from server
-      tactic: '',
-      provable: ''
+      var modalInstance = $uibModal.open({
+        templateUrl: 'partials/modeldialog.html',
+        controller: 'ModelDialogCtrl',
+        size: 'fullscreen',
+        resolve: {
+          userid: function() { return $scope.userId; },
+          modelid: function() { return modelId; },
+          mode: function() { return 'proofedit'; },
+          proofid: function() { return $scope.proofId; }
+        }
+      });
     }
 
-    // fetch proof
-    $http.get("/proofs/user/" + userId + "/" + proofId + "/validatedStatus").then(function(response) {
-      $scope.proof = response.data; // no transformation, pass on to HTML as is
+    // all tasks finished
+
+    // empty open proof until fetched from server
+    $scope.proof = {};
+    $scope.resetProof = function() {
+      $scope.proof.proofId = '';
+      $scope.proof.checking = true;
+      //isProved: true/false is reported from server
+      $scope.proof.isProved = undefined;
+      $scope.proof.tactic = '';
+      $scope.proof.provable = '';
+    }
+    $scope.resetProof();
+
+    $scope.$on('agenda.isEmpty', function(event, data) {
+      if (data.proofId == $scope.proofId) {
+        // the current controller is responsible
+        $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
+          if (data.status == 'closed') {
+            // fetch proof
+            $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/validatedStatus").then(function(response) {
+              $scope.proof = response.data; // no transformation, pass on to HTML as is
+            });
+          } else {
+            // should never happen
+            showMessage($uibModal, 'Empty agenda even though proof ' + $scope.proofId + ' is not closed (' + data.status + ')')
+          }
+        });
+      }
     });
 
-    // just close the dialog
-    $scope.cancel = function() { $uibModalInstance.dismiss('cancel'); };
-
     $scope.browseProof = function() {
-      $uibModalInstance.dismiss('cancel');
       $location.path('/proofs/' + $scope.proof.proofId + '/browse');
     };
 
     // don't trust local cache, fetch new from server
-    //@todo duplicate with proofs.js downloadTactic
-    $scope.downloadTactic = function() {
-      $http.get("/proofs/user/" + userId + "/" + proofId + "/extract").then(function(response) {
-        var data = new Blob([response.data.tacticText], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, proofName + '.kyt');
-      });
-    }
-
-    // don't trust local cache, fetch new from server
     //@todo duplicate with proofs.js downloadLemma
     $scope.downloadLemma = function() {
-      $http.get("/proofs/user/" + userId + "/" + proofId + "/lemma").then(function(response) {
+      $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/lemma").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, proofName + '.kyp');
+        FileSaver.saveAs(data, $scope.proofName + '.kyp');
       });
     }
 
     //@todo duplicate with proofs.js downloadPartialProof
     $scope.downloadProofArchive = function() {
-      $http.get("/proofs/user/" + userId + "/" + proofId + "/download").then(function(response) {
+      $http.get("/proofs/user/" + $scope.userId + "/" + $scope.proofId + "/download").then(function(response) {
         var data = new Blob([response.data.fileContents], { type: 'text/plain;charset=utf-8' });
-        FileSaver.saveAs(data, proofName + '.kya');
+        FileSaver.saveAs(data, $scope.proofName + '.kyx');
       });
     }
-});
+  });

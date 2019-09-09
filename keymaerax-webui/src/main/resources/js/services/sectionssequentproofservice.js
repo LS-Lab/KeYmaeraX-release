@@ -260,7 +260,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     /** Fetches the agenda from the server */
-    fetchAgenda: function(scope, userId, proofId) {
+    fetchAgenda: function(userId, proofId) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
       spinnerService.show('proofLoadingSpinner');

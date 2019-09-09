@@ -12,13 +12,13 @@ class BelleLexerTests extends FlatSpec with Matchers {
     ("nil ; nil", List(IDENT("nil"), SEQ_COMBINATOR, IDENT("nil"))) ::
     ("nil | nil", List(IDENT("nil"), EITHER_COMBINATOR, IDENT("nil"))) ::
     ("(nil | nil)*", OPEN_PAREN :: IDENT("nil") :: EITHER_COMBINATOR :: IDENT("nil") :: CLOSE_PAREN :: KLEENE_STAR :: Nil) ::
-    ("cut({`1=1`})", IDENT("cut") :: OPEN_PAREN :: EXPRESSION("{`1=1`}") :: CLOSE_PAREN :: Nil) ::
+    ("cut({`1=1`})", IDENT("cut") :: OPEN_PAREN :: EXPRESSION("{`1=1`}", "{`"->"`}") :: CLOSE_PAREN :: Nil) ::
     ("implyR(-1)", IDENT("implyR") :: OPEN_PAREN :: ABSOLUTE_POSITION("-1") :: CLOSE_PAREN :: Nil) ::
-    ("diffCut({`1=1`}, 1)", IDENT("diffCut") :: OPEN_PAREN :: EXPRESSION("{`1=1`}") :: COMMA :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: Nil) ::
+    ("diffCut({`1=1`}, 1)", IDENT("diffCut") :: OPEN_PAREN :: EXPRESSION("{`1=1`}", "{`"->"`}") :: COMMA :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: Nil) ::
     ("andR(1) <(QE, QE)", IDENT("andR") :: OPEN_PAREN :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: BRANCH_COMBINATOR :: OPEN_PAREN :: IDENT("QE") :: COMMA :: IDENT("QE") :: CLOSE_PAREN :: Nil) ::
     ("QE partial", IDENT("QE") :: PARTIAL :: Nil) ::
     ("partial(QE)", PARTIAL :: OPEN_PAREN :: IDENT("QE") :: CLOSE_PAREN :: Nil) ::
-    ("USMatch({`p() -> q()`} => implyR(1))", US_MATCH :: OPEN_PAREN :: EXPRESSION("{`p() -> q()`}") :: RIGHT_ARROW :: IDENT("implyR") :: OPEN_PAREN :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: CLOSE_PAREN :: Nil) ::
+    ("USMatch({`p() -> q()`} => implyR(1))", US_MATCH :: OPEN_PAREN :: EXPRESSION("{`p() -> q()`}", "{`"->"`}") :: RIGHT_ARROW :: IDENT("implyR") :: OPEN_PAREN :: ABSOLUTE_POSITION("1") :: CLOSE_PAREN :: CLOSE_PAREN :: Nil) ::
     Nil
   }
 

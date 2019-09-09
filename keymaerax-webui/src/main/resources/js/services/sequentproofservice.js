@@ -25,6 +25,10 @@ angular.module('keymaerax.services').factory('Agenda', function() {
     return {
        itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
        selectedTab: "()",
+       clear: function() {
+         this.itemsMap = {};
+         this.selectedTab = "()";
+       },
        selectedId: function() {
          var selected = $.grep(this.items(), function(e, i) { return e.isSelected; });
          if (selected !== undefined && selected.length > 0) return selected[0].id;
@@ -104,6 +108,11 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         nodeIds: function() { return Object.keys(this.nodesMap); },
         nodes: function() { return $.map(this.nodesMap, function(v) {return v;}); },
 
+        clear: function() {
+          this.root = undefined;
+          this.nodesMap = {};
+        },
+
         /** Prunes below the specified node */
         pruneBelow: function(nodeId) {
           var theProofTree = this;
@@ -134,6 +143,7 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         /** Highlights the operator where the step that created sequent/node `nodeId` was applied. */
         highlightNodeStep: function(nodeId, highlight) {
           var node = this.node(nodeId);
+          node.isHighlighted = highlight;
           var pos = node.rule.pos.replace(/\./g, "\\,");
           var element = $("#seq_"+this.htmlNodeId(node.parent) + " #fml_"+pos);
           if (highlight) {
@@ -144,6 +154,11 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
               else element.addClass("k4-highlight-steppos-modality-prg");
             }
           } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+        },
+        highlightedNode: function() {
+          var theNodes = $.map(this.nodesMap, function(v) {return v;});
+          var highlighted = $.grep(theNodes, function(e, i) { return e.isHighlighted; });
+          return highlighted !== undefined && highlighted.length > 0 ? highlighted[0] : undefined;
         },
 
         paths: function(node) {
@@ -210,28 +225,23 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       show: false
     },
 
-    /** Prunes the proof tree at the specified goal, executes onPruned when the tree is pruned */
-    prune: function(userId, proofId, nodeId, onPruned) {
-      //@note make model available in closure of function success
-      var theProofTree = this.proofTree;
-      var theAgenda = this.agenda;
-      var theTactic = this.tactic;
-
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').then(function(response) {
-        // prune proof tree
-        theProofTree.pruneBelow(nodeId);
+    /** Prunes below node `nodeId`, ONLY IN THE UI. Updates the proof tree, agenda, and tactic. */
+    uiPruneBelow: function(userId, proofId, nodeId, proofTree, agenda, tactic, newTopAgendaItem, sequentProofData) {
+      // prune proof tree
+      if (proofTree.nodesMap[nodeId]) {
+        proofTree.pruneBelow(nodeId);
 
         // update agenda: prune deduction paths
-        var agendaItems = theAgenda.itemsByProofStep(nodeId);
+        var agendaItems = agenda.itemsByProofStep(nodeId);
         $.each(agendaItems, function(i, item) {
-          var deductionIdx = theAgenda.deductionIndexOf(item.id, nodeId);
+          var deductionIdx = agenda.deductionIndexOf(item.id, nodeId);
           var section = item.deduction.sections[deductionIdx.sectionIdx];
           section.path.splice(0, deductionIdx.pathStepIdx);
           item.deduction.sections.splice(0, deductionIdx.sectionIdx);
         });
 
         // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
-        var newTop = response.data.agendaItem.deduction.sections[0].path[0];
+        var newTop = newTopAgendaItem.deduction.sections[0].path[0];
         $.each(agendaItems, function(i, item) {
           var oldTop = item.deduction.sections[0].path[0];
           if (oldTop !== newTop) {
@@ -244,37 +254,61 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         // delete previous items
         //@todo preserve previous tab order
         $.each(agendaItems, function(i, item) {
-          delete theAgenda.itemsMap[item.id];
+          delete agenda.itemsMap[item.id];
         });
 
         // update agenda: if available, copy already cached deduction path into the remaining agenda item (new top item)
-        var topDeduction = agendaItems[0] ? agendaItems[0].deduction : response.data.agendaItem.deduction;
-        response.data.agendaItem.deduction = topDeduction;
-        response.data.agendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
-        theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
+        var topDeduction = agendaItems[0] ? agendaItems[0].deduction : newTopAgendaItem.deduction;
+        newTopAgendaItem.deduction = topDeduction;
+        newTopAgendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
+        agenda.itemsMap[newTopAgendaItem.id] = newTopAgendaItem;
 
         // select new top item
-        theAgenda.select(response.data.agendaItem);
+        agenda.select(newTopAgendaItem);
 
         // refresh tactic
-        theTactic.fetch(userId, proofId);
+        tactic.fetch(userId, proofId);
+      } else {
+        // undo on a reloaded/partially loaded proof (proof tree does not contain node with ID `nodeId`)
+        sequentProofData.clear();
+        sequentProofData.fetchAgenda(userId, proofId);
+      }
+    },
+
+    /** Prunes the proof tree at the specified goal, executes onPruned when the tree is pruned */
+    prune: function(userId, proofId, nodeId, onPruned) {
+      //@note make model available in closure of function success
+      var self = this;
+
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').then(function(response) {
+        self.uiPruneBelow(userId, proofId, nodeId, self.proofTree, self.agenda, self.tactic, response.data.agendaItem, self);
+      }).then(onPruned);
+    },
+
+    /** Undoes the last proof step, executes onPruned when the tree is pruned */
+    undoLastProofStep: function(userId, proofId, onPruned) {
+      //@note make model available in closure of function success
+      var self = this;
+
+      $http.get('proofs/user/' + userId + '/' + proofId + '/undoLastStep').then(function(response) {
+        self.uiPruneBelow(userId, proofId, response.data.agendaItem.id, self.proofTree, self.agenda, self.tactic, response.data.agendaItem, self);
       }).then(onPruned);
     },
 
     /** Clears all proof data (at proof start). */
     clear: function() {
-      this.proofTree = new ProofTree();
-      this.agenda = new Agenda();
+      this.proofTree.clear();
+      this.agenda.clear();
     },
 
     /** Fetches the agenda from the server for the purpose of continuing a proof */
-    fetchAgenda: function(scope, userId, proofId) { this.doFetchAgenda(scope, userId, proofId, 'agendaawesome'); },
+    fetchAgenda: function(userId, proofId) { this.doFetchAgenda(userId, proofId, 'agendaawesome'); },
 
     /** Fetches the agenda from the server for the purpose of browsing a proof from root to leaves */
-    fetchBrowseAgenda: function(scope, userId, proofId) { this.doFetchAgenda(scope, userId, proofId, 'browseagenda'); },
+    fetchBrowseAgenda: function(userId, proofId) { this.doFetchAgenda(userId, proofId, 'browseagenda'); },
 
     /** Fetches a proof's agenda of kind `agendaKind` from the server */
-    doFetchAgenda: function(scope, userId, proofId, agendaKind) {
+    doFetchAgenda: function(userId, proofId, agendaKind) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
       this.tactic.fetch(userId, proofId);

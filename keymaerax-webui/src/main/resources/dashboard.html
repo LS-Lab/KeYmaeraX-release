@@ -15,7 +15,7 @@
     <link href="/css/angular-busy.min.css" rel="stylesheet" type="text/css">
     <link href="/css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css">
     <link href="/css/font-awesome.min.css" rel="stylesheet" type="text/css">
-    <link href="/css/xeditable.css" rel="stylesheet" type="text/css">
+    <link href="/css/xeditable.min.css" rel="stylesheet" type="text/css">
 
     <!-- Custom styles for this template -->
     <link ng-href="css/{{theme.css}}.css" title="KeYmaera X" rel="stylesheet" type="text/css">
@@ -38,16 +38,19 @@
             <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#mainnavbar">
                 <span class="fa fa-bars"></span>
             </button>
-            <a class="navbar-brand" href="/">KeYmaera X</a>
+<!--            <a class="navbar-brand" href="http://keymaeraX.org/">KeYmaera X</a>-->
         </div>
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="mainnavbar">
-            <ul class="nav navbar-nav nav-pills">
-                <!--<li ng-class="{active: theview == 'dashboard'}"><a href="dashboard.html?#/dashboard">Dashboard</a></li>-->
-                <li ng-class="{'nav-item': true, active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
-                <!--<li><a href="#">Lemmas</a></li>-->
-                <!-- TODO nav pill shows how many updates where made to proofs since last logged in. Currently, it shows the number of OPEN proofs! -->
-                <li class="nav-item" ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><!--<span class="badge pull-right">{{ open_proof_count }}</span>-->Proofs</a></li>
+            <ul class="nav navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown">KeYmaera X <span class="caret"></span></a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="dashboard.html?#/models"><i class="fa fa-file-code-o"></i> Models</a></li>
+                        <li><a href="dashboard.html?#/proofs"><i class="fa fa-book"></i> Proofs</a></li>
+                        <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Preferences</a></li>
+                    </ul>
+                </li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 <!--<li><a href="#">Profile</a></li>-->
@@ -74,7 +77,6 @@
                         <!--<li><a ng-click="startIntro();"><i class="fa fa-question-circle"></i> Step-by-step help</a></li>-->
                         <li><a href="dashboard.html?#/usage"><i class="fa fa-info-circle"></i> Using KeYmaera&#160;X</a></li>
                         <li class="divider"></li>
-                        <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Tool Configuration</a></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
@@ -134,7 +136,7 @@
             <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a class="text-danger" href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(no network).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest).</span>
-            <i class="fa fa-copyright"></i> <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2014-2019</p>
+            <i class="fa fa-copyright"></i> Carnegie Mellon University, <a href="https://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a> 2014-2019</p>
     </div>
 </div>
 

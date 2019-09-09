@@ -8,7 +8,7 @@ import java.security.SecureRandom
 import java.util.{Calendar, Date}
 
 import akka.http.scaladsl.model.{Multipart, StatusCodes}
-import akka.http.scaladsl.server.ExceptionHandler
+import akka.http.scaladsl.server.{ExceptionHandler, Route, StandardRoute}
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -18,8 +18,6 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import org.apache.logging.log4j.scala.Logging
-
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.model.Multipart.FormData.BodyPart
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.headers._
@@ -85,7 +83,7 @@ object RestApi extends Logging {
       complete(response)
     }
 
-  def completeRequest(r: Request, t: SessionToken) = t match {
+  def completeRequest(r: Request, t: SessionToken): StandardRoute = t match {
     case NewlyExpiredToken(_) => complete(Unauthorized, Nil, s"Session $t expired")
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
@@ -741,6 +739,14 @@ object RestApi extends Logging {
       }
     }}}
 
+    val undoLastProofStep: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "undoLastStep") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new UndoLastProofStepRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+
     val getAgendaItem: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
       get {
         val request = GetAgendaItemRequest(database, userId, proofId, nodeId)
@@ -980,6 +986,14 @@ object RestApi extends Logging {
     }
   }
 
+  val cancelTool: Route = path("tools" / "cancel") {
+    pathEnd {
+      get {
+        completeRequest(new CancelToolRequest(), EmptyToken())
+      }
+    }
+  }
+
   val restartTool: Route = path("tools" / "restart") {
     pathEnd {
       get {
@@ -1123,6 +1137,7 @@ object RestApi extends Logging {
     validateProof      ::
     licenses           ::
     restartTool        ::
+    cancelTool         ::
     testToolConnection ::
     Nil
 
@@ -1186,6 +1201,7 @@ object RestApi extends Logging {
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
+    undoLastProofStep     ::
     modelplex             ::
     modelplexMandatoryVars::
     exportSequent         ::

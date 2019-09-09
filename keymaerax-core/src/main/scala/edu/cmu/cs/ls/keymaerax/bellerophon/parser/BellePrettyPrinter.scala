@@ -78,8 +78,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   }
 
   private def argPrinter(arg : BelleParser.TacticArg) = arg match {
-    case Left(expr: Expression) => "{`" + KeYmaeraXPrettyPrinter(expr) + "`}"
-    case Left(expr: String) => "{`" + expr + "`}"
+    case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
+    case Left(expr: String) => "\"" + expr + "\""
     case Right(loc) => loc.prettyString
   }
 

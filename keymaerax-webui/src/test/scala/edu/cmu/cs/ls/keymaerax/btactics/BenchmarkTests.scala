@@ -129,7 +129,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   private val entries = {
     println("Reading " + url)
     try {
-      DatabasePopulator.readKya(url)
+      DatabasePopulator.readKyx(url)
     } catch {
       case ex: Throwable =>
         println("Failed reading: " + ex.getMessage)

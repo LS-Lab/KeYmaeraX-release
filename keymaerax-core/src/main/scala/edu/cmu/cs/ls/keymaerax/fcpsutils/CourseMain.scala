@@ -112,7 +112,7 @@ object CourseMain {
         parseArchiveFileOrfail(archiveFile)
       } catch {
         case e : Throwable => {
-          println(s"Expected a valid .kya file but could not parse file contents: ${archiveFileStr}")
+          println(s"Expected a valid .kyx file but could not parse file contents: ${archiveFileStr}")
           System.exit(-1)
           Nil
         }

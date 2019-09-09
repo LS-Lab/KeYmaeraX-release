@@ -192,6 +192,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
 
+  /** Automated propositional reasoning, only keeps result if proved. */
+  val propAuto: BelleExpr = "propAuto" by (prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods"))
+
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
@@ -519,6 +522,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
+  /** Same as odeInvariant but directly reports an error when it detects that the postcondition should be invariant
+    * but currently unprovable
+    */
+  lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
+
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
@@ -777,15 +785,15 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[RCF]] */
   def QE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     //@todo implement as part of tools?
-    lazy val tool = ToolProvider.qeTool(requiresTool).getOrElse(
+    lazy val tool = ToolProvider.qeTool(requiresTool.map(n => if (n == "M") "Mathematica" else n)).getOrElse(
       throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
-    lazy val resetTimeout: (BelleExpr => BelleExpr) = timeout match {
+    lazy val resetTimeout: BelleExpr => BelleExpr = timeout match {
       case Some(t) => tool match {
         case tom: ToolOperationManagement =>
           val oldTimeout = tom.getOperationTimeout
           tom.setOperationTimeout(t)
           if (oldTimeout != t) {
-            (e: BelleExpr) => e > new DependentTactic("ANON") {
+            e: BelleExpr => e > new DependentTactic("ANON") {
               override def computeExpr(v: BelleValue): BelleExpr = {
                 tom.setOperationTimeout(oldTimeout)
                 v match {

@@ -12,7 +12,7 @@
             <span style="padding-right: 10px;"
                  data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica and Wolfram Engine require external installation but provide more features)."
                  data-position="right">
-            <select name="toolSelect" id="toolSelect" ng-model="toolConfig.tool" ng-change="toolChange()">
+            <select name="toolSelect" id="toolSelect" ng-model="toolStatus.tool" ng-change="toolChange()">
                 <option value="mathematica">Mathematica</option>
                 <option value="wolframengine">Wolfram Engine</option>
                 <option value="wolframscript">Wolfram Script</option>
@@ -20,6 +20,10 @@
             </select>
             </span>
         </form>
+        <div ng-class="{'alert': true, 'alert-success': toolStatus.initialized, 'alert-danger': toolStatus.error}">
+            <span ng-if="toolStatus.initialized">Initialized: <i class="fa fa-check"></i></span>
+            <span ng-if="toolStatus.error">{{toolStatus.error}}</span>
+        </div>
     </div>
     <div class="col-md-8">
         <div class="panel panel-default">
@@ -27,20 +31,23 @@
                 <h3 class="panel-title">System Information</h3>
             </div>
             <div class="panel-body">
+                <div ng-if="systemInfo.error" class="alert alert-warning">
+                    Detected Java JVM 32bit. Unless your operating system is 32bit, tool connection is likely to fail.
+                </div>
                 <dl class="dl-horizontal">
                     <dt>Operating System:</dt>
-                    <dd>{{systemInfo.os}} {{systemInfo.osVersion}}</dd>
+                    <dd>{{systemInfo.info.os}} {{systemInfo.info.osVersion}}</dd>
                     <dt>Java JVM:</dt>
-                    <dd>{{systemInfo.jvmVendor}} {{systemInfo.jvmVersion}} with <b>{{systemInfo.jvmArchitecture}} bits</b></dd>
+                    <dd>{{systemInfo.info.jvmVendor}} {{systemInfo.info.jvmVersion}} with <b>{{systemInfo.info.jvmArchitecture}} bits</b></dd>
                     <dt>Java Home:</dt>
-                    <dd>{{systemInfo.jvmHome}}</dd>
+                    <dd>{{systemInfo.info.jvmHome}}</dd>
                 </dl>
             </div>
         </div>
     </div>
 </div>
 
-<div ng-if="toolConfig.tool==='mathematica'">
+<div ng-if="toolStatus.tool==='mathematica'">
     <div ng-include="'/partials/mathematica_config.html'" ng-controller="MathematicaConfig"></div>
 </div>
 <div ng-if="toolConfig.tool==='wolframengine'">
@@ -50,7 +57,7 @@
     <div ng-include="'/partials/wolframscript_config.html'" ng-controller="WolframScriptConfig"></div>
 </div>
 
-<div ng-if="toolConfig.tool==='z3'">
+<div ng-if="toolStatus.tool==='z3'">
     <h2>Z3 Configuration</h2>
     <p><b>Limited functionality with Z3.</b></p>
     <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,

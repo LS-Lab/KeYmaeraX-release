@@ -5,14 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.components.ComponentSystem
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -232,63 +230,98 @@ object DerivationInfo {
       {case () => HilbertCalculus.useAt("Cont continuous existence")}),
     new CoreAxiomInfo("Uniq uniqueness", "Uniq", "Uniq", unsure,
       {case () => HilbertCalculus.useAt("Uniq uniqueness")}),
-    new InputPositionTacticInfo("autoApproximate",
-      RuleDisplayInfo("Approximate",
-        (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
-        List( (List("&Gamma;"), List("[{X'=F}]", "&Delta;")) )
-      ),
-      List(ExpressionArg("n", Nil)),
-      _ => ((n: Number) => n match {
-        case n:Number => Approximator.autoApproximate(n)
-      }) : TypedFunc[Number, BelleExpr]
-    ),
-    new InputPositionTacticInfo("expApproximate",
-      RuleDisplayInfo("e'=e Approximation",
-        (List("&Gamma;"), List("[{c1,e'=e,c2 & approximate(n)}]", "&Delta;")),
-        List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
-      ),
-      List(ExpressionArg("e", "e"::Nil), ExpressionArg("n", Nil)),
-      _ =>
-        ((e: Expression) =>
-          ((n: Expression) => (n,e) match {
-            case (n:Number,e:Variable) => Approximator.expApproximate(e,n)
-          }) : TypedFunc[Expression, BelleExpr]
-          ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
-    ),
-    new InputPositionTacticInfo("circularApproximate",
-      RuleDisplayInfo("Circular Dynamics Approximation",
-        (List("&Gamma;"), List("[{c1,s'=c,c2,c'=-s,c3 & approximate(n)}]", "&Delta;")),
-        List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
-      ),
-      List(ExpressionArg("s", "s"::Nil), ExpressionArg("c", "c"::Nil), ExpressionArg("n", Nil)),
-      _ =>
-        ((s: Expression) =>
-          ((c: Expression) =>
-            ((n: Expression) => (s,c,n) match {
-              case (s:Variable,c:Variable,n:Number) => Approximator.circularApproximate(s,c,n)
-            }) : TypedFunc[Expression, BelleExpr]
-            ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
-          ) : TypedFunc[Expression, TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]]
-    ),
-    new InputPositionTacticInfo("dG",
-      RuleDisplayInfo(
-        "Differential Ghost",
-        /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
-        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")) )
-      ),
-      List(ExpressionArg("E", "y"::"x"::"y'"::Nil), FormulaArg("P", "y"::Nil)),
-      _ =>
-        ((f: Expression) =>
-          ((p : Option[Formula]) => f match {
-            case f : Equal => {
-              assert(f.left.isInstanceOf[DifferentialSymbol])
-              val dp = AtomicODE(f.left.asInstanceOf[DifferentialSymbol], f.right)
-              TactixLibrary.dG(dp, p)
-            }
-            case f: DifferentialProgram => TactixLibrary.dG(f.asInstanceOf[DifferentialProgram], p)
-          }) :  TypedFunc[Option[Formula], BelleExpr]
-          ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
-    ),
+    { val converter = (e: Expression) => e match {
+        case n: Number => Left(n)
+        case _ => Right("Expected a number but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("autoApproximate",
+        RuleDisplayInfo("Approximate",
+          (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
+          List( (List("&Gamma;"), List("[{X'=F}]", "&Delta;")) )
+        ),
+        List(ExpressionArg("n", Nil, converter)),
+        _ => ((e: Expression) => converter(e) match {
+          case Left(n: Number) => Approximator.autoApproximate(n)
+          case Right(msg) => throw new IllegalArgumentException(msg)
+        }) : TypedFunc[Number, BelleExpr]
+      )
+    },
+    { val nConverter = (e: Expression) => e match {
+        case n: Number => Left(n)
+        case _ => Right("Expected a number but got " + e.prettyString)
+      }
+      val eConverter = (e: Expression) => e match {
+        case v: Variable => Left(v)
+        case _ => Right("Expected a variable but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("expApproximate",
+        RuleDisplayInfo("e'=e Approximation",
+          (List("&Gamma;"), List("[{c1,e'=e,c2 & approximate(n)}]", "&Delta;")),
+          List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
+        ),
+        List(ExpressionArg("e", "e"::Nil), ExpressionArg("n", Nil, nConverter)),
+        _ =>
+          ((e: Expression) => (eConverter(e) match {
+              case Left(v: Variable) => (n: Expression) => nConverter(n) match {
+                case Left(n: Number) => Approximator.expApproximate(v, n)
+                case Right(msg) => throw new IllegalArgumentException(msg)
+              }
+              case Right(msg) => throw new IllegalArgumentException(msg)
+            }): TypedFunc[Expression, BelleExpr]
+          ): TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
+      )
+    },
+    {
+      val nConverter = (e: Expression) => e match {
+        case n: Number => Left(n)
+        case _ => Right("Expected a number but got " + e.prettyString)
+      }
+      val vConverter = (e: Expression) => e match {
+        case v: Variable => Left(v)
+        case _ => Right("Expected a variable but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("circularApproximate",
+        RuleDisplayInfo("Circular Dynamics Approximation",
+          (List("&Gamma;"), List("[{c1,s'=c,c2,c'=-s,c3 & approximate(n)}]", "&Delta;")),
+          List((List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")))
+        ),
+        List(ExpressionArg("s", "s" :: Nil, vConverter), ExpressionArg("c", "c" :: Nil, vConverter), ExpressionArg("n", Nil, nConverter)),
+        _ =>
+          ((s: Expression) => vConverter(s) match {
+            case Left(sv: Variable) => ((c: Expression) => vConverter(c) match {
+              case Left(cv: Variable) => ((n: Expression) => nConverter(n) match {
+                case Left(nn: Number) => Approximator.circularApproximate(sv, cv, nn)
+                case Right(msg) => throw new IllegalArgumentException(msg)
+              }): TypedFunc[Expression, BelleExpr]
+              case Right(msg) => throw new IllegalArgumentException(msg)
+            }): TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
+            case Right(msg) => throw new IllegalArgumentException(msg)
+          }): TypedFunc[Expression, TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]]
+      )
+    },
+    {
+      val converter = (e: Expression) => e match {
+        case Equal(l: DifferentialSymbol, r) => Left(AtomicODE(l, r))
+        case dp: DifferentialProgram => Left(dp)
+        case _ => Right("Expected a differential program y′=f(y), but got " + e.prettyString)
+      }
+      InputPositionTacticInfo("dG",
+        RuleDisplayInfo(
+          "Differential Ghost",
+          /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+          /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")) )
+        ),
+        List(ExpressionArg("E", "y"::"x"::"y'"::Nil, converter), FormulaArg("P", "y"::Nil)),
+        _ =>
+          ((f: Expression) =>
+            ((p: Option[Formula]) => converter(f) match {
+              case Left(dp: DifferentialProgram) => TactixLibrary.dG(dp, p)
+              case Left(e) => throw new IllegalStateException("Expected a differential program, but expression converter produced " + e.prettyString)
+              case Right(msg) => throw new IllegalArgumentException(msg)
+            }) :  TypedFunc[Option[Formula], BelleExpr]
+            ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
+      )
+    },
     PositionTacticInfo("dGi",
       RuleDisplayInfo(
         "Inverse Differential Ghost",
@@ -308,6 +341,15 @@ object DerivationInfo {
         case Some(g: Term) => DifferentialTactics.dgDbx(g)
         case None => DifferentialTactics.dgDbxAuto
       }: TypedFunc[Option[Term], BelleExpr]
+    ),
+    PositionTacticInfo("diffUnpackEvolDomain",
+      RuleDisplayInfo(
+        "Unpack evolution domain",
+        /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P","&Delta;")),
+        /* premises */ List( (List("&Gamma;","Q"), List("[{x′=f(x) & Q}]P","&Delta;")) )
+      ),
+      _ => DifferentialTactics.diffUnpackEvolutionDomainInitially
+      , needsTool = false
     ),
     PositionTacticInfo("barrier",
       RuleDisplayInfo(
@@ -805,7 +847,7 @@ object DerivationInfo {
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
     new PositionTacticInfo("GV"
-      , RuleDisplayInfo("G&ouml;del/Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
+      , RuleDisplayInfo("G&ouml;del Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
         , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}),
     new InputPositionTacticInfo("existsR"
@@ -912,7 +954,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("cutLR", "Cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutLR(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("loop",
-      RuleDisplayInfo("Loop Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
+      RuleDisplayInfo("Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("J", "&Delta;")),
           (List("J"),List("[a]J")),
@@ -921,7 +963,7 @@ object DerivationInfo {
     new PositionTacticInfo("loopAuto", "loopAuto",
       {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
     new InputPositionTacticInfo("throughout",
-      RuleDisplayInfo("Loop Induction Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
+      RuleDisplayInfo("Loop Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("j(x)", "&Delta;")),
           (List("j(x)"),List("[a]j(x)")),
@@ -999,6 +1041,7 @@ object DerivationInfo {
     PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
     PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
     PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
+    PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}),
     PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
     PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(
       TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
@@ -1008,6 +1051,7 @@ object DerivationInfo {
     PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true),
+    new TacticInfo("explore", "explore", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen, keepQEFalse = false)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     InputTacticInfo("QE", "QE",
       List(OptionArg(StringArg("tool")), OptionArg(TermArg("timeout"))),
@@ -1124,6 +1168,9 @@ object DerivationInfo {
     new PositionTacticInfo("ODE",
       "Auto",
       {case () => TactixLibrary.ODE}, needsTool = true),
+    new PositionTacticInfo("odeInvC",
+      "odeInvC",
+      {case () => TactixLibrary.odeInvariantComplete}, needsTool = true),
     new PositionTacticInfo("dgZeroMonomial",
       "dgZeroMonomial",
       {case () => DifferentialTactics.dgZeroMonomial}, needsTool = true),
@@ -1297,9 +1344,15 @@ object TacticInfo {
 }
 
 sealed trait ArgInfo {
+  /** Argument sort. */
   val sort: String
+  /** Argument name. */
   val name: String
+  /** A list of allowed fresh symbols. */
   val allowsFresh: List[String]
+  /** Converts an expression into the required format of the tactic (default: no-op). Returns either the converted
+    * expression or an error message. */
+  def convert(e: Expression): Either[Expression, String] = Left(e)
 }
 case class FormulaArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "formula"
@@ -1307,8 +1360,10 @@ case class FormulaArg (override val name: String, override val allowsFresh: List
 case class VariableArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "variable"
 }
-case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
+case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil,
+                          converter: Expression => Either[Expression, String] = e => Left(e)) extends ArgInfo {
   val sort = "expression"
+  override def convert(e: Expression): Either[Expression, String] = converter(e)
 }
 case class TermArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "term"

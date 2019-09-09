@@ -219,7 +219,7 @@ object HyDRAInitializer extends Logging {
         if (!p.tools().forall(_.isInitialized)) {
           val msg =
             s"""Unable to connect to $toolName, switching to Z3
-              |Please check your $toolName configuration in Help->Tools
+              |Please check your $toolName configuration in KeYmaera X->Preferences
             """.stripMargin
           logger.info(msg)
           new Z3ToolProvider
@@ -228,7 +228,7 @@ object HyDRAInitializer extends Logging {
         case ex: Throwable =>
           val msg =
             s"""Unable to connect to $toolName, switching to Z3
-              |Please check your $toolName configuration in Help->Tools
+              |Please check your $toolName configuration in KeYmaera X->Preferences
               |$toolName initialization failed with the error below
             """.stripMargin
           logger.warn(msg, ex)

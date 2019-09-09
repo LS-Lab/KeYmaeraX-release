@@ -1,5 +1,8 @@
 <script type="text/ng-template" id="templates/sequentRuleExplanationTemplate.html">
-    <div class="k4-sequentRule">
+    <div class="k4-sequentRule pull-right">
+        <ul>
+            <li>{{stepDeriv.name}}</li>
+        </ul>
         <div class="row k4-sequentRulePremise">
             <div class="col-md-12">
                 <div class="row" ng-if="stepDeriv.premise.length === 0">
@@ -9,17 +12,17 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-12">
-                        <div ng-repeat="premise in stepDeriv.premise">
-                            <div ng-class="{'row': !premise.isClosed, 'row small': premise.isClosed}">
-                                <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+                    <div ng-repeat="premise in stepDeriv.premise">
+                        <div ng-class="{'col-sm-12': stepDeriv.premise.length==1, 'col-sm-6': stepDeriv.premise.length==2, 'col-sm-4': stepDeriv.premise.length==3, 'col-sm-3': stepDeriv.premise.length==4, 'col-sm-2': stepDeriv.premise.length==5, 'col-sm-2': stepDeriv.premise.length==6, 'col-sm-1': stepDeriv.premise.length>=7}">
+                            <div ng-class="{'small': premise.isClosed}">
+                                <span class="k4-nobreak k4-sequentRuleAnte">
                                     <span ng-repeat="ante in premise.ante">
                                         <span ng-bind-html="ante"></span>
                                         {{$last ? '' : ','}}
                                     </span>
                                 </span>
-                                <span class="col-md-1">&#8866;</span>
-                                <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+                                <span>&#8866;</span>
+                                <span class="k4-nobreak k4-sequentRuleSucc">
                                     <span ng-repeat="succ in premise.succ">
                                         <span ng-bind-html="succ"></span>
                                         {{$last ? '' : ','}}
@@ -36,21 +39,19 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div ng-repeat="conclusion in [stepDeriv.conclusion]">
-                            <div class="row">
-                                <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
-                                    <span ng-repeat="ante in conclusion.ante">
-                                        <span ng-bind-html="ante"></span>
-                                        {{$last ? '' : ','}}
-                                    </span>
+                            <span class="k4-nobreak k4-sequentRuleAnte">
+                                <span ng-repeat="ante in conclusion.ante">
+                                    <span ng-bind-html="ante"></span>
+                                    {{$last ? '' : ','}}
                                 </span>
-                                <span class="col-md-1">&#8866;</span>
-                                <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
-                                    <span ng-repeat="succ in conclusion.succ">
-                                        <span ng-bind-html="succ"></span>
-                                        {{$last ? '' : ','}}
-                                    </span>
+                            </span>
+                            <span>&#8866;</span>
+                            <span class="k4-nobreak k4-sequentRuleSucc">
+                                <span ng-repeat="succ in conclusion.succ">
+                                    <span ng-bind-html="succ"></span>
+                                    {{$last ? '' : ','}}
                                 </span>
-                            </div>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -61,8 +62,8 @@
 
 <script type="text/ng-template" id="templates/stepExplanationPopover.html">
     <div>
-        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'axiom'" ng-bind-html="stepExpl.derivation.formula"></div>
-        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'tactic' &&  stepExpl.derivation.formula" ng-bind-html="stepExpl.derivation.formula"></div>
+        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'axiom'">{{stepExpl.derivation.name}} <span ng-bind-html="stepExpl.derivation.formula"></span></div>
+        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'tactic' &&  stepExpl.derivation.formula">{{stepExpl.derivation.name}} <span ng-bind-html="stepExpl.derivation.formula"></span></div>
         <div class="col-md-12 k4-help-content" ng-if="stepExpl.derivation.type === 'tactic' && !stepExpl.derivation.formula" ng-bind-html="stepExpl.derivation.help"></div>
         <div ng-if="stepExpl.derivation.type === 'sequentrule'">
             <div class="col-md-12" ng-repeat="stepDeriv in [stepExpl.derivation]"

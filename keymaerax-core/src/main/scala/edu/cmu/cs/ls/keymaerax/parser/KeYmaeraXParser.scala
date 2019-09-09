@@ -759,6 +759,10 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
 //        if (firstExpression(la) ||
 //          t1.isInstanceOf[Program] && followsProgram((la))) shift(st) else error(st)
 
+      case _ :+ Expr(t1) :+ (optok@Token(op, _)) if isOrContainsDifferentialSymbol(t1) && op == EQ =>
+        if (firstExpression(la) && la!=EOF) shift(st)
+        else throw ParseException("Missing right-hand side " + t1 + "=", st, List[Expected](TERM))
+
       // better error message for missing {} around ODEs
       case _ :+ Expr(t1) :+ (optok@Token(op, _)) if isOrContainsDifferentialSymbol(t1) && op != COMMA && op != AMP && op != RBRACE =>
         if (firstExpression(la) && la!=EOF) shift(st)

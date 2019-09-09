@@ -23,8 +23,8 @@
             <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                             formula-id="{{tacticPopover.formulaId()}}"
                             tactic="tactic" axiom-readonly="true"
-                            on-tactic="applyTactic(formulaId, tacticId)"
-                            on-input-tactic="applyInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
+                            on-tactic="onTactic(formulaId, tacticId)"
+                            on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
         </div>
         <div class="k4-tactic-popover-entry">
             <div class="input-group">
@@ -47,7 +47,28 @@
                    ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>
             </div>
         </div>
-        <!-- TODO: link to switch to a modal dialog for expert mode: display an exhaustive list of axioms etc. there -->
+        <div ng-if="derivationInfos.infos.length > 0" ng-class="k4-tactic-popover-entry">
+            <div class="input-group">
+                <input type="text" ng-model="derivationInfos.filter" placeholder="Filter lemmas"
+                       class="form-control" />
+                <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === 'standardDerivation.name'"
+                   ng-click="derivationInfos.order = '-standardDerivation.name'"><i class="fa fa-sort-alpha-desc"></i></a>
+                <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === '-standardDerivation.name'"
+                   ng-click="derivationInfos.order = 'standardDerivation.name'"><i class="fa fa-sort-alpha-asc"></i></a>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
+                         class="k4-tactic-popover-entry">
+                        <k4-tactic-info user-id="userId" proof-id="proofId" node-id="nodeId"
+                                        formula-id="tacticPopover.formulaId()"
+                                        tactic="tactic" axiom-readonly="false"
+                                        on-tactic="onTactic(tacticPopover.formulaId(), tacticId)"
+                                        on-input-tactic="onInputTactic(tacticPopover.formulaId(), tacticId, input)"></k4-tactic-info>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <div ng-if="formulaAxiomsMap[tacticPopover.formulaId()] === undefined || formulaAxiomsMap[tacticPopover.formulaId()] === null || formulaAxiomsMap[tacticPopover.formulaId()].length == 0">

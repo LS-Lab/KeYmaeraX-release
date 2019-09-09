@@ -1,23 +1,22 @@
 <div>
   <p>
-  The <kbd>loop</kbd> rule proves safety of a loop by a given loop invariant <code>J</code>, which:
+  The <kbd>loop</kbd> rule proves safety of a loop <code>[a<sup>*</sup>]P</code> by a loop invariant <code>J</code>:
   <ol>
-    <li>initial case: needs to be true initially</li>
-    <li>use case: needs to imply the postcondition <code>P</code></li>
-    <li>induction step: is still true after one round of the loop whenever it was true before</li>
+    <li>initial case: <code>J</code> is true initially</li>
+    <li>use case: <code>J</code> implies the postcondition <code>P</code></li>
+    <li>induction step: <code>J</code> is still true after one round of the loop whenever <code>J</code> was true before</li>
   </ol>
-  When identifying loop invariants, it is important that it transports enough knowledge about how the state might have changed during past iterations of <code>a*</code>.
+  Make sure the loop invariants transports enough knowledge about how the state changed during past iterations of <code>a<sup>*</sup></code>.
 </p>
 <p>
 See also
 <ul>
-    <li><kbd>iterateb</kbd> axiom unwinds a loop once, which can be useful to disprove it or identify required conditions.</li>
+    <li><kbd>iterateb</kbd> unwinds a loop once.</li>
 </ul>
 <p>
 Learning resources
 <ul>
-    <li><a target="_blank" href="https://doi.org/10.1007/978-3-319-63588-0_7">
-        Lecture Notes: Control Loops &amp; Invariants</a></li>
+    <li><a target="_blank" href="https://doi.org/10.1007/978-3-319-63588-0_7">07: Control Loops &amp; Invariants</a></li>
 </ul>
 </p>
 </p>

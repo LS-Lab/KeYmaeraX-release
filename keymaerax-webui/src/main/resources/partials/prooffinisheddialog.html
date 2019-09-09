@@ -9,6 +9,16 @@
         <span ng-if="proof.isProved !== undefined && !proof.isProved" ng-cloak>
             <i class="fa fa-bolt"></i> Open goals need to be proved
         </span>
+        <span class="pull-right">
+            <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+                    ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Export proof</button>
+            <!--button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+                    ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Export lemma</button-->
+            <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+                    ng-click="browseProof()"><i class="fa fa-globe"></i> Browse proof</button>
+            <button ng-controller="ModelProofCreateCtrl" ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+                    ng-click="createProof(agenda.modelId, '', '')"><i class="fa fa-undo"></i> Redo proof</button>
+        </span>
     </h3>
 </div>
 <div class="modal-body">
@@ -21,15 +31,4 @@
         <pre class="k4-vertical-fill-flex"><code>{{proof.tactic}}</code></pre>
     </div>
     <!-- TODO Display proof statistics -->
-</div>
-<div class="modal-footer">
-    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
-            ng-click="browseProof()"><i class="fa fa-globe"></i> Browse proof</button>
-    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
-            ng-click="downloadTactic()"><i class="fa fa-download"></i> Download tactic</button>
-    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
-            ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Download lemma</button>
-    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
-            ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Download archive</button>
-    <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>

@@ -160,11 +160,17 @@ class ProofListResponse(proofs: List[(ProofPOJO, String)], models: Option[List[S
 }
 
 class GetModelResponse(model: ModelPOJO) extends Response {
+
+  private def illustrationLinks(): List[String] = {
+    KeYmaeraXArchiveParser(model.keyFile).flatMap(_.info.get("Illustration"))
+  }
+
   def getJson = JsObject(
     "id" -> JsString(model.modelId.toString),
     "name" -> JsString(model.name),
     "date" -> JsString(model.date),
     "description" -> JsString(model.description),
+    "illustrations" -> JsArray(illustrationLinks().map(JsString(_)).toVector),
     "pubLink" -> JsString(model.pubLink),
     "keyFile" -> JsString(model.keyFile),
     "title" -> JsString(model.title),
@@ -1012,9 +1018,10 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
 
   def getJson = JsArray(derivationInfos.map(derivationJson):_*)
 }
+
 class PruneBelowResponse(item: AgendaItem) extends Response {
-  def getJson = JsObject (
-  "agendaItem" -> Helpers.itemJson(item)._2
+  def getJson: JsObject = JsObject(
+    "agendaItem" -> Helpers.itemJson(item)._2
   )
 }
 
