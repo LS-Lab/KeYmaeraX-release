@@ -214,35 +214,11 @@ object HyDRAInitializer extends Logging {
   }
 
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
-    def initFallbackZ3(p: => ToolProvider, toolName: String): ToolProvider = {
-      try {
-        val withZ3 = new MultiToolProvider(p :: new Z3ToolProvider() :: Nil)
-        if (!p.tools().forall(_.isInitialized)) {
-          val msg =
-            s"""Unable to connect to $toolName, switching to Z3
-              |Please check your $toolName configuration in KeYmaera X->Preferences
-            """.stripMargin
-          logger.info(msg)
-          new Z3ToolProvider
-        } else p
-      } catch {
-        case ex: Throwable =>
-          val msg =
-            s"""Unable to connect to $toolName, switching to Z3
-              |Please check your $toolName configuration in KeYmaera X->Preferences
-              |$toolName initialization failed with the error below
-            """.stripMargin
-          logger.warn(msg, ex)
-          logger.info(s"Starting with Z3 since $toolName initialization failed")
-          new Z3ToolProvider
-      }
-    }
-
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" => initFallbackZ3(new MathematicaToolProvider(config), "Mathematica")
-      case "wolframengine" => initFallbackZ3(new WolframEngineToolProvider(config), "Wolfram Engine")
-      case "wolframscript" => initFallbackZ3(new WolframScriptToolProvider, "Wolfram Script")
+      case "mathematica" => ToolProvider.initFallbackZ3(new MathematicaToolProvider(config), "Mathematica")
+      case "wolframengine" => ToolProvider.initFallbackZ3(new WolframEngineToolProvider(config), "Wolfram Engine")
+      case "wolframscript" => ToolProvider.initFallbackZ3(new WolframScriptToolProvider, "Wolfram Script")
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }

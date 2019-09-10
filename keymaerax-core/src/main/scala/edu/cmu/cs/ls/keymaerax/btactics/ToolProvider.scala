@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
 import edu.cmu.cs.ls.keymaerax.core.QETool
 import edu.cmu.cs.ls.keymaerax.tools._
+import org.apache.logging.log4j.scala.Logging
 
 
 /** Central repository providing access to arithmetic tools.
@@ -18,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
   * @see [[edu.cmu.cs.ls.keymaerax.tools]]
   * @see [[edu.cmu.cs.ls.keymaerax.tools.ToolInterface]]
   */
-object ToolProvider extends ToolProvider {
+object ToolProvider extends ToolProvider with Logging {
 
   /** Configuration options for tools. */
   type Configuration = Map[String, String]
@@ -66,6 +67,29 @@ object ToolProvider extends ToolProvider {
 
   def tools(): List[Tool] = f.tools()
 
+  def initFallbackZ3(p: => ToolProvider, toolName: String): ToolProvider = {
+    try {
+      val withZ3 = new MultiToolProvider(p :: new Z3ToolProvider() :: Nil)
+      if (!p.tools().forall(_.isInitialized)) {
+        val msg =
+          s"""Unable to connect to $toolName, switching to Z3
+             |Please check your $toolName configuration in KeYmaera X->Preferences
+            """.stripMargin
+        logger.info(msg)
+        new Z3ToolProvider
+      } else withZ3
+    } catch {
+      case ex: Throwable =>
+        val msg =
+          s"""Unable to connect to $toolName, switching to Z3
+             |Please check your $toolName configuration in KeYmaera X->Preferences
+             |$toolName initialization failed with the error below
+            """.stripMargin
+        logger.warn(msg, ex)
+        logger.info(s"Starting with Z3 since $toolName initialization failed")
+        new Z3ToolProvider
+    }
+  }
 }
 
 /** A tool factory creates various arithmetic and simulation tools.

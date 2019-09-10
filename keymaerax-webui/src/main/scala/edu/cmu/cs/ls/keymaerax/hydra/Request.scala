@@ -504,19 +504,19 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
     } else {
       ToolProvider.shutdown()
-      val wolframProvider = toolName match {
+      val provider = toolName match {
         case "wolframengine" =>
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, jlinkTcpip)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          new WolframEngineToolProvider(ToolConfiguration.config(toolName))
+          ToolProvider.initFallbackZ3(new WolframEngineToolProvider(ToolConfiguration.config(toolName)), "Wolfram Engine")
         case "mathematica" =>
           Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
           Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkNameFile.getAbsolutePath)
           Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-          new MathematicaToolProvider(ToolConfiguration.config(toolName))
+          ToolProvider.initFallbackZ3(new MathematicaToolProvider(ToolConfiguration.config(toolName)), "Mathematica")
       }
-      ToolProvider.setProvider(new MultiToolProvider(wolframProvider :: new Z3ToolProvider() :: Nil))
+      ToolProvider.setProvider(provider)
       new ConfigureMathematicaResponse(linkNameFile.getAbsolutePath, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
@@ -640,7 +640,7 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
         new ToolConfigStatusResponse(tool, isConfigured) :: Nil
       } catch {
         case ex: Throwable if tool == "mathematica" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the Java JVM 32/64bit fits your operating system, and that the license is valid (e.g., check in Mathematica, check that license server is reachable, if used).", ex) :: Nil
-        case ex: Throwable if tool == "wolframengine" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the Java JVM 32/64bit fits your operating system, and that the computer is online for license checking.", ex) :: Nil
+        case ex: Throwable if tool == "wolframengine" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the Java JVM 32/64bit fits your operating system, and that the computer is online for license checking. If Wolfram Engine remains unavailable and/or keeps crashing KeYmaera X, please run Wolfram Engine from your Applications to update the license information prior to starting KeYmaera X.", ex) :: Nil
         case ex: Throwable => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths and that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
       }
     }
