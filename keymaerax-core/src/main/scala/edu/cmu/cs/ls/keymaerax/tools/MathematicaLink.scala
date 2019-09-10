@@ -7,7 +7,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.io.{File, FileWriter}
+import java.io.{File, FileWriter, IOException}
 import java.time.LocalDate
 
 import com.wolfram.jlink._
@@ -212,6 +212,10 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         init(linkName, jlinkLibDir, tcpip, remainingTrials-1)
       case e: MathLinkException =>
         logger.error("Shutting down since " + engineName + " J/Link errored " + e + "\nPlease double check configuration and license.\n" + diagnostic, e)
+        shutdown()
+        false
+      case ex: IOException =>
+        logger.error("Shutting down since " + engineName + " was not reachable under the configured path. \nPlease double check configuration paths.\n" + diagnostic, ex)
         shutdown()
         false
       case ex: Throwable =>
