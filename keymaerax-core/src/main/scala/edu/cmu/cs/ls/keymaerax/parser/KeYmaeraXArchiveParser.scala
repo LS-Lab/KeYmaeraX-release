@@ -392,10 +392,11 @@ object KeYmaeraXArchiveParser {
       case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(_: DOUBLE_QUOTES_STRING, _)) :+ (info@MetaInfo(_)) if la == PERIOD || la == SEMI =>
         reduce(shift(st), 1, Bottom, r :+ begin :+ name :+ info)
       // finish entry
-      case r :+ (tok@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+
-          Definitions(_, _) :+ Problem(_, _) :+ Tactics(_) => la match {
+      case r@(_ :+ (tok@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+
+          Definitions(_, _) :+ Problem(_, _) :+ Tactics(_)) => la match {
         case END_BLOCK => shift(st)
         case TACTIC_BLOCK => shift(st)
+        case IDENT(key, None) if MetaInfoKey.KEYS.contains(key) => reduce(shift(st), 1, Bottom :+ MetaInfoKey(key), r)
         case _ => throw ParseException.imbalancedErrorHere(tok + /*" from " + tok.loc +*/ " has no matching " + END_BLOCK.img+PERIOD.img, unmatched=tok, END_BLOCK.img+PERIOD.img, st,
           hint="Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise)" +  " needs its own " + END_BLOCK.img+PERIOD.img + " delimiter.")
       }
@@ -420,13 +421,37 @@ object KeYmaeraXArchiveParser {
       case r :+ ArchiveEntries(lentries) :+ (rentry: ArchiveEntry) =>
         reduce(st, 2, Bottom :+ ArchiveEntries(lentries :+ rentry), r)
 
-      // metainfo
+      // metainfo (at any position inside entries)
       case r :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ MetaInfoKey(_) => la match {
+        case DOUBLE_QUOTES_STRING(_) => shift(st)
+        case _ => throw ParseException("Invalid meta info value", st, Expected.ExpectTerminal(DOUBLE_QUOTES_STRING("")) :: Nil)
+      }
+      case r :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ Definitions(_, _) :+ MetaInfoKey(_) => la match {
+        case DOUBLE_QUOTES_STRING(_) => shift(st)
+        case _ => throw ParseException("Invalid meta info value", st, Expected.ExpectTerminal(DOUBLE_QUOTES_STRING("")) :: Nil)
+      }
+      case r :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ Definitions(_, _) :+ Problem(_, _) :+ MetaInfoKey(_) => la match {
+        case DOUBLE_QUOTES_STRING(_) => shift(st)
+        case _ => throw ParseException("Invalid meta info value", st, Expected.ExpectTerminal(DOUBLE_QUOTES_STRING("")) :: Nil)
+      }
+      case r :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ Definitions(_, _) :+ Problem(_, _) :+ Tactics(_) :+ MetaInfoKey(_) => la match {
         case DOUBLE_QUOTES_STRING(_) => shift(st)
         case _ => throw ParseException("Invalid meta info value", st, Expected.ExpectTerminal(DOUBLE_QUOTES_STRING("")) :: Nil)
       }
       case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ MetaInfo(info) :+ MetaInfoKey(infoKey) :+ Token(DOUBLE_QUOTES_STRING(infoValue), _) => la match {
         case PERIOD | SEMI => reduce(shift(st), 4, Bottom :+ MetaInfo(info ++ Map(infoKey -> infoValue)), r :+ entry :+ name)
+        case _ => throw ParseException("Missing meta info delimiter", st, Expected.ExpectTerminal(PERIOD) :: Expected.ExpectTerminal(SEMI) :: Nil)
+      }
+      case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ MetaInfo(info) :+ (defs@Definitions(_, _)) :+ MetaInfoKey(infoKey) :+ Token(DOUBLE_QUOTES_STRING(infoValue), _) => la match {
+        case PERIOD | SEMI => reduce(shift(st), 5, Bottom :+ MetaInfo(info ++ Map(infoKey -> infoValue)) :+ defs, r :+ entry :+ name)
+        case _ => throw ParseException("Missing meta info delimiter", st, Expected.ExpectTerminal(PERIOD) :: Expected.ExpectTerminal(SEMI) :: Nil)
+      }
+      case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ MetaInfo(info) :+ (defs@Definitions(_, _)) :+ (problem@Problem(_, _)) :+ MetaInfoKey(infoKey) :+ Token(DOUBLE_QUOTES_STRING(infoValue), _) => la match {
+        case PERIOD | SEMI => reduce(shift(st), 6, Bottom :+ MetaInfo(info ++ Map(infoKey -> infoValue)) :+ defs :+ problem, r :+ entry :+ name)
+        case _ => throw ParseException("Missing meta info delimiter", st, Expected.ExpectTerminal(PERIOD) :: Expected.ExpectTerminal(SEMI) :: Nil)
+      }
+      case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ MetaInfo(info) :+ (defs@Definitions(_, _)) :+ (problem@Problem(_, _)) :+ (tactics@Tactics(_)) :+ MetaInfoKey(infoKey) :+ Token(DOUBLE_QUOTES_STRING(infoValue), _) => la match {
+        case PERIOD | SEMI => reduce(shift(st), 7, Bottom :+ MetaInfo(info ++ Map(infoKey -> infoValue)) :+ defs :+ problem :+ tactics, r :+ entry :+ name)
         case _ => throw ParseException("Missing meta info delimiter", st, Expected.ExpectTerminal(PERIOD) :: Expected.ExpectTerminal(SEMI) :: Nil)
       }
 
@@ -646,7 +671,7 @@ object KeYmaeraXArchiveParser {
         reduce(shift(st), 2, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock :+ real, r)
 
       // problem
-      case _ :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ Definitions(_, _) => la match {
+      case r@(_ :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ Definitions(_, _)) => la match {
         case PROBLEM_BLOCK =>
           val parser = KeYmaeraXParser
           val annotationListener = parser.annotationListener
@@ -673,6 +698,7 @@ object KeYmaeraXArchiveParser {
           } finally {
             parser.setAnnotationListener(annotationListener)
           }
+        case IDENT(key, None) if MetaInfoKey.KEYS.contains(key) => reduce(shift(st), 1, Bottom :+ MetaInfoKey(key), r)
         case _ if !rest.exists(_.tok == PROBLEM_BLOCK) => throw ParseException("Missing problem block", st, nextTok, PROBLEM_BLOCK.img)
         case _ if  rest.exists(_.tok == PROBLEM_BLOCK) => throw ParseException("Misplaced problem block: problem expected before tactics", st, nextTok, PROBLEM_BLOCK.img)
       }
