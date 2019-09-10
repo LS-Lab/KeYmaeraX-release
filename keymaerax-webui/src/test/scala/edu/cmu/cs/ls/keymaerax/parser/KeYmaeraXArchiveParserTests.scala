@@ -991,6 +991,43 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       "Link" -> "http://web.keymaerax.org/show/entry1")
   }
 
+  it should "parse meta information at any position" in {
+    val input =
+      """Lemma "Entry 1".
+        | Description "The description of entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Link "http://web.keymaerax.org/show/entry1".
+        | Problem. x>y -> y<x End.
+        | Title "A short entry 1 title".
+        | Illustration "https://lfcps.org/example.png".
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "lemma"
+    entry.fileContent shouldBe
+      """Lemma "Entry 1".
+        | Description "The description of entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Link "http://web.keymaerax.org/show/entry1".
+        | Problem. x>y -> y<x End.
+        | Title "A short entry 1 title".
+        | Illustration "https://lfcps.org/example.png".
+        |End.""".stripMargin
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> y<x".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe Map(
+      "Description" -> "The description of entry 1",
+      "Title" -> "A short entry 1 title",
+      "Link" -> "http://web.keymaerax.org/show/entry1",
+      "Illustration" -> "https://lfcps.org/example.png"
+    )
+  }
+
   it should "replace tabs with spaces" in {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
     val entry = KeYmaeraXArchiveParser.parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
@@ -1273,8 +1310,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>0 End.
         |End.""".stripMargin
     ) should have message """2:2 Invalid meta info key 'MetaInfo'
-                            |Found:    MetaInfo (ID("MetaInfo")) at 2:2 to 2:9
-                            |Expected: Link,Citation,Title,Description,Author,See""".stripMargin
+                            |Found:    MetaInfo at 2:2 to 2:9
+                            |Expected: Link,Citation,Title,Description,Author,See,Illustration""".stripMargin
   }
 
   it should "report invalid meta info value" in {
@@ -1285,8 +1322,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem x>0 End.
         |End.""".stripMargin
     ) should have message """2:8 Invalid meta info value
-                            |Found:    InvalidValue (ID("InvalidValue")) at 2:8 to 2:19
-                            |Expected: <string> (DOUBLE_QUOTES_STRING)""".stripMargin
+                            |Found:    InvalidValue at 2:8 to 2:19
+                            |Expected: <string>""".stripMargin
   }
 
   it should "report missing meta info delimiter" in {
@@ -1297,9 +1334,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>0 End.
         |End.""".stripMargin
     ) should have message """3:2 Missing meta info delimiter
-                            |Found:    ProgramVariables (PROGRAM_VARIABLES_BLOCK$) at 3:2 to 3:17
-                            |Expected: . (PERIOD$)
-                            |      or: ; (SEMI$)""".stripMargin
+                            |Found:    ProgramVariables at 3:2 to 3:17
+                            |Expected: .
+                            |      or: ;""".stripMargin
   }
 
   it should "report missing or misplaced problem blocks" in {
@@ -1308,7 +1345,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. End.
         |End.""".stripMargin
     ) should have message """3:1 Missing problem block
-                            |Found:    End (END_BLOCK$) at 3:1 to 3:3
+                            |Found:    End at 3:1 to 3:3
                             |Expected: Problem""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1317,7 +1354,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Proof". implyR(1) End.
         |End.""".stripMargin
     ) should have message """3:2 Missing problem block
-                           |Found:    Tactic (TACTIC_BLOCK$) at 3:2 to 3:7
+                           |Found:    Tactic at 3:2 to 3:7
                            |Expected: Problem""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1327,7 +1364,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>0 End.
         |End.""".stripMargin
     ) should have message """3:2 Misplaced problem block: problem expected before tactics
-                           |Found:    Tactic (TACTIC_BLOCK$) at 3:2 to 3:7
+                           |Found:    Tactic at 3:2 to 3:7
                            |Expected: Problem""".stripMargin
   }
 
@@ -1338,7 +1375,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. End.
         |End.""".stripMargin
     ) should have message """2:2 Misplaced definitions/program variables: expected before problem
-                            |Found:    Problem (PROBLEM_BLOCK$) at 2:2 to 2:8
+                            |Found:    Problem at 2:2 to 2:8
                             |Expected: ProgramVariables""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1347,7 +1384,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions. R f(). End.
         |End.""".stripMargin
     ) should have message """2:2 Misplaced definitions/program variables: expected before problem
-                            |Found:    Problem (PROBLEM_BLOCK$) at 2:2 to 2:8
+                            |Found:    Problem at 2:2 to 2:8
                             |Expected: Definitions""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1357,7 +1394,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions. R f(). End.
         |End.""".stripMargin
     ) should have message """2:2 Misplaced definitions/program variables: expected before problem
-                           |Found:    Problem (PROBLEM_BLOCK$) at 2:2 to 2:8
+                           |Found:    Problem at 2:2 to 2:8
                            |Expected: ProgramVariables""".stripMargin
   }
 
@@ -1368,7 +1405,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>0 End.
         |End.""".stripMargin
     ) should have message """1:13 Missing archive name
-                            |Found:    . (PERIOD$) at 1:13
+                            |Found:    . at 1:13
                             |Expected: "<string>"""".stripMargin
   }
 
@@ -1377,7 +1414,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """ArchiveEntry "Entry 1".
         | Problem. true End.""".stripMargin
     ) should have message """2:20 ArchiveEntry has no matching End.
-                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise (ArchiveEntry) at 1:1 to 1:12--2:20 to EOF$
+                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise at 1:1 to 1:12--2:20 to EOF$
                             |Found:    EOF$ at 2:20 to EOF$
                             |Expected: End.
                             |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
@@ -1389,7 +1426,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. false->true End.
         |End.""".stripMargin
     ) should have message """3:1 ArchiveEntry has no matching End.
-                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise (ArchiveEntry) at 1:1 to 1:12--3:1 to 3:7
+                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise at 1:1 to 1:12--3:1 to 3:7
                             |Found:    Theorem at 3:1 to 3:7
                             |Expected: End.
                             |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
@@ -1402,11 +1439,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """3:2 Unexpected definition
-                            |Found:    Problem (PROBLEM_BLOCK$) at 3:2 to 3:8
-                            |Expected: End (END_BLOCK$)
-                            |      or: Real (ID("Real"))
-                            |      or: Bool (ID("Bool"))
-                            |      or: HP (ID("HP"))""".stripMargin
+                            |Found:    Problem at 3:2 to 3:8
+                            |Expected: End
+                            |      or: Real
+                            |      or: Bool
+                            |      or: HP""".stripMargin
   }
 
   it should "report a missing program variables delimiter" in {
@@ -1416,9 +1453,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """3:2 Unexpected program variable definition
-                            |Found:    Problem (PROBLEM_BLOCK$) at 3:2 to 3:8
-                            |Expected: End (END_BLOCK$)
-                            |      or: Real (ID("Real"))""".stripMargin
+                            |Found:    Problem at 3:2 to 3:8
+                            |Expected: End
+                            |      or: Real""".stripMargin
   }
 
   it should "report a missing problem delimiter" in {
@@ -1428,30 +1465,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Proof". close End.
         |End.""".stripMargin
     ) should have message """3:2 Missing problem delimiter
-                            |Found:    Tactic (TACTIC_BLOCK$) at 3:2 to 3:7
+                            |Found:    Tactic at 3:2 to 3:7
                             |Expected: End""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
         | Problem. true""".stripMargin
     ) should have message """2:15 Missing problem delimiter
-                           |Found:    <EOF> (EOF$) at 2:15 to EOF$
+                           |Found:    <EOF> at 2:15 to EOF$
                            |Expected: End""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End""".stripMargin
     ) should have message """2:19 Missing . after delimiter End
-                            |Found:    <EOF> (EOF$) at 2:19 to EOF$
-                            |Expected: . (PERIOD$)""".stripMargin
+                            |Found:    <EOF> at 2:19 to EOF$
+                            |Expected: .""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End
         |Tactic "My tactic" closeTrue End. """.stripMargin
     ) should have message """3:1 Missing . after delimiter End
-                            |Found:    Tactic (TACTIC_BLOCK$) at 3:1 to 3:6
-                            |Expected: . (PERIOD$)""".stripMargin
+                            |Found:    Tactic at 3:1 to 3:6
+                            |Expected: .""".stripMargin
   }
   
   it should "report semicolon instead of comma" in {
@@ -1461,8 +1498,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem true End.
         |End.""".stripMargin
     ) should have message """2:25 Unexpected declaration delimiter
-                            |Found:    , (COMMA$) at 2:25
-                            |Expected: ; (SEMI$)""".stripMargin
+                            |Found:    , at 2:25
+                            |Expected: ;""".stripMargin
   }
 
   it should "report parse errors in function definitions" in {
@@ -1472,7 +1509,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:33 Unexpected token cannot be parsed
-                            |Found:    * (STAR$) at 2:33
+                            |Found:    * at 2:33
                             |Expected: <BeginningOfExpression>""".stripMargin
   }
 
@@ -1483,7 +1520,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:34 Unexpected token cannot be parsed
-                            |Found:    > (RDIA$) at 2:34
+                            |Found:    > at 2:34
                             |Expected: <BeginningOfExpression>""".stripMargin
   }
   
@@ -1494,8 +1531,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:32 Unexpected token cannot be parsed
-                            |Found:    } (RBRACE$) at 2:32
-                            |Expected: ; (SEMI$)""".stripMargin
+                            |Found:    } at 2:32
+                            |Expected: ;""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1"
@@ -1503,8 +1540,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:31 Missing right-hand side x'=
-                            |Found:    } (RBRACE$) at 2:31
-                            |Expected: $$$T (TERM$)""".stripMargin
+                            |Found:    } at 2:31
+                            |Expected: $$$T""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1"
@@ -1512,7 +1549,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:33 Unexpected token cannot be parsed
-                            |Found:    } (RBRACE$) at 2:33
+                            |Found:    } at 2:33
                             |Expected: <BeginningOfTerm>""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1521,8 +1558,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:37 Missing right-hand side t'=
-                            |Found:    } (RBRACE$) at 2:37
-                            |Expected: $$$T (TERM$)""".stripMargin
+                            |Found:    } at 2:37
+                            |Expected: $$$T""".stripMargin
   }
   
   
@@ -1534,9 +1571,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:22 Function definition only allowed in Definitions block
-                            |Found:    ( (LPAREN$) at 2:22
-                            |Expected: ; (SEMI$)
-                            |      or: , (COMMA$)""".stripMargin
+                            |Found:    ( at 2:22
+                            |Expected: ;
+                            |      or: ,""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
@@ -1544,7 +1581,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:19 Predicate and program definitions only allowed in Definitions block
-                            |Found:    B (ID("B")) at 2:19
+                            |Found:    B at 2:19
                             |Expected: Real""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1553,7 +1590,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:19 Predicate and program definitions only allowed in Definitions block
-                           |Found:    HP (ID("HP")) at 2:19 to 2:20
+                           |Found:    HP at 2:19 to 2:20
                            |Expected: Real""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1562,9 +1599,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:23 Unexpected token in ProgramVariables block
-                            |Found:    & (AMP$) at 2:23
-                            |Expected: ; (SEMI$)
-                            |      or: , (COMMA$)""".stripMargin
+                            |Found:    & at 2:23
+                            |Expected: ;
+                            |      or: ,""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1"
@@ -1572,8 +1609,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem true End.
         |End.""".stripMargin
     ) should have message """2:26 Missing variable declaration delimiter
-                            |Found:    Real (ID("Real")) at 2:26 to 2:29
-                            |Expected: ; (SEMI$)""".stripMargin
+                            |Found:    Real at 2:26 to 2:29
+                            |Expected: ;""".stripMargin
   }
 
   it should "report function definition errors" in {
@@ -1583,9 +1620,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:20 Unexpected token in function definition
-                            |Found:    & (AMP$) at 2:20
-                            |Expected: = (EQ$)
-                            |      or: ; (SEMI$)""".stripMargin
+                            |Found:    & at 2:20
+                            |Expected: =
+                            |      or: ;""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
@@ -1593,7 +1630,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:20 Function must be defined by equality
-                            |Found:    <-> (EQUIV$) at 2:20 to 2:22
+                            |Found:    <-> at 2:20 to 2:22
                             |Expected: =""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1613,7 +1650,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:20 Unexpected token in predicate definition
-                            |Found:    & (AMP$) at 2:20
+                            |Found:    & at 2:20
                             |Expected: <->""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1622,7 +1659,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:20 Predicate must be defined by equivalence
-                            |Found:    = (EQ$) at 2:20
+                            |Found:    = at 2:20
                             |Expected: <->""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1688,8 +1725,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem x>y -> x>=y End.
         |End.""".stripMargin
     ) should have message """1:21 Missing entry ID separator
-                            |Found:    <string> (DOUBLE_QUOTES_STRING) at 1:21 to 1:29
-                            |Expected: : (COLON$)""".stripMargin
+                            |Found:    <string> at 1:21 to 1:29
+                            |Expected: :""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry entry1
@@ -1697,8 +1734,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem x>y -> x>=y End.
         |End.""".stripMargin
     ) should have message """2:2 Missing entry ID separator
-                            |Found:    ProgramVariables (PROGRAM_VARIABLES_BLOCK$) at 2:2 to 2:17
-                            |Expected: : (COLON$)""".stripMargin
+                            |Found:    ProgramVariables at 2:2 to 2:17
+                            |Expected: :""".stripMargin
   }
 
   it should "report a missing entry title" in {
@@ -1708,8 +1745,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem x>y -> x>=y End.
         |End.""".stripMargin
     ) should have message """2:2 Missing entry title
-                            |Found:    ProgramVariables (PROGRAM_VARIABLES_BLOCK$) at 2:2 to 2:17
-                            |Expected: <string> (DOUBLE_QUOTES_STRING)""".stripMargin
+                            |Found:    ProgramVariables at 2:2 to 2:17
+                            |Expected: <string>""".stripMargin
   }
 
   it should "report undefined entry IDs" in {
@@ -1740,9 +1777,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.
         |Problem x>y -> x>=y End.""".stripMargin
     ) should have message """3:3 Unexpected program variable definition
-                            |Found:    Rea (ID("Rea")) at 3:3 to 3:5
-                            |Expected: End (END_BLOCK$)
-                            |      or: Real (ID("Real"))""".stripMargin
+                            |Found:    Rea at 3:3 to 3:5
+                            |Expected: End
+                            |      or: Real""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ProgramVariables 
@@ -1751,7 +1788,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.
         |Problem x>y -> x>=y End.""".stripMargin
     ) should have message """3:3 Predicate and program definitions only allowed in Definitions block
-                            |Found:    Bool (ID("Bool")) at 3:3 to 3:6
+                            |Found:    Bool at 3:3 to 3:6
                             |Expected: Real""".stripMargin
   }
 
