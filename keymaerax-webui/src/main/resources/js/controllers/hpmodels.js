@@ -193,7 +193,18 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
           $location.path( "/models" );
         }
       }).finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
-    })
+    }).error(function(err) {
+       $uibModal.open({
+         templateUrl: 'templates/modalMessageTemplate.html',
+         controller: 'ModalMessageCtrl',
+         size: 'lg',
+         resolve: {
+           title: function() { return "Error importing examples"; },
+           message: function() { return err.textStatus; },
+           mode: function() { return "ok"; }
+         }
+       });
+    }).finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
   };
 
   $scope.deleteModel = function(modelId) {

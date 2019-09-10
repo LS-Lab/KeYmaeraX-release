@@ -220,9 +220,14 @@ object RestApi extends Logging {
   val importExampleRepo: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { userId => { pathEnd {
     post {
       entity(as[String]) { repoUrl => {
-        val content = DatabasePopulator.loadResource(repoUrl)
-        val r = new UploadArchiveRequest(database, userId, content, None)
-        completeRequest(r, t)
+        try {
+          val content = DatabasePopulator.loadResource(repoUrl)
+          val r = new UploadArchiveRequest(database, userId, content, None)
+          completeRequest(r, t)
+        } catch {
+          case ex: java.net.UnknownHostException => complete(completeResponse(new ErrorResponse("Example repository is unreachable, please check that your computer is online.", ex) :: Nil))
+        }
+
       }}
     }
   }}}
