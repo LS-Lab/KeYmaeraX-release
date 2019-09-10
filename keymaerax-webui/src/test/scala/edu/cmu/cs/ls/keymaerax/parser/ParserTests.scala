@@ -114,9 +114,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                 """.stripMargin
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
       """3:1 Unexpected token in ProgramVariables block
-        |Found:    End (END_BLOCK$) at 3:1 to 3:3
-        |Expected: ; (SEMI$)
-        |      or: , (COMMA$)""".stripMargin
+        |Found:    End at 3:1 to 3:3
+        |Expected: ;
+        |      or: ,""".stripMargin
   }
 
   it should "report useful message on missing semicolon in function definitions" in {
@@ -132,9 +132,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                 """.stripMargin
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
       """3:1 Unexpected token in function definition
-        |Found:    End (END_BLOCK$) at 3:1 to 3:3
-        |Expected: = (EQ$)
-        |      or: ; (SEMI$)""".stripMargin
+        |Found:    End at 3:1 to 3:3
+        |Expected: =
+        |      or: ;""".stripMargin
   }
 
   it should "report useful message on missing semicolon in program definitions" in {
@@ -150,9 +150,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                 """.stripMargin
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
       """3:1 Unexpected token in program definition
-        |Found:    End (END_BLOCK$) at 3:1 to 3:3
-        |Expected: ::= (PRG_DEF$)
-        |      or: ; (SEMI$)""".stripMargin
+        |Found:    End at 3:1 to 3:3
+        |Expected: ::=
+        |      or: ;""".stripMargin
   }
 
   it should "report useful message on missing braces in program definitions" in {
@@ -291,9 +291,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                             |semantics: Expect unique names_index that identify a unique type.
                             |ambiguous: x:Trafo and x:Real
                             |symbols:   x, x""".stripMargin) ::
-      ("scolon1.key", "6:10 Unexpected token cannot be parsed\nFound:    > (RDIA$) at 6:10") ::
-      ("scolon2.key", "6:12 Unexpected token cannot be parsed\nFound:    = (EQ$) at 6:12") ::
-      ("scolon3.key", "6:12 Unexpected token cannot be parsed\nFound:    > (RDIA$) at 6:12") :: Nil
+      ("scolon1.key", "6:10 Unexpected token cannot be parsed\nFound:    > at 6:10") ::
+      ("scolon2.key", "6:12 Unexpected token cannot be parsed\nFound:    = at 6:12") ::
+      ("scolon3.key", "6:12 Unexpected token cannot be parsed\nFound:    > at 6:12") :: Nil
       //("UndeclaredVariables.key", "TODO") :: Nil //@note not yet caught (LAX?)
 
     for((testFile, message) <- files) {
@@ -371,8 +371,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         |else if (x<0) { x:=-x; }
         |else { x:=7; }
       """.stripMargin) should have message """3:6 Unexpected token cannot be parsed
-                                             |Found:    if (IF$) at 3:6 to 3:7
-                                             |Expected: { (LBRACE$)""".stripMargin
+                                             |Found:    if at 3:6 to 3:7
+                                             |Expected: {""".stripMargin
   }
 
   "Annotation parsing" should "populate easy loop annotations" in {
@@ -497,7 +497,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val input = "Functions. R y() <-> (3+7). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
       """1:18 Function must be defined by equality
-        |Found:    <-> (EQUIV$) at 1:18 to 1:20
+        |Found:    <-> at 1:18 to 1:20
         |Expected: =""".stripMargin
   }
 
