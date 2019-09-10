@@ -736,11 +736,12 @@ class WolframScriptConfigStatusRequest(db: DBAbstraction) extends Request with R
 
 class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val availableWorkers = ToolProvider.tool(toolId) match {
-      case Some(t: ToolOperationManagement) => t.getAvailableWorkers
-      case _ => -1
+    ToolProvider.tool(toolId) match {
+      case Some(t: ToolOperationManagement) => new ToolStatusResponse(toolId, t.getAvailableWorkers) :: Nil
+      case Some(_) => new ToolStatusResponse(toolId, -1) :: Nil
+      case None => new ToolConfigErrorResponse(toolId, "Tool could not be started; please check KeYmaera X -> Preferences. Temporarily using " + ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.") :: Nil
     }
-    new ToolStatusResponse(toolId, availableWorkers) :: Nil
+
   }
 }
 
@@ -1872,14 +1873,26 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   private def backendAvailable: Boolean = Configuration(Configuration.Keys.QE_TOOL) match {
     case "mathematica" => ToolProvider.tool("Mathematica") match {
       case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
+      case None => ToolProvider.qeTool() match {
+        case Some(t: ToolOperationManagement) => t.getAvailableWorkers > 0
+        case _ => false
+      }
       case _ => false
     }
     case "wolframengine" => ToolProvider.tool("WolframEngine") match {
       case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
+      case None => ToolProvider.qeTool() match {
+        case Some(t: ToolOperationManagement) => t.getAvailableWorkers > 0
+        case _ => false
+      }
       case _ => false
     }
     case "wolframscript" => ToolProvider.tool("WolframScript") match {
       case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
+      case None => ToolProvider.qeTool() match {
+        case Some(t: ToolOperationManagement) => t.getAvailableWorkers > 0
+        case _ => false
+      }
       case _ => false
     }
     case "z3" => ToolProvider.tool("Z3") match {
