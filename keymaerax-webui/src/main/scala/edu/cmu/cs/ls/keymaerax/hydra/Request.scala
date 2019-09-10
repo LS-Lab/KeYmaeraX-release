@@ -639,6 +639,8 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
         }
         new ToolConfigStatusResponse(tool, isConfigured) :: Nil
       } catch {
+        case ex: Throwable if tool == "mathematica" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the Java JVM 32/64bit fits your operating system, and that the license is valid (e.g., check in Mathematica, check that license server is reachable, if used).", ex) :: Nil
+        case ex: Throwable if tool == "wolframengine" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the Java JVM 32/64bit fits your operating system, and that the computer is online for license checking.", ex) :: Nil
         case ex: Throwable => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths and that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
       }
     }
@@ -703,18 +705,28 @@ class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String,
 
 class MathematicaConfigStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new ToolConfigStatusResponse("mathematica",
-      Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-      Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) :: Nil
+    ToolProvider.tool("mathematica") match {
+      case Some(_) =>
+        new ToolConfigStatusResponse("mathematica",
+          Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+          Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
+          ToolProvider.tool("mathematica").isDefined) :: Nil
+      case None => new ToolConfigErrorResponse("mathematica", "Mathematica could not be started; please double-check the configured paths and make sure you have a valid license (if you use a license server, make sure it is reachable). Temporarily using " + ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.") :: Nil
+    }
   }
 }
 
 class WolframEngineConfigStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new ToolConfigStatusResponse("wolframengine",
-      Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
-      Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
-      Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) :: Nil
+    ToolProvider.tool("wolframEngine") match {
+      case Some(_) =>
+        new ToolConfigStatusResponse("wolframengine",
+          Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
+          Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
+          Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) :: Nil
+      case None => new ToolConfigErrorResponse("wolframengine", "Wolfram Engine could not be started; please double-check the configured paths and make sure you are online for license checking. Temporarily using " + ToolProvider.tools().map(_.name).mkString(",") + " with potentially limited functionality.") :: Nil
+    }
+
   }
 }
 

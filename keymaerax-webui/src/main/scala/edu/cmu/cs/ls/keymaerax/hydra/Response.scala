@@ -389,6 +389,10 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
   }
 }
 
+class ToolConfigErrorResponse(tool: String, msg: String) extends ErrorResponse(msg, null) {
+  override def getJson: JsObject = JsObject(super.getJson.fields ++ Map("tool" -> JsString(tool)))
+}
+
 class GenericOKResponse() extends Response {
   def getJson = JsObject(
     "success" -> JsTrue

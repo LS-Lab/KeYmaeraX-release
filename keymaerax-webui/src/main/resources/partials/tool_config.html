@@ -1,7 +1,7 @@
 <h1>Tool Configuration</h1>
 
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-5">
         <p>KeYmaera&#160;X uses backend tools to prove validity of real arithmetic formulas.
            Z3 is shipped with KeYmaera&#160;X for your convenience.
            Please select your preferred solver.
@@ -12,20 +12,31 @@
             <span style="padding-right: 10px;"
                  data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica and Wolfram Engine require external installation but provide more features)."
                  data-position="right">
-            <select name="toolSelect" id="toolSelect" ng-model="toolStatus.tool" ng-change="toolChange()">
-                <option value="mathematica">Mathematica</option>
-                <option value="wolframengine">Wolfram Engine</option>
-                <option value="wolframscript">Wolfram Script</option>
-                <option value="z3">Z3</option>
-            </select>
+            <div class="btn-group" name="toolSelect" id="toolSelect">
+                <label ng-class="{'btn': true, 'btn-success': toolStatus.tool=='mathematica' && toolStatus.initialized, 'btn-default': toolStatus.tool!='mathematica', 'btn-danger': toolStatus.tool=='mathematica' && !toolStatus.initialized && toolStatus.error}"
+                       ng-model="toolStatus.tool" ng-click="toolChange()" uib-btn-radio="'mathematica'"
+                       tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Mathematica provides extensive backend support for solving/simplifying arithmetic, generating invariants for ODEs, and finding assumptions and counter-examples. A license from Wolfram is required.">
+                    <i ng-class="{'fa': true, 'fa-check': toolStatus.tool=='mathematica' && toolStatus.initialized, 'fa-bolt': toolStatus.tool=='mathematica' && !toolStatus.initialized}"></i>
+                    Mathematica
+                </label>
+                <label ng-class="{'btn': true, 'btn-success': toolStatus.tool=='wolframengine' && toolStatus.initialized, 'btn-default': toolStatus.tool!='wolframengine', 'btn-danger': toolStatus.tool=='wolframengine' && !toolStatus.initialized && toolStatus.error}"
+                       ng-model="toolStatus.tool" ng-click="toolChange()" uib-btn-radio="'wolframengine'"
+                       tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Wolfram Engine provides backend functionality equivalent to Mathematica with a free license from Wolfram, but is intended for academic/personal/non-production use only and may need online connection to check the license.">
+                    <i ng-class="{'fa': true, 'fa-check': toolStatus.tool=='wolframengine' && toolStatus.initialized, 'fa-bolt': toolStatus.tool=='wolframengine' && !toolStatus.initialized}"></i>
+                    Wolfram Engine
+                </label>
+                <label ng-class="{'btn': true, 'btn-success': toolStatus.tool=='z3' && toolStatus.initialized, 'btn-default': toolStatus.tool!='z3', 'btn-danger': toolStatus.tool=='z3' && !toolStatus.initialized && toolStatus.error}"
+                       ng-model="toolStatus.tool" ng-click="toolChange()" uib-btn-radio="'z3'"
+                       tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Z3 is readily shipped with KeYmaera X, but provides limited backend support (e.g., no invariant generation, no counter-examples).">
+                    <i ng-class="{'fa': true, 'fa-check': toolStatus.tool=='z3' && toolStatus.initialized, 'fa-bolt': toolStatus.tool=='z3' && !toolStatus.initialized}"></i>
+                    Z3
+                </label>
+            </div>
             </span>
         </form>
-        <div ng-class="{'alert': true, 'alert-success': toolStatus.initialized, 'alert-danger': toolStatus.error}">
-            <span ng-if="toolStatus.initialized">Initialized: <i class="fa fa-check"></i></span>
-            <span ng-if="toolStatus.error">{{toolStatus.error}}</span>
-        </div>
+        <div class="alert alert-danger" ng-if="toolStatus.error">{{toolStatus.error}}</div>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-7">
         <div class="panel panel-default">
             <div class="panel-heading">
                 <h3 class="panel-title">System Information</h3>
@@ -50,10 +61,10 @@
 <div ng-if="toolStatus.tool==='mathematica'">
     <div ng-include="'/partials/mathematica_config.html'" ng-controller="MathematicaConfig"></div>
 </div>
-<div ng-if="toolConfig.tool==='wolframengine'">
+<div ng-if="toolStatus.tool==='wolframengine'">
     <div ng-include="'/partials/wolframengine_config.html'" ng-controller="WolframEngineConfig"></div>
 </div>
-<div ng-if="toolConfig.tool==='wolframscript'">
+<div ng-if="toolStatus.tool==='wolframscript'">
     <div ng-include="'/partials/wolframscript_config.html'" ng-controller="WolframScriptConfig"></div>
 </div>
 
@@ -62,6 +73,6 @@
     <p><b>Limited functionality with Z3.</b></p>
     <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,
         simplification, and arithmetic with alternating quantifiers please choose <kbd>Mathematica</kbd> or <kbd>Wolfram Engine</kbd> as Arithmetic Solver from the
-        drop-down box above.</p>
+        options above.</p>
     <p>In general, complex problems may require trying different tools.</p>
 </div>

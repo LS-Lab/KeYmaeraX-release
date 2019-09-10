@@ -38,6 +38,7 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
       toolStatus.error = undefined;
       toolStatus.errorDetails = undefined;
     }).error(function(data, status) {
+      toolStatus.tool = data.tool;
       toolStatus.initialized = false;
       toolStatus.error = data.textStatus;
       toolStatus.errorDetails = data.causeMsg;
