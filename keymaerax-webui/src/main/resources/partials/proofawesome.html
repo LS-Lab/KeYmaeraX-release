@@ -407,6 +407,10 @@
                                aria-haspopup="true" aria-expanded="false">Tools
                                 <i class="fa fa-spinner fa-spin fa-fw"
                                    ng-if="backend.busypoller.data.response.busy"></i>
+                                <i class="fa fa-bolt text-danger"
+                                   ng-if="backend.busypoller.data.response.textStatus"
+                                   tooltip-placement="auto bottom"
+                                   uib-tooltip="{{backend.busypoller.data.response.textStatus}}"></i>
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-right">

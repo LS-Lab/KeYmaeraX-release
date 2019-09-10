@@ -399,6 +399,7 @@ angular.module('keymaerax.services').factory('Poller', function($http, $timeout)
         },
         function(error) {
           // server is likely offline, poll less frequently
+          data.response = error.data;
           if (!data.cancel) $timeout(poller, 10*interval);
         });
       };
