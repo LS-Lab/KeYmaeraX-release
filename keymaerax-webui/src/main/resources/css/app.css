@@ -544,13 +544,13 @@ del {
 }
 
 .k4-model-illustration {
-  width: calc(30vw);
+  width: 285px;
   max-width: calc(30vw);
 }
 
 .k4-model-illustration img {
   margin: auto;
-  width: calc(30vw);
+  width: 285px;
   max-width: calc(30vw);
 }
 
