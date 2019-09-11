@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PartialTactic, SeqTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PartialTactic
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, Trafo, Tuple, Unit}
@@ -297,6 +297,46 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("f", None) -> (Some(Unit), Real, None, UnknownLocation)
       )))
     entry.model shouldBe "f()>0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "allow comma-separated simple function definitions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f(), g; End.
+        | Problem f()>g() End.
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("f", None) -> (Some(Unit), Real, None, UnknownLocation),
+        ("g", None) -> (Some(Unit), Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "f()>g()".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "allow comma-separated simple predicate definitions" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Bool p(), q(); End.
+        | Problem p() & q() End.
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("p", None) -> (Some(Unit), Bool, None, UnknownLocation),
+        ("q", None) -> (Some(Unit), Bool, None, UnknownLocation)
+      )))
+    entry.model shouldBe "p() & q()".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
