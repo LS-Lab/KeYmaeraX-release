@@ -75,11 +75,11 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "report missing identifiers in block quantifiers" in {
     the [ParseException] thrownBy parser("\\forall x,y, (x>y)") should have message """1:14 Unexpected token cannot be parsed
-                                                                                      |Found:    ( (LPAREN$) at 1:14
-                                                                                      |Expected: IDENT (ID("IDENT"))""".stripMargin
+                                                                                      |Found:    ( at 1:14
+                                                                                      |Expected: IDENT""".stripMargin
     the [ParseException] thrownBy parser("\\forall x,y, x>y") should have message """1:15 Unexpected token cannot be parsed
-                                                                                    |Found:    > (RDIA$) at 1:15
-                                                                                    |Expected: , (COMMA$)
+                                                                                    |Found:    > at 1:15
+                                                                                    |Expected: ,
                                                                                     |      or: <BeginningOfFormula>""".stripMargin
   }
 
@@ -177,43 +177,43 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "refuse ; in ODE-{}" in {
     the [ParseException] thrownBy parser("[{x'=v;v'=2}]x=0") should have message
       """1:7 Unexpected ; in system of ODEs
-        |Found:    ; (SEMI$) at 1:7
+        |Found:    ; at 1:7
         |Expected: ,""".stripMargin
   }
 
   it should "refuse ++ in ODE-{}" in {
     the [ParseException] thrownBy parser("[{x'=v++v'=2}]x=0") should have message
       """1:7 Unexpected ++ in system of ODEs
-        |Found:    ++ (CHOICE$) at 1:7 to 1:8
+        |Found:    ++ at 1:7 to 1:8
         |Expected: ,""".stripMargin
   }
 
   it should "refuse ODE 1 without {} in modalities" in {
     the [ParseException] thrownBy parser("[x'=v;]x=0") should have message
       """1:7 ODE without {}
-        |Found:    ] (RBOX$) at 1:7
-        |Expected: } (RBRACE$)""".stripMargin
+        |Found:    ] at 1:7
+        |Expected: }""".stripMargin
   }
 
   it should "refuse ODE 2 without {} in modalities" in {
     the [ParseException] thrownBy parser("[x'=v & x>0;]x=0") should have message
       """1:13 ODE without {}
-        |Found:    ] (RBOX$) at 1:13
-        |Expected: } (RBRACE$)""".stripMargin
+        |Found:    ] at 1:13
+        |Expected: }""".stripMargin
   }
 
   it should "refuse ODE systems 1 without {} in modalities" in {
     the [ParseException] thrownBy parser("[x'=v,v'=3;]x=0") should have message
       """1:12 ODE without {}
-        |Found:    ] (RBOX$) at 1:12
-        |Expected: } (RBRACE$)""".stripMargin
+        |Found:    ] at 1:12
+        |Expected: }""".stripMargin
   }
 
   it should "refuse ODE systems 2 without {} in modalities" in {
     the [ParseException] thrownBy parser("[x'=v,v'=3 & x>0;]x=0") should have message
       """1:18 ODE without {}
-        |Found:    ] (RBOX$) at 1:18
-        |Expected: } (RBRACE$)""".stripMargin
+        |Found:    ] at 1:18
+        |Expected: }""".stripMargin
   }
 
   it should "refuse primed variables in evolution domain constraint" in {

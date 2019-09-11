@@ -101,7 +101,7 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
   "Power" should "give useful location information" in {
     val ex = the [ParseException] thrownBy "((f(||)^(c()))'".asTerm
     ex.getMessage should include ("1:1 Imbalanced parenthesis")
-    ex.getMessage should include ("Found:    ( (LPAREN$) at 1:1")
+    ex.getMessage should include ("Found:    ( at 1:1")
   }
 
 
