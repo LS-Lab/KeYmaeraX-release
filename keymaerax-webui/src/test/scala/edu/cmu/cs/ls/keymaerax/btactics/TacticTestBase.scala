@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
+import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
@@ -59,6 +60,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   def configFileMathematicaConfig: Map[String, String] = {
+    if (!Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME)) {
+      Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, DefaultConfiguration.defaultMathematicaConfig("linkName"), saveToFile = false)
+    }
+    if (!Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
+      Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, DefaultConfiguration.defaultMathematicaConfig("libDir"), saveToFile = false)
+    }
+    if (!Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)) {
+      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, DefaultConfiguration.defaultMathematicaConfig("tcpip"), saveToFile = false)
+    }
     Map(
       "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
       "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR),
@@ -66,6 +76,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   def configFileWolframEngineConfig: Map[String, String] = {
+    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME)) {
+      Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, DefaultConfiguration.defaultWolframEngineConfig("linkName"), saveToFile = false)
+    }
+    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)) {
+      Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, DefaultConfiguration.defaultWolframEngineConfig("libDir"), saveToFile = false)
+    }
+    if (!Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
+      Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, DefaultConfiguration.defaultWolframEngineConfig("tcpip"), saveToFile = false)
+    }
     Map(
       "linkName" -> Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
       "libDir" -> Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR),
