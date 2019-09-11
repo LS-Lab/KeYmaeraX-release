@@ -260,7 +260,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     TactixLibrary.invGenerator = generator
     TactixLibrary.differentialInvGenerator =
       (sequent,pos) => generator(sequent,pos) #::: InvariantGenerator.differentialInvariantCandidates(sequent,pos)
-    ToolProvider.setProvider(new NoneToolProvider())
+    //@note Mathematica is expected to shut down only in afterAll(), but setting provider shuts down the current provider
+    if (!mathematicaProvider.isInitialized) ToolProvider.setProvider(new NoneToolProvider())
   }
 
   /* Test teardown */
@@ -273,12 +274,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       if (!mathematicaProvider.isInitialized) {
         //@note only shutdown non-Mathematica tool providers; Mathematica is shutdown in afterAll()
         ToolProvider.shutdown()
+        ToolProvider.setProvider(new NoneToolProvider())
       }
       if (dbTester.isInitialized) {
         dbTester().db.session.close()
         dbTester = null
       }
-      ToolProvider.setProvider(new NoneToolProvider())
       TactixLibrary.invGenerator = FixedGenerator(Nil)
       TactixLibrary.differentialInvGenerator = FixedGenerator(Nil)
     }
