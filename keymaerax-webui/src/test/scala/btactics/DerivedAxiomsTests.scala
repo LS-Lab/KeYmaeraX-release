@@ -322,7 +322,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     }
   }
 
-  "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" in withMathematica { qeTool =>
+  "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" ignore withMathematica { qeTool =>
     import TactixLibrary._
     val dgZeroEquilibrium = AxiomInfo.ofCodeName("dgZeroEquilibrium")
     dgZeroEquilibrium.formula shouldBe "x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula
