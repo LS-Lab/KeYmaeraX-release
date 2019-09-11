@@ -43,9 +43,6 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
                     $("#mathematicaConfigurationAlert").hide();
                     $rootScope.mathematicaIsConfigured = data.configured;
-                    //ToolConfigService.getToolConfig().tool = "mathematica";
-                    //ToolConfigService.getToolConfig().configured = data.success;
-                    //$scope.$parent.getTool();
                     ToolConfigService.getTool();
                 } else if (data.errorThrown) {
                     showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")

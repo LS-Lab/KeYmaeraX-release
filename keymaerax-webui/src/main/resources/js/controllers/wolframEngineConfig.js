@@ -41,8 +41,7 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
                 if (data.success) {
                     $scope.WolframEngineForm.linkName.$setValidity("FileExists", true);
                     $scope.WolframEngineForm.jlinkLibDir.$setValidity("FileExists", true);
-                    ToolConfigService.getToolConfig().tool = "wolframengine";
-                    ToolConfigService.getToolConfig().configured = data.success;
+                    ToolConfigService.getTool();
                 } else if (data.errorThrown) {
                     showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Wolfram Engine configuration")
                 } else {
