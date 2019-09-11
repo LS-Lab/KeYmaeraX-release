@@ -35,8 +35,8 @@ object ToolProvider extends ToolProvider with Logging {
     * @param provider the tool provider to use in KeYmaera X from now on.
     */
   def setProvider(provider: ToolProvider): Unit = {
-    if (provider!=this) {
-      f.shutdown()
+    if (provider != this) {
+      if (provider != f) f.shutdown()
       f = provider
     } else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
   }
