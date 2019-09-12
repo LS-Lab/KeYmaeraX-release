@@ -552,7 +552,12 @@ object BelleParser extends (String => BelleExpr) with Logging {
           Right(new Find(0, Some(defs.exhaustiveSubst(expr.expression)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(ABSOLUTE_POSITION(posString), _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
           val Fixed(pp, _, _) = parseAbsolutePosition(posString, loc)
-          Right(new Fixed(pp.top, Some(defs.exhaustiveSubst(expr.expression).asInstanceOf[Formula]), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          val what: Formula = defs.exhaustiveSubst(expr.expression) match {
+            case f: Formula => f
+            case FuncOf(Function(name, idx, domain, _, _), child) => PredOf(Function(name, idx, domain, Bool), child)
+            case e => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, loc)
+          }
+          Right(new Fixed(pp.top, Some(what), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case tok::tail => parseArgumentToken(None)(tok, UnknownLocation) +: arguments(tail)
       }
 

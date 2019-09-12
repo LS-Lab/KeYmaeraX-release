@@ -47,7 +47,7 @@ class ToolTacticsTests extends TacticTestBase {
       transform("z<=4".asFormula)(-1)) shouldNot have message "[Bellerophon Runtime] head of empty list"
     inside(the [BelleThrowable] thrownBy proveBy("z<=5 ==> ".asSequent, transform("z<=4".asFormula)(-1))) {
       case bt: BelleThrowable =>
-        bt should have message "[Bellerophon Runtime] Tactic transform({`z<=4`},-1) is not applicable for\n    z<=5\nat position Fixed(-1,None,true)\nbecause Invalid transformation: cannot transform Some(z<=5) to z<=4"
+        bt should have message "[Bellerophon Runtime] Tactic transform(\"z<=4\",-1) is not applicable for\n    z<=5\nat position Fixed(-1,None,true)\nbecause Invalid transformation: cannot transform Some(z<=5) to z<=4"
         bt.getCause should have message "[Bellerophon Runtime] Invalid transformation: cannot transform Some(z<=5) to z<=4"
     }
   }
@@ -99,6 +99,18 @@ class ToolTacticsTests extends TacticTestBase {
   it should "cohide other formulas in succ when proving a transformation in negative polarity in succ" ignore withQE { _ =>
     val result = proveBy("x>0, y>0 ==> [{x'=-x^y}]x>0, z>x+y->a=5, [{x:=x+1;}*]x>0".asSequent, transform("z>0".asFormula)(2, 0::Nil))
     result.subgoals.loneElement shouldBe "x>0, y>0 ==> [{x'=-x^y}]x>0, z>0->a=5, [{x:=x+1;}*]x>0".asSequent
+  }
+
+  it should "transform double negation" in withQE { _ =>
+    proveBy("b=5 & --b>0 -> b>0".asFormula, edit("b=5 & b>0 -> b>0".asFormula)(1)).
+      subgoals.loneElement shouldBe "==> b=5 & b>0 -> b>0".asSequent
+    proveBy("b()=5 & --b()>0 -> b()>0".asFormula, edit("b()=5 & b()>0 -> b()>0".asFormula)(1)).
+      subgoals.loneElement shouldBe "==> b()=5 & b()>0 -> b()>0".asSequent
+  }
+
+  it should "introduce universal quantifiers" in withQE { _ =>
+    proveBy("\\forall y (x>0 & y>0)".asFormula, edit("\\forall x \\forall y (x>0 & y>0)".asFormula)(1)).
+      subgoals.loneElement shouldBe "==> \\forall x \\forall y (x>0 & y>0)".asSequent
   }
 
   "Transform in context" should "exploit equivalence" in withQE { _ =>
@@ -198,15 +210,15 @@ class ToolTacticsTests extends TacticTestBase {
   it should "only abbreviate if no transformations are present" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("x>=2+3", edit("x>=abbrv(2+3,y)".asFormula)(1))
     provable.subgoals.loneElement shouldBe "y=2+3 ==> x>=y".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("edit({`x>=abbrv(2+3,y)`},1)")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2+3`},{`y`})")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("x>=abbrv(2+3,y)",1)""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2+3","y")""")
   }}
 
   it should "abbreviate and transform" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("2*g()*x=37+4", edit("abbrv(2*g())*x=41".asFormula)(1))
     provable.subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*x=41`},1)")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & transform({`41`},1.1)")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*x=41",1)""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv"); transform("41",1.1); assert("abbrv*x=41", "Unexpected edit result", 1)""")
   }}
 
   it should "expand abs" in withQE { _ =>
@@ -232,8 +244,8 @@ class ToolTacticsTests extends TacticTestBase {
   it should "abbreviate and expand and transform" in withQE { _ => withDatabase { db =>
     val (proofId, provable) = db.proveByWithProofId("2*g()*abs(x)=37+4", edit("abbrv(2*g())*expand(abs(x))=41".asFormula)(1))
     provable.subgoals.loneElement shouldBe "abbrv=2*g(), x>=0&abs_0=x | x<0&abs_0=-x ==> abbrv*abs_0=41".asSequent
-    db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*expand(abs(x))=41`},1)")
-    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & absExp(1.0.1) & transform({`41`},1.1)")
+    db.extractTactic(proofId) shouldBe BelleParser("""edit("abbrv(2*g())*expand(abs(x))=41",1)""")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("""abbrv("2*g()","abbrv") & absExp(1.0.1) & transform("41",1.1); assert("abbrv*abs_0=41","Unexpected edit result",1)""")
   }}
 
   it should "abbreviate in programs" in withQE { _ =>

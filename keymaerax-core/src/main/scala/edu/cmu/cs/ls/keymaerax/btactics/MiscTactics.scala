@@ -152,14 +152,19 @@ object DebuggingTactics {
   }
 
   /** assertE is a no-op tactic that raises an error if the provable has not the expected expression at the specified position. */
-  def assertE(expected: => Expression, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
-    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != expected) {
-        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
-          provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
-      }
-      provable
-    }
+  def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic = {
+    import TacticFactory._
+    "assert" byWithInputs (expected :: message :: Nil, (pos: Position, seq: Sequent) => {
+      (new BuiltInPositionTactic("assert") {
+        override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
+          if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != expected) {
+            throw BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
+              provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
+          }
+          provable
+        }
+    })(pos)
+  })
   }
 
   /** @see [[TactixLibrary.done]] */

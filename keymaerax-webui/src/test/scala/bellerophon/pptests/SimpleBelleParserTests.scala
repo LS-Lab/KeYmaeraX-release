@@ -667,6 +667,10 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("dG({`{z'=-1*z+0}`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1))
   }
 
+  it should "parse predicates in locators" in {
+    BelleParser("hideL(1==\"p(x)\")") shouldBe (round trip TactixLibrary.hideL(Fixed(1, Nil, Some("p(x)".asFormula))))
+  }
+
   it should "expand definitions when parsing arguments" in {
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None, Declaration(Map()))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (

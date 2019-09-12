@@ -956,7 +956,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
   def assertT(cond : (Sequent,Position)=>Boolean, msg: => String): BuiltInPositionTactic = DebuggingTactics.assert(cond, msg)
   /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
-  def assertE(expected: => Expression, msg: => String): BuiltInPositionTactic = DebuggingTactics.assertE(expected, msg)
+  def assertE(expected: => Expression, msg: => String): DependentPositionWithAppliedInputTactic = DebuggingTactics.assertE(expected, msg)
 
   /** errorT raises an error upon executing this tactic, stopping processing */
   def errorT(msg: => String): BuiltInTactic = DebuggingTactics.error(msg)

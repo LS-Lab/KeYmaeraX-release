@@ -545,6 +545,7 @@ object KeYmaeraXArchiveParser {
           }
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, pred, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
+        case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Bool"), currLoc) +: rest)
         case EQ => throw ParseException("Predicate must be defined by equivalence", st, nextTok, EQUIV.img)
         case _ => throw ParseException("Unexpected token in predicate definition", st, nextTok, EQUIV.img)
       }
@@ -580,6 +581,7 @@ object KeYmaeraXArchiveParser {
           }
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, term, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
+        case COMMA => ParseState(r :+ defs :+ defsBlock :+ next, Token(SEMI, currLoc) +: Token(IDENT("Real"), currLoc) +: rest)
         case EQUIV => throw ParseException("Function must be defined by equality", st, nextTok, EQ.img)
         case _ => throw ParseException("Unexpected token in function definition", st, Expected.ExpectTerminal(EQ) :: Expected.ExpectTerminal(SEMI) :: Nil)
       }

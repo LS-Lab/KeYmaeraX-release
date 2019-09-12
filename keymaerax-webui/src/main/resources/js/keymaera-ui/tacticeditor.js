@@ -65,7 +65,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
                   } else {
                     // tactic with input -> postpone and wait for arguments
                     var inputStrings = $.map(di.standardDerivation.derivation.input, function(e, i) {
-                      return "{`" + e.param + ":" + e.type + "`}";
+                      return '"' + e.param + ":" + e.type + '"';
                     });
                     var inputString = inputStrings[0];
                     for (i = 1; i < inputStrings.length; i++) { inputString = inputString + ", " + inputStrings[i]; }
