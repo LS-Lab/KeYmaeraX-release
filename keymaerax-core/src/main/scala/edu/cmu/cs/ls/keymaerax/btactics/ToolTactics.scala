@@ -253,9 +253,17 @@ private object ToolTactics {
         } catch {
           case ex: UnificationException =>
             //@note looks for specific transform position until we have better formula diff
-            FormulaTools.posOf(e, ex.e2.asExpr) match {
-              case Some(pp) => transform(ex.e1.asExpr)(pos.topLevel ++ pp) | transform(expandTo)(pos)
-              case _ => transform(expandTo)(pos)
+            //@note Exception reports variable unifications and function symbol unifications swapped
+            if (ex.e2.asExpr.isInstanceOf[FuncOf] && !ex.e1.asExpr.isInstanceOf[FuncOf]) {
+              FormulaTools.posOf(e, ex.e1.asExpr) match {
+                case Some(pp) => transform(ex.e2.asExpr)(pos.topLevel ++ pp) | transform(expandTo)(pos)
+                case _ => transform(expandTo)(pos)
+              }
+            } else {
+              FormulaTools.posOf(e, ex.e2.asExpr) match {
+                case Some(pp) => transform(ex.e1.asExpr)(pos.topLevel ++ pp) | transform(expandTo)(pos)
+                case _ => transform(expandTo)(pos)
+              }
             }
         }
     })
