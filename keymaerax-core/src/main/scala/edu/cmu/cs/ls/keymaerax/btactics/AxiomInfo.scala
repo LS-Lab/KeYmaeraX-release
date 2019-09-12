@@ -1249,7 +1249,12 @@ object DerivationInfo {
     // assertions and messages
     InputTacticInfo("print"
       , SimpleDisplayInfo("Print","print")
-      ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.printIndexed(msg)): TypedFunc[String, BelleExpr])
+      ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.printIndexed(msg)): TypedFunc[String, BelleExpr]),
+    InputPositionTacticInfo("assert"
+      , SimpleDisplayInfo("Assert","assert")
+      , List(ExpressionArg("expected"), StringArg("msg"))
+      , _ => ((expr: Expression) => ((msg: String) => DebuggingTactics.assertE(expr, msg)): TypedFunc[String, BelleExpr]): TypedFunc[Expression, TypedFunc[String, BelleExpr]]
+    )
   )
 
   /**
