@@ -107,6 +107,7 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         nodesMap: {}, // Map[String, PTNode], i.e., { id: { id: String, children: [ref PTNode], parent: ref PTNode } }
         nodeIds: function() { return Object.keys(this.nodesMap); },
         nodes: function() { return $.map(this.nodesMap, function(v) {return v;}); },
+        isProved: false,
 
         clear: function() {
           this.root = undefined;
@@ -319,6 +320,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
           theProofTree.nodesMap = response.data.proofTree.nodes;
           theProofTree.root = response.data.proofTree.root;
+          theProofTree.isProved = response.data.proofTree.isProved;
           var agendaItems = theAgenda.items();
           if (agendaItems.length > 0 && theAgenda.selectedId() === undefined) {
             // select first task if nothing is selected yet

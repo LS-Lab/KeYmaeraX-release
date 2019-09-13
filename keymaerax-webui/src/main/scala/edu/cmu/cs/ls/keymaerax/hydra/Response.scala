@@ -829,7 +829,9 @@ case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTr
     JsObject(
       "id" -> proofIdJson(proofId),
       "nodes" -> JsObject(theNodes.toMap),
-      "root" -> JsString(root.id.toString))
+      "root" -> JsString(root.id.toString),
+      "isProved" -> JsBoolean(root.done)
+    )
   }
 
   private lazy val agendaItems = JsObject(agenda.map(itemJson):_*)
