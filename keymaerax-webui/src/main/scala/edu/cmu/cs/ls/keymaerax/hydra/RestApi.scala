@@ -419,6 +419,13 @@ object RestApi extends Logging {
       }
     }}}
 
+    val userLemmas: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "lemmas") { userId => { pathEnd {
+      get {
+        val request = new UserLemmasRequest(database, userId)
+        completeRequest(request, t)
+      }
+    }}}
+
     val openProof: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
       get {
         val request = new OpenProofRequest(database, userId, proofId)
@@ -1178,6 +1185,7 @@ object RestApi extends Logging {
     browseNodeChildren    ::
     deleteModelProofSteps ::
     deleteAllModels       ::
+    userLemmas            ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

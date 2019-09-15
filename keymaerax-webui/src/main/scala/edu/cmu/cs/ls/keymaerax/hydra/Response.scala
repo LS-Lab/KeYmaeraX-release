@@ -120,40 +120,36 @@ class UpdateProofNameResponse(proofId: String, newName: String) extends Response
 /**
  *
  * @param proofs The list of proofs with their status in KeYmaera (proof, loadStatus).
- * @param models -- optionally, a list of model names associated with each of the proofs in <em>proofs</em>
  */
-class ProofListResponse(proofs: List[(ProofPOJO, String)], models: Option[List[String]] = None) extends Response {
+class ProofListResponse(proofs: List[(ProofPOJO, String)]) extends Response {
   override val schema = Some("prooflist.js")
 
-  val objects : List[JsObject] = models match {
-    case None => proofs.map({case (proof, loadStatus) => JsObject(
-      "id" -> JsString(proof.proofId.toString),
-      "name" -> JsString(proof.name),
-      "description" -> JsString(proof.description),
-      "date" -> JsString(proof.date),
-      "modelId" -> JsString(proof.modelId.toString),
-      "stepCount" -> JsNumber(proof.stepCount),
-      "status" -> JsBoolean(proof.closed),
-      "loadStatus" -> JsString(loadStatus)
-    )})
-    case Some(modelNames) =>
-      (proofs zip modelNames).map({case (p,loadStatus) =>
-        val proof = p._1
-        val modelName = p._2
+  val objects : List[JsObject] = proofs.map({case (proof, loadStatus) => JsObject(
+    "id" -> JsString(proof.proofId.toString),
+    "name" -> JsString(proof.name),
+    "description" -> JsString(proof.description),
+    "date" -> JsString(proof.date),
+    "modelId" -> JsString(proof.modelId.toString),
+    "stepCount" -> JsNumber(proof.stepCount),
+    "status" -> JsBoolean(proof.closed),
+    "loadStatus" -> JsString(loadStatus)
+  )})
 
-        JsObject(
-          "id" -> JsString(proof.proofId.toString),
-          "name" -> JsString(proof.name),
-          "description" -> JsString(proof.description),
-          "date" -> JsString(proof.date),
-          "modelId" -> JsString(proof.modelId.toString),
-          "stepCount" -> JsNumber(proof.stepCount),
-          "status" -> JsBoolean(proof.closed),
-          "loadStatus" -> JsString(loadStatus),
-          "modelName" -> JsString(modelName)
-        )
-      })
+  def getJson = JsArray(objects:_*)
+}
+
+class UserLemmasResponse(proofs: List[(ProofPOJO, Option[ModelPOJO])]) extends Response {
+  def problemContent(s: String): String = {
+    val i = s.indexOf("Problem")
+    val j = s.indexOf("End.", i)
+    s.substring(i + "Problem".length, j).trim()
   }
+
+  lazy val objects : List[JsObject] = proofs.map({case (proof, model) => JsObject(
+    "id" -> JsString(proof.proofId.toString),
+    "name" -> (if (model.isDefined) JsString(model.get.name) else JsNull),
+    "conclusion" -> (if (model.isDefined) JsString(problemContent(model.get.keyFile)) else JsNull)
+  )})
 
   def getJson = JsArray(objects:_*)
 }

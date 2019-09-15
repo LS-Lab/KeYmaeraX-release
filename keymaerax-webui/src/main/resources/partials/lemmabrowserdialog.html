@@ -20,27 +20,64 @@
     </div>
 </div>
 <div class="modal-body">
-    <div class="row">
-        <div class="col-md-12">
-            <p>Select formula (hover and click to select typical formulas, press <kbd>option/alt</kbd> key and click to select any term or formula)</p>
-            <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="nodeId"
-                        sequent="sequent"
-                        read-only="false" collapsed="false" abbreviate="false"
-                        on-apply-tactic="formulaSelected(formulaId, tacticId)"></k4-sequent>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-12">
-            <p>Select proof step</p>
-            <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
-                 class="k4-tactic-popover-entry">
-                <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
-                                formula-id="{{formulaId}}"
-                                tactic="tactic" axiom-readonly="false"
-                                on-tactic="applyTactic(formulaId, tacticId)"
-                                on-input-tactic="applyInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
+    <uib-tabset justified="false">
+        <uib-tab index="1" select="loadDerivationInfos()">
+            <uib-tab-heading>Axioms, Rules, and Tactics</uib-tab-heading>
+            <div class="row">
+                <div class="col-md-12">
+                    <p>Select formula (hover and click to select typical formulas, press <kbd>option/alt</kbd> key and click to select any term or formula)</p>
+                    <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="nodeId"
+                                sequent="sequent"
+                                read-only="false" collapsed="false" abbreviate="false"
+                                on-apply-tactic="formulaSelected(formulaId, tacticId)"></k4-sequent>
+                </div>
             </div>
-        </div>
-    </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <p>Select proof step</p>
+                    <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
+                         class="k4-tactic-popover-entry">
+                        <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                                        formula-id="{{formulaId}}"
+                                        tactic="tactic" axiom-readonly="false"
+                                        on-tactic="applyTactic(formulaId, tacticId)"
+                                        on-input-tactic="applyInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
+                    </div>
+                </div>
+            </div>
+        </uib-tab>
+        <uib-tab index="2" select="loadLemmas()">
+            <uib-tab-heading>Lemmas</uib-tab-heading>
+            <div class="row">
+                <div class="col-md-12">
+                    <div ng-repeat="lemma in derivationInfos.lemmas | filter: derivationInfos.filter | orderBy: derivationInfos.order"
+                         class="k4-tactic-popover-entry">
+                        <div class="well well-compact">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="input-group">
+                                        <label class="btn btn-link input-group-addon" ng-click="useLemma(tacticPopover.formulaId(), lemma)">{{lemma.name}}</label>
+                                        <label class="input-group-addon">Apply:</label>
+                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'nil'">verbatim</a>
+                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'prop'"><kbd>prop</kbd></a>
+                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'master'"><kbd>auto</kbd></a>
+                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'custom'">
+                                            <i ng-class="{'fa': true, 'fa-circle-o': !lemma.useLemmaTac !== 'custom', 'fa-dot-circle-o': lemma.useLemmaTac == 'custom'}"></i>
+                                        </a>
+                                        <input type="text" class="form-control" ng-model="lemma.customTac" placeholder="Optional tactic to adapt lemma shape">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <pre>{{lemma.conclusion}}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </uib-tab>
+    </uib-tabset>
 </div>

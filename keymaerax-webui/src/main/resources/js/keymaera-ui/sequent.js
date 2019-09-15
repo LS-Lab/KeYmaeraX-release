@@ -141,13 +141,33 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.derivationInfos = {
               filter: undefined,
               order: 'standardDerivation.name',
-              infos: []
+              infos: [],
+              lemmas: []
             };
 
-            scope.browseLemmas = function() {
+            scope.browseTactics = function() {
               derivationInfos.allDerivationInfos(scope.userId, scope.proofId, scope.nodeId).then(function(response) {
                 scope.derivationInfos.infos = response.data;
               });
+            };
+
+            scope.browseLemmas = function() {
+              derivationInfos.allLemmas(scope.userId).then(function(response) {
+                scope.derivationInfos.lemmas = response.data;
+              });
+            };
+
+            //@see lemmaBrowser.js/useLemma
+            scope.useLemma = function(formulaId, lemma) {
+              if (lemma.useLemmaTac && lemma.useLemmaTac != "verbatim") {
+                var tactic = lemma.useLemmaTac ? (lemma.useLemmaTac != "custom" ? lemma.useLemmaTac : lemma.customTac) : undefined;
+                var input = [{ type: "string", param: "lemma", value: lemma.name},
+                             { type: "string", param: "tactic", value: tactic }];
+                scope.onApplyInputTactic({formulaId: formulaId, tacticId: "useLemma", input: input});
+              } else {
+                var input = [{ type: "string", param: "lemma", value: lemma.name}];
+                scope.onApplyInputTactic({formulaId: formulaId, tacticId: "useLemma", input: input});
+              }
             }
 
             turnstileTooltipOpen = false;

@@ -179,11 +179,19 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
   }
 }
 
-class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
+class ProofsForUserRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
   def resultingResponses(): List[Response] = {
     val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).map(proof =>
       (proof._1, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
+  }
+}
+
+class UserLemmasRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
+  def resultingResponses(): List[Response] = {
+    val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).filter(_._1.closed).
+      groupBy(_._1.modelId).map(_._2.head).map(proof => (proof._1, proof._1.modelId.map(db.getModel))).toList
+    new UserLemmasResponse(proofs) :: Nil
   }
 }
 

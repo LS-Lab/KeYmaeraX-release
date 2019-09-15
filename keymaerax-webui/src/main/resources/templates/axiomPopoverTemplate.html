@@ -42,7 +42,7 @@
                     <k4-axiom-key-selector axiom="lemma.selected" readonly="false"></k4-axiom-key-selector>
                 </div>
                 <a class="input-group-addon btn btn-default"
-                   ng-click="browseLemmas()">Browse...</a>
+                   ng-click="browseTactics()">Browse...</a>
                 <a class="input-group-addon btn btn-default" ng-disabled="!lemma.selected"
                    ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>
             </div>
@@ -58,14 +58,51 @@
             </div>
             <div class="row">
                 <div class="col-md-12">
-                    <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
-                         class="k4-tactic-popover-entry">
-                        <k4-tactic-info user-id="userId" proof-id="proofId" node-id="nodeId"
-                                        formula-id="tacticPopover.formulaId()"
-                                        tactic="tactic" axiom-readonly="false"
-                                        on-tactic="onTactic(tacticPopover.formulaId(), tacticId)"
-                                        on-input-tactic="onInputTactic(tacticPopover.formulaId(), tacticId, input)"></k4-tactic-info>
-                    </div>
+                    <uib-tabset justified="false" active="derivationInfos.kind">
+                        <uib-tab index="1" select="browseTactics()">
+                            <uib-tab-heading>Axioms, Rules, and Tactics</uib-tab-heading>
+                            <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
+                                 class="k4-tactic-popover-entry">
+                                <k4-tactic-info user-id="userId" proof-id="proofId" node-id="nodeId"
+                                                formula-id="tacticPopover.formulaId()"
+                                                tactic="tactic" axiom-readonly="false"
+                                                on-tactic="onTactic(tacticPopover.formulaId(), tacticId)"
+                                                on-input-tactic="onInputTactic(tacticPopover.formulaId(), tacticId, input)"></k4-tactic-info>
+                            </div>
+                        </uib-tab>
+                        <uib-tab index="2" select="browseLemmas()">
+                            <uib-tab-heading>Lemmas</uib-tab-heading>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div ng-repeat="lemma in derivationInfos.lemmas | filter: derivationInfos.filter | orderBy: derivationInfos.order"
+                                         class="k4-tactic-popover-entry">
+                                        <div class="well well-compact">
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <div class="input-group">
+                                                        <label class="btn btn-link input-group-addon" ng-click="useLemma(tacticPopover.formulaId(), lemma)">{{lemma.name}}</label>
+                                                        <label class="input-group-addon">Apply:</label>
+                                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'nil'">verbatim</a>
+                                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'prop'"><kbd>prop</kbd></a>
+                                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'master'"><kbd>auto</kbd></a>
+                                                        <a class="btn btn-secondary input-group-addon" type="button" ng-model="lemma.useLemmaTac" uib-btn-radio="'custom'">
+                                                            <i ng-class="{'fa': true, 'fa-circle-o': !lemma.useLemmaTac !== 'custom', 'fa-dot-circle-o': lemma.useLemmaTac == 'custom'}"></i>
+                                                        </a>
+                                                        <input type="text" class="form-control" ng-model="lemma.customTac" placeholder="Optional tactic to adapt lemma shape">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <pre>{{lemma.conclusion}}</pre>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </uib-tab>
+                    </uib-tabset>
                 </div>
             </div>
         </div>
