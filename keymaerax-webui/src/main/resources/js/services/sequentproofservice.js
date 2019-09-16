@@ -118,7 +118,8 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         pruneBelow: function(nodeId) {
           var theProofTree = this;
           var node = theProofTree.nodesMap[nodeId];
-          if (node.children.length > 0) {
+          //@note child nodes may not be loaded yet (if pruning below root and proof was reloaded)
+          if (node && node.children.length > 0) {
             $.each(node.children, function(i, c) {
               theProofTree.pruneBelow(c);
               delete theProofTree.nodesMap[c];
