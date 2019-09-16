@@ -21,7 +21,9 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
       "A>0\n|b>0 -> [x:=1;]x>=0", Declaration(Map.empty),
       "A>0 | b>0 -> [x:=1;]x>=0".asFormula, Nil, Map.empty)
     new KeYmaeraXArchivePrinter(withComments=true)(entry) shouldBe
-      """Theorem "Entry 1"
+      s"""/* Exported from KeYmaera X v${edu.cmu.cs.ls.keymaerax.core.VERSION} */
+        #
+        #Theorem "Entry 1"
         #
         #ProgramVariables
         #  Real A;
@@ -33,6 +35,7 @@ class KeYmaeraXArchivePrinterTests extends TacticTestBase {
         #  A>0
         #|b>0 -> [x:=1;]x>=0
         #End.
+        #
         #
         #
         #End.""".stripMargin('#')
