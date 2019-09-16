@@ -9,6 +9,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable}
 import Augmentors._
 import org.apache.logging.log4j.scala.Logging
 
+import scala.collection.immutable.List
+
 /** Invariant generators and differential invariant generators.
   * @author Andre Platzer
   * @see [[TactixLibrary.invGenerator]]
@@ -77,16 +79,27 @@ object InvariantGenerator extends Logging {
   def sortedRelevanceFilter(generator: Generator[GenProduct]): Generator[GenProduct] = (sequent,pos) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val system = sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, _)) => ode.ode
+      case Some(Box(ode: ODESystem, _)) => ode
       case Some(Box(loop: Loop, _)) => loop
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
 
+    lazy val indOrder = DependencyAnalysis.inducedOrd(DependencyAnalysis.transClose(DependencyAnalysis.analyseModalVars(
+      system, DependencyAnalysis.varSetToBaseVarSet(StaticSemantics.vars(system).toSet), ignoreTest = false).mapValues(v => v._1)))
+
+    lazy val vars = DependencyAnalysis.freeVars(sequent)
+    lazy val order = vars.toList.sortWith((x, y) => {
+      val ord = indOrder.compare(x, y)
+      if (ord == 0) x.compare(y) < 0
+      else ord < 0
+    }
+    )
+
     lazy val deps = StaticSemanticsTools.transitiveDependencies(system)
 
     def sizeCompare(a: Formula, b: Formula) = system match {
-      case _: DifferentialProgram =>
+      case ODESystem(_: DifferentialProgram, _) =>
         // smaller set of variables that it depends on means good idea to try first in dependency order, excluding self-dependencies
         StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size <
         StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size
@@ -96,13 +109,20 @@ object InvariantGenerator extends Logging {
         (StaticSemantics.freeVars(system).symbols -- StaticSemantics.freeVars(b).symbols).size
     }
 
+    def depCompare(a: Formula, b: Formula): Boolean = {
+      val aOrder = order.lastIndexWhere(v => StaticSemantics.freeVars(a).contains(v))
+      val bOrder = order.lastIndexWhere(v => StaticSemantics.freeVars(b).contains(v))
+      if (aOrder == bOrder) sizeCompare(a, b)
+      else aOrder < bOrder
+    }
+
     relevanceFilter(generator, analyzeMissing = true)(sequent, pos).
       // sort by dependency order
       //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
       sortWith((a: GenProduct, b: GenProduct) =>
         //@todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
         //@todo improve sorting to take dependency cluster into account, too.
-        if (a._1.isFOL == b._1.isFOL) sizeCompare(a._1, b._1)
+        if (a._1.isFOL == b._1.isFOL) depCompare(a._1, b._1)
         else a._1.isFOL //@note a.isFOL != b.isFOL, FOL are smaller than non-FOL formulas
       )
   }
@@ -149,8 +169,8 @@ object InvariantGenerator extends Logging {
       sequent.ante.toList.filter(fml => !StaticSemantics.freeVars(fml).intersect(StaticSemantics.boundVars(loop)).isEmpty).reduceOption(And).getOrElse(True)
     }
     sequent.sub(pos) match {
-      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).map(_ -> None).toStream.distinct
-      case Some(Box(l: Loop, post))     => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).map(_ -> None).toStream.distinct
+      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).distinct.map(_ -> None).toStream.distinct
+      case Some(Box(l: Loop, post))      => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).map(_ -> None).toStream.distinct
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }}
