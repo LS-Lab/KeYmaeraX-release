@@ -32,7 +32,7 @@ class ICCPSTutorial extends TacticTestBase {
     val printedTactic = BellePrettyPrinter(parsedTactic)
 
      printedTactic should equal ("""
-        |(implyR(1) ; loop({`x != m & b > 0`},1)) ; <(
+        |(implyR(1) ; loop("x != m & b > 0",1)) ; <(
         |  QE,
         |  QE,
         |  composeb(1) ; composeb(1) ; composeb(1) ; testb(1) ; assignb(1) ; solve(1) ; QE
@@ -44,7 +44,7 @@ class ICCPSTutorial extends TacticTestBase {
   })
 
   "Simple car search tactic" should "parse, print, prove" in withMathematica(mathematica => {
-    val t = "implyR(1) & loop({`1=1`}, 1) & solve(1) & QE"
+    val t = """implyR(1) & loop("1=1", 1) & solve(1) & QE"""
     BelleParser(t)
   })
 }
