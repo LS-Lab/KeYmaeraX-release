@@ -706,31 +706,29 @@ private object DifferentialTactics extends Logging {
     *         This can be used to prevent (unnecessary) invariant generation for loops or ODEs from happening
     *         Return False in all other cases (including when the sequent or position are not of the expected shape)
     */
-  private def invCheckHelper(pos:Position, seq:Sequent) : Boolean = {
+  private def invCheckHelper(pos: Position, seq: Sequent): Boolean = {
     seq.sub(pos) match {
-      case Some(Box(ode:ODESystem, post)) => {
-        val assms = seq.ante.flatMap(flattenConjunctions(_)).toList
+      case Some(Box(ode: ODESystem, post)) if post.isFOL =>
+        val assms = seq.ante.flatMap(flattenConjunctions).toList
         //Track constant assumptions separately
         val odeBV = StaticSemantics.boundVars(ode)
         val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
         val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
-        val conjConst = assmsConst.foldLeft(ode.constraint)( (f,a) => And(f,a))
-        val conjRest = assmsRest.foldLeft(True:Formula)( (f,a) => And(f,a))
-        val detectEquiv = proveBy(Imply(conjConst,Equiv(conjRest,post)), timeoutCEXQE)
+        val conjConst = assmsConst.foldLeft(ode.constraint)( (f, a) => And(f, a))
+        val conjRest = assmsRest.foldLeft(True: Formula)( (f, a) => And(f, a))
+        val detectEquiv = proveBy(Imply(conjConst, Equiv(conjRest, post)), ?(timeoutCEXQE))
         detectEquiv.isProved
-      }
 
-      case Some(Box(l:Loop, post)) => {
-        val assms = seq.ante.flatMap(flattenConjunctions(_)).toList
+      case Some(Box(l: Loop, post)) if post.isFOL =>
+        val assms = seq.ante.flatMap(flattenConjunctions).toList
         //Track constant assumptions separately
         val loopBV = StaticSemantics.boundVars(l)
         val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
         val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
-        val conjConst = assmsConst.foldLeft(True:Formula)( (f,a) => And(f,a))
-        val conjRest = assmsRest.foldLeft(True:Formula)( (f,a) => And(f,a))
-        val detectEquiv = proveBy(Imply(conjConst,Equiv(conjRest,post)), timeoutCEXQE)
+        val conjConst = assmsConst.foldLeft(True: Formula)( (f, a) => And(f, a))
+        val conjRest = assmsRest.foldLeft(True: Formula)( (f, a) => And(f, a))
+        val detectEquiv = proveBy(Imply(conjConst, Equiv(conjRest, post)), ?(timeoutCEXQE))
         detectEquiv.isProved
-      }
 
       case _ => false
     }
@@ -739,10 +737,10 @@ private object DifferentialTactics extends Logging {
   /** Invariance check
     * @return Executes t if it detects a purely invariance question (for all subgoals) otherwise execute f
     */
-  def invCheck(t: BelleExpr,f :BelleExpr) : DependentPositionTactic = "invCheck" by ((pos:Position) => {
+  def invCheck(t: BelleExpr, f: BelleExpr): DependentPositionTactic = "invCheck" by ((pos:Position) => {
     doIfElse(pr =>
       pr.subgoals.forall(s => invCheckHelper(pos, s))
-    )(t,f)
+    )(t, f)
   })
 
   /** ODE counterexample finder
