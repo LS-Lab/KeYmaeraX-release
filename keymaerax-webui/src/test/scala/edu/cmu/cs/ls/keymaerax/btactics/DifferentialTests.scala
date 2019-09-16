@@ -357,12 +357,12 @@ class DifferentialTests extends TacticTestBase {
 
   it should "report when invariant not true in the beginning" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x<0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
-      have message "[Bellerophon Runtime] Differential invariant must hold in the beginning: expected proved provable, but got open goals"
+      have message "[Bellerophon Runtime] Differential invariant must hold in the beginning: expected to have proved, but got open goals"
   }
 
   it should "report when not an invariant" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x>0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
-      have message "[Bellerophon Runtime] Differential invariant must be preserved: expected proved provable, but got open goals"
+      have message "[Bellerophon Runtime] Differential invariant must be preserved: expected to have proved, but got open goals"
   }
 
   it should "report when failing to derive postcondition" in withQE { _ =>
@@ -388,7 +388,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "expand special functions" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("[{x'=3}]abs(x)>=0".asFormula, dI()(1)) should have message
-      """[Bellerophon Runtime] Differential invariant must be preserved: expected proved provable, but got open goals""".stripMargin
+      """[Bellerophon Runtime] Differential invariant must be preserved: expected to have proved, but got open goals""".stripMargin
   }
 
   //@todo unsupported so far (substitution clash)
@@ -1066,7 +1066,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "a()>0, x>0 ==> \\exists y [{x'=2,y'=-a()}](x>0 & y<0)".asSequent
   }
 
-  it should "solve x'=x" in withQE { _ =>
+  it should "solve x'=x" in withMathematica { _ =>
     val s = "==> x>0 -> [{x'=x}]x>0".asSequent
     val t = prop & dG("{z'=(-1/2)*z+0}".asDifferentialProgram, Some("x*z^2=1".asFormula))(1) &
       existsR("1/x^(1/2)".asTerm)(1) & dI()(1) & QE
@@ -1079,13 +1079,13 @@ class DifferentialTests extends TacticTestBase {
     result shouldBe 'proved
   }
 
-  it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withQE { _ =>
+  it should "do fancy unification for proving x>0->[{x'=-x}]x>0" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
       dG("{y'=(1/2)*y+0}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & existsR("1/x^(1/2)".asTerm)(1) & dI()(1) & QE)
     result shouldBe 'proved
   }
 
-  it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withQE { _ =>
+  it should "do fancy unification for proving x>0->[{x'=x}]x>0" in withMathematica { _ =>
     val result = proveBy("x>0->[{x'=x}]x>0".asFormula, implyR(1) &
       dG("{y'=(-1/2)*y+0}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) & dI()(1, 0::Nil) & existsR("1/x^(1/2)".asTerm)(1) & QE)
     result shouldBe 'proved
@@ -1347,7 +1347,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>=0 ==> [{x'=3&x>=0}]x>=0".asSequent
   }
 
-  "Differential Invariants" should "prove random differential invariant equations" taggedAs IgnoreInBuildTest in withMathematica { tool =>
+  "Differential Invariants" should "prove random differential invariant equations" taggedAs (IgnoreInBuildTest,TodoTest) in withMathematica { tool =>
     for (i <- 1 to randomTrials) {
       val vars = IndexedSeq(Variable("x"),Variable("y"),Variable("z")) //rand.nextNames("z", 4)
       //@todo avoid divisions by zero
@@ -1457,7 +1457,7 @@ class DifferentialTests extends TacticTestBase {
     proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula, diffVar(1, 1::0::1::Nil)) shouldBe 'proved
   }
 
-  it should "diff var flat flight progress [variable]" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "diff var flat flight progress [variable]" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
   }
 
