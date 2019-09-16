@@ -16,13 +16,13 @@
                 <span class="text-danger" ng-if="mode==='exercise' && !modelIsComplete()">
                     Fill in the blanks (__________)
                 </span>
-                <a class="btn btn-link" ng-click="enableEditing()" ng-if="mode==='edit'"
-                   ng-disabled="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
                 <span class="pull-right">
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelIsComplete()"
                             ng-click="save.cmd=startProof">Start proof</button>
-                    <button class="btn btn-default" type="submit" ng-if="!user.isGuest() && mode==='edit'"
-                            ng-disabled="!modelDataForm.$visible" ng-click="save.cmd=refreshModels">Save</button>
+                    <button class="btn btn-default" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelDataForm.$visible"
+                            ng-click="save.cmd=refreshModels">Save</button>
+                    <button class="btn btn-default" ng-if="!user.isGuest() && mode==='edit' && !modelDataForm.$visible"
+                            ng-click="enableEditing()"><i class="fa fa-pencil"></i> Edit</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
                             ng-click="save.cmd=redoProof">Save</button>
                     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
