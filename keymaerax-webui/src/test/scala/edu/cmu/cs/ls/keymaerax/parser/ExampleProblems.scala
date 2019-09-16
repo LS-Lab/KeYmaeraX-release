@@ -28,7 +28,7 @@ class ExampleProblems extends FlatSpec with Matchers {
         |End.""".stripMargin
 
     val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser(f)
-    ex.found shouldBe """x (ID("x"))"""
+    ex.found shouldBe """x"""
     ex.expect shouldBe "Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term"
     ex.loc.begin.line shouldBe 8
     ex.loc.begin.column shouldBe 11
@@ -59,7 +59,7 @@ class ExampleProblems extends FlatSpec with Matchers {
         |End.""".stripMargin
 
     val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parseAsProblemOrFormula(f)
-    ex.found shouldBe """x (ID("x"))"""
+    ex.found shouldBe """x"""
     ex.expect shouldBe "Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term"
     ex.loc.begin.line shouldBe 15
     ex.loc.begin.column shouldBe 11
@@ -69,7 +69,7 @@ class ExampleProblems extends FlatSpec with Matchers {
     val f = " ProgramVariables.\n\n   R x. R y. R z. \n\n   End.  \n\n   Problem.\n\n   (x*x*y >= 0 & x >= 0 & z >= x) \n\n   -> \n\n   [\n\n   {x := 2x; y := 2y;}\n\n  ]\n\n (x*y >= 0)\n\nEnd."
 
     val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parseAsProblemOrFormula(f)
-    ex.found shouldBe """x (ID("x"))"""
+    ex.found shouldBe """x"""
     ex.expect shouldBe "Multiplication in KeYmaera X requires an explicit * symbol. E.g. 2*term"
     ex.loc.begin.line shouldBe 15
     ex.loc.begin.column shouldBe 11
