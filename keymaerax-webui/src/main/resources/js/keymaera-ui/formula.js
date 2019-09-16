@@ -257,6 +257,12 @@ angular.module('formula')
               });
             }
 
+            scope.replacePlainNullaryFn = function(text) {
+              return text.replace(/(\w+)(\(\))/g, function(match, fn, parens, offset, string) {
+                return fn;
+              });
+            }
+
             scope.subscriptIndex = function(html) {
               return html;
               //@note disabled for now for proper copy-paste behavior
