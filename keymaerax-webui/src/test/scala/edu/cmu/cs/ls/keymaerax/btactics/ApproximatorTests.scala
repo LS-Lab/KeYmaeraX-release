@@ -100,14 +100,14 @@ class ApproximatorTests extends TacticTestBase {
   "Tactic pretty printer" should "properly print expApproximate tactics" taggedAs KeYmaeraXTestTags.DeploymentTest in {
     val t = Approximator.expApproximate("e".asVariable, Number(10))(1)
     val print = t.prettyString
-    print shouldBe "expApproximate({`e`},{`10`},1)"
+    print shouldBe """expApproximate("e","10",1)"""
     print.asTactic shouldBe t
   }
 
   it should "properly print taylor approximation tactics" taggedAs KeYmaeraXTestTags.DeploymentTest in {
     val t = Approximator.circularApproximate("s".asVariable, "c".asVariable, Number(5))(1)
     val print = BellePrettyPrinter(t)
-    print should equal ("circularApproximate({`s`},{`c`},{`5`},1)") (after being whiteSpaceRemoved)
+    print should equal ("""circularApproximate("s","c","5",1)""") (after being whiteSpaceRemoved)
     print.asTactic shouldBe t
     //@todo check print of parse after patching DerivationInfo.
   }
@@ -115,7 +115,7 @@ class ApproximatorTests extends TacticTestBase {
   it should "properly print and parse top-level autoApproximate tactic" taggedAs KeYmaeraXTestTags.DeploymentTest in {
     val t = Approximator.autoApproximate(Number(10))(1)
     val print = t.prettyString
-    print shouldBe "autoApproximate({`10`},1)"
+    print shouldBe """autoApproximate("10",1)"""
     print.asTactic shouldBe t
   }
 
