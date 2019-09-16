@@ -14,7 +14,7 @@
 <div class="modal-body">
     <uib-tabset justified="false">
         <uib-tab index="1" select="loadDerivationInfos()">
-            <uib-tab-heading>Axioms, Rules, and Tactics</uib-tab-heading>
+            <uib-tab-heading><span class="fa fa-spinner fa-spin" ng-if="axiomsLoading"></span> Axioms, Rules, and Tactics</uib-tab-heading>
             <div class="row">
                 <div class="col-md-12">
                     <div class="panel panel-default">
@@ -43,7 +43,7 @@
             </div>
         </uib-tab>
         <uib-tab index="2" select="loadLemmas()">
-            <uib-tab-heading>Lemmas</uib-tab-heading>
+            <uib-tab-heading><span class="fa fa-spinner fa-spin" ng-if="lemmasLoading"></span> Lemmas</uib-tab-heading>
             <div class="row">
                 <div class="col-md-12">
                     <div ng-repeat="lemma in derivationInfos.lemmas | filter: derivationInfos.filter | orderBy: derivationInfos.order"

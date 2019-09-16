@@ -146,14 +146,18 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             };
 
             scope.browseTactics = function() {
+              scope.axiomsLoading = true;
               derivationInfos.allDerivationInfos(scope.userId, scope.proofId, scope.nodeId).then(function(response) {
                 scope.derivationInfos.infos = response.data;
+                scope.axiomsLoading = false;
               });
             };
 
             scope.browseLemmas = function() {
+              scope.lemmasLoading = true;
               derivationInfos.allLemmas(scope.userId).then(function(response) {
                 scope.derivationInfos.lemmas = response.data;
+                scope.lemmasLoading = false;
               });
             };
 

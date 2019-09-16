@@ -42,7 +42,7 @@
                     <k4-axiom-key-selector axiom="lemma.selected" readonly="false"></k4-axiom-key-selector>
                 </div>
                 <a class="input-group-addon btn btn-default"
-                   ng-click="browseTactics()">Browse...</a>
+                   ng-click="browseTactics()"><span class="fa fa-spinner fa-spin" ng-if="axiomsLoading || lemmasLoading"></span> Browse...</a>
                 <a class="input-group-addon btn btn-default" ng-disabled="!lemma.selected"
                    ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>
             </div>
@@ -60,7 +60,7 @@
                 <div class="col-md-12">
                     <uib-tabset justified="false" active="derivationInfos.kind">
                         <uib-tab index="1" select="browseTactics()">
-                            <uib-tab-heading>Axioms, Rules, and Tactics</uib-tab-heading>
+                            <uib-tab-heading><span class="fa fa-spinner fa-spin" ng-if="axiomsLoading"></span> Axioms, Rules, and Tactics</uib-tab-heading>
                             <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
                                  class="k4-tactic-popover-entry">
                                 <k4-tactic-info user-id="userId" proof-id="proofId" node-id="nodeId"
@@ -71,7 +71,7 @@
                             </div>
                         </uib-tab>
                         <uib-tab index="2" select="browseLemmas()">
-                            <uib-tab-heading>Lemmas</uib-tab-heading>
+                            <uib-tab-heading><span class="fa fa-spinner fa-spin" ng-if="lemmasLoading"></span> Lemmas</uib-tab-heading>
                             <div class="row">
                                 <div class="col-md-12">
                                     <div ng-repeat="lemma in derivationInfos.lemmas | filter: derivationInfos.filter | orderBy: derivationInfos.order"

@@ -15,14 +15,18 @@ angular.module('keymaerax.controllers').controller('LemmaBrowserCtrl',
   };
 
   $scope.loadDerivationInfos = function() {
+    $scope.axiomsLoading = true;
     derivationInfos.allDerivationInfos(userId, proofId, nodeId).then(function(response) {
       $scope.derivationInfos.infos = response.data;
+      $scope.axiomsLoading = false;
     });
   }
 
   $scope.loadLemmas = function() {
+    $scope.lemmasLoading = true;
     derivationInfos.allLemmas(userId).then(function(response) {
       $scope.derivationInfos.lemmas = response.data;
+      $scope.lemmasLoading = false;
     })
   }
 
