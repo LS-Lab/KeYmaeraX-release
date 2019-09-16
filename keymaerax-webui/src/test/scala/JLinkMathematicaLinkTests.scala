@@ -156,8 +156,8 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     theLink.run(new MExpr(new MExpr(Expr.SYMBOL,  "Pause"), Array(new MExpr(5))), trueConverter, executor)
     //@note we wait about 1s of the 5s of the first worker (so if only 1 worker we still wait about 4s)
     // and then another 5s in the second worker (check with a little slack time around 9s for <= 1 worker or 5s for > 1 worker)
-    if (workers <= 1) (System.currentTimeMillis() - intermediate) should (be >= 8800L and be <= 9200L)
-    else (System.currentTimeMillis() - intermediate) should (be >= 4800L and be <= 5200L)
+    if (workers <= 1) (System.currentTimeMillis() - intermediate) should (be >= 8500L and be <= 9500L)
+    else (System.currentTimeMillis() - intermediate) should (be >= 4500L and be <= 5500L)
     executor.availableWorkers() shouldBe workers
   }
 
