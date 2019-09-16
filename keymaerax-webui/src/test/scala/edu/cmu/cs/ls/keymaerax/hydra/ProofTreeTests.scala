@@ -210,8 +210,9 @@ class ProofTreeTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
     val tactics = tree.openGoals.head.applicableTacticsAt(SuccPosition(1))
-    tactics should have size 1
-    tactics.head._1.codeName shouldBe "implyR"
+    tactics should have size 2
+    tactics(0)._1.codeName shouldBe "implyR"
+    tactics(1)._1.codeName shouldBe "chaseAt"
   }
 
   it should "return single-pos tactics with input suggestions" in withDatabase { db =>
@@ -388,8 +389,8 @@ class ProofTreeTests extends TacticTestBase {
       val tactics = goals.head.applicableTacticsAt(SuccPosition(1))
       goals.head.tacticInputSuggestions(SuccPosition(1)) shouldBe empty
 
-      if (i%2==1) tactics shouldBe empty
-      else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
+      if (i%2==1) { tactics should have size 1; tactics(0)._1.codeName shouldBe "chaseAt" }
+      else { tactics should have size 2; tactics(0)._1.codeName shouldBe "implyR"; tactics(1)._1.codeName shouldBe "chaseAt" }
 
       val tacticSuggestionFetch = System.currentTimeMillis()
 
@@ -435,8 +436,8 @@ class ProofTreeTests extends TacticTestBase {
       val tactics = goals.head.applicableTacticsAt(SuccPosition(1))
       goals.head.tacticInputSuggestions(SuccPosition(1)) shouldBe empty
 
-      if (i%2==1) tactics shouldBe empty
-      else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
+      if (i%2==1) { tactics should have size 1; tactics(0)._1.codeName shouldBe "chaseAt" }
+      else { tactics should have size 2; tactics(0)._1.codeName shouldBe "implyR"; tactics(1)._1.codeName shouldBe "chaseAt" }
 
       if (i%2==1) goals.head.runTactic("guest", ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), implyRi, "implyRi", wait=true)
       else goals.head.runTactic("guest", ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), implyR(1), "implyR", wait=true)
@@ -478,8 +479,8 @@ class ProofTreeTests extends TacticTestBase {
         val tactics = goals.head.applicableTacticsAt(SuccPosition(1))
         goals.head.tacticInputSuggestions(SuccPosition(1)) shouldBe empty
 
-        if (i%2==0) tactics shouldBe empty
-        else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
+        if (i%2==0) { tactics should have size 1; tactics(0)._1.codeName shouldBe "chaseAt" }
+        else { tactics should have size 2; tactics(0)._1.codeName shouldBe "implyR"; tactics(1)._1.codeName shouldBe "chaseAt" }
 
         if (i%2==0) goals.head.runTactic("guest", ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), implyRi, "implyRi", wait=true)
         else goals.head.runTactic("guest", ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), implyR(1), "implyR", wait=true)
