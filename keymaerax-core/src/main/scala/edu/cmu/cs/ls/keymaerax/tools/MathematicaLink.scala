@@ -171,7 +171,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         MathLinkFactory.createKernelLink(args)
       } else {
         logger.info("Launching " + engineName)
-        val args = ("-linkmode"::"launch"::"-linkname"::linkName + " -mathlink"::Nil).toArray
+        val args = ("-linkmode"::"launch"::"-linkprotocol"::"tcpip"::"-linkname"::linkName + " -mathlink"::Nil).toArray
         MathLinkFactory.createKernelLink(args)
       }
 
