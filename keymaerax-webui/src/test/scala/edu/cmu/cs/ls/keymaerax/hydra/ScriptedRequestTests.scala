@@ -35,8 +35,8 @@ class ScriptedRequestTests extends TacticTestBase {
     response shouldBe a [ParseErrorResponse]
     response should have (
       'msg ("Unexpected token cannot be parsed"),
-      'found ("] (RBOX$)"),
-      'expect ("; (SEMI$)")
+      'found ("]"),
+      'expect (";")
     )
     db.db.getModelList("guest") shouldBe empty
   }
@@ -112,7 +112,7 @@ class ScriptedRequestTests extends TacticTestBase {
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
     inside (new ExtractTacticRequest(db.db, proofId.toString).getResultingResponses(t).loneElement) {
-      case GetTacticResponse(tacticText) => tacticText shouldBe "hideR(1=={`x>=0->x>=0`})"
+      case GetTacticResponse(tacticText) => tacticText shouldBe """hideR(1=="x>=0->x>=0")"""
     }
   }}
 
@@ -264,7 +264,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = new GetApplicableAxiomsRequest(db.db, db.user.userName, proofId.toString, "()", SuccPosition(1)).
       getResultingResponses(t).loneElement
-    response should have ('derivationInfos ((DerivationInfo("implyR"), None)::Nil), 'suggestedInput (Map.empty))
+    response should have ('derivationInfos ((DerivationInfo("implyR"), None)::(DerivationInfo("chaseAt"), None)::Nil), 'suggestedInput (Map.empty))
   }
 
   it should "work with input suggestion" in withDatabase { db =>
@@ -354,7 +354,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val examplesResponse = new ListExamplesRequest(db.db, userName).getResultingResponses(t).loneElement.getJson
     examplesResponse shouldBe a [JsArray]
     val urls = examplesResponse.asInstanceOf[JsArray].elements.map(_.asJsObject.fields("url").asInstanceOf[JsString].value)
-    urls should have size 6 // change when ListExamplesRequest is updated
+    urls should have size 8 // change when ListExamplesRequest is updated
     val urlsTable = Table("url", urls:_*)
     forEvery(urlsTable) { url =>
       val content = DatabasePopulator.loadResource(url)
@@ -374,7 +374,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelInfos = models.asInstanceOf[JsArray].elements.
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
-    modelInfos should have size 56  // change when ListExamplesRequest is updated
+    modelInfos should have size 87  // change when ListExamplesRequest is updated
     val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>
       println("Importing and opening " + name + "...")
