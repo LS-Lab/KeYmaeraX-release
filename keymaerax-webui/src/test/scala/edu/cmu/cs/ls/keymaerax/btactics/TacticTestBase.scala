@@ -91,14 +91,20 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       "tcpip" -> Configuration(Configuration.Keys.WOLFRAMENGINE_TCPIP))
   }
 
+  /** A tool provider that does not shut down on `shutdown`, but defers to `doShutdown`. */
+  class DelayedShutdownToolProvider(p: ToolProvider) extends PreferredToolProvider(p.tools()) {
+    override def shutdown(): Unit = {} // do not shut down between tests and when switching providers in ToolProvider.setProvider
+    def doShutdown(): Unit = super.shutdown()
+  }
+
   // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
   private val WOLFRAM = System.getProperty("WOLFRAM", "Mathematica")
 
   //@note Initialize once per test class, but only if requested in a withMathematica call
   private var mathematicaProvider =
-    if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
-    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new WolframEngineToolProvider(configFileWolframEngineConfig))
-    else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new WolframScriptToolProvider)
+    if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(new WolframEngineToolProvider(configFileWolframEngineConfig)))
+    else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(new WolframScriptToolProvider))
     else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
@@ -138,7 +144,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
         Configuration.Keys.QE_TOOL -> "mathematica",
         Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
-      val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
+      val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
       val tool = provider.defaultTool() match {
         case Some(m: Mathematica) => m
@@ -150,7 +156,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         tool.cancel()
         t.interrupt()
         provider.shutdown()
-        mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
+        mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
       }
       failAfter(to) { testcode(tool) }
     }
@@ -271,11 +277,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       interpreters = Nil
     } finally {
       PrettyPrinter.setPrinter(e => e.getClass.getName)
-      if (!mathematicaProvider.isInitialized) {
-        //@note only shutdown non-Mathematica tool providers; Mathematica is shutdown in afterAll()
-        ToolProvider.shutdown()
-        ToolProvider.setProvider(new NoneToolProvider())
-      }
+      ToolProvider.shutdown()
+      ToolProvider.setProvider(new NoneToolProvider())
       if (dbTester.isInitialized) {
         dbTester().db.session.close()
         dbTester = null
@@ -289,10 +292,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   override def afterAll(): Unit = {
     //@note reduce number of zombie MathKernels: init and tear down Mathematica once per test class
     if (mathematicaProvider.isInitialized) {
-      ToolProvider.shutdown()
-      ToolProvider.setProvider(new NoneToolProvider())
-      mathematicaProvider().shutdown()
+      mathematicaProvider().doShutdown()
     }
+    ToolProvider.shutdown()
+    ToolProvider.setProvider(new NoneToolProvider())
   }
 
   /** Registers an interpreter for cleanup after test. Returns the registered interpreter. */
