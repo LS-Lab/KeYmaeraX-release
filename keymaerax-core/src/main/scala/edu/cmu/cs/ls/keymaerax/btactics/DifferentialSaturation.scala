@@ -137,7 +137,7 @@ object DifferentialSaturation extends Logging {
   //The substitution is only allowed to instantiate variables in instVars
   def guessInstantiations(fml:Formula, instVars : List[Variable]) : List[Map[Variable,Term]] = {
     //todo: should not be using PQE here, the generated decomposition is heavily dependent on the variable order
-    val pr = proveBy(fml,partialQE)
+    val pr = proveBy(fml, Idioms.?(partialQE))
     if(pr.isProved)
       return List(Map())
 
@@ -152,7 +152,7 @@ object DifferentialSaturation extends Logging {
       val fml2 = repeatedSubst(fml, s)
       if(fml2.isEmpty) false
       else {
-        proveBy(fml2.get.asInstanceOf[Formula], QE).isProved
+        proveBy(fml2.get.asInstanceOf[Formula], Idioms.?(QE)).isProved
       }
     }
     )
