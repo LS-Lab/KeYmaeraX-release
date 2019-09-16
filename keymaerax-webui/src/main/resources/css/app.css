@@ -116,6 +116,10 @@ output {
   height: inherit;
   padding-top: 5px;
   padding-bottom: 5px;
+  max-width: calc(10vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .k4-tactics-nav-first > li > a {
