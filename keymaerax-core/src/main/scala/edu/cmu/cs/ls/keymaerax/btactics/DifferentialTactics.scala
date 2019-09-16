@@ -968,7 +968,7 @@ private object DifferentialTactics extends Logging {
               }
             ) &
           // continue outside <(skip, ...) so that cut is proved before used
-          (odeInvariant()(pos) | fastODE(invariantCandidates)(finish)(pos) /* with next option from iterator */) &
+          (odeInvariant()(pos) & done | fastODE(invariantCandidates)(finish)(pos) /* with next option from iterator */) &
           DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
