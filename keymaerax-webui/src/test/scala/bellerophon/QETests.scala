@@ -61,7 +61,7 @@ class QETests extends TacticTestBase {
 
   it should "fail x()=x" in withMathematica { qeTool =>
     the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
-      """[Bellerophon Runtime] Tactic useAt({`-> self`},1) is not applicable for
+      """[Bellerophon Runtime] Tactic useAt("-> self",1) is not applicable for
         |    \forall x (true->x=x)->\forall x (true->x()=x)
         |at position Fixed(1,None,true)
         |because No substitution found by unification, try to patch locally with own substitution""".stripMargin
@@ -214,9 +214,9 @@ class QETests extends TacticTestBase {
       subgoals.loneElement shouldBe "==> false".asSequent
   }
 
-  it should "turn x^2>=0 |- y>1 into |- y>1" in withMathematica { qeTool =>
+  it should "not forget assumptions on x^2>=0 |- y>1" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq("x^2>=0".asFormula), IndexedSeq("y>1".asFormula)), ToolTactics.partialQE(qeTool)).
-      subgoals.loneElement shouldBe  "==> y>1".asSequent
+      subgoals.loneElement shouldBe  "x^2>=0 ==> y>1".asSequent
   }
 
 }

@@ -192,10 +192,13 @@ private object ToolTactics {
   def partialQE(qeTool: => QETool): BelleExpr = "pQE" by ((s: Sequent) => {
     // dependent tactic so that qeTool is evaluated only when tactic is executed, but not when tactic is instantiated
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    hidePredicates & toSingleFormula & rcf(qeTool) & Idioms.doIf(!_.isProved)(cut(s.ante.filterNot(_.isInstanceOf[PredOf]).reduceRightOption(And).getOrElse(True)) <(
-      SaturateTactic(andL('L)) & SimplifierV3.fullSimpTac(),
-      QE & done
-    ))
+    hidePredicates & toSingleFormula & rcf(qeTool) &
+      (if (s.ante.exists(!_.isInstanceOf[PredOf]))
+        Idioms.doIf(!_.isProved)(cut(s.ante.filterNot(_.isInstanceOf[PredOf]).reduceRight(And)) <(
+          SaturateTactic(andL('L)) & SimplifierV3.fullSimpTac(),
+          QE & done
+        ))
+       else nil)
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
