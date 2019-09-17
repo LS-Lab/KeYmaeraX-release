@@ -94,9 +94,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             runTactic(left, goal, level, ctx, convertPending = false, executePending)
           } catch {
             case e: BelleThrowable =>
-              if (convertPending) return runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
-                convertPending = false, executePending = false)
-              else throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
+              if (convertPending) right match {
+                case t: StringInputTactic if t.name == "pending" =>
+                  return runTactic(DebuggingTactics.pending(BellePrettyPrinter(left) + "; " + t.inputs.head), goal, level, ctx,
+                    convertPending = false, executePending = false)
+                case _ =>
+                  return runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
+                    convertPending = false, executePending = false)
+              } else throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
           }
           try {
             runTactic(right, leftResult, level, leftCtx, convertPending, executePending)
