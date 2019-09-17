@@ -275,7 +275,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           runTactic(t, goal, level - levelDecrement, ctx, convertPending, executePending)
 
         case t: StringInputTactic if t.name == "pending" && executePending =>
-          runTactic(BelleParser(t.inputs.head), goal, level, ctx, convertPending, executePending)
+          runTactic(BelleParser(t.inputs.head.replaceAllLiterally("\\\"", "\"")), goal, level, ctx, convertPending, executePending)
 
         // forward to inner interpreter
         case _ =>
