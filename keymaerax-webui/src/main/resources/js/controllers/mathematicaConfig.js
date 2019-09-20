@@ -13,6 +13,8 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
               if (data.linkName !== "" && data.jlinkLibPath !== "") {
                   $scope.linkName = data.linkName;
                   $scope.jlinkLibPath = data.jlinkLibDir;
+                  $scope.origLinkName = data.linkName;
+                  $scope.origJlinkLibPath = data.jlinkLibDir;
               }
 //          else {
 //            $http.get("/config/mathematica/suggest")
@@ -35,6 +37,8 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                 if (data.success) {
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
+                    $scope.origLinkName = $scope.linkName;
+                    $scope.origJlinkLibPath = $scope.jlinkLibPath;
                     $("#mathematicaConfigurationAlert").hide();
                     $rootScope.mathematicaIsConfigured = data.configured;
                     $scope.$parent.getTool();
@@ -73,6 +77,16 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
 
     $scope.setDefaultJLinkLibPath = function() {
       $scope.jlinkLibPath = $scope.mathematicaConfigSuggestion.suggestion.jlinkPath + $scope.mathematicaConfigSuggestion.suggestion.jlinkName
+    }
+
+    $scope.defaultMathematicaPaths = function() {
+      $scope.setDefaultMathKernel();
+      $scope.setDefaultJLinkLibPath();
+    }
+
+    $scope.resetMathematicaPaths = function() {
+      $scope.linkName = $scope.origLinkName;
+      $scope.jlinkLibPath = $scope.origJlinkLibPath;
     }
 });
 
