@@ -1039,48 +1039,46 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
           }
 
           if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {
-            val monitorFml =  monitorShape match {
-              case "boolean" => monitorCond.subgoals.head.succ.head
-              case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.succ.head)
-            }
+            val monitorFml =  monitorCond.subgoals.head.succ.head
+            val reassociatedCtrlMonitorFml = FormulaTools.reassociate(monitorFml)
+            val proof = TactixLibrary.proveBy(Equiv(monitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop)
+            if (proof.isProved) {
+              val ctrlMonitorProg = TactixLibrary.proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
+              val ctrlInputs = CGenerator.getInputs(ctrlMonitorProg)
+              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(ctrlMonitorProg, stateVars, ctrlInputs, "Monitor")
+              val inputs = CGenerator.getInputs(prg)
+              val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
+              val declarations = ctrlMonitorCode._1.trim
+              val monitorCode = ctrlMonitorCode._2.trim
 
-            val params = CGenerator.getParameters(monitorFml, stateVars)
-            val inputs = CGenerator.getInputs(prg)
-            val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
-              CGenerator.printStateDeclaration(stateVars) + "\n" +
-              CGenerator.printInputDeclaration(inputs)
-            val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
-            val monitorCode = (new CMonitorGenerator)(monitorFml, stateVars, inputs)
+              val sandbox =
+                s"""
+                  |${CGenerator.printHeader(model.name)}
+                  |$declarations
+                  |${fallbackCode._1}
+                  |${fallbackCode._2}
+                  |$monitorCode
+                  |
+                  |state ctrl(state curr, const parameters* const params, const input* const in) {
+                  |  /* controller implementation stub: modify curr to return actuator set values */
+                  |  return curr;
+                  |}
+                  |
+                  |int main() {
+                  |  /* control loop stub */
+                  |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
+                  |  while (true) {
+                  |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
+                  |    input in;   /* resolve non-deterministic assignments in the model */
+                  |    state post = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
+                  |    /* hand post actuator set values to actuators */
+                  |  }
+                  |  return 0;
+                  |}
+                  |""".stripMargin
 
-            val sandbox =
-              s"""
-                |${CGenerator.printHeader(model.name)}
-                |${CGenerator.INCLUDE_STATEMENTS}
-                |$declarations
-                |${fallbackCode._1}
-                |${fallbackCode._2}
-                |${monitorCode._1}
-                |${monitorCode._2}
-                |
-                |state ctrl(state curr, const parameters* const params, const input* const in) {
-                |  /* controller implementation stub: modify curr to return actuator set values */
-                |  return curr;
-                |}
-                |
-                |int main() {
-                |  /* control loop stub */
-                |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
-                |  while (true) {
-                |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
-                |    input in;   /* resolve non-deterministic assignments in the model */
-                |    state post = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
-                |    /* hand post actuator set values to actuators */
-                |  }
-                |  return 0;
-                |}
-                |""".stripMargin
-
-            new ModelPlexArtifactCodeResponse(model, sandbox) :: Nil
+              new ModelPlexArtifactCodeResponse(model, sandbox) :: Nil
+            } else new ErrorResponse("ModelPlex failed: unable to prove equivalence of monitor\n  " + monitorFml.prettyString + " with reassociated form\n  " + reassociatedCtrlMonitorFml.prettyString) :: Nil
           } else new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString) :: Nil
       }
     case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
