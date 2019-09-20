@@ -1193,6 +1193,13 @@ private object DifferentialTactics extends Logging {
   //todo: Awkward usubst lemma placement because this is also needed in ODEInvariance...
   private lazy val dbxCond: ProvableSig = remember("((-g_())*y_()+0)*(z_())^2 + y_()*(2*z_()^(2-1)*(g_()/2*z_()+0))=0".asFormula,QE,namespace).fact
 
+  lazy val dbxLeqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() <= 0 -> z_() <= 0".asFormula,QE,namespace).fact
+  lazy val dbxGeqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() >= 0 -> z_() >= 0".asFormula,QE,namespace).fact
+  lazy val dbxLtRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() < 0 -> z_() < 0".asFormula,QE,namespace).fact
+  lazy val dbxGtRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() > 0 -> z_() > 0".asFormula,QE,namespace).fact
+  lazy val dbxEqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() = 0 -> z_() = 0".asFormula,QE,namespace).fact
+  lazy val dbxNeqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() != 0 -> z_() != 0".asFormula,QE,namespace).fact
+
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
@@ -1206,6 +1213,16 @@ private object DifferentialTactics extends Logging {
       case bop:ComparisonFormula if bop.right.isInstanceOf[Number] && bop.right.asInstanceOf[Number].value == 0 =>
         (bop.left,bop)
       case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}, dgDbx requires 0 on RHS")
+    }
+
+    val dbxRw = pop match {
+      case LessEqual(_,_) => dbxLeqRw
+      case GreaterEqual(_,_) => dbxGeqRw
+      case Less(_,_) => dbxLtRw
+      case Greater(_,_) => dbxGtRw
+      case Equal(_,_) => dbxEqRw
+      case NotEqual(_,_) => dbxNeqRw
+      case _ => ???
     }
 
     val isOpen = property match {
@@ -1243,17 +1260,18 @@ private object DifferentialTactics extends Logging {
       //Postcond:
       //For equalities, != 0 works too, but the > 0 works for >=, > as well
       val gtz = Greater(gvy, zero)
-      val pcy = And(gtz, pop.reapply(Times(gvy, p), zero))
+      val pcy = pop.reapply(Times(gvy, p), zero)
       val pcz = Equal(Times(gvy, Power(gvz, two)), one)
 
       DebuggingTactics.debug("Darboux postcond " + pcy.toString + " " + pcz.toString) &
-        dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+        dG(dey, None)(pos) & //Introduce the dbx ghost
         existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
         diffCut(gtz)(pos) < (
-          boxAnd(pos) & andR(pos) < (
-            diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
+          diffCut(pcy)(pos) <(
+            diffWeakenG(pos) & byUS(dbxRw)
+            ,
             if (isOpen) openDiffInd(pos) else diffInd('full)(pos)
-          ) // Closes p z = 0 invariant
+          )
           ,
           DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
@@ -1299,6 +1317,16 @@ private object DifferentialTactics extends Logging {
     //p>=0 or p>0
     val cf = property.asInstanceOf[ComparisonFormula]
 
+    val dbxRw = cf match {
+      case LessEqual(_,_) => dbxLeqRw
+      case GreaterEqual(_,_) => dbxGeqRw
+      case Less(_,_) => dbxLtRw
+      case Greater(_,_) => dbxGtRw
+      case Equal(_,_) => dbxEqRw
+      case NotEqual(_,_) => dbxNeqRw
+      case _ => ???
+    }
+
     val barrier = cf.left
 
     val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
@@ -1327,7 +1355,7 @@ private object DifferentialTactics extends Logging {
 
     //Postcond:
     val gtz = Greater(gvy, zero)
-    val pcy = And(gtz, cf.reapply(Times(gvy, barrier), zero))
+    val pcy = cf.reapply(Times(gvy, barrier), zero)
     val pcz = Equal(Times(gvy, Power(gvz, two)), one)
 
     //Construct the diff ghost y' = -qy
@@ -1341,11 +1369,11 @@ private object DifferentialTactics extends Logging {
     //Diff ghost z' = qz/2
     val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
     pre &
-      DifferentialTactics.dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+      DifferentialTactics.dG(dey, None)(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
       dC(gtz)(pos) < (
-        boxAnd(pos) & andR(pos) < (
-          diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
+        diffCut(pcy)(pos) <(
+          diffWeakenG(pos) & byUS(dbxRw),
           Dconstify(
           diffInd('diffInd)(pos)
           <(
