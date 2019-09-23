@@ -21,10 +21,17 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     ("a,b,c,d,e,f" split(',')).toList.map(_.asTerm).forall(t => lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) shouldBe true
   }
 
-  "proveBounds" should "pick up all kinds of non-numbers" in withMathematica { qeTool =>
+  it should "pick up all kinds of non-numbers" in withMathematica { qeTool =>
     val assms = IndexedSeq("0 <= f(x)", "f(x) <= 1", "0 <= x", "x <= 1", "0 <= c()", "c() <= 1") map (_.asFormula)
     val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List("0".asTerm))
     ("f(x),x,c()" split(',')).toList.map(_.asTerm).forall(t => lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) shouldBe true
+  }
+
+  it should "pick up numeric constraints" in withMathematica { qeTool =>
+    val assms = IndexedSeq("1 + 2 <= x", "x <= 4*5") map (_.asFormula)
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List("0".asTerm))
+    val x = "x".asVariable
+    lowers.isDefinedAt(x) shouldBe true
   }
 
   val xyz_bounds = IndexedSeq("-10 <= f(x)", "f(x) <= 1", "-3 <= x", "x <= -1", "2 <= c()", "c() <= 4").map(_.asFormula)
