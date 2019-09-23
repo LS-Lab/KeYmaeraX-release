@@ -64,7 +64,7 @@ output {
   font-size: 85%;
 }
 
-@media (max-width: 991px) {
+@media (max-width: 767px) {
 .k4-btn-optional-text {
   display: none;
 }
