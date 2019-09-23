@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -32,6 +33,39 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List("0".asTerm))
     val x = "x".asVariable
     lowers.isDefinedAt(x) shouldBe true
+  }
+
+  it should "pick up interpreted functions in constraints" in withMathematica { qeTool =>
+    val assms = IndexedSeq("min(1, 2) <= x", "x <= max(4,5)") map (_.asFormula)
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List("0".asTerm))
+    val x = "x".asVariable
+    lowers.isDefinedAt(x) shouldBe true
+  }
+
+  it should "compute bounds given by interpreted functions" in withMathematica { qeTool =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val assms = IndexedSeq("min(1, 2) <= x", "x <= max(4,5)", "max(1, 2) <= y", "y <= min(4,5)") map (_.asFormula)
+      val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List("x + y".asTerm))
+      val x = "x".asVariable
+      lowers(x) shouldBe 'proved
+      lowers(x).conclusion.ante shouldBe assms
+      lowers(x).conclusion.succ.loneElement shouldBe "min(1,2)<=x".asFormula
+      uppers(x) shouldBe 'proved
+      uppers(x).conclusion.ante shouldBe assms
+      uppers(x).conclusion.succ.loneElement shouldBe "x <= max(4, 5)".asFormula
+    }
+  }
+
+  it should "compute with interpreted functions" in withMathematica { qeTool =>
+    val assms = IndexedSeq("1 <= x", "x <= 2", "3 <= y", "y <= 5") map (_.asFormula)
+    val t = "min(x, y) + max (x, y)".asTerm
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List(t))
+    lowers(t) shouldBe 'proved
+    lowers(t).conclusion.ante shouldBe assms
+    lowers(t).conclusion.succ.loneElement shouldBe "4*10^0<=min((x,y))+max((x,y))".asFormula
+    uppers(t) shouldBe 'proved
+    uppers(t).conclusion.ante shouldBe assms
+    uppers(t).conclusion.succ.loneElement shouldBe "min((x,y))+max((x,y))<=7*10^0".asFormula
   }
 
   val xyz_bounds = IndexedSeq("-10 <= f(x)", "f(x) <= 1", "-3 <= x", "x <= -1", "2 <= c()", "c() <= 4").map(_.asFormula)

@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import java.math.{MathContext, RoundingMode}
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 
 /** Tests for (hopefully) trustworthy BigDecimal computationss
@@ -22,5 +23,8 @@ class BigDecimalQEToolTests extends TacticTestBase  {
     BigDecimalQETool.eval(Times(Number(b), Number(a))) shouldBe BigDecimal("15.18435")
   }
 
-
+  it should "evaluate interpreted functions" in withMathematica { _ =>
+    BigDecimalQETool.eval("min(2.7182,3.14159)".asTerm) shouldBe BigDecimal("2.7182")
+    BigDecimalQETool.eval("max(2.7182,3.14159)".asTerm) shouldBe BigDecimal("3.14159")
+  }
 }
