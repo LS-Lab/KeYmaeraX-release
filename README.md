@@ -125,7 +125,7 @@ In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Re
 
 11. André Platzer.
 [Uniform substitution at one fell swoop](https://doi.org/10.1007/978-3-030-29436-6_25).
-In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, volume 11716 of LNCS. Springer, 2019.
+In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
 [Isabelle/HOL](http://isa-afp.org/entries/Differential_Game_Logic.html)
 
 Automatic proofs for differential equation invariants are based on:
