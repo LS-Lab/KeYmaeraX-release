@@ -1,11 +1,11 @@
 KeYmaera X Theorem Prover for Hybrid Systems
 ============================================
 
-Self-driving cars, autonomous robots, modern airplanes, or robotic surgery: we increasingly entrust our lives to computers and therefore should strive for nothing but the highest safety standards - mathematical correctness proof. Proofs for such cyber-physical systems can be constructed with the KeYmaera X prover. As a hybrid systems theorem prover, KeYmaera X analyzes the control program and the physical behavior of the controlled system together in differential dynamic logic.
+Self-driving cars, autonomous robots, modern airplanes, or robotic surgery: we increasingly entrust our lives to computers and therefore should strive for nothing but the highest safety standards - mathematical correctness proof. Proofs for such cyber-physical systems can be constructed with the KeYmaera X prover. As a _hybrid systems_ theorem prover, KeYmaera X analyzes the control program and the physical behavior of the controlled system together in _differential dynamic logic_.
 
-KeYmaera X features a minimal core of just about 1700 lines of code that isolates all soundness-critical reasoning. Such a small and simple prover core makes it much easier to trust verification results. Pre-defined and custom tactics built on top of the core drive automated proof search. KeYmaera X comes with a web-based front-end that provides a clean interface for both interactive and automated proving, highlighting the most crucial parts of a verification activity. Besides hybrid systems, KeYmaera X also supports the verification of hybrid games in differential game logic.
+KeYmaera X features a minimal core of just about 1700 lines of code that isolates all soundness-critical reasoning. Such a small and simple prover core makes it much easier to trust verification results. Pre-defined and custom tactics built on top of the core drive automated proof search. KeYmaera X comes with a web-based front-end that provides a clean interface for both interactive and automated proving, highlighting the most crucial parts of a verification activity. Besides hybrid systems, KeYmaera X also supports the verification of _hybrid games_ in _differential game logic_.
 
-More information and precompiled binaries are available at:
+**More information** and precompiled binaries are available at:
   http://keymaeraX.org/
 
 * [Differential dynamic logic grammar](http://keymaerax.org/doc/dL-grammar.md)
@@ -50,17 +50,15 @@ Windows, 64bit, Mathematica 10.4+
 
 #### FAQ: Run Problems
 
-If running `java -jar keymaerax.jar` results in the error `java.lang.module.FindException: Module java.xml.bind not found` then downgrade JDK to version 1.8 till 1.10, because JDK 1.11 is not yet supported.
+1. If running `java -jar keymaerax.jar` results in the error `java.lang.module.FindException: Module java.xml.bind not found` then downgrade Java JDK to version 1.8 (or 1.9 or 1.10), because JDK 1.11 is not yet supported.
 
-If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then update to Java 1.8 and to Mathematica 10+.
-If you need to use an earlier version of Java or Mathematica, you can also run KeYmaera X via
+2. If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then upgrade to Java JDK 1.8 and to Mathematica 10+. If you need to use an earlier version of Java or Mathematica, you can also run KeYmaera X manually via
 
     java -Xss20M -cp keymaerax.jar KeYmaeraX
 
-If KeYmaera X acts weird after an update, clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`.
-You could also try renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly). It is good practice to periodically export KeYmaera X proof archives, because they avoid database upgrade problems.
+3. If KeYmaera X acts weird after an update, clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`. You could also try renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly). It is good practice to periodically export KeYmaera X proof archives, because they avoid database upgrade problems.
 
-Errors related to `com.wolfram.jlink` or `JLinkNativeLibrary` are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10+. Or they may be caused by operating system configuration issues.
+4. Errors related to `com.wolfram.jlink` or `JLinkNativeLibrary` are caused by incompatibilities such as Java JDK 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10+. Or they may be caused by operating system configuration or bit-width issues.
 
 
 Building
