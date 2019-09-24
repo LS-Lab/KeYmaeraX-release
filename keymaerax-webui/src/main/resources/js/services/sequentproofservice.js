@@ -227,6 +227,19 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       show: false
     },
 
+    justifications: {
+      justificationsMap: {},           // { proofId: { nodeId: { ... } } }
+      add: function(proofId, nodeId, justification) {
+        if (!this.justificationsMap[proofId]) {
+          this.justificationsMap[proofId] = {};
+        }
+        this.justificationsMap[proofId][nodeId] = justification;
+      },
+      get: function(proofId, nodeId) {
+        return this.justificationsMap[proofId] ? this.justificationsMap[proofId][nodeId] : undefined;
+      }
+    },
+
     /** Prunes below node `nodeId`, ONLY IN THE UI. Updates the proof tree, agenda, and tactic. */
     uiPruneBelow: function(userId, proofId, nodeId, proofTree, agenda, tactic, newTopAgendaItem, sequentProofData) {
       // prune proof tree

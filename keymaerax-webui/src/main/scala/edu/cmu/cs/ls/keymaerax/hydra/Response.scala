@@ -736,9 +736,9 @@ object Helpers {
   }
 
   /** Only first node's sequent is printed. */
-  def nodesJson(nodes: List[ProofTreeNode], marginLeft: Int, marginRight: Int): List[(String, JsValue)] = {
+  def nodesJson(nodes: List[ProofTreeNode], marginLeft: Int, marginRight: Int, printAllSequents: Boolean = false): List[(String, JsValue)] = {
     if (nodes.isEmpty) Nil
-    else nodeJson(nodes.head, withSequent=true, marginLeft, marginRight) +: nodes.tail.map(nodeJson(_, withSequent=false, marginLeft, marginRight))
+    else nodeJson(nodes.head, withSequent=true, marginLeft, marginRight) +: nodes.tail.map(nodeJson(_, withSequent=printAllSequents, marginLeft, marginRight))
   }
 
   def nodeJson(node: ProofTreeNode, withSequent: Boolean, marginLeft: Int, marginRight: Int): (String, JsValue) = {
@@ -1341,7 +1341,7 @@ case class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, steps
                                 tree: List[ProofTreeNode], openGoals: List[AgendaItem],
                                 marginLeft: Int, marginRight: Int) extends Response {
   private lazy val proofTree = {
-    val theNodes: List[(String, JsValue)] = nodesJson(tree, marginLeft, marginRight)
+    val theNodes: List[(String, JsValue)] = nodesJson(tree, marginLeft, marginRight, printAllSequents=true)
     JsObject(
       "nodes" -> JsObject(theNodes.toMap),
       "root" -> JsString(tree.head.id.toString))
