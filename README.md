@@ -1,5 +1,5 @@
-KeYmaera X
-==========
+KeYmaera X Theorem Prover for Hybrid Systems
+============================================
 
 Self-driving cars, autonomous robots, modern airplanes, or robotic surgery: we increasingly entrust our lives to computers and therefore should strive for nothing but the highest safety standards - mathematical correctness proof. Proofs for such cyber-physical systems can be constructed with the KeYmaera X prover. As a hybrid systems theorem prover, KeYmaera X analyzes the control program and the physical behavior of the controlled system together in differential dynamic logic.
 
@@ -28,11 +28,11 @@ First ensure that the following software is installed
 
 #### Configuration
 KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica and some features are only available when using Mathematica.
-After starting KeYmaera X you can configure arithmetic tools in the _Help->Tool Configuration_ menu.
+After starting KeYmaera X you can configure arithmetic tools in the _KeYmaera X->Configuration_ menu.
 
 Depending on the operating system, Mathematica is installed in different locations. 
 Alternatively, you can also specify which arithmetic tools to use from command line with
-parameters `-mathkernel` and `-jlink`. Parameters that are appropriate when
+parameters `-mathkernel` and `-jlink`. Example parameters that are appropriate when
 Mathematica is installed in the default location are provided below.
 
 #### Default Configuration Parameters per Operating System
