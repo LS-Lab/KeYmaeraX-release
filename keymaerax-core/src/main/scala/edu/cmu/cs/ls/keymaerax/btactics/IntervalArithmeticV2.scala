@@ -167,10 +167,17 @@ object IntervalArithmeticV2 {
   private lazy val multDownSeq = proveBy(
     "(((ff_()<=f_() & f_()<=F_()) & gg_()<=g_() & g_()<=G_()) & ((h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_())<->true)) ==> h_()<=f_()*g_()".asSequent,
     useAt("<=* down", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val divideUpSeq = proveBy(
-    "((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((((G_()<0 | 0<gg_()) & (ff_()/gg_()<=h_() & ff_()/G_()<=h_() & F_()/gg_()<=h_() & F_()/G_()<=h_())))<->true) ==> f_()/g_()<=h_()".asSequent, QE & done)
-  private lazy val divideDownSeq = proveBy(
-    "((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((((G_()<0 | 0<gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))<->true) ==> h_()<=f_()/g_()".asSequent, QE & done)
+  private lazy val divideUpSeq = proveBy(("((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) &" +
+    "((" +
+    "  ( G_()<0 & (ff_()>=h_()*gg_() & ff_()>=h_()*G_() & F_()>=h_()*gg_() & F_()>=h_()*G_())) |" +
+    "  (0<gg_() & (ff_()<=h_()*gg_() & ff_()<=h_()*G_() & F_()<=h_()*gg_() & F_()<=h_()*G_()))" +
+    ")<->true) ==> f_()/g_()<=h_()").asSequent, QE & done)
+  private lazy val divideDownSeq = proveBy(("((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) &" +
+    "((" +
+    "  (  G_()<0 & (h_()*gg_()>=ff_() & h_()*G_()>=ff_() & h_()*gg_()>=F_() & h_()*G_()>=F_())) |" +
+    "  ( 0<gg_() & (h_()*gg_()<=ff_() & h_()*G_()<=ff_() & h_()*gg_()<=F_() & h_()*G_()<=F_()))" +
+    ")<->true) ==> h_()<=f_()/g_()").asSequent,
+    QE & done)
   private lazy val minUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() | G_()<=h_())<->true)) ==> min(f_(),g_())<=h_()".asSequent, useAt("min<= up", PosInExpr(1::Nil))(1) & prop & done)
   private lazy val minDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() & h_()<=gg_())<->true)) ==> h_()<=min(f_(),g_())".asSequent, useAt("<=min down", PosInExpr(1::Nil))(1) & prop & done)
   private lazy val maxUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() & G_()<=h_())<->true)) ==> max(f_(),g_())<=h_()".asSequent, useAt("max<= up", PosInExpr(1::Nil))(1) & prop & done)
