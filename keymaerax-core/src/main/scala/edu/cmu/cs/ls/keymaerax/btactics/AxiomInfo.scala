@@ -111,7 +111,7 @@ object DerivationInfo {
       , {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
-      , {case () => TactixLibrary.assignb}),
+      , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", false, {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new CoreAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
@@ -121,7 +121,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     new CoreAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality y")}),
-    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}),
+    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
     new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
@@ -1203,12 +1203,12 @@ object DerivationInfo {
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solve}, needsTool = true),
+      {case () => TactixLibrary.solve}, needsTool = true, revealInternalSteps = true),
     new PositionTacticInfo("solveEnd",
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( q(sol(t)) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solveEnd}, needsTool = true),
+      {case () => TactixLibrary.solveEnd}, needsTool = true, revealInternalSteps = true),
     new PositionTacticInfo("DGauto",
       "DGauto",
       {case () => TactixLibrary.DGauto}, needsTool = true),
@@ -1423,6 +1423,8 @@ sealed trait DerivationInfo {
   val numPositionArgs: Int = 0
   /** Whether the derivation expects the caller to provide it with a way to generate invariants */
   val needsGenerator: Boolean = false
+  /** Whether the derivation makes internal steps that are useful for users to see. */
+  val revealInternalSteps: Boolean = false
   override def toString: String = "DerivationInfo(" + canonicalName + "," + codeName + ")"
 }
 
@@ -1566,7 +1568,9 @@ class TacticInfo(override val codeName: String, override val display: DisplayInf
   val canonicalName = codeName
 }
 
-case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any,
+                              needsTool: Boolean = false, override val needsGenerator: Boolean = false,
+                              override val revealInternalSteps: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 1
 }
@@ -1579,7 +1583,9 @@ case class TwoPositionTacticInfo(override val codeName: String, override val dis
 case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_, _], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator)
 
-case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_,_], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo,
+                                   override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_,_], needsTool: Boolean = false,
+                                   override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
   extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 1
 }

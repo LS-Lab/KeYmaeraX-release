@@ -948,7 +948,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def tacticJson(info: DerivationInfo): JsObject = {
     JsObject(
       "type" -> JsString("tactic"),
-      "expansible" -> JsBoolean(true),
+      "expansible" -> JsBoolean(info.revealInternalSteps),
       "input" -> inputsJson(info.inputs),
       "help" -> helpJson(info.codeName)
     )
@@ -968,12 +968,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
     val premisesJson = JsArray(premises.map(sequentJson):_*)
     JsObject(
       "type" -> JsString("sequentrule"),
-      "expansible" -> JsBoolean(
-        info.belleExpr match {
-          case _: BuiltInTactic | _: BuiltInLeftTactic | _: BuiltInRightTactic | _: BuiltInPositionTactic | _: BuiltInTwoPositionTactic => false
-          case _ => true
-        }
-      ),
+      "expansible" -> JsBoolean(info.revealInternalSteps),
       "conclusion" -> conclusionJson,
       "premise" -> premisesJson,
       "input" -> inputsJson(info.inputs),
