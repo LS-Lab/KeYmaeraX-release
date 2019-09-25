@@ -79,8 +79,12 @@
                      ng-include="'templates/sequentRuleTemplate.html'"></div>
             </div>
             <div class="col-sm-12 well well-stepjustification" ng-if="justification && justification.visible && justification.kind === 'tactic'">
-                <span> by {{justification.details.tactic}}</span>
+                <span> by </span>
                 <span class="pull-right">
+                    <a class="btn btn-xs btn-default"
+                       uib-popover-template="'proofStepTactic.html'"
+                       popover-trigger="'outsideClick'"
+                       popover-placement="auto bottom-right"><span class="fa fa-file-code-o"> Tactic</span></a>
                     <a class="btn btn-xs btn-default" ng-if="!readOnly" ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a>
                     <span ng-if="justification.details.standardDerivation.codeName !== 'nil'"
                           uib-popover-template="fetchJustificationHelp(justification.details.standardDerivation.codeName)"
@@ -223,4 +227,11 @@
 </script>
 <script type="text/ng-template" id="rulehelp.html">
     <ng-include src="'/help/axiomsrules/' + rulehelp.codeName + '.html'"></ng-include>
+</script>
+<script type="text/ng-template" id="proofStepTactic.html">
+    <div>
+        <span>
+            {{justification.details.tactic}}
+        </span>
+    </div>
 </script>
