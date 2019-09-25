@@ -26,9 +26,11 @@ First ensure that the following software is installed
   The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
   Without active Mathemetica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
 
+[More details on installation, usage, FAQ]((http://keymaeraX.org/download.html)
+
 #### Configuration
 KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica and some features are only available when using Mathematica.
-After starting KeYmaera X you can configure arithmetic tools in the _KeYmaera X->Configuration_ menu.
+After starting KeYmaera X you can configure arithmetic tools in the _KeYmaera X->Preferences_ menu.
 
 Depending on the operating system, Mathematica is installed in different locations. 
 Alternatively, you can also specify which arithmetic tools to use from command line with
@@ -47,19 +49,6 @@ Linux, 64bit, Mathematica 10.4+
 Windows, 64bit, Mathematica 10.4+
 * `-mathkernel "C:\Program Files\Wolfram Research\Mathematica\10.4\MathKernel.exe"`
 * `-jlink "C:\Program Files\Wolfram Research\Mathematica\10.4\SystemFiles\Links\JLink\SystemFiles\Libraries\Windows-x86-64"`
-
-#### FAQ: Run Problems
-
-1. If running `java -jar keymaerax.jar` results in the error `java.lang.module.FindException: Module java.xml.bind not found` then downgrade Java JDK to version 1.8 (or 1.9 or 1.10), because JDK 1.11 is not yet supported.
-
-2. If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then upgrade to Java JDK 1.8 and to Mathematica 10+. If you need to use an earlier version of Java or Mathematica, you can also run KeYmaera X manually via
-
-    java -Xss20M -cp keymaerax.jar KeYmaeraX
-
-3. If KeYmaera X acts weird after an update, clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`. You could also try renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly). It is good practice to periodically export KeYmaera X proof archives, because they avoid database upgrade problems.
-
-4. Errors related to `com.wolfram.jlink` or `JLinkNativeLibrary` are caused by incompatibilities such as Java JDK 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10+. Or they may be caused by operating system configuration or bit-width issues.
-
 
 Building
 ========
