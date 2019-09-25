@@ -26,7 +26,7 @@ First ensure that the following software is installed
   The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
   Without active Mathemetica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
 
-[More details on installation, usage, FAQ]((http://keymaeraX.org/download.html)
+See [more details on installation, usage, FAQ](http://keymaeraX.org/download.html)
 
 #### Configuration
 KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica and some features are only available when using Mathematica.
