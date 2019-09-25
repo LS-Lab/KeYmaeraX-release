@@ -890,6 +890,9 @@ object DerivationInfo {
       , RuleDisplayInfo("CMon", (List(), List("C{o}→C{k}")), List((List(), List("o→k"))))
       , {case () => TactixLibrary.CMon}
     ),
+    InputTacticInfo("CMonCongruence"
+      , SimpleDisplayInfo("CMonCongruence","CMonCongruence")
+      ,List(StringArg("inEqPos")), _ => ((inEqPos: String) => TactixLibrary.CMon(PosInExpr.parse(inEqPos))): TypedFunc[String, BelleExpr]),
 
     // proof management tactics
     InputTacticInfo("debug"
@@ -925,6 +928,9 @@ object DerivationInfo {
     new TacticInfo("id",
       RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => TactixLibrary.closeId}),
+    PositionTacticInfo("idWith",
+      RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
+      {case () => TactixLibrary.closeIdWith}),
     new TacticInfo("close",
       RuleDisplayInfo("Close by ⊥/⊤", (List("&Gamma;", "P", "⊥"), List("⊤", "P", "&Delta;")), Nil),
       {case () => TactixLibrary.close}),

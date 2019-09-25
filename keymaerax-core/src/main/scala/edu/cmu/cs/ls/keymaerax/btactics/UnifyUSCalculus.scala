@@ -333,11 +333,11 @@ trait UnifyUSCalculus {
 
 
   def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, key, linear=false, inst)
+    useAt(axiom.codeName, axiom.provable, key, linear=false, inst, serializeByCodeName = true)
   def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, key, linear=false, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+    useAt(axiom.codeName, axiom.provable, key, linear=false, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")), serializeByCodeName = true)
   def useAt(axiom: ProvableInfo, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear, inst)
+    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear, inst, serializeByCodeName = true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
     useAt("ANON", fact, key, linear=false, inst, serializeByCodeName=true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic =
@@ -396,7 +396,7 @@ trait UnifyUSCalculus {
     val (name, inputs) =
       if (serializeByCodeName) (codeName, Nil)
       else {
-        val info = AxiomInfo.ofCodeName(codeName)
+        val info = DerivationInfo.ofCodeName(codeName)
         ("useAt", if (AxiomIndex.axiomIndex(info.canonicalName)._1 == key) info.canonicalName :: Nil else info.canonicalName :: key.prettyString.substring(1) :: Nil)
       }
     new DependentPositionWithAppliedInputTactic(name, inputs) {
@@ -771,7 +771,7 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CMon(Context)]]
     * @see [[UnifyUSCalculus.CEat())]]
     */
-  def CMon(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CMon congruence") {
+  def CMon(inEqPos: PosInExpr): InputTactic = "CMonCongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
       sequent.succ.head match {
@@ -787,7 +787,7 @@ trait UnifyUSCalculus {
             by(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))))))
       }
     }
-  }
+  })
 
   /** Convenience CMon with hiding. */
   def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
