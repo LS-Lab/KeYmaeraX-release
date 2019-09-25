@@ -83,7 +83,7 @@ abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
   }
   private[bellerophon] def result(provable : ProvableSig): ProvableSig
 }
-case class LabelBranch(label: BelleLabel) extends BelleExpr { override def prettyString: String = s"Label ${label.prettyString}" }
+case class LabelBranch(label: BelleLabel) extends BelleExpr { override def prettyString: String = "label(\"" + label.prettyString + "\")" }
 
 /** ⎵: Placeholder for tactics in tactic contexts. Reserved tactic expression that cannot be executed. */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }
@@ -455,7 +455,7 @@ abstract class LabelledGoalsDependentTactic(override val name: String) extends D
   * @see [[AtPosition]] */
 abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr with AtPosition[DependentTactic] {
   override def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
-  override def prettyString: String = "DependentPositionTactic(" + name + ")"
+  override def prettyString: String = name
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
@@ -761,6 +761,13 @@ case class BelleSubProof(id: Int) extends BelleValue
 trait BelleLabel {
   protected val LABEL_DELIMITER: String = ":"
   def prettyString: String
+}
+object BelleLabel {
+  def fromString(s: String): BelleLabel = {
+    var labels = s.split(":")
+    val parent = BelleTopLevelLabel(labels.head)
+    labels.tail.foldLeft[BelleLabel](parent)({ case (p, label) => BelleSubLabel(p, label) })
+  }
 }
 /** A top-level label for a BelleProvable */
 case class BelleTopLevelLabel(label: String) extends BelleLabel {
