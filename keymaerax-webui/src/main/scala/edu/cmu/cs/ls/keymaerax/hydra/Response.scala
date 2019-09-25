@@ -1349,7 +1349,7 @@ case class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, steps
 
   def getJson = JsObject(
     "tactic" -> JsObject(
-      "stepsTactic" -> JsString(stepsTactic),
+      "stepsTactic" -> JsString(stepsTactic.trim()),
       "parent" -> JsString(tacticParent)
     ),
     "detailsProofId" -> JsString(detailsProofId.toString),
