@@ -750,7 +750,7 @@ object Helpers {
     val parent = node.parent.map(n => JsString(n.id.toString)).getOrElse(JsNull)
 
     val posLocator =
-      if (node.maker.isEmpty) None
+      if (node.maker.isEmpty || node.maker.get.isEmpty) None
       else BelleParser(node.maker.get) match { //@todo probably performance bottleneck
         case pt: AppliedPositionTactic => Some(pt.locator)
         case pt: AppliedDependentPositionTactic => Some(pt.locator)

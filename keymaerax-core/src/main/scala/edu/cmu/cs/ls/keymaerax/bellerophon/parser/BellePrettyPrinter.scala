@@ -17,6 +17,22 @@ import scala.util.Try
 object BellePrettyPrinter extends (BelleExpr => String) {
   override def apply(e: BelleExpr): String = pp(e, 0)
 
+  private def sanitizeUnary(t: String, op: String): String = t match {
+    case "" | "()" => ""
+    case _ => t + op
+  }
+
+  private def sanitizeBinary(left: String, op: String, right: String, sep: String = " "): String = left match {
+    case "" | "()" => right match {
+      case "" | "()" => ""
+      case _ => right
+    }
+    case _ => right match {
+      case "" | "()" => left
+      case _ => left + sep + op + sep + right
+    }
+  }
+
   private def pp(e : BelleExpr, indent: Int): String = {
     // Prefer the code name if one exists for this tactic, but looking up code name may throw exception.
     //      println("Looking for a code name for " + e)
@@ -27,18 +43,20 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       case _ => e match {
         case DefTactic(name, t) => op(e).terminal.img + " " + name + " " + AS.img + " (" + pp(t, indent) + ")"
         case ApplyDefTactic(DefTactic(name, _)) => name
-        case SeqTactic(l,r)     => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
-        case EitherTactic(l,r) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
-        case AfterTactic(l,r) => wrapLeft(e, l, indent) + " " + op(e).terminal.img + " " + wrapRight(e, r, indent)
+        case SeqTactic(l,r)    => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
+        case EitherTactic(l,r) => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
+        case AfterTactic(l,r)  => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
         case BranchTactic(ts) => op(e).terminal.img +
           "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
-        case SaturateTactic(t) => wrapLeft(e, t, indent) + op(e).terminal.img
+        case SaturateTactic(t) => sanitizeUnary(wrapLeft(e, t, indent), op(e).terminal.img)
         case it: StringInputTactic if it.inputs.nonEmpty =>
           val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
           it.name + "(" + eargs + ")"
         case it: StringInputTactic if it.inputs.isEmpty => it.name
-        case b : BuiltInTactic => b.name
-        case b: BuiltInPositionTactic => b.name
+        case BuiltInTactic(name) if name != "ANON" => name
+        case BuiltInTactic(name) if name == "ANON" => ""
+        case BuiltInPositionTactic(name) if name != "ANON" => name
+        case BuiltInPositionTactic(name) if name == "ANON" => ""
         case b: BuiltInLeftTactic => b.name
         case b: BuiltInRightTactic => b.name
         case e: PartialTactic => wrapLeft(e, e.child, indent) + " " + op(e).terminal.img

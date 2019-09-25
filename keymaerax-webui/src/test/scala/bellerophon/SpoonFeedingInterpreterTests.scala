@@ -1131,6 +1131,19 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """.stripMargin)
   }
 
+  it should "work for master on failing QE" in withDatabase { db => withMathematica { _ =>
+    val problem = "x>=0 -> x>=2"
+    val modelContent = s"ProgramVariables Real x; End.\n\n Problem $problem End."
+    val proofId = db.createProof(modelContent, "proof")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = true), 1, strict=false))
+    interpreter(master(), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.goal shouldBe Some("==> false".asSequent)
+    tree.tactic shouldBe BelleParser("implyR(1) ; QE")
+  }}
+
   private def stepInto(node: ProofTreeNode, expectedStep: String, depth: Int = 1)(db: DBAbstraction): (Int, BelleExpr) = {
     val (localProvable, step) = (ProvableSig.startProof(node.conclusion), node.maker.getOrElse("nil"))
     step shouldBe expectedStep

@@ -330,7 +330,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               if (ctx.onBranch >= 0) {
                 if (provable.subgoals.size > 1) tactic match {
                   case t: BuiltInTactic if t.name.startsWith("assert") | t.name.startsWith("print") |
-                    t.name.startsWith("debug") | t.name == "done" =>
+                    t.name.startsWith("debug") | t.name == "done" | t.name == "ANON" =>
                     //@note for now: execute but do not store these no-op tactics
                     runningInner = inner(Nil)
                     runningInner(tactic, goal) match {

@@ -216,6 +216,19 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic.right shouldBe TactixLibrary.nil
   }
 
+  it should "print anonymous tactics empty and reparse without them" in {
+    val t1 = BelleParser(BellePrettyPrinter(TactixLibrary.assertT(_ => false, "Fail") & implyR(1)))
+    t1 shouldBe implyR(1)
+    BellePrettyPrinter(t1) shouldBe "implyR(1)"
+
+    val t2 = BelleParser(BellePrettyPrinter(implyR(1) & TactixLibrary.assertT(_ => false, "Fail")))
+    t2 shouldBe implyR(1)
+    BellePrettyPrinter(t2) shouldBe "implyR(1)"
+
+    BellePrettyPrinter(TactixLibrary.assertT(_ => true, "Succeed") & TactixLibrary.assertT(_ => false, "Fail")) shouldBe ""
+    BellePrettyPrinter(implyR(1) & TactixLibrary.assertT(_ => true, "Succeed") & andL(-1)) shouldBe "(implyR(1)) ; andL(-1)"
+  }
+
   //endregion
 
   //region Either combinator
