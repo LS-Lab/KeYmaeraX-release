@@ -751,9 +751,9 @@ object Helpers {
 
     val posLocator =
       if (node.maker.isEmpty || node.maker.get.isEmpty) None
-      else BelleParser(node.maker.get) match { //@todo probably performance bottleneck
-        case pt: AppliedPositionTactic => Some(pt.locator)
-        case pt: AppliedDependentPositionTactic => Some(pt.locator)
+      else Try(BelleParser(node.maker.get)).toOption match { //@todo probably performance bottleneck
+        case Some(pt: AppliedPositionTactic) => Some(pt.locator)
+        case Some(pt: AppliedDependentPositionTactic) => Some(pt.locator)
         case _ => None
       }
 
