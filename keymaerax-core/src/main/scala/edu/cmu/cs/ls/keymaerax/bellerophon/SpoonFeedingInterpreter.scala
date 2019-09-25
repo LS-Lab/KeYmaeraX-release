@@ -64,7 +64,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
 case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProvider: ProvableSig => Int,
                                    listenerFactory: Int => ((String, Int, Int) => scala.collection.immutable.Seq[IOListener]),
                                    inner: scala.collection.immutable.Seq[IOListener] => Interpreter, descend: Int = 0,
-                                   strict: Boolean = true) extends Interpreter with Logging {
+                                   strict: Boolean = true, convertPending: Boolean = true) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
 
   private var runningInner: Interpreter = _
@@ -76,7 +76,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (runningInner == null) {
-      runTactic(expr, v, descend, DbAtomPointer(startStepIndex))._1
+      runTactic(expr, v, descend, DbAtomPointer(startStepIndex), convertPending)._1
     } else {
       logger.debug("Handing auxiliary proof of an already running tactic (like initiated by UnifyUSCalculus or Simplifier) to fresh inner interpreter")
       inner(Nil)(expr, v)
@@ -138,7 +138,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             case _: BelleThrowable =>
           }
           result
-        case RepeatTactic(_, times) if times < 1 => throw new BelleThrowable("RepeatTactic done")
+        case RepeatTactic(_, times) if times < 1 => (goal, ctx) // nothing to do
         case RepeatTactic(child, times) if times >= 1 =>
           //assert(times >= 1, "Invalid number of repetitions " + times + ", expected >= 1")
           var result: (BelleValue, ExecutionContext) = (goal, ctx)
@@ -178,6 +178,41 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             (BelleProvable(result), resultCtx.closeBranch())
           case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(tactic, "")
         }
+
+        case t@USubstPatternTactic(children) =>
+          val provable = goal match {
+            case BelleProvable(p, _) => p
+            case _ => throw new BelleThrowable("Cannot attempt US unification with a non-Provable value.").inContext(tactic, "")
+          }
+
+          if (provable.subgoals.length != 1)
+            throw new BelleThrowable("Unification of multi-sequent patterns is not currently supported.").inContext(tactic, "")
+
+          //@todo loop through all using the first one whose unificatoin and tactic application ends up being successful as opposed to committing to first unifiable case.
+          //Attempt to find a child that unifies with the input.
+          val unifications = children.map(pair => {
+            val ty = pair._1
+            val expr = pair._2
+            ty match {
+              case SequentType(s) => try {
+                (UnificationMatch(s, provable.subgoals.head), expr)
+              } catch {
+                // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
+                // fall back to user-provided substitution
+                case e: UnificationException =>
+                  //if (BelleExpr.DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
+                  (RenUSubst(Nil), expr)
+              }
+              case _ => throw new BelleThrowable("Cannot unify non-sequent types.").inContext(t, "")
+            }
+          })
+
+          //@note try user-provided last unification
+          val unification: (UnificationMatch.Subst, RenUSubst => BelleExpr) =
+            if (unifications.forall(_._1.isEmpty)) unifications.last
+            else unifications.filterNot(_._1.isEmpty).head
+
+          runTactic(unification._2(unification._1.asInstanceOf[RenUSubst]), goal, level, ctx, convertPending, executePending)
 
         case OnAll(e) =>
           val provable = goal match {
@@ -280,7 +315,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           runTactic(t, goal, level - levelDecrement, ctx, convertPending, executePending)
 
         case t: StringInputTactic if t.name == "pending" && executePending =>
-          runTactic(BelleParser(t.inputs.head.replaceAllLiterally("\\\"", "\"")), goal, level, ctx, convertPending, executePending)
+          runTactic(BelleParser(t.inputs.head.replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, convertPending, executePending)
 
         // forward to inner interpreter
         case _ =>

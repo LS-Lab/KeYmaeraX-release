@@ -395,6 +395,97 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(id, nil), andR(1) ; <(nil, nil))")
   }
 
+  it should "work with nested branching when branching stay open 4" in withDatabase { db =>
+    val problem = "x>=0|x<y -> x>=0&x<y"
+    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & orL(-1) & Idioms.<(andR(1) & Idioms.<(closeId, skip), andR(1) & Idioms.<(skip, closeId)),
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals should have size 2
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(id, nil), andR(1) ; <(nil, id))")
+  }
+
+  it should "work with nested branching and repeat" in withDatabase { db =>
+    val problem = "x>=0|x<y -> x>=0&(x>=0&x<y)"
+    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & orL(-1) <((andR(1) <(closeId, skip))*2, andR(1) <(skip, andR(1) <(skip, closeId))),
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals should have size 3
+    tree.tactic shouldBe BelleParser("implyR(1); orL(-1); <(andR(1); <(id, andR(1); <(id, nil)), andR(1); <(nil, andR(1); <(nil, id)))")
+  }
+
+  it should "work with loop tactic" in withDatabase { db =>
+    val problem = "x>=0 -> [{x:=x+1;}*]x>=0"
+    val modelContent = s"ProgramVariables. R x. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, convertPending=false))
+    interpreter(implyR(1) & loop("x>=0".asFormula)(1),
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals should have size 3
+    tree.tactic shouldBe BelleParser(
+      """implyR(1) ; cutR("[{x:=x+1;}*](x>=0&!false)", 1) ; <(
+        |Iind(1) ; andR(1) ; <(
+        |andR(1) ; <(
+        |  label("Init case"),
+        |    notR(1) ; close
+        |  ),
+        |  cohide(1) ; Goedel ; implyR(1) ; boxAnd(1) ; andR(1) ; <(
+        |  andL('Llast) ; hideL('Llast) ; label("Induction step"),
+        |    andL(-1) ; hideL(-1=="x>=0") ; V(1) ; id
+        |  )
+        |),
+        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; hideL('Llast) ; label("Use case")
+        |)""".stripMargin)
+  }
+
+  it should "work with loop tactic that preserves constants" in withDatabase { db =>
+    val problem = "x>=0 & A>0&B>0&C>0 -> [{x:=x+B;}*]x>=0"
+    val modelContent = s"Definitions Real A,B,C; End. ProgramVariables Real x; End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, convertPending=false))
+    interpreter(implyR(1) & loop("x>=0".asFormula)(1),
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals should have size 3
+    tree.tactic shouldBe BelleParser(
+      """implyR(1) ; andL('L) ; andL('L) ; andL('L) ; cutR("[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)", 1) ; <(
+        |Iind(1) ; andR(1) ; <(
+        |andR(1) ; <(
+        |  label("Init case"),
+        |    andR(1) ; <(
+        |    idWith(1),
+        |      andR(1) ; <(
+        |      idWith(1),
+        |        andR(1) ; <(
+        |        idWith(1),
+        |          notR(1) ; close
+        |        )
+        |      )
+        |    )
+        |  ),
+        |  cohide(1) ; Goedel ; implyR(1) ; boxAnd(1) ; andR(1) ; <(
+        |  andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Induction step"),
+        |    andL(-1) ; hideL(-1=="x>=0") ; V(1) ; id
+        |  )
+        |),
+        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Use case")
+        |)""".stripMargin)
+  }
+
   "Saturation" should "record each iteration as step" in withDatabase { db =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>0&x>1&x>2 -> x>0 End."
     val proofId = db.createProof(modelContent)
@@ -1384,7 +1475,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val proofId = db.createProof(modelFile, "model1")
     val tactic = BelleParser("""pending("implyR(1) ; loop(\"x>0\", 1)")""")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1, strict=false, convertPending=true))
     interpreter(tactic, BelleProvable(p))
     db.extractTactic(proofId) shouldBe BelleParser("""implyR(1) ; pending("loop(\"x>0\", 1)")""")
   }}
