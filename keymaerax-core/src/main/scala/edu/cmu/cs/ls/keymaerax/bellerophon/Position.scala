@@ -71,6 +71,7 @@ object PosInExpr {
 
   /** Parses the binary representation of an int into a PosInExpr */
   def parseInt(i: Int): PosInExpr = if (i > 1) parseInt(i/2) ++ i%2 else PosInExpr(i::Nil)
+  def parse(s: String): PosInExpr = PosInExpr(s.stripPrefix(".").split("\\.").map(_.toInt).toList)
 }
 
 // @note observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
