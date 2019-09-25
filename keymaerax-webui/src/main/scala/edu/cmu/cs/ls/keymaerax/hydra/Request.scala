@@ -1512,12 +1512,11 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
-      case Some(node) if node.children.isEmpty || node.children.head.maker.isEmpty =>
+      case Some(node) if node.maker.isEmpty =>
         new ErrorResponse("Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic")::Nil
-      case Some(node) if node.children.nonEmpty && node.children.head.maker.isDefined =>
-        assert(node.children.nonEmpty && node.children.head.maker.isDefined, "Unable to expand node without tactics")
-        //@note all children share the same maker
-        val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.provable.conclusion), node.children.head.maker.get, node.children.head.makerShortName.get)
+      case Some(node) if node.maker.isDefined =>
+        assert(node.maker.isDefined, "Unable to expand node without tactics")
+        val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
           RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1,

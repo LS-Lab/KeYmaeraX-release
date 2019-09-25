@@ -1003,6 +1003,7 @@ del {
   border-right: none;
   border-bottom: thin solid var(--lsmain);
   margin: 0 0 0 3em;
+  position: relative;
 }
 
 /* must be after k4-proofrow: overrides border styling */
@@ -1012,12 +1013,13 @@ del {
   border-top: none;
   border-right: none;
   border-bottom: none;
+  position: relative;
 }
 
 .k4-proofrow > ul:first-child {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1.4ex 0 0 -0.5em;
+  margin: -1ex 0 0 -4em;
   text-align: right;
   width: 3em;
   display: block;
@@ -1031,17 +1033,18 @@ del {
   color: var(--lsmain);
   display: inline-block;
   white-space: nowrap;
-  width: 3.5em;
+  width: 4em;
 }
 
 .k4-proofrow > ul:nth-child(2) {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1ex 0 0 -1em;
+  margin: -1ex 0 0 0em;
   text-align: left;
   width: 1em;
   display: block;
   position: absolute;
+  top: 100%;
   left: 100%;
 }
 .k4-proofrow > ul:nth-child(2) li {

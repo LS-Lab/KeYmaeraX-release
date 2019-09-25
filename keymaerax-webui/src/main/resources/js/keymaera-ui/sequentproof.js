@@ -231,7 +231,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return sequentProofData.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
       }
 
-      scope.deductionPath.isCollapsed = true;
+      scope.deductionPath.isCollapsed = !scope.readOnly;
 
       scope.manyDigits = '|123456789'.repeat(15);
       scope.characterWidthSequent = {
