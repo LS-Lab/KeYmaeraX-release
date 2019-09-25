@@ -1521,7 +1521,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.provable.conclusion), node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(conjecture)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=false)
+          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1,
+          strict=true, convertPending=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(conjecture))
         innerInterpreter.kill()
