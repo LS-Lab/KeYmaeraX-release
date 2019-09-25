@@ -1522,7 +1522,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val localProofId = db.createProof(conjecture)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
           RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1,
-          strict=true, convertPending=false)
+          strict=false, convertPending=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(conjecture))
         innerInterpreter.kill()

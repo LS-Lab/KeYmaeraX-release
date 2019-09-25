@@ -1160,7 +1160,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent, "proof1")
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), strict=false))
     interpreter(implyR(1) & prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString).load()
