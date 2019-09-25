@@ -133,10 +133,9 @@ abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: St
   override final def resultingResponses(): List[Response] = {
     if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
     //@todo faster query for existence
-    else if (!db.userOwnsProof(username, proofId)) {
+    else if (HyDRAServerConfig.isHosted && db.getProofInfo(proofId).modelId.isDefined && !db.userOwnsProof(username, proofId)) {
       new PossibleAttackResponse("Permission denied") :: Nil
-    }
-    else doResultingResponses()
+    } else doResultingResponses()
   }
 
   protected def doResultingResponses(): List[Response]
