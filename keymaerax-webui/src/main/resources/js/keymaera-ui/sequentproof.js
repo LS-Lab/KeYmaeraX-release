@@ -198,6 +198,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
               justification.details.proofTree.nodesMap = response.data.proofTree.nodes;
               justification.details.proofTree.root = response.data.proofTree.root;
               justification.details.agenda.itemsMap = response.data.openGoals;
+              $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, scope.userId, proofId, v); });
 
               paths = justification.details.proofTree.paths(justification.details.proofTree.rootNode());
               $.each(paths.reverse(), function(i, v) { scope.updateProof(justification.details.agenda, justification.details.proofTree, v); });
