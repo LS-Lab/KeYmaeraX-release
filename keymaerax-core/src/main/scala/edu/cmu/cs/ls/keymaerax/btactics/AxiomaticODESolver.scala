@@ -77,7 +77,7 @@ object AxiomaticODESolver {
   })
 
   /** Axiomatic solver for box ODEs. */
-  private def boxAxiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "doSolve" by ((pos: Position, s: Sequent) => {
+  private def boxAxiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
     val (ode, q, post) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), pp)) => (o, qq, pp)
       case Some(f) => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
