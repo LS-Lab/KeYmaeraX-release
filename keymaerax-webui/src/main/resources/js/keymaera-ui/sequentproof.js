@@ -123,19 +123,19 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
 
       scope.proofStepChildren = function(parentId) {
-        return sequentProofData.proofTree.node(parentId).children;
+        return scope.proofTree.node(parentId).children;
       }
 
       scope.stepAxiom = function() {
         if (scope.explanationNodeId) {
-          var node = sequentProofData.proofTree.node(scope.explanationNodeId)
+          var node = scope.proofTree.node(scope.explanationNodeId)
           return [node.rule];
         } else [];
       }
 
       scope.highlightStepPosition = function(nodeId, highlight) {
         scope.explanationNodeId = highlight ? nodeId : undefined;
-        sequentProofData.proofTree.highlightNodeStep(nodeId, highlight);
+        scope.proofTree.highlightNodeStep(nodeId, highlight);
       }
 
       flatPath = function(item) {
@@ -179,7 +179,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         //@todo check that proof step didn't change either
         if (!sequentProofData.justifications.get(proofId, nodeId)) {
           spinnerService.show('magnifyingglassSpinner')
-          if (!sequentProofData.proofTree.node(nodeId)) {
+          if (!scope.proofTree.node(nodeId)) {
             scope.fetchSectionParent(scope.deductionPath.sections[0]);
           }
           $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand').then(function(response) {
@@ -229,7 +229,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       /* Indicates whether the section has a parent (if its last step has a parent, and the section is not complete) */
       scope.hasParent = function(section) {
         var step = section.path[section.path.length - 1];
-        return sequentProofData.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
+        return scope.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
       }
 
       scope.deductionPath.isCollapsed = !scope.readOnly;
