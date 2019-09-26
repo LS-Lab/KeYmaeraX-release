@@ -30,7 +30,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         //@note add name to derivation so that we can display it as a step
         //@note axioms often have shorter names (->R vs. implyR), tactics often shorter code names (differential cut vs. dC)
         var displayRuleName = node.rule ? (node.rule.codeName ? (node.rule.name.length <= node.rule.codeName.length ? node.rule.name : node.rule.codeName) : node.rule.name) : undefined;
-        if (node.rule) node.rule.derivation.name = displayRuleName;
+        if (node.rule && node.rule.derivation) node.rule.derivation.name = displayRuleName;
         return [node.rule];
       }
       else return [];
