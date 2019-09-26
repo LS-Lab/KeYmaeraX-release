@@ -920,7 +920,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   private def helpJson(codeName: String): JsString = {
     val helpResource = getClass.getResourceAsStream(s"/help/axiomsrules/$codeName.html")
     if (helpResource == null) JsString("")
-    else JsString(scala.io.Source.fromInputStream(helpResource).mkString)
+    else JsString(scala.io.Source.fromInputStream(helpResource)(scala.io.Codec.UTF8).mkString)
   }
 
   def axiomJson(info: DerivationInfo): JsObject = {
