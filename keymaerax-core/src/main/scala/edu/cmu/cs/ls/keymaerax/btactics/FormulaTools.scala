@@ -375,4 +375,12 @@ object FormulaTools extends Logging {
     case True => True
     case False => False
   }
+
+  /** prepends all-quantifiers over given variables to a formula */
+  def quantify(xs: List[Variable], fml: Formula): Formula = xs match {
+    case Nil => fml
+    case x :: xs => Forall(List(x), quantify(xs, fml))
+  }
+
+
 }
