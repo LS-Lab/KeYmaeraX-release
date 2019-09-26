@@ -68,6 +68,19 @@ trait NamedBelleExpr extends BelleExpr {
   override def prettyString: String = name
 }
 
+/** Marker for no-op tactics. */
+trait NoOpTactic {}
+/** Mixing in NoOpTactic with existing tactic instances (e.g., obtained through TacticFactory methods)
+  * @see https://stackoverflow.com/a/3896244
+  */
+object NoOpTactic {
+  import languageFeature.implicitConversions
+  implicit def innerObj[T](o: MixNoOp[T]): T = o.obj
+
+  def ::[T](o: T) = new MixNoOp(o)
+  final class MixNoOp[T] private[NoOpTactic](val obj: T) extends NoOpTactic
+}
+
 /** Give a code name to the given tactic `tactic` for serialization purposes. */
 case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   assert(name == "ANON" || DerivationInfo.hasCodeName(name), s"WARNING: NamedTactic was named $name but this name does not appear in DerivationInfo's list of codeNames.")
@@ -83,7 +96,7 @@ abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
   }
   private[bellerophon] def result(provable : ProvableSig): ProvableSig
 }
-case class LabelBranch(label: BelleLabel) extends BelleExpr { override def prettyString: String = "label(\"" + label.prettyString + "\")" }
+case class LabelBranch(label: BelleLabel) extends BelleExpr with NoOpTactic { override def prettyString: String = "label(\"" + label.prettyString + "\")" }
 
 /** ⎵: Placeholder for tactics in tactic contexts. Reserved tactic expression that cannot be executed. */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }

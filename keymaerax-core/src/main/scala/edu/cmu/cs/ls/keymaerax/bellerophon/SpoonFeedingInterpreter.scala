@@ -165,8 +165,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             val (provables, resultCtx) = branchTactics.zipWithIndex.foldRight((List[BelleValue](), branchCtxs.last))({ case (((ct, cp), i), (accProvables, accCtx)) =>
               val localCtx = branchCtxs(i).glue(accCtx, 0)
               assert(i == localCtx.onBranch, "Expected context branch and branch tactic index to agree, but got context=" + localCtx.onBranch + " vs. index=" + i)
-              // must execute nil branches
-              val branchResult = runTactic(ct, cp, level, localCtx, strict = if (ct==Idioms.nil) true else strict,
+              // must execute at least some tactic on every branch, even if no-op
+              val branchResult = runTactic(ct, cp, level, localCtx, strict = if (ct.isInstanceOf[NoOpTactic]) true else strict,
                 convertPending, executePending)
               val branchOpenGoals = branchResult._1 match {
                 case BelleProvable(bp, _) => bp.subgoals.size
@@ -321,26 +321,27 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
         // forward to inner interpreter
         case _ =>
-          if (!strict && tactic == Idioms.nil) (goal, ctx)
-          else goal match {
+          if (!strict && tactic.isInstanceOf[NoOpTactic]) {
+            // skip recording no-op tactics in non-strict mode (but execute, may throw exceptions that we expect)
+            runningInner = inner(Nil)
+            runningInner(tactic, goal) match { case _: BelleProvable => runningInner = null }
+            (goal, ctx)
+          } else goal match { // record no-op tactics in strict mode
             case BelleProvable(provable, _) if provable.subgoals.isEmpty =>
-              runningInner = inner(scala.collection.immutable.Seq())
+              runningInner = inner(Nil)
               val result = (runningInner(tactic, goal), ctx)
               runningInner = null
               result
             case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
               if (ctx.onBranch >= 0) {
                 if (provable.subgoals.size > 1) tactic match {
-                  case t: BuiltInTactic if t.name.startsWith("assert") | t.name.startsWith("print") |
-                    t.name.startsWith("debug") | t.name == "done" | t.name == "ANON" =>
-                    //@note for now: execute but do not store these no-op tactics
+                  case t: NoOpTactic =>
+                    //@note execute but do not store no-op tactics
                     runningInner = inner(Nil)
-                    runningInner(tactic, goal) match {
-                      case _: BelleProvable =>
-                        runningInner = null
-                        (goal, ctx)
-                    }
+                    runningInner(tactic, goal) match { case _: BelleProvable => runningInner = null }
+                    (goal, ctx)
                   case _ => ???
+                    //@note tactic operating on multiple subgoals without OnAll
                 } else {
                   runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                   runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
@@ -363,7 +364,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                 // for example:
                 // 2=(1,0) ; <(5=(2,0);6=(5,0) ; <nil,nil> , 3=(2,1);4=(3,0))> ; 7=(2,-1) ; <(10=(7,0)=(6,0), 9=(7,1)=(6,1), 8=(7,2)=(4,0))>
                 // where stepId=(prevStepId,branch)
-                assert(tactic == Idioms.nil, "Encountered non-trivial tactic after branch merge")
+                assert(tactic.isInstanceOf[NoOpTactic], "Encountered non-trivial tactic after branch merge")
                 (goal, ctx)
               }
           }
