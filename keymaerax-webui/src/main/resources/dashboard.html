@@ -49,7 +49,7 @@
                     <ul class="dropdown-menu" role="menu">
                         <li><a href="dashboard.html?#/models"><i class="fa fa-file-code-o"></i> Models</a></li>
                         <li><a href="dashboard.html?#/proofs"><i class="fa fa-book"></i> Proofs</a></li>
-                        <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Preferences</a></li>
+                        <li><a ng-click="openPreferences()" ng-show="isLocal"><i class="fa fa-wrench"></i> Preferences</a></li>
                     </ul>
                 </li>
             </ul>

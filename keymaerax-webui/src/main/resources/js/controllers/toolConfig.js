@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ToolConfig',
-  function($scope, $http) {
+  function($scope, $http, $uibModalInstance) {
 
     $scope.systemInfo = {
       info: undefined,
@@ -32,6 +32,7 @@ angular.module('keymaerax.controllers').controller('ToolConfig',
     }
 
     $scope.getTool = function() {
+      $scope.toolStatus.initializing = true;
       $http.get("/config/tool").success(function(data) {
         $scope.toolStatus.tool = data.tool;
         $scope.toolStatus.initialized = true;
@@ -41,7 +42,13 @@ angular.module('keymaerax.controllers').controller('ToolConfig',
         $scope.toolStatus.initialized = false;
         $scope.toolStatus.error = data.textStatus;
         $scope.toolStatus.errorDetails = data.causeMsg;
+      }).finally(function() {
+        $scope.toolStatus.initializing = false;
       });
+    }
+
+    $scope.close = function() {
+      $uibModalInstance.close();
     }
 
     $scope.getTool();

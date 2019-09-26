@@ -1,5 +1,10 @@
-<h1>Tool Configuration</h1>
-
+<div class="modal-header">
+    <h3>
+        <span>Tool Configuration</span>
+        <span class="pull-right"><a ng-click="close()"><span class="fa fa-close"></span></a></span>
+    </h3>
+</div>
+<div class="modal-body modal-nofoot">
 <div class="row">
     <div class="col-md-4">
         <p>KeYmaera&#160;X uses backend tools to prove validity of real arithmetic formulas.
@@ -18,9 +23,13 @@
             </select>
             </span>
         </form>
-        <div ng-class="{'alert': true, 'alert-success': toolStatus.initialized, 'alert-danger': toolStatus.error}">
-            <span ng-if="toolStatus.initialized">Initialized: <i class="fa fa-check"></i></span>
-            <span ng-if="toolStatus.error">{{toolStatus.error}}</span>
+        <div ng-class="{'alert': true,
+                        'alert-success': !toolStatus.initializing && toolStatus.initialized,
+                        'alert-warning': toolStatus.initializing,
+                        'alert-danger': !toolStatus.initializing && toolStatus.error}">
+            <span ng-if="toolStatus.initializing">Initializing: <i class="fa fa-spinner fa-spin"></i></span>
+            <span ng-if="!toolStatus.initializing && toolStatus.initialized">Initialized: <i class="fa fa-check"></i></span>
+            <span ng-if="!toolStatus.initializing && toolStatus.error">{{toolStatus.error}}</span>
         </div>
     </div>
     <div class="col-md-8">
@@ -56,4 +65,5 @@
         simplification, and arithmetic with alternating quantifiers please choose <kbd>Mathematica</kbd> as Arithmetic Solver from the
         drop-down box above.</p>
     <p>In general, complex problems may require trying different tools.</p>
+</div>
 </div>

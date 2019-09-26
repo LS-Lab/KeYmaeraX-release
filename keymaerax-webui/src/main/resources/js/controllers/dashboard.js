@@ -37,6 +37,14 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     $scope.toolConfig = response.data;
   });
 
+  $scope.openPreferences = function() {
+    $uibModal.open({
+      templateUrl: 'partials/tool_config.html',
+      controller: 'ToolConfig',
+      size: 'fullwidth'
+    });
+  };
+
   $scope.isLocal = false;
   $http.get('/isLocal')
       .success(function(data) {

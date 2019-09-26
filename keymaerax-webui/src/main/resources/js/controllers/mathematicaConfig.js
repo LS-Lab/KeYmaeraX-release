@@ -32,6 +32,7 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
         var jlinkLibPath = $scope.jlinkLibPath ? $scope.jlinkLibPath : "";
         var dataObj = {linkName: linkName, jlinkLibDir: jlinkLibPath}
 
+        $scope.$parent.toolStatus.initializing = true;
         $http.post(uri, dataObj)
             .success(function(data) {
                 if (data.success) {
@@ -68,6 +69,8 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
             })
             .error(function(data) {
                 showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration.")
+            }).finally(function() {
+              $scope.$parent.toolStatus.initializing = false;
             })
     }
 
@@ -82,11 +85,15 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
     $scope.defaultMathematicaPaths = function() {
       $scope.setDefaultMathKernel();
       $scope.setDefaultJLinkLibPath();
+      $scope.configureMathematica();
     }
 
     $scope.resetMathematicaPaths = function() {
-      $scope.linkName = $scope.origLinkName;
-      $scope.jlinkLibPath = $scope.origJlinkLibPath;
+      if ($scope.linkName != $scope.origLinkName || $scope.jlinkLibPath != $scope.origJlinkLibPath) {
+        $scope.linkName = $scope.origLinkName;
+        $scope.jlinkLibPath = $scope.origJlinkLibPath;
+        $scope.configureMathematica();
+      }
     }
 });
 
