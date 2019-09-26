@@ -4,11 +4,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import java.util.concurrent.{Callable, ExecutionException, FutureTask}
+import java.util.concurrent.ExecutionException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -16,9 +16,8 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, Promise, TimeoutException}
+import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration.{Duration, MILLISECONDS}
-import scala.util.Try
 import scala.util.control.Breaks._
 
 /**
@@ -31,25 +30,6 @@ import scala.util.control.Breaks._
 abstract class SequentialInterpreter(val listeners: scala.collection.immutable.Seq[IOListener], val throwWithDebugInfo: Boolean = false)
   extends Interpreter with Logging {
   var isDead: Boolean = false
-
-  /** Cancellable future, @see https://stackoverflow.com/questions/16009837/how-to-cancel-future-in-scala */
-  class Cancellable[T](executionContext: scala.concurrent.ExecutionContext, todo: => T) {
-    private val promise = Promise[T]()
-
-    def future: Future[T] = promise.future
-
-    private val jf: FutureTask[T] = new FutureTask[T](() => todo) {
-      override def done(): Unit = promise.complete(Try(get()))
-    }
-
-    def cancel(): Unit = jf.cancel(true)
-
-    executionContext.execute(jf)
-  }
-  object Cancellable {
-    def apply[T](todo: => T)(implicit executionContext: scala.concurrent.ExecutionContext): Cancellable[T] =
-      new Cancellable[T](executionContext, todo)
-  }
 
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted || isDead) {
