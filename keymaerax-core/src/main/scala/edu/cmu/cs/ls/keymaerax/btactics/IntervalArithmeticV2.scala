@@ -81,6 +81,14 @@ object IntervalArithmeticV2 {
       val (la, ua) = eval_ivl(prec)(bounds)(a)
       val (lb, ub) = eval_ivl(prec)(bounds)(b)
       (la.bigDecimal.subtract(ub.bigDecimal, downContext(prec)), ua.bigDecimal.subtract(lb.bigDecimal, upContext(prec)))
+    case FuncOf(m, Pair(a, b)) if m == BigDecimalQETool.minF || m == BigDecimalQETool.maxF =>
+      val (la, ua) = eval_ivl(prec)(bounds)(a)
+      val (lb, ub) = eval_ivl(prec)(bounds)(b)
+      if (m == BigDecimalQETool.minF) {
+        (la.bigDecimal.min(lb.bigDecimal), ua.bigDecimal.min(ub.bigDecimal))
+      } else {
+        (la.bigDecimal.max(lb.bigDecimal), ua.bigDecimal.max(ub.bigDecimal))
+      }
     case Neg(a) =>
       val (la, ua) = eval_ivl(prec)(bounds)(a)
       (-ua, -la)
@@ -159,10 +167,22 @@ object IntervalArithmeticV2 {
   private lazy val multDownSeq = proveBy(
     "(((ff_()<=f_() & f_()<=F_()) & gg_()<=g_() & g_()<=G_()) & ((h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_())<->true)) ==> h_()<=f_()*g_()".asSequent,
     useAt("<=* down", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val divideUpSeq = proveBy(
-    "((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((((G_()<0 | 0<gg_()) & (ff_()/gg_()<=h_() & ff_()/G_()<=h_() & F_()/gg_()<=h_() & F_()/G_()<=h_())))<->true) ==> f_()/g_()<=h_()".asSequent, QE & done)
-  private lazy val divideDownSeq = proveBy(
-    "((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((((G_()<0 | 0<gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))<->true) ==> h_()<=f_()/g_()".asSequent, QE & done)
+  private lazy val divideUpSeq = proveBy(("((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) &" +
+    "((" +
+    "  ( G_()<0 & (ff_()>=h_()*gg_() & ff_()>=h_()*G_() & F_()>=h_()*gg_() & F_()>=h_()*G_())) |" +
+    "  (0<gg_() & (ff_()<=h_()*gg_() & ff_()<=h_()*G_() & F_()<=h_()*gg_() & F_()<=h_()*G_()))" +
+    ")<->true) ==> f_()/g_()<=h_()").asSequent, QE & done)
+  private lazy val divideDownSeq = proveBy(("((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) &" +
+    "((" +
+    "  (  G_()<0 & (h_()*gg_()>=ff_() & h_()*G_()>=ff_() & h_()*gg_()>=F_() & h_()*G_()>=F_())) |" +
+    "  ( 0<gg_() & (h_()*gg_()<=ff_() & h_()*G_()<=ff_() & h_()*gg_()<=F_() & h_()*G_()<=F_()))" +
+    ")<->true) ==> h_()<=f_()/g_()").asSequent,
+    QE & done)
+  private lazy val minUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() | G_()<=h_())<->true)) ==> min(f_(),g_())<=h_()".asSequent, useAt("min<= up", PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val minDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() & h_()<=gg_())<->true)) ==> h_()<=min(f_(),g_())".asSequent, useAt("<=min down", PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val maxUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() & G_()<=h_())<->true)) ==> max(f_(),g_())<=h_()".asSequent, useAt("max<= up", PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val maxDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() | h_() <= gg_())<->true))==>h_() <= max(f_(),g_())".asSequent, useAt("<=max down", PosInExpr(1::Nil))(1) & prop & done)
+
 
   // Formulas
   private lazy val leBothSeq = proveBy(
@@ -495,6 +515,93 @@ object IntervalArithmeticV2 {
           case _ =>
             throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +
               "Binary operation " + t.getClass.getSimpleName + " not implemented.")
+        }
+      case FuncOf(m, Pair(f, g)) if m == BigDecimalQETool.minF || m == BigDecimalQETool.maxF =>
+        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1)(g)
+        val ff_prv = lowers2(f)
+        val gg_prv = lowers2(g)
+        val F_prv = uppers2(f)
+        val G_prv = uppers2(g)
+        val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val G_fml = G_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val ff = ff_fml.left
+        val gg = gg_fml.left
+        val F = F_fml.right
+        val G = G_fml.right
+
+        val h = eval_ivl_term(prec)(FuncOf(m, Pair(ff, gg)))._1
+        val H = eval_ivl_term(prec)(FuncOf(m, Pair(F, G)))._2
+        if (m == BigDecimalQETool.minF) {
+          val minDown = minDownSeq.apply(USubst(
+            SubstitutionPair(t_h, h) ::
+              SubstitutionPair(t_f, f) ::
+              SubstitutionPair(t_g, g) ::
+              SubstitutionPair(t_ff, ff) ::
+              SubstitutionPair(t_gg, gg) :: Nil))
+          val minUp = minUpSeq.apply(USubst(
+            SubstitutionPair(t_h, H) ::
+              SubstitutionPair(t_f, f) ::
+              SubstitutionPair(t_g, g) ::
+              SubstitutionPair(t_F, F) ::
+              SubstitutionPair(t_G, G) :: Nil))
+
+          val h_le = ProvableSig.proveArithmetic(qeTool, minDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val H_le = ProvableSig.proveArithmetic(qeTool, minUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+
+          val h_prv = (CutHide(minDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+            apply(minDown, 0).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(CoHideRight(SuccPos(0)), 1).
+            apply(h_le, 1).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(gg_prv, 1).  // be stable by operating on last subgoal
+            apply(ff_prv, 0)
+          val H_prv = (CutHide(minUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+            apply(minUp, 0).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(CoHideRight(SuccPos(0)), 1).
+            apply(H_le, 1).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(G_prv, 1).
+            apply(F_prv, 0)
+          (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+        } else /* max */ {
+          val maxDown = maxDownSeq.apply(USubst(
+            SubstitutionPair(t_h, h) ::
+              SubstitutionPair(t_f, f) ::
+              SubstitutionPair(t_g, g) ::
+              SubstitutionPair(t_ff, ff) ::
+              SubstitutionPair(t_gg, gg) :: Nil))
+          val maxUp = maxUpSeq.apply(USubst(
+            SubstitutionPair(t_h, H) ::
+              SubstitutionPair(t_f, f) ::
+              SubstitutionPair(t_g, g) ::
+              SubstitutionPair(t_F, F) ::
+              SubstitutionPair(t_G, G) :: Nil))
+
+          val h_le = ProvableSig.proveArithmetic(qeTool, maxDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val H_le = ProvableSig.proveArithmetic(qeTool, maxUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+
+          val h_prv = (CutHide(maxDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
+            apply(maxDown, 0).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(CoHideRight(SuccPos(0)), 1).
+            apply(h_le, 1).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(gg_prv, 1).  // be stable by operating on last subgoal
+            apply(ff_prv, 0)
+          val H_prv = (CutHide(maxUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+            apply(maxUp, 0).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(CoHideRight(SuccPos(0)), 1).
+            apply(H_le, 1).
+            apply(AndRight(SuccPos(0)), 0).
+            apply(G_prv, 1).
+            apply(F_prv, 0)
+          (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
         }
       case _ =>
         throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +

@@ -11,10 +11,16 @@ import scala.collection.immutable.Map
   */
 object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
   initialized = true
+
+  // TODO: taken from DifferentialTactics, should perhaps be in a more central place?
+  val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
+  val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
+
   def isNumeric(t: Term) : Boolean = t match {
     case t: BinaryCompositeTerm => isNumeric(t.left) && isNumeric(t.right)
     case t: UnaryCompositeTerm => isNumeric(t.child)
     case Number(a) => true
+    case FuncOf(m, Pair(a, b)) if m == minF || m == maxF => isNumeric(a) && isNumeric(b)
     case _ => false
   }
   def eval(t: Term) : BigDecimal = t match {
@@ -24,6 +30,8 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case Times(a, b) => eval(a) * eval(b)
     case Power(a, Number(n)) if n.isValidInt && n>=0 => eval(a) pow n.toIntExact
     case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
+    case FuncOf(m, Pair(a, b)) if m == minF => eval(a) min eval(b)
+    case FuncOf(m, Pair(a, b)) if m == maxF => eval(a) max eval(b)
     case Divide(a, b) => throw new IllegalArgumentException("Division is not guaranteed to be representable without error: " + t)
   }
   def eval(fml: Formula) : Boolean = fml match {
