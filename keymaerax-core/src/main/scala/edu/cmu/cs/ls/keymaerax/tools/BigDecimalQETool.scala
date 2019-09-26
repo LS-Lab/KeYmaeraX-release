@@ -28,7 +28,12 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case Minus(a, b) => eval(a) - eval(b)
     case Neg(a) => -eval(a)
     case Times(a, b) => eval(a) * eval(b)
-    case Power(a, Number(n)) if n.isValidInt && n>=0 => eval(a) pow n.toIntExact
+    case Power(a, b) =>
+      (eval(a), eval(b)) match {
+        case (x, y) if y.isValidInt && y >= 0 => x pow y.toIntExact
+        case (x, y) if x == BigDecimal(10) && y.isValidInt => BigDecimal(1).bigDecimal.scaleByPowerOfTen(y.toIntExact)
+        case _ => throw new IllegalArgumentException("Power neither of 10 nor by nonnegative integer")
+      }
     case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
     case FuncOf(m, Pair(a, b)) if m == minF => eval(a) min eval(b)
     case FuncOf(m, Pair(a, b)) if m == maxF => eval(a) max eval(b)
