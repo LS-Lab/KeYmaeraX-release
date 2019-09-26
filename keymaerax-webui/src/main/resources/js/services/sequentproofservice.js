@@ -379,6 +379,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           newAgendaItem.deduction.sections[0].path.unshift(node.id);
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
+        if (proofUpdate.newNodes.length == 0) {
+          $rootScope.$broadcast('agenda.branchClosed', {proofId: proofId});
+        }
         delete theAgenda.itemsMap[oldAgendaItem.id];
         var agendaIds = theAgenda.itemIds();
         if (theAgenda.selectedId() === undefined && agendaIds.length > 0) {
