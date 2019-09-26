@@ -175,6 +175,16 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return 'rulehelp.html';
       }
 
+      scope.justificationNode = function(nodeId) {
+        //@note cannot use index verbatim since spoonfeeding interpreter and sequential interpreter create branches in different order
+        var branchId = branchId = parseInt(nodeId.split(",")[1][0], 10);
+        var outer = scope.proofTree.node(nodeId).rule;
+        if (outer.codeName == "loop") {
+          branchId = branchId == 0 ? 2 : branchId == 1 ? 0 : 1;
+        }
+        return scope.justification(scope.proofId, nodeId).details.agenda.items()[branchId];
+      }
+
       scope.stepInto = function(proofId, nodeId) {
         //@todo check that proof step didn't change either
         if (!sequentProofData.justifications.get(proofId, nodeId)) {
