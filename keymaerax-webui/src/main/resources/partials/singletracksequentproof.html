@@ -166,17 +166,17 @@
                      ng-include="'templates/sequentRuleTemplate.html'"></div>
             </div>
             <div class="col-sm-12 well well-stepjustification" ng-if="justification && justification.visible && justification.kind === 'tactic'">
-                <span> by </span>
+                <kbd>{{proofTree.node(step).rule.codeName}}</kbd>
                 <span class="pull-right">
                     <a class="btn btn-xs btn-default"
                        uib-popover-template="'proofStepTactic.html'"
                        popover-trigger="'outsideClick'"
                        popover-placement="auto bottom-right"><span class="fa fa-file-code-o"> Tactic</span></a>
                     <a class="btn btn-xs btn-default" ng-if="!readOnly" ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a>
-                    <span ng-if="justification.details.standardDerivation.codeName !== 'nil'"
-                          uib-popover-template="fetchJustificationHelp(justification.details.standardDerivation.codeName)"
-                          popover-placement="auto bottom-right"
-                          popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
+<!--                    <span ng-if="justification.details.standardDerivation.codeName !== 'nil'"-->
+<!--                          uib-popover-template="fetchJustificationHelp(justification.details.standardDerivation.codeName)"-->
+<!--                          popover-placement="auto bottom-right"-->
+<!--                          popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>-->
                 </span>
                 <k4-sequentproof user-id="userId"
                                  proof-id="justification.details.proofId"
