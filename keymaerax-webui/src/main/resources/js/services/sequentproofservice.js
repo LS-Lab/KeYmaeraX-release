@@ -144,18 +144,25 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         htmlNodeId: function(nodeId) { return nodeId.replace(/\(|\)/g, "").replace(/,/g, "-"); },
         /** Highlights the operator where the step that created sequent/node `nodeId` was applied. */
         highlightNodeStep: function(nodeId, highlight) {
-          var node = this.node(nodeId);
-          node.isHighlighted = highlight;
-          var pos = node.rule.pos.replace(/\./g, "\\,");
-          var element = $("#seq_"+this.htmlNodeId(node.parent) + " #fml_"+pos);
-          if (highlight) {
-            if (node.rule.asciiName == "WL" || node.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
-            else element.addClass("k4-highlight-steppos");
-            if (element.text().startsWith("[") || element.text().startsWith("<")) {
-              if (node.rule.asciiName == "[]^" || node.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
-              else element.addClass("k4-highlight-steppos-modality-prg");
-            }
-          } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+          // branching tactic: tree may include other child
+          var nodeIdHead = nodeId.split(",")[0];
+          var node = undefined;
+          for (i = 0; i<3 && !node; i++) {
+            node = this.node(nodeIdHead + "," + i + ")");
+          }
+          if (node) {
+            node.isHighlighted = highlight;
+            var pos = node.rule.pos.replace(/\./g, "\\,");
+            var element = $("#seq_" + this.htmlNodeId(node.parent) + " #fml_" + pos);
+            if (highlight) {
+              if (node.rule.asciiName == "WL" || node.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
+              else element.addClass("k4-highlight-steppos");
+              if (element.text().startsWith("[") || element.text().startsWith("<")) {
+                if (node.rule.asciiName == "[]^" || node.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
+                else element.addClass("k4-highlight-steppos-modality-prg");
+              }
+            } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+          }
         },
         highlightedNode: function() {
           var theNodes = $.map(this.nodesMap, function(v) {return v;});
