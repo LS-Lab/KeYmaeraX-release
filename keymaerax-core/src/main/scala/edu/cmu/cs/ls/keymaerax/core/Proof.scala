@@ -598,7 +598,7 @@ object Provable {
   /** List of the class names of all external real arithmetic tools whose answers KeYmaera X would believe */
   private[this] val trustedTools: immutable.List[String] =
   "edu.cmu.cs.ls.keymaerax.tools.Mathematica" :: "edu.cmu.cs.ls.keymaerax.tools.Z3" ::
-    (if (LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
+    (if (LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Polya" :: "edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool$" :: Nil else Nil)
 
 
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. (convenience method) */
