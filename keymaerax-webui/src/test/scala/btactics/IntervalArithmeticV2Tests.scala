@@ -169,6 +169,12 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     proveBy("0<=a,a<=1,2<=b,b<=5 ==> -2 < a*b - a".asSequent, intervalArithmetic) shouldBe 'proved
   }
 
+  it should "prove powers of 0" in withMathematica { _ =>
+    proveBy("-2 <= a, a <= -1, b = 1, 1 <= c, c <= 2 ==> a^0 = 1 & b^0 = 1 & c^0 = 1".asSequent,
+      intervalArithmetic
+    ) shouldBe 'proved
+  }
+
   "intervalArithmetic" should "cooperate with prop" in withMathematica { _ =>
     proveBy("(0<=a&a<=1&2<=b&b<=5)->(-2 < a*b - a & a*b - a <= 5)".asFormula, prop & OnAll(intervalArithmetic)) shouldBe 'proved
   }

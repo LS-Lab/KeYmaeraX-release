@@ -49,8 +49,13 @@ object IntervalArithmeticV2 {
     op_endpoints((a, b, c) => a.bigDecimal.divide(b.bigDecimal, c))(prec)(bounds)(lat, uat)(lbt, ubt)
 
   private def power_endpoints(prec: Int)(bounds: DecimalBounds)(lat: Term, uat: Term)(n: Int) : (BigDecimal, BigDecimal) = {
+    assert(n>=0)
     val (la, _) = eval_ivl(prec)(bounds)(lat)
     val (_, ua) = eval_ivl(prec)(bounds)(uat)
+    if (n == 0) {
+      if (la > 0 || ua < 0) (1, 1)
+      else throw new IllegalArgumentException("Power [" + la + ", " + ua + "]^0 is not defined")
+    }
     val lower: BigDecimal =
       if (n % 2 == 1) la.bigDecimal.pow(n, downContext(prec))
       else {
@@ -475,7 +480,7 @@ object IntervalArithmeticV2 {
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
-          case Power(_, i: Number) if i.value.isValidInt && i.value >= 1 =>
+          case Power(_, i: Number) if i.value.isValidInt && i.value >= 0 =>
             // Lower Bound
             val n = i.value.toIntExact
             val ivl = power_endpoints(prec)(DecimalBounds())(ff, F)(n)
