@@ -209,7 +209,7 @@ object DerivationInfo {
       , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
       , _ => ((fml: Formula) => DifferentialTactics.diffRefine(fml)): TypedFunc[Formula, BelleExpr]),
     PositionTacticInfo("dCi"
-      , RuleDisplayInfo("Inverse Differential Cut"
+      , RuleDisplayInfo("dCi"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))
         , /* premises */ List(
           (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
