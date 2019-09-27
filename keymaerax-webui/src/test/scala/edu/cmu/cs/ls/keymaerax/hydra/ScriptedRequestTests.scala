@@ -208,7 +208,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1))
-    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()").getResultingResponses(t).loneElement) {
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "implyR"
         stepsTactic shouldBe ""
@@ -223,7 +223,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", prop)
-    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()").getResultingResponses(t).loneElement) {
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
         stepsTactic shouldBe "implyR(1) ; andL(-1)"
@@ -238,7 +238,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", master())
-    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()").getResultingResponses(t).loneElement) {
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "master"
         stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; QE"

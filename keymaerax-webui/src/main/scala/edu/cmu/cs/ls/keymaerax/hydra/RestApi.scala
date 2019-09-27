@@ -484,8 +484,10 @@ object RestApi extends Logging {
 
     val proofTaskExpand: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "expand") { (userId, proofId, nodeId) => { pathEnd {
       get {
-        val request = new ProofTaskExpandRequest(database, userId, proofId, nodeId)
-        completeRequest(request, t)
+        parameters('strict.as[Boolean]) { strict =>
+          val request = new ProofTaskExpandRequest(database, userId, proofId, nodeId, strict)
+          completeRequest(request, t)
+        }
       }
     }}}
 

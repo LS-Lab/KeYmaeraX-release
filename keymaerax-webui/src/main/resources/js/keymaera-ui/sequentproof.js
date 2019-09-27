@@ -185,14 +185,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return scope.justification(scope.proofId, nodeId).details.agenda.items()[branchId];
       }
 
-      scope.stepInto = function(proofId, nodeId) {
+      scope.stepInto = function(proofId, nodeId, event) {
         //@todo check that proof step didn't change either
         if (!sequentProofData.justifications.get(proofId, nodeId)) {
           spinnerService.show('magnifyingglassSpinner')
           if (!scope.proofTree.node(nodeId)) {
             scope.fetchSectionParent(scope.deductionPath.sections[0]);
           }
-          $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand').then(function(response) {
+          $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand?strict=' + (event && event.altKey)).then(function(response) {
             scope.deductionPath.isCollapsed=false;
             if (response.data.proofTree.nodes !== undefined) {
               var justification = {

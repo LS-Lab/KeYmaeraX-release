@@ -1506,7 +1506,7 @@ class ProofNodeSequentRequest(db: DBAbstraction, userId: String, proofId: String
   }
 }
 
-class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, strict: Boolean)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
@@ -1520,7 +1520,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val localProofId = db.createProof(conjecture)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
           RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1,
-          strict=false, convertPending=false)
+          strict=strict, convertPending=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(conjecture))
         innerInterpreter.kill()
