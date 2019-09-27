@@ -946,7 +946,7 @@ object DerivationInfo {
 
     // Proof rule input tactics
     new InputTacticInfo("cut"
-      , RuleDisplayInfo(("Cut","cut")
+      , RuleDisplayInfo(("cut","cut")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
           (List("&Gamma;"),List("&Delta;","P")),
@@ -959,11 +959,11 @@ object DerivationInfo {
           (List("&Gamma;", "freshVar=theta"),List("&Delta;"))))
       ,List(TermArg("theta"),VariableArg("freshVar", "freshVar"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
     // Proof rule input position tactics
-    new InputPositionTacticInfo("cutL", "Cut", List(FormulaArg("cutFormula")),
+    new InputPositionTacticInfo("cutL", "cutL", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("cutR", "Cut", List(FormulaArg("cutFormula")),
+    new InputPositionTacticInfo("cutR", "cutR", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutR(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("cutLR", "Cut", List(FormulaArg("cutFormula")),
+    new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutLR(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("loop",
       RuleDisplayInfo("Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
@@ -1039,7 +1039,7 @@ object DerivationInfo {
 
     new InputPositionTacticInfo(
       "discreteGhost",
-      RuleDisplayInfo(("[:=] ghost", "[:=] ghost"), (List("&Gamma;"),List("P","&Delta;")),
+      RuleDisplayInfo(("iG", "iG"), (List("&Gamma;"),List("P","&Delta;")),
         List((List("&Gamma;"), List("[gv:=gt;]P","&Delta;")))),
       TermArg("gt") :: VariableArg("gv", "gv"::Nil) :: Nil,
       _ => ((t:Term) => ((v: Option[Variable]) => DLBySubst.discreteGhost(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
