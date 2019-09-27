@@ -14,6 +14,16 @@ import scala.collection.immutable._
 /** Tests for Interval Arithmetic
   * @author Fabian Immler
   */
+object IntervalArithmeticV2Tests {
+  def timing[B](s: String)(f: () => B) : B = {
+    val tic = System.nanoTime()
+    val res = f()
+    val toc = System.nanoTime()
+    System.out.println("Timing for " + s + ": " + (toc - tic)/1000000000.0 + "s")
+    res
+  }
+}
+
 class IntervalArithmeticV2Tests extends TacticTestBase  {
 
   "proveBounds" should "pick up all kinds of constraints" in withMathematica { qeTool =>
@@ -166,14 +176,6 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     "==>" +
     "a*b+c*d*(e+f*g*h+x*y*z + i*j*k*(l + (m*n*(o + (p*q - r*s))))) <= 17808*10^0").asSequent
 
-  def timing[B](s: String)(f: () => B) : B = {
-    val tic = System.nanoTime()
-    val res = f()
-    val toc = System.nanoTime()
-    System.out.println("Timing for " + s + ": " + (toc - tic)/1000000000.0 + "s")
-    res
-  }
-
   "intervalArithmetic" should "prove Comparisons in succedent" in withMathematica { _ =>
     proveBy("0<=a,a<=1,2<=b,b<=5 ==> a*b - a <= 5".asSequent, intervalArithmetic) shouldBe 'proved
     proveBy("0<=a,a<=1,2<=b,b<=5 ==> a*b - a < 6".asSequent, intervalArithmetic) shouldBe 'proved
@@ -237,15 +239,16 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     val res = proveBy(seq, intervalArithmetic)
     res shouldBe 'proved
   }
+
   "intervalCut" should "be fast" in withMathematica { _ =>
-    timing("intervalCut")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
-    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
-    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+    IntervalArithmeticV2Tests.timing("intervalCut")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+    IntervalArithmeticV2Tests.timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+    IntervalArithmeticV2Tests.timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
   }
   "Slow.intervalArithmetic" should "be slow" taggedAs(SlowTest) in withMathematica { _ =>
-    timing("intervalArithmetic")(() => proveBy(seq2, Slow.intervalArithmetic & done))
-    timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
-    timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
+    IntervalArithmeticV2Tests.timing("intervalArithmetic")(() => proveBy(seq2, Slow.intervalArithmetic & done))
+    IntervalArithmeticV2Tests.timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
+    IntervalArithmeticV2Tests.timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
   }
 
 }

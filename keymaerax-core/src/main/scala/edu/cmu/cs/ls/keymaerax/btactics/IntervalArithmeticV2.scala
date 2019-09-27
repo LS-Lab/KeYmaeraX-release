@@ -842,7 +842,7 @@ object IntervalArithmeticV2 {
     }
   }
 
-  private def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
     requireOneSucc(seq, "intervalArithmeticBool")
     seq.succ(0) match {
       case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))
