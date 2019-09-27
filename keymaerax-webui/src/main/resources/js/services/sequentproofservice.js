@@ -1,8 +1,12 @@
 /** Makes a node that fetches its sequent lazily */
 makeLazyNode = function(http, userId, proofId, node) {
-  node.getSequent = function() {
+  /** Returns a sequent object that may be filled in later. Use callback to wait for a filled sequent. */
+  node.getSequent = function(callback) {
     var theNode = node;
-    if (theNode.sequent) return theNode.sequent;
+    if (theNode.sequent) {
+      if (callback) callback(theNode.sequent);
+      return theNode.sequent;
+    }
     else {
       theNode.sequent = {};
       http.get('proofs/user/' + userId + '/' + proofId + '/' + theNode.id + '/sequent').then(function(response) {
@@ -13,6 +17,7 @@ makeLazyNode = function(http, userId, proofId, node) {
           theNode.sequent.ante = [];
           theNode.sequent.succ = [];
         }
+        if (callback) callback(theNode.sequent);
       });
       return theNode.sequent;
     }

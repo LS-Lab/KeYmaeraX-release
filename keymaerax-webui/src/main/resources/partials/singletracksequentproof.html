@@ -30,8 +30,37 @@
                         on-apply-two-position-tactic="onApplyTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequent>
         </div>
     </div>
-    <div ng-if="deductionPath.isCollapsed">
-        <div class="row k4-proofrow k4-proofrow-last">
+    <div ng-if="deductionPath.isCollapsed" ng-init="topSeq = proofTree.node(deductionPath.sections[0].path[0]).getSequent()">
+        <div class="row k4-proofrow" ng-if="topSeq.ante.length == 0 && topSeq.succ.length == 1 && topSeq.succ[0].formula.json.plain == 'false'" ng-cloak>
+            <!-- Left rule annotation -->
+            <ul>
+                <li>
+                    <!-- Full collapse -->
+                    <span class="k4-prooficon" ng-if="!readOnly">
+                        <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                           uib-tooltip="Collapse/uncollapse everything"
+                           tooltip-popup-delay="1000"><span class="fa fa-plus-square-o"></span></a>
+                    </span>
+                    <!-- proof rule -->
+                    <span class="k4-withcontextmenu k4-proofrule"
+                          tooltip-placement="right"
+                          ng-mouseover="highlightStepPosition(deductionPath.sections[0].path[0], true)"
+                          ng-mouseleave="highlightStepPosition(deductionPath.sections[0].path[0], false)"
+                          uib-tooltip="{{deductionPath.sections[0].path[0] | maker:this}}">
+                        {{deductionPath.sections[0].path[0] | ruleName:this}}
+                    </span>
+                </li>
+            </ul>
+            <div class="col-sm-12">
+                <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[1]}}"
+                            sequent="proofTree.nodesMap[deductionPath.sections[0].path[1]].getSequent()"
+                            read-only="true" collapsed="false" in-closed-proof="proofTree.isProved" abbreviate="false"
+                            on-apply-tactic=""
+                            on-apply-input-tactic=""
+                            on-apply-two-position-tactic=""></k4-sequent>
+            </div>
+        </div>
+        <div class="row k4-proofrow k4-proofrow-last" ng-if="!(topSeq.ante.length == 0 && topSeq.succ.length == 1 && topSeq.succ[0].formula.json.plain == 'false')" ng-cloak>
             <!-- Left rule annotation -->
             <ul>
                 <li>

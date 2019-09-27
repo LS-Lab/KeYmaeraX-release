@@ -242,7 +242,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return scope.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
       }
 
+      // inner steps are readOnly, show them all
       scope.deductionPath.isCollapsed = !scope.readOnly;
+      // fetch child if top node is false to show additional proof line
+      scope.proofTree.node(scope.nodeId).getSequent(function(sequent) {
+        var nodeIsFalse = sequent.ante.length == 0 && sequent.succ.length == 1 && sequent.succ[0].formula.json.plain == "false";
+        if (nodeIsFalse && scope.deductionPath.sections[0].path.length <= 1) scope.fetchParent(scope.nodeId);
+      });
+
 
       scope.manyDigits = '|123456789'.repeat(15);
       scope.characterWidthSequent = {
