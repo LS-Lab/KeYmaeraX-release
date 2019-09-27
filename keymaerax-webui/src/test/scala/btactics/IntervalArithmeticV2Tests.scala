@@ -82,7 +82,16 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
         "4<=c()^2 & c()^2<=16 &" +
         "-1000<=f(x)^3 & f(x)^3<=1 &" +
         "-27<=x^3 & x^3<=-1 &" +
-          "8<=c()^3 & c()^3<=64").asFormula)),
+        "8<=c()^3 & c()^3<=64 &" +
+        "25*10^-2<=c()^-1 & c()^-1<=5*10^-1 &" +
+        "625*10^-4<=c()^-2 & c()^-2<=25*10^-2 &" +
+        "15625*10^-6<=c()^-3 & c()^-3<=125*10^-3 &" +
+        "1<=c()^0 & c()^0<=1 &" +
+        "1<=x^0 & x^0<=1 &" +
+        "-1<=x^-1 & x^-1<=-33333*10^-5 &" +
+        "11111*10^-5<=x^-2 & x^-2<=1 &" +
+        "-1<=x^-3 & x^-3<=-37037*10^-6"
+        ).asFormula)),
       intervalCutTerms(
         "x+f(x)".asTerm,
         "x*f(x)".asTerm,
@@ -95,6 +104,14 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
         "f(x)^3".asTerm,
         "x^3".asTerm,
         "c()^3".asTerm,
+        "c()^0".asTerm,
+        "c()^-1".asTerm,
+        "c()^-2".asTerm,
+        "c()^-3".asTerm,
+        "x^0".asTerm,
+        "x^-1".asTerm,
+        "x^-2".asTerm,
+        "x^-3".asTerm
       ) & SimplifierV3.fullSimpTac() & prop
     )
     res shouldBe 'proved
