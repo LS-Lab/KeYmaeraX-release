@@ -811,6 +811,20 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       $http.post("proofs/user/" + $scope.userId + "/" + $scope.proofId + "/name/" + newName, {})
     }
 
+    $scope.taskPrefixLabel = function(nodeId) {
+      var labels = $scope.prooftree.node(nodeId).labels;
+      return labels.length > 1 ? labels[0] : undefined;
+    }
+
+    $scope.taskPostfixLabel = function(nodeId) {
+      var labels = $scope.prooftree.node(nodeId).labels;
+      return labels.length > 0 ? labels[labels.length - 1] : undefined;
+    }
+
+    $scope.taskLabels = function(nodeId) {
+      return $scope.prooftree.node(nodeId).labels.join('<i class="fa fa-angle-right"></i>')
+    }
+
     $scope.saveTaskName = function(newName) {
       var nodeId = sequentProofData.agenda.selectedId();
       if (nodeId != undefined) $http.post("proofs/user/" + $scope.userId + "/" + $scope.proofId + "/" + nodeId + "/name/" + newName, {});
