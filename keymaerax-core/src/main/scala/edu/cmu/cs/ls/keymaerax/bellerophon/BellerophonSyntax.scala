@@ -772,9 +772,14 @@ case class BelleSubProof(id: Int) extends BelleValue
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.BelleLabels]]
   */
 trait BelleLabel {
+  /** The label. */
+  val label: String
+  /** The label pretty string. */
   def prettyString: String
   /** All sublabels from root label to leave label. */
   def components: List[BelleLabel]
+  /** Appends a label to the end of this label. */
+  def append(l: BelleLabel): BelleLabel
 }
 object BelleLabel {
   val LABEL_SEPARATOR: String = ","
@@ -796,6 +801,10 @@ case class BelleTopLevelLabel(label: String) extends BelleLabel {
   require(!label.contains(BelleLabel.LABEL_SEPARATOR), s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}")
   override def prettyString: String = label
   override def components: List[BelleLabel] = this :: Nil
+  override def append(l: BelleLabel): BelleLabel = l match {
+    case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
+    case sl: BelleSubLabel => BelleSubLabel(this.append(sl.parent), sl.label)
+  }
 }
 /** A sublabel for a BelleProvable */
 case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
@@ -803,6 +812,10 @@ case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel 
   require(!label.contains(BelleLabel.LABEL_SEPARATOR), s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}")
   override def prettyString: String = parent.prettyString + BelleLabel.LABEL_DELIMITER + label
   override def components: List[BelleLabel] = parent.components :+ this
+  override def append(l: BelleLabel): BelleLabel = l match {
+    case tl: BelleTopLevelLabel => BelleSubLabel(this, tl.label)
+    case sl: BelleSubLabel => BelleSubLabel(parent.append(sl.parent), sl.label)
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

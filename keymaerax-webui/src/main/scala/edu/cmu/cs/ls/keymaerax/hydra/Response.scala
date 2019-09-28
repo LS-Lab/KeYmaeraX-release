@@ -768,7 +768,7 @@ object Helpers {
       "sequent" -> sequent,
       "children" -> childrenIds,
       "rule" -> ruleJson(node.makerShortName.getOrElse(""), posLocator),
-      "labels" -> JsArray(node.label.map(_.components).getOrElse(Nil).map(c => JsString(c.prettyString)).toVector),
+      "labels" -> JsArray(node.label.map(_.components).getOrElse(Nil).map(c => JsString(c.label)).toVector),
       "parent" -> parent))
   }
 

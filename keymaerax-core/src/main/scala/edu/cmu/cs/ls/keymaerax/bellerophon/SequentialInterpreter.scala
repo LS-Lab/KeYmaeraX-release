@@ -63,11 +63,23 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     listeners.foreach(_.kill())
   }
 
+  /** Adjusts the number of labels to match the number of subgoals. */
+  private def adjustLabels(p: ProvableSig, lbl: Option[List[BelleLabel]]): Option[List[BelleLabel]] = lbl match {
+    case None => None
+    case Some(labels) =>
+      if (p.subgoals.size > labels.size) {
+        Some(labels ++ List.fill(p.subgoals.size - labels.size)(labels.last))
+      } else if (p.subgoals.size < labels.size) {
+        Some(labels.dropRight(labels.size - p.subgoals.size))
+      } else Some(labels)
+  }
+
   /** Returns the result of running tactic `expr` on value `v`. */
   protected def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case builtIn: BuiltInTactic => v match {
       case BelleProvable(pr, lbl) => try {
-        BelleProvable(builtIn.execute(pr), lbl)
+        val result = builtIn.execute(pr)
+        BelleProvable(result, adjustLabels(result, lbl))
       } catch {
         case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(BelleDot, pr.prettyString)
       }
@@ -115,14 +127,13 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
             children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
             p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
         //Compute the results of piecewise applications of children to provable subgoals.
-        val results: Seq[Either[BelleValue,BelleThrowable]] =
-          (children zip p.subgoals) map (pair => {
-            val e_i = pair._1
-            val s_i = pair._2
+        val results: Seq[Either[BelleValue, BelleThrowable]] =
+          children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
             try {
-              Left(apply(e_i, bval(s_i)))
+              Left(apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil))))
             } catch {
-              case e: BelleThrowable => Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
+              case e: BelleThrowable =>
+                Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
             }
           })
 
@@ -132,7 +143,9 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         // Compute a single provable that contains the combined effect of all the piecewise computations.
         // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
         // is replaced with 0 new subgoals (also means: drop labels).
-        def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
+        def createLabels(parent: Option[BelleLabel], start: Int, end: Int): List[BelleLabel] =
+          (start until end).map(i => parent match { case Some(l) => BelleSubLabel(l, s"$i")
+                                                    case None => BelleTopLevelLabel(s"$i") }).toList
 
         //@todo preserve labels from parent p (turn new labels into sublabels)
         val combinedEffect =
@@ -142,9 +155,9 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
               case (Some(origLabels), Some(newLabels)) =>
                 Some(origLabels.patch(cidx, newLabels, 0))
               case (Some(origLabels), None) =>
-                Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.size), 0))
+                Some(origLabels.patch(cidx, createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.size), 0))
               case (None, Some(newLabels)) =>
-                Some(createLabels(0, cidx) ++ newLabels)
+                Some(createLabels(None, 0, cidx) ++ newLabels)
               case (None, None) => None
             }
             (combinedProvable, nextIdx, combinedLabels)
@@ -202,7 +215,8 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case AppliedPositionTactic(positionTactic, pos) => v match {
       case BelleProvable(pr, lbl) => try {
-        BelleProvable(positionTactic.apply(pos).computeResult(pr), lbl)
+        val result = positionTactic.apply(pos).computeResult(pr)
+        BelleProvable(result, adjustLabels(result, lbl))
       } catch {
         case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
       }
@@ -210,7 +224,8 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case positionTactic@AppliedBuiltinTwoPositionTactic(_, posOne, posTwo) => v match {
       case BelleProvable(pr, lbl) => try {
-        BelleProvable(positionTactic.computeResult(pr), lbl)
+        val result = positionTactic.computeResult(pr)
+        BelleProvable(result, adjustLabels(result, lbl))
       } catch {
         case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
       }
@@ -242,7 +257,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case PartialTactic(child, Some(label)) => try {
       apply(child, v) match {
-        case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
+        case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels.map(_.append(label))))
         case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
         case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
       }
@@ -305,7 +320,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
 
     case LabelBranch(label) => v match {
-      case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
+      case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels.map(_.append(label))))
       case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
       case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
     }
@@ -329,8 +344,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
     case named: NamedTactic => apply(named.tactic, v)
 
-    case ProveAs(lemmaName, f, e) => {
-      //@todo why is labels ignored?
+    case ProveAs(lemmaName, f, e) =>
       val BelleProvable(provable, labels) = v
       assert(provable.subgoals.length == 1)
 
@@ -341,7 +355,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         assert(LemmaDBFactory.lemmaDB.get(lemmaName).head.fact.conclusion == lemma.conclusion)
       }
       else {
-        val BelleProvable(result, _) = apply(e, BelleProvable(lemma))
+        val BelleProvable(result, _) = apply(e, BelleProvable(lemma, labels))
         assert(result.isProved, "Result of proveAs should always be proven.")
 
         val tacticText: String = try { BellePrettyPrinter(e) } catch { case _: Throwable => "nil" }
@@ -357,11 +371,10 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         LemmaDBFactory.lemmaDB.add(Lemma(result, Lemma.requiredEvidence(result, evidence), Some(lemmaName)))
       }
       v //nop on the original goal.
-    }
 
     case Let(abbr, value, inner) =>
-      val (provable,lbl) = v match {
-        case BelleProvable(p, l) => (p,l)
+      val (provable, lbl) = v match {
+        case BelleProvable(p, l) => (p, l)
         case _ => throw new BelleThrowable("Cannot attempt Let with a non-Provable value.").inContext(expr, "")
       }
       if (provable.subgoals.length != 1)
@@ -385,16 +398,16 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       }
       logger.debug("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
       //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
-      apply(inner, BelleProvable(in)) match {
-        case BelleProvable(derivation, _) =>
+      apply(inner, BelleProvable(in, lbl)) match {
+        case BelleProvable(derivation, resultLbl) =>
           val backsubst: ProvableSig = derivation(us)
-          BelleProvable(provable(backsubst, 0), lbl)
+          BelleProvable(provable(backsubst, 0), resultLbl)
         case e => throw new BelleThrowable("Let expected sub-derivation")
       }
 
 
     case LetInspect(abbr, instantiator, inner) =>
-      val (provable,lbl) = v match {
+      val (provable, lbl) = v match {
         case BelleProvable(p, l) => (p,l)
         case _ => throw new BelleThrowable("Cannot attempt LetInspect with a non-Provable value.").inContext(expr, "")
       }
@@ -402,23 +415,23 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         throw new BelleThrowable("LetInspect of multiple goals is not currently supported.").inContext(expr, "")
 
       val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
-      apply(inner, BelleProvable(in)) match {
-        case BelleProvable(derivation, _) =>
+      apply(inner, BelleProvable(in, lbl)) match {
+        case BelleProvable(derivation, resultLbl) =>
           try {
             val value: Expression = instantiator(derivation)
             val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
             val backsubst: ProvableSig = derivation(us)
-            BelleProvable(provable(backsubst, 0), lbl)
+            BelleProvable(provable(backsubst, 0), resultLbl)
           } catch {
             case e: BelleThrowable => throw e.inContext(expr, "LetInspect backsubstitution failed")
             case e: ProverException => throw new BelleThrowable("LetInspect backsubstitution failed", e).inContext(expr.toString, "LetInspect backsubstitution failed")
           }
-        case e => throw new BelleThrowable("LetInspect expected sub-derivation")
+        case e: BelleThrowable => throw new BelleThrowable("LetInspect expected sub-derivation", e)
       }
 
 
     case SearchAndRescueAgain(abbr, common, instantiator, continuation) =>
-      val (provable,lbl) = v match {
+      val (provable, lbl) = v match {
         case BelleProvable(p, l) => (p,l)
         case _ => throw new BelleThrowable("Cannot attempt SearchAndRescueAgain with a non-Provable value.").inContext(expr, "")
       }
@@ -455,7 +468,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       }
 
 
-    case t@USubstPatternTactic(children) => {
+    case t@USubstPatternTactic(children) =>
       val provable = v match {
         case BelleProvable(p, _) => p
         case _ => throw new BelleThrowable("Cannot attempt US unification with a non-Provable value.").inContext(expr, "")
@@ -466,9 +479,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
       //@todo loop through all using the first one whose unificatoin and tactic application ends up being successful as opposed to committing to first unifiable case.
       //Attempt to find a child that unifies with the input.
-      val unifications = children.map(pair => {
-        val ty = pair._1
-        val expr = pair._2
+      val unifications = children.map({ case (ty, expr) =>
         ty match {
           case SequentType(s) => try {
             (UnificationMatch(s, provable.subgoals.head), expr)
@@ -489,7 +500,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         else unifications.filterNot(_._1.isEmpty).head
 
       apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
-    }
 
     //@todo this seems wrongly scoped, so AppliedDependentTwoPositionTactic and USubstPatternTactic are dead code
     case AppliedDependentTwoPositionTactic(t, p1, p2) =>
@@ -501,7 +511,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
   }
 
   /** Maps sequents to BelleProvables. */
-  protected def bval(s: Sequent) = BelleProvable(ProvableSig.startProof(s))
+  protected def bval(s: Sequent, lbl: Option[List[BelleLabel]]) = BelleProvable(ProvableSig.startProof(s), lbl)
 
   /**
     * Replaces the nth subgoal of original with the remaining subgoals of result.
@@ -534,17 +544,15 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                                      override val throwWithDebugInfo: Boolean = false) extends SequentialInterpreter(listeners, throwWithDebugInfo) {
   override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case BranchTactic(children) => v match {
-      case BelleProvable(p, _) =>
+      case BelleProvable(p, lbl) =>
         if (children.length != p.subgoals.length)
           throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " +
             children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
             p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
         //Compute the results of piecewise applications of children to provable subgoals.
-        val results: Seq[BelleProvable] = children.zip(p.subgoals).map(pair => {
-          val e_i = pair._1
-          val s_i = pair._2
+        val results: Seq[BelleProvable] = children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
           val ithResult = try {
-            apply(e_i, bval(s_i))
+            apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil)))
           } catch {
             case e: BelleThrowable => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
           }
