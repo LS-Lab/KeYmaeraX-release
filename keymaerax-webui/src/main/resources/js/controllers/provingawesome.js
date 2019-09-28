@@ -822,12 +822,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.taskLabels = function(nodeId) {
-      return $scope.prooftree.node(nodeId).labels.join('<i class="fa fa-angle-right"></i>')
+      return $scope.prooftree.node(nodeId).labels.join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
     }
 
     $scope.saveTaskName = function(newName) {
-      var nodeId = sequentProofData.agenda.selectedId();
-      if (nodeId != undefined) $http.post("proofs/user/" + $scope.userId + "/" + $scope.proofId + "/" + nodeId + "/name/" + newName, {});
+      $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: newName }]);
     }
 
     $scope.openModelEditor = function (modelId) {

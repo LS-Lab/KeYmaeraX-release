@@ -851,10 +851,6 @@ class GetAgendaItemResponse(item: AgendaItemPOJO) extends Response {
   def getJson: JsValue = agendaItemJson(item)
 }
 
-class SetAgendaItemNameResponse(item: AgendaItemPOJO) extends Response {
-  def getJson: JsValue = agendaItemJson(item)
-}
-
 class ProofTaskParentResponse (parent: ProofTreeNode, marginLeft: Int, marginRight: Int) extends Response {
   def getJson: JsValue = nodeJson(parent, withSequent=true, marginLeft, marginRight)._2
 }

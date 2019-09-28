@@ -1486,26 +1486,6 @@ case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: Stri
   }
 }
 
-case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String,
-                                    displayName: String) extends UserProofRequest(db, userId, proofId) with WriteRequest {
-  override protected def doResultingResponses(): List[Response] = {
-    val tree = DbProofTree(db, proofId)
-    tree.nodeIdFromString(nodeId) match {
-      case Some(nId) =>
-        db.getAgendaItem(proofId.toInt, nId) match {
-          case Some(item) =>
-            val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
-            db.updateAgendaItem(newItem)
-            new SetAgendaItemNameResponse(newItem) :: Nil
-          case None =>
-            val id = db.addAgendaItem(proofId.toInt, nId, displayName)
-            new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, nId, displayName)) :: Nil
-        }
-      case None => new ErrorResponse("Unknown node " + nodeId)::Nil
-    }
-  }
-}
-
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {

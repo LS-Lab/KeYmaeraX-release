@@ -767,13 +767,6 @@ object RestApi extends Logging {
         completeRequest(request, t)
       }}}}
 
-    val setAgendaItemName: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "name" / Segment) { (userId, proofId, nodeId, newName) => { pathEnd {
-      post {
-        entity(as[String]) { _ => {
-          val request = SetAgendaItemNameRequest(database, userId, proofId, nodeId, newName)
-          completeRequest(request, t)
-      }}}}}}
-
     val proofProgressStatus: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "progress") { (userId, proofId) => { pathEnd {
       get {
         val request = new GetProofProgressStatusRequest(database, userId, proofId)
@@ -1176,7 +1169,6 @@ object RestApi extends Logging {
     downloadModelProofs   ::
     openProof             ::
     getAgendaItem         ::
-    setAgendaItemName     ::
     changeProofName       ::
     proofProgressStatus   ::
     proofCheckIsProved    ::
