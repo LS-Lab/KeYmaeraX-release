@@ -123,6 +123,7 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
                              localProvableId: Option[Int],
                              userExecuted: Boolean,
                              ruleName: String,
+                             branchLabel: Option[String],
                              numSubgoals: Int,
                              numOpenSubgoals: Int)
 {

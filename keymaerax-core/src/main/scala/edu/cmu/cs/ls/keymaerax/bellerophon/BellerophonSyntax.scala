@@ -772,25 +772,37 @@ case class BelleSubProof(id: Int) extends BelleValue
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.BelleLabels]]
   */
 trait BelleLabel {
-  protected val LABEL_DELIMITER: String = ":"
   def prettyString: String
+  /** All sublabels from root label to leave label. */
+  def components: List[BelleLabel]
 }
 object BelleLabel {
-  def fromString(s: String): BelleLabel = {
-    var labels = s.split(":")
-    val parent = BelleTopLevelLabel(labels.head)
-    labels.tail.foldLeft[BelleLabel](parent)({ case (p, label) => BelleSubLabel(p, label) })
+  val LABEL_SEPARATOR: String = ","
+  val LABEL_DELIMITER: String = ":"
+
+  def fromString(s: String): List[BelleLabel] = {
+    s.split(LABEL_SEPARATOR).map(topLabel => {
+      val labels = topLabel.split(LABEL_DELIMITER)
+      val parent = BelleTopLevelLabel(labels.head)
+      labels.tail.foldLeft[BelleLabel](parent)({ case (p, label) => BelleSubLabel(p, label) })
+    }).toList
   }
+
+  def toPrettyString(labels: List[BelleLabel]): String = labels.map(_.prettyString).mkString(LABEL_SEPARATOR)
 }
 /** A top-level label for a BelleProvable */
 case class BelleTopLevelLabel(label: String) extends BelleLabel {
-  require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")
+  require(!label.contains(BelleLabel.LABEL_DELIMITER), s"Label should not contain the sublabel delimiter ${BelleLabel.LABEL_DELIMITER}")
+  require(!label.contains(BelleLabel.LABEL_SEPARATOR), s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}")
   override def prettyString: String = label
+  override def components: List[BelleLabel] = this :: Nil
 }
 /** A sublabel for a BelleProvable */
 case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
-  require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")
-  override def prettyString: String = parent.prettyString + LABEL_DELIMITER + label
+  require(!label.contains(BelleLabel.LABEL_DELIMITER), s"Label should not contain the sublabel delimiter ${BelleLabel.LABEL_DELIMITER}")
+  require(!label.contains(BelleLabel.LABEL_SEPARATOR), s"Label should not contain the label separator ${BelleLabel.LABEL_SEPARATOR}")
+  override def prettyString: String = parent.prettyString + BelleLabel.LABEL_DELIMITER + label
+  override def components: List[BelleLabel] = parent.components :+ this
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

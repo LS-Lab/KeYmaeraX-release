@@ -38,6 +38,8 @@ object SQLite {
   /** Use this for all unit tests that work with the database, so tests don't infect the production database */
   lazy val TestDB: SQLiteDB = new SQLiteDB(DBAbstractionObj.testLocation)
 
+  private val RULENAME_BRANCH_SEPARATOR: String = "@@"
+
   /** Stores lemmas in the Lemma table of the given database. */
   class UncachedSQLiteLemmaDB(db: SQLiteDB) extends LemmaDBBase {
     def readLemmas(ids: List[LemmaID]):Option[List[String]] = {
@@ -372,7 +374,7 @@ object SQLite {
           val stepCount = stepCountQuery(p._Id.get).run //@todo avoid ripple loading
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
           val temporary: Boolean = sqliteBoolToBoolean(p.istemporary.getOrElse(0))
-          new ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount,
+          ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount,
             closed, p.lemmaid, temporary, p.tactic)
         })
       })
@@ -684,6 +686,11 @@ object SQLite {
       })
     }
 
+    private def splitNameLabel(s: String): (String, Option[String]) = s.split(RULENAME_BRANCH_SEPARATOR).toList match {
+      case rn :: Nil => (rn, None)
+      case rn :: bl :: Nil => (rn, Some(bl))
+    }
+
     /** Updates an executable step */
     override def updateExecutionStep(executionStepId: Int, step: ExecutionStepPOJO): Unit = {
       synchronizedTransaction({
@@ -697,7 +704,10 @@ object SQLite {
           dbstep.rulename.get, dbstep.numsubgoals, dbstep.numopensubgoals)
         ).update((step.executionId, step.previousStep, step.branchOrder,
           ExecutionStepStatus.toString(step.status), step.executableId, step.inputProvableId, step.resultProvableId,
-          step.localProvableId, step.userExecuted.toString, false.toString, step.ruleName, step.numSubgoals, step.numOpenSubgoals))
+          step.localProvableId, step.userExecuted.toString, false.toString,
+          //@todo store branch labels separately
+          step.ruleName + RULENAME_BRANCH_SEPARATOR + step.branchLabel.getOrElse(""),
+          step.numSubgoals, step.numOpenSubgoals))
 
         // update parent's open subgoals
         updateOpenSubgoalsCount(step.executionId, step.previousStep)
@@ -758,11 +768,12 @@ object SQLite {
           val (headSteps, tailSteps) = steps.partition(_.previousstep == prevId)
           if (headSteps.nonEmpty) {
             val head = headSteps.head
+            val (ruleName: String, branchLabel: Option[String]) = splitNameLabel(head.rulename.get)
             revResult =
               ExecutionStepPOJO(head._Id, head.proofid.get, head.previousstep,
                 head.branchorder, ExecutionStepStatus.fromString(head.status.get),
                 head.executableid.get, head.inputprovableid, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean,
-                head.rulename.get, head.numsubgoals, head.numopensubgoals) :: revResult
+                ruleName, branchLabel, head.numsubgoals, head.numopensubgoals) :: revResult
             if (headSteps.tail.isEmpty) prevIds.pop
             prevIds.push(head._Id)
             steps = headSteps.tail ++ tailSteps
@@ -782,12 +793,13 @@ object SQLite {
         row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished))
 
     private def proofStepsUnorderd(proofId: Int, stepIds: Set[Int]): List[ExecutionStepPOJO] = {
-      executionStepsUnorderedQuery(proofId, stepIds).list.map(step =>
+      executionStepsUnorderedQuery(proofId, stepIds).list.map(step => {
+        val (ruleName: String, branchLabel: Option[String]) = splitNameLabel(step.rulename.get)
         ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean,
-          step.rulename.get, step.numsubgoals, step.numopensubgoals)
-      )
+          ruleName, branchLabel, step.numsubgoals, step.numopensubgoals)
+      })
     }
 
     private def getProofConclusion(proofId: Int): Sequent = {
@@ -857,12 +869,13 @@ object SQLite {
       ))
 
     override def getFirstExecutionStep(proofId: Int): Option[ExecutionStepPOJO] =
-      firstExecutionStepQuery(proofId).list.headOption.map(step =>
+      firstExecutionStepQuery(proofId).list.headOption.map(step => {
+        val (ruleName: String, branchLabel: Option[String]) = splitNameLabel(step.rulename.get)
         ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
-          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals)
-      )
+          step.userexecuted.get.toBoolean, ruleName, branchLabel, step.numsubgoals, step.numopensubgoals)
+      })
 
     //@todo need better index to not degrade performance
 //    private def openBranchingStepsSql(proofId: Int) =
@@ -908,11 +921,13 @@ object SQLite {
 //      ).map(step => step.previousstep -> step.branchorder)
 
     override def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])] = synchronizedTransaction({
-      val openSteps = openStepsQuery(proofId).list.map(step =>
+      val openSteps = openStepsQuery(proofId).list.map(step => {
+        val (ruleName: String, branchLabel: Option[String]) = splitNameLabel(step.rulename.get)
         ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
-          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals))
+          step.userexecuted.get.toBoolean, ruleName, branchLabel, step.numsubgoals, step.numopensubgoals)
+      })
       val closedBranches = closedBranchesSql(proofId, openSteps.flatMap(_.stepId).toSet).list.toMap
 
       def parseClosedBranches(closed: Option[String]): List[Int] = closed match {
@@ -930,10 +945,12 @@ object SQLite {
     override def getPlainExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStepPOJO] = {
       executionStepQuery(proofId, stepId).run.headOption match {
         case None => None
-        case Some(step) => Some(ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
-          step.branchorder, ExecutionStepStatus.fromString(step.status.get),
-          step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
-          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals))
+        case Some(step) =>
+          val (ruleName: String, branchLabel: Option[String]) = splitNameLabel(step.rulename.get)
+          Some(ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
+            step.branchorder, ExecutionStepStatus.fromString(step.status.get),
+            step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
+            step.userexecuted.get.toBoolean, ruleName, branchLabel, step.numsubgoals, step.numopensubgoals))
       }
     }
 
@@ -945,11 +962,13 @@ object SQLite {
         row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)))
 
     override def getPlainStepSuccessors(proofId: Int, prevStepId: Int, branchOrder: Int): List[ExecutionStepPOJO] = {
-      stepSuccessorsQuery(proofId, prevStepId, branchOrder).run.map(step =>
+      stepSuccessorsQuery(proofId, prevStepId, branchOrder).run.map(step => {
+        val (ruleName: String, branchLabel: Option[String]) = splitNameLabel(step.rulename.get)
         ExecutionStepPOJO(step._Id, step.proofid.get, step.previousstep,
           step.branchorder, ExecutionStepStatus.fromString(step.status.get),
           step.executableid.get, step.inputprovableid, step.resultprovableid, step.localprovableid,
-          step.userexecuted.get.toBoolean, step.rulename.get, step.numsubgoals, step.numopensubgoals)).toList
+          step.userexecuted.get.toBoolean, ruleName, branchLabel, step.numsubgoals, step.numopensubgoals)
+      }).toList
     }
 
     override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] = getPlainExecutionStep(proofId, stepId) match {

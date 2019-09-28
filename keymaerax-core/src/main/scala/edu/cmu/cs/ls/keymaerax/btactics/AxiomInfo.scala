@@ -915,7 +915,7 @@ object DerivationInfo {
     ),
     InputTacticInfo("label"
       , SimpleDisplayInfo("Label","label")
-      ,List(StringArg("label")), _ => ((l: String) => TactixLibrary.label(BelleLabel.fromString(l))): TypedFunc[String, BelleExpr]),
+      ,List(StringArg("label")), _ => ((l: String) => TactixLibrary.label(BelleLabel.toPrettyString(BelleLabel.fromString(l)))): TypedFunc[String, BelleExpr]),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),

@@ -42,6 +42,9 @@ trait ProofTreeNode {
   /** The tactic short name. */
   def makerShortName: Option[String]
 
+  /** The node label. */
+  def label: Option[BelleLabel]
+
   /** A local provable, whose subgoals are filled in by the node's children. */
   def localProvable: ProvableSig
 
@@ -283,6 +286,9 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
   /** The tactic short name. */
   override def makerShortName: Option[String] = Some(step.ruleName)
 
+  /** The node label. */
+  override def label: Option[BelleLabel] = step.branchLabel.flatMap(BelleLabel.fromString(_).lift(goalIdx))
+
   /** A local provable, whose subgoals are filled in by the node's children. */
   override def localProvable: ProvableSig = dbLocalProvable
 
@@ -342,8 +348,19 @@ case class DbLoadedProofTreeNode(db: DBAbstraction,
   /** The tactic (serialized BelleExpr) that produced this node from its parent. */
   override def maker: Option[String] = step.map(_ => dbMaker) //@todo load with step
 
+  private val nameLabel: Option[(String, List[BelleLabel])] = step.map(_.rule.split("@@").toList match {
+    case rn :: Nil => (rn, Nil)
+    case rn :: bl :: Nil => (rn, BelleLabel.fromString(bl))
+  })
+
   /** The tactic short name. */
-  override def makerShortName: Option[String] = step.map(_.rule)
+  override def makerShortName: Option[String] = nameLabel.map(_._1)
+
+  /** The node label. */
+  override def label: Option[BelleLabel] = step match {
+    case None => None
+    case Some(s) => nameLabel.flatMap(_._2.lift(goalIdx))
+  }
 
   /** A local provable, whose subgoals are filled in by the node's children. Triggers a database operation if the node's
     * step is loaded without provables. */
@@ -379,6 +396,9 @@ case class DbRootProofTreeNode(db: DBAbstraction)(override val id: ProofTreeNode
 
   /** The tactic short name. */
   override def makerShortName: Option[String] = None
+
+  /** The node label. */
+  override def label: Option[BelleLabel] = None
 
   /** A local provable, whose subgoals are filled in by the node's children. */
   override def localProvable: ProvableSig = dbLocal
