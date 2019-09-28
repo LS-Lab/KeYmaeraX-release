@@ -376,10 +376,10 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
       )
     )) should have message
-      """[Bellerophon Runtime] Left Message: [Bellerophon Runtime] Unable to create dependent tactic: requirement failed: Expects same formula in antecedent and succedent. Found:
+      """[Bellerophon Runtime] Left Message: [Bellerophon Runtime] Unable to create dependent tactic 'id', cause: requirement failed: Expects same formula in antecedent and succedent. Found:
         |   -1:  x>0	Greater
         |==> 1:  x>5	Greater
-        |Right Message: [Bellerophon Runtime] Unable to create dependent tactic: requirement failed: Expects same formula in antecedent and succedent. Found:
+        |Right Message: [Bellerophon Runtime] Unable to create dependent tactic 'id', cause: requirement failed: Expects same formula in antecedent and succedent. Found:
         |   -1:  x>0	Greater
         |==> 1:  x>2	Greater)""".stripMargin
 
