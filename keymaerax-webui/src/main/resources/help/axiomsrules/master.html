@@ -3,12 +3,14 @@
   <kbd>master</kbd> is trying the default automatic proof strategy of KeYmaera&#160;X.
   </p>
   <p>
-  If <kbd>master</kbd> does not succeed, then either your formula has a counterexample or <kbd>master</kbd> just was unable to find a proof within the timeouts.
+  If it does not find a proof, then either your formula has a counterexample or <kbd>master</kbd> just was unable to find a proof within the timeouts.
+  Then:
   </p>
   <ol>
-    <li>Sanity check if you have correct assumptions and controls for your model.</li>
-    <li>Annotate loops and/or differential equations with <code>@invariant(...)</code> formulas.</li>
+    <li>Scrutinize if you have all assumptions and correct controls for your model.</li>
+    <li>Annotate loops and/or differential equations with appropriate <code>@invariant(...)</code> formulas.</li>
     <li>Click to decompose the formula and either find a proof or how to bugfix your model.</li>
+    <li>Exploit system insights to find an easier decomposition of your formula.</li>
     <li>Try other proof strategies or provide a domain-specific tactic performing proof search.</li>
   </ol>
 </div>
