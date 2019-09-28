@@ -32,7 +32,9 @@ import scala.util.Try
 
 /** UI display information on how to show an axiom, rule, or tactic application */
 sealed trait DisplayInfo {
+  /** how to render an axiom/rule/tactic name in the UI */
   def name: String
+  /** how to render an axiom/rule/tactic name in ASCII plain text */
   def asciiName: String
 }
 case class SimpleDisplayInfo(override val name: String, override val asciiName: String) extends DisplayInfo
@@ -135,7 +137,7 @@ object DerivationInfo {
       _ => ((e: Term) => DLBySubst.assignbExists(e)): TypedFunc[Term, BelleExpr]
     ),
     new CoreAxiomInfo("[':=] differential assign"
-      , AxiomDisplayInfo(("[′:=]","[':=]"), "<span class=\"k4-axiom-key\">[x′:=c]p(x′)</span>↔p(c)")
+      , AxiomDisplayInfo(("[:=]","[:=]"), "<span class=\"k4-axiom-key\">[x′:=c]p(x′)</span>↔p(c)")
       , "Dassignb", false, {case () => HilbertCalculus.Dassignb}),
     new DerivedAxiomInfo("[':=] differential assign y"
       , AxiomDisplayInfo(("[y′:=]","[y':=]"), "<span class=\"k4-axiom-key\">[y′:=c]p(y′)</span>↔p(c)")
@@ -170,9 +172,8 @@ object DerivationInfo {
       , AxiomDisplayInfo(("<d>", "<d>"), "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔[a]P"), "dualDirectd", true, {case () => HilbertCalculus.useAt(DerivedAxioms.dualdDirectAxiom)}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", true, {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
-    //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
-    //@todo which of the I axioms is this exactly?
-    CoreAxiomInfo("I induction", "Iind", "Iind", unsure, {case () => HilbertCalculus.useAt("I induction") }),
+    CoreAxiomInfo("I induction"
+      , AxiomDisplayInfo(("I<sub>→</sub>", "Iimp"), "P∧[a*](P→[a]P)→<span class=\"k4-axiom-key\">[a*]P</span>"), "Iind", unsure, {case () => HilbertCalculus.useAt("I induction") }),
     new CoreAxiomInfo("VK vacuous"
       , AxiomDisplayInfo("VK", "(p→<span class=\"k4-axiom-key\">[a]p</span>)←[a]T")
       , "VK", unsure, {case () => HilbertCalculus.VK}),
@@ -632,7 +633,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("[*-] backiterate necessity", "[*-] backiterate necessity", "backiteratebnecc", unsure, {case () => useAt(DerivedAxioms.backiteratebnecc)}),
     new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-] backiterate sufficiency", "backiteratebsuff", unsure, {case () => useAt(DerivedAxioms.backiteratebsuff)}),
     new DerivedAxiomInfo("II induction", "II induction", "IIinduction", unsure, {case () => useAt(DerivedAxioms.iiinduction)}),
-    new DerivedAxiomInfo("I", "I", "I", true, {case () => useAt(DerivedAxioms.Ieq)}),
+    new DerivedAxiomInfo("I"
+      , AxiomDisplayInfo(("I", "I"), "<span class=\"k4-axiom-key\">[a*]P</span>↔P∧[a*](P→[a]P)"), "I", true, {case () => useAt(DerivedAxioms.Ieq)}),
     //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", unsure, {case () => useAt(DerivedAxioms.existsGeneralize)}),
     new DerivedAxiomInfo("exists generalize y", ("∃Gy","existsGy"), "existsGeneralizey", unsure, {case () => useAt(DerivedAxioms.existsGeneralizey)}),
@@ -884,7 +886,7 @@ object DerivationInfo {
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
     new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
-    new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
+    new PositionTacticInfo("toSingleFormula", "toFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     PositionTacticInfo("CMon"
       , RuleDisplayInfo("CMon", (List(), List("C{o}→C{k}")), List((List(), List("o→k"))))
@@ -963,7 +965,7 @@ object DerivationInfo {
       _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("cutR", "cutR", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutR(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),
+    new InputPositionTacticInfo("cutLR", "cutLR", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutLR(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("loop",
       RuleDisplayInfo("Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
@@ -1078,13 +1080,13 @@ object DerivationInfo {
         case Some(Number(timeout)) => TactixLibrary.QE(Nil, None, Some(timeout.toInt))
         case _ => TactixLibrary.QE }: TypedFunc[Option[Term], BelleExpr]
       }: TypedFunc[Option[String], _], needsTool = true, revealInternalSteps = true),
-    new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
+    new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
     //@todo universal closure may come with list of named symbols
-    new PositionTacticInfo("universalClosure", "universalClosure", {case () => FOQuantifierTactics.universalClosure}),
+    new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}),
 
     InputPositionTacticInfo("useAt"
       , "useAt"
@@ -1234,7 +1236,7 @@ object DerivationInfo {
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]Q"::Nil, "[a;]P"::Nil), SequentDisplay("Q"::Nil, "P"::Nil)::Nil)
       , "monb2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
     new DerivedRuleInfo("Goedel"
-      , RuleDisplayInfo(SimpleDisplayInfo("Goedel", "Goedel"), SequentDisplay(Nil, "[a;]P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
+      , RuleDisplayInfo(SimpleDisplayInfo("G", "G"), SequentDisplay(Nil, "[a;]P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
       , "Goedel", {case () => HilbertCalculus.useAt(DerivedAxioms.Goedel)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
