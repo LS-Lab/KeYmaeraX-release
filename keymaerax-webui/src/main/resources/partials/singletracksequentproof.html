@@ -17,7 +17,7 @@
         <!-- Rule below: right annotation -->
         <ul ng-if="proofTree.node(deductionPath.sections[0].path[0]).rule.derivation.expansible">
             <li>
-                <i class="fa fa-bars" ng-click="stepInto(proofId, deductionPath.sections[0].path[0], event)"></i>
+                <i class="fa fa-bars" ng-click="stepInto(proofId, deductionPath.sections[0].path[0], $event)"></i>
             </li>
         </ul>
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
@@ -110,7 +110,7 @@
             <!-- Rule below: right annotation -->
             <ul ng-if="proofTree.node(step).rule.derivation.expansible">
                 <li>
-                    <i class="fa fa-bars" ng-click="stepInto(proofId, step, event)"></i>
+                    <i class="fa fa-bars" ng-click="stepInto(proofId, step, $event)"></i>
                 </li>
             </ul>
             <div class="col-sm-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
