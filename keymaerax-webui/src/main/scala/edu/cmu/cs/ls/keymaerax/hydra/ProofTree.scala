@@ -543,7 +543,8 @@ object AgendaItem {
   }
 
   /** Creates a name from a proof tree node. */
-  def nameOf(node: ProofTreeNode, prefix: String = "", suffix: String = ""): String = {
-    prefix + nameOf(node.makerShortName.getOrElse("").split("\\(").head) + suffix
+  def nameOf(node: ProofTreeNode): String = {
+    if (node.parent.exists(_.id.toString == "()")) "Conjecture: "
+    else nameOf(node.makerShortName.getOrElse("").split("\\(").head)
   }
 }

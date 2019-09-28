@@ -1430,7 +1430,7 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
 
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
-      AgendaItem(n.id.toString, if (n.parent.contains(tree.root)) "Conjecture: " else AgendaItem.nameOf(n), proofId))
+      AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
@@ -1445,7 +1445,7 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
     extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
-    val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, AgendaItem.nameOf(tree.root, "Conjecture: "), proofId) :: Nil
+    val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, AgendaItem.nameOf(tree.root), proofId) :: Nil
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false, marginLeft, marginRight) :: Nil
   }
@@ -2134,8 +2134,7 @@ class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: Strin
           val info = db.getProofInfo(proofId)
           db.updateProofInfo(info.copy(closed = false))
           val item = AgendaItem(node.id.toString,
-            if (node.parent.contains(tree.root)) "Conjecture: "
-            else AgendaItem.nameOf(node)
+            AgendaItem.nameOf(node)
             ,
             proofId, node.allAncestors.map(_.id.toString))
           new PruneBelowResponse(item) :: Nil
