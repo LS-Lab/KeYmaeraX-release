@@ -70,7 +70,7 @@ object DebuggingTactics {
     * @param msg The message to display.
     * @param assertion The assertion.
     */
-  def assertAt(msg: Expression => String, assertion: Expression => Boolean): BuiltInPositionTactic = new BuiltInPositionTactic("assertAt") with NoOpTactic {
+  def assertAt(msg: Expression => String, assertion: Expression => Boolean): BuiltInPositionTactic = new BuiltInPositionTactic("ANON") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       val ctx = provable.subgoals.head.at(pos)
       if (!assertion(ctx._2))
@@ -82,7 +82,7 @@ object DebuggingTactics {
   def assertAt(msg: => String, assertion: Expression => Boolean): BuiltInPositionTactic = assertAt((e:Expression) => msg, assertion)
 
   /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
-  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("assert") with NoOpTactic {
+  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.ante.size != anteSize ||
         provable.subgoals.head.succ.size != succSize) {
@@ -112,7 +112,7 @@ object DebuggingTactics {
   }
 
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition on the sole subgoal. */
-  def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") with NoOpTactic {
+  def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
         throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition but got " +
@@ -143,7 +143,7 @@ object DebuggingTactics {
   }
 
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition at position pos. */
-  def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") with NoOpTactic {
+  def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("ANON") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       if (provable.subgoals.size != 1) {
         throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
