@@ -343,6 +343,7 @@ private object DifferentialTactics extends Logging {
     })
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint. */
+  // @see AxiomaticODESolver.inverseDiffCut
   def inverseDiffCut: DependentPositionTactic = "dCi" by ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val fact = s.at(pos) match {

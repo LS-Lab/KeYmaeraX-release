@@ -401,7 +401,7 @@ object AxiomaticODESolver {
 
   //region Cut in solutions
 
-  def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")): DependentPositionTactic = "cutInSoln" by ((pos: Position, s: Sequent) => {
+  def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")): DependentPositionTactic = "solDC" by ((pos: Position, s: Sequent) => {
     val system: ODESystem = s.sub(pos) match {
       case Some(Box(x: ODESystem, _)) => x
     }
@@ -474,14 +474,14 @@ object AxiomaticODESolver {
 
   //region Simplify post-condition and evolution domain constraint
 
-  private def simplifyEvolutionDomain(odeSize: Int) = "simplifyEvolutionDomain" by ((pos: Position, _: Sequent) => {
+  private def simplifyEvolutionDomain(odeSize: Int) = "domSimplify" by ((pos: Position, _: Sequent) => {
     lazy val simplFact = remember(
       "p_(f(x_)) & x_=f(x_) <-> p_(x_) & x_=f(x_)".asFormula, TactixLibrary.equivR(1) <(
         TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqL2R(-2)(1) & TactixLibrary.closeId, TactixLibrary.closeId),
         TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqR2L(-2)(1) & TactixLibrary.closeId, TactixLibrary.closeId)
         ), namespace)
 
-    val step = "simplifyEvolDomainStep" by ((pp: Position, ss: Sequent) => {
+    val step = "domSimplifyStep" by ((pp: Position, ss: Sequent) => {
       val subst = (_: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
         case Some(And(p, Equal(x, f))) => RenUSubst(
           ("x_".asVariable, x) ::
@@ -495,7 +495,7 @@ object AxiomaticODESolver {
     (0 until odeSize).map(List.fill(_)(0)).map(i => step(pos ++ PosInExpr(i))).reduceRight[BelleExpr](_ & _)
   })
 
-  def simplifyPostCondition(odeSize: Int): DependentPositionTactic = "simplifyPostCondition" by ((pos: Position, seq: Sequent) => {
+  def simplifyPostCondition(odeSize: Int): DependentPositionTactic = "postSimplify" by ((pos: Position, seq: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(seq(pos.top), pos.inExpr)
 
     lazy val rewrite1 = remember("(q_(f(x_)) -> p_(f(x_))) -> (q_(x_) & x_=f(x_) -> p_(x_))".asFormula,
@@ -507,7 +507,7 @@ object AxiomaticODESolver {
     lazy val rewrite3 = remember("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop, namespace)
 
     //@note compute substitution fresh on each step, single pass unification match does not work because q_(x_) before x_=f
-    ("simplifyPostConditionStep" by ((pp: Position, ss: Sequent) => {
+    ("postSimplifyStep" by ((pp: Position, ss: Sequent) => {
       val (xx, subst, rewrite) = ss.sub(pp) match {
         case Some(Imply(And(q, Equal(x: Variable, f)), p)) => (x, (_: Option[TactixLibrary.Subst]) => RenUSubst(
           ("x_".asVariable, x) ::
@@ -534,6 +534,7 @@ object AxiomaticODESolver {
 
   //region Inverse diff cuts
 
+  //@todo @see DifferentialTactics.inverseDiffCut duplication?
   private def inverseDiffCut(odeSize: Int): DependentPositionTactic = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
