@@ -535,7 +535,7 @@ object AxiomaticODESolver {
   //region Inverse diff cuts
 
   //@todo @see DifferentialTactics.inverseDiffCut duplication?
-  private def inverseDiffCut(odeSize: Int): DependentPositionTactic = "inverseDiffCut" by ((pos: Position, s: Sequent) => {
+  private def inverseDiffCut(odeSize: Int): DependentPositionTactic = "dCi2" by ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
     val fact = s.sub(withInitialsPos) match {
