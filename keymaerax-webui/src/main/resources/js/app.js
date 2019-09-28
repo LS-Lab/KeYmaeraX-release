@@ -116,10 +116,6 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/dev.html',
         controller: 'DevCtrl'
       }).
-      when('/tools', {
-        templateUrl: 'partials/tool_config.html',
-        controller: 'ToolConfig'
-      }).
       when('/license', {
                 templateUrl: 'partials/license_page.html',
                 controller: 'ServerInfoCtrl'

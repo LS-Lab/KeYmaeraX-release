@@ -50,6 +50,9 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {
     case ("nil", _) => ts2
     case (_, "nil") => ts1
+    case ("" | "()", "" | "()") => ""
+    case (_, "" | "()") => ts1
+    case ("" | "()", _) => ts2
     case _ => ts1 + " " + SEQ_COMBINATOR.img + " " + ts2
   }
 
@@ -58,7 +61,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     case None => "nil"
     case Some(c) => c.maker match {
       case None => "nil"
-      case Some(m) if m == "assert" => "nil" //@note BuiltInTactic with Scala argument is not serializable
+      case Some(m) if m == "ANON" => "???" //@note anonymous tactics are not serializable (and should not be in the trace)
       case Some(m) => m
     }
   }

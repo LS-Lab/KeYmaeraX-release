@@ -13,7 +13,24 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
       return promise;
     },
 
+    allLemmasCache: undefined,
     allDerivationsCache: undefined,
+
+    allLemmas: function(userId) {
+      if (serviceDef.allLemmasCache) {
+        return $q(function(resolve, reject) { resolve({data: serviceDef.allLemmasCache}); });
+      } else {
+        var promise = $http.get('models/users/' + userId + '/lemmas')
+          .then(function(response) {
+            // return value gets picked up by 'then' in the controller using this service
+            serviceDef.allLemmasCache = response.data;
+            return {
+              data: serviceDef.allLemmasCache
+            };
+          });
+        return promise;
+      }
+    },
 
     allDerivationInfos: function(userId, proofId, nodeId) {
       if (serviceDef.allDerivationsCache) {

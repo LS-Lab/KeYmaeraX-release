@@ -1,5 +1,5 @@
 <div class="row">
-<div class="col-md-12">
+<div class="col-sm-12">
 <spinner name="tacticExecutionSpinner" ng-cloak>
     <div class="tactic-spinner-background"></div>
     <div class="tactic-spinner-overlay">
@@ -12,6 +12,15 @@
         <p ng-if="runningTask.info && runningTask.info !== ''">{{runningTask.info}}</p>
         <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
     </div>
+    </div>
+</spinner>
+<spinner name="branchClosedSpinner" ng-cloak>
+    <div class="tactic-spinner-background"></div>
+    <div class="tactic-spinner-overlay">
+        <div class="tactic-spinner-please-wait">
+            <p><i class="fa fa-5x fa-trophy faa-tada animated"></i></p>
+            <p>Branch closed</p>
+        </div>
     </div>
 </spinner>
 <spinner name="magnifyingglassSpinner" ng-cloak>
@@ -60,7 +69,7 @@
 <div>
 <div  ng-controller="TaskCtrl">
 <div class="row">
-    <div class="col-md-12">
+    <div class="col-sm-12">
         <!-- Tool box -->
         <div class="navbar navbar-default k4-tactics-navbar">
             <div class="container">
@@ -492,7 +501,7 @@
     </div>
 </div>
 <div class="row">
-    <div class="col-md-12" ng-controller="ProofMessagesCtrl">
+    <div class="col-sm-12" ng-controller="ProofMessagesCtrl">
         <k4-auto-hide-alert message="proofMessage.text"
                             causeMsg="proofMessage.causeMsg"
                             details="proofMessage.details"
@@ -503,7 +512,7 @@
 </div>
 
 <div class="row">
-    <div class="col-md-12">
+    <div class="col-sm-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
         <uib-tabset justified="true" active="agenda.selectedTab" ng-if="agenda.items().length > 0" ng-cloak>
             <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
@@ -512,7 +521,7 @@
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
-                        <div class="col-md-11" ng-if="$first"
+                        <div class="col-sm-11" ng-if="$first"
                              data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal'><dt>Left-click</dt><dd>default step</dd><dt>Right-click</dt><dd>list tactics</dd><dt>Alt/Option-click</dt><dd>chase subformula away</dd><dt>Hover &#8866;</dt><dd>transform entire subgoal</dd></dl>"
                              data-position="bottom">
                             <span class="fa fa-tasks"></span>
@@ -525,7 +534,7 @@
                                 <span ng-bind-html="task.name"></span> <!--<small>{{task.id}}</small>-->
                             </span>
                         </div>
-                        <div class="col-md-11" ng-if="!$first">
+                        <div class="col-sm-11" ng-if="!$first">
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
@@ -537,8 +546,8 @@
                             </span>
                         </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->
-                        <!--<div class="col-md-3"  ng-if="selectedTask != task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>-->
-                        <!--<div class="col-md-8" ng-if="selectedTask != task">-->
+                        <!--<div class="col-sm-3"  ng-if="selectedTask != task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>-->
+                        <!--<div class="col-sm-8" ng-if="selectedTask != task">-->
                             <!--<span class="k4-tiny k4-abbreviate k4-nowrap">-->
                                 <!--<k4-formula formula="task.proofNode.sequent.ante[0].formula"-->
                                             <!--highlight="false"-->
@@ -551,7 +560,7 @@
                                             <!--ng-if="task.proofNode.sequent.succ.length > 0"></k4-formula>-->
                             <!--</span>-->
                         <!--</div>-->
-                        <div class="col-md-1" cg-busy="defer" ng-if="defer"></div>
+                        <div class="col-sm-1" cg-busy="defer" ng-if="defer"></div>
                     </div>
                 </uib-tab-heading>
 
@@ -575,12 +584,12 @@
 
                 <!-- Tactic -->
                 <div class="row" id="provingtactics" ng-if="task.isSelected">
-                    <div class="col-md-12">
+                    <div class="col-sm-12">
                         <div class="panel panel-default">
                             <div class="panel-heading panel-heading-compact">
                                 <div class="row">
-                                <div class="col-md-2" ng-if="taskExplanation.selection=='Tactic'">
-                                    <div class="btn-group-sm">
+                                <div class="col-sm-2" ng-if="taskExplanation.selection=='Tactic'">
+                                    <div class="btn-group-sm k4-nobreak">
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
                                                uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic)"
                                                tooltip-placement="auto top">Tactic</label>
@@ -591,7 +600,7 @@
                                         </label>
                                     </div>
                                 </div>
-                                <div class="col-md-12" ng-if="taskExplanation.selection=='Rule'">
+                                <div class="col-sm-12" ng-if="taskExplanation.selection=='Rule'">
                                     <div class="btn-group-sm">
                                         <label class="btn btn-secondary" ng-model="taskExplanation.selection"
                                                uib-btn-radio="'Tactic'" uib-tooltip="Display and edit the recorded proof steps (tactic)"
@@ -608,7 +617,7 @@
                                     </div>
                                 </div>
                                 <div ng-if="taskExplanation.selection=='Tactic'" ng-cloak>
-                                    <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel === ''">
+                                    <div class="input-group input-group-sm col-sm-10" ng-if="tactic.tacticDel === ''">
                                         <span class="input-group-btn"
                                               uib-tooltip="Rerun tactic from original conjecture">
                                             <button class="btn btn-default" ng-click="rerunTactic()"
@@ -633,7 +642,7 @@
                                                     ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
                                         </span>
                                     </div>
-                                    <div class="input-group input-group-sm col-md-10" ng-if="tactic.tacticDel !== ''">
+                                    <div class="input-group input-group-sm col-sm-10" ng-if="tactic.tacticDel !== ''">
                                         <span class="input-group-btn"
                                               uib-tooltip="Rerun tactic from original conjecture">
                                             <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>

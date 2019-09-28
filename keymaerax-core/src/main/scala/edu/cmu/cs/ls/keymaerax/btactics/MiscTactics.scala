@@ -23,17 +23,17 @@ object DebuggingTactics {
 
   private val logger = Logger(getClass)
 
-  def error(e: Throwable): BuiltInTactic = new BuiltInTactic("Error") {
+  def error(e: Throwable): BuiltInTactic = new BuiltInTactic("Error") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = throw e
   }
 
-  def error(s: => String): BuiltInTactic = new BuiltInTactic("Error") {
+  def error(s: => String): BuiltInTactic = new BuiltInTactic("Error") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       throw BelleUserGeneratedError(s + "\nThe error occurred on\n" + provable.underlyingProvable.prettyString)
     }
   }
 
-  def recordQECall(): BuiltInTactic = new BuiltInTactic("recordQECall") {
+  def recordQECall(): BuiltInTactic = new BuiltInTactic("recordQECall") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       logger.info(s"QE CALL\n==QE==\n${provable.subgoals(0).prettyString}\n==END_QE==")
       provable
@@ -42,7 +42,7 @@ object DebuggingTactics {
 
   /** debug is a no-op tactic that prints a message and the current provable, if doPrint (defaults to the system property DEBUG) is true. */
   def debug(message: => String, doPrint: Boolean = DEBUG, printer: ProvableSig => String = _.toString): StringInputTactic =
-      new StringInputTactic(if (doPrint) "print" else "debug", message::Nil) {
+      new StringInputTactic(if (doPrint) "print" else "debug", message::Nil) with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (doPrint) logger.info("===== " + message + " ==== " + printer(provable) + " =====")
       provable
@@ -56,7 +56,7 @@ object DebuggingTactics {
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
-  def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
+  def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       if (doPrint) logger.info("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
         + " at position " + pos + " of first subgoal,"
@@ -70,11 +70,11 @@ object DebuggingTactics {
     * @param msg The message to display.
     * @param assertion The assertion.
     */
-  def assertAt(msg: Expression => String, assertion: Expression => Boolean): BuiltInPositionTactic = new BuiltInPositionTactic("NOT_EXTRACTABLE") {
+  def assertAt(msg: Expression => String, assertion: Expression => Boolean): BuiltInPositionTactic = new BuiltInPositionTactic("assertAt") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       val ctx = provable.subgoals.head.at(pos)
       if (!assertion(ctx._2))
-        throw new BelleUserGeneratedError("Assertion Failed: " + msg(ctx._2) + "\nAt:\n" + ctx)
+        throw BelleUserGeneratedError("Assertion Failed: " + msg(ctx._2) + "\nAt:\n" + ctx)
       provable
     }
   }
@@ -82,11 +82,11 @@ object DebuggingTactics {
   def assertAt(msg: => String, assertion: Expression => Boolean): BuiltInPositionTactic = assertAt((e:Expression) => msg, assertion)
 
   /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
-  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("assert") {
+  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("assert") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.ante.size != anteSize ||
         provable.subgoals.head.succ.size != succSize) {
-        throw new BelleUserGeneratedError(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
+        throw BelleUserGeneratedError(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with: " + provable.subgoals.head.ante.size + "antecedent and " +
           provable.subgoals.head.succ.size + " succedent formulas)")
       }
@@ -96,30 +96,35 @@ object DebuggingTactics {
 
   //@todo rename to something else otherwise scala assert no longer works!
   /** assert is a no-op tactic that raises an error if the provable has not the expected formula at the specified position. */
-  def assert(fml: Formula, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
-    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != fml) {
-        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
-          provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.sub(pos) + " at position " + pos + ")")
-      }
-      provable
-    }
+  def assert(fml: Formula, message: => String): DependentPositionWithAppliedInputTactic = {
+    import TacticFactory._
+    ("assert" byWithInputs (fml :: message :: Nil, (pos: Position, seq: Sequent) => {
+      (new BuiltInPositionTactic("ANON") {
+        override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
+          if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != fml) {
+            throw BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
+              provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.sub(pos) + " at position " + pos + ")")
+          }
+          provable
+        }
+      })(pos)
+    })) :: NoOpTactic
   }
 
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition on the sole subgoal. */
-  def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
+  def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
         throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
-          else provable.subgoals.head.prettyString))
+           else provable.subgoals.head.prettyString))
       }
       provable
     }
   }
 
   /** assertOnAll is a no-op tactic that raises an error the provable does not satisfy a condition on all subgoals. */
-  def assertOnAll(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
+  def assertOnAll(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (!provable.subgoals.forall(cond(_))) {
         throw BelleUserGeneratedError(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
@@ -129,23 +134,22 @@ object DebuggingTactics {
     }
   }
 
-  def assertProvableSize(provableSize: Int): BuiltInTactic = new BuiltInTactic(s"assertProvableSize(${provableSize})") {
+  def assertProvableSize(provableSize: Int): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.length != provableSize)
-        throw new BelleUserGeneratedError(s"assertProvableSize failed: Expected to have ${provableSize} open goals but found an open goal with ${provable.subgoals.size}");
+        throw BelleUserGeneratedError(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
       provable
     }
   }
 
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition at position pos. */
-  def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
+  def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      if (provable.subgoals.size != 1){
-        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
+      if (provable.subgoals.size != 1) {
+        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
           provable.subgoals.size + " subgoals")
-      }
-      else if (!cond(provable.subgoals.head, pos)) {
-        throw new BelleUserGeneratedError(message + "\nAn (internal) check failed at the subgoal formula " + provable.subgoals.head.at(pos)._2)
+      } else if (!cond(provable.subgoals.head, pos)) {
+        throw BelleUserGeneratedError(message + "\nAn (internal) check failed at the subgoal formula " + provable.subgoals.head.at(pos)._2)
       }
       provable
     }
@@ -154,8 +158,8 @@ object DebuggingTactics {
   /** assertE is a no-op tactic that raises an error if the provable has not the expected expression at the specified position. */
   def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic = {
     import TacticFactory._
-    "assert" byWithInputs (expected :: message :: Nil, (pos: Position, seq: Sequent) => {
-      (new BuiltInPositionTactic("assert") {
+    ("assert" byWithInputs (expected :: message :: Nil, (pos: Position, seq: Sequent) => {
+      (new BuiltInPositionTactic("ANON") {
         override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
           if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != expected) {
             throw BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
@@ -164,7 +168,7 @@ object DebuggingTactics {
           provable
         }
     })(pos)
-  })
+  })) :: NoOpTactic
   }
 
   /** @see [[TactixLibrary.done]] */
@@ -200,7 +204,7 @@ case class Case(fml: Formula, simplify: Boolean = true) {
 object Idioms {
   import TacticFactory._
 
-  lazy val nil: BelleExpr = new BuiltInTactic("nil") {
+  lazy val nil: BelleExpr = new BuiltInTactic("nil") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = provable
   }
   /** no-op nil */
@@ -272,7 +276,7 @@ object Idioms {
   }
 
   /** Stores a lemma `lemmaName` if the current provable is proved. */
-  def rememberAs(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr = new BuiltInTactic("RememberProof") {
+  def rememberAs(lemmaName: String)(implicit lemmaDB: LemmaDB): BelleExpr = new BuiltInTactic("RememberProof") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.isProved) {
         val evidence = ToolEvidence(immutable.List("input" -> provable.conclusion.prettyString, "output" -> "true")) :: Nil
@@ -308,7 +312,7 @@ object Idioms {
     }
   }
 
-  def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
+  def atSubgoal(subgoalIdx: Int, t: BelleExpr): DependentTactic = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
@@ -317,7 +321,7 @@ object Idioms {
   }
 
   /** Gives a name to a tactic to a definable tactic. */
-  def NamedTactic(name: String, tactic: BelleExpr) = new DependentTactic(name) {
+  def NamedTactic(name: String, tactic: BelleExpr): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = tactic
   }
 

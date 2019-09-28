@@ -196,7 +196,7 @@ trait SequentCalculus {
     }
   def close(a: Int, s: Int)  : BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  val closeIdWith: DependentPositionTactic = "closeIdWith" by ((pos: Position, s: Sequent) => {
+  val closeIdWith: DependentPositionTactic = "idWith" by ((pos: Position, s: Sequent) => {
     pos.top match {
       case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
       case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)

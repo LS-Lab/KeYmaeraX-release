@@ -208,10 +208,12 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1))
-    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()").getResultingResponses(t).loneElement) {
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "implyR"
         stepsTactic shouldBe ""
+      case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
+      case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
   }}
 
@@ -223,10 +225,12 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", prop)
-    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()").getResultingResponses(t).loneElement) {
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
         stepsTactic shouldBe "implyR(1) ; andL(-1)"
+      case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
+      case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
   }}
 
@@ -238,10 +242,12 @@ class ScriptedRequestTests extends TacticTestBase {
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", master())
-    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()").getResultingResponses(t).loneElement) {
+    inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "master"
         stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; QE"
+      case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
+      case e: ErrorResponse if e.exn == null => fail(e.msg)
     }
   }}
 
@@ -264,7 +270,9 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = new GetApplicableAxiomsRequest(db.db, db.user.userName, proofId.toString, "()", SuccPosition(1)).
       getResultingResponses(t).loneElement
-    response should have ('derivationInfos ((DerivationInfo("implyR"), None)::(DerivationInfo("chaseAt"), None)::Nil), 'suggestedInput (Map.empty))
+    response should have (
+      'derivationInfos ((DerivationInfo("implyR"), None) :: (DerivationInfo("chaseAt"), None) :: Nil),
+      'suggestedInput (Map.empty))
   }
 
   it should "work with input suggestion" in withDatabase { db =>

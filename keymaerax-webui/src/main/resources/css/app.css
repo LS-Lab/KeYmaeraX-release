@@ -64,7 +64,7 @@ output {
   font-size: 85%;
 }
 
-@media (max-width: 991px) {
+@media (max-width: 767px) {
 .k4-btn-optional-text {
   display: none;
 }
@@ -116,6 +116,10 @@ output {
   height: inherit;
   padding-top: 5px;
   padding-bottom: 5px;
+  max-width: calc(10vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .k4-tactics-nav-first > li > a {
@@ -266,6 +270,11 @@ del {
   margin-bottom: 10px;
 }
 
+.well-stepjustification {
+  padding: 0px;
+  margin-bottom: 0px;
+}
+
 .panel-heading-compact {
   padding: 0px 0px 0px 0px;
 }
@@ -300,7 +309,7 @@ del {
 }
 
 .popover {
-  max-width: none;
+  max-width: calc(80vw);
 }
 
 .tooltip-inner {
@@ -994,6 +1003,7 @@ del {
   border-right: none;
   border-bottom: thin solid var(--lsmain);
   margin: 0 0 0 3em;
+  position: relative;
 }
 
 /* must be after k4-proofrow: overrides border styling */
@@ -1003,12 +1013,13 @@ del {
   border-top: none;
   border-right: none;
   border-bottom: none;
+  position: relative;
 }
 
 .k4-proofrow > ul:first-child {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1.4ex 0 0 -0.5em;
+  margin: -1ex 0 0 -4em;
   text-align: right;
   width: 3em;
   display: block;
@@ -1022,7 +1033,28 @@ del {
   color: var(--lsmain);
   display: inline-block;
   white-space: nowrap;
-  width: 3.5em;
+  width: 4em;
+}
+
+.k4-proofrow > ul:nth-child(2) {
+  list-style-type: none;
+  padding: 0 0 0 0;
+  margin: -1ex 0 0 0em;
+  text-align: left;
+  width: 1em;
+  display: block;
+  position: absolute;
+  top: 100%;
+  left: 100%;
+}
+.k4-proofrow > ul:nth-child(2) li {
+  height: 3ex;
+  font-size: smaller;
+  border: none;
+  color: var(--lsmain);
+  display: inline-block;
+  white-space: nowrap;
+  width: 1em;
 }
 
 .k4-proofrow .k4-proofrule {
@@ -1038,6 +1070,11 @@ del {
   display: inline-block;
   text-align: center;
   width: 1em;
+}
+
+.k4-proofrow-justification {
+  margin-left: 3em; /* see k4-proofrow margin */
+  margin-right: 0;
 }
 
 .k4-flexrow {

@@ -19,6 +19,7 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
   }
 
   this.toolChange = function() {
+    toolStatus.initializing = true;
     $http.post("/config/tool", toolStatus.tool).success(function(data) {
       toolStatus.tool = data.tool;
       toolStatus.initialized = true;
@@ -28,10 +29,13 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
       toolStatus.initialized = false;
       toolStatus.error = data.textStatus;
       toolStatus.errorDetails = data.causeMsg;
+    }).finally(function() {
+      toolStatus.initializing = false;
     });
   }
 
   this.getTool = function() {
+    toolStatus.initializing = true;
     $http.get("/config/tool").success(function(data) {
       toolStatus.tool = data.tool;
       toolStatus.initialized = true;
@@ -42,6 +46,8 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
       toolStatus.initialized = false;
       toolStatus.error = data.textStatus;
       toolStatus.errorDetails = data.causeMsg;
+    }).finally(function() {
+      toolStatus.initializing = false;
     });
   }
 
@@ -53,9 +59,18 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
 });
 
 angular.module('keymaerax.controllers').controller('ToolConfig',
-  function($scope, $http, ToolConfigService) {
+  function($scope, $uibModalInstance, ToolConfigService) {
     $scope.toolStatus = ToolConfigService.getToolStatus();
     $scope.systemInfo = ToolConfigService.getSystemInfo();
     $scope.toolChange = ToolConfigService.toolChange;
     $scope.getTool = ToolConfigService.getTool;
+
+    $scope.close = function() {
+      $uibModalInstance.close();
+    }
+});
+
+angular.module('keymaerax.controllers').controller('ToolStatus',
+  function($scope, ToolConfigService) {
+    $scope.toolStatus = ToolConfigService.getToolStatus();
 });

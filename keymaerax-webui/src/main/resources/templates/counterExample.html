@@ -1,5 +1,9 @@
 <div class="modal-header">
-    <h3 class="modal-title">Counter-example search result</h3>
+    <h3 class="modal-title">
+        <span>Counter-example search result</span>
+        <span class="pull-right"><button class="btn btn-primary" ng-click="cancel()">Ok</button></span>
+    </h3>
+
 </div>
 <div ng-if="result === 'cex.found'" class="modal-body">
     <div class="panel panel-default">
@@ -66,7 +70,4 @@
     <p>
         Please go to <mark>Help &rarr; Tool Configuration</mark> and configure Mathematica as backend tool.
     </p>
-</div>
-<div class="modal-footer">
-    <button class="btn btn-primary" ng-click="cancel()">Ok</button>
 </div>

@@ -131,10 +131,9 @@ abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: St
   override final def resultingResponses(): List[Response] = {
     if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
     //@todo faster query for existence
-    else if (!db.userOwnsProof(username, proofId)) {
+    else if (HyDRAServerConfig.isHosted && db.getProofInfo(proofId).modelId.isDefined && !db.userOwnsProof(username, proofId)) {
       new PossibleAttackResponse("Permission denied") :: Nil
-    }
-    else doResultingResponses()
+    } else doResultingResponses()
   }
 
   protected def doResultingResponses(): List[Response]
@@ -177,11 +176,19 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
   }
 }
 
-class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
+class ProofsForUserRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
   def resultingResponses(): List[Response] = {
     val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).map(proof =>
       (proof._1, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
+  }
+}
+
+class UserLemmasRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
+  def resultingResponses(): List[Response] = {
+    val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).filter(_._1.closed).
+      groupBy(_._1.modelId).map(_._2.head).map(proof => (proof._1, proof._1.modelId.map(db.getModel))).toList
+    new UserLemmasResponse(proofs) :: Nil
   }
 }
 
@@ -1096,48 +1103,46 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
           }
 
           if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {
-            val monitorFml =  monitorShape match {
-              case "boolean" => monitorCond.subgoals.head.succ.head
-              case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.succ.head)
-            }
+            val monitorFml =  monitorCond.subgoals.head.succ.head
+            val reassociatedCtrlMonitorFml = FormulaTools.reassociate(monitorFml)
+            val proof = TactixLibrary.proveBy(Equiv(monitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop)
+            if (proof.isProved) {
+              val ctrlMonitorProg = TactixLibrary.proveBy(reassociatedCtrlMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
+              val ctrlInputs = CGenerator.getInputs(ctrlMonitorProg)
+              val ctrlMonitorCode = (new CGenerator(new CMonitorGenerator()))(ctrlMonitorProg, stateVars, ctrlInputs, "Monitor")
+              val inputs = CGenerator.getInputs(prg)
+              val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
+              val declarations = ctrlMonitorCode._1.trim
+              val monitorCode = ctrlMonitorCode._2.trim
 
-            val params = CGenerator.getParameters(monitorFml, stateVars)
-            val inputs = CGenerator.getInputs(prg)
-            val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
-              CGenerator.printStateDeclaration(stateVars) + "\n" +
-              CGenerator.printInputDeclaration(inputs)
-            val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
-            val monitorCode = (new CMonitorGenerator)(monitorFml, stateVars, inputs)
+              val sandbox =
+                s"""
+                  |${CGenerator.printHeader(model.name)}
+                  |$declarations
+                  |${fallbackCode._1}
+                  |${fallbackCode._2}
+                  |$monitorCode
+                  |
+                  |state ctrl(state curr, const parameters* const params, const input* const in) {
+                  |  /* controller implementation stub: modify curr to return actuator set values */
+                  |  return curr;
+                  |}
+                  |
+                  |int main() {
+                  |  /* control loop stub */
+                  |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
+                  |  while (true) {
+                  |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
+                  |    input in;   /* resolve non-deterministic assignments in the model */
+                  |    state post = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
+                  |    /* hand post actuator set values to actuators */
+                  |  }
+                  |  return 0;
+                  |}
+                  |""".stripMargin
 
-            val sandbox =
-              s"""
-                |${CGenerator.printHeader(model.name)}
-                |${CGenerator.INCLUDE_STATEMENTS}
-                |$declarations
-                |${fallbackCode._1}
-                |${fallbackCode._2}
-                |${monitorCode._1}
-                |${monitorCode._2}
-                |
-                |state ctrl(state curr, const parameters* const params, const input* const in) {
-                |  /* controller implementation stub: modify curr to return actuator set values */
-                |  return curr;
-                |}
-                |
-                |int main() {
-                |  /* control loop stub */
-                |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
-                |  while (true) {
-                |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
-                |    input in;   /* resolve non-deterministic assignments in the model */
-                |    state post = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
-                |    /* hand post actuator set values to actuators */
-                |  }
-                |  return 0;
-                |}
-                |""".stripMargin
-
-            new ModelPlexArtifactCodeResponse(model, sandbox) :: Nil
+              new ModelPlexArtifactCodeResponse(model, sandbox) :: Nil
+            } else new ErrorResponse("ModelPlex failed: unable to prove equivalence of monitor\n  " + monitorFml.prettyString + " with reassociated form\n  " + reassociatedCtrlMonitorFml.prettyString) :: Nil
           } else new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString) :: Nil
       }
     case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
@@ -1566,23 +1571,23 @@ class ProofNodeSequentRequest(db: DBAbstraction, userId: String, proofId: String
   }
 }
 
-class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, strict: Boolean)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
-      case Some(node) if node.children.isEmpty || node.children.head.maker.isEmpty =>
+      case Some(node) if node.maker.isEmpty =>
         new ErrorResponse("Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic")::Nil
-      case Some(node) if node.children.nonEmpty && node.children.head.maker.isDefined =>
-        assert(node.children.nonEmpty && node.children.head.maker.isDefined, "Unable to expand node without tactics")
-        //@note all children share the same maker
-        val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
-        val localProofId = db.createProof(localProvable)
+      case Some(node) if node.maker.isDefined =>
+        assert(node.maker.isDefined, "Unable to expand node without tactics")
+        val (conjecture, parentStep, parentRule) = (ProvableSig.startProof(node.conclusion), node.maker.get, node.makerShortName.get)
+        val localProofId = db.createProof(conjecture)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=false)
+          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1,
+          strict=strict, convertPending=false)
         val parentTactic = BelleParser(parentStep)
-        innerInterpreter(parentTactic, BelleProvable(localProvable))
+        innerInterpreter(parentTactic, BelleProvable(conjecture))
         innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)

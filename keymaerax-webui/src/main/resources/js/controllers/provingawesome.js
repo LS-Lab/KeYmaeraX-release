@@ -350,7 +350,7 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, $location,
+  function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, $location, $timeout,
            Tactics, sequentProofData, spinnerService,
            derivationInfos, sessionService, Poller, FileSaver) {
     $scope.proofId = $routeParams.proofId;
@@ -858,6 +858,14 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             showMessage($uibModal, 'Empty agenda even though proof ' + $scope.proofId + ' is not closed (' + data.status + ')')
           }
         });
+      }
+    });
+
+    $scope.$on('agenda.branchClosed', function(event, data) {
+      if (data.proofId == $scope.proofId) {
+        // the current controller is responsible
+        spinnerService.show('branchClosedSpinner');
+        $timeout(function() { spinnerService.hide('branchClosedSpinner'); }, 2000);
       }
     });
 

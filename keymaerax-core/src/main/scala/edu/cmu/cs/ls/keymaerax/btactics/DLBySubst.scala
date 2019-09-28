@@ -303,7 +303,7 @@ private object DLBySubst {
       val oldified = SubstitutionHelper.replaceFn("old", invariant, ghosts.map(_._1).toMap)
       val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) &
-        ("doLoop" byWithInput(oldified, (pos, sequent) => {
+        ("ANON" byWithInput(oldified, (pos, sequent) => {
           sequent.sub(pos) match {
             case Some(b@Box(Loop(a), p)) =>
               if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)

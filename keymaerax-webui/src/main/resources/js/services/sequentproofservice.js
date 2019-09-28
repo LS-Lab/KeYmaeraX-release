@@ -1,8 +1,12 @@
 /** Makes a node that fetches its sequent lazily */
 makeLazyNode = function(http, userId, proofId, node) {
-  node.getSequent = function() {
+  /** Returns a sequent object that may be filled in later. Use callback to wait for a filled sequent. */
+  node.getSequent = function(callback) {
     var theNode = node;
-    if (theNode.sequent) return theNode.sequent;
+    if (theNode.sequent) {
+      if (callback) callback(theNode.sequent);
+      return theNode.sequent;
+    }
     else {
       theNode.sequent = {};
       http.get('proofs/user/' + userId + '/' + proofId + '/' + theNode.id + '/sequent').then(function(response) {
@@ -13,6 +17,7 @@ makeLazyNode = function(http, userId, proofId, node) {
           theNode.sequent.ante = [];
           theNode.sequent.succ = [];
         }
+        if (callback) callback(theNode.sequent);
       });
       return theNode.sequent;
     }
@@ -107,6 +112,7 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         nodesMap: {}, // Map[String, PTNode], i.e., { id: { id: String, children: [ref PTNode], parent: ref PTNode } }
         nodeIds: function() { return Object.keys(this.nodesMap); },
         nodes: function() { return $.map(this.nodesMap, function(v) {return v;}); },
+        isProved: false,
 
         clear: function() {
           this.root = undefined;
@@ -117,7 +123,8 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         pruneBelow: function(nodeId) {
           var theProofTree = this;
           var node = theProofTree.nodesMap[nodeId];
-          if (node.children.length > 0) {
+          //@note child nodes may not be loaded yet (if pruning below root and proof was reloaded)
+          if (node && node.children.length > 0) {
             $.each(node.children, function(i, c) {
               theProofTree.pruneBelow(c);
               delete theProofTree.nodesMap[c];
@@ -142,18 +149,25 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         htmlNodeId: function(nodeId) { return nodeId.replace(/\(|\)/g, "").replace(/,/g, "-"); },
         /** Highlights the operator where the step that created sequent/node `nodeId` was applied. */
         highlightNodeStep: function(nodeId, highlight) {
-          var node = this.node(nodeId);
-          node.isHighlighted = highlight;
-          var pos = node.rule.pos.replace(/\./g, "\\,");
-          var element = $("#seq_"+this.htmlNodeId(node.parent) + " #fml_"+pos);
-          if (highlight) {
-            if (node.rule.asciiName == "WL" || node.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
-            else element.addClass("k4-highlight-steppos");
-            if (element.text().startsWith("[") || element.text().startsWith("<")) {
-              if (node.rule.asciiName == "[]^" || node.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
-              else element.addClass("k4-highlight-steppos-modality-prg");
-            }
-          } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+          // branching tactic: tree may include other child
+          var nodeIdHead = nodeId.split(",")[0];
+          var node = undefined;
+          for (i = 0; i<3 && !node; i++) {
+            node = this.node(nodeIdHead + "," + i + ")");
+          }
+          if (node) {
+            node.isHighlighted = highlight;
+            var pos = node.rule.pos.replace(/\./g, "\\,");
+            var element = $("#seq_" + this.htmlNodeId(node.parent) + " #fml_" + pos);
+            if (highlight) {
+              if (node.rule.asciiName == "WL" || node.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
+              else element.addClass("k4-highlight-steppos");
+              if (element.text().startsWith("[") || element.text().startsWith("<")) {
+                if (node.rule.asciiName == "[]^" || node.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
+                else element.addClass("k4-highlight-steppos-modality-prg");
+              }
+            } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+          }
         },
         highlightedNode: function() {
           var theNodes = $.map(this.nodesMap, function(v) {return v;});
@@ -223,6 +237,19 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
     characterMeasure: {
       show: false
+    },
+
+    justifications: {
+      justificationsMap: {},           // { proofId: { nodeId: { ... } } }
+      add: function(proofId, nodeId, justification) {
+        if (!this.justificationsMap[proofId]) {
+          this.justificationsMap[proofId] = {};
+        }
+        this.justificationsMap[proofId][nodeId] = justification;
+      },
+      get: function(proofId, nodeId) {
+        return this.justificationsMap[proofId] ? this.justificationsMap[proofId][nodeId] : undefined;
+      }
     },
 
     /** Prunes below node `nodeId`, ONLY IN THE UI. Updates the proof tree, agenda, and tactic. */
@@ -319,6 +346,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
           theProofTree.nodesMap = response.data.proofTree.nodes;
           theProofTree.root = response.data.proofTree.root;
+          theProofTree.isProved = response.data.proofTree.isProved;
           var agendaItems = theAgenda.items();
           if (agendaItems.length > 0 && theAgenda.selectedId() === undefined) {
             // select first task if nothing is selected yet
@@ -363,6 +391,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           newAgendaItem.deduction.sections[0].path.unshift(node.id);
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
+        if (proofUpdate.newNodes.length == 0) {
+          $rootScope.$broadcast('agenda.branchClosed', {proofId: proofId});
+        }
         delete theAgenda.itemsMap[oldAgendaItem.id];
         var agendaIds = theAgenda.itemIds();
         if (theAgenda.selectedId() === undefined && agendaIds.length > 0) {

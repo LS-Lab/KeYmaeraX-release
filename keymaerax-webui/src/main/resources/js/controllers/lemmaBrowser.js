@@ -10,12 +10,38 @@ angular.module('keymaerax.controllers').controller('LemmaBrowserCtrl',
   $scope.derivationInfos = {
     filter: undefined,
     order: 'standardDerivation.name',
-    infos: []
+    infos: [],
+    lemmas: []
   };
 
-  derivationInfos.allDerivationInfos(userId, proofId, nodeId).then(function(response) {
-    $scope.derivationInfos.infos = response.data;
-  });
+  $scope.loadDerivationInfos = function() {
+    $scope.axiomsLoading = true;
+    derivationInfos.allDerivationInfos(userId, proofId, nodeId).then(function(response) {
+      $scope.derivationInfos.infos = response.data;
+      $scope.axiomsLoading = false;
+    });
+  }
+
+  $scope.loadLemmas = function() {
+    $scope.lemmasLoading = true;
+    derivationInfos.allLemmas(userId).then(function(response) {
+      $scope.derivationInfos.lemmas = response.data;
+      $scope.lemmasLoading = false;
+    })
+  }
+
+  //@see sequent.js/useLemma
+  $scope.useLemma = function(formulaId, lemma) {
+    if (lemma.useLemmaTac && lemma.useLemmaTac != "verbatim") {
+      var tactic = lemma.useLemmaTac ? (lemma.useLemmaTac != "custom" ? lemma.useLemmaTac : lemma.customTac) : undefined;
+      var input = [{ type: "string", param: "lemma", value: lemma.name},
+                   { type: "string", param: "tactic", value: tactic }];
+      $scope.applyInputTactic(formulaId, "useLemma", input);
+    } else {
+      var input = [{ type: "string", param: "lemma", value: lemma.name}];
+      $scope.applyInputTactic(formulaId, "useLemma", input);
+    }
+  }
 
   $scope.applyTactic = function(formulaId, tacticId) {
     var fmlId = formulaId ? formulaId : sequentProofData.formulas.highlighted;

@@ -17,7 +17,7 @@
         <div class="col-md-12">
             <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[0]}}"
                         sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
-                        read-only="true" collapsed="false" abbreviate="false"></k4-sequent>
+                        read-only="true" collapsed="false" in-closed-proof="proofTree.isProved" abbreviate="false"></k4-sequent>
         </div>
     </div>
     <div ng-repeat="step in deductionPath.sections[0].path">
@@ -41,7 +41,9 @@
             <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{step}}"
                             sequent="proofTree.nodesMap[step].getSequent()"
-                            read-only="true" collapsed="true" abbreviate="false"></k4-sequent>
+                            read-only="true" collapsed="true"
+                            in-closed-proof="proofTree.isProved"
+                            abbreviate="false"></k4-sequent>
                 {{highlightStepPosition(proofStepChildren(step)[0], true)}} <!-- permanently highlight step -->
                 <div ng-include="'siblinglinks.html'" replace-include></div>
             </div>
@@ -66,7 +68,9 @@
             <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{step}}"
                             sequent="proofTree.nodesMap[step].getSequent()"
-                            read-only="true" collapsed="true" abbreviate="false"></k4-sequent>
+                            read-only="true" collapsed="true"
+                            in-closed-proof="proofTree.isProved"
+                            abbreviate="false"></k4-sequent>
                 {{highlightStepPosition(proofStepChildren(step)[0], true)}} <!-- permanently highlight step -->
                 <div ng-include="'siblinglinks.html'" replace-include></div>
             </div>

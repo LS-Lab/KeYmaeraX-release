@@ -111,7 +111,7 @@ object DerivationInfo {
       , {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
-      , {case () => TactixLibrary.assignb}),
+      , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", false, {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new CoreAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
@@ -121,7 +121,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     new CoreAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality y")}),
-    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}),
+    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
     new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
@@ -209,7 +209,7 @@ object DerivationInfo {
       , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
       , _ => ((fml: Formula) => DifferentialTactics.diffRefine(fml)): TypedFunc[Formula, BelleExpr]),
     PositionTacticInfo("dCi"
-      , RuleDisplayInfo("Inverse Differential Cut"
+      , RuleDisplayInfo("dCi"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))
         , /* premises */ List(
           (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
@@ -890,6 +890,12 @@ object DerivationInfo {
       , RuleDisplayInfo("CMon", (List(), List("C{o}→C{k}")), List((List(), List("o→k"))))
       , {case () => TactixLibrary.CMon}
     ),
+    InputTacticInfo("CMonCongruence"
+      , SimpleDisplayInfo("CMonCongruence","CMonCongruence")
+      ,List(StringArg("inEqPos")), _ => ((inEqPos: String) => TactixLibrary.CMon(PosInExpr.parse(inEqPos))): TypedFunc[String, BelleExpr]),
+    InputTacticInfo("CECongruence"
+      , SimpleDisplayInfo("CECongruence","CECongruence")
+      ,List(StringArg("inEqPos")), _ => ((inEqPos: String) => TactixLibrary.CE(PosInExpr.parse(inEqPos))): TypedFunc[String, BelleExpr]),
 
     // proof management tactics
     InputTacticInfo("debug"
@@ -907,6 +913,9 @@ object DerivationInfo {
       ,List(StringArg("tactic")), _ =>
         ((tactic: String) => DebuggingTactics.pending(tactic)): TypedFunc[String, BelleExpr]
     ),
+    InputTacticInfo("label"
+      , SimpleDisplayInfo("Label","label")
+      ,List(StringArg("label")), _ => ((l: String) => TactixLibrary.label(BelleLabel.fromString(l))): TypedFunc[String, BelleExpr]),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
@@ -922,6 +931,9 @@ object DerivationInfo {
     new TacticInfo("id",
       RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => TactixLibrary.closeId}),
+    PositionTacticInfo("idWith",
+      RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
+      {case () => TactixLibrary.closeIdWith}),
     new TacticInfo("close",
       RuleDisplayInfo("Close by ⊥/⊤", (List("&Gamma;", "P", "⊥"), List("⊤", "P", "&Delta;")), Nil),
       {case () => TactixLibrary.close}),
@@ -934,7 +946,7 @@ object DerivationInfo {
 
     // Proof rule input tactics
     new InputTacticInfo("cut"
-      , RuleDisplayInfo(("Cut","cut")
+      , RuleDisplayInfo(("cut","cut")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
           (List("&Gamma;"),List("&Delta;","P")),
@@ -947,11 +959,11 @@ object DerivationInfo {
           (List("&Gamma;", "freshVar=theta"),List("&Delta;"))))
       ,List(TermArg("theta"),VariableArg("freshVar", "freshVar"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
     // Proof rule input position tactics
-    new InputPositionTacticInfo("cutL", "Cut", List(FormulaArg("cutFormula")),
+    new InputPositionTacticInfo("cutL", "cutL", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("cutR", "Cut", List(FormulaArg("cutFormula")),
+    new InputPositionTacticInfo("cutR", "cutR", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutR(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("cutLR", "Cut", List(FormulaArg("cutFormula")),
+    new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutLR(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("loop",
       RuleDisplayInfo("Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
@@ -959,7 +971,8 @@ object DerivationInfo {
           (List("&Gamma;"),List("J", "&Delta;")),
           (List("J"),List("[a]J")),
           (List("J"),List("P"))))
-      , List(FormulaArg("J")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]),
+      , List(FormulaArg("J")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]
+      , revealInternalSteps = true),
     new PositionTacticInfo("loopAuto", "loopAuto",
       {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
     new InputPositionTacticInfo("throughout",
@@ -999,6 +1012,7 @@ object DerivationInfo {
       _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
     new InputPositionTacticInfo("edit", "edit", List(ExpressionArg("to")),
       _ => ((expr:Expression) => TactixLibrary.edit(expr)): TypedFunc[Expression, BelleExpr]),
+    new TacticInfo("expandAll", "expandAll", _ => EqualityTactics.expandAll, revealInternalSteps = true),
     new InputPositionTacticInfo("boundRename"
       , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)","&Delta;")),
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
@@ -1025,7 +1039,7 @@ object DerivationInfo {
 
     new InputPositionTacticInfo(
       "discreteGhost",
-      RuleDisplayInfo(("[:=] ghost", "[:=] ghost"), (List("&Gamma;"),List("P","&Delta;")),
+      RuleDisplayInfo(("iG", "iG"), (List("&Gamma;"),List("P","&Delta;")),
         List((List("&Gamma;"), List("[gv:=gt;]P","&Delta;")))),
       TermArg("gt") :: VariableArg("gv", "gv"::Nil) :: Nil,
       _ => ((t:Term) => ((v: Option[Variable]) => DLBySubst.discreteGhost(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
@@ -1040,8 +1054,8 @@ object DerivationInfo {
     PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
     PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
     PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
-    PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
-    PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}),
+    PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}, revealInternalSteps = true),
+    PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}, revealInternalSteps = true),
     PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
     PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(
       TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
@@ -1050,9 +1064,9 @@ object DerivationInfo {
     )}),
     PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
-    new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true),
+    new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true, revealInternalSteps = true),
     new TacticInfo("explore", "explore", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen, keepQEFalse = false)}, needsGenerator = true),
-    new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
+    new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true, revealInternalSteps = true),
     InputTacticInfo("QE", "QE",
       List(OptionArg(StringArg("tool")), OptionArg(TermArg("timeout"))),
       _ => { case Some(toolName: String) => {
@@ -1063,7 +1077,7 @@ object DerivationInfo {
       case _ => {
         case Some(Number(timeout)) => TactixLibrary.QE(Nil, None, Some(timeout.toInt))
         case _ => TactixLibrary.QE }: TypedFunc[Option[Term], BelleExpr]
-      }: TypedFunc[Option[String], _], needsTool = true),
+      }: TypedFunc[Option[String], _], needsTool = true, revealInternalSteps = true),
     new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
@@ -1194,12 +1208,12 @@ object DerivationInfo {
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solve}, needsTool = true),
+      {case () => TactixLibrary.solve}, needsTool = true, revealInternalSteps = true),
     new PositionTacticInfo("solveEnd",
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( q(sol(t)) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solveEnd}, needsTool = true),
+      {case () => TactixLibrary.solveEnd}, needsTool = true, revealInternalSteps = true),
     new PositionTacticInfo("DGauto",
       "DGauto",
       {case () => TactixLibrary.DGauto}, needsTool = true),
@@ -1414,6 +1428,8 @@ sealed trait DerivationInfo {
   val numPositionArgs: Int = 0
   /** Whether the derivation expects the caller to provide it with a way to generate invariants */
   val needsGenerator: Boolean = false
+  /** Whether the derivation makes internal steps that are useful for users to see. */
+  val revealInternalSteps: Boolean = false
   override def toString: String = "DerivationInfo(" + canonicalName + "," + codeName + ")"
 }
 
@@ -1550,15 +1566,18 @@ object DerivedAxiomInfo {
 // tactics
 
 /** Meta-information on a tactic performing a proof step (or more) */
-class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false,
+                 override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
   extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   val canonicalName = codeName
 }
 
-case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
+case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any,
+                              needsTool: Boolean = false, override val needsGenerator: Boolean = false,
+                              override val revealInternalSteps: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
@@ -1567,11 +1586,14 @@ case class TwoPositionTacticInfo(override val codeName: String, override val dis
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_, _], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator)
+case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_, _], needsTool: Boolean = false,
+                           override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator, revealInternalSteps)
 
-case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_,_], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
+case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo,
+                                   override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_,_], needsTool: Boolean = false,
+                                   override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 

@@ -7,21 +7,21 @@
 <div>
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <div class="row">
-            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
+            <div class="col-sm-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
                  tooltip-placement="auto top-left" tooltip-popup-delay="1000">
                 <a ng-click="applyTactic(tactic.selectedDerivation().id)">
                     <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 </a>
             </div>
-            <div class="col-md-8" ng-if="tactic.selectedDerivation().derivation.displayInfoParts !== null">
+            <div class="col-sm-8" ng-if="tactic.selectedDerivation().derivation.displayInfoParts !== null">
                 <k4-axiom-key-selector axiom="tactic.selectedDerivation().derivation"
                                        readonly="axiomReadonly"></k4-axiom-key-selector>
             </div>
-            <div class="col-md-8" ng-if="tactic.selectedDerivation().derivation.displayInfoParts === null">
+            <div class="col-sm-8" ng-if="tactic.selectedDerivation().derivation.displayInfoParts === null">
                 <span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span>
             </div>
-            <div class="col-md-1">
+            <div class="col-sm-1">
                 <span ng-if="tactic.selectedDerivation().derivation.help"
                       class="pull-right"
                       uib-popover-html="tactic.selectedDerivation().derivation.help"
@@ -34,14 +34,14 @@
     </div>
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
-            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
+            <div class="col-sm-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
                  tooltip-placement="auto top-left" tooltip-popup-delay="1000">
                 <a ng-click="applyTactic(tactic.selectedDerivation().id)">
                     <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 </a>
             </div>
-            <div class="col-md-9">
+            <div class="col-sm-9">
                 <span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span>
                 <span ng-if="tactic.selectedDerivation().derivation.help"
                       class="pull-right"
@@ -94,7 +94,7 @@
             </div>
         </div>
         <div class="panel-body" uib-collapse="!tactic.isOpen">
-            <div class="col-md-12">
+            <div class="col-sm-12">
                 <k4-sequent-rule-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                                       tactic="tactic.selectedDerivation()"></k4-sequent-rule-info>
             </div>

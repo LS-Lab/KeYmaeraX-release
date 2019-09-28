@@ -1,34 +1,71 @@
-<div class="col-md-12">
+<div class="col-sm-12">
     <!-- Character witdth measurement -->
     <div class="row k4-proofrow" ng-if="characterMeasure.show" ng-cloak>
-        <div class="col-md-12">
+        <div class="col-sm-12">
             <k4-sequent user-id="" proof-id="" node-id=""
                         sequent="characterWidthSequent"
-                        read-only="true" collapsed="false" abbreviate="true"
+                        read-only="true" collapsed="false" in-closed-proof="false" abbreviate="true"
                         on-apply-tactic=""
                         on-apply-input-tactic=""
                         on-apply-two-position-tactic=""></k4-sequent>
         </div>
     </div>
-
     <!-- Open Goal -->
     <div class="row k4-proofrow">
+        <!-- Rule above: left annotation -->
+        <ul></ul>
+        <!-- Rule below: right annotation -->
+        <ul ng-if="proofTree.node(deductionPath.sections[0].path[0]).rule.derivation.expansible">
+            <li>
+                <i class="fa fa-bars" ng-click="stepInto(proofId, deductionPath.sections[0].path[0], event)"></i>
+            </li>
+        </ul>
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
-        <div class="col-md-12">
+        <div class="col-sm-12">
             <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[0]}}"
                         sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
-                        read-only="readOnly" collapsed="false" abbreviate="false"
+                        read-only="readOnly" collapsed="false" in-closed-proof="proofTree.isProved" abbreviate="false"
                         on-apply-tactic="onApplyTactic(formulaId, tacticId)"
                         on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"
                         on-apply-two-position-tactic="onApplyTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequent>
         </div>
     </div>
-    <div ng-if="deductionPath.isCollapsed">
-        <div class="row k4-proofrow k4-proofrow-last">
+    <div ng-if="deductionPath.isCollapsed" ng-init="topSeq = proofTree.node(deductionPath.sections[0].path[0]).getSequent()">
+        <div class="row k4-proofrow" ng-if="topSeq.ante.length == 0 && topSeq.succ.length == 1 && topSeq.succ[0].formula.json.plain == 'false'" ng-cloak>
+            <!-- Left rule annotation -->
             <ul>
                 <li>
                     <!-- Full collapse -->
-                    <span class="k4-prooficon">
+                    <span class="k4-prooficon" ng-if="!readOnly">
+                        <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                           uib-tooltip="Collapse/uncollapse everything"
+                           tooltip-popup-delay="1000"><span class="fa fa-plus-square-o"></span></a>
+                    </span>
+                    <!-- proof rule -->
+                    <span class="k4-withcontextmenu k4-proofrule"
+                          tooltip-placement="right"
+                          ng-mouseover="highlightStepPosition(deductionPath.sections[0].path[0], true)"
+                          ng-mouseleave="highlightStepPosition(deductionPath.sections[0].path[0], false)"
+                          uib-tooltip="{{deductionPath.sections[0].path[0] | maker:this}}">
+                        {{deductionPath.sections[0].path[0] | ruleName:this}}
+                    </span>
+                </li>
+            </ul>
+            <div class="col-sm-12">
+                <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[1]}}"
+                            sequent="proofTree.nodesMap[deductionPath.sections[0].path[1]].getSequent()"
+                            read-only="true" collapsed="false" in-closed-proof="proofTree.isProved" abbreviate="false"
+                            on-apply-tactic=""
+                            on-apply-input-tactic=""
+                            on-apply-two-position-tactic=""></k4-sequent>
+            </div>
+        </div>
+        <div class="row k4-proofrow k4-proofrow-last" ng-if="!(topSeq.ante.length == 0 && topSeq.succ.length == 1 && topSeq.succ[0].formula.json.plain == 'false')" ng-cloak>
+            <!-- Left rule annotation -->
+            <ul>
+                <li>
+                    <!-- Full collapse -->
+                    <span class="k4-prooficon" ng-if="!readOnly">
                         <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
                            uib-tooltip="Collapse/uncollapse everything"
                            tooltip-popup-delay="1000"><span class="fa fa-plus-square-o"></span></a>
@@ -48,10 +85,11 @@
     <div ng-if="!deductionPath.isCollapsed" ng-repeat="step in deductionPath.sections[0].path">
         <!-- Conclusion -->
         <div class="row k4-proofrow" ng-if="$middle">
+            <!-- Rule above: left annotation -->
             <ul>
                 <li >
                     <!-- Full collapse icon -->
-                    <span ng-if="$index == 1" class="k4-prooficon">
+                    <span ng-if="$index == 1 && !readOnly" class="k4-prooficon">
                         <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
                            uib-tooltip="Collapse/uncollapse everything"
                            tooltip-popup-delay="1000"><span class="fa fa-minus-square-o"></span></a>
@@ -69,18 +107,25 @@
                     </span>
                 </li>
             </ul>
-            <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
+            <!-- Rule below: right annotation -->
+            <ul ng-if="proofTree.node(step).rule.derivation.expansible">
+                <li>
+                    <i class="fa fa-bars" ng-click="stepInto(proofId, step, event)"></i>
+                </li>
+            </ul>
+            <div class="col-sm-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{step}}"
                             sequent="proofTree.nodesMap[step].getSequent()"
-                            read-only="true" collapsed="true" abbreviate="false"></k4-sequent>
+                            read-only="true" collapsed="true" in-closed-proof="proofTree.isProved" abbreviate="false"></k4-sequent>
                 <div ng-include="'siblinglinks.html'" replace-include></div>
             </div>
         </div>
         <div ng-if="$last" class="row k4-proofrow k4-proofrow-last">
+            <!-- Rule above: left annotation -->
             <ul>
                 <li>
                     <!-- Full collapse if middle is not displayed (1 or 2 elements in path) -->
-                    <span ng-if="$index <= 1" class="k4-prooficon">
+                    <span ng-if="$index <= 1 && !readOnly" class="k4-prooficon">
                         <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
                            uib-tooltip="Collapse/uncollapse everything"
                            tooltip-popup-delay="1000"><span class="fa fa-minus-square-o"></span></a>
@@ -99,14 +144,14 @@
                 </li>
             </ul>
             <!-- do not repeat if first==last, i.e., sole element in list fetched so far -->
-            <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
+            <div ng-if="!$first" class="col-sm-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{step}}"
                             sequent="proofTree.nodesMap[step].getSequent()"
-                            read-only="true" collapsed="true" abbreviate="false"></k4-sequent>
+                            read-only="true" collapsed="true" in-closed-proof="proofTree.isProved" abbreviate="false"></k4-sequent>
                 <div ng-include="'siblinglinks.html'" replace-include></div>
             </div>
             <!-- only display fetch elements on non-root nodes -->
-            <div ng-if="step != '()'" class="col-md-12 k4-proofrow-annotation">
+            <div ng-if="step != '()'" class="col-sm-12 k4-proofrow-annotation">
                 ...
                 <ul>
                     <li>
@@ -123,6 +168,57 @@
                 </ul>
             </div>
         </div>
+        <!-- Justification -->
+        <div class="row k4-proofrow-justification" ng-repeat="justification in [justification(proofId, step)]">
+            <div class="col-sm-12 well well-stepjustification" ng-if="justification && justification.visible && justification.kind === 'axiom'">
+                <span>by {{justification.details.standardDerivation.name}} </span>
+                <span ng-bind-html="justification.details.standardDerivation.derivation.formula"></span>
+                <span class="pull-right">
+                    <a class="btn btn-xs btn-default" ng-if="!readOnly" ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a>
+                    <span ng-if="justification.details.standardDerivation.codeName !== 'nil'"
+                          uib-popover-template="fetchJustificationHelp(justification.details.standardDerivation.codeName)"
+                          popover-placement="auto bottom-right"
+                          popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
+                </span>
+            </div>
+            <div class="col-sm-12 well well-stepjustification" ng-if="justification && justification.visible && justification.kind === 'sequentrule'">
+                <span>by {{justification.details.standardDerivation.name}} </span>
+                <span class="pull-right">
+                    <a class="btn btn-xs btn-default" ng-if="!readOnly" ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a>
+                    <span ng-if="justification.details.standardDerivation.codeName !== 'nil'"
+                          uib-popover-template="fetchJustificationHelp(justification.details.standardDerivation.codeName)"
+                          popover-placement="auto bottom-right"
+                          popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
+                </span>
+
+                <div class="col-sm-12" ng-repeat="tactic in [justification.details.standardDerivation]"
+                     ng-include="'templates/sequentRuleTemplate.html'"></div>
+            </div>
+            <div class="col-sm-12 well well-stepjustification" ng-if="justification && justification.visible && justification.kind === 'tactic'">
+                <kbd>{{proofTree.node(step).rule.codeName}}</kbd>
+                <span class="pull-right">
+                    <a class="btn btn-xs btn-default"
+                       uib-popover-template="'proofStepTactic.html'"
+                       popover-trigger="'outsideClick'"
+                       popover-placement="auto bottom-right"><span class="fa fa-file-code-o"> Tactic</span></a>
+                    <a class="btn btn-xs btn-default" ng-if="!readOnly" ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a>
+<!--                    <span ng-if="justification.details.standardDerivation.codeName !== 'nil'"-->
+<!--                          uib-popover-template="fetchJustificationHelp(justification.details.standardDerivation.codeName)"-->
+<!--                          popover-placement="auto bottom-right"-->
+<!--                          popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>-->
+                </span>
+                <k4-sequentproof user-id="userId"
+                                 proof-id="justification.details.proofId"
+                                 node-id="justificationNode(step).id"
+                                 deduction-path="justificationNode(step).deduction"
+                                 proof-tree="justification.details.proofTree"
+                                 agenda="justification.details.agenda"
+                                 read-only="true"
+                                 on-tactic=""
+                                 on-input-tactic=""
+                                 on-two-position-tactic=""></k4-sequentproof>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -135,14 +231,12 @@
 <script type="text/ng-template" id="proofStepPopover.html">
     <div class="k4-nobreak">
         <a ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a><br/>
-        <!--<a ng-click="stepInto(proofId, step)"><span class="fa fa-book"> Details</span></a><br/>-->
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
 </script>
 <script type="text/ng-template" id="proofStepPopoverPrev.html">
     <div class="k4-nobreak">
         <a ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a><br/>
-        <!--<a ng-click="stepInto(proofId, step)"><span class="fa fa-book"> Details</span></a><br/>-->
         <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
     </div>
 </script>
@@ -155,4 +249,14 @@
                class="badge">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
         </li>
     </ul>
+</script>
+<script type="text/ng-template" id="rulehelp.html">
+    <ng-include src="'/help/axiomsrules/' + rulehelp.codeName + '.html'"></ng-include>
+</script>
+<script type="text/ng-template" id="proofStepTactic.html">
+    <div>
+        <span>
+            {{justification.details.tactic}}
+        </span>
+    </div>
 </script>

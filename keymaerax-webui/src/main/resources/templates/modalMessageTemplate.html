@@ -1,15 +1,15 @@
 <div class="modal-header" >
-    <h3 class="modal-title">{{title}}</h3>
+    <h3 class="modal-title">
+        <span>{{title}}</span>
+        <span class="pull-right" ng-if="mode == 'ok'">
+            <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
+        </span>
+        <span class="pull-right" ng-if="mode == 'yesno'">
+            <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
+            <button type="submit" class="btn btn-primary" ng-click="cancel()">Cancel</button>
+        </span>
+    </h3>
 </div>
 <div class="modal-body">
     {{message}}
-</div>
-<div class="modal-footer">
-    <div ng-if="mode == 'ok'">
-        <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
-    </div>
-    <div ng-if="mode == 'yesno'">
-        <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
-        <button type="submit" class="btn btn-primary" ng-click="cancel()">Cancel</button>
-    </div>
 </div>

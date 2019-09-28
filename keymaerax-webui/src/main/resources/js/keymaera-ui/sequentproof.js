@@ -15,8 +15,10 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
    * @param agenda          The agenda, see provingawesome.js for schema.
    * @param readOnly        Indicates whether or not the proof steps should allow interaction (optional).
    */
-  .directive('k4Sequentproof', ['$http', '$uibModal', '$q', '$timeout', 'sequentProofData', 'spinnerService', 'derivationInfos',
-      function($http, $uibModal, $q, $timeout, sequentProofData, spinnerService, derivationInfos) {
+  .directive('k4Sequentproof', ['$http', '$uibModal', '$q', '$timeout', '$compile',
+                                'ProofTree', 'Agenda', 'sequentProofData', 'spinnerService', 'derivationInfos',
+      function($http, $uibModal, $q, $timeout, $compile, ProofTree, Agenda,
+               sequentProofData, spinnerService, derivationInfos) {
     /* The directive's internal control. */
     function link(scope, element, attrs) {
 
@@ -56,15 +58,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       /**
        * Adds a proof tree node and updates the agenda sections.
        */
-      updateProof = function(proofTreeNode) {
-        scope.proofTree.addNode(proofTreeNode);
-
-        // append parent to the appropriate section in all relevant agenda items
-        var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
+      scope.updateProof = function(agenda, proofTree, proofTreeNode) {
+        var items = $.map(proofTreeNode.children, function(e) { return agenda.itemsByProofStep(e); });
         $.each(items, function(i, v) {
-          var childSectionIdx = scope.agenda.childSectionIndex(v.id, proofTreeNode);
+          var childSectionIdx = agenda.childSectionIndex(v.id, proofTreeNode);
           if (childSectionIdx >= 0) {
-            scope.agenda.updateSection(scope.proofTree, proofTreeNode, v, childSectionIdx);
+            agenda.updateSection(proofTree, proofTreeNode, v, childSectionIdx);
           }
         });
       }
@@ -124,19 +123,19 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
 
       scope.proofStepChildren = function(parentId) {
-        return sequentProofData.proofTree.node(parentId).children;
+        return scope.proofTree.node(parentId).children;
       }
 
       scope.stepAxiom = function() {
         if (scope.explanationNodeId) {
-          var node = sequentProofData.proofTree.node(scope.explanationNodeId)
+          var node = scope.proofTree.node(scope.explanationNodeId)
           return [node.rule];
         } else [];
       }
 
       scope.highlightStepPosition = function(nodeId, highlight) {
         scope.explanationNodeId = highlight ? nodeId : undefined;
-        sequentProofData.proofTree.highlightNodeStep(nodeId, highlight);
+        scope.proofTree.highlightNodeStep(nodeId, highlight);
       }
 
       flatPath = function(item) {
@@ -155,7 +154,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
       scope.fetchParent = function(nodeId) {
         $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + nodeId + '/parent').success(function(data) {
-          updateProof(data);
+          scope.proofTree.addNode(data);
+          scope.updateProof(scope.agenda, scope.proofTree, data);
         });
       }
 
@@ -164,59 +164,92 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         sequentProofData.prune(scope.userId, scope.proofId, nodeId);
       }
 
-      scope.stepInto = function(proofId, nodeId) {
-        spinnerService.show('magnifyingglassSpinner')
-        $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand').then(function(response) {
-          if (response.data.proofTree.nodes !== undefined) {
-            var modalInstance = $uibModal.open({
-              templateUrl: 'templates/magnifyingglass.html',
-              controller: 'MagnifyingGlassDialogCtrl',
-              scope: scope,
-              size: 'fullscreen',
-              resolve: {
-                proofInfo: function() {
-                  return {
-                    userId: scope.userId,
-                    proofId: proofId,
-                    nodeId: nodeId,
-                    detailsProofId: response.data.detailsProofId
-                  }
-                },
-                tactic: function() { return response.data.tactic; },
-                proofTree: function() { return response.data.proofTree; },
-                openGoals: function() { return response.data.openGoals; }
-              }
-            });
-          } else {
-            var tacticName = response.data.tactic.parent;
-            var tactics = derivationInfos.byName(scope.userId, scope.proofId, nodeId, tacticName)
-              .then(function(response) {
-                return response.data;
-              });
+      scope.justification = function(proofId, nodeId) {
+        return sequentProofData.justifications.get(proofId, nodeId);
+      }
 
-            var modalInstance = $uibModal.open({
-              templateUrl: 'templates/derivationInfoDialog.html',
-              controller: 'DerivationInfoDialogCtrl',
-              size: 'md',
-              resolve: {
-                tactics: function() { return tactics; },
-                readOnly: function() { return true; }
-              }
-            });
+      scope.rulehelp = {}
+      scope.fetchJustificationHelp = function(codeName) {
+        scope.rulehelp.codeName = codeName;
+        // return name of the ng-template in singletracksequentproof.html
+        return 'rulehelp.html';
+      }
+
+      scope.justificationNode = function(nodeId) {
+        //@note cannot use index verbatim since spoonfeeding interpreter and sequential interpreter create branches in different order
+        var branchId = branchId = parseInt(nodeId.split(",")[1][0], 10);
+        var outer = scope.proofTree.node(nodeId).rule;
+        if (outer.codeName == "loop") {
+          branchId = branchId == 0 ? 2 : branchId == 1 ? 0 : 1;
+        }
+        return scope.justification(scope.proofId, nodeId).details.agenda.items()[branchId];
+      }
+
+      scope.stepInto = function(proofId, nodeId, event) {
+        //@todo check that proof step didn't change either
+        if (!sequentProofData.justifications.get(proofId, nodeId)) {
+          spinnerService.show('magnifyingglassSpinner')
+          if (!scope.proofTree.node(nodeId)) {
+            scope.fetchSectionParent(scope.deductionPath.sections[0]);
           }
-        })
-        .finally(function() {
-          spinnerService.hide('magnifyingglassSpinner');
-        });
+          $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand?strict=' + (event && event.altKey)).then(function(response) {
+            scope.deductionPath.isCollapsed=false;
+            if (response.data.proofTree.nodes !== undefined) {
+              var justification = {
+                kind: 'tactic',
+                visible: true,
+                details: {
+                  proofId: response.data.detailsProofId,
+                  tactic: response.data.tactic.stepsTactic,
+                  proofTree: new ProofTree(),
+                  agenda: new Agenda()
+                }
+              }
+              justification.details.proofTree.nodesMap = response.data.proofTree.nodes;
+              justification.details.proofTree.root = response.data.proofTree.root;
+              justification.details.agenda.itemsMap = response.data.openGoals;
+              $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, scope.userId, proofId, v); });
+
+              paths = justification.details.proofTree.paths(justification.details.proofTree.rootNode());
+              $.each(paths.reverse(), function(i, v) { scope.updateProof(justification.details.agenda, justification.details.proofTree, v); });
+
+              sequentProofData.justifications.add(proofId, nodeId, justification);
+            } else {
+              var tacticName = response.data.tactic.parent;
+              derivationInfos.byName(scope.userId, proofId, nodeId, tacticName).then(function(response) {
+                var justification = {
+                  kind: response.data[0].standardDerivation.derivation.type,
+                  visible: true,
+                  details: response.data[0]
+                }
+                sequentProofData.justifications.add(proofId, nodeId, justification);
+              });
+            }
+          })
+          .finally(function() {
+            spinnerService.hide('magnifyingglassSpinner');
+          });
+        } else {
+          var justification = sequentProofData.justifications.get(proofId, nodeId)
+          justification.visible = !justification.visible;
+          if (justification.visible) scope.deductionPath.isCollapsed=false;
+        }
       }
 
       /* Indicates whether the section has a parent (if its last step has a parent, and the section is not complete) */
       scope.hasParent = function(section) {
         var step = section.path[section.path.length - 1];
-        return sequentProofData.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
+        return scope.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
       }
 
-      scope.deductionPath.isCollapsed = true;
+      // inner steps are readOnly, show them all
+      scope.deductionPath.isCollapsed = !scope.readOnly;
+      // fetch child if top node is false to show additional proof line
+      scope.proofTree.node(scope.nodeId).getSequent(function(sequent) {
+        var nodeIsFalse = sequent.ante.length == 0 && sequent.succ.length == 1 && sequent.succ[0].formula.json.plain == "false";
+        if (nodeIsFalse && scope.deductionPath.sections[0].path.length <= 1) scope.fetchParent(scope.nodeId);
+      });
+
 
       scope.manyDigits = '|123456789'.repeat(15);
       scope.characterWidthSequent = {
@@ -224,7 +257,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         succ: [ { formula: { json: { plain: scope.manyDigits, text: scope.manyDigits }, string: scope.manyDigits } } ]
       };
 
-      scope.characterMeasure = sequentProofData.characterMeasure
+      scope.characterMeasure = sequentProofData.characterMeasure;
+
+      // compile on demand avoids recursive template infinite loop
+      var template = '<div ng-include="\'partials/singletracksequentproof.html\'"></div>';
+      var $template = angular.element(template);
+      $compile($template)(scope);
+      element.append($template);
     }
 
     return {
@@ -241,8 +280,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
             onInputTactic: '&',
             onTwoPositionTactic: '&'
         },
-        link: link,
-        templateUrl: 'partials/singletracksequentproof.html'
+        link: link
+        // do not use templateUrl (infinite loop because singletracksequentproof.html is a recursive template)
     };
   }])
   /**

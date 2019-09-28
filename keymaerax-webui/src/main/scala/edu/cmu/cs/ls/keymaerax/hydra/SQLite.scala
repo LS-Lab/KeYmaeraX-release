@@ -828,6 +828,9 @@ object SQLite {
                 case prevId@Some(_) => localProvables(prevId)
                 case None => rootProvable
               }
+              assert(step.branchOrder < inputProvable.subgoals.size, "Open branch index " + step.branchOrder +
+                " should point to a subgoal, but got only " + inputProvable.subgoals.size + " subgoals:\n" +
+                inputProvable.subgoals.map(_.prettyString).mkString("\n"))
               assert(inputProvable.subgoals(step.branchOrder) == localProvable.conclusion,
                 "Conclusion of subderivation " + localProvable.conclusion +
                   " should match open goal " + inputProvable.subgoals(step.branchOrder) +
