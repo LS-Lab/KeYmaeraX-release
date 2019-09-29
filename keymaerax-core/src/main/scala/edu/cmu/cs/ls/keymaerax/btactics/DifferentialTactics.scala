@@ -130,7 +130,7 @@ private object DifferentialTactics extends Logging {
 
   /** @see [[TactixLibrary.dI]] */
   def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("dI") {
-    require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
+    require(auto == 'full || auto == 'none || auto == 'diffInd || auto == 'cex, "Expected one of ['none, 'diffInd, 'full, 'cex] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val diFml = sequent.sub(pos)
@@ -152,23 +152,26 @@ private object DifferentialTactics extends Logging {
           val t = expand & DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
               if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
-                 else skip,
+              else if (auto == 'cex) ToolTactics.hideNonFOL & ?(QE) & label("Init case")
+              else skip
+              ,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
-                (if (auto == 'full)
+                (if (auto == 'full || auto == 'cex)
                   (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) | DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")) &
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL &
-                    (QE & done | DebuggingTactics.done("Differential invariant must be preserved"))
+                    (if (auto == 'full) QE & done | DebuggingTactics.done("Differential invariant must be preserved")
+                     else ?(QE) & label("Induction step"))
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
                   abstractionb(pos) & SaturateTactic(allR(pos)) & ?(implyR(pos)) })
               } else skip
               )
-          if (auto == 'full) Dconstify(t)(pos)
+          if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
           else t
         } else {
           val t = expand & DI(pos) &
@@ -177,7 +180,7 @@ private object DifferentialTactics extends Logging {
                 //@note derive before DE to keep positions easier
                 shift(PosInExpr(1 :: Nil), derive)(pos) &
                   DE(pos) &
-                  (if (auto == 'full) shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
+                  (if (auto == 'full || auto == 'cex) shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
                     //@note DW after DE to keep positions easier
                     (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
                     abstractionb(pos)
@@ -185,7 +188,7 @@ private object DifferentialTactics extends Logging {
                 )
               )(pos)
             } else ident)
-          if (auto == 'full) Dconstify(t)(pos)
+          if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
           else t
         }
       }

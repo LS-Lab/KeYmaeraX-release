@@ -320,8 +320,8 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
 
     case LabelBranch(label) => v match {
-      case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels.map(_.append(label))))
-      case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
+      case BelleProvable(pr, Some(labels)) => BelleProvable(pr, adjustLabels(pr, Some(labels.map(_.append(label)))))
+      case BelleProvable(pr, None) => BelleProvable(pr, adjustLabels(pr, Some(label :: Nil)))
       case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
     }
 
@@ -400,8 +400,14 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
       apply(inner, BelleProvable(in, lbl)) match {
         case BelleProvable(derivation, resultLbl) =>
-          val backsubst: ProvableSig = derivation(us)
-          BelleProvable(provable(backsubst, 0), resultLbl)
+          try {
+            val backsubst: ProvableSig = derivation(us)
+            BelleProvable(provable(backsubst, 0), resultLbl)
+          } catch {
+            case _: SubstitutionClashException =>
+              // proof will not close, but keep without backsubstitution to allow users step into the failed derivation
+              BelleProvable(derivation, resultLbl)
+          }
         case e => throw new BelleThrowable("Let expected sub-derivation")
       }
 

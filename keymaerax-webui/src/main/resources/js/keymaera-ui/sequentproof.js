@@ -179,10 +179,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         //@note cannot use index verbatim since spoonfeeding interpreter and sequential interpreter create branches in different order
         var branchId = branchId = parseInt(nodeId.split(",")[1][0], 10);
         var outer = scope.proofTree.node(nodeId).rule;
+        var items = scope.justification(scope.proofId, nodeId).details.agenda.items()
         if (outer.codeName == "loop") {
           branchId = branchId == 0 ? 2 : branchId == 1 ? 0 : 1;
+        } else if (outer.codeName == "dI" && items.length > 1) {
+          branchId = branchId == 0 ? 1 : 0;
         }
-        return scope.justification(scope.proofId, nodeId).details.agenda.items()[branchId];
+        return items[branchId];
       }
 
       scope.stepInto = function(proofId, nodeId, event) {

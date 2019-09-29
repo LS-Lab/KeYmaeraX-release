@@ -106,10 +106,12 @@ trait ProofTreeNode {
       val myProvable = children.head.localProvable
       assert(children.forall(_.localProvable == myProvable), "All children share the same local provable, only differing in goalIdx")
 
-      // merge finalized provables from all children into nyProvable
+      // merge finalized provables from all children into myProvable
+      // if they cannot be merged (backsubstitution failed, see SequentialInterpreter Let): keep global
       if (myProvable.isProved) myProvable
       else children.map(_.provable).zipWithIndex.foldRight(myProvable)({ case ((sub, i), global) =>
-        global(sub, i)
+        if (global.subgoals(i) == sub.conclusion) global(sub, i)
+        else global
       })
     }
   }

@@ -191,7 +191,7 @@ object DerivationInfo {
       , RuleDisplayInfo("Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
-      , {case () => DifferentialTactics.diffWeaken}),
+      , {case () => DifferentialTactics.diffWeaken}, revealInternalSteps = false),
     new DerivedAxiomInfo("DC differential cut"
       , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
       , "DC", true, {case () => HilbertCalculus.useAt("DC differential cut")}),
@@ -201,7 +201,7 @@ object DerivationInfo {
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
           (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
       , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
-      , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
+      , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr], revealInternalSteps = true),
     InputPositionTacticInfo("dR"
       , RuleDisplayInfo("Differential Refine"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
@@ -504,7 +504,7 @@ object DerivationInfo {
       ,  AxiomDisplayInfo(("∃′","exists'"), "<span class=\"k4-axiom-key\">(∃x p(x))′</span>↔∀x (p(x))′")
       , "Dexists", true, {case () => HilbertCalculus.Derive.Dexists}),
 
-    new PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive})
+    PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive}/* , revealInternalSteps = true is uninformative */)
   )
 
   private lazy val foInfos: List[DerivationInfo] = List(
@@ -851,7 +851,7 @@ object DerivationInfo {
     new PositionTacticInfo("GV"
       , RuleDisplayInfo("G&ouml;del Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
         , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
-      , {case () => TactixLibrary.abstractionb}),
+      , {case () => TactixLibrary.abstractionb}, revealInternalSteps = true),
     new InputPositionTacticInfo("existsR"
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
@@ -1004,7 +1004,7 @@ object DerivationInfo {
         List(
           (List("&Gamma;"),List("[a]Q", "&Delta;")),
           (List("Q"),List("P"))))
-      , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr]),
+      , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr], revealInternalSteps = true),
     InputPositionTacticInfo("transform",
       RuleDisplayInfo("trafo",
         //@todo suggests formulas, but also works with terms
@@ -1198,7 +1198,7 @@ object DerivationInfo {
         (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
         /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/),
           (List("Q"), List("[x′:=f(x)](P)′"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/))),
-      {case () => DifferentialTactics.diffInd()}),
+      {case () => DifferentialTactics.diffInd(auto = 'cex)}, revealInternalSteps = true),
     new InputPositionTacticInfo("diffInvariant"
       , RuleDisplayInfo("Differential Cut + Differential Invariant"
         , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))
