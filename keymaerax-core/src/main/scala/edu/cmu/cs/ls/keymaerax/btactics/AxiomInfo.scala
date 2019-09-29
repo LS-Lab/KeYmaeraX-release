@@ -916,7 +916,7 @@ object DerivationInfo {
         ((tactic: String) => DebuggingTactics.pending(tactic)): TypedFunc[String, BelleExpr]
     ),
     InputTacticInfo("label"
-      , SimpleDisplayInfo("Label","label")
+      , SimpleDisplayInfo("label","label")
       ,List(StringArg("label")), _ => ((l: String) => TactixLibrary.label(BelleLabel.toPrettyString(BelleLabel.fromString(l)))): TypedFunc[String, BelleExpr]),
 
     // Proof rule two-position tactics
