@@ -528,14 +528,29 @@
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                <small>{{taskPrefixLabel(task.id)}} <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i></small>
+                                <small>
+                                    <span>{{taskPrefixLabel(task.id)}}</span>
+                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                          tooltip-append-to-body="true" tooltip-placement="auto top">
+                                        <i class="fa fa-angle-double-right"></i>
+                                        {{taskPostfixLabel(task.id)}}
+                                    </span>
+                                    <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
+                                </small>
                                 <span ng-bind-html="task.name"></span>
-                                <small ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)">({{taskPostfixLabel(task.id)}})</small>
+
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
-                                <small>{{taskPrefixLabel(task.id)}} <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i></small>
+                                <small>
+                                    <span>{{taskPrefixLabel(task.id)}}</span>
+                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                          tooltip-append-to-body="true" tooltip-placement="auto top">
+                                        <i class="fa fa-angle-double-right"></i>
+                                        {{taskPostfixLabel(task.id)}}
+                                    </span>
+                                    <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
+                                </small>
                                 <span ng-bind-html="task.name"></span>
-                                <small ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)">({{taskPostfixLabel(task.id)}})</small>
                             </span>
                         </div>
                         <div class="col-sm-11" ng-if="!$first">
@@ -543,14 +558,28 @@
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                <small>{{taskPrefixLabel(task.id)}} <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i></small>
+                                <small>
+                                    <span>{{taskPrefixLabel(task.id)}}</span>
+                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                          tooltip-append-to-body="true" tooltip-placement="auto top">
+                                        <i class="fa fa-angle-double-right"></i>
+                                        {{taskPostfixLabel(task.id)}}
+                                    </span>
+                                    <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
+                                </small>
                                 <span ng-bind-html="task.name"></span>
-                                <small ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)">({{taskPostfixLabel(task.id)}})</small>
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
-                                <small>{{taskPrefixLabel(task.id)}} <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i></small>
+                                <small>
+                                    <span>{{taskPrefixLabel(task.id)}}</span>
+                                    <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
+                                          tooltip-append-to-body="true" tooltip-placement="auto top">
+                                        <i class="fa fa-angle-double-right"></i>
+                                        {{taskPostfixLabel(task.id)}}
+                                    </span>
+                                    <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
+                                </small>
                                 <span ng-bind-html="task.name"></span>
-                                <small ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)">({{taskPostfixLabel(task.id)}})</small>
                             </span>
                         </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->
