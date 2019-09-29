@@ -436,17 +436,17 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.openGoals should have size 3
     tree.tactic shouldBe BelleParser(
       """implyR(1) ; cutR("[{x:=x+1;}*](x>=0&!false)", 1) ; <(
-        |Iind(1) ; andR(1) ; <(
+        |I(1) ; andR(1) ; <(
         |andR(1) ; <(
-        |  label("Init case"),
+        |  label("Init"),
         |    notR(1) ; close
         |  ),
         |  cohide(1) ; Goedel ; implyR(1) ; boxAnd(1) ; andR(1) ; <(
-        |  andL('Llast) ; hideL('Llast) ; label("Induction step"),
+        |  andL('Llast) ; hideL('Llast) ; label("Step"),
         |    andL(-1) ; hideL(-1=="x>=0") ; V(1) ; id
         |  )
         |),
-        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; hideL('Llast) ; label("Use case")
+        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; hideL('Llast) ; label("Post")
         |)""".stripMargin)
   }
 
@@ -463,9 +463,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.openGoals should have size 3
     tree.tactic shouldBe BelleParser(
       """implyR(1) ; andL('L) ; andL('L) ; andL('L) ; cutR("[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)", 1) ; <(
-        |Iind(1) ; andR(1) ; <(
+        |I(1) ; andR(1) ; <(
         |andR(1) ; <(
-        |  label("Init case"),
+        |  label("Init"),
         |    andR(1) ; <(
         |    idWith(1),
         |      andR(1) ; <(
@@ -478,11 +478,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |    )
         |  ),
         |  cohide(1) ; Goedel ; implyR(1) ; boxAnd(1) ; andR(1) ; <(
-        |  andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Induction step"),
+        |  andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Step"),
         |    andL(-1) ; hideL(-1=="x>=0") ; V(1) ; id
         |  )
         |),
-        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Use case")
+        |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Post")
         |)""".stripMargin)
   }
 

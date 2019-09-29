@@ -39,8 +39,7 @@ class ICCPSTutorial extends TacticTestBase {
         |)
       """.stripMargin) (after being whiteSpaceRemoved)
 
-    //@todo printed tactic should reparse
-    //BelleParser(printedTactic) shouldBe parsedTactic
+    BelleParser(printedTactic) shouldBe parsedTactic
   })
 
   "Simple car search tactic" should "parse, print, prove" in withMathematica(mathematica => {

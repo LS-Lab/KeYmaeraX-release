@@ -392,11 +392,14 @@ class SequentialInterpreterTests extends TacticTestBase {
         QE,
         QE,
         choiceb(1) & andR(1) <(
-          assignb(1),
+          assignb(1) & label("1"),
           assignb(1)
         )
       ), (labels: Option[List[BelleLabel]]) => {
-      labels shouldBe Some(BelleTopLevelLabel("QE CEX") :: BelleTopLevelLabel("1") :: BelleTopLevelLabel("2") :: Nil)
+      labels shouldBe Some(
+        BelleLabels.useCase.append(BelleLabels.cutShow).append(BelleLabels.QECEX) ::
+        BelleSubLabel(BelleLabels.indStep, "1") ::
+        BelleLabels.indStep :: Nil)
     })
   }
 
