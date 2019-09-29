@@ -13,13 +13,13 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
   */
 object BelleLabels {
   // loop induction
-  val useCase = BelleTopLevelLabel("Use case")
-  val initCase = BelleTopLevelLabel("Init case")
-  val indStep = BelleTopLevelLabel("Induction step")
+  val useCase = BelleTopLevelLabel("Post")
+  val initCase = BelleTopLevelLabel("Init")
+  val indStep = BelleTopLevelLabel("Step")
 
   // cuts
-  val cutUse = BelleTopLevelLabel("Cut use")
-  val cutShow = BelleTopLevelLabel("Cut show")
+  val cutUse = BelleTopLevelLabel("Use")
+  val cutShow = BelleTopLevelLabel("Show")
 
   // QE
   val QECEX = BelleTopLevelLabel("QE CEX")
