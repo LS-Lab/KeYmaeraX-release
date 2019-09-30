@@ -581,15 +581,15 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   protected def docOf(program: Program): Doc = program match {
     case a: ProgramConst        => statementDoc(Doc.text(a.asString))
     case a: SystemConst         => statementDoc(Doc.text(a.asString))
-    case Assign(x, e)           => statementDoc(docOf(x) + Doc.text(ppOp(program)) + docOf(e))
+    case Assign(x, e)           => statementDoc(docOf(x) + Doc.text(ppOp(program)) + (Doc.lineBreak + docOf(e)).nested(2)).grouped
     case AssignAny(x)           => statementDoc(docOf(x) + Doc.text(ppOp(program)))
-    case Test(f)                => statementDoc(Doc.text(ppOp(program)) + docOf(f))
-    case ODESystem(ode, f) if f != True => wrapDoc(docOfODE(ode) + Doc.space + Doc.text(ppOp(program)) + Doc.line + docOf(f), program)
-    case ODESystem(ode, f) if f == True => wrapDoc(docOfODE(ode), program)
+    case Test(f)                => statementDoc(Doc.text(ppOp(program)) + docOf(f).nested(2)).grouped
+    case ODESystem(ode, f) if f != True => wrapDoc(docOfODE(ode) + Doc.space + Doc.text(ppOp(program)) + Doc.line + docOf(f), program).grouped
+    case ODESystem(ode, f) if f == True => wrapDoc(docOfODE(ode), program).grouped
     case ode: DifferentialProgram => (Doc.line + wrapDoc(docOfODE(ode), program) + Doc.line).grouped
-    case t: UnaryCompositeProgram => wrapDoc(docOf(t.child), program) + Doc.text(ppOp(program))
-    case t: Compose => pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + pwrapRightDoc(t, docOf(t.right))
-    case t: BinaryCompositeProgram => pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + Doc.line + pwrapRightDoc(t, docOf(t.right))
+    case t: UnaryCompositeProgram => (wrapDoc(docOf(t.child), program) + Doc.text(ppOp(program))).grouped
+    case t: Compose => (pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + pwrapRightDoc(t, docOf(t.right))).grouped
+    case t: BinaryCompositeProgram => (pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + Doc.line + pwrapRightDoc(t, docOf(t.right))).grouped
   }
 
   protected def docOfODE(program: DifferentialProgram): Doc = program match {
