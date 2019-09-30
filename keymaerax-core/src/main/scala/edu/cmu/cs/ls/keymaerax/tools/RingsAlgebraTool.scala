@@ -34,7 +34,7 @@ case class RingsLibrary(mapper: Map[NamedSymbol,String], unmapper:  Map[Int,Term
         })))
   }
 
-  val ring = MultivariateRing(Q,mapper.values.toArray.sorted)
+  implicit val ring = MultivariateRing(Q,mapper.values.toArray.sorted)
 
   def toRing(term:Term) : MultivariatePolynomial[Rational[BigInteger]] = {
     term match {
@@ -102,15 +102,6 @@ case class RingsLibrary(mapper: Map[NamedSymbol,String], unmapper:  Map[Int,Term
     else ls2.tail.fold(ls2.head)(Plus)
   }
 
-}
-
-class RingsAlgebraTool() extends AlgebraTool{
-
-//  private def mkCoeff(n:Int,m:Int, vmap:Map[NamedSymbol,Int]) : Polynomial = {
-//    val arr = 1.until(vmap.size).foldLeft(Array(vf.rational(n,m)).asInstanceOf[Object])( (res,i) => Array(res))
-//    vf.polynomial(arr)
-//  }
-
   //TODO: this is probably available somewhere in the library but I can't find it
   //Turn univariate polynomial back into the multivariant ring
   private def multiringify(varname:String, upoly: UnivariatePolynomial[MultivariatePolynomial[Rational[BigInteger]]], ring:MultivariateRing[Rational[BigInteger]]) :
@@ -120,6 +111,39 @@ class RingsAlgebraTool() extends AlgebraTool{
       p => ring.multiply(p._1,ring(varname+"^"+p._2.toString))
     ).foldLeft(ring.getZero)( (p1,p2) => ring.add(p1,p2))
   }
+
+  def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {
+    val ringvar = mapper(x)
+    val varindex = ring.index(ringvar)
+
+    val ringterm = toRing(term).asUnivariate(varindex)
+    val ringdiv = toRing(div).asUnivariate(varindex)
+
+    val uniring = UnivariateRing(ringterm.ring, ringvar)
+
+    val res = uniring.divideAndRemainder(ringterm,ringdiv)
+
+    val mringquo = multiringify(ringvar,res(0),ring)
+    val mringrem = multiringify(ringvar,res(1),ring)
+
+    (fromRing(mringquo),fromRing(mringrem))
+  }
+
+  def groebnerBasis(polynomials: List[Term]): List[Term] = {
+    if(polynomials.isEmpty) return List()
+    Ideal(polynomials.map(toRing)).groebnerBasis.toList.map(fromRing)
+  }
+
+  def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
+    val ringpoly = toRing(polynomial)
+    val ringGB = GB.map(toRing)
+    val res = (ringpoly /%/%* (ringGB:_*)).toList
+    (res.init.map(fromRing),fromRing(res.last))
+  }
+
+}
+
+class RingsAlgebraTool() extends AlgebraTool{
 
   override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {
     //@note sort for stable results
@@ -132,22 +156,7 @@ class RingsAlgebraTool() extends AlgebraTool{
     if(emp.nonEmpty)
       throw new IllegalArgumentException("RingsAlgebraTool does not handle non-constant function symbols: " +emp)
 
-    val rings = new RingsLibrary(vars++funcs)
-    implicit val ring = rings.ring
-    val ringvar = rings.mapper(x)
-    val varindex = ring.index(ringvar)
-
-    val ringterm = rings.toRing(term).asUnivariate(varindex)
-    val ringdiv = rings.toRing(div).asUnivariate(varindex)
-
-    val uniring = UnivariateRing(ringterm.ring, ringvar)
-
-    val res = uniring.divideAndRemainder(ringterm,ringdiv)
-
-    val mringquo = multiringify(ringvar,res(0),ring)
-    val mringrem = multiringify(ringvar,res(1),ring)
-
-    (rings.fromRing(mringquo),rings.fromRing(mringrem))
+    new RingsLibrary(vars++funcs).quotientRemainder(term, div, x)
   }
 
   override def groebnerBasis(polynomials: List[Term]): List[Term] = {
@@ -163,14 +172,7 @@ class RingsAlgebraTool() extends AlgebraTool{
     if(emp.nonEmpty)
       throw new IllegalArgumentException("RingsAlgebraTool does not handle non-constant function symbols: " +emp)
 
-    val rings = new RingsLibrary(vars++funcs)
-    implicit val ring = rings.ring
-
-    val ringpolynomials = polynomials.map(rings.toRing)
-
-    val gb = Ideal(ringpolynomials).groebnerBasis.toList
-    //println(ringpolynomials,gb)
-    gb.map(rings.fromRing)
+    new RingsLibrary(vars++funcs).groebnerBasis(polynomials)
   }
 
   override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
@@ -184,17 +186,6 @@ class RingsAlgebraTool() extends AlgebraTool{
     if(emp.nonEmpty)
       throw new IllegalArgumentException("RingsAlgebraTool does not handle non-constant function symbols: " +emp)
 
-    val rings = new RingsLibrary(vars++funcs)
-    implicit val ring = rings.ring
-
-    val ringpoly = rings.toRing(polynomial)
-    val ringGB = GB.map(rings.toRing)
-
-    val res = (ringpoly /%/%* (ringGB:_*)).toList
-
-    val quos = res.init.map(rings.fromRing)
-    val rem = rings.fromRing(res.last)
-
-    (quos,rem)
+    new RingsLibrary(vars++funcs).polynomialReduce(polynomial, GB)
   }
 }
