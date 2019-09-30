@@ -41,11 +41,12 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
   override def store(e: BelleExpr): ExecutionContext = DbAtomPointer(predStep+1)
   override def branch(count: Int): List[ExecutionContext] =
     if (count == 1) DbAtomPointer(predStep)::Nil
-    else (0 until count).map(DbBranchPointer(predStep, _, predStep)).toList
-  override def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext = ctx match {
-    case DbAtomPointer(id) => DbBranchPointer(parent, branch, id, openBranchesAfterExec ++ List.fill(createdSubgoals)(id))
-    case DbBranchPointer(_, _, pc2, ob2) => DbBranchPointer(parent, branch, pc2, openBranchesAfterExec++ob2) // continue after pc2 (final step of the other branch)
-  }
+    else (0 until count).map(DbBranchPointer(predStep, _, predStep, openBranchesAfterExec)).toList
+  override def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext =
+    if (this != ctx) ctx match {
+      case DbAtomPointer(id) => DbBranchPointer(parent, branch, id, openBranchesAfterExec ++ List.fill(createdSubgoals)(id))
+      case DbBranchPointer(_, _, pc2, ob2) => DbBranchPointer(parent, branch, pc2, openBranchesAfterExec++ob2) // continue after pc2 (final step of the other branch)
+    } else this
   // branch=-1 indicates the merging point after branch tactics (often points to a closed provable when the branches all close,
   // but may point to a provable of arbitrary size)
   override def closeBranch(): ExecutionContext = DbBranchPointer(parent, -1, predStep, openBranchesAfterExec)
@@ -376,11 +377,24 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                   }
                 }
               } else if (provable.subgoals.size == 1) {
+                // onBranch < 0 indicates closed DbBranchPointer, and here all but one subgoals were closed, so
                 // adapt context to continue on the sole open subgoal (either nil or some other atom to follow up on)
                 val newCtx = ctx match {
-                  case DbBranchPointer(_, _, _, openBranchesAfterExec) if openBranchesAfterExec.size == 1 => DbAtomPointer(openBranchesAfterExec.head)
+                  case DbBranchPointer(_, _, _, openBranchesAfterExec) if openBranchesAfterExec.size == 1 =>
+                    DbAtomPointer(openBranchesAfterExec.head)
                 }
-                runTactic(tactic, goal, level, newCtx, strict, convertPending, executePending)
+                runTactic(tactic, goal, level, newCtx, strict, convertPending, executePending) match {
+                  case (bp@BelleProvable(p, _), resultCtx) => ctx match {
+                    // replaced the remaining goal of a branching tactic
+                    case dbp@DbBranchPointer(_, _, predStep, openBranchesAfterExec) if openBranchesAfterExec.size == 1 =>
+                      val numSteps = (newCtx, resultCtx) match {
+                        case (DbAtomPointer(i), DbAtomPointer(j)) => j-i
+                        case (DbAtomPointer(i), _: DbBranchPointer) => ???
+                      }
+                      if (p.subgoals.size != provable.subgoals.size) (bp, dbp.copy(predStep = predStep + numSteps, openBranchesAfterExec = openBranchesAfterExec.drop(1)))
+                      else (bp, DbAtomPointer(predStep + numSteps))
+                  }
+                }
               } else {
                 //@todo store and reload a trace with branch -1 (=merging point of a branching tactic)
                 // possible solution: store a nil/applyUsubst step with prevStepId=StartOfBranching and branchOrder=-1, without a local provable;

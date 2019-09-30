@@ -2548,21 +2548,10 @@ object RequestHelper {
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
   def listenerFactory(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionSteps(proofId)
-    assert(-1 <= parentInTrace && parentInTrace < trace.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
-    val parentStep: Option[Int] = if (parentInTrace < 0) None else trace(parentInTrace).stepId
-    val globalProvable = parentStep match {
-      case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
-      case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
-    }
-    val codeName = tacticName.split("\\(").head
-    val ruleName = try {
-      RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName)
-    } catch {
-      case _: Throwable => tacticName
-    }
-    new TraceRecordingListener(db, proofId, parentStep,
-      globalProvable, branch, recursive = false, ruleName) :: Nil
+    DBTools.listener(db, (tn: String) => {
+      val codeName = tn.split("\\(").head
+      Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName)).getOrElse(tn)
+    })(proofId)(tacticName, parentInTrace, branch)
   }
 
 }

@@ -198,7 +198,51 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("implyR(1)")::Some("""pending("prop ; done | done")""")::Nil
   }
 
-  "Branch tactic" should "work top-level" in withDatabase { db =>
+  "Branch tactic" should "work simple top-level" in withDatabase { db =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & Idioms.<(closeId, closeId),
+      BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, id)")
+  }
+
+  it should "work nested branching top-level" in withDatabase { db =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & Idioms.<(closeId, andR(1) & Idioms.<(closeId, closeId)),
+      BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, andR(1) ; <(id, id))")
+    db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
+      "implyR(1)" :: "andR(1)" :: "andR(1)" :: "id" :: "id" :: "id" :: Nil
+  }
+
+  it should "support nested branching with unconventional closing" in withDatabase { db =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>0&x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
+    interpreter(implyR(1) & andR(1) & Idioms.<(nil, andR(1) & Idioms.<(closeId, nil) & closeId) & closeId,
+      BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    // tactic extraction rewrites into nicer shape
+    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, andR(1) ; <(id, id))")
+    db.db.getExecutionTrace(proofId).steps.map(_.rule) should contain theSameElementsInOrderAs
+      "implyR(1)" :: "andR(1)" :: "andR(1)" :: "nil" :: "id" :: "id" :: "nil" :: "id" :: Nil
+  }
+
+  it should "work top-level" in withDatabase { db =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&x>=0 End."
     val proofId = db.createProof(modelContent)
 
@@ -1025,6 +1069,91 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """.stripMargin)
 
     //@todo reprove
+  }}
+
+  it should "should work for simple diffWeaken" in withMathematica { _ => withDatabase { db =>
+    val problem = "x>=0 -> [{x'=1 & x>0}]x>=0"
+    val modelContent = s"ProgramVariables Real x; End. Problem $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & dW(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    val trace = db.db.getExecutionTrace(proofId)
+    trace.steps should have size 16
+    trace.steps.head.rule shouldBe "implyR(1)"
+    tree.tactic shouldBe BelleParser(
+      """implyR(1) ; discreteGhost("x",1) ; assignEquality(1) ; allR2L('Llast) ; hideL('Llast) ;
+        |dC("x_0>=0",1) ; <(cohide(1) ; DW(1) ; G(1) ; implyR(1) ; andL('Llast) ; implyRi(-1,1),
+        |                   V('Rlast) ; idWith('Rlast))""".stripMargin)
+  }}
+
+  it should "should work for diffWeaken" in withMathematica { _ => withDatabase { db =>
+    val problem = "x>=0 & y>=0 & z>=0 -> [{x'=y+z & x>=0}]x>=0"
+    val modelContent = s"ProgramVariables Real x, y, z; End. Problem $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & SaturateTactic(andL('Llast)) & dW(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    val trace = db.db.getExecutionTrace(proofId)
+    trace.steps.map(_.rule) should contain theSameElementsInOrderAs List("implyR(1)", "andL('Llast)", "andL('Llast)",
+      "nil", "discreteGhost(\"x\",1)", "assignEquality(1)", "allR2L('Llast)", "hideL('Llast)",
+      "dC(\"x_0>=0&y>=0&z>=0\",1)", "V('Rlast)", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "idWith('Rlast)",
+      "idWith('Rlast)", "idWith('Rlast)", "nil", "cohide(1)", "DW(1)", "G(1)", "implyR(1)", "andL('Llast)",
+      "andL('Llast)", "andL('Llast)", "implyRi(-1,1)")
+    tree.tactic shouldBe BelleParser(
+      """implyR(1) ; andL('Llast) ; andL('Llast) ; discreteGhost("x",1) ; assignEquality(1) ; allR2L('Llast) ;
+        |hideL('Llast) ; dC("x_0>=0&y>=0&z>=0",1) ; <(
+        |   cohide(1) ; DW(1) ; G(1) ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; implyRi(-1,1),
+        |   V('Rlast) ; andR('Rlast) ; <( idWith('Rlast), andR('Rlast) ; <( idWith('Rlast), idWith('Rlast) ) ) )""".stripMargin)
+  }}
+
+  it should "should work for Bouncing Ball diffWeaken" in withMathematica { _ => withDatabase { db =>
+    val problem = "2*g*x<=2*g*H-v_0^2 & x>=0 & g>0 & 1>=c & c>=0 & r>=0 & x=0 & v=-c*v_0 -> [{x'=v,v'=-g-r*v^2 & x>=0&v>=0}](2*g*x<=2*g*H-v^2 & x>=0)"
+    val modelContent = s"Definitions Real c, g, r, H; End. ProgramVariables Real x, v, v_0; End. Problem $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & SaturateTactic(andL('Llast)) & dW(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    val trace = db.db.getExecutionTrace(proofId)
+    trace.steps.map(_.rule) should contain theSameElementsInOrderAs List("implyR(1)", "andL('Llast)", "andL('Llast)",
+      "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "nil", "discreteGhost(\"x\",1)",
+      "discreteGhost(\"v\",1)", "assignEquality(1)", "allR2L('Llast)", "hideL('Llast)", "assignEquality(1)",
+      "allR2L('Llast)", "hideL('Llast)", "dC(\"2*g*x_0<=2*g*H-v_1^2&x_0>=0&g>0&1>=c&c>=0&r>=0&x_0=0&v_0=-c*v_1\",1)",
+      "V('Rlast)", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "andR('Rlast)", "nil",
+      "andR('Rlast)", "nil", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "idWith('Rlast)", "idWith('Rlast)",
+      "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)",
+      "nil", "cohide(1)", "DW(1)", "G(1)", "implyR(1)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)",
+      "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "implyRi(-1,1)")
+    tree.tactic shouldBe BelleParser(
+      """implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ;
+        |andL('Llast) ; discreteGhost("x",1) ; discreteGhost("v",1) ; assignEquality(1) ; allR2L('Llast) ;
+        |hideL('Llast) ; assignEquality(1) ; allR2L('Llast) ; hideL('Llast) ;
+        |dC("2*g*x_0<=2*g*H-v_1^2&x_0>=0&g>0&1>=c&c>=0&r>=0&x_0=0&v_0=-c*v_1",1) ; <(
+        |   cohide(1) ; DW(1) ; G(1) ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ;
+        |   andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; implyRi(-1,1)
+        |   ,
+        |   V('Rlast) ; andR('Rlast) ; <(
+        |     idWith('Rlast),
+        |     andR('Rlast) ; <(
+        |       idWith('Rlast),
+        |       andR('Rlast) ; <(
+        |         idWith('Rlast),
+        |         andR('Rlast) ; <(
+        |           idWith('Rlast),
+        |           andR('Rlast) ; <(
+        |             idWith('Rlast),
+        |             andR('Rlast) ; <(
+        |               idWith('Rlast),
+        |               andR('Rlast) ; <(
+        |                 idWith('Rlast),
+        |                 idWith('Rlast) ) ) ) ) ) ) )
+        |)""".stripMargin)
   }}
 
   it should "work with assertions/print/debug on multi-subgoal provables" in withDatabase { db =>
