@@ -532,7 +532,7 @@
                                     <span>{{taskPrefixLabel(task.id)}}</span>
                                     <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                           tooltip-append-to-body="true" tooltip-placement="auto top">
-                                        <i class="fa fa-angle-double-right"></i>
+                                        <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                         {{taskPostfixLabel(task.id)}}
                                     </span>
                                     <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
@@ -545,7 +545,7 @@
                                     <span>{{taskPrefixLabel(task.id)}}</span>
                                     <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                           tooltip-append-to-body="true" tooltip-placement="auto top">
-                                        <i class="fa fa-angle-double-right"></i>
+                                        <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                         {{taskPostfixLabel(task.id)}}
                                     </span>
                                     <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
@@ -562,7 +562,7 @@
                                     <span>{{taskPrefixLabel(task.id)}}</span>
                                     <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                           tooltip-append-to-body="true" tooltip-placement="auto top">
-                                        <i class="fa fa-angle-double-right"></i>
+                                        <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                         {{taskPostfixLabel(task.id)}}
                                     </span>
                                     <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
@@ -574,7 +574,7 @@
                                     <span>{{taskPrefixLabel(task.id)}}</span>
                                     <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
                                           tooltip-append-to-body="true" tooltip-placement="auto top">
-                                        <i class="fa fa-angle-double-right"></i>
+                                        <i ng-if="taskPrefixLabel(task.id)" class="fa fa-angle-double-right"></i>
                                         {{taskPostfixLabel(task.id)}}
                                     </span>
                                     <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
