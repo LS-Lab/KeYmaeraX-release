@@ -14,25 +14,38 @@ import scala.collection.JavaConverters._
   * A link to Rings library for its algebra tools
   */
 
-case class RingsLibrary(mapper: Map[NamedSymbol,String], unmapper:  Map[Int,Term]) {
+class RingsLibrary(terms: List[Term]) {
 
   private def varprefix = "AVAR"
   private def funcprefix = "BFUNC"
 
-  def this(names: List[NamedSymbol]) {
-    this(
-      names.zipWithIndex.map(p =>
-        p._1 match {
-          case v: Variable => (p._1, varprefix + p._2)
-          case _ => (p._1, funcprefix + p._2)
-        }
-      ), names.zipWithIndex.map(p => (p._2,
-        p._1 match {
-          case v: Variable => v
-          case f: Function => FuncOf(f, Nothing)
-          case _ => ??? //never happens
-        })))
+  private val names = {
+    //@note sort for stable results
+    val syms = terms.flatMap(p => StaticSemantics.symbols(p)).distinct.sorted
+    // Only constant symbols f() and vars are kept. Everything else is discarded
+    val (vars,rest) = syms.partition( p => p.isInstanceOf[BaseVariable])
+    val (funcs,emp) = rest.partition( p => p.isInstanceOf[Function] && p.asInstanceOf[Function].domain == Unit )
+
+    if(emp.nonEmpty)
+      throw new IllegalArgumentException("RingsLibrary does not handle non-constant function symbols: " +emp)
+    vars ++ funcs
   }
+
+  private val mapper =
+    names.zipWithIndex.map(p =>
+      p._1 match {
+        case v: Variable => (p._1, varprefix + p._2)
+        case _ => (p._1, funcprefix + p._2)
+      }
+    ).toMap
+  private val unmapper =
+    names.zipWithIndex.map(p => (p._2,
+      p._1 match {
+        case v: Variable => v
+        case f: Function => FuncOf(f, Nothing)
+        case _ => ??? //never happens
+      }
+    )).toMap
 
   implicit val ring = MultivariateRing(Q,mapper.values.toArray.sorted)
 
@@ -146,46 +159,16 @@ case class RingsLibrary(mapper: Map[NamedSymbol,String], unmapper:  Map[Int,Term
 class RingsAlgebraTool() extends AlgebraTool{
 
   override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {
-    //@note sort for stable results
-    val syms = (x::List(term,div).flatMap(p => StaticSemantics.symbols(p))).distinct.sorted
-
-    // Only constant symbols f() and vars are kept. Everything else is discarded
-    val (vars,rest) = syms.partition( p => p.isInstanceOf[BaseVariable])
-    val (funcs,emp) = rest.partition( p => p.isInstanceOf[Function] && p.asInstanceOf[Function].domain == Unit )
-
-    if(emp.nonEmpty)
-      throw new IllegalArgumentException("RingsAlgebraTool does not handle non-constant function symbols: " +emp)
-
-    new RingsLibrary(vars++funcs).quotientRemainder(term, div, x)
+    new RingsLibrary(x::List(term,div)).quotientRemainder(term, div, x)
   }
 
   override def groebnerBasis(polynomials: List[Term]): List[Term] = {
-
     if(polynomials.isEmpty) return List()
-    //@note sort for stable results
-    val syms = polynomials.flatMap(p => StaticSemantics.symbols(p)).distinct.sorted
-
-    // Only constant symbols f() and vars are kept. Everything else is discarded
-    val (vars,rest) = syms.partition( p => p.isInstanceOf[BaseVariable])
-    val (funcs,emp) = rest.partition( p => p.isInstanceOf[Function] && p.asInstanceOf[Function].domain == Unit )
-
-    if(emp.nonEmpty)
-      throw new IllegalArgumentException("RingsAlgebraTool does not handle non-constant function symbols: " +emp)
-
-    new RingsLibrary(vars++funcs).groebnerBasis(polynomials)
+    new RingsLibrary(polynomials).groebnerBasis(polynomials)
   }
 
   override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
-    //@note sort for stable results
-    val syms = (polynomial::GB).flatMap(p => StaticSemantics.symbols(p)).distinct.sorted
-
-    // Only constant symbols f() and vars are kept. Everything else is discarded
-    val (vars,rest) = syms.partition( p => p.isInstanceOf[BaseVariable])
-    val (funcs,emp) = rest.partition( p => p.isInstanceOf[Function] && p.asInstanceOf[Function].domain == Unit )
-
-    if(emp.nonEmpty)
-      throw new IllegalArgumentException("RingsAlgebraTool does not handle non-constant function symbols: " +emp)
-
-    new RingsLibrary(vars++funcs).polynomialReduce(polynomial, GB)
+    new RingsLibrary(polynomial::GB).polynomialReduce(polynomial, GB)
   }
+
 }
