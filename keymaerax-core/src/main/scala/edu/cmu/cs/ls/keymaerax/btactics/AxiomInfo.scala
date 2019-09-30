@@ -191,7 +191,7 @@ object DerivationInfo {
       , RuleDisplayInfo("Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
-      , {case () => DifferentialTactics.diffWeaken}, revealInternalSteps = false),
+      , {case () => DifferentialTactics.diffWeaken}, revealInternalSteps = true),
     new DerivedAxiomInfo("DC differential cut"
       , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
       , "DC", true, {case () => HilbertCalculus.useAt("DC differential cut")}),
@@ -321,6 +321,8 @@ object DerivationInfo {
               case Right(msg) => throw new IllegalArgumentException(msg)
             }) :  TypedFunc[Option[Formula], BelleExpr]
             ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
+        ,
+        revealInternalSteps = true
       )
     },
     PositionTacticInfo("dGi",
