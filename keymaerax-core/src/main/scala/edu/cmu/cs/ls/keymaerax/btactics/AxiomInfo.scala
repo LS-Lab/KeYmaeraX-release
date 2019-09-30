@@ -506,7 +506,7 @@ object DerivationInfo {
       ,  AxiomDisplayInfo(("∃′","exists'"), "<span class=\"k4-axiom-key\">(∃x p(x))′</span>↔∀x (p(x))′")
       , "Dexists", true, {case () => HilbertCalculus.Derive.Dexists}),
 
-    PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive}/* , revealInternalSteps = true is uninformative */)
+    PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
   )
 
   private lazy val foInfos: List[DerivationInfo] = List(
