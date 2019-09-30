@@ -130,20 +130,19 @@ class RingsAlgebraTool() extends AlgebraTool{
 
     val (mapper,unmapper) = uniqueNames(vars++funcs)
 
-    //It should always be AVAR(XXX)
-    val varindex = mapper(x).drop(varprefix.length).toInt
-
+    val ringvar = mapper(x)
     implicit val ring = MultivariateRing(Q,mapper.values.toArray.sorted)
+    val varindex = ring.index(ringvar)
 
     val ringterm = toRing(term,ring,mapper).asUnivariate(varindex)
     val ringdiv = toRing(div,ring,mapper).asUnivariate(varindex)
 
-    val uniring = UnivariateRing(ringterm.ring,varprefix+varindex)
+    val uniring = UnivariateRing(ringterm.ring, ringvar)
 
     val res = uniring.divideAndRemainder(ringterm,ringdiv)
 
-    val mringquo = multiringify(varprefix+varindex,res(0),ring)
-    val mringrem = multiringify(varprefix+varindex,res(1),ring)
+    val mringquo = multiringify(ringvar,res(0),ring)
+    val mringrem = multiringify(ringvar,res(1),ring)
 
     (fromRing(mringquo,unmapper),fromRing(mringrem,unmapper))
   }
