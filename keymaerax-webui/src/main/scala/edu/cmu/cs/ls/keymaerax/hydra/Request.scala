@@ -646,8 +646,8 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
         }
         new ToolConfigStatusResponse(tool, isConfigured) :: Nil
       } catch {
-        case ex: Throwable if tool == "mathematica" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the Java JVM 32/64bit fits your operating system, and that the license is valid (e.g., check in Mathematica, check that license server is reachable, if used).", ex) :: Nil
-        case ex: Throwable if tool == "wolframengine" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the Java JVM 32/64bit fits your operating system, and that the computer is online for license checking. If Wolfram Engine remains unavailable and/or keeps crashing KeYmaera X, please run Wolfram Engine from your Applications to update the license information prior to starting KeYmaera X.", ex) :: Nil
+        case ex: Throwable if tool == "mathematica" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the license is valid (e.g., start Mathematica and type $LicenseExpirationDate, check that license server is reachable, if used), and that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
+        case ex: Throwable if tool == "wolframengine" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the license is valid and the computer is online for license checking. If Wolfram Engine remains unavailable and/or keeps crashing KeYmaera X, please run Wolfram Engine to update the license information (check by running $LicenseExpirationDate in Wolfram Engine) prior to starting KeYmaera X. Also make sure that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
         case ex: Throwable => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths and that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
       }
     }
