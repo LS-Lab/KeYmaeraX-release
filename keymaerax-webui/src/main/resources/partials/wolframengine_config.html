@@ -53,27 +53,14 @@
     </script>
 
     <div class="form-group">
-        <h4 for="linkName">Wolfram Engine Kernel</h4>
-
-        <div>
-            <p>
-                Please configure the path to the Wolfram Engine kernel. On your operating system
-                ({{wolframEngineConfigSuggestion.os}}) look for an executable file named
-                <code>{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>.<br/>
-                If Wolfram Engine is installed at its default location, you might find that file at
-            </p>
-            <p>
-                <code uib-tooltip-template="'kernelSuggestionTooltipTemplate.html'"
-                      tooltip-placement="auto top">{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>.
-            </p>
-        </div>
-
         <div class="input-group"
              data-intro="Configure the path to the Wolfram Engine kernel executable, corresponding to your operating system. Look for an executable file named <code>{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>. You might find it at <br/>{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}."
              data-position="top" style="padding-top: 10px;">
             <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
+            <span class="input-group-addon">Kernel</span>
             <input type="text" name="linkName" id="linkName" class="form-control" ng-model="linkName"/>
+            <span class="input-group-addon" uib-tooltip-template="'templates/kernelHelp.html'" tooltip-placement="auto top-right"><i class="fa fa-question"></i></span>
             <span class="input-group-btn">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
                         data-placement="bottom"
@@ -94,29 +81,14 @@
     </div>
 
     <div class="form-group">
-        <h4 for="jlinkLibDir">
-            Wolfram Engine J/Link Native Library
-        </h4>
-
-        <div>
-            <p>
-                Please configure the path to the J/Link native library on your system architecture.
-                On your operating system ({{wolframEngineConfigSuggestion.os}} with <b>{{wolframEngineConfigSuggestion.jvmArchitecture}}-bit</b> Java Virtual Machine) look for a
-                file named <code>{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code>.<br/>
-                If Wolfram Engine is installed at its default location, you might find that file at
-            </p>
-            <p>
-                <code uib-tooltip-template="'jlinkSuggestionTooltipTemplate.html'"
-                      tooltip-placement="auto top">{{wolframEngineConfigSuggestion.suggestion.jlinkPath}}{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code>.
-            </p>
-        </div>
-
         <div class="input-group"
              data-intro="Configure the path to the Wolfram Engine J/Link native library. Look for a file named <code>{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code> at <br/>{{wolframEngineConfigSuggestion.suggestion.jlinkPath}}{{wolframEngineConfigSuggestion.suggestion.jlinkName}}.<br/>Make sure that you choose a <b>{{wolframEngineConfigSuggestion.jvmArchitecture}}-bit</b> library that fits to your system architecture, since you are running a <b>{{wolframEngineConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine</b>."
              data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
             <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="jlinkLibPath === undefined"><i class="fa fa-wrench"></i></span>
+            <span class="input-group-addon">J/Link Native Library</span>
             <input type="text" name="jlinkLibDir" id="jlinkLibDir" class="form-control" ng-model="jlinkLibPath"/>
+            <span class="input-group-addon" uib-tooltip-template="'templates/jlinkHelp.html'" tooltip-placement="auto top-right"><i class="fa fa-question"></i></span>
             <span class="input-group-btn">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
                         data-placement="bottom"
@@ -137,28 +109,52 @@
     </div>
 
     <div class="form-group">
-        <h4 for="jlinktcpip">
-            Kernel Connection
-        </h4>
-
-        <div>
-            <p>
-                Please configure how to connect to the Wolfram Engine kernel.
-                Enter an optional port number (default is 1234) to let KeYmaera X start a local Wolfram Engine in its
-                own process and connect via TCPIP.
-                Enter an optional remote machine name to connect to an already running remote
-                Wolfram Engine at <code>port@remotemachine</code>.
-            </p>
-        </div>
-
         <div class="input-group"
              data-intro="Configure how to connect to the Wolfram Engine kernel."
              data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
             <span class="input-group-addon" ng-if="jlinkTcpip.port"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="!jlinkTcpip.port"><i class="fa fa-wrench"></i></span>
+            <span class="input-group-addon">Connection</span>
             <input type="number" min="1024" max="65535" placeholder="Port number (optional in the range 1024-65535)" name="jlinktcpipport" id="jlinktcpipport" class="form-control" ng-model="jlinkTcpip.port"/>
             <span class="input-group-addon">@</span>
             <input type="text" placeholder="Remote machine name (optional)" name="jlinktcpipmachine" id="jlinktcpipmachine" class="form-control" ng-model="jlinkTcpip.machine"/>
+            <span class="input-group-addon" uib-tooltip-template="'templates/portHelp.html'" tooltip-placement="auto top-right"><i class="fa fa-question"></i></span>
         </div>
     </div>
 </form>
+
+<script type="text/ng-template" id="templates/jlinkHelp.html">
+    <p>
+        Please configure the path to the J/Link native library on your system architecture.
+        On your operating system ({{wolframEngineConfigSuggestion.os}} with <b>{{wolframEngineConfigSuggestion.jvmArchitecture}}-bit</b> Java Virtual Machine) look for a
+        file named <code>{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code>.<br/>
+        If Wolfram Engine is installed at its default location, you might find that file at
+    </p>
+    <p>
+        <code uib-tooltip-template="'jlinkSuggestionTooltipTemplate.html'"
+              tooltip-placement="auto top">{{wolframEngineConfigSuggestion.suggestion.jlinkPath}}{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code>.
+    </p>
+</script>
+
+<script type="text/ng-template" id="templates/kernelHelp.html">
+    <p>
+        Please configure the path to the Wolfram Engine kernel. On your operating system
+        ({{wolframEngineConfigSuggestion.os}}) look for an executable file named
+        <code>{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>.<br/>
+        If Wolfram Engine is installed at its default location, you might find that file at
+    </p>
+    <p>
+        <code uib-tooltip-template="'kernelSuggestionTooltipTemplate.html'"
+              tooltip-placement="auto top">{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>.
+    </p>
+</script>
+
+<script type="text/ng-template" id="templates/portHelp.html">
+    <p>
+        Please configure how to connect to the Wolfram Engine kernel.
+        Enter an optional port number (default is 1234) to let KeYmaera X start a local Wolfram Engine in its
+        own process and connect via TCPIP.
+        Enter an optional remote machine name to connect to an already running remote
+        Wolfram Engine at <code>port@remotemachine</code>.
+    </p>
+</script>
