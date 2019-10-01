@@ -313,7 +313,7 @@ del {
 }
 
 .tooltip-inner {
-  max-width: none;
+  max-width: calc(80vw);
 }
 
 [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
