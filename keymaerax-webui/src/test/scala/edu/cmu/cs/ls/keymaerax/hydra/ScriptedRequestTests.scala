@@ -111,7 +111,7 @@ class ScriptedRequestTests extends TacticTestBase {
         root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
-    inside (new ExtractTacticRequest(db.db, proofId.toString).getResultingResponses(t).loneElement) {
+    inside (new ExtractTacticRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case GetTacticResponse(tacticText) => tacticText shouldBe """hideR(1=="x>=0->x>=0")"""
     }
   }}

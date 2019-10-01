@@ -129,11 +129,14 @@ abstract class UserModelRequest(db: DBAbstraction, username: String, modelId: St
 
 abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
-    if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
-    //@todo faster query for existence
-    else if (HyDRAServerConfig.isHosted && db.getProofInfo(proofId).modelId.isDefined && !db.userOwnsProof(username, proofId)) {
-      new PossibleAttackResponse("Permission denied") :: Nil
-    } else doResultingResponses()
+    Try(proofId.toInt).toOption match {
+      case Some(_) =>
+        //@todo faster query for existence
+        if (HyDRAServerConfig.isHosted && db.getProofInfo(proofId).modelId.isDefined && !db.userOwnsProof(username, proofId)) {
+          new PossibleAttackResponse("Permission denied") :: Nil
+        } else doResultingResponses()
+      case None => new ErrorResponse("The user interface lost track of the proof, please try reloading the page.") :: Nil //@note Web UI bug)
+    }
   }
 
   protected def doResultingResponses(): List[Response]
@@ -2098,8 +2101,7 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
 /** Prunes a node and everything below */
 class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends UserProofRequest(db, userId, proofId) with WriteRequest {
   override protected def doResultingResponses(): List[Response] = {
-    if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
-    else if (db.getProofInfo(proofId).closed) new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
+    if (db.getProofInfo(proofId).closed) new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
     else {
       val tree = DbProofTree(db, proofId)
       tree.locate(nodeId) match {
@@ -2123,22 +2125,19 @@ class UndoLastProofStepRequest(db: DBAbstraction, userId: String, proofId: Strin
   }
 
   override protected def doResultingResponses(): List[Response] = {
-    if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
-    else {
-      val tree = DbProofTree(db, proofId)
-      //@todo do not load all steps
-      tree.nodes.lastOption.flatMap(_.parent) match {
-        case None => new ErrorResponse("Proof does not have any steps yet") :: Nil
-        case Some(node) =>
-          node.pruneBelow()
-          val info = db.getProofInfo(proofId)
-          db.updateProofInfo(info.copy(closed = false))
-          val item = AgendaItem(node.id.toString,
-            AgendaItem.nameOf(node)
-            ,
-            proofId, node.allAncestors.map(_.id.toString))
-          new PruneBelowResponse(item) :: Nil
-      }
+    val tree = DbProofTree(db, proofId)
+    //@todo do not load all steps
+    tree.nodes.lastOption.flatMap(_.parent) match {
+      case None => new ErrorResponse("Proof does not have any steps yet") :: Nil
+      case Some(node) =>
+        node.pruneBelow()
+        val info = db.getProofInfo(proofId)
+        db.updateProofInfo(info.copy(closed = false))
+        val item = AgendaItem(node.id.toString,
+          AgendaItem.nameOf(node)
+          ,
+          proofId, node.allAncestors.map(_.id.toString))
+        new PruneBelowResponse(item) :: Nil
     }
   }
 }
@@ -2193,7 +2192,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
       val tactic = tree.tacticString
       // remember tactic string
-      val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
+      val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
         tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
         Some(tactic))
       db.updateProofInfo(newInfo)
@@ -2298,12 +2297,12 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
   }
 }
 
-class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request with WriteRequest {
-  override def resultingResponses(): List[Response] = {
+class ExtractTacticRequest(db: DBAbstraction, userName: String, proofIdStr: String) extends UserProofRequest(db, userName, proofIdStr) with WriteRequest {
+  override def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofIdStr)
     val tactic = tree.tacticString
     // remember tactic string
-    val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
+    val newInfo = ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
       tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
       Some(tactic))
     db.updateProofInfo(newInfo)
@@ -2311,8 +2310,8 @@ class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Reques
   }
 }
 
-class GetTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = {
+class GetTacticRequest(db: DBAbstraction, userName: String, proofIdStr: String) extends UserProofRequest(db, userName, proofIdStr) with ReadRequest {
+  override def doResultingResponses(): List[Response] = {
     val proofInfo = db.getProofInfo(proofIdStr)
     GetTacticResponse(proofInfo.tactic.getOrElse(BellePrettyPrinter(Idioms.nil))) :: Nil
   }
@@ -2370,7 +2369,7 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
     val tactic = tree.tacticString
     val model = db.getModel(tree.info.modelId.get)
 
-    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil, withComments=true)
+    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic) :: Nil, withComments = true)
     new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }
 }
