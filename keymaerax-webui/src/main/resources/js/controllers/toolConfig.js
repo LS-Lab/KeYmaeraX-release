@@ -8,7 +8,10 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
     tool: undefined,
     initialized: undefined,
     error: undefined,
-    errorDetails: undefined
+    errorDetails: undefined,
+    isInitialized: function(t) { return this.tool===t && !this.initializing && this.initialized && this.error === undefined; },
+    isInitializing: function(t) { return this.tool===t && this.initializing; },
+    isError: function(t) { return this.tool===t && !this.initializing && !this.initialized && this.error !== undefined; }
   }
 
   this.fetchSystemInfo = function() {
@@ -19,30 +22,33 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
   }
 
   this.toolChange = function() {
-    toolStatus.initializing = true;
-    $http.post("/config/tool", toolStatus.tool).success(function(data) {
-      toolStatus.tool = data.tool;
-      toolStatus.initialized = true;
+    if (toolStatus.tool) {
+      toolStatus.initializing = true;
+      toolStatus.initialized = undefined;
       toolStatus.error = undefined;
       toolStatus.errorDetails = undefined;
-    }).error(function(data, status) {
-      toolStatus.initialized = false;
-      toolStatus.error = data.textStatus;
-      toolStatus.errorDetails = data.causeMsg;
-    }).finally(function() {
-      toolStatus.initializing = false;
-    });
+      $http.post("/config/tool", toolStatus.tool).success(function(data) {
+        toolStatus.initialized = true;
+        toolStatus.tool = data.tool;
+      }).error(function(data, status) {
+        toolStatus.initialized = false;
+        toolStatus.error = data.textStatus;
+        toolStatus.errorDetails = data.causeMsg;
+      }).finally(function() {
+        toolStatus.initializing = false;
+      });
+    } else getTool();
   }
 
   this.getTool = function() {
     toolStatus.initializing = true;
+    toolStatus.initialized = undefined;
+    toolStatus.error = undefined;
+    toolStatus.errorDetails = undefined;
     $http.get("/config/tool").success(function(data) {
-      toolStatus.tool = data.tool;
       toolStatus.initialized = true;
-      toolStatus.error = undefined;
-      toolStatus.errorDetails = undefined;
-    }).error(function(data, status) {
       toolStatus.tool = data.tool;
+    }).error(function(data, status) {
       toolStatus.initialized = false;
       toolStatus.error = data.textStatus;
       toolStatus.errorDetails = data.causeMsg;
@@ -63,11 +69,14 @@ angular.module('keymaerax.controllers').controller('ToolConfig',
     $scope.toolStatus = ToolConfigService.getToolStatus();
     $scope.systemInfo = ToolConfigService.getSystemInfo();
     $scope.toolChange = ToolConfigService.toolChange;
-    $scope.getTool = ToolConfigService.getTool;
 
     $scope.close = function() {
       $uibModalInstance.close();
     }
+
+    $scope.$watch('toolStatus.tool', function(newValue, oldValue, scope) {
+      if (newValue !== oldValue) scope.toolChange();
+    })
 });
 
 angular.module('keymaerax.controllers').controller('ToolStatus',

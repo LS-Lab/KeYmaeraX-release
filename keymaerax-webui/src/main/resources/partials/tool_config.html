@@ -11,51 +11,96 @@
            Z3 is shipped with KeYmaera&#160;X for your convenience.
            Please select your preferred solver.
         </p>
-
-        <form name="toolSelection">
+        <p>
             <label for="toolSelect">Arithmetic Solver: </label>
             <span style="padding-right: 10px;"
                  data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica and Wolfram Engine require external installation but provide more features)."
                  data-position="right">
             <div class="btn-group" name="toolSelect" id="toolSelect">
-                <label ng-class="{'btn': true, 'btn-default': toolStatus.tool!='mathematica',
-                                  'btn-success': toolStatus.tool=='mathematica' && !toolStatus.initializing && toolStatus.initialized,
-                                  'btn-warning': toolStatus.tool=='mathematica' && toolStatus.initializing,
-                                  'btn-danger': toolStatus.tool=='mathematica' && !toolStatus.initializing && !toolStatus.initialized && toolStatus.error
-                                  }"
-                       ng-model="toolStatus.tool" ng-click="toolChange()" uib-btn-radio="'mathematica'"
-                       tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Mathematica provides extensive backend support for solving/simplifying arithmetic, generating invariants for ODEs, and finding assumptions and counter-examples. A license from Wolfram is required.">
-                    <i ng-class="{'fa': true, 'fa-check': toolStatus.tool=='mathematica' && !toolStatus.initializing && toolStatus.initialized,
-                                              'fa-bolt': toolStatus.tool=='mathematica' && !toolStatus.initializing && !toolStatus.initialized,
-                                              'fa-spinner fa-spin': toolStatus.tool=='mathematica' && toolStatus.initializing}"></i>
-                    Mathematica
-                </label>
-                <label ng-class="{'btn': true, 'btn-default': toolStatus.tool!='wolframengine',
-                                  'btn-success': toolStatus.tool=='wolframengine' && !toolStatus.initializing && toolStatus.initialized,
-                                  'btn-warning': toolStatus.tool=='wolframengine' && toolStatus.initializing,
-                                  'btn-danger': toolStatus.tool=='wolframengine' && !toolStatus.initializing && !toolStatus.initialized && toolStatus.error
-                                  }"
-                       ng-model="toolStatus.tool" ng-click="toolChange()" uib-btn-radio="'wolframengine'"
-                       tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Wolfram Engine provides backend functionality equivalent to Mathematica with a free license from Wolfram, but is intended for academic/personal/non-production use only and may need online connection to check the license.">
-                    <i ng-class="{'fa': true, 'fa-check': toolStatus.tool=='wolframengine' && !toolStatus.initializing && toolStatus.initialized,
-                                  'fa-bolt': toolStatus.tool=='wolframengine' && !toolStatus.initializing && !toolStatus.initialized,
-                                  'fa-spinner fa-spin': toolStatus.tool=='wolframengine' && toolStatus.initializing}"></i>
-                    Wolfram Engine
-                </label>
-                <label ng-class="{'btn': true, 'btn-default': toolStatus.tool!='z3',
-                                  'btn-success': toolStatus.tool=='z3' && !toolStatus.initializing && toolStatus.initialized,
-                                  'btn-warning': toolStatus.tool=='z3' && toolStatus.initializing,
-                                  'btn-danger': toolStatus.tool=='z3' && !toolStatus.initializing && !toolStatus.initialized && toolStatus.error}"
-                       ng-model="toolStatus.tool" ng-click="toolChange()" uib-btn-radio="'z3'"
-                       tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Z3 is readily shipped with KeYmaera X, but provides limited backend support (e.g., no invariant generation, no counter-examples).">
-                    <i ng-class="{'fa': true, 'fa-check': toolStatus.tool=='z3' && !toolStatus.initializing && toolStatus.initialized,
-                                  'fa-bolt': toolStatus.tool=='z3' && !toolStatus.initializing && !toolStatus.initialized,
-                                  'fa-spinner fa-spin': toolStatus.tool=='wolframengine' && toolStatus.initializing}"></i>
-                    Z3
-                </label>
+                <a class="btn btn-success" ng-if="toolStatus.isInitialized('mathematica')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'mathematica'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Mathematica provides extensive backend support for solving/simplifying arithmetic, generating invariants for ODEs, and finding assumptions and counter-examples. A license from Wolfram is required.">
+                      <i class="fa fa-check"></i>
+                      <span>Mathematica</span>
+                </a>
+                <a class="btn btn-default" ng-if="toolStatus.tool !== 'mathematica'"
+                   ng-model="toolStatus.tool" uib-btn-radio="'mathematica'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Mathematica provides extensive backend support for solving/simplifying arithmetic, generating invariants for ODEs, and finding assumptions and counter-examples. A license from Wolfram is required.">
+                  Mathematica
+                </a>
+                <a class="btn btn-danger" ng-if="toolStatus.isError('mathematica')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'mathematica'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Mathematica provides extensive backend support for solving/simplifying arithmetic, generating invariants for ODEs, and finding assumptions and counter-examples. A license from Wolfram is required.">
+                      <i class="fa fa-bolt"></i>
+                      <span>Mathematica</span>
+                </a>
+                <a class="btn btn-warning" ng-if="toolStatus.isInitializing('mathematica')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'mathematica'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Mathematica provides extensive backend support for solving/simplifying arithmetic, generating invariants for ODEs, and finding assumptions and counter-examples. A license from Wolfram is required.">
+                      <i class="fa fa-spinner fa-spin"></i>
+                      <span>Mathematica</span>
+                </a>
+                <a class="btn btn-success" ng-if="toolStatus.isInitialized('wolframengine')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'wolframengine'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Wolfram Engine provides backend functionality equivalent to Mathematica with a free license from Wolfram, but is intended for academic/personal/non-production use only and may need online connection to check the license.">
+                      <i class="fa fa-check"></i>
+                      <span>Wolfram Engine</span>
+                </a>
+                <a class="btn btn-default" ng-if="toolStatus.tool !== 'wolframengine'"
+                   ng-model="toolStatus.tool" uib-btn-radio="'wolframengine'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Wolfram Engine provides backend functionality equivalent to Mathematica with a free license from Wolfram, but is intended for academic/personal/non-production use only and may need online connection to check the license.">
+                      Wolfram Engine
+                </a>
+                <a class="btn btn-danger" ng-if="toolStatus.isError('wolframengine')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'wolframengine'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Wolfram Engine provides backend functionality equivalent to Mathematica with a free license from Wolfram, but is intended for academic/personal/non-production use only and may need online connection to check the license.">
+                      <i class="fa fa-bolt"></i>
+                      <span>Wolfram Engine</span>
+                </a>
+                <a class="btn btn-warning" ng-if="toolStatus.isInitializing('wolframengine')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'wolframengine'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Wolfram Engine provides backend functionality equivalent to Mathematica with a free license from Wolfram, but is intended for academic/personal/non-production use only and may need online connection to check the license.">
+                      <i class="fa fa-spinner fa-spin"></i>
+                      <span>Wolfram Engine</span>
+                </a>
+                <a class="btn btn-success" ng-if="toolStatus.isInitialized('z3')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'z3'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Z3 is readily shipped with KeYmaera X, but provides limited backend support (e.g., no invariant generation, no counter-examples).">
+                      <i class="fa fa-check"></i>
+                      <span>Z3</span>
+                </a>
+                <a class="btn btn-default" ng-if="toolStatus.tool !== 'z3'"
+                   ng-model="toolStatus.tool" uib-btn-radio="'z3'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Z3 is readily shipped with KeYmaera X, but provides limited backend support (e.g., no invariant generation, no counter-examples).">
+                  Z3
+                </a>
+                <a class="btn btn-danger" ng-if="toolStatus.isError('z3')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'z3'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Z3 is readily shipped with KeYmaera X, but provides limited backend support (e.g., no invariant generation, no counter-examples).">
+                      <i class="fa fa-bolt"></i>
+                      <span>Z3</span>
+                </a>
+                <a class="btn btn-warning" ng-if="toolStatus.isInitializing('z3')"
+                   ng-model="toolStatus.tool" uib-btn-radio="'z3'"
+                   ng-disabled="toolStatus.initializing"
+                   tooltip-placement="auto bottom-left" tooltip-append-to-body="true" uib-tooltip="Z3 is readily shipped with KeYmaera X, but provides limited backend support (e.g., no invariant generation, no counter-examples).">
+                      <i class="fa fa-spinner fa-spin"></i>
+                      <span>Z3</span>
+                </a>
             </div>
             </span>
-        </form>
+        </p>
         <div class="alert alert-danger" ng-if="toolStatus.error">{{toolStatus.error}}</div>
     </div>
     <div class="col-md-7">
