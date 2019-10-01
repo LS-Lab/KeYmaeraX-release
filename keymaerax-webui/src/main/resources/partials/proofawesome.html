@@ -87,11 +87,17 @@
                 <div class="collapse navbar-collapse" id="tacticnavbar">
                     <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'master')"
-                                                data-intro="<center>Automatic search</center>" data-position="top">
+                                                data-intro="<center>Automatic search</center>" data-position="top"
+                                                uib-popover-template="fetchRuleHelp('master')"
+                                                popover-class="k4-rulemenu-helppopover"
+                                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="onTacticScript('propAuto',false)"
-                                                data-intro="<center>Propositional proof</center>" data-position="top">
+                                                data-intro="<center>Propositional proof</center>" data-position="top"
+                                                uib-popover-template="fetchRuleHelp('propAuto')"
+                                                popover-class="k4-rulemenu-helppopover"
+                                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'explore')"
@@ -107,10 +113,16 @@
                             </a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'fullSimplify')"
-                                                data-intro="<center>Simplify formulas</center>" data-position="top">
+                                                data-intro="<center>Simplify formulas</center>" data-position="top"
+                                                uib-popover-template="fetchRuleHelp('fullSimplify')"
+                                                popover-class="k4-rulemenu-helppopover"
+                                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span></a></li>
                         <li class="nav-item"><a ng-click="undoLastProofStep()"
-                               data-intro="<center>Undo</center>" data-position="top">
+                               data-intro="<center>Undo</center>" data-position="top"
+                               uib-popover-template="fetchRuleHelp('undo')"
+                               popover-class="k4-rulemenu-helppopover"
+                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
@@ -131,7 +143,8 @@
                         </li>
                         <li class="nav-item"><a ng-click="openModelEditor(agenda.modelId)"
                                data-intro="<center>View and edit model</center>" data-position="top">
-                            <span class="fa fa-keyboard-o"><span class="k4-btn-optional-text"> Model</span></span></a>
+                            <span class="fa fa-keyboard-o"
+                             uib-tooltip="View model or edit model and rerun proof"><span class="k4-btn-optional-text"> Model</span></span></a>
                         </li>
                     </ul>
                 <!-- Global list of proof rules, axiom and proof tactics -->
