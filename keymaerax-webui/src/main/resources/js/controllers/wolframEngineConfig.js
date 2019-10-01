@@ -14,15 +14,20 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
     $http.get("/config/wolframengine")
       .success(function(data) {
           if (data.errorThrown) showCaughtErrorMessage($uibModal, data, "Failed to retrieve the server's current Wolfram Engine configuration")
-          else {
-              if (data.linkName !== "" && data.jlinkLibPath !== "") {
-                  $scope.linkName = data.linkName;
-                  $scope.jlinkLibPath = data.jlinkLibDir;
-                  var portMachine = data.jlinkTcpip.split("@");
-                  var port = parseInt(portMachine[0]);
-                  if (isNaN(port)) $scope.jlinkTcpip.port = undefined;
-                  else $scope.jlinkTcpip.port = port;
-                  $scope.jlinkTcpip.machine = portMachine.length > 1 ? portMachine[1] : undefined;
+          else if (data.linkName !== "" && data.jlinkLibPath !== "") {
+              $scope.linkName = data.linkName;
+              $scope.jlinkLibPath = data.jlinkLibDir;
+              var portMachine = data.jlinkTcpip.split("@");
+              var port = parseInt(portMachine[0]);
+              if (isNaN(port)) $scope.jlinkTcpip.port = undefined;
+              else $scope.jlinkTcpip.port = port;
+              $scope.jlinkTcpip.machine = portMachine.length > 1 ? portMachine[1] : undefined;
+
+              $scope.origLinkName = $scope.linkName;
+              $scope.origJlinkLibPath = $scope.jlinkLibPath;
+              $scope.origJlinkTcpip = {
+                port: $scope.jlinkTcpip.port,
+                machine: $scope.jlinkTcpip.machine
               }
           }
       });
@@ -36,11 +41,18 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
                                                 : "true";
         var dataObj = { linkName: linkName, jlinkLibDir: jlinkLibPath, jlinkTcpip: jlinkTcpip };
 
+        $scope.$parent.toolStatus.initializing = true;
         $http.post(uri, dataObj)
             .success(function(data) {
                 if (data.success) {
                     $scope.WolframEngineForm.linkName.$setValidity("FileExists", true);
                     $scope.WolframEngineForm.jlinkLibDir.$setValidity("FileExists", true);
+                    $scope.origLinkName = $scope.linkName;
+                    $scope.origJlinkLibPath = $scope.jlinkLibPath;
+                    $scope.origJlinkTcpip.port = $scope.jlinkTcpip.port;
+                    $scope.origJlinkTcpip.machine = $scope.jlinkTcpip.machine;
+                    $("#mathematicaConfigurationAlert").hide();
+                    $rootScope.mathematicaIsConfigured = data.configured;
                     ToolConfigService.getTool();
                 } else if (data.errorThrown) {
                     showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Wolfram Engine configuration")
@@ -65,9 +77,10 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
                     $scope.WolframEngineForm.linkName.$setValidity("FileExists", kernelNameExists);
                     $scope.WolframEngineForm.jlinkLibDir.$setValidity("FileExists", jlinkExists);
                 }
-            })
-            .error(function(data) {
+            }).error(function(data) {
                 showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration.")
+            }).finally(function() {
+              $scope.$parent.toolStatus.initializing = false;
             })
     }
 
@@ -77,6 +90,23 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
 
     $scope.setDefaultJLinkLibPath = function() {
       $scope.jlinkLibPath = $scope.wolframEngineConfigSuggestion.suggestion.jlinkPath + $scope.wolframEngineConfigSuggestion.suggestion.jlinkName
+    }
+
+    $scope.defaultWolframEnginePaths = function() {
+      $scope.setDefaultMathKernel();
+      $scope.setDefaultJLinkLibPath();
+      $scope.configureWolframEngine();
+    }
+
+    $scope.resetWolframEnginePaths = function() {
+      if ($scope.linkName != $scope.origLinkName || $scope.jlinkLibPath != $scope.origJlinkLibPath ||
+          $scope.jlinkTcpip.port != $scope.origJlinkTcpip.port || $scope.jlinkTcpip.machine != $scope.origJlinkTcpip.machine) {
+        $scope.linkName = $scope.origLinkName;
+        $scope.jlinkLibPath = $scope.origJlinkLibPath;
+        $scope.jlinkTcpip.port = $scope.origJlinkTcpip.port;
+        $scope.jlinkTcpip.machine = $scope.origJlinkTcpip.machine;
+        $scope.configureWolframEngine();
+      }
     }
 });
 

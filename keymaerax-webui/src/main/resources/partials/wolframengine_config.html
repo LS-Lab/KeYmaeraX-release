@@ -1,45 +1,57 @@
-<h2>Wolfram Engine Configuration</h2>
-
-<p ng-if="wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
-    Your system looks as if you have installed Wolfram Engine {{wolframEngineConfigSuggestion.suggestion.version}} on {{wolframEngineConfigSuggestion.os}}.
-</p>
-<p ng-if="!wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
-    Your system looks like {{wolframEngineConfigSuggestion.os}}, but Wolfram Engine may not be installed or may not be activated.
-    <ol>
-    <li>Download Wolfram Engine from <a href="http://www.wolfram.com/engine">Wolfram</a></li>
-    <li>Install Wolfram Engine</li>
-    <li>Activate Wolfram Engine</li>
-    <li>Configure how KeYmaera X connects to Wolfram Engine below</li>
-    </ol>
-    See also the <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
-</p>
-<p>
-    <strong>Important:</strong> If Wolfram Engine is not activated prior to starting KeYmaera X, it is likely to fail and/or even crash the KeYmaera X server.
-</p>
-
-<script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">
-    <div style="text-align: left;">
-        Other locations where you might find the Wolfram Engine Kernel:
-        <ul>
-            <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
-                {{suggestion.version}}: {{suggestion.kernelPath}}
-            </li>
-        </ul>
-    </div>
-</script>
-
-<script type="text/ng-template" id="jlinkSuggestionTooltipTemplate.html">
-    <div style="text-align: left;">
-        Other locations where you might find the J/Link native library:
-        <ul>
-            <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
-                {{suggestion.version}}: {{suggestion.jlinkPath}}
-            </li>
-        </ul>
-    </div>
-</script>
-
 <form ng-controller="WolframEngineConfig" name="WolframEngineForm">
+    <h2>
+        <span>Wolfram Engine Configuration</span>
+        <span>
+                <button ng-click="configureWolframEngine()"
+                        ng-class="{'btn': true, 'btn-primary':   linkName !== origLinkName || jlinkLibPath !== origJlinkLibPath || jlinkTcpip.machine !== origJlinkTcpip.machine || jlinkTcpip.port !== origJlinkTcpip.port,
+                                                'btn-default': !(linkName !== origLinkName || jlinkLibPath !== origJlinkLibPath || jlinkTcpip.machine !== origJlinkTcpip.machine || jlinkTcpip.port !== origJlinkTcpip.port)}">
+                    <span ng-if="linkName !== origLinkName || jlinkLibPath !== origJlinkLibPath || jlinkTcpip.machine !== origJlinkTcpip.machine || jlinkTcpip.port !== origJlinkTcpip.port">*</span>
+                    <span>Save</span>
+                </button>
+                <button ng-click="defaultWolframEnginePaths()" class="btn btn-default">Reset to Default</button>
+                <button ng-click="resetWolframEnginePaths()" class="btn btn-default">Discard Changes</button>
+            </span>
+    </h2>
+
+    <p ng-if="wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
+        Your system looks as if you have installed Wolfram Engine {{wolframEngineConfigSuggestion.suggestion.version}} on {{wolframEngineConfigSuggestion.os}}.
+    </p>
+    <p ng-if="!wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
+        Your system looks like {{wolframEngineConfigSuggestion.os}}, but Wolfram Engine may not be installed or may not be activated.
+        <ol>
+        <li>Download Wolfram Engine from <a href="http://www.wolfram.com/engine">Wolfram</a></li>
+        <li>Install Wolfram Engine</li>
+        <li>Activate Wolfram Engine</li>
+        <li>Configure how KeYmaera X connects to Wolfram Engine below</li>
+        </ol>
+        See also the <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
+    </p>
+    <p>
+        <strong>Important:</strong> If Wolfram Engine is not activated prior to starting KeYmaera X, it is likely to fail and/or even crash the KeYmaera X server.
+    </p>
+
+    <script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">
+        <div style="text-align: left;">
+            Other locations where you might find the Wolfram Engine Kernel:
+            <ul>
+                <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
+                    {{suggestion.version}}: {{suggestion.kernelPath}}
+                </li>
+            </ul>
+        </div>
+    </script>
+
+    <script type="text/ng-template" id="jlinkSuggestionTooltipTemplate.html">
+        <div style="text-align: left;">
+            Other locations where you might find the J/Link native library:
+            <ul>
+                <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
+                    {{suggestion.version}}: {{suggestion.jlinkPath}}
+                </li>
+            </ul>
+        </div>
+    </script>
+
     <div class="form-group">
         <h4 for="linkName">Wolfram Engine Kernel</h4>
 
@@ -144,15 +156,9 @@
              data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
             <span class="input-group-addon" ng-if="jlinkTcpip.port"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="!jlinkTcpip.port"><i class="fa fa-wrench"></i></span>
-            <input type="number" min="1024" max="65535" placeholder="Port number (1024-65535)" name="jlinktcpipport" id="jlinktcpipport" class="form-control" ng-model="jlinkTcpip.port"/>
+            <input type="number" min="1024" max="65535" placeholder="Port number (optional in the range 1024-65535)" name="jlinktcpipport" id="jlinktcpipport" class="form-control" ng-model="jlinkTcpip.port"/>
             <span class="input-group-addon">@</span>
             <input type="text" placeholder="Remote machine name (optional)" name="jlinktcpipmachine" id="jlinktcpipmachine" class="form-control" ng-model="jlinkTcpip.machine"/>
-        </div>
-    </div>
-
-    <div class="form-group">
-        <div class="col-md-3 pull-right">
-            <button ng-click="configureWolframEngine()" class="form-control btn btn-primary">Save Configuration</button>
         </div>
     </div>
 </form>
