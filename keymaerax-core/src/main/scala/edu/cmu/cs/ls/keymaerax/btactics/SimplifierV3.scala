@@ -29,7 +29,10 @@ object SimplifierV3 {
   private val namespace = "simplifierv3"
 
   /** Term simplifier */
-  //Internal lemmas for binary connectives
+
+  /**
+    * Lemmas used internally by term simplifier
+    */
   private def termAx(ctor:(Term,Term)=>Term) : (ProvableSig,ProvableSig,ProvableSig) = {
     val limp = "A_() -> (L_() = LL_())".asFormula
     val rimp = "B_() -> (R_() = RR_())".asFormula
@@ -40,8 +43,10 @@ object SimplifierV3 {
     (lAx,rAx,lrAx)
   }
 
-  //Walks a pair and applies the given function everywhere, remembering where it applied that function
-  //Used for predicate arguments and formula arguments
+  /**
+    *   Walks a pair and applies the given function everywhere, remembering where it applied that function
+    *   Used for predicate arguments and formula arguments
+    */
   private def pairWalk[A](t: Term, fn: Term => (Term,A), prefix :List[Int] = List[Int]()): (Term,List[(A,List[Int])]) = t match {
     case Pair(a,b) =>
       val (aa,l) = pairWalk(a,fn,0::prefix)
@@ -57,13 +62,16 @@ object SimplifierV3 {
   private lazy val timesAxs = termAx(Times.apply)
   private lazy val divAxs = termAx(Divide.apply)
   private lazy val powAxs = termAx(Power.apply)
-
   private lazy val negAx = remember( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"), namespace).fact
 
   private lazy val equalTrans = remember("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,
     prop & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive")).fact
 
-  //TODO: think more about the type used to represent the current context
+  /**
+    * An index is a function from a term/formula and the current formula context (i.e., assumptions)
+    * to a list of simplification lemmas to try on that term/formula
+    * TODO: think more about the type used to represent the current context
+    */
   type context = Set[Formula]
   type termIndex = (Term,context) => List[ProvableSig]
   type formulaIndex = (Formula,context) => List[ProvableSig]
@@ -73,13 +81,15 @@ object SimplifierV3 {
   def composeIndex[A<:Expression] (is:((A,context) => List[ProvableSig])*)
                                  (f:A,ctx:context) : List[ProvableSig] = is.flatMap(axs => axs(f,ctx)).toList
 
-  //Dependent term simplification workhorse
-  //Given provable A -> (t = t') or (t = t'), a context, and a term x,
-  // Checks if x unifies with t,
-  // If applicable, checks for the A[unif] in the context
-  // Then unifies the conclusion appropriately
-  // Note: can avoid unifying again in the proof?
-  def applyTermProvable(t:Term, ctx:context, pr:ProvableSig) : Option[(Term,Formula,ProvableSig)] = {
+  /**
+    * Dependent term simplification workhorse
+    * Given provable A -> (t = t') or (t = t'), a context, and a term x,
+    * Checks if x unifies with t,
+    * If applicable, checks for the A[unif] in the context
+    * Then unifies the conclusion appropriately
+    * Note: can avoid unifying again in the proof?
+    */
+  private def applyTermProvable(t:Term, ctx:context, pr:ProvableSig) : Option[(Term,Formula,ProvableSig)] = {
     //todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
       case Imply(prem,Equal(k,v)) => {
@@ -104,11 +114,20 @@ object SimplifierV3 {
     }
   }
 
-  //Given prem -> (left = right), returns left = right
-  def completeDischarge(prem:Formula, left:Term, right:Term, pr:ProvableSig ) : ProvableSig = {
+  private def completeDischarge(prem:Formula, left:Term, right:Term, pr:ProvableSig ) : ProvableSig = {
+    //Given prem -> (left = right), returns left = right
     proveBy(Equal(left,right), useAt(pr,PosInExpr(1 :: Nil))(1) & fastCloser(HashSet(),prem))
   }
 
+  /**
+    * Term simplification of term t to term s
+    * @param t term to simplify
+    * @param ctx current context (assumptions)
+    * @param taxs the term index
+    * @return the simplified term s and an optional provable containing (premise,proof of premise->s=t) only if
+    *         some simplification was applied.
+    *         premise is an assumption in contained in ctx
+    */
   def termSimp(t:Term, ctx:context, taxs: termIndex ) : (Term, Option[(Formula,ProvableSig)]) =
   {
     val (rect,recpropt) =
@@ -190,10 +209,12 @@ object SimplifierV3 {
     }
   }
 
-  /** Formula simplifier */
-  //Lemmas used internally by formula simplifier
 
-  //The internal lemmas for comparison connectives
+  /** Formula simplifier */
+
+  /**
+    * Lemmas used internally by formula simplifier
+    */
   private def fmlAx(ctor:(Term,Term)=>Formula) : (ProvableSig,ProvableSig,ProvableSig) = {
     val limp = "A_() -> (L_() = LL_())".asFormula
     val rimp = "B_() -> (R_() = RR_())".asFormula
@@ -269,13 +290,15 @@ object SimplifierV3 {
 
   private lazy val equivTrans = remember("(P_() -> (F_() <-> FF_())) & (Q_() -> (FF_() <-> FFF_())) -> (P_() & Q_() -> (F_() <-> FFF_())) ".asFormula,prop & done, namespace).fact
 
-  //Dependent formula simplification workhorse
-  //Given provable A -> (P <-> P') or (P<->P'), a context, and a formula f,
-  // Checks if P unifies with f,
-  // If applicable, checks for the A[unif] in the context
-  // Then unifies the conclusion appropriately
-  // Note: can avoid unifying again in the proof?
-  def applyFormulaProvable(f:Formula, ctx:context, pr:ProvableSig) : Option[(Formula,Formula,ProvableSig)] = {
+  /**
+    * Dependent formula simplification workhorse
+    * Given provable A -> (P <-> P') or (P<->P'), a context, and a formula f,
+    * Checks if P unifies with f,
+    * If applicable, checks for the A[unif] in the context
+    * Then unifies the conclusion appropriately
+    * Note: can avoid unifying again in the proof?
+    */
+  private def applyFormulaProvable(f:Formula, ctx:context, pr:ProvableSig) : Option[(Formula,Formula,ProvableSig)] = {
     //todo: Add some kind of unification search? (that precludes fast HashSet lookups though)
     pr.conclusion.succ(0) match {
       case Imply(prem,Equiv(k,v)) => {
@@ -301,7 +324,7 @@ object SimplifierV3 {
   }
 
   //todo: the number is not needed anymore
-  def addCtx(ctx:context,f:Formula,ctr:Int = 0) : (Int,context) =
+  private def addCtx(ctx:context,f:Formula,ctr:Int = 0) : (Int,context) =
   {
     if(ctx.contains(f) | f.equals(True) | f.equals(Not(False))){
       return (ctr,ctx)
@@ -315,6 +338,16 @@ object SimplifierV3 {
     }
   }
 
+  /**
+    * Formula simplification of formula f to formula g
+    * @param f formula to simplify
+    * @param ctx current context (assumptions)
+    * @param faxs the formula index
+    * @param taxs the term index
+    * @return the simplified formula g and an optional provable containing (premise,proof of premise -> (f<->g)) only if
+    *         some simplification was applied
+    *         premise is an assumption in contained in ctx
+    */
   def formulaSimp(f:Formula, ctx:context = HashSet(),
                   faxs: formulaIndex, taxs: termIndex) : (Formula,Option[(Formula,ProvableSig)]) =
   {
@@ -551,7 +584,7 @@ object SimplifierV3 {
     }
   }
 
-  def fastCloser(hs:context,f:Formula): BelleExpr = {
+  private def fastCloser(hs:context,f:Formula): BelleExpr = {
     //todo: auto close for NNF
     if (f.equals(True)) closeT
     else if (hs.contains(f)) closeId
@@ -570,7 +603,7 @@ object SimplifierV3 {
     }
   }
 
-  def termSimpWithDischarge(ctx:IndexedSeq[Formula],t:Term,taxs:termIndex) : (Term,Option[ProvableSig]) = {
+  private def termSimpWithDischarge(ctx:IndexedSeq[Formula],t:Term,taxs:termIndex) : (Term,Option[ProvableSig]) = {
     val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
     val (recf,recpropt) = termSimp(t,hs,taxs)
     (recf,
@@ -585,8 +618,18 @@ object SimplifierV3 {
       )
   }
 
-  def simpWithDischarge(ctx:IndexedSeq[Formula],f:Formula,
-                        faxs:formulaIndex,taxs:termIndex) : (Formula,Option[ProvableSig]) = {
+
+  /**
+    * Almost identifcal to formulaSimp, but proves the rewrite directly with respect to ctx
+    * @param f formula to simplify
+    * @param ctx current context (assumptions)
+    * @param faxs the formula index
+    * @param taxs the term index
+    * @return the simplified formula g and an optional provable containing proof of ctx -> (f<->g) only if
+    *         some simplification was applied
+    */
+  def simpWithDischarge(ctx: IndexedSeq[Formula],f: Formula,
+                        faxs: formulaIndex,taxs: termIndex) : (Formula,Option[ProvableSig]) = {
     val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
     val (recf,recpropt) = formulaSimp(f,hs,faxs,taxs)
 
@@ -602,8 +645,8 @@ object SimplifierV3 {
     )
   }
 
-  lazy val defaultFaxs:formulaIndex = composeIndex(baseIndex,boolIndex,cmpIndex)
-  lazy val defaultTaxs:termIndex = composeIndex(arithGroundIndex,arithBaseIndex)
+  lazy val defaultFaxs: formulaIndex = composeIndex(baseIndex,boolIndex,cmpIndex)
+  lazy val defaultTaxs: termIndex = composeIndex(arithGroundIndex,arithBaseIndex)
 
   //Allow the user to directly specify a list of theorems for rewriting
   private def thWrapper(ths: List[ProvableSig]) : (formulaIndex,termIndex) = {
@@ -626,10 +669,12 @@ object SimplifierV3 {
     ((f,ctx) => fths,(t,ctx)=>tths)
   }
 
-  //Simplifies a formula including sub-terms occuring in the formula
+  /**
+   * Tactic that simplifies at the given position
+   */
   def simpTac(ths:List[ProvableSig]=List(),
               faxs:formulaIndex=defaultFaxs,
-              taxs:termIndex=defaultTaxs):DependentPositionTactic = new DependentPositionTactic("simplify"){
+              taxs:termIndex=defaultTaxs): DependentPositionTactic = new DependentPositionTactic("simplify") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       val (fths,tths) = thWrapper(ths)
       val augmentFaxs:formulaIndex = composeIndex(fths,faxs)
@@ -683,7 +728,9 @@ object SimplifierV3 {
     }
   }
 
-  //Full sequent simplification tactic
+  /**
+    * Full sequent simplification tactic
+    */
   def fullSimpTac(ths:List[ProvableSig]=List(),
                   faxs:formulaIndex=defaultFaxs,
                   taxs:termIndex=defaultTaxs,
