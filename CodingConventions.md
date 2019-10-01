@@ -28,9 +28,9 @@ If there is a way of running your core code to obtain an incorrect answer or inc
   // The use of one line comments is reserved for internal comments such as in the middle of a function.
   
 8) Type delimiters go short right after the name and return types should be declared for public functions, so
-  def something(x: Int, p: Function): Boolean
+  def someMemorableFunction(x: Int, p: Function): Boolean
   
-  instead of def something(x : Int, p :Function) : Boolean
+  instead of def someMemorableFunction(x : Int, p :Function) : Boolean
   
   If/while expect a space around their condition. Braces are encouraged when the range is otherwise unclear or when else is used, so
     if (x>0) {
@@ -39,7 +39,9 @@ If there is a way of running your core code to obtain an incorrect answer or inc
       doSomethingElse()
     }
   
-9) For reasons of modularity, abstraction, and documentation, LIMIT accessibility of functions and types to a need-to-know basis. Use the private[this] or private modifier if nobody needs to know/use it. Use protected and/or private[packagename] if private is too restrictive. Only use general public access for parts that are conceptually important interfaces to the rest of the system and that you personally commit to support long-term.
+  Use lowercase camelCase naming conventions for functions/values and uppercase CamelCase for types. Stay clear of meaningless or vague names like tmpzz or doNext or checkSome.
+  
+9) For reasons of modularity, abstraction, and documentation, LIMIT accessibility of functions and types to a need-to-know basis. Use the private[this] or private modifier if nobody needs to know/use it. Use protected and/or private[packagename] if private is too restrictive. ONLY use general public access for parts that are conceptually important interfaces to the rest of the system and that you personally commit to support long-term.
 For the purpose of writing test cases, remember that test cases declared in the same package get to see private[packagename] and protected functions. PrivateMethodTester can be used to test private functions (albeit with unfortunate notational overhead).
 
 10) Document your source code and its intended use cases well. Seriously! Including package.scala overviews and argument explanations. If something is important enough to be publicly accessible, it should be important enough for you to explain what it does, or else others are free to delete undocumented public functions arbitrarily to improve code quality, which loses code features.
@@ -48,4 +50,4 @@ For the purpose of writing test cases, remember that test cases declared in the 
   "Making something variable is easy. Controlling duration of constancy is the trick."
   -- Alan J. Perlis 66
 
-12) Don't make others suffer by using println or tactic debug steps all over the map. Use with Logging or use private val logger = Logger(getClass) to get logger.debug("Information") to make it possible to more selectively control the messages you are interested in.
+12) Don't make other developers suffer endlessly by using println or tactic debug steps all over the map. Use with Logging or use private val logger = Logger(getClass) to get logger.debug("Information") to make it possible to more selectively control the messages you are interested in.
