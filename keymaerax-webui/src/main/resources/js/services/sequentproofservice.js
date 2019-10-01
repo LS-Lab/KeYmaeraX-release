@@ -157,6 +157,7 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
           }
           if (node) {
             node.isHighlighted = highlight;
+            //@todo calculate position for search 'L, 'Llast, etc.
             var pos = node.rule.pos.replace(/\./g, "\\,");
             var element = $("#seq_" + this.htmlNodeId(node.parent) + " #fml_" + pos);
             if (highlight) {
