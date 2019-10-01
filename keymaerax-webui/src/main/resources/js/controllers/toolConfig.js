@@ -22,25 +22,26 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
   }
 
   this.toolChange = function() {
-    toolStatus.initializing = true;
-    toolStatus.initialized = undefined;
-    toolStatus.error = undefined;
-    toolStatus.errorDetails = undefined;
-    $http.post("/config/tool", toolStatus.tool).success(function(data) {
-      toolStatus.initialized = true;
-      toolStatus.tool = data.tool;
-    }).error(function(data, status) {
-      toolStatus.initialized = false;
-      toolStatus.error = data.textStatus;
-      toolStatus.errorDetails = data.causeMsg;
-    }).finally(function() {
-      toolStatus.initializing = false;
-    });
+    if (toolStatus.tool) {
+      toolStatus.initializing = true;
+      toolStatus.initialized = undefined;
+      toolStatus.error = undefined;
+      toolStatus.errorDetails = undefined;
+      $http.post("/config/tool", toolStatus.tool).success(function(data) {
+        toolStatus.initialized = true;
+        toolStatus.tool = data.tool;
+      }).error(function(data, status) {
+        toolStatus.initialized = false;
+        toolStatus.error = data.textStatus;
+        toolStatus.errorDetails = data.causeMsg;
+      }).finally(function() {
+        toolStatus.initializing = false;
+      });
+    } else getTool();
   }
 
   this.getTool = function() {
     toolStatus.initializing = true;
-    toolStatus.tool = undefined;
     toolStatus.initialized = undefined;
     toolStatus.error = undefined;
     toolStatus.errorDetails = undefined;
