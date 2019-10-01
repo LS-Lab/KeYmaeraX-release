@@ -152,7 +152,7 @@ private object DifferentialTactics extends Logging {
           val t = expand & DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
               if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
-              else if (auto == 'cex) ToolTactics.hideNonFOL & ?(QE) & label("Init case")
+              else if (auto == 'cex) ToolTactics.hideNonFOL & ?(QE) & label(BelleLabels.dIInit)
               else skip
               ,
               if (auto != 'none) {
@@ -164,7 +164,7 @@ private object DifferentialTactics extends Logging {
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL &
                     (if (auto == 'full) QE & done | DebuggingTactics.done("Differential invariant must be preserved")
-                     else ?(QE) & label("Induction step"))
+                     else ?(QE) & label(BelleLabels.dIStep))
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &

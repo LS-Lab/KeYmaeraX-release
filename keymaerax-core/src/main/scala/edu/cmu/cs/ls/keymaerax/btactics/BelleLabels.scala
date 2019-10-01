@@ -23,4 +23,7 @@ object BelleLabels {
 
   // QE
   val QECEX = BelleTopLevelLabel("QE CEX")
+
+  val dIInit = BelleTopLevelLabel("dI Init")
+  val dIStep = BelleTopLevelLabel("dI Step")
 }
