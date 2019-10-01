@@ -132,6 +132,29 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               }
             }
 
+            scope.lemma = {
+              selected: undefined,
+              allInfos: function(formulaId, partialLemmaName) {
+                if (partialLemmaName && partialLemmaName.length > 0) {
+                  var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' +
+                            formulaId + '/lemmas/' + encodeURIComponent(partialLemmaName);
+                  return $http.get(url).then(function(response) { return response.data.lemmas; });
+                } else return [];
+              },
+              select: function(item, model, label, event) {
+                scope.lemma.selected = item;
+              },
+              apply: function(formulaId) {
+                scope.onInputTactic(formulaId, 'useAt',
+                                    [{param: 'axiom', value: scope.lemma.selected.name },
+                                     {param: 'key', value: '' + scope.lemma.selectedKeyPos() }]);
+              },
+              selectedKeyPos: function() {
+                var s = scope.lemma.selected;
+                return s.selectedKeyPos ? s.selectedKeyPos : s.defaultKeyPos;
+              }
+            }
+
             scope.onExprRightClick = function(formulaId) {
               scope.fetchFormulaAxioms(formulaId, function() {
                 scope.tacticPopover.open(formulaId);
