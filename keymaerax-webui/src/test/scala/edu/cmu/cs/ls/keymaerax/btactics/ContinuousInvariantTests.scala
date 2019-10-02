@@ -180,13 +180,13 @@ class ContinuousInvariantTests extends TacticTestBase {
 
   it should "refute as a tactic" in withMathematica { _ =>
     val fml = "x^2+y^2=r()^2 -> [{x'=y,y'=A()*x}] x^2+y^2=r()^2".asFormula
-    proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1)).subgoals.loneElement shouldBe "==> false".asSequent
+    proveBy(fml, implyR(1) & DifferentialTactics.cexODE(1)).subgoals.loneElement shouldBe "==> false".asSequent
   }
 
   it should "find cex differently under a flag" in withMathematica { _ =>
     val fml = "x != 0 -> [{x'=0}] x^2 > 0".asFormula
     val pr1 = proveBy(fml, implyR(1) & DifferentialTactics.invCheck(cutR(True)(1) <(closeT,skip),cutR(False)(1))(1))
-    val pr2 = proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1))
+    val pr2 = proveBy(fml, implyR(1) & DifferentialTactics.cexODE(1))
 
     pr1.subgoals.loneElement shouldBe "x!=0 ==> true -> [{x'=0&true}]x^2>0".asSequent
     pr2.subgoals.loneElement shouldBe "x!=0 ==> [{x'=0&true}]x^2>0".asSequent
