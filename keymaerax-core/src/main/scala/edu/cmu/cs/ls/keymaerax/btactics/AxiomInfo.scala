@@ -1188,7 +1188,7 @@ object DerivationInfo {
     new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
     new PositionTacticInfo("ODE",
       "Auto",
-      {case () => TactixLibrary.ODE}, needsTool = true),
+      {case () => TactixLibrary.ODE}, needsTool = true, revealInternalSteps = true),
     new PositionTacticInfo("odeInvC",
       "odeInvC",
       {case () => TactixLibrary.odeInvariantComplete}, needsTool = true),
