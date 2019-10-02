@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration.{Duration, MILLISECONDS}
@@ -41,11 +42,18 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
   override def store(e: BelleExpr): ExecutionContext = DbAtomPointer(predStep+1)
   override def branch(count: Int): List[ExecutionContext] =
     if (count == 1) DbAtomPointer(predStep)::Nil
-    else (0 until count).map(DbBranchPointer(predStep, _, predStep, openBranchesAfterExec)).toList
+    else if (openBranchesAfterExec.isEmpty) (0 until count).map(DbBranchPointer(predStep, _, predStep, openBranchesAfterExec)).toList
+    else {
+      assert(openBranchesAfterExec.size == count, "Remaining open branches " + openBranchesAfterExec.size + " and " + count + " subgoal tactics do not match")
+      // create branch indexes for elements with same parent but keep order stable (groupBy destroys order)
+      val grouped = openBranchesAfterExec.map(s => DbBranchPointer(s, 0, predStep, Nil)).zipWithIndex.groupBy(_._1.parent)
+      val lhm = mutable.LinkedHashMap(grouped.toSeq.sortBy(_._2.head._2): _*)
+      lhm.mapValues(elems => elems.zipWithIndex.map({ case (e, i) => e._1.copy(branch = i) })).values.flatten.toList
+    }
   override def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext =
     if (this != ctx) ctx match {
-      case DbAtomPointer(id) => DbBranchPointer(parent, branch, id, openBranchesAfterExec ++ List.fill(createdSubgoals)(id))
-      case DbBranchPointer(_, _, pc2, ob2) => DbBranchPointer(parent, branch, pc2, openBranchesAfterExec++ob2) // continue after pc2 (final step of the other branch)
+      case DbAtomPointer(id) => DbBranchPointer(parent, branch, id, List.fill(createdSubgoals)(id) ++ openBranchesAfterExec)
+      case DbBranchPointer(_, _, pc2, ob2) => DbBranchPointer(parent, branch, pc2, ob2++openBranchesAfterExec) // continue after pc2 (final step of the other branch)
     } else this
   // branch=-1 indicates the merging point after branch tactics (often points to a closed provable when the branches all close,
   // but may point to a provable of arbitrary size)
@@ -171,7 +179,6 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             //@note execute in reverse for stable global subgoal indexing
             val (provables, resultCtx) = branchTactics.zipWithIndex.foldRight((List[BelleValue](), branchCtxs.last))({ case (((ct, cp), i), (accProvables, accCtx)) =>
               val localCtx = branchCtxs(i).glue(accCtx, 0)
-              assert(i == localCtx.onBranch, "Expected context branch and branch tactic index to agree, but got context=" + localCtx.onBranch + " vs. index=" + i)
               // must execute at least some tactic on every branch, even if no-op
               val branchResult = runTactic(ct, cp, level, localCtx, strict = if (ct.isInstanceOf[NoOpTactic]) true else strict,
                 convertPending, executePending)
@@ -365,8 +372,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                     runningInner = inner(Nil)
                     runningInner(tactic, goal) match { case _: BelleProvable => runningInner = null }
                     (goal, ctx)
-                  case _ => ???
+                  case _ =>
                     //@note tactic operating on multiple subgoals without OnAll
+                    throw BelleIllFormedError("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
                 } else {
                   runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                   runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
@@ -396,14 +404,26 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                   }
                 }
               } else {
-                //@todo store and reload a trace with branch -1 (=merging point of a branching tactic)
-                // possible solution: store a nil/applyUsubst step with prevStepId=StartOfBranching and branchOrder=-1, without a local provable;
-                // when referenced to with prevStepId/branchOrder, look up the appropriate last step of branchOrder
-                // for example:
-                // 2=(1,0) ; <(5=(2,0);6=(5,0) ; <nil,nil> , 3=(2,1);4=(3,0))> ; 7=(2,-1) ; <(10=(7,0)=(6,0), 9=(7,1)=(6,1), 8=(7,2)=(4,0))>
-                // where stepId=(prevStepId,branch)
-                assert(tactic.isInstanceOf[NoOpTactic], "Encountered non-trivial tactic after branch merge")
-                (goal, ctx)
+                //@todo support additional cases for storing and reloading a trace with branch -1 (=merging point of a branching tactic)
+                (goal, ctx) match {
+                  case (BelleProvable(goalP, _), DbBranchPointer(_, _, _, openBranches)) =>
+                    assert(goalP.subgoals.size == openBranches.size, "Open subgoals and expected open subgoals do not match")
+                    val newCtx = DbAtomPointer(openBranches.last)
+                    runTactic(tactic, goal, level, newCtx, strict, convertPending, executePending) match {
+                      case (bp@BelleProvable(resultP, _), resultCtx) => ctx match {
+                        // replaced the previous goal with a new goal
+                        case dbp@DbBranchPointer(_, _, predStep, openBranchesAfterExec) if openBranchesAfterExec.size == openBranches.size =>
+                          val numSteps = (newCtx, resultCtx) match {
+                            case (DbAtomPointer(i), DbAtomPointer(j)) => j-i
+                            case (DbAtomPointer(i), _: DbBranchPointer) => ???
+                          }
+                          if (resultP.subgoals.size != provable.subgoals.size) (bp, dbp.copy(predStep = predStep + numSteps, openBranchesAfterExec = openBranchesAfterExec.dropRight(1)))
+                          else (bp, DbAtomPointer(predStep + numSteps))
+                        case _ => ???
+                      }
+                      case r => r
+                    }
+                }
               }
           }
       }

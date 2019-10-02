@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import testHelper.KeYmaeraXTestTags.SlowTest
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -528,6 +528,53 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |),
         |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Post")
         |)""".stripMargin)
+  }
+
+  it should "close left-over branching with follow-up branches" in withDatabase { db =>
+    val problem = "x>=0|x<y -> x>=0&x>=0&x>=0|x<y"
+    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & orL(-1) & onAll(orR(1)) & Idioms.<(andR(1) & Idioms.<(closeId, andR(1)), closeId) & onAll(closeId),
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals shouldBe empty
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(orR(1) ; andR(1) ; <(id, andR(1) ; <(id, id) ), orR(1) ; id)")
+    proveBy(problem.asFormula, tree.tactic) shouldBe 'proved
+  }
+
+  it should "close left-over branching with follow-up branches (2)" in withDatabase { db =>
+    val problem = "x>=0|x<y -> x>=0&x>=0&x>=0|x<y"
+    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & orL(-1) & onAll(orR(1)) & Idioms.<(andR(1) & Idioms.<(closeId, andR(1)), skip) & onAll(closeId),
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals shouldBe empty
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(orR(1) ; andR(1) ; <(id, andR(1); <(id, id) ), orR(1) ; id)")
+    proveBy(problem.asFormula, tree.tactic) shouldBe 'proved
+  }
+
+  it should "close left-over branching with follow-up branches (3)" taggedAs TodoTest ignore withDatabase { db =>
+    val problem = "x>=0|x<y -> x>=0&x>=0&x>=0|x<y"
+    val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 1))
+    interpreter(implyR(1) & orL(-1) & onAll(orR(1)) & Idioms.<(andR(1) & Idioms.<(closeId, andR(1)), skip) &
+      Idioms.<(skip, cut("x^2>=0".asFormula), skip) & DebuggingTactics.print("Foo") & Idioms.<(skip, skip, closeId, cohideR('Rlast)) &
+      DebuggingTactics.print("WTF") & Idioms.<(skip, closeId, QE) & closeId,
+      BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals shouldBe empty
+    //tree.tactic shouldBe BelleParser("")
+    proveBy(problem.asFormula, tree.tactic) shouldBe 'proved
   }
 
   "Saturation" should "record each iteration as step" in withDatabase { db =>
