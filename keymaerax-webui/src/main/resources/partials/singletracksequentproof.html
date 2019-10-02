@@ -197,6 +197,9 @@
             <div class="col-sm-12 well well-stepjustification" ng-if="justification && justification.visible && justification.kind === 'tactic'">
                 <kbd>{{proofTree.node(step).rule.codeName}}</kbd>
                 <span class="pull-right">
+                    <a class="btn btn-xs btn-default" ng-click="getInnerCounterExample(justification.details.proofId, justificationNode(step))">
+                        <i class="fa fa-bug"></i> Counterexample
+                    </a>
                     <a class="btn btn-xs btn-default"
                        uib-popover-template="'proofStepTactic.html'"
                        popover-trigger="'outsideClick'"

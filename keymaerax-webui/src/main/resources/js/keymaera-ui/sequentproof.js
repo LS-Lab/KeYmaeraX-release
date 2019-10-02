@@ -180,6 +180,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var branchId = branchId = parseInt(nodeId.split(",")[1][0], 10);
         var outer = scope.proofTree.node(nodeId).rule;
         var items = scope.justification(scope.proofId, nodeId).details.agenda.items()
+        //@todo send labels with agenda items and order by labels
         if (outer.codeName == "loop") {
           branchId = branchId == 0 ? 2 : branchId == 1 ? 0 : 1;
         } else if (outer.codeName == "dI" && items.length > 1) {
@@ -236,6 +237,35 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
           var justification = sequentProofData.justifications.get(proofId, nodeId)
           justification.visible = !justification.visible;
           if (justification.visible) scope.deductionPath.isCollapsed=false;
+        }
+      }
+
+      scope.getInnerCounterExample = function(proofId, node) {
+        var requestCanceller = $q.defer();
+        var p = scope.$parent;
+        // find the parent that maintains running requests
+        while (p && !p.runningRequest) { p = p.$parent; }
+        if (p) {
+          p.runningRequest.canceller = requestCanceller;
+          spinnerService.show('counterExampleSpinner');
+          var nodeId = node.deduction.sections[0].path[0];
+          $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/counterExample', { timeout: requestCanceller.promise })
+            .then(function(response) {
+              var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
+              $uibModal.open({
+                templateUrl: 'templates/counterExample.html',
+                controller: 'CounterExampleCtrl',
+                size: dialogSize,
+                resolve: {
+                  result: function() { return response.data.result; },
+                  origFormula: function() { return response.data.origFormula; },
+                  cexFormula: function() { return response.data.cexFormula; },
+                  cexValues: function() { return response.data.cexValues; },
+                  speculatedValues: function() { return response.data.speculatedValues; }
+                }
+              });
+            })
+            .finally(function() { spinnerService.hide('counterExampleSpinner'); });
         }
       }
 
