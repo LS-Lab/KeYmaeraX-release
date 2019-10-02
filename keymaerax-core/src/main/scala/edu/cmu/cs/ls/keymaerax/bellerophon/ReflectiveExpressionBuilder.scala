@@ -23,7 +23,7 @@ object ReflectiveExpressionBuilder extends Logging {
           case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[GenProduct] => Any](theGenerator)
           case None =>
             logger.debug(s"Need a generator for tactic ${info.codeName} but none was provided; switching to default.")
-            info.belleExpr.asInstanceOf[Generator.Generator[GenProduct] => Any](InvariantGenerator.defaultInvariantGenerator)
+            info.belleExpr.asInstanceOf[Generator.Generator[GenProduct] => Any](TactixLibrary.invGenerator)
         }
       } else {
         info.belleExpr

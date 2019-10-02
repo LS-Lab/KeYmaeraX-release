@@ -279,6 +279,25 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[master]] */
   def auto: BelleExpr = "auto" by master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done
 
+  /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
+    * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
+  def explore(gen: ConfigurableGenerator[GenProduct]): BelleExpr = "explore" by master("ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    case Some(Box(prg@Loop(_), _)) if gen.products.contains(prg) =>
+      logger.info("Explore uses loop with annotated invariant")
+      //@note bypass all other invariant generators except the annotated invariants, pass on to loop
+      ChooseSome(
+        () => try {
+          gen(seq, pos).iterator.map(_._1)
+        } catch {
+          case err: Exception =>
+            logger.warn("ChooseSome: error listing options " + err, err)
+            List[Formula]().iterator
+        },
+        (inv: Formula) => loop(inv)(pos) & onAll(explore(gen))
+      )
+    case _ => throw BelleIllFormedError("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
+  }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=true)
+
   /*******************************************************************
     * unification and matching based auto-tactics
  *
