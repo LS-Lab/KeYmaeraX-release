@@ -12,7 +12,7 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
     isInitialized: function(t) { return this.tool===t && !this.initializing && this.configured && this.initialized && this.error === undefined; },
     isInitializing: function(t) { return this.tool===t && this.initializing; },
     isError: function(t) { return this.tool===t && !this.initializing && !this.initialized && this.error !== undefined; },
-    isUnconfigured: function(t) { return this.tool===t && !this.initializing && !this.configured; },
+    isUnconfigured: function(t) { return this.tool===t && !this.initializing && !this.configured && this.error === undefined; },
   }
 
   this.fetchSystemInfo = function() {
