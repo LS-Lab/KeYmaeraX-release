@@ -328,8 +328,8 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
         .replaceAll("\\s+$|\\s*(\n)\\s*|(\\s)\\s*", "$1$2") //@note collapse newlines
     } else ""
   def getJson = JsObject(
-    "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
-    "causeMsg" -> (if (exn != null && exn.getMessage != null) JsString(exn.getMessage) else JsString("")),
+    "textStatus" -> (if (msg != null) JsString(msg.replaceAllLiterally("[Bellerophon Runtime]", "")) else JsString("")),
+    "causeMsg" -> (if (exn != null && exn.getMessage != null) JsString(exn.getMessage.replaceAllLiterally("[Bellerophon Runtime", "")) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
     "type" -> JsString("error")
   )
@@ -355,11 +355,11 @@ case class ParseErrorResponse(override val msg: String, expect: String, found: S
 }
 
 class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
-    extends ErrorResponse("Tactic failed with error: " + msg, exn) {
+    extends ErrorResponse(msg, exn) {
   override def getJson: JsObject = exn match {
     case ex: BelleUnexpectedProofStateError =>
       JsObject(super.getJson.fields ++ Map(
-        "tacticMsg" -> JsString(tacticMsg)
+        "tacticMsg" -> JsString(tacticMsg.replaceAllLiterally("[Bellerophon Runtime]", ""))
       ))
     case ex: CompoundException =>
       val exceptions = flatten(ex)
@@ -375,7 +375,7 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
       ))
     case _ =>
       JsObject(super.getJson.fields ++ Map(
-        "tacticMsg" -> JsString(tacticMsg)
+        "tacticMsg" -> JsString(tacticMsg.replaceAllLiterally("[Bellerophon Runtime]", ""))
       ))
   }
 
