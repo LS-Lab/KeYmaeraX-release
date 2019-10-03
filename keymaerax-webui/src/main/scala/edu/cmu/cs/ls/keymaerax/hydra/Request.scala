@@ -2369,7 +2369,41 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
     val tactic = tree.tacticString
     val model = db.getModel(tree.info.modelId.get)
 
-    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic) :: Nil, withComments = true)
+    def getLemmas(model: ModelPOJO, tactic: String): List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = {
+      val lemmaFinder = """useLemma\(\"([^\"]*)\"""".r
+      val lemmaNames = lemmaFinder.findAllMatchIn(tactic).map(m => m.group(1))
+      val lemmaModels = lemmaNames.map(n => n -> db.getModelList(userId).find(n == _.name))
+      val lemmas = lemmaModels.map(m => m._1 -> (m._2 match {
+        case Some(mp) => db.getProofsForModel(mp.modelId).filter(_.closed) match {
+          case Nil => m._2 -> None
+          case proofs => m._2 -> Some(proofs.maxBy(_.date))
+        }
+        case _ => m._2 -> None
+      })).toList
+      val parentLemmas: List[(String, (Option[ModelPOJO], Option[ProofPOJO]))] = lemmas.flatMap({ case (_, (mp, pp)) => (mp, pp) match {
+        case (Some(m), Some(p)) => p.tactic match {
+          case Some(t) => getLemmas(m, t)
+          case _ => Nil
+        }
+        case _ => Nil
+      }})
+
+      parentLemmas ++ lemmas
+    }
+
+    val lemmas = getLemmas(model, tactic)
+    val printedLemmas = lemmas.map({
+      case (_, (Some(modelPOJO), proofPOJO)) =>
+        ArchiveEntryPrinter.archiveEntry(modelPOJO,
+          proofPOJO match {
+            case Some(p) => (p.name -> p.tactic.getOrElse("/* todo */ nil")) :: Nil
+            case None => ("Todo" -> "/* todo */ nil") :: Nil
+          },
+          withComments = true)
+      case (lemmaName, (None, _)) => s"""Lemma "$lemmaName" /* todo */ End."""
+    })
+    val modelContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic) :: Nil, withComments = true)
+    val archiveContent = printedLemmas.mkString("\n\n") ++ modelContent
     new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }
 }
