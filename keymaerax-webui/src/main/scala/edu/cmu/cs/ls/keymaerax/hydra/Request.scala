@@ -635,14 +635,26 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
       try {
         val isConfigured = tool match {
           case "mathematica" =>
-            ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
-            Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-              Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+            if (new java.io.File(config.getOrElse("linkName", "")).exists &&
+                new java.io.File(config.getOrElse("libDir", "")).exists) {
+              ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+              Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+                Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+            } else {
+              ToolProvider.setProvider(new Z3ToolProvider())
+              false
+            }
           case "wolframengine" =>
-            ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
-            Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
-              Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
-              Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
+            if (new java.io.File(config.getOrElse("linkName", "")).exists &&
+                new java.io.File(config.getOrElse("libDir", "")).exists) {
+              ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
+              Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
+                Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
+                Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
+            } else {
+              ToolProvider.setProvider(new Z3ToolProvider())
+              false
+            }
           case "wolframscript" => ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil)); true
           case "z3" => ToolProvider.setProvider(new Z3ToolProvider()); true
           case _ => ToolProvider.setProvider(new NoneToolProvider); false

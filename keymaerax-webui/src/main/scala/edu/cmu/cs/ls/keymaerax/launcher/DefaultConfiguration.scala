@@ -18,14 +18,13 @@ object DefaultConfiguration {
     var kernelName = ""
     var jlinkFileName = ""
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
-    if(osName.contains("mac")) {
+    if (osName.contains("mac")) {
       kernelName = "MathKernel"
       jlinkFileName = "libJLinkNativeLibrary.jnilib"
-    }
-    else if(osName.contains("windows")) {
+    } else if (osName.contains("windows")) {
       kernelName = "MathKernel.exe"
       jlinkFileName = "JLinkNativeLibrary.dll"
-    } else if(osName.contains("linux")) {
+    } else if (osName.contains("linux")) {
       kernelName = "MathKernel"
       jlinkFileName = "libJLinkNativeLibrary.so"
     }

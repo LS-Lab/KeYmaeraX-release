@@ -9,9 +9,10 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
     initialized: undefined,
     error: undefined,
     errorDetails: undefined,
-    isInitialized: function(t) { return this.tool===t && !this.initializing && this.initialized && this.error === undefined; },
+    isInitialized: function(t) { return this.tool===t && !this.initializing && this.configured && this.initialized && this.error === undefined; },
     isInitializing: function(t) { return this.tool===t && this.initializing; },
-    isError: function(t) { return this.tool===t && !this.initializing && !this.initialized && this.error !== undefined; }
+    isError: function(t) { return this.tool===t && !this.initializing && !this.initialized && this.error !== undefined; },
+    isUnconfigured: function(t) { return this.tool===t && !this.initializing && !this.configured; },
   }
 
   this.fetchSystemInfo = function() {
@@ -29,11 +30,14 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
       toolStatus.errorDetails = undefined;
       $http.post("/config/tool", toolStatus.tool).success(function(data) {
         toolStatus.initialized = true;
+        toolStatus.configured = data.configured;
         toolStatus.tool = data.tool;
       }).error(function(data, status) {
         toolStatus.initialized = false;
-        toolStatus.error = data.textStatus;
-        toolStatus.errorDetails = data.causeMsg;
+        toolStatus.configured = false;
+        toolStatus.error = data ? (data.textStatus ? data.textStatus : "Unknown error, server may have crashed")
+                                : "Unknown error, server may have crashed";
+        toolStatus.errorDetails = data ? data.causeMsg : "";
       }).finally(function() {
         toolStatus.initializing = false;
       });
@@ -47,6 +51,7 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
     toolStatus.errorDetails = undefined;
     $http.get("/config/tool").success(function(data) {
       toolStatus.initialized = true;
+      toolStatus.configured = data.configured;
       toolStatus.tool = data.tool;
     }).error(function(data, status) {
       toolStatus.initialized = false;

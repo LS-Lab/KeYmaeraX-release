@@ -5,6 +5,8 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
       machine: undefined
     };
 
+    $scope.origJlinkTcpip = {}
+
     $http.get("/config/wolframengine/suggest")
       .success(function(data) {
           if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Encountered an error when attempting to get a suggested Wolfram Engine configuration.")
@@ -25,10 +27,8 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
 
               $scope.origLinkName = $scope.linkName;
               $scope.origJlinkLibPath = $scope.jlinkLibPath;
-              $scope.origJlinkTcpip = {
-                port: $scope.jlinkTcpip.port,
-                machine: $scope.jlinkTcpip.machine
-              }
+              $scope.origJlinkTcpip.port = $scope.jlinkTcpip.port;
+              $scope.origJlinkTcpip.machine = $scope.jlinkTcpip.machine;
           }
       });
 
