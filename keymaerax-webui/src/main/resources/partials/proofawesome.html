@@ -540,7 +540,7 @@
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
-                                  onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
+                                  onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
                                 <small>
                                     <span>{{taskPrefixLabel(task.id)}}</span>
                                     <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"
@@ -570,7 +570,7 @@
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
-                                  onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
+                                  onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
                                 <small>
                                     <span>{{taskPrefixLabel(task.id)}}</span>
                                     <span ng-if="taskPostfixLabel(task.id)" uib-tooltip-html="taskLabels(task.id)"

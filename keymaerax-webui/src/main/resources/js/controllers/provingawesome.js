@@ -825,8 +825,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       return $scope.prooftree.node(nodeId).labels.join('&nbsp;<i class="fa fa-angle-right"></i>&nbsp;')
     }
 
-    $scope.saveTaskName = function(newName) {
-      $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: newName }]);
+    $scope.saveTaskName = function(newName, oldName) {
+      if (newName !== oldName) $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: newName }]);
     }
 
     $scope.openModelEditor = function (modelId) {
