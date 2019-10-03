@@ -751,7 +751,7 @@ private object DifferentialTactics extends Logging {
     * @return Leaves False as the only subgoal if it finds a counterexample to the ODE question at the position it is called
     *         Succeeds in all other cases (including when the sequent or position are not of the expected shape)
     */
-  val cexCheck: DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
+  val cexCheck: DependentPositionTactic = "cexODE" by ((pos: Position, seq:Sequent) => {
     if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
       //todo: currently only works if there is exactly one succedent
       logger.warn("ODE counterexample not called at top-level succedent")
