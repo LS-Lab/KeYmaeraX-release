@@ -998,7 +998,7 @@ private object DifferentialTactics extends Logging {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     if(TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
-      throw new BelleThrowable("Strongest ODE invariant already added to domain constraints.")
+      throw new BelleThrowable("The strongest ODE invariant has already been added to the domain constraint. Try using dW or solve on the ODE to make progress in your proof.")
 
     seq.sub(pos) match {
       case Some(Box(sys@ODESystem(ode, q), _)) =>
