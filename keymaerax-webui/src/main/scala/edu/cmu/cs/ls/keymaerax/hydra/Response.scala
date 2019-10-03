@@ -1032,18 +1032,18 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
     val (boundCex, freeCex) = cex.partition(e => bv.contains(e._1))
     JsObject(
       "result" -> JsString(kind),
-      "origFormula" -> JsString(fml.prettyString),
-      "cexFormula" -> JsString(createCexFormula(fml, cex)),
+      "origFormula" -> JsString(fml.prettyString.replaceAllLiterally("()", "")),
+      "cexFormula" -> JsString(createCexFormula(fml, cex).replaceAllLiterally("()", "")),
       "cexValues" -> JsArray(
         freeCex.map(e => JsObject(
-          "symbol" -> JsString(e._1.prettyString),
-          "value" -> JsString(e._2.prettyString))
+          "symbol" -> JsString(e._1.prettyString.replaceAllLiterally("()", "")),
+          "value" -> JsString(e._2.prettyString.replaceAllLiterally("()", "")))
         ).toList:_*
       ),
       "speculatedValues" -> JsArray(
         boundCex.map(e => JsObject(
-          "symbol" -> JsString(e._1.prettyString),
-          "value" -> JsString(e._2.prettyString))
+          "symbol" -> JsString(e._1.prettyString.replaceAllLiterally("()", "")),
+          "value" -> JsString(e._2.prettyString.replaceAllLiterally("()", "")))
         ).toList:_*
       )
     )
