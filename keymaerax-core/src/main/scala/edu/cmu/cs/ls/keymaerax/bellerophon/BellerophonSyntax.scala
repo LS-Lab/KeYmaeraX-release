@@ -564,12 +564,12 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           throw new BelleThrowable(
             s"""Tactic $prettyString is not applicable for
               |    ${printWithParents(pos)}
-              |at position $locator
+              |at position ${locator.prettyString}
               |because ${be.getMessage.stripPrefix("[Bellerophon Runtime] ")}""".stripMargin, be)
         case _ => throw be
       }
     }
-    case ex: IndexOutOfBoundsException => throw new BelleThrowable("Position " + locator +
+    case ex: IndexOutOfBoundsException => throw new BelleThrowable("Position " + locator.prettyString +
       " may point outside the positions of the goal " + v.prettyString, ex)
     //@note wrap failing assertions etc. so that searchy tactic combinators follow up on the tactic failure
     case t: Throwable => throw new BelleThrowable(t.getMessage, t)
