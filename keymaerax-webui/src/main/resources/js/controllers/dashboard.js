@@ -45,6 +45,14 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     });
   };
 
+  $scope.openNewModelDialog = function() {
+    $uibModal.open({
+      templateUrl: 'templates/modeluploaddialog.html',
+      controller: 'ModelUploadCtrl',
+      size: 'fullscreen'
+    });
+  };
+
   $scope.isLocal = false;
   $http.get('/isLocal')
       .success(function(data) {
