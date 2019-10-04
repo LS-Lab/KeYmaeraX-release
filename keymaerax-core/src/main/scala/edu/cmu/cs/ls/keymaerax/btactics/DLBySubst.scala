@@ -82,8 +82,8 @@ private object DLBySubst {
     }
   }
 
-  /** Automated abstraction checks to not lose information from tests and evolution domain constraints before it abstracts. */
-  def autoabstractionb: DependentPositionTactic = "autoabstractionb" by ((pos: Position, seq: Sequent) => {
+  /** Safe abstraction checks to not lose information from tests and evolution domain constraints before it abstracts. */
+  def safeabstractionb: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(Box(prg, fml)) =>
         val fv = StaticSemantics.freeVars(fml)

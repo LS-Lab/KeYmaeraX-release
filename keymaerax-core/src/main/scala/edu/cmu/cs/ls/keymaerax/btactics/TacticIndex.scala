@@ -143,7 +143,7 @@ class DefaultTacticIndex extends TacticIndex {
         a match {
           case _: ODESystem if  bv.intersect(StaticSemantics.freeVars(p)).isEmpty => (TactixLibrary.solve::Nil, TactixLibrary.dW::Nil)
           case _: ODESystem if !bv.intersect(StaticSemantics.freeVars(p)).isEmpty => (TactixLibrary.solve::Nil, TactixLibrary.ODE::TactixLibrary.solve::Nil)
-          case _ => (TactixLibrary.step::Nil, DLBySubst.autoabstractionb::TactixLibrary.step::Nil)
+          case _ => (TactixLibrary.step::Nil, DLBySubst.safeabstractionb::TactixLibrary.step::Nil)
         }
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.solve::Nil)
