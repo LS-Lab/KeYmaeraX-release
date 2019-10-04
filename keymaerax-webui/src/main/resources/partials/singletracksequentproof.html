@@ -15,7 +15,7 @@
         <!-- Rule above: left annotation -->
         <ul></ul>
         <!-- Rule below: right annotation -->
-        <ul ng-if="proofTree.node(deductionPath.sections[0].path[0]).rule.derivation.expansible">
+        <ul ng-if="proofTree.node(deductionPath.sections[0].path[0]).rule.derivation.expansible || proofTree.node(deductionPath.sections[0].path[0]).rule.codeName === 'custom'">
             <li>
                 <i class="fa fa-bars" ng-click="stepInto(proofId, deductionPath.sections[0].path[0], $event)"></i>
             </li>
@@ -108,7 +108,7 @@
                 </li>
             </ul>
             <!-- Rule below: right annotation -->
-            <ul ng-if="proofTree.node(step).rule.derivation.expansible">
+            <ul ng-if="proofTree.node(step).rule.derivation.expansible || proofTree.node(step).rule.codeName === 'custom'">
                 <li>
                     <i class="fa fa-bars" ng-click="stepInto(proofId, step, $event)"></i>
                 </li>
