@@ -26,6 +26,8 @@ import scala.io.Source
 import scala.language.postfixOps
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
+import scala.util.matching.Regex
+
 /**
  * Tutorial and case study test cases.
  * @author Stefan Mitsch
@@ -63,48 +65,32 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
   }
 
   it should "prove all entries flagged as being provable with Mathematica" in withMathematica { _ => withDatabase {
-    prove("Mathematica")
+    prove("Mathematica" :: "Z3" :: Nil)
   }}
   it should "prove all entries flagged as being provable with Z3" in withZ3 { tool => withDatabase {
     tool.setOperationTimeout(30) // avoid getting stuck
-    prove("Z3")
+    prove("Z3" :: Nil)
   }}
 
   /* Try to see if any of the Mathematica entries work with Z3. Test "fails" if Z3 can prove an entry. */
   it should "try all Mathematica entries also with Z3" in withZ3 { tool => withDatabase { db =>
-    val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
-
-    val mathematicaEntries = tutorialEntries.
-      flatMap(e => e._7.filter(t => t._3 && qeFinder.findAllMatchIn(t._2).exists(_.group("toolName") == "Mathematica")).map(t =>
-        (e._1, e._2, e._3, e._4, e._5, e._6, t::Nil, e._8)
-      ))
+    val mathematicaEntries = filterEntriesByTool(_.exists(_.group("toolName") == "Mathematica"), replaceQE=true)
 
     tool.setOperationTimeout(30) // avoid getting stuck
     forEvery (mathematicaEntries) { (_, name, model, _, _, _, tactic, kind) =>
-      val t = (tactic.head._1, qeFinder.replaceAllIn(tactic.head._2, "QE"), tactic.head._3)
       try {
-        runEntry(name, model, kind, t, db)
-        fail("Now works with Z3: " + tutorialName + "/" + name + "/" + t._1)
+        runEntry(name, model, kind, tactic.head, db)
+        fail("Now works with Z3: " + tutorialName + "/" + name + "/" + tactic.head._1)
       } catch {
-        case _: BelleThrowable => // test "succeeds" (Z3 still fails), so QE({`Mathematica`}) is still required
+        case _: BelleThrowable => // test "succeeds" (Z3 still fails), so QE("Mathematica") is still required
         case e: TestFailedException if e.getMessage.contains("was not proved") => // master/ODE etc. stopped before proof was done
       }
     }
   }}
 
-  /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE({`tool`}) (if any) match tool */
-  private def prove(tool: String)(db: TempDBTools): Unit = {
-    // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
-    val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
-
-    val skipEntries = tutorialEntries.filter(e => e._7.nonEmpty && !e._7.exists(t => t._3 && qeFinder.findAllMatchIn(t._2).forall(p => p.group("toolName") == tool)))
-    skipEntries.foreach(e => println(s"QE tool mismatch: skipping ${e._1}"))
-
-    val checkEntries = tutorialEntries.
-      flatMap(e => e._7.filter(t => t._3 && qeFinder.findAllMatchIn(t._2).forall(p => p.group("toolName") == tool)).map(t =>
-        (e._1, e._2, e._3, e._4, e._5, e._6, t::Nil, e._8)
-      ))
-    forEvery (checkEntries) { (_, name, model, _, _, _, tactic, kind) =>
+  /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE("tool") (if any) match any of the tools */
+  private def prove(tools: List[String])(db: TempDBTools): Unit = {
+    forEvery (filterEntriesByTool(_.forall(m => tools.contains(m.group("toolName"))), replaceQE=false)) { (_, name, model, _, _, _, tactic, kind) =>
       runEntry(name, model, kind, tactic.head, db)
     }
   }
@@ -160,6 +146,26 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
     (entry.defs, generator)
   }
 
+  /** Restricts the tutorialentries to the ones with tactics matching the filter `toolFilter`. */
+  private def filterEntriesByTool(toolFilter: Iterator[Regex.Match] => Boolean, replaceQE: Boolean) = {
+    // find all specific QE({`tool`}) and QE("tool") entries, but ignores the generic QE that works with any tool
+    val qeOldFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
+    val qeFinder = """QE\("([^"]+)"\)""".r("toolName")
+
+    val skipEntries = tutorialEntries.filter(e => e._7.nonEmpty && !e._7.exists(t => t._3 &&
+      toolFilter(qeFinder.findAllMatchIn(t._2)) && toolFilter(qeOldFinder.findAllMatchIn(t._2)))
+    )
+    skipEntries.foreach(e => println(s"QE tool mismatch: skipping ${e._2}"))
+
+    val foo = tutorialEntries.flatMap(e => e._7.filter(t => t._3 &&
+      toolFilter(qeFinder.findAllMatchIn(t._2)) && toolFilter(qeOldFinder.findAllMatchIn(t._2))).map(t =>
+        (e._1, e._2, e._3, e._4, e._5, e._6,
+          if (replaceQE) (t._1, qeOldFinder.replaceAllIn(qeFinder.replaceAllIn(t._2, "QE"), "QE"), t._3)::Nil
+          else t::Nil, e._8)
+      )
+    )
+    foo
+  }
 }
 
 @SlowTest

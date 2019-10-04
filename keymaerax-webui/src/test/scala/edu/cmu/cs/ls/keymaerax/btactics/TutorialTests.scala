@@ -66,7 +66,7 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("LICS 6", s"$GITHUB_PROJECTS_RAW_PATH/lics/lics2-hybrid-forward.kya"),
   new TutorialRegressionTester("LICS 7", s"$GITHUB_PROJECTS_RAW_PATH/lics/lics4a-time-safe.kya"),
   new TutorialRegressionTester("LICS 8", s"$GITHUB_PROJECTS_RAW_PATH/lics/rotational.kya"),
-  new TutorialRegressionTester("LMPC", s"$GITHUB_PROJECTS_RAW_PATH/LMPC/LMPC.kya")
+  new TutorialRegressionTester("LMPC", s"$GITHUB_PROJECTS_RAW_PATH/LMPC/LMPC.kyx")
 )
 
 @ExtremeTest
@@ -81,6 +81,6 @@ object TutorialTests {
   val COURSE17_PATH: String = "http://symbolaris.com/course/fcps17"
   val GITHUB_PROJECTS_RAW_PATH: String = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
   // for testing changes in a locally cloned repository
-//  private val COURSE17_PATH: String = "classpath:/course"
-//  private val GITHUB_PROJECTS_RAW_PATH: String = "classpath:/keymaerax-projects"
+//  val COURSE17_PATH: String = "classpath:/course"
+//  val GITHUB_PROJECTS_RAW_PATH: String = "classpath:/keymaerax-projects"
 }
