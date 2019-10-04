@@ -322,7 +322,9 @@ class Compbased extends TacticTestBase {
   it should "prove the monolithic system" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Full System",
       io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/components/llc/multiport_system.kyx")).mkString).get
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
+    withTacticProgress(entry.tactics.head._3) {
+      proveBy(entry.model.asInstanceOf[Formula], _)
+    } shouldBe 'proved
   }
 
   "ETCS" should "prove RBC component" in withMathematica { _ =>
