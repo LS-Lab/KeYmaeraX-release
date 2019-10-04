@@ -114,16 +114,16 @@ object UIIndex {
           case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: Nil))
           //@note intermediate steps in dI
           case ODESystem(ode, _) if !post.isInstanceOf[Modal] && containsPrime(post) => ode match {
-            case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules
-            case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: rules
-            case _ => rules
+            case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: (maybeSplit :+ "GV" :+ "MR")
+            case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: (maybeSplit :+ "GV" :+ "MR")
+            case _ => maybeSplit :+ "GV" :+ "MR"
           }
           case ODESystem(_, _) =>
             if (pos.forall(_.isSucc)) {
-              if (pos.forall(_.isTopLevel)) ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ rules
-              else ("solve" :: "dC" :: "dI" ::  "dG" :: Nil) ++ rules
+              if (pos.forall(_.isTopLevel)) ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
+              else ("solve" :: "dC" :: "dI" ::  "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
             }
-            else ("solve" :: "dC" :: Nil) ++ rules
+            else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
           case _ => rules
         }
 
