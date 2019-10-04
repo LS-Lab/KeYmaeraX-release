@@ -1056,8 +1056,8 @@ object DerivationInfo {
     // TactixLibrary tactics
     PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
     PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
-    PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
-    PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
+    PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}, revealInternalSteps = true),
+    PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}, revealInternalSteps = true),
     PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}, revealInternalSteps = true),
     PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}, revealInternalSteps = true),
     PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
@@ -1210,7 +1210,7 @@ object DerivationInfo {
         , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & Q}]R", "&Delta;"), true),
           (List("&Gamma;"), List("[{x′ = f(x) & (Q∧R)}]P","&Delta;"))))
       , List(FormulaArg("R")) //@todo should be ListArg, before merge we already had concrete Bellerophon syntax for lists
-      , _ => ((fml:Formula) => TactixLibrary.diffInvariant(fml)): TypedFunc[Formula, BelleExpr]),
+      , _ => ((fml:Formula) => TactixLibrary.diffInvariant(fml)): TypedFunc[Formula, BelleExpr], revealInternalSteps = true),
     new PositionTacticInfo("solve",
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
