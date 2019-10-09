@@ -155,7 +155,7 @@ object ComponentSystem {
         require(ys.flatMap(y => StaticSemantics.freeVars(y.e).toSet).intersect(xs.map(_.xp.x)).isEmpty, "Right-handside of y'=eta must not overlap primed ys")
 
         xs.reduceOption(DifferentialProduct.apply) match {
-          case Some(xsys) =>
+          case Some(xsys) if StaticSemantics.boundVars(xsys).toSet.exists(_.name != "t") =>
             ys.reduceOption(DifferentialProduct.apply) match {
               case Some(ysys) =>
                 val universalXClosure = ys.map(_.xp.x).foldLeft[Formula](Box(ODESystem(ode, h), p))((f, y) => Forall(y::Nil, f))
@@ -182,7 +182,35 @@ object ComponentSystem {
                 )
               case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
             }
-          case None => ??? //@todo
+          case Some(xsys) if StaticSemantics.boundVars(xsys).toSet.forall(_.name == "t") =>
+            ys.reduceOption(DifferentialProduct.apply) match {
+              case Some(ysys) => ???
+              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+            }
+          case None =>
+            ys.reduceOption(DifferentialProduct.apply) match {
+              case Some(ysys) =>
+                val universalXClosure = ys.map(_.xp.x).foldLeft[Formula](Box(ODESystem(ode, h), p))((f, y) => Forall(y::Nil, f))
+                val partitionedOdeLemma =
+                  proveBy(Imply(Box(ODESystem(ysys, h), p), Box(ODESystem(ode, h), p)),
+                    implyR(1) &
+                      //sort ys into reverse order because we apply DGi outside in (innermost universal quantifier first)
+                      AxiomaticODESolver.selectionSort(h, p, ode, ys.map(_.xp.x)++xs.map(_.xp.x), SuccPosition(1)) &
+                      closeId)
+                proveBy(Imply(Box(Test(h), p), have),
+                  implyR(1) & DifferentialTactics.diffRefine(h)(1) <(
+                    cut(universalXClosure) <(
+                      allL('Llast)*ys.size & closeId & done
+                      ,
+                      hideR(1) & useAt(partitionedOdeLemma, PosInExpr(1::Nil))(1, List.fill(ys.size)(0)) &
+                        allR(1)*ys.size & dW(1) & useAt("[?] test", PosInExpr(1::Nil))(1) &
+                        closeId & done
+                    ),
+                    cohideR(1) & dW(1) & prop & done
+                  )
+                )
+              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+            }
         }
     }
     useAt(lemma3, PosInExpr(1::Nil))(pos)
@@ -247,6 +275,7 @@ object ComponentSystem {
   /** STTT Fig. 12 */
   private def useCompatibility(compatibility: Lemma, plant1Vars: Set[Variable]) = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(delta, Box(ctrl, Box(Assign(told,t), Box(plant, Box(in1star, Box(cons, Imply(pi2out, pi1in)))))))) =>
+      DebuggingTactics.print("Using compatibility") &
       useAt(compatibility, PosInExpr(1::Nil))(pos ++ PosInExpr(List.fill(5)(1))) & DebuggingTactics.print("Applied compatibility lemma") &
         dropControl(pos ++ PosInExpr(1::1::1::1::Nil)) &
         dropPlant(plant1Vars)(pos ++ PosInExpr(1::1::1::Nil)) &
@@ -264,19 +293,14 @@ object ComponentSystem {
                                    compatibility: Lemma, remainingCons: Int): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(_) if remainingCons <= 0 => skip
     case Some(Box(cons, _)) if remainingCons > 0 =>
-
-      val headConVar = cons match {
-        case Compose(l, _) => StaticSemantics.boundVars(l).toSet
-        case p => StaticSemantics.boundVars(p).toSet
-      }
-
+      val headConVars: Set[Variable] = leftAssignments(cons, remainingCons).flatMap(p => StaticSemantics.boundVars(p).toSet).toSet
       (if (remainingCons > 1) composeb(pos) else skip) &
         // Step 2.7 (introduce output guarantee of component 2)
-        introduceTest(outputGuarantees(headConVar))(pos.topLevel ++ pos.inExpr.parent.parent) <(skip, prop & done) & DebuggingTactics.print("Introduced test") &
+        introduceTest(outputGuarantees(headConVars))(pos.topLevel ++ pos.inExpr.parent.parent) <(skip, prop & DebuggingTactics.done("Step 2.7")) & DebuggingTactics.print("Introduced test") &
         // Step 2.8 (move output guarantee past connection)
         programIndependence()(pos.topLevel ++ pos.inExpr.parent) & programIndependence()(pos) & DebuggingTactics.print("Moved test") &
         // Step 2.9 (weaken output guarantee to input assumption)
-        weakenTest(inputAssumptions(headConVar))(pos ++ PosInExpr(1::Nil)) <(
+        weakenTest(inputAssumptions(headConVars))(pos ++ PosInExpr(1::Nil)) <(
           skip,
           useCompatibility(compatibility, plant1Vars)(pos.topLevel)
         ) & DebuggingTactics.print("Weakened test") &
@@ -343,7 +367,7 @@ object ComponentSystem {
                       useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil) &
                       useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil) &
                       useAt("[;] compose", PosInExpr(1::Nil))(1) &
-                      useLemma(c2step, Some(prop)) &
+                      DebuggingTactics.print("Close by C2 step lemma") & useLemma(c2step, Some(prop)) &
                       DebuggingTactics.done("Close by C2 induction step")
                     ,
                     DebuggingTactics.print("Proving C2 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
@@ -351,14 +375,14 @@ object ComponentSystem {
                       dW(1) & prop & DebuggingTactics.done("Proving C2 diff. refine")
                   )
                   ,
-                  DebuggingTactics.print("Close by C2 use case") & useLemma(c2use, Some(prop)) & DebuggingTactics.done("Close by C2 use case")
+                  DebuggingTactics.print("Close by C2 use case lemma") & useLemma(c2use, Some(prop)) & DebuggingTactics.done("Close by C2 use case")
                 )
               ,
               DebuggingTactics.print("Close by communication guarantee liveness") &
                 implyR(1) & ((abstractionb(1) & SaturateTactic(allR(1)))*4) &
                 //@todo use communication guarantees of internal ports
                 composed(1) & testd(1, 1::Nil) & useAt(DerivedAxioms.trueAnd)(1, 1::Nil) &
-                useLemma(comGuaranteeLiveness, Some(prop)) & DebuggingTactics.done("Close by communication guarantee liveness")
+                DebuggingTactics.print("Close by Communication Guarantee Liveness lemma") & useLemma(comGuaranteeLiveness, Some(prop)) & DebuggingTactics.done("Close by communication guarantee liveness")
             )
             ,
             // show
@@ -436,7 +460,7 @@ object ComponentSystem {
                   useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil) &
                   useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil) &
                   useAt("[;] compose", PosInExpr(1::Nil))(1) &
-                  useLemma(c1step, Some(prop)) &
+                  DebuggingTactics.print("Close by C1 step lemma") & useLemma(c1step, Some(prop)) &
                   DebuggingTactics.done("Close by C1 induction step")
                 ,
                 DebuggingTactics.print("Proving C1 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
@@ -518,17 +542,17 @@ object ComponentSystem {
         case And(l, r) => (l, r)
         case f => (f, f)
       }
-      implyR(1) & loop(And(inv1, And(inv2, zeta)))(1) <(
+      implyR(1) & loop(And(inv1, And(inv2, zeta)))(1) & DebuggingTactics.print("Loop") <(
         andR(1) <(
-          useLemma(c1base, Some(prop)) & DebuggingTactics.done("C1Base"),
+          DebuggingTactics.print("Close by C1 base case lemma") & useLemma(c1base, Some(prop)) & DebuggingTactics.done("C1Base"),
           andR(1) <(
-            useLemma(c2base, Some(prop)) & DebuggingTactics.done("C2Base"),
+            DebuggingTactics.print("Close by C2 base case lemma") & useLemma(c2base, Some(prop)) & DebuggingTactics.done("C2Base"),
             prop & DebuggingTactics.done("ZetaBase")
           )
         ) & DebuggingTactics.done("Component system base case", Some("user/" + systemName + " Base Case")),
         andR(1) <(
-          useLemma(c1use, Some(prop)) & DebuggingTactics.done("C1Use"),
-          useLemma(c2use, Some(prop)) & DebuggingTactics.done("C2Use")
+          DebuggingTactics.print("Close by C1 use case lemma") & useLemma(c1use, Some(prop)) & DebuggingTactics.done("C1Use"),
+          DebuggingTactics.print("Close by C2 use case lemma") & useLemma(c2use, Some(prop)) & DebuggingTactics.done("C2Use")
         ) & DebuggingTactics.done("Component system use case", Some("user/" + systemName + " Use Case")),
         proveSystemStep(
           c1use, c1step,
@@ -571,7 +595,7 @@ object ComponentSystem {
                   compatibilityLemma: String,
                   comGuaranteeSafetyLemma: String,
                   comGuaranteeLivenessLemma: String): DependentPositionWithAppliedInputTactic = "proveComponentSystem" byWithInputs (
-      c1baseLemma :: c1useLemma :: c1stepLemma :: c2baseLemma :: c2useLemma :: c2stepLemma ::
+      systemName :: c1baseLemma :: c1useLemma :: c1stepLemma :: c2baseLemma :: c2useLemma :: c2stepLemma ::
         compatibilityLemma :: comGuaranteeSafetyLemma :: comGuaranteeLivenessLemma :: Nil,
       (pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Imply(asys, Box(Loop(prgsys), gsys))) =>
