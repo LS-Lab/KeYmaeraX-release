@@ -1,6 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import com.sun.tools.javac.code.TypeTag
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -77,9 +76,6 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr, pArgs, num) =>
         if (pArgs.length > num) {
           throw new ReflectiveExpressionBuilderExn("Expected either " + num + s" or 0 position arguments for ${expr.getClass} ($expr), got " + pArgs.length)
-        } else if (expr.isInstanceOf[TypedFunc[TypeTag,TypeTag]]) {
-          throw new ReflectiveExpressionBuilderExn("Tactic " + info.codeName + " called with\n  " + expressionArgs.mkString(";") + "\n  arguments\ndoes not match type "
-            + expr.asInstanceOf[TypedFunc[TypeTag,TypeTag]].argType + " => " + expr.asInstanceOf[TypedFunc[TypeTag,TypeTag]].retType)
         } else {
           throw new ReflectiveExpressionBuilderExn("Tactic " + info.codeName + " called with\n  " + expressionArgs.mkString(";") + "\n  arguments\ndoes not match type " + expr.getClass.getSimpleName)
         }
