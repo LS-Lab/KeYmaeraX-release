@@ -2018,19 +2018,27 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
         val tactic = BelleParser(t)
-        try {
-          //@note replace listener created by proof tree (we want a different tactic name for each component of the executed tactic)
-          val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+
+        def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
-          val taskId = tree.root.runTactic(userId, interpreter, tactic, "")
-          RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
-        } catch {
-          case _: Throwable =>
-            //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
-            //      even if browsing then shows a single step only
-            val tree: ProofTree = DbProofTree(db, proofId)
-            val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), tactic, "custom")
-            RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
+          tree.root.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), tactic, name)
+        }
+
+        tactic match {
+          case n: NamedBelleExpr => RunBelleTermResponse(proofId, "()", atomic(n.name), "") :: Nil
+          case _ =>
+            try {
+              //@note replace listener created by proof tree (we want a different tactic name for each component of the executed tactic)
+              val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+              val tree: ProofTree = DbProofTree(db, proofId)
+              val taskId = tree.root.runTactic(userId, interpreter, tactic, "")
+              RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
+            } catch {
+              case _: Throwable =>
+                //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
+                //      even if browsing then shows a single step only
+                RunBelleTermResponse(proofId, "()", atomic("custom"), "") :: Nil
+            }
         }
     }
   }
