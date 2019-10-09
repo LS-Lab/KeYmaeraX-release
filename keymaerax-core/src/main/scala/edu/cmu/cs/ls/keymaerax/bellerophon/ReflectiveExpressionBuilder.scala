@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import com.sun.tools.javac.code.TypeTag
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -34,7 +35,9 @@ object ReflectiveExpressionBuilder extends Logging {
 
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
-      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe => expr(s)
+      case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe =>
+        println(s)
+        expr(s)
       case (expr: TypedFunc[Formula, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Formula].tpe => expr(fml)
       case (expr: TypedFunc[Variable, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe => expr(y)
       case (expr: TypedFunc[Term, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe => expr(term)
@@ -74,8 +77,11 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr, pArgs, num) =>
         if (pArgs.length > num) {
           throw new ReflectiveExpressionBuilderExn("Expected either " + num + s" or 0 position arguments for ${expr.getClass} ($expr), got " + pArgs.length)
+        } else if (expr.isInstanceOf[TypedFunc[TypeTag,TypeTag]]) {
+          throw new ReflectiveExpressionBuilderExn("Tactic " + info.codeName + " called with\n  " + expressionArgs.mkString(";") + "\n  arguments\ndoes not match type "
+            + expr.asInstanceOf[TypedFunc[TypeTag,TypeTag]].argType + " => " + expr.asInstanceOf[TypedFunc[TypeTag,TypeTag]].retType)
         } else {
-          throw new ReflectiveExpressionBuilderExn("Tactics with " + num + " arguments cannot have type " + expr.getClass.getSimpleName)
+          throw new ReflectiveExpressionBuilderExn("Tactic " + info.codeName + " called with\n  " + expressionArgs.mkString(";") + "\n  arguments\ndoes not match type " + expr.getClass.getSimpleName)
         }
     }
   }
