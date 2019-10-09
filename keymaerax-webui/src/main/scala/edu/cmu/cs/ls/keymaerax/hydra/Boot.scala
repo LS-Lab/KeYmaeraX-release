@@ -185,12 +185,14 @@ object HyDRAInitializer extends Logging {
 
     LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
+    val allow = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false")
     try {
       //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
       val cacheVersion = LemmaDBFactory.lemmaDB.version()
       if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
+
       Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
@@ -201,7 +203,7 @@ object HyDRAInitializer extends Logging {
           """.stripMargin
         logger.warn(msg, e)
     } finally {
-      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
+      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, allow, saveToFile = false)
     }
   }
 
