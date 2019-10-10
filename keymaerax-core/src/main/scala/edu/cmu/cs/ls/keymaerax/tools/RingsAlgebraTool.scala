@@ -19,7 +19,7 @@ class RingsLibrary(terms: Traversable[Term]) {
   private def varprefix = "AVAR"
   private def funcprefix = "BFUNC"
 
-  private val names = {
+  val names = {
     //@note sort for stable results
     val syms = terms.toList.flatMap(p => StaticSemantics.symbols(p)).distinct.sorted
     // Only constant symbols f() and vars are kept. Everything else is discarded
@@ -31,13 +31,14 @@ class RingsLibrary(terms: Traversable[Term]) {
     vars ++ funcs
   }
 
-  val mapper =
+  val ringsNames =
     names.zipWithIndex.map(p =>
       p._1 match {
         case v: Variable => (p._1, varprefix + p._2)
         case _ => (p._1, funcprefix + p._2)
       }
-    ).toMap
+    )
+  val mapper = ringsNames.toMap
   val unmapper =
     names.zipWithIndex.map(p => (p._2,
       p._1 match {
@@ -47,7 +48,7 @@ class RingsLibrary(terms: Traversable[Term]) {
       }
     )).toMap
 
-  implicit val ring = MultivariateRing(Q,mapper.values.toArray.sorted)
+  implicit val ring = MultivariateRing(Q,ringsNames.map(_._2).toArray)
   type Ring = MultivariatePolynomial[Rational[BigInteger]]
   def toRing(term:Term) : Ring = {
     term match {
