@@ -14,14 +14,14 @@ import scala.collection.JavaConverters._
   * A link to Rings library for its algebra tools
   */
 
-class RingsLibrary(terms: List[Term]) {
+class RingsLibrary(terms: Traversable[Term]) {
 
   private def varprefix = "AVAR"
   private def funcprefix = "BFUNC"
 
   private val names = {
     //@note sort for stable results
-    val syms = terms.flatMap(p => StaticSemantics.symbols(p)).distinct.sorted
+    val syms = terms.toList.flatMap(p => StaticSemantics.symbols(p)).distinct.sorted
     // Only constant symbols f() and vars are kept. Everything else is discarded
     val (vars,rest) = syms.partition( p => p.isInstanceOf[BaseVariable])
     val (funcs,emp) = rest.partition( p => p.isInstanceOf[Function] && p.asInstanceOf[Function].domain == Unit )
@@ -31,14 +31,14 @@ class RingsLibrary(terms: List[Term]) {
     vars ++ funcs
   }
 
-  private val mapper =
+  val mapper =
     names.zipWithIndex.map(p =>
       p._1 match {
         case v: Variable => (p._1, varprefix + p._2)
         case _ => (p._1, funcprefix + p._2)
       }
     ).toMap
-  private val unmapper =
+  val unmapper =
     names.zipWithIndex.map(p => (p._2,
       p._1 match {
         case v: Variable => v
@@ -48,8 +48,8 @@ class RingsLibrary(terms: List[Term]) {
     )).toMap
 
   implicit val ring = MultivariateRing(Q,mapper.values.toArray.sorted)
-
-  def toRing(term:Term) : MultivariatePolynomial[Rational[BigInteger]] = {
+  type Ring = MultivariatePolynomial[Rational[BigInteger]]
+  def toRing(term:Term) : Ring = {
     term match {
       case Neg(l) =>
         ring.negate(toRing(l))
@@ -73,6 +73,8 @@ class RingsLibrary(terms: List[Term]) {
       // Every named symbol must be mapped
       case v:NamedSymbol => ring(mapper(v))
       // Some special cases for powers
+      case Power(l,Number(n)) if n.isValidInt && n >= 0 =>
+        ring.pow(toRing(l), n.toIntExact)
       case Power(l,r) => {
         PolynomialArith.groundNormaliseProof(r,true) match {
           case Some((n:Number,pr)) if n.value.isValidInt && n.value >= 0 => {
@@ -87,7 +89,7 @@ class RingsLibrary(terms: List[Term]) {
     }
   }
 
-  def fromRing( p: MultivariatePolynomial[Rational[BigInteger]] ): Term =
+  def fromRing( p: Ring ): Term =
   {
     //Monomials contain their coefficients as well
     val monomials = p.collection().asScala.toList
@@ -117,8 +119,7 @@ class RingsLibrary(terms: List[Term]) {
 
   //TODO: this is probably available somewhere in the library but I can't find it
   //Turn univariate polynomial back into the multivariant ring
-  private def multiringify(varname:String, upoly: UnivariatePolynomial[MultivariatePolynomial[Rational[BigInteger]]], ring:MultivariateRing[Rational[BigInteger]]) :
-  MultivariatePolynomial[Rational[BigInteger]] = {
+  private def multiringify(varname:String, upoly: UnivariatePolynomial[Ring], ring:MultivariateRing[Rational[BigInteger]]) : Ring = {
     val coeffs = upoly.iterator().asScala.toList
     coeffs.zipWithIndex.map(
       p => ring.multiply(p._1,ring(varname+"^"+p._2.toString))
@@ -154,6 +155,126 @@ class RingsLibrary(terms: List[Term]) {
     (res.init.map(fromRing),fromRing(res.last))
   }
 
+  /** integral/primitive of `t` w.r.t. Variable `i` */
+  def integrate(i: Int)(t: Ring) : Ring =
+    t.mapTerms(Q, { mon =>
+      val p = mon.dv.exponents(i)
+      mon.
+        setCoefficient(mon.coefficient.divide(p + 1)).
+        setDegreeVector(mon.dv.dvMultiply(i, 1))
+    })
+
+  /** compute the Lie Derivative */
+  def lieDerivative(ode: Variable => Option[Ring])(t: Term) : Ring = t match {
+    case v: Variable => ode(v) match {
+      case Some(u) => u
+      case None => 0
+    }
+    case _: AtomicTerm => 0
+    case Neg(u) => -lieDerivative(ode)(u)
+    case Plus(u, v) => lieDerivative(ode)(u) + lieDerivative(ode)(v)
+    case Minus(u, v) => lieDerivative(ode)(u) - lieDerivative(ode)(v)
+    case Times(u, v) => lieDerivative(ode)(u) * toRing(v) + toRing(u) * lieDerivative(ode)(v)
+    case Divide(u, Number(n)) if n.isValidInt => lieDerivative(ode)(u) / n.toIntExact
+    case Power(u, Number(n)) if n.isValidInt =>
+      n.toIntExact * (toRing(u) ^ (n.toIntExact - 1)) * lieDerivative(ode)(u)
+    case _ => throw new IllegalArgumentException("Operation " + t.kind + " not (yet) supported by RingsLibrary: " + t)
+  }
+
+  /** return None if b does not divide a, otherwise Some (quotient, remainder) */
+  def internalQuotientRemainder(a: Ring, b: Ring) : Option[(Ring, Ring)] =
+  {
+    val array = ring.divideAndRemainder(a, b)
+    val q = array(0)
+    if (q.isZero) None
+    else Some(q, array(1))
+  }
+
+  /** rewrite t to Horner Form (w.r.t. "Variables" xs)
+    *
+    * we allow arbitrary terms as "variables" in order to factor out e.g., squares.
+    * */
+  def toHorner(t: Ring, xs: List[Ring]) : Term = xs match {
+    case Nil => fromRing(t)
+    case x :: xs => {
+      internalQuotientRemainder(t, x) match {
+        case None => toHorner(t, xs)
+        case Some((q, r)) => {
+          val hq = toHorner(q, x :: xs)
+          val hr = toHorner(r, xs)
+          val prod = if (hq == Number(0)) Number(0)
+          else if (hq == Number(1)) fromRing(x)
+          else if (hq == Number(-1)) Neg(fromRing(x))
+          else Times(fromRing(x), hq)
+          if (hr == Number(0)) prod
+          else if (prod == Number(0)) hr
+          else Plus(hr, prod)
+        }
+      }
+    }
+  }
+
+  /** Substitute into a polynomial: simultaneously replace Variables v */
+  def substitutes(subst: Variable => Option[Ring])(t: Term) : Ring = t match {
+    case v: Variable => subst(v) match {
+      case Some(u) => u
+      case None => toRing(v)
+    }
+    case Neg(u) => -substitutes(subst)(u)
+    case Plus(u, v) => substitutes(subst)(u) + substitutes(subst)(v)
+    case Minus(u, v) => substitutes(subst)(u) - substitutes(subst)(v)
+    case Times(u, v) => substitutes(subst)(u) * substitutes(subst)(v)
+    case Divide(u, Number(n)) if n.isValidInt => substitutes(subst)(u) / n.toIntExact
+    case Power(u, Number(n)) if n.isValidInt => substitutes(subst)(u) ^ (n.toIntExact)
+    case n : Number => toRing(n)
+    case _ => throw new IllegalArgumentException("Operation " + t.kind + " not (yet) supported by substitutes in RingsLibrary: " + t)
+  }
+
+  /** split polynomial according to order w.r.t variables in list */
+  def splitInternal(p: Ring, order: Int, vars: Seq[Int], drop: Seq[Int]) = {
+    def keep(p: Monomial[Rational[BigInteger]]) : Boolean =
+      p.dvTotalDegree(vars: _*) <= order && !drop.exists{d =>
+        val pdve = p.dv.exponents
+        p.dv.exponents(d) > 0
+      }
+    def mapToKeep(keep: Monomial[Rational[BigInteger]] => Boolean) : Ring =
+      p.mapTerms(Q, { p => if(keep(p)) p else p.setCoefficient(Rational(0)(Z)) } )
+    val poly = mapToKeep(keep)
+    val rest = mapToKeep(!keep(_))
+    (poly, rest)
+  }
+
+  /** encapsulates information relevant for working with ODEs with the Rings library */
+  case class ODE(time: Variable, state: Seq[Variable], rhs: Seq[Term]) {
+    private val stateI = state.map(v=>ring.index(mapper(v)))
+    private val timeI = ring.index(mapper(time))
+    private val variablesI = Seq(timeI)++stateI
+
+    /** compute the Picard operator P(x)*/
+    def PicardOperation(x0R: Seq[Ring],
+                        ps:  Seq[Ring],
+                        order: Int,
+                        consts_to_remainder: Seq[Int] = Nil,
+                       ) : (Seq[Ring], Seq[Ring]) =
+    {
+      val pairs = (x0R,rhs).zipped.map{case (x0R_i, f_i) =>
+        val fp = substitutes((state,ps).zipped.toMap.get)(f_i)
+        val int = integrate(timeI)(fp)
+        val sum = x0R_i + int
+        splitInternal(sum, order, variablesI, consts_to_remainder)
+      }
+      pairs.unzip
+    }
+
+    /** perform picard iteration for initial value tm0 (a polynomial in const0) up to order */
+    def PicardIteration(tm0: Seq[Ring], order: Int) = {
+      var ptm = tm0
+      for (i <- 0 until order) {
+        ptm = PicardOperation(tm0, ptm, order)._1
+      }
+      ptm
+    }
+  }
 }
 
 class RingsAlgebraTool() extends AlgebraTool{
