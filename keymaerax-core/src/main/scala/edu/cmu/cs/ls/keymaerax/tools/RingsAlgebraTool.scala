@@ -201,7 +201,7 @@ class RingsLibrary(terms: Traversable[Term]) {
     *
     * we allow arbitrary terms as "variables" in order to factor out e.g., squares.
     * */
-  def toHorner(t: Ring, xs: List[Ring]) : Term = xs match {
+  def toHorner(t: Ring, xs: List[Ring]): Term = xs match {
     case Nil => fromRing(t)
     case x :: xs => {
       internalQuotientRemainder(t, x) match {
@@ -209,10 +209,11 @@ class RingsLibrary(terms: Traversable[Term]) {
         case Some((q, r)) => {
           val hq = toHorner(q, x :: xs)
           val hr = toHorner(r, xs)
-          val prod = if (hq == Number(0)) Number(0)
-          else if (hq == Number(1)) fromRing(x)
-          else if (hq == Number(-1)) Neg(fromRing(x))
-          else Times(fromRing(x), hq)
+          val prod =
+            if (hq == Number(0)) Number(0)
+            else if (hq == Number(1)) fromRing(x)
+            else if (hq == Number(-1)) Neg(fromRing(x))
+            else Times(fromRing(x), hq)
           if (hr == Number(0)) prod
           else if (prod == Number(0)) hr
           else Plus(hr, prod)

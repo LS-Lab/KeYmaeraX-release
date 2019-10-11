@@ -493,22 +493,10 @@ object TaylorModelTactics extends Logging {
             hornerFprPp.zipWithIndex.map{case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i)))}.reduceRight(And)
           ))
       Timing.toc("numbericCondition")
-      val fpr2 = applyODE(ode, state, time)(picard_iteration.zipWithIndex.toList.map{case(p, i) => Plus(p, remainder(i))})
-      val pp2 = picard_iteration.map(p => normalizingLieDerivative(AtomicODE(DifferentialSymbol(time), Number(1)), p))
-      val horner_fpr_pp = (fpr2, pp2).zipped.map { case (fp, dp) => horner(normalise(Minus(fp, dp)), horner_order) }
-      val numberic_condition =
-        FormulaTools.quantify(time :: remainders,
-          Imply(
-            And(And(LessEqual(Number(0), time), LessEqual(time, timestep)),
-              (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
-            horner_fpr_pp.zipWithIndex.map{ case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i))) }.reduceRight(And)
-          ))
-      Timing.toc("numberic_condition")
-      debug("numberic_condition", numberic_condition)
       val prv = proveBy(
         Imply(
           And(And(initial_condition, right_tm_domain),
-            numberic_condition),
+            numbericCondition),
           box),
         debugTac("start") &
           implyR(1) &
@@ -516,6 +504,7 @@ object TaylorModelTactics extends Logging {
           odeTac.dIClosed(1) &
           Idioms.<(
             // Initial Condition
+            debugTac("Initial Condition") &
             SimplifierV3.fullSimpTac() &
               SaturateTactic(andL('L)) & rewriteAnte(true)(1) &
               debugTac("initial QE") &
