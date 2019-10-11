@@ -24,6 +24,19 @@ import scala.collection.immutable._
 
 object TaylorModelTactics extends Logging {
 
+  // Timing
+  object Timing {
+    var time = System.nanoTime()
+    def tic() = {
+      time = System.nanoTime()
+    }
+    def toc(msg: String) = {
+      val t = System.nanoTime()
+      logger.info("TIMING " + msg + ": " + (t - time)/1000000000.0 + "s")
+      tic()
+    }
+  }
+
   // Terms
 
   def constR(name: String) = FuncOf(Function(name, None, Unit, Real), Nothing)
@@ -377,26 +390,6 @@ object TaylorModelTactics extends Logging {
     val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim),
       DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
-    private def normaliseAt: DependentPositionTactic = "normaliseAt" by { (pos: Position, seq: Sequent) =>
-      seq.sub(pos) match {
-        case Some(t: Term) =>
-          useAt(PolynomialArith.normalise(t, false)._2, PosInExpr(0::Nil))(pos)
-        case Some(LessEqual(FuncOf(BigDecimalQETool.minF, _), _)) =>
-          unfoldMinMax(pos) & normaliseAt(pos)
-        case Some(LessEqual(_, FuncOf(BigDecimalQETool.maxF, _))) =>
-          unfoldMinMax(pos) & normaliseAt(pos)
-        case Some(fml: ComparisonFormula) =>
-          SimplifierV3.ineqNormalize(fml) match {
-            case (nrml, Some(prv)) =>
-              useAt(prv, PosInExpr(0::Nil))(pos) &
-                normaliseAt(pos ++ PosInExpr(0::Nil))
-            case _ => normaliseAt(pos ++ PosInExpr(0::Nil)) // TODO: is this correct here? assuming that this case only occurs if ineqNormalize did not make progress
-          }
-        case Some(b: BinaryCompositeFormula) => normaliseAt(pos ++ PosInExpr(0::Nil)) & normaliseAt(pos ++ PosInExpr(1::Nil))
-        case _ => TactixLibrary.fail
-      }
-    }
-
     private val pp = new KeYmaeraXPrettierPrinter(100)
     private def ppSubgoals(prv: ProvableSig) = {
       prv.subgoals.zipWithIndex.map{case (s, i) => "== Subgoal " + i + "==\n" + pp.stringify(s)}.mkString("\n")
@@ -415,6 +408,13 @@ object TaylorModelTactics extends Logging {
       new StringInputTactic("debugTac", message::Nil) {
         override def result(provable: ProvableSig): ProvableSig = {
           debug(_ => "===== " + message + " ====\n" + ppSubgoals(provable) + "\n===== " + message + " (end)\n")
+          provable
+        }
+      }
+    def tocTac(message: => String): StringInputTactic =
+      new StringInputTactic("tocTac", message::Nil) {
+        override def result(provable: ProvableSig): ProvableSig = {
+          Timing.toc(message)
           provable
         }
       }
@@ -443,18 +443,6 @@ object TaylorModelTactics extends Logging {
     def in_domain(t: Term) = And(LessEqual(Number(-1), t), LessEqual(t, Number(1)))
 
     val right_tm_domain = names.right_vars(dim).map(in_domain).reduceRight(And)
-
-    object Timing {
-      var time = System.nanoTime()
-      def tic() = {
-        time = System.nanoTime()
-      }
-      def toc(msg: String) = {
-        val t = System.nanoTime()
-        System.out.println("TIMING " + msg + ": " + (t - time)/1000000000.0 + "s")
-        tic()
-      }
-    }
 
     val lemma : ProvableSig = {
       Timing.tic()
@@ -496,7 +484,7 @@ object TaylorModelTactics extends Logging {
         seq.sub(pos) match {
           case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
             ProofRuleTactics.boundRenaming(vs.head, remainder(state.indexOf(v)))(pos) & existsL(pos)
-          case _ => TactixLibrary.fail
+          case _ => throw new IllegalArgumentException("instLeq not on expected shape.")
         }
       }
       val right_vars = names.right_vars(dim)
@@ -533,9 +521,11 @@ object TaylorModelTactics extends Logging {
         debugTac("start") &
           implyR(1) &
           unfoldExists(1) &
+          tocTac("pre dIClosed") &
           odeTac.dIClosed(1) &
           Idioms.<(
             // Initial Condition
+            tocTac("dIClosed") &
             debugTac("Initial Condition") &
               andL(-1) & cohideOnlyL(-1) &
               SaturateTactic(andL('L)) &
@@ -543,11 +533,21 @@ object TaylorModelTactics extends Logging {
               cohideR(1) &
               debugTac("initial QEs") &
               solveTrivialInequalities(1) &
+              tocTac("Initial Condition done") &
               done,
             // Differential Invariant
-            foldAndLessEqExists(1) & implyR(1) & SaturateTactic(andL('L) | instLeq('L)) & rewriteAnte(true)(1) &
+            tocTac("Differential Invariant") &
+            foldAndLessEqExists(1) &
+              tocTac("foldAndLessEqExists") &
+              implyR(1) &
+              SaturateTactic(andL('L) | instLeq('L)) &
+              tocTac("Saturate instLeq") &
+              rewriteAnte(true)(1) &
+              tocTac("rewriteAnte") &
               unfoldMinMax(1) &
+              tocTac("unfoldMinMax") &
               coarsenTimesBounds(time) &
+              tocTac("coarsenTimesBounds") &
               FOQuantifierTactics.allLs(time :: remainders)(-1) &
               implyL(-1) &
               Idioms.<(
@@ -555,7 +555,9 @@ object TaylorModelTactics extends Logging {
                   cohideOnlyL(-1) &
                   implyRi()(AntePosition(1), SuccPosition(1)) &
                   debugTac("refine it!") &
-                  refineTrivialStrictInequalities(1)
+                  tocTac("to refine") &
+                  refineTrivialStrictInequalities(1) &
+                  tocTac("refined it")
               )
           )
       )
