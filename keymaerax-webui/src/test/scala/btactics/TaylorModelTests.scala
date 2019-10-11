@@ -121,8 +121,8 @@ class TaylorModelTests extends TacticTestBase {
         |        xRem =
         |        x -
         |        (
-        |          t + aC0() + t * aC1() + a00() * r0() + a01() * r1() + t * a10() * r0() + t * a11() * r1() +
-        |          -1 / 2 * (t^2 * aC0()^2)
+        |          aC0() + t + a01() * r1() + a00() * r0() + t * aC1() + t * a11() * r1() + t * a10() * r0() +
+        |          -1 / 2 * t^2 * aC0()^2
         |        ) &
         |        t * iL0() <= xRem & xRem <= t * iU0()
         |      ) &
@@ -131,9 +131,10 @@ class TaylorModelTests extends TacticTestBase {
         |        yRem =
         |        y -
         |        (
-        |          aC1() + a10() * r0() + a11() * r1() + -t^2 * aC0() + -t * aC0()^2 + -t^2 * aC0() * aC1() +
-        |          -2 * (t * a00() * aC0() * r0()) +
-        |          -2 * (t * a01() * aC0() * r1())
+        |          aC1() + a11() * r1() + a10() * r0() + -1 * t * aC0()^2 + -1 * t^2 * aC0() +
+        |          -2 * t * a01() * aC0() * r1() +
+        |          -2 * t * a00() * aC0() * r0() +
+        |          -1 * t^2 * aC0() * aC1()
         |        ) &
         |        t * iL1() <= yRem & yRem <= t * iU1()
         |      )
@@ -163,10 +164,11 @@ class TaylorModelTests extends TacticTestBase {
         |      xRem =
         |      x -
         |      (
-        |        aC0() + t * aC0() + a00() * r0() + 1 / 2 * (t^2 * aC0()) + t * a00() * r0() + 1 / 6 * (t^3 * aC0()) +
-        |        1 / 2 * (t^2 * a00() * r0()) +
-        |        1 / 24 * (t^4 * aC0()) +
-        |        1 / 6 * (t^3 * a00() * r0())
+        |        aC0() + a00() * r0() + t * aC0() + t * a00() * r0() + 1 / 2 * t^2 * aC0() +
+        |        1 / 2 * t^2 * a00() * r0() +
+        |        1 / 6 * t^3 * aC0() +
+        |        1 / 6 * t^3 * a00() * r0() +
+        |        1 / 24 * t^4 * aC0()
         |      ) &
         |      t * iL0() <= xRem & xRem <= t * iU0()
         |    )
@@ -202,12 +204,11 @@ class TaylorModelTests extends TacticTestBase {
         "z = 0*r0() + 0*r1() + 0.01*r2() + 0) & " +
         "(-1 <= r0() & r0() <= 1) & (-1 <= r1() & r1() <= 1) & (-1 <= r2() & r2() <= 1)").asFormula
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
-      val pp = new KeYmaeraXPrettierPrinter(80)
       val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), BigDecimalQETool)(1)))
       val res2 = IntervalArithmeticV2Tests.timing("Mathematica     ")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1)))
       res1 shouldEqual res2
       val res = proveBy(res1, SimplifierV3.simpTac()(1, 0::1::Nil))
-      // println(pp.stringify(res.subgoals.loneElement))
+      // println(new KeYmaeraXPrettierPrinter(80).stringify(res.subgoals.loneElement))
       res.subgoals.loneElement.ante.loneElement shouldBe assms
       res.subgoals.loneElement.succ.loneElement shouldBe
         """[
@@ -222,45 +223,47 @@ class TaylorModelTests extends TacticTestBase {
           |          xRem =
           |          x -
           |          (
-          |            1 + t + 0.01 * r0() + 1 / 2 * t^2 + t * 0.01 * r0() + 1 / 6 * t^3 +
-          |            1 / 2 * (t^2 * 0.01 * r0()) +
+          |            1 + 0.01 * r0() + t + t * 0.01 * r0() + 1 / 2 * t^2 +
+          |            1 / 2 * t^2 * 0.01 * r0() +
+          |            1 / 6 * t^3 +
+          |            1 / 6 * t^3 * 0.01 * r0() +
           |            1 / 24 * t^4 +
-          |            1 / 6 * (t^3 * 0.01 * r0()) +
+          |            1 / 24 * t^4 * 0.01 * r0() +
           |            1 / 120 * t^5 +
-          |            1 / 24 * (t^4 * 0.01 * r0()) +
-          |            1 / 720 * t^6 +
-          |            1 / 120 * (t^5 * 0.01 * r0())
+          |            1 / 120 * t^5 * 0.01 * r0() +
+          |            1 / 720 * t^6
           |          ) &
-          |          t * (-5400607643*10^-15) <= xRem & xRem <= t * (4880338545*10^-14)
+          |          t * (-5400607643 * 10^-15) <= xRem & xRem <= t * (4880338545 * 10^-14)
           |        ) &
           |      \exists yRem
           |        (
           |          yRem =
           |          y -
           |          (
-          |            0.5 + 0.01 * r1() + 1 / 2 * (t^2 * 0.5) + t * 0.01 * r2() +
-          |            1 / 2 * (t^2 * 0.01 * r1()) +
-          |            1 / 24 * (t^4 * 0.5) +
-          |            1 / 6 * (t^3 * 0.01 * r2()) +
-          |            1 / 24 * (t^4 * 0.01 * r1()) +
-          |            1 / 720 * (t^6 * 0.5) +
-          |            1 / 120 * (t^5 * 0.01 * r2())
+          |            0.5 + 0.01 * r1() + t * 0.01 * r2() + 1 / 2 * t^2 * 0.5 +
+          |            1 / 2 * t^2 * 0.01 * r1() +
+          |            1 / 6 * t^3 * 0.01 * r2() +
+          |            1 / 24 * t^4 * 0.5 +
+          |            1 / 24 * t^4 * 0.01 * r1() +
+          |            1 / 120 * t^5 * 0.01 * r2() +
+          |            1 / 720 * t^6 * 0.5
           |          ) &
-          |          t * (-5364438662*10^-15) <= yRem & yRem <= t * (1259823498*10^-14)
+          |          t * (-5364438662 * 10^-15) <= yRem & yRem <= t * (1259823498 * 10^-14)
           |        ) &
           |      \exists zRem
           |        (
           |          zRem =
           |          z -
           |          (
-          |            t * 0.5 + 0.01 * r2() + t * 0.01 * r1() + 1 / 6 * (t^3 * 0.5) +
-          |            1 / 2 * (t^2 * 0.01 * r2()) +
-          |            1 / 6 * (t^3 * 0.01 * r1()) +
-          |            1 / 120 * (t^5 * 0.5) +
-          |            1 / 24 * (t^4 * 0.01 * r2()) +
-          |            1 / 120 * (t^5 * 0.01 * r1())
+          |            0.01 * r2() + t * 0.5 + t * 0.01 * r1() +
+          |            1 / 2 * t^2 * 0.01 * r2() +
+          |            1 / 6 * t^3 * 0.5 +
+          |            1 / 6 * t^3 * 0.01 * r1() +
+          |            1 / 24 * t^4 * 0.01 * r2() +
+          |            1 / 120 * t^5 * 0.5 +
+          |            1 / 120 * t^5 * 0.01 * r1()
           |          ) &
-          |          t * (-5355396416*10^-15) <= zRem & zRem <= t * (1982298904*10^-14)
+          |          t * (-5355396416 * 10^-15) <= zRem & zRem <= t * (1982298904 * 10^-14)
           |        )
           |    }
           |  ]
@@ -280,10 +283,9 @@ class TaylorModelTests extends TacticTestBase {
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
       val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), BigDecimalQETool)(1)))
       val res2 = IntervalArithmeticV2Tests.timing("Mathematica     ")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1)))
-      val pp = new KeYmaeraXPrettierPrinter(80)
       res1 shouldEqual res2
       val res = res1
-      // println(pp.stringify(res.subgoals.loneElement))
+      // println(new KeYmaeraXPrettierPrinter(80).stringify(res.subgoals.loneElement))
       res.subgoals.loneElement.ante.loneElement shouldBe assms
       res.subgoals.loneElement.succ.loneElement shouldBe
         """[
@@ -297,9 +299,9 @@ class TaylorModelTests extends TacticTestBase {
           |          xRem =
           |          x -
           |          (
-          |            t + 1 + t * 0.5 + 0.01 * r0() + 0 * r1() + t * 0 * r0() +
-          |            t * 0.01 * r1() +
-          |            -1 / 2 * (t^2 * 1^2)
+          |            1 + t + 0 * r1() + 0.01 * r0() + t * 0.5 + t * 0.01 * r1() +
+          |            t * 0 * r0() +
+          |            -1 / 2 * t^2 * 1^2
           |          ) &
           |          t * (-1887591619 * 10^-11) <= xRem & xRem <= t * (2940096162 * 10^-12)
           |        ) &
@@ -308,10 +310,10 @@ class TaylorModelTests extends TacticTestBase {
           |          yRem =
           |          y -
           |          (
-          |            0.5 + 0 * r0() + 0.01 * r1() + -t^2 * 1 + -t * 1^2 +
-          |            -t^2 * 1 * 0.5 +
-          |            -2 * (t * 0.01 * 1 * r0()) +
-          |            -2 * (t * 0 * 1 * r1())
+          |            0.5 + 0.01 * r1() + 0 * r0() + -1 * t * 1^2 + -1 * t^2 * 1 +
+          |            -2 * t * 0 * 1 * r1() +
+          |            -2 * t * 0.01 * 1 * r0() +
+          |            -1 * t^2 * 1 * 0.5
           |          ) &
           |          t * (-1875812641 * 10^-11) <= yRem & yRem <= t * (9399926235 * 10^-12)
           |        )

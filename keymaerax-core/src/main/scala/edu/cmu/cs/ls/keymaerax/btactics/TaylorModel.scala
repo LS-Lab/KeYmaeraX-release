@@ -10,10 +10,15 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
-import edu.cmu.cs.ls.keymaerax.tools.{BigDecimalQETool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{BigDecimalQETool, RingsLibrary, ToolEvidence}
 import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.scala.Logging
 import java.util.UUID
+
+import cc.redberry.rings
+import rings.poly.PolynomialMethods._
+import rings.scaladsl._
+import syntax._
 
 import scala.collection.immutable._
 
@@ -59,6 +64,9 @@ object TaylorModelTactics extends Logging {
   //  - use own representation of multivariate polynomials or a
   //  - dedicated library
   //    libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
+  //  - RingsAlgebraTool?
+
+  /* A more efficient data structure for polynomial arithmetic */
 
   def normalise(p: Term) = {
     PolynomialArith.normalise(p, true)._1
@@ -213,10 +221,18 @@ object TaylorModelTactics extends Logging {
     def interval(i: Int) : FuncOf = constR(interval_prefix + i)
     val timestep = constR(timestepN)
     def right_vars(n: Int) : List[FuncOf] = ((0 until n) map right).toList
+
+    def all_vars(n: Int) : List[Term] = {
+      def make(f: Int => Term) = (0 until n) map f
+      val preconds : List[Int => Term] = (0 until n).map(i => (j: Int) => precond(i, j)).toList
+      // Scala does not like this?
+      // (precondC::right::lower::upper::interval::preconds).flatMap(make)
+      (make(precondC)::make(right)::make(lower)::make(upper)::make(interval)::preconds.map(make)).flatten
+    }
   }
 
-  def templateTmCompose(names: TMNames, dim: Int): List[Term] = {
-    (0 until dim).map(i => Plus((0 until dim).map(j => Times(names.precond(i, j), names.right(j))).reduceLeft(Plus), names.precondC(i))).toList
+  def templateTmCompose(names: TMNames, dim: Int): Seq[Term] = {
+    (0 until dim).map(i => Plus((0 until dim).map(j => Times(names.precond(i, j), names.right(j))).reduceLeft(Plus), names.precondC(i)))
   }
 
   // Specialized Tactics
@@ -322,36 +338,11 @@ object TaylorModelTactics extends Logging {
     // State Variables of Expansion and Actual Evolution
     val vars = DifferentialHelper.getPrimedVariables(ode)
     val state = vars.filterNot(_ == time)
+    val dim = state.length
 
-    /** apply the picard operator for initial value x0 on ps(polynomials in const0) */
-    def PicardOperation(x0: List[Term], const0: List[Term], ps: List[Term], order: Int, consts_to_remainder: List[Term] = Nil) = {
-      val stateify = replaceList (const0, state) (_)
-      val constify = replaceList (state, const0) (_)
-
-      def is_tm_var(t: Term) = t == time || const0.contains(t)
-
-      // f(p)
-      val f = applyODE(ode, state, time)(ps).map(normalise)
-
-      // integral(f(picard_poly + r))
-      val int_f = f map integrate(time)
-
-      // x0 + integral(f(picard_poly + r))
-      val tool = ToolProvider.simplifierTool()
-      val pairs = ((x0, int_f).zipped.map(Plus).map(normalise)).map(split_poly(_, order_gen(_, is_tm_var) <= order, consts_to_remainder))
-      val res = ((pairs.map(p => DifferentialHelper.simpWithTool(None, p._1))), (pairs.map(p => DifferentialHelper.simpWithTool(None, p._2))))
-      logger.debug("PicardOperation:\n" + res)
-      res
-    }
-
-    /** perform picard iteration for initial value tm0 (a polynomial in const0) up to order */
-    def PicardIteration(tm0: List[Term], const0: List[Term], order: Int) = {
-      var ptm = tm0
-      for (i <- 0 until order) {
-        ptm = PicardOperation(tm0, const0, ptm, order)._1
-      }
-      ptm
-    }
+    // Establish connection to the rings-library
+    val ringsLib = new RingsLibrary(vars++names.all_vars(dim))
+    val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim), DifferentialHelper.atomicOdes(ode).map(_.e))
 
     private def normaliseAt: DependentPositionTactic = "normaliseAt" by { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
@@ -395,8 +386,6 @@ object TaylorModelTactics extends Logging {
         }
       }
 
-    val dim = state.length
-
     val initial_condition = And(Equal(time, Number(0)),
       state.zipWithIndex.map { case (v, i) => Equal(v,
         Plus(
@@ -426,16 +415,17 @@ object TaylorModelTactics extends Logging {
       val state = vars.filterNot(_ == time)
 
       val tm0 = templateTmCompose(names, dim)
-      val picard_iteration = PicardIteration(tm0, names.right_vars(dim), order)
+      val tm0R = tm0.map(ringsLib.toRing)
+      val picard_iterationR = ringsODE.PicardIteration(tm0R, order)
+      val picard_iteration = picard_iterationR.map(ringsLib.fromRing(_))
 
-      val picard_remainder_vars: List[Term] = (0 until dim) map (picRem(_)) toList
+      val picard_remainder_vars = (0 until dim) map (picRem(_))
+      val picard_remainder_varsR = picard_remainder_vars.map(ringsLib.toRing(_))
+      val picard_remainder_varsI = picard_remainder_vars.map(v => ringsLib.ring.index(ringsLib.mapper(v.func)))
 
-      val picard_poly_rem = (picard_iteration, picard_remainder_vars).zipped.map(
-        (poly, rem) => normaliseStripZero(Plus(poly, rem))) // TODO: here another option might be to just subtract picard_poly_state from the overall result
+      val picard_poly_rem = (picard_iterationR, picard_remainder_varsR).zipped.map(_ + _)
 
-      val (_, picard_iterate_remainder) = PicardOperation(tm0, names.right_vars(2), picard_poly_rem, order, picard_remainder_vars)
-      val (picard_iterate_rem_exact, picard_iterate_rem_ivl) =
-        picard_iterate_remainder.map(pir => split_poly(pir, (_ => true), picard_remainder_vars)).unzip
+      val (_, picard_iterate_remainder) = ringsODE.PicardOperation(tm0R, picard_poly_rem, order, picard_remainder_varsI)
 
       val odeTac = new DifferentialTactics.ODESpecific(ode)
 
@@ -463,12 +453,13 @@ object TaylorModelTactics extends Logging {
       /* this tries to keep even powers to exploit r:[-1,1]->r^2:[0,1] */
       val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (time :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
 
+      // TODO: use ringsLib here, as well
       val numberic_condition =
         FormulaTools.quantify(time :: state.map(remainder(_)),
           Imply(
             And(And(LessEqual(Number(0), time), LessEqual(time, timestep)),
               (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
-            (applyODE(ode, state, time)((picard_iteration, state).zipped.map((p, x) => (Plus(p, remainder(x))))), picard_iteration).zipped.toList.zipWithIndex.map {
+            (applyODE(ode, state, time)((picard_iteration.toList, state).zipped.map((p, x) => (Plus(p, remainder(x))))), picard_iteration).zipped.toList.zipWithIndex.map {
               case ((fp, p), i) =>
                 val dp = normalizingLieDerivative(AtomicODE(DifferentialSymbol(time), Number(1)), p)
                 val diff = horner(normalise(Minus(fp, dp)), horner_order)
