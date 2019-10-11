@@ -212,7 +212,7 @@ object TaylorModelTactics extends Logging {
                      interval_prefix: String,
                      remainder_suffix: String,
                      timestepN: String) {
-    def remainder(x: Variable) : Variable = Variable(x.name + "Rem")
+    def remainder(i: Int) : Variable = Variable("Rem" + i)
     def precond(i: Int, j: Int) : FuncOf = constR(precond_prefix + i + j)
     def precondC(i: Int) : FuncOf = constR(precond_prefix + "C" + i)
     def right(i: Int) : FuncOf = constR(right_prefix + i)
@@ -227,7 +227,7 @@ object TaylorModelTactics extends Logging {
       val preconds : List[Int => Term] = (0 until n).map(i => (j: Int) => precond(i, j)).toList
       // Scala does not like this?
       // (precondC::right::lower::upper::interval::preconds).flatMap(make)
-      (make(precondC)::make(right)::make(lower)::make(upper)::make(interval)::preconds.map(make)).flatten
+      (make(precondC)::make(right)::make(lower)::make(upper)::make(interval)::make(remainder)::preconds.map(make)).flatten
     }
   }
 
@@ -342,7 +342,8 @@ object TaylorModelTactics extends Logging {
 
     // Establish connection to the rings-library
     val ringsLib = new RingsLibrary(vars++names.all_vars(dim))
-    val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim), DifferentialHelper.atomicOdes(ode).map(_.e))
+    val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim),
+      DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
     private def normaliseAt: DependentPositionTactic = "normaliseAt" by { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
@@ -398,19 +399,33 @@ object TaylorModelTactics extends Logging {
     val picRem = names.interval(_)
     val tdL = names.lower(_)
     val tdU = names.upper(_)
+    val remainders = (0 until dim).map(remainder(_)).toList
 
-    def lower_rembounds(t: Term)(td: Int => Term) : List[Formula] = state.zipWithIndex.map{case (v, i) =>
-      LessEqual(minF(Number(0), Times(t, td(i))), remainder(v))
-    }
-    def upper_rembounds(t: Term)(td: Int => Term) : List[Formula] = state.zipWithIndex.map{case (v, i) =>
-      LessEqual(remainder(v), maxF(Number(0), Times(t, td(i))))
-    }
+    def lower_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
+      LessEqual(minF(Number(0), Times(t, td(i))), remainder(i))
+    )
+    def upper_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
+      LessEqual(remainder(i), maxF(Number(0), Times(t, td(i))))
+    )
 
     def in_domain(t: Term) = And(LessEqual(Number(-1), t), LessEqual(t, Number(1)))
 
     val right_tm_domain = names.right_vars(dim).map(in_domain).reduceRight(And)
 
+    object Timing {
+      var time = System.nanoTime()
+      def tic() = {
+        time = System.nanoTime()
+      }
+      def toc(msg: String) = {
+        val t = System.nanoTime()
+        System.out.println("TIMING " + msg + ": " + (t - time)/1000000000.0 + "s")
+        tic()
+      }
+    }
+
     val lemma : ProvableSig = {
+      Timing.tic()
       val vars = DifferentialHelper.getPrimedVariables(ode)
       val state = vars.filterNot(_ == time)
 
@@ -427,45 +442,68 @@ object TaylorModelTactics extends Logging {
 
       val (_, picard_iterate_remainder) = ringsODE.PicardOperation(tm0R, picard_poly_rem, order, picard_remainder_varsI)
 
+      Timing.toc("Picard Iterate")
+
       val odeTac = new DifferentialTactics.ODESpecific(ode)
 
-      def tm_enclosure(x: Variable, p: Term, l: Term, u: Term) = {
-        val r = remainder(x)
+      Timing.toc("odeTac")
+
+      def tm_enclosure(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
+        val r = remainder(i)
         Exists(List(r), And(Equal(r, Minus(x, p)), And(LessEqual(l, r), LessEqual(r, u))))
       }
 
       val post = (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
-        tm_enclosure(x, p, Times(time, tdL(i)), Times(time, tdU(i)))
+        tm_enclosure(x, i, p, Times(time, tdL(i)), Times(time, tdU(i)))
       }
+      Timing.toc("post")
 
       val box = Box(ODESystem(ode, And(LessEqual(Number(0), time), LessEqual(time, timestep))), post.reduceRight(And))
 
       val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
         seq.sub(pos) match {
           case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
-            ProofRuleTactics.boundRenaming(vs.head, remainder(v))(pos) & existsL(pos)
+            ProofRuleTactics.boundRenaming(vs.head, remainder(state.indexOf(v)))(pos) & existsL(pos)
           case _ => TactixLibrary.fail
         }
       }
       val right_vars = names.right_vars(dim)
-      val bounded_vars = right_vars ++ state.map(remainder(_)) // variables for which we assume interval bounds somewhen
+      val bounded_vars = right_vars ++ (0 until dim).map(remainder(_)) // variables for which we assume interval bounds somewhen
 
       /* this tries to keep even powers to exploit r:[-1,1]->r^2:[0,1] */
       val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (time :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
+      val horner_orderR = horner_order.map(ringsLib.toRing)
 
+      Timing.toc("horner_order")
       // TODO: use ringsLib here, as well
-      val numberic_condition =
-        FormulaTools.quantify(time :: state.map(remainder(_)),
+      // f (p + r)
+      val fpr = ringsODE.applyODE(picard_iterationR.zipWithIndex.map{case (p, i) => p + ringsLib.toRing(remainder(i))})
+      // p'
+      val pp = picard_iteration.map(ringsLib.lieDerivative{
+        case v: Variable if v == time => Some(ringsLib.ring(1))
+        case _ => None
+      })
+      // Horner(f (p + r) - p')
+      val hornerFprPp = (fpr, pp).zipped.map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
+      val numbericCondition =
+        FormulaTools.quantify(time :: remainders,
           Imply(
             And(And(LessEqual(Number(0), time), LessEqual(time, timestep)),
               (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
-            (applyODE(ode, state, time)((picard_iteration.toList, state).zipped.map((p, x) => (Plus(p, remainder(x))))), picard_iteration).zipped.toList.zipWithIndex.map {
-              case ((fp, p), i) =>
-                val dp = normalizingLieDerivative(AtomicODE(DifferentialSymbol(time), Number(1)), p)
-                val diff = horner(normalise(Minus(fp, dp)), horner_order)
-                And(Less(tdL(i), diff), Less(diff, tdU(i)))
-            }.reduceRight(And)
+            hornerFprPp.zipWithIndex.map{case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i)))}.reduceRight(And)
           ))
+      Timing.toc("numbericCondition")
+      val fpr2 = applyODE(ode, state, time)(picard_iteration.zipWithIndex.toList.map{case(p, i) => Plus(p, remainder(i))})
+      val pp2 = picard_iteration.map(p => normalizingLieDerivative(AtomicODE(DifferentialSymbol(time), Number(1)), p))
+      val horner_fpr_pp = (fpr2, pp2).zipped.map { case (fp, dp) => horner(normalise(Minus(fp, dp)), horner_order) }
+      val numberic_condition =
+        FormulaTools.quantify(time :: remainders,
+          Imply(
+            And(And(LessEqual(Number(0), time), LessEqual(time, timestep)),
+              (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
+            horner_fpr_pp.zipWithIndex.map{ case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i))) }.reduceRight(And)
+          ))
+      Timing.toc("numberic_condition")
       debug("numberic_condition", numberic_condition)
       val prv = proveBy(
         Imply(
@@ -486,7 +524,7 @@ object TaylorModelTactics extends Logging {
             foldAndLessEqExists(1) & implyR(1) & SaturateTactic(andL('L) | instLeq('L)) & rewriteAnte(true)(1) &
               unfoldMinMax(1) &
               coarsenTimesBounds(time) &
-              FOQuantifierTactics.allLs(time :: state.map(remainder(_)))(-1) &
+              FOQuantifierTactics.allLs(time :: remainders)(-1) &
               debugTac("fullSimpTac") &
               SimplifierV3.fullSimpTac() & // gets rid of preconditions of numberic_condition
               debugTac("fullSimpTac done") &

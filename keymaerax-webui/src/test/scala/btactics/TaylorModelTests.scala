@@ -35,42 +35,42 @@ class TaylorModelTests extends TacticTestBase {
         |((t = 0 & x = a00() * r0() + a01() * r1() + aC0() & y = a10() * r0() + a11() * r1() + aC1()) &
         |  (-1 <= r0() & r0() <= 1) & -1 <= r1() & r1() <= 1) &
         |\forall t
-        |  \forall xRem
-        |    \forall yRem
+        |  \forall Rem0
+        |    \forall Rem1
         |      (
         |        (0 <= t & t <= h()) &
-        |        (min((0,h() * iL0())) <= xRem & xRem <= max((0,h() * iU0()))) &
-        |        min((0,h() * iL1())) <= yRem & yRem <= max((0,h() * iU1())) ->
+        |        (min((0,h() * iL0())) <= Rem0 & Rem0 <= max((0,h() * iU0()))) &
+        |        min((0,h() * iL1())) <= Rem1 & Rem1 <= max((0,h() * iU1())) ->
         |        (
         |          iL0() <
-        |          yRem +
+        |          Rem1 +
         |          t *
         |          (r1() * (-2 * (a01() * aC0())) + r0() * (-2 * (a00() * aC0())) + t * (-aC0() + -aC0() * aC1())) &
-        |          yRem +
+        |          Rem1 +
         |          t *
         |          (r1() * (-2 * (a01() * aC0())) + r0() * (-2 * (a00() * aC0())) + t * (-aC0() + -aC0() * aC1())) <
         |          iU0()
         |        ) &
         |        iL1() <
-        |        xRem * (-2 * aC0()) + r1() * (xRem * (-2 * a01())) +
-        |        r0() * (xRem * (-2 * a00()) + r1() * (-2 * (a00() * a01()))) +
-        |        -xRem^2 +
+        |        Rem0 * (-2 * aC0()) + r1() * (Rem0 * (-2 * a01())) +
+        |        r0() * (Rem0 * (-2 * a00()) + r1() * (-2 * (a00() * a01()))) +
+        |        -Rem0^2 +
         |        r1()^2 * (-a01()^2) +
         |        r0()^2 * (-a00()^2) +
         |        t *
         |        (
-        |          xRem * (-2 + -2 * aC1()) +
-        |          r1() * (-2 * a01() + -2 * (a11() * aC0()) + -2 * (a01() * aC1()) + xRem * (-2 * a11())) +
+        |          Rem0 * (-2 + -2 * aC1()) +
+        |          r1() * (-2 * a01() + -2 * (a11() * aC0()) + -2 * (a01() * aC1()) + Rem0 * (-2 * a11())) +
         |          r0() *
         |          (
-        |            -2 * a00() + -2 * (a10() * aC0()) + -2 * (a00() * aC1()) + xRem * (-2 * a10()) +
+        |            -2 * a00() + -2 * (a10() * aC0()) + -2 * (a00() * aC1()) + Rem0 * (-2 * a10()) +
         |            r1() * (-2 * (a01() * a10()) + -2 * (a00() * a11()))
         |          ) +
         |          r1()^2 * (-2 * (a01() * a11())) +
         |          r0()^2 * (-2 * (a00() * a10())) +
         |          t *
         |          (
-        |            -1 + -2 * aC1() + -aC1()^2 + aC0()^3 + xRem * aC0()^2 +
+        |            -1 + -2 * aC1() + -aC1()^2 + aC0()^3 + Rem0 * aC0()^2 +
         |            r1() * (-2 * a11() + -2 * (a11() * aC1()) + a01() * aC0()^2) +
         |            r0() * (-2 * a10() + -2 * (a10() * aC1()) + a00() * aC0()^2 + r1() * (-2 * (a10() * a11()))) +
         |            r1()^2 * (-a11()^2) +
@@ -82,25 +82,25 @@ class TaylorModelTests extends TacticTestBase {
         |            )
         |          )
         |        ) &
-        |        xRem * (-2 * aC0()) + r1() * (xRem * (-2 * a01())) +
-        |        r0() * (xRem * (-2 * a00()) + r1() * (-2 * (a00() * a01()))) +
-        |        -xRem^2 +
+        |        Rem0 * (-2 * aC0()) + r1() * (Rem0 * (-2 * a01())) +
+        |        r0() * (Rem0 * (-2 * a00()) + r1() * (-2 * (a00() * a01()))) +
+        |        -Rem0^2 +
         |        r1()^2 * (-a01()^2) +
         |        r0()^2 * (-a00()^2) +
         |        t *
         |        (
-        |          xRem * (-2 + -2 * aC1()) +
-        |          r1() * (-2 * a01() + -2 * (a11() * aC0()) + -2 * (a01() * aC1()) + xRem * (-2 * a11())) +
+        |          Rem0 * (-2 + -2 * aC1()) +
+        |          r1() * (-2 * a01() + -2 * (a11() * aC0()) + -2 * (a01() * aC1()) + Rem0 * (-2 * a11())) +
         |          r0() *
         |          (
-        |            -2 * a00() + -2 * (a10() * aC0()) + -2 * (a00() * aC1()) + xRem * (-2 * a10()) +
+        |            -2 * a00() + -2 * (a10() * aC0()) + -2 * (a00() * aC1()) + Rem0 * (-2 * a10()) +
         |            r1() * (-2 * (a01() * a10()) + -2 * (a00() * a11()))
         |          ) +
         |          r1()^2 * (-2 * (a01() * a11())) +
         |          r0()^2 * (-2 * (a00() * a10())) +
         |          t *
         |          (
-        |            -1 + -2 * aC1() + -aC1()^2 + aC0()^3 + xRem * aC0()^2 +
+        |            -1 + -2 * aC1() + -aC1()^2 + aC0()^3 + Rem0 * aC0()^2 +
         |            r1() * (-2 * a11() + -2 * (a11() * aC1()) + a01() * aC0()^2) +
         |            r0() * (-2 * a10() + -2 * (a10() * aC1()) + a00() * aC0()^2 + r1() * (-2 * (a10() * a11()))) +
         |            r1()^2 * (-a11()^2) +
@@ -116,19 +116,19 @@ class TaylorModelTests extends TacticTestBase {
         |      ) ->
         |[{x'=1 + y, y'=-x^2, t'=1 & 0 <= t & t <= h()}]
         |  (
-        |    \exists xRem
+        |    \exists Rem0
         |      (
-        |        xRem =
+        |        Rem0 =
         |        x -
         |        (
         |          aC0() + t + a01() * r1() + a00() * r0() + t * aC1() + t * a11() * r1() + t * a10() * r0() +
         |          -1 / 2 * t^2 * aC0()^2
         |        ) &
-        |        t * iL0() <= xRem & xRem <= t * iU0()
+        |        t * iL0() <= Rem0 & Rem0 <= t * iU0()
         |      ) &
-        |    \exists yRem
+        |    \exists Rem1
         |      (
-        |        yRem =
+        |        Rem1 =
         |        y -
         |        (
         |          aC1() + a11() * r1() + a10() * r0() + -1 * t * aC0()^2 + -1 * t^2 * aC0() +
@@ -136,7 +136,7 @@ class TaylorModelTests extends TacticTestBase {
         |          -2 * t * a00() * aC0() * r0() +
         |          -1 * t^2 * aC0() * aC1()
         |        ) &
-        |        t * iL1() <= yRem & yRem <= t * iU1()
+        |        t * iL1() <= Rem1 & Rem1 <= t * iU1()
         |      )
         |  )
       """.stripMargin.asSequent
@@ -152,16 +152,16 @@ class TaylorModelTests extends TacticTestBase {
         |((t = 0 & x = a00() * r0() + aC0()) &
         |(-1 <= r0() & r0() <= 1)) &
         |\forall t
-        |  \forall xRem
+        |  \forall Rem0
         |    (
-        |      (0 <= t & t <= h()) & min((0,h() * iL0())) <= xRem & xRem <= max((0,h() * iU0())) ->
-        |      iL0() < xRem + t * (t * (t * (r0() * (1 / 6 * a00()) + t * (1 / 24 * aC0())))) &
-        |      xRem + t * (t * (t * (r0() * (1 / 6 * a00()) + t * (1 / 24 * aC0())))) < iU0()
+        |      (0 <= t & t <= h()) & min((0,h() * iL0())) <= Rem0 & Rem0 <= max((0,h() * iU0())) ->
+        |      iL0() < Rem0 + t * (t * (t * (r0() * (1 / 6 * a00()) + t * (1 / 24 * aC0())))) &
+        |      Rem0 + t * (t * (t * (r0() * (1 / 6 * a00()) + t * (1 / 24 * aC0())))) < iU0()
         |    ) ->
         |[{x'=x, t'=1 & 0 <= t & t <= h()}]
-        |  \exists xRem
+        |  \exists Rem0
         |    (
-        |      xRem =
+        |      Rem0 =
         |      x -
         |      (
         |        aC0() + a00() * r0() + t * aC0() + t * a00() * r0() + 1 / 2 * t^2 * aC0() +
@@ -170,14 +170,14 @@ class TaylorModelTests extends TacticTestBase {
         |        1 / 6 * t^3 * a00() * r0() +
         |        1 / 24 * t^4 * aC0()
         |      ) &
-        |      t * iL0() <= xRem & xRem <= t * iU0()
+        |      t * iL0() <= Rem0 & Rem0 <= t * iU0()
         |    )
       """.stripMargin.asSequent
   }
 
   it should "prove a lemma about van der Pol" in withMathematica { _ =>
     val ode = "{x' = y, y' = (1 - x^2)*y - x, t' = 1}".asDifferentialProgram
-    val tm = TaylorModel(ode, 1).lemma
+    val tm = TaylorModel(ode, 3).lemma
     tm shouldBe 'proved
   }
 
@@ -218,9 +218,9 @@ class TaylorModelTests extends TacticTestBase {
           |      z'=y,
           |      t'=1 &
           |      (0 <= t & t <= 0.5) &
-          |      \exists xRem
+          |      \exists Rem0
           |        (
-          |          xRem =
+          |          Rem0 =
           |          x -
           |          (
           |            1 + 0.01 * r0() + t + t * 0.01 * r0() + 1 / 2 * t^2 +
@@ -233,11 +233,11 @@ class TaylorModelTests extends TacticTestBase {
           |            1 / 120 * t^5 * 0.01 * r0() +
           |            1 / 720 * t^6
           |          ) &
-          |          t * (-5400607643 * 10^-15) <= xRem & xRem <= t * (4880338545 * 10^-14)
+          |          t * (-5400607643 * 10^-15) <= Rem0 & Rem0 <= t * (4880338545 * 10^-14)
           |        ) &
-          |      \exists yRem
+          |      \exists Rem1
           |        (
-          |          yRem =
+          |          Rem1 =
           |          y -
           |          (
           |            0.5 + 0.01 * r1() + t * 0.01 * r2() + 1 / 2 * t^2 * 0.5 +
@@ -248,11 +248,11 @@ class TaylorModelTests extends TacticTestBase {
           |            1 / 120 * t^5 * 0.01 * r2() +
           |            1 / 720 * t^6 * 0.5
           |          ) &
-          |          t * (-5364438662 * 10^-15) <= yRem & yRem <= t * (1259823498 * 10^-14)
+          |          t * (-5364438662 * 10^-15) <= Rem1 & Rem1 <= t * (1259823498 * 10^-14)
           |        ) &
-          |      \exists zRem
+          |      \exists Rem2
           |        (
-          |          zRem =
+          |          Rem2 =
           |          z -
           |          (
           |            0.01 * r2() + t * 0.5 + t * 0.01 * r1() +
@@ -263,7 +263,7 @@ class TaylorModelTests extends TacticTestBase {
           |            1 / 120 * t^5 * 0.5 +
           |            1 / 120 * t^5 * 0.01 * r1()
           |          ) &
-          |          t * (-5355396416 * 10^-15) <= zRem & zRem <= t * (1982298904 * 10^-14)
+          |          t * (-5355396416 * 10^-15) <= Rem2 & Rem2 <= t * (1982298904 * 10^-14)
           |        )
           |    }
           |  ]
@@ -294,20 +294,20 @@ class TaylorModelTests extends TacticTestBase {
           |      y'=-x^2,
           |      t'=1 &
           |      (0 <= t & t <= 0.1) &
-          |      \exists xRem
+          |      \exists Rem0
           |        (
-          |          xRem =
+          |          Rem0 =
           |          x -
           |          (
           |            1 + t + 0 * r1() + 0.01 * r0() + t * 0.5 + t * 0.01 * r1() +
           |            t * 0 * r0() +
           |            -1 / 2 * t^2 * 1^2
           |          ) &
-          |          t * (-1887591619 * 10^-11) <= xRem & xRem <= t * (2940096162 * 10^-12)
+          |          t * (-1887591619 * 10^-11) <= Rem0 & Rem0 <= t * (2940096162 * 10^-12)
           |        ) &
-          |      \exists yRem
+          |      \exists Rem1
           |        (
-          |          yRem =
+          |          Rem1 =
           |          y -
           |          (
           |            0.5 + 0.01 * r1() + 0 * r0() + -1 * t * 1^2 + -1 * t^2 * 1 +
@@ -315,7 +315,7 @@ class TaylorModelTests extends TacticTestBase {
           |            -2 * t * 0.01 * 1 * r0() +
           |            -1 * t^2 * 1 * 0.5
           |          ) &
-          |          t * (-1875812641 * 10^-11) <= yRem & yRem <= t * (9399926235 * 10^-12)
+          |          t * (-1875812641 * 10^-11) <= Rem1 & Rem1 <= t * (9399926235 * 10^-12)
           |        )
           |    }
           |  ]

@@ -177,6 +177,7 @@ class RingsLibrary(terms: Traversable[Term]) {
       case None => 0
     }
     case _: AtomicTerm => 0
+    case f@FuncOf(_, Nothing) => 0
     case Neg(u) => -lieDerivative(ode)(u)
     case Plus(u, v) => lieDerivative(ode)(u) + lieDerivative(ode)(v)
     case Minus(u, v) => lieDerivative(ode)(u) - lieDerivative(ode)(v)
@@ -184,7 +185,7 @@ class RingsLibrary(terms: Traversable[Term]) {
     case Divide(u, Number(n)) if n.isValidInt => lieDerivative(ode)(u) / n.toIntExact
     case Power(u, Number(n)) if n.isValidInt =>
       n.toIntExact * (toRing(u) ^ (n.toIntExact - 1)) * lieDerivative(ode)(u)
-    case _ => throw new IllegalArgumentException("Operation " + t.kind + " not (yet) supported by RingsLibrary: " + t)
+    case _ => throw new IllegalArgumentException("Operation not (yet) supported by RingsLibrary: " + t)
   }
 
   /** return None if b does not divide a, otherwise Some (quotient, remainder) */
@@ -279,6 +280,10 @@ class RingsLibrary(terms: Traversable[Term]) {
     private val const0I = const0.map(v=>ring.index(mapper(v.func)))
     private val tmVariablesI = Seq(timeI)++const0I
 
+    def applyODE(xs: Seq[Ring]) = {
+      rhs.map(f_i => substitutes((state,xs).zipped.toMap.get)(f_i))
+    }
+
     /** compute the Picard operator P(x)*/
     def PicardOperation(x0R: Seq[Ring],
                         ps:  Seq[Ring],
@@ -286,8 +291,8 @@ class RingsLibrary(terms: Traversable[Term]) {
                         consts_to_remainder: Seq[Int] = Nil,
                        ) : (Seq[Ring], Seq[Ring]) =
     {
-      val pairs = (x0R,rhs).zipped.map{case (x0R_i, f_i) =>
-        val fp = substitutes((state,ps).zipped.toMap.get)(f_i)
+      val fps = applyODE(ps)
+      val pairs = (x0R,fps).zipped.map{case (x0R_i, fp) =>
         val int = integrate(timeI)(fp)
         val sum = x0R_i + int
         splitInternal(sum, order, tmVariablesI, consts_to_remainder)
