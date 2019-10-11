@@ -108,8 +108,13 @@ class RingsLibrary(terms: Traversable[Term]) {
           else if(i._1 == 1) unmapper(i._2)
           else Power(unmapper(i._2), Number(i._1))
         )).filterNot(t => t==Number(1))
+        def cleverTimes(a: Term, b: Term) = a match {
+          case Number(n) if n == 1 => b
+          case Number(n) if n == -1 => Neg(b)
+          case _ => Times(a, b)
+        }
         if(xis.isEmpty) cof
-        else xis.tail.fold(xis.head)(Times)
+        else xis.tail.fold(xis.head)(cleverTimes)
       }
     )
 

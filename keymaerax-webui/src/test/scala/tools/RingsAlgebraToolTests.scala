@@ -36,7 +36,7 @@ class RingsAlgebraToolTests extends TacticTestBase  {
 
     val res = tool.polynomialReduce(x,List(y,z))
     res._1 shouldBe List("b()","1").map(_.asTerm)
-    res._2 shouldBe "-1*b()".asTerm
+    res._2 shouldBe "-b()".asTerm
   }
 
   it should "compute univariate quotient remainder" in withMathematica { _ =>
@@ -92,8 +92,8 @@ class RingsAlgebraToolTests extends TacticTestBase  {
     val x0R = "2*r0()+0.5*r1(),r0()+0.1*r1()".split(',').map(_.asTerm).map(R.toRing)
     val psR = "r0()*r1()*t + 2*r0(),r0()*t-r1()".split(',').map(t => R.toRing(t.asTerm))
     ode.PicardOperation(x0R, psR, 3).zipped.map { case (a, b) => (R.fromRing(a), R.fromRing(b)) }.toList shouldBe
-      ("1/2*r1()+2*r0()+-1*t*r1()^2".asTerm, "t^2*r0()*r1()+-1/3*t^3*r0()^2".asTerm) ::
-        ("1/10*r1()+r0()+-1*t*r1()+2*t*r0()+1/2*t^2*r0()".asTerm, "1/2*t^2*r0()*r1()".asTerm) :: Nil
+      ("1/2*r1()+2*r0()+(-t)*r1()^2".asTerm, "t^2*r0()*r1()+-1/3*t^3*r0()^2".asTerm) ::
+        ("1/10*r1()+r0()+(-t)*r1()+2*t*r0()+1/2*t^2*r0()".asTerm, "1/2*t^2*r0()*r1()".asTerm) :: Nil
   }
 
   it should "compute the Picard iteration" in {
@@ -104,7 +104,7 @@ class RingsAlgebraToolTests extends TacticTestBase  {
       "-y^2,x+y".split(',').map(_.asTerm))
     val x0R = "2*r0()+0.5*r1(),r0()+0.1*r1()".split(',').map(_.asTerm).map(R.toRing)
     ode.PicardIteration(x0R, 4).map(R.fromRing).toList shouldBe
-      "1/2*r1()+2*r0()+-1/100*t*r1()^2+-1/5*t*r0()*r1()+-1*t*r0()^2+-3/50*t^2*r1()^2+-9/10*t^2*r0()*r1()+-3*t^2*r0()^2".asTerm ::
+      "1/2*r1()+2*r0()+-1/100*t*r1()^2+-1/5*t*r0()*r1()+(-t)*r0()^2+-3/50*t^2*r1()^2+-9/10*t^2*r0()*r1()+-3*t^2*r0()^2".asTerm ::
         "1/10*r1()+r0()+3/5*t*r1()+3*t*r0()+3/10*t^2*r1()+3/2*t^2*r0()+-1/200*t^2*r1()^2+-1/10*t^2*r0()*r1()+1/10*t^3*r1()+-1/2*t^2*r0()^2+1/2*t^3*r0()".asTerm ::
         Nil
   }
