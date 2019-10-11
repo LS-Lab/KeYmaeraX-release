@@ -35,7 +35,38 @@ object TaylorModelTactics extends Logging {
       logger.info("TIMING " + msg + ": " + (t - time)/1000000000.0 + "s")
       tic()
     }
+    def tocTac(message: => String): StringInputTactic =
+      new StringInputTactic("tocTac", message::Nil) {
+        override def result(provable: ProvableSig): ProvableSig = {
+          toc(message)
+          provable
+        }
+      }
   }
+  import Timing._
+
+  // Debugging
+  private val pp = new KeYmaeraXPrettierPrinter(100)
+  private def ppSubgoals(prv: ProvableSig) = {
+    prv.subgoals.zipWithIndex.map{case (s, i) => "== Subgoal " + i + "==\n" + pp.stringify(s)}.mkString("\n")
+  }
+  def debug(msg: Unit => String) : Unit = {
+    val message = new Message {
+      override def getFormattedMessage(): String = msg()
+      override def getParameters: Array[AnyRef] = ???
+      override def getFormat(): String = ???
+      override def getThrowable(): Throwable = ???
+    }
+    logger.debug(message)
+  }
+  def debug(name: String, e: Expression) : Unit = debug(_ => "=== " + name + "===\n" + pp.stringify(e))
+  def debugTac(message: => String): StringInputTactic =
+    new StringInputTactic("debugTac", message::Nil) {
+      override def result(provable: ProvableSig): ProvableSig = {
+        debug(_ => "===== " + message + " ====\n" + ppSubgoals(provable) + "\n===== " + message + " (end)\n")
+        provable
+      }
+    }
 
   // Terms
 
@@ -272,26 +303,38 @@ object TaylorModelTactics extends Logging {
     }).reduceLeft(_ & _)
   }
 
+  lazy val leTimesMonoLemma =
+    proveBy("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() -> R_() <= max((0,h_() * U_()))".asFormula, QE & done)
+  lazy val timesLeMonoLemma =
+    proveBy("0 <= t_() & t_() <= h_() -> t_() * L_() <= U_() -> min((0,h_() * L_())) <= U_()".asFormula, QE & done)
   private[btactics] def coarsenTimesBounds(t: Term) = "coarsenTimesBounds" by { (seq: Sequent) =>
     val leTimesMono = "leTimesMono" by { (pos: Position, seq: Sequent) =>
       pos.checkAnte
       seq.sub(pos) match {
         case Some(LessEqual(l, Times(t, g))) =>
+          toc("cTB")
           seq.ante.find{ case (LessEqual(Number(n), s)) if n==0 && s==t => true case _ => false } match {
             case None => throw new IllegalArgumentException("could not find matching nonnegativity assumption")
-            case Some(nonneg) =>
-              seq.ante.find{ case (LessEqual(s, _)) if s==t => true case _ => false } match {
+            case Some(nonneg) => {
+              toc(" found nonnegative ")
+              seq.ante.find { case (LessEqual(s, _)) if s == t => true case _ => false } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
-                case Some(ub_fml @ (LessEqual(_, ub))) =>
-                  cutL(LessEqual(l, FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g)))))(pos) &
-                    Idioms.<( skip,
-                      cohideOnlyR('Rlast) &
-                        cutR(And(nonneg, ub_fml))(1) & Idioms.<(
-                        andR(1) & Idioms.<(closeId, closeId),
-                        cohideR(1) & QE & done
+                case Some(ub_fml@(LessEqual(_, ub))) =>
+                  {
+                    toc(" found upper bound")
+                    cutL(LessEqual(l, FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g)))))(pos) &
+                      Idioms.<(skip,
+                        cohideOnlyR('Rlast) &
+                          cutR(And(nonneg, ub_fml))(1) & Idioms.<(
+                          andR(1) & Idioms.<(closeId, closeId),
+                          cohideR(1) &
+                            useAt(leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
+                            done
+                        )
                       )
-                    )
+                  }
               }
+            }
           }
         case _ => throw new IllegalArgumentException("leTimesMono not on _ <= _ * _")
       }
@@ -312,7 +355,7 @@ object TaylorModelTactics extends Logging {
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
                         andR(1) & Idioms.<(closeId, closeId),
-                        cohideR(1) & QE & done
+                        cohideR(1) & useAt(timesLeMonoLemma, PosInExpr(Nil))(1) & done
                       )
                     )
               }
@@ -390,35 +433,6 @@ object TaylorModelTactics extends Logging {
     val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim),
       DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
-    private val pp = new KeYmaeraXPrettierPrinter(100)
-    private def ppSubgoals(prv: ProvableSig) = {
-      prv.subgoals.zipWithIndex.map{case (s, i) => "== Subgoal " + i + "==\n" + pp.stringify(s)}.mkString("\n")
-    }
-    def debug(msg: Unit => String) : Unit = {
-      val message = new Message {
-        override def getFormattedMessage(): String = msg()
-        override def getParameters: Array[AnyRef] = ???
-        override def getFormat(): String = ???
-        override def getThrowable(): Throwable = ???
-      }
-      logger.debug(message)
-    }
-    def debug(name: String, e: Expression) : Unit = debug(_ => "=== " + name + "===\n" + pp.stringify(e))
-    def debugTac(message: => String): StringInputTactic =
-      new StringInputTactic("debugTac", message::Nil) {
-        override def result(provable: ProvableSig): ProvableSig = {
-          debug(_ => "===== " + message + " ====\n" + ppSubgoals(provable) + "\n===== " + message + " (end)\n")
-          provable
-        }
-      }
-    def tocTac(message: => String): StringInputTactic =
-      new StringInputTactic("tocTac", message::Nil) {
-        override def result(provable: ProvableSig): ProvableSig = {
-          Timing.toc(message)
-          provable
-        }
-      }
-
     val initial_condition = And(Equal(time, Number(0)),
       state.zipWithIndex.map { case (v, i) => Equal(v,
         Plus(
@@ -445,7 +459,7 @@ object TaylorModelTactics extends Logging {
     val right_tm_domain = names.right_vars(dim).map(in_domain).reduceRight(And)
 
     val lemma : ProvableSig = {
-      Timing.tic()
+      tic()
       val vars = DifferentialHelper.getPrimedVariables(ode)
       val state = vars.filterNot(_ == time)
 
@@ -462,11 +476,11 @@ object TaylorModelTactics extends Logging {
 
       val (_, picard_iterate_remainder) = ringsODE.PicardOperation(tm0R, picard_poly_rem, order, picard_remainder_varsI)
 
-      Timing.toc("Picard Iterate")
+      toc("Picard Iterate")
 
       val odeTac = new DifferentialTactics.ODESpecific(ode)
 
-      Timing.toc("odeTac")
+      toc("odeTac")
 
       def tm_enclosure(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
         val r = remainder(i)
@@ -476,7 +490,7 @@ object TaylorModelTactics extends Logging {
       val post = (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
         tm_enclosure(x, i, p, Times(time, tdL(i)), Times(time, tdU(i)))
       }
-      Timing.toc("post")
+      toc("post")
 
       val box = Box(ODESystem(ode, And(LessEqual(Number(0), time), LessEqual(time, timestep))), post.reduceRight(And))
 
@@ -494,7 +508,7 @@ object TaylorModelTactics extends Logging {
       val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (time :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
       val horner_orderR = horner_order.map(ringsLib.toRing)
 
-      Timing.toc("horner_order")
+      toc("horner_order")
       // TODO: use ringsLib here, as well
       // f (p + r)
       val fpr = ringsODE.applyODE(picard_iterationR.zipWithIndex.map{case (p, i) => p + ringsLib.toRing(remainder(i))})
@@ -512,7 +526,7 @@ object TaylorModelTactics extends Logging {
               (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
             hornerFprPp.zipWithIndex.map{case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i)))}.reduceRight(And)
           ))
-      Timing.toc("numbericCondition")
+      toc("numbericCondition")
       val prv = proveBy(
         Imply(
           And(And(initial_condition, right_tm_domain),

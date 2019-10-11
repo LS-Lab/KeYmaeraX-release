@@ -2074,27 +2074,39 @@ private object DifferentialTactics extends Logging {
       pos.checkTop
       seq.sub(pos) match {
         case Some(Box(ODESystem(ode, constraint), post)) =>
+          import TaylorModelTactics.Timing._
+          toc("== dIClosed")
           val postD = DifferentialHelper.lieDerivative(ode, post)
+          toc("== lieDerivative")
           val post_semi = SimplifierV3.semiAlgNormalize(post)
+          toc("== semiAlgNormalize post")
           val postD_semi = SimplifierV3.semiAlgNormalize(postD)
+          toc("== semiAlgNormalize postD")
           (SimplifierV3.maxMinGeqNormalize(post_semi._1), SimplifierV3.maxMinGeqNormalize(postD_semi._1)) match {
             case ((GreaterEqual(p, Number(np)), Some(p_prv)),
             (GreaterEqual(q, Number(nq)), Some(q_prv))) if np == 0 && nq == 0 =>
             {
+              toc("== maxMinGeqNormalize")
               val usubst = (UnificationMatch(p_pat, p) ++ UnificationMatch(q_pat, q) ++ UnificationMatch(P_pat, post)).usubst
               val lastpos = - seq.ante.length - 1
                 useAt(dIopenClosedProvable(usubst), PosInExpr(1::Nil))(pos) &
                 andR(pos) & Idioms.<( skip, andR(pos) & Idioms.<(skip, andR(pos))) &
                 Idioms.<(
                     skip /* initial condition */,
+                  tocTac("== Tactic start") &
                   dW(pos) /* (open) differential invariant */,
+                  tocTac("== dW") &
                   cohideR(pos) & allR(pos)*vars.length & derive(pos++PosInExpr(1::Nil)) &
                     DE(pos) & Dassignb(pos ++ PosInExpr(1::Nil))*vars.length & dW(pos) &
+                    tocTac("== DE") &
                     QE & done,
+                  tocTac("== QE") &
                   cohideR(pos) & allR(pos)*vars.length &
                     useAt(post_semi._2.get, PosInExpr(0::Nil))(1, 0::Nil) &
                     useAt(p_prv, PosInExpr(0::Nil))(1, 0::Nil) &
-                    byUS("<-> reflexive") & done
+                    byUS("<-> reflexive") &
+                    tocTac("== done") &
+                    done
                 )
             }
             case unexpected =>
