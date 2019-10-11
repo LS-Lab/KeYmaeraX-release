@@ -246,10 +246,11 @@ class RingsLibrary(terms: Traversable[Term]) {
   }
 
   /** encapsulates information relevant for working with ODEs with the Rings library */
-  case class ODE(time: Variable, state: Seq[Variable], rhs: Seq[Term]) {
+  case class ODE(time: Variable, state: Seq[Variable], const0: Seq[FuncOf], rhs: Seq[Term]) {
     private val stateI = state.map(v=>ring.index(mapper(v)))
     private val timeI = ring.index(mapper(time))
-    private val variablesI = Seq(timeI)++stateI
+    private val const0I = const0.map(v=>ring.index(mapper(v.func)))
+    private val tmVariablesI = Seq(timeI)++const0I
 
     /** compute the Picard operator P(x)*/
     def PicardOperation(x0R: Seq[Ring],
@@ -262,7 +263,7 @@ class RingsLibrary(terms: Traversable[Term]) {
         val fp = substitutes((state,ps).zipped.toMap.get)(f_i)
         val int = integrate(timeI)(fp)
         val sum = x0R_i + int
-        splitInternal(sum, order, variablesI, consts_to_remainder)
+        splitInternal(sum, order, tmVariablesI, consts_to_remainder)
       }
       pairs.unzip
     }
