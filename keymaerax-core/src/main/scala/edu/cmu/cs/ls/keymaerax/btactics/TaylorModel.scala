@@ -328,7 +328,39 @@ object TaylorModelTactics extends Logging {
     case _ => Nil
   })
 
+  lazy val trivialInequality = proveBy("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
+  def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
+    pos.checkTop
+    pos.checkSucc
+    val ssp = seq.sub(pos)
+    seq.sub(pos) match {
+      case Some(LessEqual(a, b)) =>
+        useAt(trivialInequality, PosInExpr(1::Nil))(pos) & andR(pos) &
+          Idioms.<(QE & done, QE & done) // TODO: this is purely algebraic, optimize for that?
+      case Some(And(f, g)) =>
+        andR(pos) & Idioms.<(solveTrivialInequalities(1), solveTrivialInequalities(1))
+      case _ =>
+        throw new IllegalArgumentException("solveTrivialInequalities cannot be applied here: " + ssp)
+    }
+  }
 
+  lazy val refineConjunction = proveBy("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
+  lazy val trivialStrictInequalityRefinement = proveBy("(w_() - v_() = x_()) -> (v_() < w_() -> x_() > 0)".asFormula, QE & done)
+  def refineTrivialStrictInequalities : DependentPositionTactic = "refineTrivialStrictInequalities" by { (pos: Position, seq: Sequent) =>
+    pos.checkTop
+    pos.checkSucc
+    val ssp = seq.sub(pos)
+    seq.sub(pos) match {
+      case Some(Imply(And(_, _), And(_, _))) =>
+        useAt(refineConjunction, PosInExpr(1::Nil))(pos) & andR(pos) &
+          Idioms.<(refineTrivialStrictInequalities(1), refineTrivialStrictInequalities(1))
+      case Some(Imply(Less(_, _), Greater(_, Number(z)))) if z == 0 =>
+        useAt(trivialStrictInequalityRefinement, PosInExpr(1::Nil))(pos) & Idioms.<(
+          QE & done) // TODO: this is purely algebraic, optimize for that?
+      case _ =>
+        throw new IllegalArgumentException("solveTrivialInequalities cannot be applied here: " + ssp)
+    }
+  }
   /**
     * A class capturing all lemmas and tactics for Taylor models for the given ode
     * */
@@ -505,24 +537,26 @@ object TaylorModelTactics extends Logging {
           Idioms.<(
             // Initial Condition
             debugTac("Initial Condition") &
-            SimplifierV3.fullSimpTac() &
-              SaturateTactic(andL('L)) & rewriteAnte(true)(1) &
-              debugTac("initial QE") &
-              QE(),
+              andL(-1) & cohideOnlyL(-1) &
+              SaturateTactic(andL('L)) &
+              rewriteAnte(true)(1) &
+              cohideR(1) &
+              debugTac("initial QEs") &
+              solveTrivialInequalities(1) &
+              done,
             // Differential Invariant
             foldAndLessEqExists(1) & implyR(1) & SaturateTactic(andL('L) | instLeq('L)) & rewriteAnte(true)(1) &
               unfoldMinMax(1) &
               coarsenTimesBounds(time) &
               FOQuantifierTactics.allLs(time :: remainders)(-1) &
-              debugTac("fullSimpTac") &
-              SimplifierV3.fullSimpTac() & // gets rid of preconditions of numberic_condition
-              debugTac("fullSimpTac done") &
-              normaliseAt(-1) &
-              debugTac("normalised Ante") &
-              normaliseAt(1) &
-              debugTac("normalised Succ") &
-              closeId &
-              debugTac("closed")
+              implyL(-1) &
+              Idioms.<(
+                cohideOnlyR(2) & prop & done,
+                  cohideOnlyL(-1) &
+                  implyRi()(AntePosition(1), SuccPosition(1)) &
+                  debugTac("refine it!") &
+                  refineTrivialStrictInequalities(1)
+              )
           )
       )
       prv
