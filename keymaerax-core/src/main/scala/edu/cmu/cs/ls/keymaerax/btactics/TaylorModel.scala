@@ -280,8 +280,9 @@ object TaylorModelTactics extends Logging {
   }
 
   // Specialized Tactics
-
-  private lazy val unfoldExistsLemma = proveBy("\\exists x (x = r() & P(x)) <-> P(r())".asFormula, prop & Idioms.<(
+  private val namespace = "taylormodel"
+  def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
+  private lazy val unfoldExistsLemma = remember("\\exists x (x = r() & P(x)) <-> P(r())".asFormula, prop & Idioms.<(
     existsL(-1) & andL(-1) & eqL2R(-1)(-2) & closeId,
     existsR("r()".asTerm)(1) & prop & QE & done))
   val unfoldExists = "unfoldExists" by { (pos: Position, seq: Sequent) =>
@@ -292,7 +293,7 @@ object TaylorModelTactics extends Logging {
     }).reduceLeft(_ & _)
   }
 
-  private lazy val foldAndLessEqExistsLemma = proveBy(("(a() <= x - b() & x - b() <= c()) <->" +
+  private lazy val foldAndLessEqExistsLemma = remember(("(a() <= x - b() & x - b() <= c()) <->" +
     "(\\exists xr_ (x = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula, QE & done)
   val foldAndLessEqExists = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
     Idioms.mapSubpositions(pos, seq, {
@@ -304,9 +305,9 @@ object TaylorModelTactics extends Logging {
   }
 
   lazy val leTimesMonoLemma =
-    proveBy("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() -> R_() <= max((0,h_() * U_()))".asFormula, QE & done)
+    remember("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() -> R_() <= max((0,h_() * U_()))".asFormula, QE & done)
   lazy val timesLeMonoLemma =
-    proveBy("0 <= t_() & t_() <= h_() -> t_() * L_() <= U_() -> min((0,h_() * L_())) <= U_()".asFormula, QE & done)
+    remember("0 <= t_() & t_() <= h_() -> t_() * L_() <= U_() -> min((0,h_() * L_())) <= U_()".asFormula, QE & done)
   private[btactics] def coarsenTimesBounds(t: Term) = "coarsenTimesBounds" by { (seq: Sequent) =>
     val leTimesMono = "leTimesMono" by { (pos: Position, seq: Sequent) =>
       pos.checkAnte
@@ -374,17 +375,19 @@ object TaylorModelTactics extends Logging {
   }
 
   // only the cases that I need here...
-  private lazy val minGtNorm:ProvableSig = proveBy("min((f_(),g_()))>h_()<->(f_()>h_()&g_()>h_())".asFormula, QE& done)
-  private lazy val minLeNorm:ProvableSig = proveBy("min((f_(),g_()))<=h_()<->(f_()<=h_()|g_()<=h_())".asFormula, QE& done)
-  private lazy val leMaxNorm:ProvableSig = proveBy("h_()<=max((f_(),g_()))<->(h_()<=f_()|h_()<=g_())".asFormula, QE& done)
-  private def unfoldMinMax = chaseCustom({
-    case Greater(FuncOf(BigDecimalQETool.minF, _), _) => (minGtNorm, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case LessEqual(FuncOf(BigDecimalQETool.minF, _), _) => (minLeNorm, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case LessEqual(_, FuncOf(BigDecimalQETool.maxF, _)) => (leMaxNorm, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+  private lazy val minGtNorm = remember("min((f_(),g_()))>h_()<->(f_()>h_()&g_()>h_())".asFormula, QE& done)
+  private lazy val minLeNorm = remember("min((f_(),g_()))<=h_()<->(f_()<=h_()|g_()<=h_())".asFormula, QE& done)
+  private lazy val minGeNorm = remember("min((f_(),g_()))>=h_()<->(f_()>=h_()&g_()>=h_())".asFormula, QE& done)
+  private lazy val leMaxNorm = remember("h_()<=max((f_(),g_()))<->(h_()<=f_()|h_()<=g_())".asFormula, QE& done)
+  private [btactics] def unfoldMinMax = chaseCustom({
+    case Greater(FuncOf(BigDecimalQETool.minF, _), _) => (minGtNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case GreaterEqual(FuncOf(BigDecimalQETool.minF, _), _) => (minGeNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case LessEqual(FuncOf(BigDecimalQETool.minF, _), _) => (minLeNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case LessEqual(_, FuncOf(BigDecimalQETool.maxF, _)) => (leMaxNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
     case _ => Nil
   })
 
-  lazy val trivialInequality = proveBy("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
+  lazy val trivialInequality = remember("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
   def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
@@ -400,18 +403,23 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  lazy val refineConjunction = proveBy("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
-  lazy val trivialStrictInequalityRefinement = proveBy("(w_() - v_() = x_()) -> (v_() < w_() -> x_() > 0)".asFormula, QE & done)
-  def refineTrivialStrictInequalities : DependentPositionTactic = "refineTrivialStrictInequalities" by { (pos: Position, seq: Sequent) =>
+  lazy val refineConjunction = remember("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
+  lazy val trivialRefineLtGt = remember("(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
+  lazy val trivialRefineGeLe = remember("(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula, QE & done)
+
+  private [btactics] def refineTrivialInequalities : DependentPositionTactic = "refineTrivialStrictInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     val ssp = seq.sub(pos)
     seq.sub(pos) match {
       case Some(Imply(And(_, _), And(_, _))) =>
         useAt(refineConjunction, PosInExpr(1::Nil))(pos) & andR(pos) &
-          Idioms.<(refineTrivialStrictInequalities(1), refineTrivialStrictInequalities(1))
-      case Some(Imply(Less(_, _), Greater(_, Number(z)))) if z == 0 =>
-        useAt(trivialStrictInequalityRefinement, PosInExpr(1::Nil))(pos) & Idioms.<(
+          Idioms.<(refineTrivialInequalities(1), refineTrivialInequalities(1))
+      case Some(Imply(Less(_, _), Greater(_, _))) =>
+        useAt(trivialRefineLtGt, PosInExpr(1::Nil))(pos) & Idioms.<(
+          QE & done) // TODO: this is purely algebraic, optimize for that?
+      case Some(Imply(GreaterEqual(_, _), LessEqual(_, _))) =>
+        useAt(trivialRefineGeLe, PosInExpr(1::Nil))(pos) & Idioms.<(
           QE & done) // TODO: this is purely algebraic, optimize for that?
       case _ =>
         throw new IllegalArgumentException("solveTrivialInequalities cannot be applied here: " + ssp)
@@ -570,7 +578,7 @@ object TaylorModelTactics extends Logging {
                   implyRi()(AntePosition(1), SuccPosition(1)) &
                   debugTac("refine it!") &
                   tocTac("to refine") &
-                  refineTrivialStrictInequalities(1) &
+                  refineTrivialInequalities(1) &
                   tocTac("refined it")
               )
           )
