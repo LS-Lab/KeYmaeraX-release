@@ -78,7 +78,11 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
 
     val printedDefs = defs.map({
       case ((name, idx), (domain, codomain, interpretation, _)) =>
-        s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)};"
+        val printedSort = codomain match {
+          case Trafo => "" //@todo program arguments not yet supported
+          case _ => "(" + printSort(domain.getOrElse(Unit)) + ")"
+        }
+        s"  ${printSort(codomain)} ${printName(name, idx)}$printedSort${printDef(codomain, interpretation)};"
       case _ => ""
     }).filter(_.nonEmpty)
 
