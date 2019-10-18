@@ -507,7 +507,7 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
   *       Usually shape has all built-in names ending in underscore _ and no input is like that.
   * @author Andre Platzer
   */
-class FreshPostUnificationMatch extends SchematicComposedUnificationMatch {
+private class FreshPostUnificationMatch extends SchematicComposedUnificationMatch {
 
   /**
     * Quickly compose patterns coming from fresh shapes by just concatenating them.
@@ -560,7 +560,7 @@ private final object RenUnificationMatch extends UnificationMatchBase {
   * Matcher leaves input alone and only substitutes into shape.
   * @author Andre Platzer
   */
-class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
+private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
   require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")
   override private[bellerophon] val REVERIFY = BelleExpr.RECHECK
   // pass 1

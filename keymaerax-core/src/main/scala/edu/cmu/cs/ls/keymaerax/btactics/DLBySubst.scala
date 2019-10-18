@@ -154,7 +154,7 @@ private object DLBySubst {
 
             cut(Imply(qPhi, Box(prg, qPhi))) <(
               /* use */ (implyL('Llast) <(
-                hideR(pos.topLevel) partial /* result */,
+                hideR(pos.topLevel) /* result */,
                 cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
                   assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &
                   assertE(b, "abstractionb: original box")('Rlast) & ?(monb) &
@@ -200,10 +200,10 @@ private object DLBySubst {
     * @author Andre Platzer
     * @incontext
     */
-  lazy val assignEquality: DependentPositionTactic = "assignEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  private[btactics] lazy val assignEquality: DependentPositionTactic = "assignEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
-    case Some(fml@Box(Assign(x, t), p)) =>
+    case Some(Box(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       ProofRuleTactics.boundRenaming(x, y)(pos) &
       useAt("[:=] assign equality")(pos) &
@@ -212,10 +212,10 @@ private object DLBySubst {
   })
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
-  lazy val assigndEquality: DependentPositionTactic = "assigndEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  private[btactics] lazy val assigndEquality: DependentPositionTactic = "assigndEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
-    case Some(fml@Diamond(Assign(x, t), p)) =>
+    case Some(Diamond(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       ProofRuleTactics.boundRenaming(x, y)(pos) &
         (if (pos.isSucc) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos)) &
