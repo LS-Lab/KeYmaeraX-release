@@ -163,7 +163,16 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         }
         val args =
           if (machine.isEmpty) {
-            mathProcess = startKernel(linkName, port)
+            val process = startKernel(linkName, port)
+            Thread.sleep(500) // wait for MathKernel to stay alive
+            process match {
+              case Some(process: Process) if process.isAlive() =>
+                mathProcess = Some(process)
+              case Some(process: Process) if !process.isAlive() =>
+                mathProcess = None
+                throw new IllegalStateException(engineName + " terminated with exit code " + process.exitValue() + "; check that your license is valid and your computer is online for license checking")
+              case _ => mathProcess = None
+            }
             ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::port::Nil).toArray
           } else {
             ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::tcpip::Nil).toArray
