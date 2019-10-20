@@ -29,7 +29,7 @@ class BellerophonTacticExecutor(poolSize: Int) {
     * [[scheduledTactics]] could be at any state of execution, included finished.
     * Tactics are never removed from the [[scheduledTactics]] mapping unless explicitly via .remove()
     */
-  private val scheduledTactics : scala.collection.mutable.Map[String, InterpreterFuture[Either[BelleValue, BelleThrowable]]] = scala.collection.mutable.Map()
+  private val scheduledTactics: scala.collection.mutable.Map[String, InterpreterFuture[Either[BelleValue, BelleThrowable]]] = scala.collection.mutable.Map()
 
   def tasksForUser(userId: String):List[String] = {
     scheduledTactics.flatMap{case (task, future) =>
@@ -56,20 +56,23 @@ class BellerophonTacticExecutor(poolSize: Int) {
     id
   }
 
-  def isDone(id: String): Boolean = scheduledTactics.get(id) match {
+  /** True, if the task identified by `id` is done, false otherwise. */
+  def isDone(id: String): Boolean = getTask(id) match {
     case Some(future) => future.isDone
     case None         => throw new Exception("This tactic does not exist in the list.")
   }
 
+  /** Tests whether the task identified by `id` exists. */
   def contains(id: String): Boolean = scheduledTactics.contains(id)
 
+  /** Returns the task identified by `id`. */
+  def getTask(id: String): Option[InterpreterFuture[Either[BelleValue, BelleThrowable]]] = scheduledTactics.get(id)
+
   /** Returns the result of the tactic, or None if the tactic is not done running. */
-  def getResult(id: String) : Option[Either[BelleValue, BelleThrowable]] =
-    synchronized {
-      if (isDone(id))
-        Some(scheduledTactics(id).get())
-      else None
-    }
+  def getResult(id: String) : Option[Either[BelleValue, BelleThrowable]] = synchronized {
+    if (isDone(id)) Some(scheduledTactics(id).get())
+    else None
+  }
 
   /**
     *

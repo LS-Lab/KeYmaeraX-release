@@ -16,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -31,6 +30,7 @@ import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
 import java.util.{Calendar, Locale}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
@@ -2028,10 +2028,13 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
           case n: NamedBelleExpr => RunBelleTermResponse(proofId, "()", atomic(n.name), "") :: Nil
           case _ =>
             try {
-              //@note replace listener created by proof tree (we want a different tactic name for each component of the executed tactic)
-              val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+              //@note replace listener created by proof tree (we want a different tactic name for each component of the
+              // executed tactic and we want to see progress)
+              val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt,
+                CollectProgressListener() :: Nil)
               val tree: ProofTree = DbProofTree(db, proofId)
-              val taskId = tree.root.runTactic(userId, interpreter, tactic, "")
+              val executor = BellerophonTacticExecutor.defaultExecutor
+              val taskId = tree.root.runTactic(userId, interpreter, tactic, "", executor)
               RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
             } catch {
               case _: Throwable =>
@@ -2048,19 +2051,26 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
-    val (isDone, lastStep) = executor.synchronized {
-      //@todo need intermediate step recording and query to get meaningful progress reports
-      //val latestExecutionStep = db.getExecutionSteps(proofId.toInt).sortBy(s => s.stepId).lastOption
-      //@note below is the conceptually correct implementation of latestExecutionStep, but getExecutionTrace doesn't work
-      //when there's not yet an associated profableId for the step (which is the case here since we are mid-step and the
-      //provable isn't computed yet).
-//      db.getExecutionTrace(proofId.toInt).lastStepId match {
-//        case Some(id) => db.getExecutionSteps(proofId.toInt, None).find(p => p.stepId == id)
-//        case None => None
-//      }
-      (!executor.contains(taskId) || executor.isDone(taskId), None)
+    type Progress = (Option[(BelleExpr, Long)], Seq[(BelleExpr, Either[BelleValue, BelleThrowable])])
+    val (isDone, progress: Option[Progress]) = executor.synchronized {
+      executor.getTask(taskId) match {
+        case Some(task) =>
+          val progressList = task.interpreter match {
+            case SpoonFeedingInterpreter(rootProofId, _, _, _, interpreterFactory, _, _, _) =>
+              //@note the inner interpreters have CollectProgressListeners attached
+              interpreterFactory(Nil).listeners.flatMap({
+                case l@CollectProgressListener(p) => Some(
+                  l.getCurrentTactic.map(f => (f._1, System.currentTimeMillis() - f._2)),
+                  scala.collection.immutable.Seq(p:_*))
+                case _ => None
+              }).headOption
+            case _ => Nil
+          }
+          (executor.isDone(taskId), progressList)
+        case _ => (!executor.contains(taskId) || executor.isDone(taskId), None)
+      }
     }
-    TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
+    TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", progress) :: Nil
   }
 }
 

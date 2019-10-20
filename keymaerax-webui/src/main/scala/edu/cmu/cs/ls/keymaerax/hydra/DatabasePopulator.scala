@@ -117,7 +117,7 @@ object DatabasePopulator extends Logging {
   }
 
   /** Prepares an interpreter for executing tactics. */
-  def prepareInterpreter(db: DBAbstraction, proofId: Int): Interpreter = {
+  def prepareInterpreter(db: DBAbstraction, proofId: Int, listeners: Seq[IOListener] = Nil): Interpreter = {
     def listener(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int) = {
       val trace = db.getExecutionTrace(proofId, withProvables=false)
       assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
@@ -129,7 +129,8 @@ object DatabasePopulator extends Logging {
       new TraceRecordingListener(db, proofId, parentStep,
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, LazySequentialInterpreter(_, throwWithDebugInfo = false))
+    def interpreter(orig: Seq[IOListener]) = LazySequentialInterpreter(orig ++ listeners, throwWithDebugInfo = false)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, interpreter)
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */

@@ -13,7 +13,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, Seq}
+import scala.collection.mutable
 
 /**
   * Some tactic listeners.
@@ -138,6 +139,26 @@ object IOListeners {
     }
 
     override def kill(): Unit = {}
+  }
+
+  /** A progresss listener that collects the top-level tactic progress in a buffer. */
+  case class CollectProgressListener(progress: mutable.Buffer[(BelleExpr, Either[BelleValue, BelleThrowable])] = mutable.Buffer.empty) extends IOListener() {
+    private var current: Option[(BelleExpr, Long)] = None
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = {
+      if (current.isEmpty) {
+        current = Some(expr, System.currentTimeMillis())
+      }
+    }
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {
+      if (current.map(_._1).contains(expr)) {
+        progress.append((expr, output))
+        current = None
+      }
+    }
+    override def kill(): Unit = {}
+
+    /** The currently executing tactic, including it's start time. */
+    def getCurrentTactic: Option[(BelleExpr, Long)] = current
   }
 
 }

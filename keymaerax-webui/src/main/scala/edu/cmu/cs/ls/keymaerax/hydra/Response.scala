@@ -20,7 +20,6 @@ import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import java.io.{PrintWriter, StringWriter}
-import java.util.regex.Pattern
 
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
@@ -441,24 +440,25 @@ case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String,
 }
 
 case class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String,
-                              lastStep: Option[ExecutionStepPOJO]) extends Response {
-  def getJson: JsValue =
-    if (lastStep.isDefined) JsObject(
+                              progress: Option[(Option[(BelleExpr, Long)], Seq[(BelleExpr, Either[BelleValue, BelleThrowable])])]) extends Response {
+  def getJson: JsValue = {
+    JsObject(
       "proofId" -> JsString(proofId),
       "parentId" -> JsString(nodeId),
       "taskId" -> JsString(taskId),
       "status" -> JsString(status),
-      "lastStep" -> JsObject(
-        "ruleName" -> JsString(lastStep.get.ruleName),
-        "stepStatus" -> JsString(lastStep.get.status.toString)
-      ),
-      "type" -> JsString("taskstatus"))
-    else JsObject(
-      "proofId" -> JsString(proofId),
-      "parentId" -> JsString(nodeId),
-      "taskId" -> JsString(taskId),
-      "status" -> JsString(status),
-      "type" -> JsString("taskstatus"))
+      "type" -> JsString("taskstatus"),
+      "currentStep" -> progress.map(p => JsObject(
+        "ruleName" -> p._1.map(c => JsString(c._1.prettyString)).getOrElse(JsNull),
+        "duration" -> p._1.map(c => JsNumber(c._2)).getOrElse(JsNull),
+        "stepStatus" -> JsNull
+      )).getOrElse(JsNull),
+      "progress" -> progress.map(p => JsArray(
+        p._2.map(e => JsString(e._1.prettyString)):_*
+      )).getOrElse(JsArray())
+    )
+  }
+
 }
 
 case class TaskResultResponse(proofId: String, parent: ProofTreeNode, marginLeft: Int, marginRight: Int, progress: Boolean = true) extends Response {

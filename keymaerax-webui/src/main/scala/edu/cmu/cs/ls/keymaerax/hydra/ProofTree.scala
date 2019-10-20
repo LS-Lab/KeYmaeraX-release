@@ -87,10 +87,13 @@ trait ProofTreeNode {
   //@todo shortName should be derived from tactic
   //@todo interpreter/listener interface needs revision
   def runTactic(userId: String, interpreter: List[IOListener]=>Interpreter, tactic: BelleExpr, shortName: String,
+                executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                 wait: Boolean = false): String
 
   /** Runs a tactic step-by-step, starting on this node. */
-  def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr, wait: Boolean = false): String
+  def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr,
+                 executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
+                 wait: Boolean = false): String
 
   /** Deletes this node with the entire subtree underneath. */
   def pruneBelow(): Unit
@@ -188,21 +191,23 @@ case class DbStepPathNodeId(step: Option[Int], branch: Option[Int]) extends Proo
 
 abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends ProofTreeNode {
   /** Runs a tactic on this node. */
-  override def runTactic(userId: String, interpreter: (List[IOListener]) => Interpreter, tactic: BelleExpr,
-                         shortName: String, wait: Boolean = false): String = {
+  override def runTactic(userId: String, interpreter: List[IOListener] => Interpreter, tactic: BelleExpr,
+                         shortName: String, executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
+                         wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
     val listener = new TraceRecordingListener(db, proofId.toInt, stepId, localProvable,
       goalIdx, recursive = false, shortName)
-    val executor = BellerophonTacticExecutor.defaultExecutor
-    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter(listener::Nil))
+    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)),
+      interpreter(listener::Nil))
     if (wait) executor.wait(taskId)
     taskId
   }
 
   /** Runs a tactic step-by-step, starting on this node. */
-  override def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr, wait: Boolean = false): String = {
+  override def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr,
+                          executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
+                          wait: Boolean = false): String = {
     assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
-    val executor = BellerophonTacticExecutor.defaultExecutor
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx), label.map(_ :: Nil)), interpreter)
     if (wait) executor.wait(taskId)
     taskId

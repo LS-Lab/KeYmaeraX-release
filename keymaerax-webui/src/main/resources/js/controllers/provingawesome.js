@@ -214,7 +214,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     poll: function(taskId, elapsed) {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
-          if (response.data.lastStep !== undefined) $scope.runningTask.lastStep = response.data.lastStep.ruleName;
+          if (response.data.currentStep) $scope.runningTask.currentStep = response.data.currentStep;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
           else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
           else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
@@ -298,7 +298,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
     taskId: undefined,
     taskStepwiseRequest: undefined,
     future: undefined,
-    lastStep: undefined,
+    currentStep: undefined,
     info: undefined,
     start: function(proofId, nodeId, taskId, info, onTaskComplete, onTaskError, taskStepwiseRequest) {
       $scope.runningTask.proofId = proofId;
@@ -325,7 +325,7 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
     poll: function(taskId, elapsed) {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
-          if (response.data.lastStep !== undefined) $scope.runningTask.lastStep = response.data.lastStep.ruleName;
+          if (response.data.currentStep) $scope.runningTask.currentStep = response.data.currentStep;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
           else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
           else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
