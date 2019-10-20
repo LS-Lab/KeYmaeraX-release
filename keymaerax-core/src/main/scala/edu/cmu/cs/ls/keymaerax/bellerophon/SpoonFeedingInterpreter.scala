@@ -435,7 +435,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
     }
   }
 
-  override def kill(): Unit = synchronized {
+  override def kill(): Unit = /* cannot stop if synchronized */{
     isDead = true
     if (runningInner != null) runningInner.kill()
   }

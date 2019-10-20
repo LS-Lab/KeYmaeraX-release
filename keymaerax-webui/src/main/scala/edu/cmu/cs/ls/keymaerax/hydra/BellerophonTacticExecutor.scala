@@ -80,21 +80,18 @@ class BellerophonTacticExecutor(poolSize: Int) {
     * @param force If true, then the tactic can be removed even if it is currently running.
     *              In that case, the tactic execution is halted first. Defaults to false.
     */
-  def tryRemove(id: String, force: Boolean = false): Unit =
-    synchronized {
-      if (!scheduledTactics.contains(id))
-        return
+  def tryRemove(id: String, force: Boolean = false): Unit = synchronized {
+    if (scheduledTactics.contains(id)) {
       if (isDone(id)) {
         scheduledTactics.remove(id)
-      }
-      else if (force) {
+      } else if (force) {
         scheduledTactics.get(id).foreach(_.cancel(true))
         scheduledTactics.remove(id)
-      }
-      else {
+      } else {
         //@note if you want to remove a tactic even if it's still running, then call remove(id, true).
         throw new Exception("Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing.")
       }
+    }
   } ensuring(!scheduledTactics.contains(id))
 
   /**
