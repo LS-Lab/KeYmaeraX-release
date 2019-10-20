@@ -205,8 +205,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         },
         /* future rejected */ function(reason) {
           $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
-          if (reason !== 'stopped') showMessage($uibModal, reason);
           spinnerService.hide('tacticExecutionSpinner');
+          if (reason !== 'stopped') showMessage($uibModal, reason);
+          else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId);
         }
       );
       $scope.runningTask.poll(taskId, 0);
@@ -316,8 +317,9 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
         },
         /* future rejected */ function(reason) {
           $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
-          if (reason !== 'stopped') showMessage($uibModal, reason);
           spinnerService.hide('tacticExecutionSpinner');
+          if (reason !== 'stopped') showMessage($uibModal, reason);
+          else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId);
         }
       );
       $scope.runningTask.poll(taskId, 0);

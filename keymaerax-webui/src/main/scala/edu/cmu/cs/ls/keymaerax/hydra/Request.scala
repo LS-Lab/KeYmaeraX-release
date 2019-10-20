@@ -2109,7 +2109,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
           TaskResultResponse(subId.toString, node, marginLeft, marginRight, progress = true)
         case Some(Right(error: BelleThrowable)) => new TacticErrorResponse(error.getMessage, "", error)
-        case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
+        case None => new ErrorResponse("Tactic cancelled, proof state may not reflect result of full tactic")
       }
       //@note may have been cancelled in the meantime
       executor.tryRemove(taskId)
