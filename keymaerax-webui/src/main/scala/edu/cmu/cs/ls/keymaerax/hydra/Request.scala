@@ -514,6 +514,7 @@ class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
     } else {
       ToolProvider.shutdown()
+      Configuration.set(Configuration.Keys.QE_TOOL, toolName)
       val provider = toolName match {
         case "wolframengine" =>
           Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, jlinkTcpip)
@@ -630,36 +631,43 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
     else {
       assert(tool == "mathematica" || tool == "z3" || tool == "wolframengine" || tool == "wolframscript", "Expected either Mathematica or Z3 or Wolfram Engine tool")
       ToolProvider.shutdown()
-      Configuration.set(Configuration.Keys.QE_TOOL, tool)
       val config = ToolConfiguration.config(tool)
       try {
-        val isConfigured = tool match {
+        val provider: Option[ToolProvider] = tool match {
           case "mathematica" =>
             if (new java.io.File(config.getOrElse("linkName", "")).exists &&
                 new java.io.File(config.getOrElse("libDir", "")).exists) {
-              ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
-              Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-                Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+              if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+                Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
+                Some(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+              } else None
             } else {
               ToolProvider.setProvider(new Z3ToolProvider())
-              false
+              None
             }
           case "wolframengine" =>
             if (new java.io.File(config.getOrElse("linkName", "")).exists &&
                 new java.io.File(config.getOrElse("libDir", "")).exists) {
-              ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
-              Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
+              if (Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
                 Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
-                Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
+                Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) {
+                Some(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
+              } else None
             } else {
               ToolProvider.setProvider(new Z3ToolProvider())
-              false
+              None
             }
-          case "wolframscript" => ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil)); true
-          case "z3" => ToolProvider.setProvider(new Z3ToolProvider()); true
-          case _ => ToolProvider.setProvider(new NoneToolProvider); false
+          case "wolframscript" => Some(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil))
+          case "z3" => Some(new Z3ToolProvider())
+          case _ => ToolProvider.setProvider(new NoneToolProvider); None
         }
-        new ToolConfigStatusResponse(tool, isConfigured) :: Nil
+        provider match {
+          case Some(p) =>
+            Configuration.set(Configuration.Keys.QE_TOOL, tool)
+            ToolProvider.setProvider(p)
+          case _ => // nothing to do
+        }
+        new ToolConfigStatusResponse(tool, provider.isDefined) :: Nil
       } catch {
         case ex: Throwable if tool == "mathematica" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the license is valid (e.g., start Mathematica and type $LicenseExpirationDate, check that license server is reachable, if used), and that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
         case ex: Throwable if tool == "wolframengine" => new ErrorResponse("Error initializing " + tool + ". Please double-check the configuration paths, that the license is valid and the computer is online for license checking. If Wolfram Engine remains unavailable and/or keeps crashing KeYmaera X, please run Wolfram Engine to update the license information (check by running $LicenseExpirationDate in Wolfram Engine) prior to starting KeYmaera X. Also make sure that the Java JVM 32/64bit fits your operating system.", ex) :: Nil
