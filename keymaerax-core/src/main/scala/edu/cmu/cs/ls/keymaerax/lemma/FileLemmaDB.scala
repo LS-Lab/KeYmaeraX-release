@@ -14,8 +14,8 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import org.apache.logging.log4j.scala.Logging
 
 /**
- * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
- * cache/lemmadb/. Lemma file names are created automatically and in a thread-safe manner.
+ * File-based lemma DB implementation. Stores one lemma per file in the user's home directory under
+ * `.keymaerax/cache/lemmadb/` directory. Lemma file names are created automatically and in a thread-safe manner.
  *
  * @note Prefer LemmaDBFactory.lemmaDB over instantiating directly to get an instance of a lemma database and ensure
  *       thread safety.
