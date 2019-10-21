@@ -14,7 +14,7 @@ Main documentation entry points for KeYmaera X API:
   - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
       - `[[edu.cmu.cs.ls.keymaerax.core.Expression Expression]]` - Differential dynamic logic expressions: terms, formulas, programs
       - `[[edu.cmu.cs.ls.keymaerax.core.Sequent Sequent]]` - Sequents of formulas
-      - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules and `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubst]]`
+      - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules with `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubst]]` for uniform substitutions and renaming
       - `[[edu.cmu.cs.ls.keymaerax.core.Provable Provable]]` - Proof certificates transformed by rules/axioms
       - `[[edu.cmu.cs.ls.keymaerax.core.StaticSemantics StaticSemantics]]` - Static semantics
 
@@ -32,12 +32,12 @@ Main documentation entry points for KeYmaera X API:
   - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
 
       - [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter KeYmaeraXPrettyPrinter]]` - Pretty printer for concrete KeYmaera X syntax
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]` - Parser for concrete KeYmaera X syntax
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser KeYmaeraXArchiveParser]]` - Parser for KeYmaera X model and proof archive files `.kyx`
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter KeYmaeraXPrettyPrinter]]` - Pretty printer producing concrete KeYmaera X syntax
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]` - Parser reading concrete KeYmaera X syntax
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser KeYmaeraXArchiveParser]]` - Parser reading KeYmaera X model and proof archive `.kyx` files
 
   - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
-      - `[[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB LemmaDB]]` - Lemma database stored in files
+      - `[[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB LemmaDB]]` - Lemma database stored in files or database etc.
 
   - `[[edu.cmu.cs.ls.keymaerax.tools]]` - Arithmetic back-ends
       - `[[edu.cmu.cs.ls.keymaerax.tools.Mathematica Mathematica]]` - Mathematica interface for real arithmetic and ODE solver etc.
