@@ -220,7 +220,7 @@ protected object FOQuantifierTactics {
             SubstitutionPair(aT, sequent.sub(pos.topLevel ++ where.head).get) :: Nil)
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
-            /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast) partial) partial,
+            /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
             /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.derivedAxiomOrRule("exists generalize")(subst))
             )
         case _ => throw new BelleThrowable("Position " + pos + " must refer to a formula in sequent " + sequent)

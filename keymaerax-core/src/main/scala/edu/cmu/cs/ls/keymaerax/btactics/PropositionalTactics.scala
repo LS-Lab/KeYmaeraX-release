@@ -52,8 +52,8 @@ private object PropositionalTactics extends Logging {
       cut(Or(left, right)) <(
         /* use */ orL(cutUsePos) & OnAll(TactixLibrary.close),
         /* show */
-          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2)) partial
-          else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1)) partial
+          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2))
+          else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1))
         )
     }
   }
@@ -75,8 +75,8 @@ private object PropositionalTactics extends Logging {
       val cutUsePos = SuccPos(sequent.succ.length)
       cut(And(left, right)) <(
         /* use */
-          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideL(pos1) & assertE(right, "")(pos2) & hideL(pos2)) partial
-          else (assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & hideL(pos1)) partial,
+          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideL(pos1) & assertE(right, "")(pos2) & hideL(pos2))
+          else (assertE(right, "")(pos2) & hideL(pos2) & assertE(left, "")(pos1) & hideL(pos1)),
         /* show */ andR(cutUsePos) & OnAll(TactixLibrary.close)
         )
     }
@@ -105,15 +105,15 @@ private object PropositionalTactics extends Logging {
       // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
       // will branch and one of these branches will close by identity. on the other branch, we have to hide
       // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-      (((notL(-1) & notR(1) & assertT(1, 1) partial)
-        | ((andL(-1) & andR(1) <((close | (hideL(-2) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
-        | ((orR(1) & orL(-1) <((close | (hideR(2) partial)) partial, (close | (hideR(1) partial)) partial) & assertT(1, 1) partial)
-        | ((implyR(1) & implyL(-1) <((close | (hideR(1) partial)) partial, (close | (hideL('Llast) partial)) partial) & assertT(1, 1) partial)
-        | ((monb partial)
-        | ((mond partial)
-        | ((allR(1) & allL(-1) partial)
-        | (existsL(-1) & existsR(1) partial)
-        partial) partial) partial) partial) partial) partial) partial) partial)*at.pos.length
+      (((notL(-1) & notR(1) & assertT(1, 1))
+        | ((andL(-1) & andR(1) <((close | (hideL(-2))), (close | (hideL(-1)))) & assertT(1, 1))
+        | ((orR(1) & orL(-1) <((close | (hideR(2))), (close | (hideR(1)))) & assertT(1, 1))
+        | ((implyR(1) & implyL(-1) <((close | (hideR(1))), (close | (hideL('Llast)))) & assertT(1, 1))
+        | ((monb)
+        | ((mond)
+        | ((allR(1) & allL(-1))
+        | (existsL(-1) & existsR(1))
+       ))))))))*at.pos.length
     }
   }
 

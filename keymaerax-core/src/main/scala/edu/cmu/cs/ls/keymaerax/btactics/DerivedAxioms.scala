@@ -188,7 +188,7 @@ object DerivedAxioms extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
     useAt("[:*] assign nondet", PosInExpr(1::Nil))(1) &
       cut(Box(AssignAny(Variable("x_",None,Real)), True)) <(
-        byUS(boxMonotone) & hide(-1) partial
+        byUS(boxMonotone) & hide(-1)
         ,
         hide(1) & boxTrue(1)
         )
@@ -211,7 +211,7 @@ object DerivedAxioms extends Logging {
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
       // use
-      byUS(boxMonotone) & hide(-1) partial
+      byUS(boxMonotone) & hide(-1)
       ,
       // show
       hide(1) & boxTrue(1)
@@ -249,7 +249,6 @@ object DerivedAxioms extends Logging {
       equivifyR(1) &
         CQ(PosInExpr(0::0::Nil)) &
         useAt(equalCommute.fact)(1)
-        partial
       )
   )
 
@@ -272,7 +271,6 @@ object DerivedAxioms extends Logging {
         SubstitutionPair(UnitPredicational("p_", AnyArg), Not(UnitPredicational("q_", AnyArg))) ::
           SubstitutionPair(UnitPredicational("q_", AnyArg), Not(UnitPredicational("p_", AnyArg))) :: Nil)) &
       notL(-1) & notR(1)
-      partial
   )
 
   /**
@@ -295,7 +293,6 @@ object DerivedAxioms extends Logging {
       //        SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
       //          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
       notL(-1) & notR(1)
-      partial
   )
 
   /**
