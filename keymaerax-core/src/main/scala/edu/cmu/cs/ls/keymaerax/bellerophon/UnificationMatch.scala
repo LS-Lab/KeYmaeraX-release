@@ -16,8 +16,9 @@ import scala.util.Try
 
 /**
   * Unification/matching algorithm for tactics.
-  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
-  * Matcher leaves input alone and only substitutes into shape.
+  * `Unify(shape, input)` matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
+  * Matcher leaves `input` alone and only substitutes into `shape`, i.e., gives a single-sided matcher.
+  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.Matcher]]
   * @author Andre Platzer
   */
 // 1 pass for semanticRenaming
@@ -36,8 +37,24 @@ object UnificationMatch extends FreshUnificationMatch
 //object UnificationMatch extends FreshPostUnificationMatch
 
 /**
-  * Matcher(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
-  * Matcher leaves input alone and only substitutes into shape.
+  * `Matcher(shape, input)` matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
+  * Matcher leaves `input` alone and only substitutes into `shape`, i.e., gives a single-sided matcher.
+  *
+  * @example {{{
+  *           val s = Matcher("p()&q()".asFormula, "x<=0 & x^2>=0".asFormula)
+  *           // gives {p() ~> x<=0, q() ~> x^2>=0}
+  *           println(s)
+  * }}}
+  * @example {{{
+  *           val s = Matcher("[a;++b;]p()".asFormula, "[x:=x+1; ++ {x'=-x}]y<=0".asFormula)
+  *           // gives {a ~> x:=x+1, b ~> {x'=-x}, p() ~> y<=0}
+  *           println(s)
+  * }}}
+  * @example {{{
+  *           val s = Matcher("[a;++b;]p(||)".asFormula, "[x:=x+1; ++ {x'=-x}]x>=0".asFormula)
+  *           // gives {a ~> x:=x+1, b ~> {x'=-x}, p(||) ~> x>=0}
+  *           println(s)
+  * }}}
   * @author Andre Platzer
   */
 trait Matcher extends ((Expression,Expression) => RenUSubst) with Logging {
