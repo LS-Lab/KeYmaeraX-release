@@ -14,16 +14,16 @@ Main documentation entry points for KeYmaera X API:
   - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
       - `[[edu.cmu.cs.ls.keymaerax.core.Expression Expression]]` - Differential dynamic logic expressions: terms, formulas, programs
       - `[[edu.cmu.cs.ls.keymaerax.core.Sequent Sequent]]` - Sequents of formulas
-      - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules with `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubst]]` for uniform substitutions and renaming
+      - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules with `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubst]]` for uniform substitutions and [[edu.cmu.cs.ls.keymaerax.core.URename renaming]]
       - `[[edu.cmu.cs.ls.keymaerax.core.Provable Provable]]` - Proof certificates transformed by rules/axioms
-      - `[[edu.cmu.cs.ls.keymaerax.core.StaticSemantics StaticSemantics]]` - Static semantics
+      - `[[edu.cmu.cs.ls.keymaerax.core.StaticSemantics StaticSemantics]]` - Static semantics with free and bound variable analysis
 
   - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
       - `[[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr BelleExpr]]` - Tactic language expressions
       - `[[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter SequentialInterpreter]]` - Sequential tactic interpreter for Bellerophon tactics
       - `[[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch UnificationMatch]]` - Unification algorithm
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Tactic language library
+  - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Bellerophon tactic library
       - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary TactixLibrary]]` - Main KeYmaera X tactic library
       - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus SequentCalculus]]` - Sequent Calculus for propositional and first-order logic

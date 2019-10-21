@@ -206,9 +206,10 @@ object FullPrettyPrinter extends BasePrettyPrinter {
  * val fml1str = pp(fml1)
  * }}}
  * @author Andre Platzer
- * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
- * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
- */
+  * @see [[edu.cmu.cs.ls.keymaerax.parser]]
+  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+  * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
+  */
 class KeYmaeraXPrinter extends BasePrettyPrinter {
 
   import OpSpec.op

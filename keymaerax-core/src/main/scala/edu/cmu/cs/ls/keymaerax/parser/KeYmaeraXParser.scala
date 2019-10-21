@@ -101,8 +101,9 @@ private object MORE extends ExpectNonterminal("<more>") {override def toString =
  * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
  * }}}
   * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.parser]]
- * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser]]
+  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+  * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
  */
 object KeYmaeraXParser extends Parser with TokenParser with Logging {
   import OpSpec.statementSemicolon
