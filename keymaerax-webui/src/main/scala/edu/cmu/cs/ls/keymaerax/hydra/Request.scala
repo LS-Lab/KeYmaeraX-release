@@ -2064,7 +2064,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
       executor.getTask(taskId) match {
         case Some(task) =>
           val progressList = task.interpreter match {
-            case SpoonFeedingInterpreter(rootProofId, _, _, _, interpreterFactory, _, _, _) =>
+            case SpoonFeedingInterpreter(_, _, _, _, interpreterFactory, _, _, _) =>
               //@note the inner interpreters have CollectProgressListeners attached
               interpreterFactory(Nil).listeners.flatMap({
                 case l@CollectProgressListener(p) => Some(
@@ -2072,7 +2072,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
                   scala.collection.immutable.Seq(p:_*))
                 case _ => None
               }).headOption
-            case _ => Nil
+            case _ => None
           }
           (executor.isDone(taskId), progressList)
         case _ => (!executor.contains(taskId) || executor.isDone(taskId), None)
