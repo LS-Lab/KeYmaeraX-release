@@ -945,7 +945,7 @@ object SimplifierV2 {
           cut(ctxAnd) <(
             implyRi()(AntePos(sequent.ante.size),SuccPos(0)) & useAt(swapImply)(1) & cohideR(1) & equivifyR(1) & commute & by(pr)
             ,
-            hideR(1) & (andR(1) <(close, (close | skip) partial))*(sequent.ante.size-1) & ?(close))
+            hideR(1) & (andR(1) <(close, (close | skip)))*(sequent.ante.size-1) & ?(close))
           )
       }
     }

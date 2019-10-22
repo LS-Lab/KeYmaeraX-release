@@ -40,10 +40,8 @@ object ArithmeticSimplification {
       val toHide = irrelevantAntePositions(p.subgoals(0)).sortBy(x => x.index0).reverse
 
       //Build up a tactic that hides all non-relevant antecedent positions.
-      PartialTactic(
-        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
-      )
+      DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+      toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideL(nextPosition))
     }
   }
 
@@ -57,10 +55,8 @@ object ArithmeticSimplification {
       val toHide = irrelevantSuccPositions(p.subgoals(0)).sortBy(x => x.index0).reverse
 
       //Build up a tactic that hides all non-relevant antecedent positions.
-      PartialTactic(
-        DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
-        toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideR(nextPosition))
-      )
+      DebuggingTactics.debug(s"Hiding positions ${toHide.mkString(",")}") &
+      toHide.foldLeft[BelleExpr](Idioms.nil)((e, nextPosition) => e & SequentCalculus.hideR(nextPosition))
     }
   }
 

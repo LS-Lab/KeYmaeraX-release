@@ -32,7 +32,7 @@ class PassiveSafetyAbsTacticGenerator extends (() => BelleExpr) {
       OnAll(
         hideL(Find.FindL(0, Some("dx^2+dy^2=1".asFormula))) &
           hideL(Find.FindL(0, Some("r!=0".asFormula))) &
-          hideL(Find.FindL(0, Some("dxo^2+dyo^2<=V()^2".asFormula))) partial)
+          hideL(Find.FindL(0, Some("dxo^2+dyo^2<=V()^2".asFormula))))
 
     val brakeStoppedArith: BelleExpr =
       hideIrrelevantAssumptions <(
@@ -41,8 +41,8 @@ class PassiveSafetyAbsTacticGenerator extends (() => BelleExpr) {
         hideR(2, "abs(x-xo)>v^2/(2*B)+V()*(v/B)".asFormula) & QE)
 
     def accArithTactic(fml: Formula): BelleExpr = implyR(1) & andL('_).*() & cutL(fml)(AntePosition.base0(4).top) <(
-      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15) partial) &
-        OnAll(andL('_).*() partial) & OnAll(exhaustiveEqL2R(hide=true)('L).*() partial) <(
+      hideL(-15) & hideL(-4) & abs(1, 0::Nil) & abs(-4, 0::Nil) & orL(-16) & OnAll(orL(-15)) &
+        OnAll(andL('_).*()) & OnAll(exhaustiveEqL2R(hide=true)('L).*()) <(
         hideL(-11) & hideL(-8) & QE,
         hideR(1) & QE,
         hideR(1) & QE,

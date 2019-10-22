@@ -21,7 +21,7 @@ import scala.collection.mutable.ListBuffer
 
 /**
   * Splits a KeYmaera X archive into its parts and forwards to respective problem/tactic parsers. An archive contains
-  * at least one entry combining a model in the .kyx format and a (partial) proof tactic in .kyt format.
+  * at least one entry combining a model in the .kyx format and possibly a (partial) proof tactic.
   *
   * Format example:
   * {{{
@@ -37,6 +37,7 @@ import scala.collection.mutable.ListBuffer
   * }}}
   *
   * @author Stefan Mitsch
+  * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   */
 object KeYmaeraXArchiveParser {
   /** The entry name, kyx file content (model), definitions, parsed model, and parsed named tactics. */

@@ -93,10 +93,10 @@ object ArithmeticSpeculativeSimplification {
     val absTactic = (anteAbs++succAbs).
       //@note p+inExpr navigates to sub-expression since p are top
       map{ case (f,p) => (f, absPos(f).map(inExpr => p ++ inExpr)) }.
-      map{ case (_,p) => p.map(pos => OnAll(abs(pos) & orL('Llast) partial)).reduceLeft[BelleExpr](_&_) }.
+      map{ case (_,p) => p.map(pos => OnAll(abs(pos) & orL('Llast))).reduceLeft[BelleExpr](_&_) }.
       reduceLeft[BelleExpr](_&_)
 
-    absTactic & OnAll(SaturateTactic(andL('_)) partial) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)) partial)
+    absTactic & OnAll(SaturateTactic(andL('_))) & OnAll(SaturateTactic(exhaustiveEqL2R(hide=true)('L)))
   })
 
   /** Hides formulas with non-matching bounds. */

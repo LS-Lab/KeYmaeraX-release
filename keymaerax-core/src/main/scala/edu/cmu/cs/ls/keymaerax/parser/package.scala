@@ -184,14 +184,15 @@ import edu.cmu.cs.ls.keymaerax.core.CoreException
  *   println("Printed:  " + sequent.prettyString)
  * }}}
  *
- * @author Andre Platzer
- * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- * @see "Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015."
- * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]]
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]]
- */
+  * @author Andre Platzer
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
+  * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar of Differential Dynamic Logic]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]]
+  */
 package object parser {
   /** Check input for requirement being true, throwing a [[ParseException]] if false.
     *  This method is a require coming from the parser that cannot be disabled.
