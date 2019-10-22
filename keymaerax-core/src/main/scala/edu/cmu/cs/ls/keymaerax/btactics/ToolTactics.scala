@@ -53,7 +53,7 @@ private object ToolTactics {
 
     Idioms.doIf(!_.isProved)(
       assertT(_.isFOL, "QE on FOL only") &
-      allTacticChase()(notL, andL, notR, implyR, orR) &
+      allTacticChase()(notL, andL, notR, implyR, orR, allR) &
         Idioms.doIf(!_.isProved)(
           close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE))
       )
