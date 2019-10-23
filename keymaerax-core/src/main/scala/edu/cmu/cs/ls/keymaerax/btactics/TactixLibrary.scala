@@ -357,7 +357,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
 
-  /** abstractionb: turns '[a]p' into \forall BV(a) p by universally quantifying over all variables modified in `a`.
+  /** GVR abstractionb: turns `[a]p` into `\forall BV(a) p` by universally quantifying over all variables modified in program `a`.
     * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
     * of that modality.
     * @example{{{
@@ -374,6 +374,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *           |- x>0
     *         ---------------abstractionb(1)
     *           |- [y:=2;]x>0
+    * }}}
+    * @example{{{
+    *          x<=0  |- \forall y \forall z x<=z^2
+    *         ------------------------------------abstractionb(1)
+    *          x<=0  |- [y:=2;z:=z+1;]x<=z^2
     * }}}
     */
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb

@@ -668,7 +668,10 @@ private object DifferentialTactics extends Logging {
       }
   })
 
-  /** diffWeaken by DW & G */
+  /** diffWeaken by DW & G
+    * @see [[TactixLibrary.DW]]
+    * @see [[TactixLibrary.G]]
+    */
   lazy val diffWeakenG: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
