@@ -457,7 +457,14 @@ private object DifferentialTactics extends Logging {
     * @see [[dG()]]
     */
   private def DG(ghost: DifferentialProgram): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
-    val (y, a, b) = DifferentialHelper.parseGhost(ghost)
+    val (y, a, b) = try {
+      DifferentialHelper.parseGhost(ghost)
+    } catch {
+      case ex: CoreException =>
+        val wrongShapeStart = ex.getMessage.indexOf("b(|y_|)~>")
+        throw new BelleFriendlyUserMessage(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
+          " is not of the expected shape a*y_+b, please provide a differential program of the shape y'=a*y+b.")
+    }
 
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&

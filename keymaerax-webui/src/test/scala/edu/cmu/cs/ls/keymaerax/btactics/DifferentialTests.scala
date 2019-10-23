@@ -1017,6 +1017,20 @@ class DifferentialTests extends TacticTestBase {
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
       subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1*t+-3}]x>0".asSequent
 
+    //division
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t/2+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1/2*t+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t/2-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1/2*t+-3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t/2+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(- 1/2)*t+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t/2-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(- 1/2)*t+-3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t/2}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1/2*t+0}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t/2}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=(-1/2)*t+0}]x>0".asSequent
+
     // supported simplifications so far
     proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
       subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
@@ -1036,6 +1050,14 @@ class DifferentialTests extends TacticTestBase {
 
   it should "not allow ghosts that are already present in the ODE" in {
     a [BelleThrowable] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{x'=0*x+1}".asDifferentialProgram, None)(1))
+  }
+
+  it should "give useful error messages on shape mismatch" in {
+    the [BelleThrowable] thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{t'=x*t*x^2}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)) should
+      have message """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
+                     |    [{x'=2&true}]x>0
+                     |at position 1
+                     |because x*y_*x^2 is not of the expected shape a*y_+b, please provide a differential program of the shape y'=a*y+b.""".stripMargin
   }
 
   "DA" should "add y'=1 to [x'=2]x>0" in withQE { _ =>

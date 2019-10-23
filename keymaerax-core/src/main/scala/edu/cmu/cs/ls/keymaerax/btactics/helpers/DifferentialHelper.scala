@@ -118,6 +118,31 @@ object DifferentialHelper {
       case None =>
     }
 
+    //Four cases contain both 1/a and b: +1/a+b, +1/a-b, -1/a+b, -1/a-b
+    //y' = y/a + b
+    UnificationMatch.unifiable("{y_'=y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), s("b(|y_|)".asTerm))
+      case None    =>
+    }
+
+    //y' = y/a - b
+    UnificationMatch.unifiable(" {y_'=y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+      case None =>
+    }
+
+    //y' = -y/a + b
+    UnificationMatch.unifiable("{y_'=-y_/a(|y_|)+b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
+      case None =>
+    }
+
+    //y' = -y/a - b
+    UnificationMatch.unifiable("{y_'=-y_/a(|y_|)-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("1/a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
+      case None =>
+    }
+
     //4 cases contain implicit a=1 and b: +y+b, +y-b, -y+b, -y-b
     //y' = y + b
     UnificationMatch.unifiable("{y_'=y_+b(|y_|)}".asDifferentialProgram, ghost) match {
@@ -153,6 +178,19 @@ object DifferentialHelper {
     //y' = -ay
     UnificationMatch.unifiable("{y_'=-a(|y_|)*y_}".asDifferentialProgram, ghost) match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-a(|y_|)".asTerm), "0".asTerm)
+      case None    =>
+    }
+
+    //2 cases contain just 1/a: +1/a and -1/a
+    //y' = ay
+    UnificationMatch.unifiable("{y_'=y_/a(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("1/a(|y_|)".asTerm), "0".asTerm)
+      case None    =>
+    }
+
+    //y' = -ay
+    UnificationMatch.unifiable("{y_'=-y_/a(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-1/a(|y_|)".asTerm), "0".asTerm)
       case None    =>
     }
 
