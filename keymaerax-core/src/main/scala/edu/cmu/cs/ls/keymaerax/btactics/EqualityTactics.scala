@@ -34,8 +34,35 @@ private object EqualityTactics {
         require(!lhs.isInstanceOf[Number], "Rewriting numbers not supported")
         require(lhs != rhs, "LHS and RHS are not allowed to overlap")
 
+        val freeRhs = StaticSemantics.freeVars(rhs).toSet
+
+        val renameBoundRhs = "ANON" by ((pos: Position, seq: Sequent) => {
+          val fml = seq(pos.top)
+          var nextSymbol: Option[Variable] = None
+          def createNextSymbol(v: Variable): Variable = nextSymbol match {
+            case None =>
+              val s = TacticHelper.freshNamedSymbol(v, fml)
+              nextSymbol = Some(s)
+              s
+            case Some(vv) => Variable(vv.name, Some(vv.index.getOrElse(-1) + 1))
+          }
+          Idioms.mapSubpositions(pos, seq, {
+            case (q: Quantified, pp) if q.vars.toSet.intersect(freeRhs).nonEmpty =>
+              Some(q.vars.map(v => boundRename(v, createNextSymbol(v))(pp)).
+                reduceRightOption[BelleExpr](_ & _).getOrElse(nil))
+            case (Box(Assign(x, _), _), pp) if freeRhs.contains(x) =>
+              Some(boundRename(x, createNextSymbol(x))(pp))
+            case (Box(AssignAny(x), _), pp) if freeRhs.contains(x) =>
+              //@note no direct bound renaming of nondeterministic assignment in core
+              Some(useAt("[:*] assign nondet")(pp) &
+                boundRename(x, createNextSymbol(x))(pp) &
+                useAt("[:*] assign nondet", PosInExpr(1::Nil))(pp))
+            case _ => None
+          }).reduceRightOption[BelleExpr](_ & _).getOrElse(nil)
+        })
+
         val occurrences = sequent.zipWithPositions.filter({ case (f, p) => p != pos && f.find(lhs).isDefined })
-        occurrences.map({ case (_, p) => eqL2R(pos.checkAnte)(p) }).reduceOption[BelleExpr](_&_).getOrElse(skip)
+        occurrences.map({ case (_, p) => renameBoundRhs(p) & eqL2R(pos.checkAnte)(p) }).reduceOption[BelleExpr](_&_).getOrElse(skip)
     }
   })
 

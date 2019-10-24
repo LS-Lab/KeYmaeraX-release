@@ -194,6 +194,17 @@ class EqualityTests extends TacticTestBase {
       subgoals.loneElement shouldBe "x=0 ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
   }
 
+  it should "bound rename when right-handside names clash" in {
+    proveBy("y=x ==> \\forall x x<y".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
+      subgoals.loneElement shouldBe "==> \\forall x_0 x_0<x".asSequent
+    proveBy("y=x ==> [x:=x+y;]x>y".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
+      subgoals.loneElement shouldBe "==> [x_0:=x+x;]x_0>x".asSequent
+    proveBy("y=x ==> [x:=*;]x>y".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
+      subgoals.loneElement shouldBe "==> [x_0:=*;]x_0>x".asSequent
+    proveBy("y=x ==> \\forall x (x<y -> \\exists x x>y)".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
+      subgoals.loneElement shouldBe "==> \\forall x_0 (x_0<x -> \\exists x_1 x_1>x)".asSequent
+  }
+
   "Apply Equalities" should "rewrite all plain equalities" in {
     proveBy("x=2, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "2+3>=4 ==> 3-2<=1, 2=2".asSequent
     proveBy("x=x+2, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=x+2, x+2+3>=4 ==> 3-(x+2)<=1, x+2=2".asSequent
