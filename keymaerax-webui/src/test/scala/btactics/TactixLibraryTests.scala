@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -562,6 +563,31 @@ class TactixLibraryTests extends TacticTestBase {
            }*
          ] x <= m""".stripMargin(' ').asFormula
     proveBy(problem2, master()) shouldBe 'proved
+  }
+
+  "useLemmaAt" should "apply at provided key" in {
+    val lemmaName = "tests/useLemmaAt/tautology1"
+    val lemma = proveBy("p() -> p()&p()".asFormula, prop)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(1::Nil)))(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
+    proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
+  }
+
+  it should "apply with default key .1 in succedent" in {
+    val lemmaName = "tests/useLemmaAt/tautology1"
+    val lemma = proveBy("p() -> p()&p()".asFormula, prop)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, None)(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
+  }
+
+  it should "apply with default key .0 in antecedent" in {
+    val lemmaName = "tests/useLemmaAt/tautology1"
+    val lemma = proveBy("p() -> p()&p()".asFormula, prop)
+    lemma shouldBe 'proved
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
   }
 
 }

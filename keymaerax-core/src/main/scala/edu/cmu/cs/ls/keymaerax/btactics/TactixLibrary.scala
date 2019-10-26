@@ -1142,7 +1142,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
-        useAt(lemma, key.getOrElse(PosInExpr(0::Nil)))(pos)
+        useAt(lemma, key.getOrElse(if (pos.isAnte) PosInExpr(0::Nil) else PosInExpr(1::Nil)))(pos)
       } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
     })
 
