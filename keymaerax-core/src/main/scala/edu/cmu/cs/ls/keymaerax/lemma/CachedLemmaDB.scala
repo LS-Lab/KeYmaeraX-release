@@ -19,10 +19,10 @@ import scala.collection.mutable
   *
   * Created by bbohrer on 8/3/16.
   */
-class CachedLemmaDB (db: LemmaDB) extends LemmaDB with Logging {
+class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
   private var cachedLemmas: mutable.Map[LemmaID, Lemma] = mutable.Map()
 
-  override def get(lemmaIDs:List[LemmaID]): Option[List[Lemma]] = {
+  override def get(lemmaIDs: List[LemmaID]): Option[List[Lemma]] = {
     /* Get as many lemmas as possible from the cache */
     val (cached, uncached) = lemmaIDs.zipWithIndex.partition{case (x,_) => cachedLemmas.contains(x)}
     val fromCache = cached.map{case (x,i) => (cachedLemmas(x), i)}
@@ -35,9 +35,8 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB with Logging {
         /* Preserve original order when combining cached vs. uncached lemmas*/
         (list ::: fromCache).sortWith{case ((_,i), (_,j)) => i < j}.map(_._1)
       }
-    }
-    catch {
-      case e:Throwable =>
+    } catch {
+      case e: Throwable =>
         logger.error("Error while trying to retrieve lemma", e)
         None
     }
@@ -54,9 +53,15 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB with Logging {
     db.deleteDatabase()
   }
 
-  override def remove(id:LemmaID): Unit = {
+  override def remove(id: LemmaID): Unit = {
     cachedLemmas -= id
     db.remove(id)
+  }
+
+  override def removeAll(folderName: LemmaID): Unit = {
+    val remove = cachedLemmas.filter(_._1.startsWith(folderName)).keys
+    cachedLemmas --= remove
+    db.removeAll(folderName)
   }
 
   override def version(): String = db.version()

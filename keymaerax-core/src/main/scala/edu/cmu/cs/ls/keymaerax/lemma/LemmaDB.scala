@@ -73,6 +73,9 @@ trait LemmaDB {
   /** Delete the lemma of the given identifier, throwing exceptions if that was unsuccessful.*/
   def remove(name: LemmaID): Unit
 
+  /** Removes all lemmas in `folder`. */
+  def removeAll(folder: String): Unit
+
   /** Delete the whole lemma database */
   def deleteDatabase(): Unit
 

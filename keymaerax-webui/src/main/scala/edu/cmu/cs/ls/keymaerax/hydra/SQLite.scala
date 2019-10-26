@@ -42,7 +42,7 @@ object SQLite {
 
   /** Stores lemmas in the Lemma table of the given database. */
   class UncachedSQLiteLemmaDB(db: SQLiteDB) extends LemmaDBBase {
-    def readLemmas(ids: List[LemmaID]):Option[List[String]] = {
+    def readLemmas(ids: List[LemmaID]): Option[List[String]] = {
       db.getLemmas(ids.map(_.toInt))
     }
 
@@ -72,6 +72,8 @@ object SQLite {
     override def remove(name: String): Unit = {
       db.deleteLemma(name.toInt)
     }
+
+    override def removeAll(folder: String): Unit = ???
 
     override def deleteDatabase(): Unit = {
       db.deleteAllLemmas()

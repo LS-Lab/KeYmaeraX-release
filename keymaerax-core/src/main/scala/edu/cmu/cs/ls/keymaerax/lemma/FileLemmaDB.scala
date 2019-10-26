@@ -13,6 +13,8 @@ import java.io.{File, IOException, PrintWriter}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import org.apache.logging.log4j.scala.Logging
 
+import scala.reflect.io.Directory
+
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's home directory under
  * `.keymaerax/cache/lemmadb/` directory. Lemma file names are created automatically and in a thread-safe manner.
@@ -41,6 +43,8 @@ class FileLemmaDB extends LemmaDBBase with Logging {
 
   /** Returns the File representing lemma `id`. */
   private def file(id: LemmaID): File = new File(lemmadbpath, sanitize(id) + ".alp")
+  /** Returns the File representing the folder `id`. */
+  private def folder(id: LemmaID): Directory = new Directory(new File(lemmadbpath, sanitize(id)))
 
   /** Reads the lemma content of the lemmas `ids`. None if any of the `ids` does not exist. */
   def readLemmas(ids: List[LemmaID]): Option[List[String]] = {
@@ -64,8 +68,15 @@ class FileLemmaDB extends LemmaDBBase with Logging {
     f.getName.substring(0, f.getName.length-".alp".length)
   }
 
-  override def remove(id: String): Unit =
-    if (!file(id).delete()) throw new IOException("File deletion for " + file(id) + " was not successful")
+  override def remove(id: String): Unit = {
+    val f = file(id)
+    if (f.exists && !f.delete()) throw new IOException("File deletion for " + file(id) + " was not successful")
+  }
+
+  override def removeAll(folderName: String): Unit = {
+    val f = folder(folderName)
+    if (f.exists && !f.deleteRecursively()) throw new IOException("File deletion for " + file(folderName) + " was not successful")
+  }
 
   override def deleteDatabase(): Unit = {
     lemmadbpath.listFiles().foreach(_.delete())
