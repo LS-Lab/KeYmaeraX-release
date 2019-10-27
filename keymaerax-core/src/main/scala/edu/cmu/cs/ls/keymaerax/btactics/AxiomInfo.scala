@@ -187,11 +187,16 @@ object DerivationInfo {
 
   private lazy val odeInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("DW base", "DWbase", "DWbase", true, {case () => HilbertCalculus.DW}),
-    new PositionTacticInfo("dW"
+    PositionTacticInfo("dW"
       , RuleDisplayInfo("Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
       , {case () => DifferentialTactics.diffWeaken}, revealInternalSteps = true),
+    PositionTacticInfo("dWplus"
+      , RuleDisplayInfo("Assumption-Preserving Differential Weaken"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
+        , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
+      , {case () => DifferentialTactics.diffWeakenPlus}, revealInternalSteps = true),
     new DerivedAxiomInfo("DC differential cut"
       , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
       , "DC", true, {case () => HilbertCalculus.useAt("DC differential cut")}),

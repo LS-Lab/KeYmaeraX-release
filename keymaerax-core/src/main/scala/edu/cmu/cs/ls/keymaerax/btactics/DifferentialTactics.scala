@@ -632,6 +632,21 @@ private object DifferentialTactics extends Logging {
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
       if (sequent.succ.size <= 1) {
+        val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
+        val constFacts = sequent.ante.flatMap(FormulaTools.conjuncts).
+          filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
+        constFacts.map(diffCut(_)(pos) <(skip, V(pos) & prop & done)).getOrElse(skip) & DW(pos) & G(pos)
+      } else {
+        useAt("DW differential weakening")(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
+      }
+  })
+
+  /** diffWeaken preserving all initial facts and mimicking the initial sequent shape. */
+  lazy val diffWeakenPlus: DependentPositionTactic = "dWplus" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(Box(a: ODESystem, p)) =>
+      require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
+
+      if (sequent.succ.size <= 1) {
         val primedVars = DifferentialHelper.getPrimedVariables(a)
 
         val rewriteExistingGhosts = sequent.ante.zipWithIndex.filter({
