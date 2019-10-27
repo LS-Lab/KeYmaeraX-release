@@ -416,9 +416,11 @@ object KeYmaeraX {
 
   /** Shuts down the backend solver and invariant generator. */
   private def shutdownProver(): Unit = {
-    ToolProvider.shutdown()
+    implicit val ec: ExecutionContext = ExecutionContext.global
+    Await.ready(Future { ToolProvider.shutdown() }, Duration(5, TimeUnit.SECONDS))
     ToolProvider.setProvider(new NoneToolProvider())
     TactixLibrary.invGenerator = FixedGenerator(Nil)
+    //@note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
   }
 
   /** Exit gracefully */

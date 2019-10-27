@@ -380,9 +380,7 @@ object Main {
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
-        if(!IS_RELAUNCH_PROCESS) {
-          KeYmaeraXLock.deleteLock()
-        }
+        if (!IS_RELAUNCH_PROCESS) KeYmaeraXLock.deleteLock()
         proc.destroy()
       }
     })
@@ -546,13 +544,9 @@ object Main {
 
     /** Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
       * @note not strictly necessary as lont as File.deleteOnExit works properly. */
-    def deleteLock() = {
-      if (lockObtained) {
-        lockFile.delete()
-      }
-      else {
-        launcherLog("refusing to delete lock because this process's most recent attempt to obtain a lock failed.")
-      }
+    def deleteLock(): Unit = {
+      if (lockObtained) lockFile.delete()
+      else launcherLog("refusing to delete lock because this process's most recent attempt to obtain a lock failed.")
     }
 
     /** Returns true iff the lock file is less than 30s old. */
