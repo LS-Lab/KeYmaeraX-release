@@ -61,6 +61,16 @@ object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
+  object Modes {
+    val CODEGEN: String = "codegen"
+    val MODELPLEX: String = "modelplex"
+    val PROVE: String = "prove"
+    val REPL: String = "repl"
+    val STRIPHINTS: String = "striphints"
+    val UI: String = "ui"
+    val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI)
+  }
+
   /** Usage -help information.
     * @note Formatted to 80 characters terminal width. */
   val usage: String =
@@ -112,11 +122,9 @@ object KeYmaeraX {
   }
   var LAUNCH: Boolean = false
 
-
   def main(args: Array[String]): Unit = {
     if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {println(usage); exit(1)}
-    println("KeYmaera X Prover" + " " + VERSION + "\n" +
-      "Use option -help for usage and license information")
+    println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
     else {
       //@note 'commandLine is only passed in to preserve evidence of what generated the output.
@@ -125,8 +133,7 @@ object KeYmaeraX {
       if(!options.contains('mode)) {
         //@note this should be a bad state but apparently it happens.
         launchUI(args)
-      }
-      else if (options.get('mode).contains("codegen")) {
+      } else if (options.get('mode).contains(Modes.CODEGEN)) {
         //@note Mathematica needed for quantitative ModelPlex
         if (options.get('quantitative).isDefined) {
           initializeProver(
@@ -134,8 +141,7 @@ object KeYmaeraX {
             else options ++ configFromFile("mathematica"))
         }
         codegen(options)
-      }
-      else if (!options.get('mode).contains("ui") ) {
+      } else if (!options.get('mode).contains(Modes.UI) ) {
         try {
           initializeProver(
             if (options.contains('tool)) options
@@ -143,12 +149,12 @@ object KeYmaeraX {
 
           //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
-            case Some("prove") => prove(options)
-            case Some("modelplex") => modelplex(options)
-            case Some("codegen") => codegen(options)
-            case Some("repl") => repl(options)
-            case Some("striphints") => stripHints(options)
-            case Some("ui") => assert(false, "already handled above since no prover needed"); ???
+            case Some(Modes.PROVE) => prove(options)
+            case Some(Modes.MODELPLEX) => modelplex(options)
+            case Some(Modes.CODEGEN) => codegen(options)
+            case Some(Modes.REPL) => repl(options)
+            case Some(Modes.STRIPHINTS) => stripHints(options)
+            case Some(Modes.UI) => assert(false, "already handled above since no prover needed"); ???
           }
         } finally {
           shutdownProver()
@@ -187,7 +193,7 @@ object KeYmaeraX {
       case "-bparse" :: value :: tail =>
         parseBelleTactic(value); ???
       case "-prove" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.PROVE, 'in -> value), tail)
         else optionErrorReporter("-prove")
       case "-verbose" :: tail =>
         require(!map.contains('verbose)); nextOption(map ++ Map('verbose -> true), tail)
@@ -197,11 +203,11 @@ object KeYmaeraX {
       case "-sandbox" :: tail =>
         nextOption(map ++ Map('sandbox -> true), tail)
       case "-modelplex" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.MODELPLEX, 'in -> value), tail)
         else optionErrorReporter("-modelPlex")
       case "-isar" :: tail => nextOption(map ++ Map('isar -> true), tail)
       case "-codegen" :: value :: tail =>
-        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.CODEGEN, 'in -> value), tail)
         else optionErrorReporter("-codegen")
       case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
@@ -209,12 +215,12 @@ object KeYmaeraX {
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
         val newMap = List('tactic, 'scaladefs).zip(posArgs).foldLeft(map){case (acc,(k,v)) => acc ++ Map(k -> v)}
         if (model.nonEmpty  && !model.toString.startsWith("-"))
-          nextOption(newMap ++ Map('mode -> "repl", 'model -> model), restArgs)
+          nextOption(newMap ++ Map('mode -> Modes.REPL, 'model -> model), restArgs)
         else optionErrorReporter("-repl")
       case "-striphints" :: kyx :: tail =>
-        if(kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(map ++ Map('mode -> "striphints", 'in -> kyx), tail)
+        if(kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.STRIPHINTS, 'in -> kyx), tail)
         else optionErrorReporter("-striphints")
-      case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
+      case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> Modes.UI)
       // action options
       case "-out" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
@@ -975,8 +981,9 @@ object KeYmaeraX {
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
-    if(this.LAUNCH) Main.main("-launch" +: args)
-    else Main.main(args)
+    val augmentedArgs = if (args.intersect(Modes.modes.toList).isEmpty) args :+ Modes.UI else args
+    if (LAUNCH) Main.main("-launch" +: augmentedArgs)
+    else Main.main(augmentedArgs)
   }
   
   // helpers

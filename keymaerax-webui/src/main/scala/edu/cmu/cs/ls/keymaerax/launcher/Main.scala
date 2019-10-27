@@ -42,8 +42,8 @@ object Main {
 
     if (isFirstLaunch) {
       IS_RELAUNCH_PROCESS = true
-      val java : String = javaLocation
-      val keymaeraxjar : String = jarLocation
+      val java: String = javaLocation
+      val keymaeraxjar: String = jarLocation
 
       val javaVersion = System.getProperty("java.version")
       val javaMajorMinor :: updateVersion :: Nil =
@@ -62,7 +62,7 @@ object Main {
               (if (args.isEmpty) "-ui" :: Nil else Nil)
           } else {
             (java :: "-Xss20M" :: "--add-modules" :: "java.xml.bind" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
-              (if (args.isEmpty) "-ui" :: Nil else Nil)
+              (if (args.intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
           }
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
