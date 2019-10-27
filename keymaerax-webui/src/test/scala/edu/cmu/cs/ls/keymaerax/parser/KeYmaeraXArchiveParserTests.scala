@@ -639,6 +639,29 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe empty
   }
 
+  it should "parse a pending tactic with arguments in new syntax" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> [{x'=1}]x>=y End.
+        | Tactic "Simple". implyR(1) ; pending("dC(\"x>=old(x)\", 1)") End.
+        |End.
+      """.stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> [{x'=1}]x>=y".asFormula
+    entry.tactics shouldBe ("Simple", "implyR(1) ; pending(\"dC(\\\"x>=old(x)\\\", 1)\")", implyR(1) & DebuggingTactics.pending("dC(\\\"x>=old(x)\\\", 1)")) :: Nil
+    entry.info shouldBe empty
+  }
+
   it should "parse a model with several tactics" in withQE { _ =>
     val input =
       """

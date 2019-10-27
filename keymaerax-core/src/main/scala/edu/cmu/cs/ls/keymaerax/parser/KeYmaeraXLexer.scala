@@ -192,6 +192,8 @@ private object DUAL    extends OPERATOR("^@") {
   override def regexp: Regex = """\^\@""".r
 }
 private object TILDE      extends OPERATOR("~")
+private object BACKSLASH extends Terminal("\\\\")
+private object QUOTATION_MARK extends Terminal("\"")
 
 /*@TODO
 private object DCHOICE  extends OPERATOR("--") {
@@ -645,7 +647,9 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     //
     EXERCISE_PLACEHOLDER.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, EXERCISE_PLACEHOLDER, loc))),
     //
-    TILDE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, TILDE, loc)))
+    TILDE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, TILDE, loc))),
+    BACKSLASH.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, BACKSLASH, loc))),
+    QUOTATION_MARK.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, QUOTATION_MARK, loc)))
   )
 
   /**
