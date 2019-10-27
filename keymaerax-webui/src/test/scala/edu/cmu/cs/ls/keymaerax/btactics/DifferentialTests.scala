@@ -398,6 +398,10 @@ class DifferentialTests extends TacticTestBase {
       """[Bellerophon Runtime] Differential invariant must be preserved: expected to have proved, but got open goals""".stripMargin
   }
 
+  it should "work when not sole formula in succedent" in withQE { _ =>
+    proveBy("x>=0 ==> [{x'=1}]x>=0, false".asSequent, dI()(1)) shouldBe 'proved
+  }
+
   //@todo unsupported so far (substitution clash)
   "Derive" should "derive quantifiers" ignore {
     proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\exists x x'>=0".asSequent
