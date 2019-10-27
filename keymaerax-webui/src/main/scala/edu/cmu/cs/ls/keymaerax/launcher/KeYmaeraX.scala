@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.{FilePermission, FileWriter, PrintWriter}
+import java.io.{FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 import java.util.concurrent.TimeUnit
@@ -69,6 +69,14 @@ object KeYmaeraX {
     val STRIPHINTS: String = "striphints"
     val UI: String = "ui"
     val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI)
+  }
+
+  object Tools {
+    val MATHEMATICA: String = "mathematica"
+    val WOLFRAMENGINE: String = "wolframengine"
+    val WOLFRAMSCRIPT: String = "wolframscript"
+    val Z3: String = "z3"
+    val tools: Set[String] = Set(MATHEMATICA, WOLFRAMENGINE, WOLFRAMSCRIPT, Z3)
   }
 
   /** Usage -help information.
@@ -138,7 +146,7 @@ object KeYmaeraX {
         if (options.get('quantitative).isDefined) {
           initializeProver(
             if (options.contains('tool)) options
-            else options ++ configFromFile("mathematica"))
+            else options ++ configFromFile(Tools.MATHEMATICA))
         }
         codegen(options)
       } else if (!options.get('mode).contains(Modes.UI) ) {
@@ -165,11 +173,11 @@ object KeYmaeraX {
 
   private def configFromFile(defaultTool: String): OptionMap = {
     Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
-      case "mathematica" => Map('tool -> "mathematica") ++
+      case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
         ToolConfiguration.mathematicaConfig.map({ case (k,v) => Symbol(k) -> v })
-      case "wolframengine" => Map('tool -> "wolframengine") ++
+      case Tools.WOLFRAMENGINE => Map('tool -> Tools.WOLFRAMENGINE) ++
         ToolConfiguration.wolframEngineConfig.map({ case (k,v) => Symbol(k) -> v })
-      case "z3" => Map('tool -> "z3") ++ ToolConfiguration.z3Config.map({ case (k, v) => Symbol(k) -> v })
+      case Tools.Z3 => Map('tool -> Tools.Z3) ++ ToolConfiguration.z3Config.map({ case (k, v) => Symbol(k) -> v })
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
@@ -198,7 +206,7 @@ object KeYmaeraX {
       case "-verbose" :: tail =>
         require(!map.contains('verbose)); nextOption(map ++ Map('verbose -> true), tail)
       case "-savept" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ptOut -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ptOut -> value), tail)
         else optionErrorReporter("-savept")
       case "-sandbox" :: tail =>
         nextOption(map ++ Map('sandbox -> true), tail)
@@ -218,38 +226,38 @@ object KeYmaeraX {
           nextOption(newMap ++ Map('mode -> Modes.REPL, 'model -> model), restArgs)
         else optionErrorReporter("-repl")
       case "-striphints" :: kyx :: tail =>
-        if(kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.STRIPHINTS, 'in -> kyx), tail)
+        if (kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.STRIPHINTS, 'in -> kyx), tail)
         else optionErrorReporter("-striphints")
       case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> Modes.UI)
       // action options
       case "-out" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
         else optionErrorReporter("-out")
       case "-fallback" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
         else optionErrorReporter("-fallback")
       case "-vars" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
         else optionErrorReporter("-vars")
       case "-monitor" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
         else optionErrorReporter("-monitor")
       case "-tactic" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
         else optionErrorReporter("-tactic")
       case "-tacticName" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tacticName -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tacticName -> value), tail)
         else optionErrorReporter("-tacticName")
       case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
       case "-tool" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tool -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tool -> value.toLowerCase), tail)
         else optionErrorReporter("-tool")
       // aditional options
       case "-mathkernel" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mathkernel -> value), tail)
         else optionErrorReporter("-mathkernel")
       case "-jlink" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('jlink -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('jlink -> value), tail)
         else optionErrorReporter("-jlink")
       case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
       case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
@@ -314,7 +322,7 @@ object KeYmaeraX {
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
       case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
-      case "-tool" => println(noValueMessage + "Please use: -tool mathematica|z3\n\n" + usage); exit(1)
+      case "-tool" => println(noValueMessage + "Please use: -tool mathematica|wolframengine|z3\n\n" + usage); exit(1)
       case _ =>  println("[Error] Unknown option " + option + "\n\n" + usage); exit(1)
     }
   }
@@ -322,11 +330,11 @@ object KeYmaeraX {
   /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
   private def initializeProver(options: OptionMap): Unit = {
     options('tool) match {
-      case "mathematica" => initMathematica(options)
-      case "wolframEngine" => initWolframEngine(options)
-      case "wolframScript" => initWolframScript(options)
-      case "z3" => initZ3(options)
-      case tool => throw new Exception("Unknown tool " + tool)
+      case Tools.MATHEMATICA => initMathematica(options)
+      case Tools.WOLFRAMENGINE => initWolframEngine(options)
+      case Tools.WOLFRAMSCRIPT => initWolframScript(options)
+      case Tools.Z3 => initZ3(options)
+      case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
     }
 
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
@@ -433,7 +441,7 @@ object KeYmaeraX {
         if (fileName.endsWith(".scala")) {
           val tacticGenClasses = new ScalaTacticCompiler().compile(source)
           assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
-          val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[(()=> BelleExpr)]
+          val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[()=> BelleExpr]
           Some(tacticGenerator())
         } else {
           Some(BelleParser(source))
@@ -596,14 +604,14 @@ object KeYmaeraX {
 
     def savePt(pt:ProvableSig):Unit = {
       (pt, options.get('ptOut)) match {
-        case (ptp:TermProvable, Some(path:String)) =>
+        case (ptp: TermProvable, Some(path:String)) =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp
           val writer = new PrintWriter(path)
           writer.write(source)
           writer.close()
         case (_, None) => ()
-        case (ptp:TermProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
+        case (ptp: TermProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
       }
     }
 
