@@ -33,7 +33,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     }
   }
 
-  private def pp(e : BelleExpr, indent: Int): String = {
+  private def pp(e: BelleExpr, indent: Int): String = {
     // Prefer the code name if one exists for this tactic, but looking up code name may throw exception.
     //      println("Looking for a code name for " + e)
     Try(TacticInfo.apply(e.prettyString)).toOption match {
@@ -92,13 +92,13 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     }
   }
 
-  private def argListPrinter(args : List[BelleParser.TacticArg]) = {
+  private def argListPrinter(args: List[BelleParser.TacticArg]) = {
     "(" + args.map(argPrinter).reduce(_ + ", " + _) + ")"
   }
 
-  private def argPrinter(arg : BelleParser.TacticArg) = arg match {
+  private def argPrinter(arg: BelleParser.TacticArg) = arg match {
     case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
-    case Left(expr: String) => "\"" + expr + "\""
+    case Left(expr) => "\"" + expr + "\""
     case Right(loc) => loc.prettyString
   }
 
