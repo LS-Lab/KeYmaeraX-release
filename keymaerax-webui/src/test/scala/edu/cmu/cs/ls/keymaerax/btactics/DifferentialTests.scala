@@ -1591,6 +1591,13 @@ class DifferentialTests extends TacticTestBase {
     TactixLibrary.proveBy(seq,  DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
+  it should "correctly Dconstify 2" in withQE { _ =>
+    val seq = "b=1,x>b,a=-1==> [{x'=a & x > 1}] x*a^2>b".asSequent
+    withTacticProgress(DifferentialTactics.dgBarrier(1), "barrier" :: Nil) {
+      TactixLibrary.proveBy(seq,  _)
+    } shouldBe 'proved
+  }
+
   "DConstV" should "extend domain constraint with const assumptions" in withMathematica {_ =>
     val seq = "f()>0 , v>0, a>0, b>0, <{x'=c+f()}> x>0, c<0 ==> z=1, a>0, [{v'=a+b,x'=y+f() & x>=v | x>=5}]v>0, x=5, y=1".asSequent
     val pr = TactixLibrary.proveBy(seq,DifferentialTactics.DconstV(3) & DifferentialTactics.DconstV(-5))

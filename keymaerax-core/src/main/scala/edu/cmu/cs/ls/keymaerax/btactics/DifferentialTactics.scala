@@ -1330,7 +1330,7 @@ private object DifferentialTactics extends Logging {
   private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
   private lazy val barrierCond2: ProvableSig = remember("h_() = k_() -> max(g_()*g_(),h_()) > 0 -> f_() > 0 ->  ((-(g_()*h_())/max(g_()*g_(),h_())) * f_() + 0) * g_() + f_() * k_() >=0".asFormula,QE,namespace).fact
 
-  def dgBarrier: DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
+  private def dgBarrierAux : DependentPositionTactic = "barrieraux" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
 
     val (system,dom,post) = seq.sub(pos) match {
@@ -1338,11 +1338,7 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"barrier only at box ODE in succedent")
     }
 
-    val consts = (StaticSemantics.freeVars(post) -- StaticSemantics.boundVars(system)).toSet.filter(_.isInstanceOf[BaseVariable])
-    val constPost = consts.foldLeft(post)({ case (fml, v) =>
-      fml.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing))
-    })
-    val (property, propt)= ineqNormalize(constPost)
+    val (property, propt)= ineqNormalize(post)
 
     val starter = propt match {
       case None => skip
@@ -1403,7 +1399,6 @@ private object DifferentialTactics extends Logging {
 
     //Diff ghost z' = qz/2
     val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
-    constify(consts,
       pre &
       DifferentialTactics.dG(dey, None)(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
@@ -1428,7 +1423,11 @@ private object DifferentialTactics extends Logging {
             hideL('Llast) & QE & done,
             cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond) & done
           )
-      ))
+      )
+  })
+
+  def dgBarrier: DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
+    Dconstify(dgBarrierAux(pos))(pos)
   })
 
   /** Find Q|- p' = q p + r, and proves |- Q -> r~0 with appropriate
