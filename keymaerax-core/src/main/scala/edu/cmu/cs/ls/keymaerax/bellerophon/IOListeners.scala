@@ -119,20 +119,20 @@ object IOListeners {
           case _ =>
         }
 
+        val status = output match {
+          case Left(BelleProvable(p, _)) =>
+            if (p.isProved) "proved"
+            else if (p.subgoals.head.succ.headOption.contains(False)) "disproved"
+            else "unfinished"
+          case _ => "failed"
+        }
+
         expr match {
-          case ApplyDefTactic(DefTactic(name, _)) =>
-            printer.println(s"$name done")
-          case e: AppliedPositionTactic => printer.println("done")
+          case ApplyDefTactic(DefTactic(name, _)) => printer.println(s"$name done (" + status + ")")
+          case e: AppliedPositionTactic => printer.println("done (" + status + ")")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
-            val status = output match {
-              case Left(BelleProvable(p, _)) =>
-                if (p.isProved) "proved"
-                else if (p.subgoals.head.succ.headOption.contains(False)) "disproved"
-                else "unfinished"
-              case _ => "failed"
-            }
             printer.println(s"${e.name} done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
-          case _: NamedBelleExpr => printer.println("done (" + (System.currentTimeMillis()-start) + "ms)")
+          case _: NamedBelleExpr => printer.println("done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
           case _ =>
         }
       }
