@@ -381,13 +381,17 @@ private object DifferentialTactics extends Logging {
     seq.sub(pos) match {
       case Some(Box(ode@ODESystem(_, _), p)) =>
         val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
-        consts.foldLeft[BelleExpr](inner)((tactic, c) =>
-          let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
+        constify(consts, inner)
       case Some(Diamond(ode@ODESystem(_, _), p)) =>
         val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
-        consts.foldLeft[BelleExpr](inner)((tactic, c) =>
-          let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
+        constify(consts, inner)
     }
+  })
+
+  /** Turns all `consts` into function symbols. */
+  def constify(consts: Set[Variable], inner: BelleExpr): DependentTactic = TacticFactory.anon ((seq: Sequent) => {
+    consts.foldLeft[BelleExpr](inner)((tactic, c) =>
+      let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
   })
 
  /** Add constant context into the domain constraint at a given (top-level) position by V
@@ -1329,13 +1333,16 @@ private object DifferentialTactics extends Logging {
   def dgBarrier: DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
 
-
     val (system,dom,post) = seq.sub(pos) match {
       case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
       case _ => throw new BelleThrowable(s"barrier only at box ODE in succedent")
     }
 
-    val (property,propt)= ineqNormalize(post)
+    val consts = (StaticSemantics.freeVars(post) -- StaticSemantics.boundVars(system)).toSet.filter(_.isInstanceOf[BaseVariable])
+    val constPost = consts.foldLeft(post)({ case (fml, v) =>
+      fml.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing))
+    })
+    val (property, propt)= ineqNormalize(constPost)
 
     val starter = propt match {
       case None => skip
@@ -1368,7 +1375,7 @@ private object DifferentialTactics extends Logging {
 
     // First cut in the barrier property, then use dgdbx on it
     // Barrier condition is checked first to make it fail faster
-    val pre = dC(barrierFml)(pos) < (
+    val pre = diffCut(barrierFml)(pos) < (
       skip, /* diffWeakenG faster but loses assumptions*/ dW(pos) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
     ) & starter
 
@@ -1396,34 +1403,32 @@ private object DifferentialTactics extends Logging {
 
     //Diff ghost z' = qz/2
     val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
-    pre &
+    constify(consts,
+      pre &
       DifferentialTactics.dG(dey, None)(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
-      dC(gtz)(pos) < (
+      diffCut(gtz)(pos) <(
         diffCut(pcy)(pos) <(
           diffWeakenG(pos) & byUS(dbxRw),
-          Dconstify(
-          diffInd('diffInd)(pos)
-          <(
+          diffInd('diffInd)(pos) <(
             hideL('Llast) & QE,
             cohideOnlyL('Llast) & andL(-1) & andL(-1) & hideL(-2) &
             cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
-            implyRi & implyRi & inspectAndCut
-            <(
+            implyRi & implyRi & inspectAndCut <(
               QE,
               byUS(barrierCond2)
             )
-          ))(pos)
+          )
         )
         ,
         DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
           existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
-          diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
-          < (
-            hideL('Llast) & QE,
-            cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+          // Closes z > 0 invariant with another diff ghost
+          diffInd('diffInd)(pos) <(
+            hideL('Llast) & QE & done,
+            cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond) & done
           )
-      )
+      ))
   })
 
   /** Find Q|- p' = q p + r, and proves |- Q -> r~0 with appropriate
