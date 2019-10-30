@@ -63,7 +63,7 @@ class QETests extends TacticTestBase {
     the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
       """[Bellerophon Runtime] Tactic implySelf(1) is not applicable for
         |    \forall x (true->x=x)->\forall x (true->x()=x)
-        |at position Fixed(1,None,true)
+        |at position 1
         |because No substitution found by unification, try to patch locally with own substitution""".stripMargin
   }
 

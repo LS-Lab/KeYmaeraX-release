@@ -4,7 +4,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -32,25 +31,21 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
+    tree.openGoals.head.goal shouldBe Some("x>0 ==> x>0".asSequent)
     tree.nodes should have size 2
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("implyR(1)")::Nil
-    tree.root.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula)))
-    tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.provable.subgoals should have size 1
-    tree.root.provable.subgoals.head shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    tree.root.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.localProvable.subgoals should have size 1
-    tree.root.localProvable.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
+    tree.root.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.goal shouldBe Some("==> x>0 -> x>0".asSequent)
+    tree.root.provable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.provable.subgoals.loneElement shouldBe "x>0 ==> x>0".asSequent
+    tree.root.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.localProvable.subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
     tree.root.makerShortName shouldBe None
-    tree.root.children should have size 1
-    tree.root.children.head.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.children.head.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
-    tree.root.children.head.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.children.head.localProvable.subgoals should have size 1
-    tree.root.children.head.localProvable.subgoals.head shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    tree.root.children.head.makerShortName shouldBe Some("implyR(1)")
+    tree.root.children.loneElement.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.children.loneElement.goal shouldBe Some("x>0 ==> x>0".asSequent)
+    tree.root.children.loneElement.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.children.loneElement.localProvable.subgoals.loneElement shouldBe "x>0 ==> x>0".asSequent
+    tree.root.children.loneElement.makerShortName shouldBe Some("implyR(1)")
 
     tree.tactic shouldBe tactic
   }
@@ -65,23 +60,21 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals should have size 1
-    tree.openGoals.head.goal shouldBe Some("==> x>0 -> x>0".asSequent)
+    tree.openGoals.loneElement.goal shouldBe Some("==> x>0 -> x>0".asSequent)
     tree.nodes should have size 2
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("""pending("andR(1)")""")::Nil
     tree.root.conclusion shouldBe "==> x>0 -> x>0".asSequent
     tree.root.goal shouldBe Some("==> x>0 -> x>0".asSequent)
-    tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
+    tree.root.provable.conclusion shouldBe "==> x>0 -> x>0".asSequent
     tree.root.provable.subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
     tree.root.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
     tree.root.localProvable.subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
     tree.root.makerShortName shouldBe None
-    tree.root.children should have size 1
-    tree.root.children.head.conclusion shouldBe "==> x>0 -> x>0".asSequent
-    tree.root.children.head.goal shouldBe Some("==> x>0 -> x>0".asSequent)
-    tree.root.children.head.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
-    tree.root.children.head.localProvable.subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
-    tree.root.children.head.makerShortName shouldBe Some("""pending("andR(1)")""")
+    tree.root.children.loneElement.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.children.loneElement.goal shouldBe Some("==> x>0 -> x>0".asSequent)
+    tree.root.children.loneElement.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.children.loneElement.localProvable.subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.children.loneElement.makerShortName shouldBe Some("""pending("andR(1)")""")
   }
 
   "Sequential tactic" should "be split into atomics before being fed to inner" in withDatabase { db =>
@@ -97,21 +90,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("implyR(1)")::Some("id")::Nil
-    tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
+    tree.root.provable.conclusion shouldBe "==> x>0 -> x>0".asSequent
     tree.root.provable shouldBe 'proved
-    tree.root.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.localProvable.subgoals should have size 1
-    tree.root.localProvable.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
+    tree.root.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.localProvable.subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
     tree.root.makerShortName shouldBe None
-    tree.root.children.head.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.children.head.localProvable.subgoals should have size 1
-    tree.root.children.head.localProvable.subgoals.head shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    tree.root.children.head.makerShortName shouldBe Some("implyR(1)")
-    tree.root.children.head.children should have size 1
-    tree.root.children.head.children.head.localProvable.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    tree.root.children.head.children.head.localProvable.subgoals shouldBe empty
-    tree.root.children.head.children.head.makerShortName shouldBe Some("id")
-    tree.root.children.head.children.head.children shouldBe empty
+    tree.root.children.loneElement.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.children.loneElement.localProvable.subgoals.loneElement shouldBe "x>0 ==> x>0".asSequent
+    tree.root.children.loneElement.makerShortName shouldBe Some("implyR(1)")
+    tree.root.children.loneElement.children.loneElement.localProvable.conclusion shouldBe "x>0 ==> x>0".asSequent
+    tree.root.children.loneElement.children.loneElement.localProvable.subgoals shouldBe empty
+    tree.root.children.loneElement.children.loneElement.makerShortName shouldBe Some("id")
+    tree.root.children.loneElement.children.loneElement.children shouldBe empty
 
     tree.tactic shouldBe tactic
   }
@@ -153,21 +143,18 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("implyR(1)")::Some("id")::Nil
-    tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
+    tree.root.provable.conclusion shouldBe "==> x>0 -> x>0".asSequent
     tree.root.provable shouldBe 'proved
-    tree.root.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.localProvable.subgoals should have size 1
-    tree.root.localProvable.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
+    tree.root.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.localProvable.subgoals.loneElement shouldBe "==> x>0 -> x>0".asSequent
     tree.root.makerShortName shouldBe None
-    tree.root.children.head.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
-    tree.root.children.head.localProvable.subgoals should have size 1
-    tree.root.children.head.localProvable.subgoals.head shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    tree.root.children.head.makerShortName shouldBe Some("implyR(1)")
-    tree.root.children.head.children should have size 1
-    tree.root.children.head.children.head.localProvable.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
-    tree.root.children.head.children.head.localProvable.subgoals shouldBe empty
-    tree.root.children.head.children.head.makerShortName shouldBe Some("id")
-    tree.root.children.head.children.head.children shouldBe empty
+    tree.root.children.loneElement.localProvable.conclusion shouldBe "==> x>0 -> x>0".asSequent
+    tree.root.children.loneElement.localProvable.subgoals.loneElement shouldBe "x>0 ==> x>0".asSequent
+    tree.root.children.loneElement.makerShortName shouldBe Some("implyR(1)")
+    tree.root.children.loneElement.children.loneElement.localProvable.conclusion shouldBe "x>0 ==> x>0".asSequent
+    tree.root.children.loneElement.children.loneElement.localProvable.subgoals shouldBe empty
+    tree.root.children.loneElement.children.loneElement.makerShortName shouldBe Some("id")
+    tree.root.children.loneElement.children.loneElement.children shouldBe empty
 
     tree.tactic shouldBe implyR(1) & closeId
   }
@@ -255,41 +242,40 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes should have size 6
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("implyR(1)")::Some("andR(1)")::
       Some("andR(1)")::Some("nil")::Some("id")::Nil
-    tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula))
-    tree.root.provable.subgoals should have size 1
-    tree.root.provable.subgoals.head shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
+    tree.root.provable.conclusion shouldBe "==> x>0 -> x>0&x>=0".asSequent
+    tree.root.provable.subgoals.loneElement shouldBe "x>0 ==> x>=0".asSequent
     tree.root.makerShortName shouldBe None
-    tree.root.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula))
-    tree.root.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula)))
+    tree.root.conclusion shouldBe "==> x>0 -> x>0&x>=0".asSequent
+    tree.root.goal shouldBe Some("==> x>0 -> x>0&x>=0".asSequent)
     tree.root.children should have size 1
 
     val n10 = tree.root.children.head
     n10.makerShortName shouldBe Some("implyR(1)")
-    n10.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&x>=0".asFormula))
-    n10.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&x>=0".asFormula)))
+    n10.conclusion shouldBe "==> x>0 -> x>0&x>=0".asSequent
+    n10.goal shouldBe Some("x>0 ==> x>0&x>=0".asSequent)
     n10.children should have size 2
 
     val n20 = n10.children.head
     n20.makerShortName shouldBe Some("andR(1)")
-    n20.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&x>=0".asFormula))
-    n20.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
+    n20.conclusion shouldBe "x>0 ==> x>0&x>=0".asSequent
+    n20.goal shouldBe Some("x>0 ==> x>0".asSequent)
     n20.children should have size 1
 
     val n4 = n20.children.head
     n4.makerShortName shouldBe Some("id")
-    n4.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
+    n4.conclusion shouldBe "x>0 ==> x>0".asSequent
     n4.goal shouldBe empty
 
     val n21 = n10.children(1)
     n21.makerShortName shouldBe Some("andR(1)")
-    n21.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&x>=0".asFormula))
-    n21.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula)))
+    n21.conclusion shouldBe "x>0 ==> x>0&x>=0".asSequent
+    n21.goal shouldBe Some("x>0 ==> x>=0".asSequent)
     n21.children should have size 1
 
     val n31 = n21.children.head
     n31.makerShortName shouldBe Some("nil")
-    n31.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula))
-    n31.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>=0".asFormula)))
+    n31.conclusion shouldBe "x>0 ==> x>=0".asSequent
+    n31.goal shouldBe Some("x>0 ==> x>=0".asSequent)
     n31.children shouldBe empty
 
     tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, nil)")
@@ -308,45 +294,45 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes should have size 7
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs
       None::Some("implyR(1)")::Some("andR(1)")::Some("andR(1)")::Some("dW(1)")::Some("prop")::Some("id")::Nil
-    tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&[{x'=1&x>=0}]x>=0".asFormula))
+    tree.root.provable.conclusion shouldBe "==> x>0 -> x>0&[{x'=1&x>=0}]x>=0".asSequent
     //tree.root.provable shouldBe 'proved
-    tree.root.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&[{x'=1&x>=0}]x>=0".asFormula))
-    tree.root.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&[{x'=1&x>=0}]x>=0".asFormula)))
+    tree.root.conclusion shouldBe "==> x>0 -> x>0&[{x'=1&x>=0}]x>=0".asSequent
+    tree.root.goal shouldBe Some(" ==> x>0 -> x>0&[{x'=1&x>=0}]x>=0".asSequent)
     tree.root.children should have size 1
 
     val n10 = tree.root.children.head
     n10.makerShortName shouldBe Some("implyR(1)")
-    n10.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0&[{x'=1&x>=0}]x>=0".asFormula))
-    n10.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&[{x'=1&x>=0}]x>=0".asFormula)))
+    n10.conclusion shouldBe " ==> x>0 -> x>0&[{x'=1&x>=0}]x>=0".asSequent
+    n10.goal shouldBe Some("x>0 ==> x>0&[{x'=1&x>=0}]x>=0".asSequent)
     n10.children should have size 2
 
     val n20 = n10.children.head
     n20.makerShortName shouldBe Some("andR(1)")
-    n20.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&[{x'=1&x>=0}]x>=0".asFormula))
-    n20.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
+    n20.conclusion shouldBe "x>0 ==> x>0&[{x'=1&x>=0}]x>=0".asSequent
+    n20.goal shouldBe Some("x>0 ==> x>0".asSequent)
     n20.children should have size 1
 
     val n50 = n20.children.head
     n50.makerShortName shouldBe Some("id")
-    n50.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula))
+    n50.conclusion shouldBe "x>0 ==> x>0".asSequent
     n50.goal shouldBe None
     n50.children shouldBe empty
 
     val n21 = n10.children(1)
     n21.makerShortName shouldBe Some("andR(1)")
-    n21.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0&[{x'=1&x>=0}]x>=0".asFormula))
-    n21.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x>=0}]x>=0".asFormula)))
+    n21.conclusion shouldBe "x>0 ==> x>0&[{x'=1&x>=0}]x>=0".asSequent
+    n21.goal shouldBe Some("x>0 ==> [{x'=1&x>=0}]x>=0".asSequent)
     n21.children should have size 1
 
     val n30 = n21.children.head
     n30.makerShortName shouldBe Some("dW(1)")
-    n30.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x>=0}]x>=0".asFormula))
-    n30.goal shouldBe Some(Sequent(IndexedSeq("x_0>0".asFormula), IndexedSeq("x>=0->x>=0".asFormula)))
+    n30.conclusion shouldBe "x>0 ==> [{x'=1&x>=0}]x>=0".asSequent
+    n30.goal shouldBe Some("==> x>=0->x>=0".asSequent)
     n30.children should have size 1
 
     val n40 = n30.children.head
     n40.makerShortName shouldBe Some("prop")
-    n40.conclusion shouldBe Sequent(IndexedSeq("x_0>0".asFormula), IndexedSeq("x>=0->x>=0".asFormula))
+    n40.conclusion shouldBe "==> x>=0->x>=0".asSequent
     n40.goal shouldBe None
     n40.children shouldBe empty
 
@@ -367,11 +353,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes should have size 9
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("implyR(1)")::Some("andR(1)")::
       Some("andR(1)")::Some("QE")::Some("orL(-1)")::Some("orL(-1)")::Some("QE")::Some("id")::Nil
-    tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0|x>1 -> x>0&x>=0".asFormula))
+    tree.root.provable.conclusion shouldBe "==> x>0|x>1 -> x>0&x>=0".asSequent
     tree.root.provable shouldBe 'proved
     // nodes after orL
-    tree.locate("(4,0)").flatMap(_.goal) shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
-    tree.locate("(4,1)").flatMap(_.goal) shouldBe Some(Sequent(IndexedSeq("x>1".asFormula), IndexedSeq("x>0".asFormula)))
+    tree.locate("(4,0)").flatMap(_.goal) shouldBe Some("x>0 ==> x>0".asSequent)
+    tree.locate("(4,1)").flatMap(_.goal) shouldBe Some("x>1 ==> x>0".asSequent)
     tree.openGoals shouldBe empty
     tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(orL(-1) ; <(id, QE), QE)")
   }}
@@ -387,12 +373,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.root.provable.subgoals should have size 1
-    tree.root.provable.subgoals.head shouldBe Sequent(IndexedSeq("x>1".asFormula), IndexedSeq("x>0".asFormula))
+    tree.root.provable.subgoals.head shouldBe "x>1 ==> x>0".asSequent
     tree.nodes should have size 6
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs
       None::Some("implyR(1)")::Some("orL(-1)")::Some("orL(-1)")::Some("id")::Some("nil")::Nil
-    tree.locate("(2,0)").flatMap(_.goal) shouldBe Some(Sequent(IndexedSeq("x>1".asFormula), IndexedSeq("x>0".asFormula)))
-    tree.locate("(2,1)").flatMap(_.goal) shouldBe Some(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("x>0".asFormula)))
+    tree.locate("(2,0)").flatMap(_.goal) shouldBe Some("x>1 ==> x>0".asSequent)
+    tree.locate("(2,1)").flatMap(_.goal) shouldBe Some("x>0 ==> x>0".asSequent)
     tree.openGoals should have size 1
     tree.tactic shouldBe BelleParser("implyR(1) & orL(-1) & <(nil, id)")
   }
@@ -589,23 +575,22 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes should have size 4
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs
       None::Some("implyR(1)")::Some("andL('L)")::Some("andL('L)")::Nil
-    tree.root.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0&x>1&x>2 -> x>0".asFormula))
-    tree.root.provable.subgoals should contain theSameElementsInOrderAs
-      Sequent(IndexedSeq("x>0".asFormula, "x>1".asFormula, "x>2".asFormula), IndexedSeq("x>0".asFormula))::Nil
+    tree.root.conclusion shouldBe "==> x>0&x>1&x>2 -> x>0".asSequent
+    tree.root.provable.subgoals should contain theSameElementsInOrderAs "x>0, x>1, x>2 ==> x>0".asSequent :: Nil
     tree.root.children should have size 1
     val n10 = tree.root.children.head
     n10.makerShortName shouldBe Some("implyR(1)")
-    n10.goal shouldBe Some(Sequent(IndexedSeq("x>0&x>1&x>2".asFormula), IndexedSeq("x>0".asFormula)))
+    n10.goal shouldBe Some("x>0&x>1&x>2 ==> x>0".asSequent)
     n10.children should have size 1
 
     val n20 = n10.children.head
     n20.makerShortName shouldBe Some("andL('L)")
-    n20.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula, "x>1&x>2".asFormula), IndexedSeq("x>0".asFormula)))
+    n20.goal shouldBe Some("x>0, x>1&x>2 ==> x>0".asSequent)
     n20.children should have size 1
 
     val n30 = n20.children.head
     n30.makerShortName shouldBe Some("andL('L)")
-    n30.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula, "x>1".asFormula, "x>2".asFormula), IndexedSeq("x>0".asFormula)))
+    n30.goal shouldBe Some("x>0, x>1, x>2 ==> x>0".asSequent)
     n30.children shouldBe empty
   }
 
@@ -672,23 +657,22 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.nodes should have size 4
     tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs
       None::Some("implyR(1)")::Some("andL('L)")::Some("andL('L)")::Nil
-    tree.root.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0&x>1&x>2&x>3 -> x>0".asFormula))
-    tree.root.provable.subgoals should contain theSameElementsInOrderAs
-      Sequent(IndexedSeq("x>0".asFormula, "x>1".asFormula, "x>2&x>3".asFormula), IndexedSeq("x>0".asFormula))::Nil
+    tree.root.conclusion shouldBe "==> x>0&x>1&x>2&x>3 -> x>0".asSequent
+    tree.root.provable.subgoals should contain theSameElementsInOrderAs "x>0, x>1, x>2&x>3 ==> x>0".asSequent::Nil
     tree.root.children should have size 1
     val n10 = tree.root.children.head
     n10.makerShortName shouldBe Some("implyR(1)")
-    n10.goal shouldBe Some(Sequent(IndexedSeq("x>0&x>1&x>2&x>3".asFormula), IndexedSeq("x>0".asFormula)))
+    n10.goal shouldBe Some("x>0&x>1&x>2&x>3 ==> x>0".asSequent)
     n10.children should have size 1
 
     val n20 = n10.children.head
     n20.makerShortName shouldBe Some("andL('L)")
-    n20.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula, "x>1&x>2&x>3".asFormula), IndexedSeq("x>0".asFormula)))
+    n20.goal shouldBe Some("x>0, x>1&x>2&x>3 ==> x>0".asSequent)
     n20.children should have size 1
 
     val n30 = n20.children.head
     n30.makerShortName shouldBe Some("andL('L)")
-    n30.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula, "x>1".asFormula, "x>2&x>3".asFormula), IndexedSeq("x>0".asFormula)))
+    n30.goal shouldBe Some("x>0, x>1, x>2&x>3 ==> x>0".asSequent)
     n30.children shouldBe empty
   }
 
@@ -1128,12 +1112,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
-    trace.steps should have size 16
+    trace.steps should have size 4
     trace.steps.head.rule shouldBe "implyR(1)"
-    tree.tactic shouldBe BelleParser(
-      """implyR(1) ; discreteGhost("x",1) ; assignEquality(1) ; allR2L('Llast) ; hideL('Llast) ;
-        |dC("x_0>=0",1) ; <(cohide(1) ; DW(1) ; G(1) ; implyR(1) ; andL('Llast) ; implyRi(-1,1),
-        |                   V('Rlast) ; idWith('Rlast))""".stripMargin)
+    tree.tactic shouldBe BelleParser("implyR(1) ; (DW(1) ; G(1))")
   }}
 
   it should "should work for diffWeaken" in withMathematica { _ => withDatabase { db =>
@@ -1147,15 +1128,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
     trace.steps.map(_.rule) should contain theSameElementsInOrderAs List("implyR(1)", "andL('Llast)", "andL('Llast)",
-      "nil", "discreteGhost(\"x\",1)", "assignEquality(1)", "allR2L('Llast)", "hideL('Llast)",
-      "dC(\"x_0>=0&y>=0&z>=0\",1)", "V('Rlast)", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "idWith('Rlast)",
-      "idWith('Rlast)", "idWith('Rlast)", "nil", "cohide(1)", "DW(1)", "G(1)", "implyR(1)", "andL('Llast)",
-      "andL('Llast)", "andL('Llast)", "implyRi(-1,1)")
+      "dC(\"y>=0&z>=0\",1)", "V(1)", "prop", "nil", "DW(1)", "G(1)")
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('Llast) ; andL('Llast) ; discreteGhost("x",1) ; assignEquality(1) ; allR2L('Llast) ;
-        |hideL('Llast) ; dC("x_0>=0&y>=0&z>=0",1) ; <(
-        |   cohide(1) ; DW(1) ; G(1) ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; implyRi(-1,1),
-        |   V('Rlast) ; andR('Rlast) ; <( idWith('Rlast), andR('Rlast) ; <( idWith('Rlast), idWith('Rlast) ) ) )""".stripMargin)
+      "implyR(1) ; (andL('Llast) ; (andL('Llast) ; (dC(\"y>=0&z>=0\",1) ; <( DW(1) ; G(1), V(1) ; prop ))))")
   }}
 
   it should "should work for Bouncing Ball diffWeaken" in withMathematica { _ => withDatabase { db =>
@@ -1169,38 +1144,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
     trace.steps.map(_.rule) should contain theSameElementsInOrderAs List("implyR(1)", "andL('Llast)", "andL('Llast)",
-      "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "nil", "discreteGhost(\"x\",1)",
-      "discreteGhost(\"v\",1)", "assignEquality(1)", "allR2L('Llast)", "hideL('Llast)", "assignEquality(1)",
-      "allR2L('Llast)", "hideL('Llast)", "dC(\"2*g*x_0<=2*g*H-v_1^2&x_0>=0&g>0&1>=c&c>=0&r>=0&x_0=0&v_0=-c*v_1\",1)",
-      "V('Rlast)", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "andR('Rlast)", "nil",
-      "andR('Rlast)", "nil", "andR('Rlast)", "nil", "andR('Rlast)", "nil", "idWith('Rlast)", "idWith('Rlast)",
-      "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)", "idWith('Rlast)",
-      "nil", "cohide(1)", "DW(1)", "G(1)", "implyR(1)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)",
-      "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "implyRi(-1,1)")
+      "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "dC(\"g>0&1>=c&c>=0&r>=0\",1)",
+      "V(1)", "prop", "nil", "DW(1)", "G(1)")
     tree.tactic shouldBe BelleParser(
-      """implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ;
-        |andL('Llast) ; discreteGhost("x",1) ; discreteGhost("v",1) ; assignEquality(1) ; allR2L('Llast) ;
-        |hideL('Llast) ; assignEquality(1) ; allR2L('Llast) ; hideL('Llast) ;
-        |dC("2*g*x_0<=2*g*H-v_1^2&x_0>=0&g>0&1>=c&c>=0&r>=0&x_0=0&v_0=-c*v_1",1) ; <(
-        |   cohide(1) ; DW(1) ; G(1) ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ;
-        |   andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; implyRi(-1,1)
-        |   ,
-        |   V('Rlast) ; andR('Rlast) ; <(
-        |     idWith('Rlast),
-        |     andR('Rlast) ; <(
-        |       idWith('Rlast),
-        |       andR('Rlast) ; <(
-        |         idWith('Rlast),
-        |         andR('Rlast) ; <(
-        |           idWith('Rlast),
-        |           andR('Rlast) ; <(
-        |             idWith('Rlast),
-        |             andR('Rlast) ; <(
-        |               idWith('Rlast),
-        |               andR('Rlast) ; <(
-        |                 idWith('Rlast),
-        |                 idWith('Rlast) ) ) ) ) ) ) )
-        |)""".stripMargin)
+      """implyR(1) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ;
+        |(andL('Llast) ; (dC("g>0&1>=c&c>=0&r>=0",1) ; <( DW(1) ; G(1), V(1) ; prop )))))))))""".stripMargin)
   }}
 
   it should "work with assertions/print/debug on multi-subgoal provables" in withDatabase { db =>
@@ -1485,14 +1433,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         DbProofTree(db, id1.toString).locate("(3,1)") match {
           case Some(n2) =>
             val (_, tactic) = stepInto(n2, "dI(1)")(db)
-            val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
+            val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
                                  |  QE,
-                                 |  derive(1.1) ; DE(1) ;
-                                 |  Dassignb(1.1) ;
-                                 |  Dassignb(1.1) ;
-                                 |  Dassignb(1.1) ;
-                                 |  DW(1) ;
-                                 |  GV(1) ; QE
+                                 |  derive('Rlast.1) ; DE('Rlast) ;
+                                 |  Dassignb('Rlast.1) ;
+                                 |  Dassignb('Rlast.1) ;
+                                 |  Dassignb('Rlast.1) ;
+                                 |  DW('Rlast) ;
+                                 |  GV('Rlast) ; QE
                                  |)
                                """.stripMargin
             tactic shouldBe BelleParser(tacticString)
@@ -1514,9 +1462,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
+        val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
                              |  QE,
-                             |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+                             |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
                              |)""".stripMargin
         tactic shouldBe BelleParser(tacticString)
         BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
@@ -1537,9 +1485,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
+        val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
                              |  QE,
-                             |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+                             |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
                              |)""".stripMargin
         tactic shouldBe BelleParser(tacticString)
         BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
@@ -1560,9 +1508,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
+        val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
                              |  QE,
-                             |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+                             |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
                              |)
                            """.stripMargin
         tactic shouldBe BelleParser(tacticString)
@@ -1584,9 +1532,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db, innerId.toString)
     val tactic = tree.tactic
     //@todo want pending("QE") or pending("QE & done | done") instead of nil
-    val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
+    val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
                          |  nil,
-                         |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+                         |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
                          |)""".stripMargin
     tactic shouldBe BelleParser(tacticString)
     BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
@@ -1605,9 +1553,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = DbProofTree(db, innerId.toString).tactic
     //@todo want pending("QE") or pending("QE & done | done") instead of nil
-    val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
+    val tacticString = """DI(1) ; implyR(1) ; andR('Rlast) ; <(
                          |  nil,
-                         |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
+                         |  derive('Rlast.1) ; DE('Rlast) ; Dassignb('Rlast.1) ; GV('Rlast) ; QE
                          |)""".stripMargin
     tactic shouldBe BelleParser(tacticString)
     BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
