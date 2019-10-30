@@ -117,8 +117,8 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     OPTIONAL.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, OPTIONAL, loc))),
     // positions
     ABSOLUTE_POSITION.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, ABSOLUTE_POSITION(pos), loc))),
-    LAST_SUCCEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, LAST_SUCCEDENT, loc))),
-    LAST_ANTECEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, LAST_ANTECEDENT, loc))),
+    LAST_SUCCEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, LAST_SUCCEDENT(pos), loc))),
+    LAST_ANTECEDENT.startPattern -> ((s: String, loc: Location, pos: String) => Right(consumeTerminalLength(s, LAST_ANTECEDENT(pos), loc))),
     SEARCH_SUCCEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_SUCCEDENT, loc))),
     SEARCH_ANTECEDENT.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_ANTECEDENT, loc))),
     SEARCH_EVERYWHERE.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEARCH_EVERYWHERE, loc))),

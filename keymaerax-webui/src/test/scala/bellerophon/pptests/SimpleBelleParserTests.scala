@@ -79,7 +79,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse a built-in argument with an absolute non-top-level postion" in {
-    val pos = BelleParser.parseAbsolutePosition("1.1", UnknownLocation)
+    val pos = BelleParser.parsePositionLocator("1.1", UnknownLocation)
     BelleParser("boxAnd(1.1)") shouldBe (round trip HilbertCalculus.boxAnd(pos))
   }
 
@@ -111,8 +111,16 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("boxAnd('Rlast)") shouldBe (round trip HilbertCalculus.boxAnd(LastSucc(0)))
   }
 
+  it should "parse a built-in argument with a 'Rlast subposition locator" in {
+    BelleParser("boxAnd('Rlast.1)") shouldBe (round trip HilbertCalculus.boxAnd(LastSucc(0, PosInExpr(1::Nil))))
+  }
+
   it should "parse a built-in argument with a 'Llast position locator" in {
     BelleParser("boxAnd('Llast)") shouldBe (round trip HilbertCalculus.boxAnd(LastAnte(0)))
+  }
+
+  it should "parse a built-in argument with a 'Llast subposition locator" in {
+    BelleParser("boxAnd('Llast.0.1)") shouldBe (round trip HilbertCalculus.boxAnd(LastAnte(0, PosInExpr(0::1::Nil))))
   }
 
   it should "parse a built-in argument with a '_ position locator" in {

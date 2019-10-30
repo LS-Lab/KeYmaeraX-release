@@ -101,7 +101,8 @@ private object COMMA extends BelleTerminal(",")
 private trait TACTIC_ARGUMENT
 
 // Positions
-private case class ABSOLUTE_POSITION(positionString: String) extends BelleTerminal(positionString) with TACTIC_ARGUMENT {
+private abstract class BASE_POSITION(positionString: String) extends BelleTerminal(positionString) with TACTIC_ARGUMENT
+private case class ABSOLUTE_POSITION(positionString: String) extends BASE_POSITION(positionString) {
   override def regexp: Regex = ABSOLUTE_POSITION.regexp
   override val startPattern: Regex = ABSOLUTE_POSITION.startPattern
   override def toString = s"ABSOLUTE_POSITION($positionString)"
@@ -110,8 +111,24 @@ private object ABSOLUTE_POSITION {
   def regexp: Regex = """(-?\d+(?:\.\d+)*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
-private object LAST_SUCCEDENT extends BelleTerminal("'Rlast") with TACTIC_ARGUMENT
-private object LAST_ANTECEDENT extends BelleTerminal("'Llast") with TACTIC_ARGUMENT
+private case class LAST_SUCCEDENT(positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = LAST_SUCCEDENT.regexp
+  override val startPattern: Regex = LAST_SUCCEDENT.startPattern
+  override def toString: String = s"LAST_SUCCEDENT($positionString)"
+}
+private object LAST_SUCCEDENT {
+  def regexp: Regex = """('Rlast(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
+}
+private case class LAST_ANTECEDENT(positionString: String) extends BASE_POSITION(positionString) {
+  override def regexp: Regex = LAST_ANTECEDENT.regexp
+  override val startPattern: Regex = LAST_ANTECEDENT.startPattern
+  override def toString: String = s"LAST_ANTECEDENT($positionString)"
+}
+private object LAST_ANTECEDENT {
+  def regexp: Regex = """('Llast(?:\.\d+)*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
+}
 private object SEARCH_SUCCEDENT extends BelleTerminal("'R") with TACTIC_ARGUMENT
 private object SEARCH_ANTECEDENT extends BelleTerminal("'L") with TACTIC_ARGUMENT
 private object SEARCH_EVERYWHERE extends BelleTerminal("'_") with TACTIC_ARGUMENT {

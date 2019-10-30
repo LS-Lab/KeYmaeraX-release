@@ -551,7 +551,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
         case BelleToken(SEARCH_EVERYWHERE, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
           Right(new Find(0, Some(defs.exhaustiveSubst(expr.expression)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(ABSOLUTE_POSITION(posString), _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
-          val Fixed(pp, _, _) = parseAbsolutePosition(posString, loc)
+          val Fixed(pp, _, _) = parsePositionLocator(posString, loc)
           val what: Formula = defs.exhaustiveSubst(expr.expression) match {
             case f: Formula => f
             case FuncOf(Function(name, idx, domain, _, _), child) => PredOf(Function(name, idx, domain, Bool), child)
@@ -589,9 +589,9 @@ object BelleParser extends (String => BelleExpr) with Logging {
     */
   private def parseArgumentToken(expectedType: Option[ArgInfo])(tok : BelleToken, loc: Location) : TacticArg = tok.terminal match {
     case terminal : TACTIC_ARGUMENT => terminal match {
-      case ABSOLUTE_POSITION(posString) => Right(parseAbsolutePosition(posString, tok.location))
-      case LAST_ANTECEDENT              => Right(LastAnte(0)) //@todo 0?
-      case LAST_SUCCEDENT               => Right(LastSucc(0)) //@todo 0?
+      case ABSOLUTE_POSITION(posString) => Right(parsePositionLocator(posString, tok.location))
+      case LAST_ANTECEDENT(posString)   => Right(parsePositionLocator(posString, tok.location))
+      case LAST_SUCCEDENT(posString)    => Right(parsePositionLocator(posString, tok.location))
       case SEARCH_ANTECEDENT            => Right(Find.FindL(0, None)) //@todo 0?
       case SEARCH_SUCCEDENT             => Right(Find.FindR(0, None)) //@todo 0?
       case SEARCH_EVERYWHERE            => Right(new Find(0, None, AntePosition(1), exact = true)) //@todo 0?
@@ -642,25 +642,32 @@ object BelleParser extends (String => BelleExpr) with Logging {
     * Public because this is a useful utility function.
     *
     * @see [[parseArgumentToken]] */
-  def parseAbsolutePosition(s : String, location: Location) : PositionLocator = {
-    if (!s.contains(".")) Fixed(Position(parseInt(s, location)))
-    else {
+  def parsePositionLocator(s: String, location: Location): PositionLocator = {
+    if (!s.contains(".")) s match {
+      case "'Llast" => LastAnte(0) //@todo 0?
+      case "'Rlast" => LastSucc(0) //@todo 0?
+      case _ => Fixed(Position(parseInt(s, location)))
+    } else {
       val subPositionStrings = s.split('.')
       val subPositions = subPositionStrings.tail.map(x => parseInt(x, location, nonZero=false))
-      Fixed(Position(parseInt(subPositionStrings.head, location), subPositions.toList))
+      subPositionStrings.head match {
+        case "'Llast" => LastAnte(0, PosInExpr(subPositions.toList)) //@todo 0?
+        case "'Rlast" => LastSucc(0, PosInExpr(subPositions.toList)) //@todo 0?
+        case _ => Fixed(Position(parseInt(subPositionStrings.head, location), subPositions.toList))
+      }
+
     }
   }
 
   /** Parses s to a non-zero integer or else throws a ParseException pointing to location.
     *
-    * @see [[parseAbsolutePosition]] */
+    * @see [[parsePositionLocator]] */
   private def parseInt(s: String, location: Location, nonZero: Boolean = true) =
     try {
       val pos = Integer.parseInt(s)
       if (nonZero && pos == 0) throw ParseException("0 is not a valid absolute (sub)position -- must be (-inf, -1] \\cup [1, inf)", location)
       else pos
-    }
-    catch {
+    } catch {
       case _: NumberFormatException => throw ParseException("Could not parse absolute position a (sequence of) integer(s)", location)
     }
 
