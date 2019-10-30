@@ -179,7 +179,16 @@ object RestApi extends Logging {
     } ~
       post {
         entity(as[String]) { themeStr => {
-          val theme = themeStr.parseJson.asJsObject.fields.map({case (k,v) => k -> v.toString})
+          def convert(k: String, v: JsValue): (String, String) = k match {
+            case "renderMargins" => v match {
+              case _: JsArray => k -> v.toString()
+              case o: JsObject if Set("0","1").subsetOf(o.fields.keySet) => k -> JsArray(o.fields("0"), o.fields("1")).toString
+              case _ => throw new IllegalArgumentException("Render margins must be either an array of numbers or an object {'0': JsNumber, '1': JsNumber}, but got " + v.toString)
+            }
+            case _ => k -> v.toString()
+          }
+
+          val theme = themeStr.parseJson.asJsObject.fields.map({case (k,v) => convert(k, v)})
           val request = new SetUserThemeRequest(database, userId, theme("css"), theme("fontSize"), theme("renderMargins"))
           completeRequest(request, t)
         }}}
