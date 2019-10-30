@@ -63,6 +63,16 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "prove a 2D equilibirum with consts" in withQE { _ =>
+    val fml = "x=0&y=0&a=1&c=0 ==> [{x'=a*y+b,y'=a*x+b&b=0}](x=c&y=x*c)".asSequent
+
+    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys)(1) & dW(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   it should "prove a 2D disequilibirum" in withQE { _ =>
     val fml = "x=0&y=1 ==> [{x'=y,y'=x}](x!=0|y!=0)".asSequent
 
@@ -209,6 +219,17 @@ class ODEInvarianceTests extends TacticTestBase {
     pr.subgoals(0) shouldBe "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, x>0|x=0".asSequent
     //In the p=0 case, more work needs to be done
     pr.subgoals(1) shouldBe "x>=0, x=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&1+x>=0}>t_!=0".asSequent
+  }
+
+  it should "take a local progress step with Dconstify" in withMathematica { qeTool =>
+    val seq = "x>=0, a=1, b=1 ==> <{t_'=1,x'=a&x-a*b>=0}>t_!=0, <{t_'=1,x'=a&x-a*b>=0}>t_!=0".asSequent
+    val pr = proveBy(seq, lpstep(2))
+    println(pr)
+    pr.subgoals should have size 2
+    //Local progress into p>=0 requires p>0 | p=0 initially
+    pr.subgoals(0) shouldBe "x>=0, a=1, b=1 ==> <{t_'=1,x'=a&x-a*b>=0}>t_!=0, x-a*b>0|x-a*b=0".asSequent
+    //In the p=0 case, more work needs to be done
+    pr.subgoals(1) shouldBe "x>=0, a=1, b=1, x-a*b=0 ==> <{t_'=1,x'=a&x-a*b>=0}>t_!=0, <{t_'=1,x'=a&a>=0}>t_!=0".asSequent
   }
 
   it should "package with real induction" in withQE { qeTool =>

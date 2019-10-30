@@ -1305,6 +1305,7 @@ private object DifferentialTactics extends Logging {
             if (isOpen) openDiffInd(pos) else diffInd('full)(pos)
           )
           ,
+          //@note does not need Dconstify since postcondition is dbxy_>0 and ODE has dbxy_'
           DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
             diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost

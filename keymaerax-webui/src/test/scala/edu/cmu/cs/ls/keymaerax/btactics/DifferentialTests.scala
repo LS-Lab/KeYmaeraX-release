@@ -1504,6 +1504,12 @@ class DifferentialTests extends TacticTestBase {
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x*A+B()".asTerm)(1)) shouldBe 'proved
   }
 
+  it should "prove equational darboux with consts" in withQE { _ =>
+    //(x+z)' = (x*A+B)(x+z)
+    val seq = "x=0 & a = 5 & b=0 ==> [{x'=a*x+b}] x-b=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("5".asTerm)(1)) shouldBe 'proved
+  }
+
   it should "prove fractional darboux" in withQE { _ =>
     //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
     //assumes z^2 non-zero already in evol domain, or the ghost will report a singularity
