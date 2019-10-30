@@ -182,6 +182,8 @@ object ODEInvariance {
    * G |- <x'=f(x)&p>=0>o,D
    *
    * As a standalone tactic, this directly cuts p=0 | p>0 and leaves it open
+   *
+   * @note uses Dconstify internally instead of an external wrapper because it leaves open goals afterwards
    */
   def lpstep: DependentPositionTactic = "lpstep" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "LP step currently only in top-level succedent")
@@ -677,6 +679,7 @@ object ODEInvariance {
     * @param negate implements vectorial darboux inequality instead
     * @return tactic implementing vdbx as described above
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+    * @note uses Dconstify and handles other constification internally instead of an external wrapper
     */
   private lazy val dbxCond: ProvableSig = remember("((-g_())*y_()+0)*(z_())^2 + y_()*(2*z_()^(2-1)*(g_()/2*z_()+0))=0".asFormula,QE,namespace).fact
 
@@ -770,7 +773,7 @@ object ODEInvariance {
                 //useAt(pr,PosInExpr(1::Nil))(pos) &
                 //DebuggingTactics.debug("First Vdbx QE",true) &
                 //p=0 must be true initially
-                (QE & done | DebuggingTactics.done("dRI condition must hold in the beginning")),
+                (QE & done | DebuggingTactics.done("Vdbx condition must hold in the beginning")),
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
                   // or the negated version ((-g)y+0)p + y(p') >= 0
