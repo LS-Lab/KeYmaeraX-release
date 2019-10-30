@@ -278,6 +278,7 @@ object KeYmaeraX {
 
   private def parseProblemFile(fileName: String) = {
     try {
+      initializeProver(Map('tool -> "z3")) //@note parsing an archive with tactics requires prover (AxiomInfo)
       KeYmaeraXArchiveParser.parseFromFile(fileName).foreach(e => {
         println(e.name)
         println(KeYmaeraXPrettyPrinter(e.model))
