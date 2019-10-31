@@ -552,7 +552,7 @@ class ODETests extends TacticTestBase {
         <(
         (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
           <(
-          dW(1) & QE,
+          dWPlus(1) & QE,
           dI('full)(1)
         ),
         hideR(1) & QE
