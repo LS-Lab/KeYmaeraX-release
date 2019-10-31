@@ -1559,7 +1559,7 @@ object ODEInvariance {
 
     val finish =
       if (solveEnd)
-        ?(dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
+        ?(diffWeakenPlus('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
           implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
           SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
           SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite

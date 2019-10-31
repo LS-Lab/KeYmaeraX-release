@@ -300,39 +300,41 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  //TODO: ALL remaining barrier certificates fail to prove with sAIclosed because its internal rank computation gets stuck
-  it should "prove duffing" ignore withQE { qeTool =>
+  //TODO: these barrier certificates fail to prove with sAIclosed because its internal rank computation gets stuck
+  it should "prove duffing" in withMathematica { qeTool =>
     val fml = "(-((2*x)/5) + y)^2 <= 1/200 & x^2 <= 1/16 -> [{x'=y, y'=x - x^3 - y}] -(3/2) + x^2 + 4*y^2 <= 0".asFormula
     //The actual invariant:
     val pr = proveBy(fml, implyR(1) &
       dC("-641 + 2*x - 5*y + 49039*y^2 + 115*y^3 + 397279*y^4 + 1022*y^5 + 64226*y^6 - 41291*x*y - 148*x*y^2 - 248650*x*y^3 - 362*x*y^4 - 11562*x*y^5 + 10969*x^2 + 17*x^2*y - 102496*x^2*y^2 - 18*x^2*y^3 + 10911*x^2*y^4 + 12*x^3 + 83659*x^3*y + 51*x^3*y^2 + 98766*x^3*y^3 - 20780*x^4 + 4*x^4*y + 66980*x^4*y^2 - 13*x^5 - 40639*x^5*y + 10000*x^6<=0".asFormula)(1) <(
         dW(1) & QE,
-        sAIclosed(1)
+        // sAIclosed(1)
+        sAIclosedPlus(1)(1)
       )
     )
     println(pr)
     pr shouldBe 'proved
   }
 
-  it should "prove FM'18 constructed example" ignore withMathematica { qeTool =>
+  it should "prove FM'18 constructed example" in withMathematica { qeTool =>
     val fml = "x1<=0 & x2<=0 & x3 <=0 -> [{x1'=2*x1+x2+2*x3-x1^2+x1*x3-x3^2, x2'=-2+x1-x2-x2^2, x3'=-2-x2-x3+x1^2-x1*x3}]!(x1+x2+x3>=1)".asFormula
     val pr = proveBy(fml, implyR(1) &
       //B1,B2,B3 <=0
       dC("1/100*(365*x1+365*x2+365*x3-60) <= 0 & 1/100*(175*x1+180*x2+100*x3-160)<=0 & 1/100*(460*x1+155*x2+270*x3-250)<=0".asFormula)(1) <(
         dW(1) & QE,
-        //dgBarrier(1)
-        sAIclosed(1)
+        // sAIclosed(1)
+        sAIclosedPlus(1)(1)
       )
     )
     println(pr)
     pr shouldBe 'proved
   }
 
-  it should "prove Strict(3) example" ignore withMathematica { qeTool =>
+  it should "prove Strict(3) example" in withMathematica { qeTool =>
     //The invariant has a special point which requires the 3rd Lie derivative
     val fml = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3 -> [{x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)}]((-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3)".asFormula
     val pr = proveBy(fml, implyR(1) &
-      sAIclosed(1)
+      // sAIclosed(1)
+      sAIclosedPlus(3)(1)
     )
     println(pr)
     pr shouldBe 'proved
@@ -358,9 +360,6 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  /**
-    * OLD TEST CASES that should be deleted together with sAIclosedPlus
-    */
   "ODEInvariance" should "compute (bounded) p*>0" in withMathematica { qeTool =>
     val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
     val poly = "x+y*z".asTerm
@@ -589,7 +588,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val seq = "x=0&v=0 ==> j!=1,[{x'=v,v'=a, a'=j & x+v+a <= 100}] x+v+a>=0, a!=0".asSequent
 
     val pr = time { proveBy(seq,
-      nilpotentSolve(false)(2) & dW(3) & QE
+      nilpotentSolve(false)(2) & dWPlus(3) & QE
     )}
     pr shouldBe 'proved
 
@@ -616,7 +615,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "x=0&v=0&a=1 -> [{x'=v,v'=a & x+v+a <= 100}] x+v+a>=0".asFormula
 
     val pr = time { proveBy(fml,
-      implyR(1) & nilpotentSolve(false)(1) & dW(1) & QE
+      implyR(1) & nilpotentSolve(false)(1) & dWPlus(1) & QE
     )}
     pr shouldBe 'proved
 
@@ -644,7 +643,7 @@ class ODEInvarianceTests extends TacticTestBase {
 
     val fml = "x=0&v=0&a=0&j=0&k=1&l=0 -> [{k'=l,l'=1,x'=v,v'=a,a'=j,j'=k & x+x*v+a+j+k <= 100}] x+v+a+j+k>=0".asFormula
     val pr = time { proveBy(fml,
-      implyR(1) & nilpotentSolve(false)(1) & dW(1) & QE
+      implyR(1) & nilpotentSolve(false)(1) & dWPlus(1) & QE
     )}
     pr shouldBe 'proved
 
@@ -653,11 +652,10 @@ class ODEInvarianceTests extends TacticTestBase {
     )}
     pr2 shouldBe 'proved
 
-    //Bug in solve
-//    val pr3 = time { proveBy(fml,
-//      implyR(1) & solve(1) & QE
-//    )}
-//    pr3 shouldBe 'proved
+    val pr3 = time { proveBy(fml,
+      implyR(1) & solve(1) & QE
+    )}
+    pr3 shouldBe 'proved
   }
 
   it should "put an obfuscated ODE into linear form and cut solution" in withMathematica { qeTool =>
@@ -666,7 +664,7 @@ class ODEInvarianceTests extends TacticTestBase {
     // z'   (1 5 -3) z   5C
     val pr = proveBy("x=1&y=1&A()=1 -> [{x'=2*(-z+x+y)+A(),y'=y+5*x-3*z-B(),z'=x-3*z+5*(y+C)}] x+y+z >= 0".asFormula,
       //val pr = proveBy("x=1&y=1 -> [{x'=x+y,y'=-x-y}] x=0".asFormula,
-      implyR(1) & nilpotentSolve(false)(1) & dW(1) & implyR(1) &
+      implyR(1) & nilpotentSolve(false)(1) & dWPlus(1) & implyR(1) &
       SaturateTactic(andL('Llast))
     )
 
@@ -678,8 +676,8 @@ class ODEInvarianceTests extends TacticTestBase {
 
   it should "not dW when unprovable" in withMathematica { _ =>
     val result = proveBy("l() < r(), l()<=x, x<=r(), x=l() ==> [{x'=1&l()>=x|x>=r()}](l()<=x&x<=r())".asSequent,
-      nilpotentSolve(false)(1))
-    result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), time_=0, x_0=x ==> [{x'=1,time_'=1&(l()>=x|x>=r())&time_>=0&x=time_+x_0}](l()<=x&x<=r())".asSequent
+      nilpotentSolve(true)(1))
+    result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), time_=0, x_0=x ==> [{x'=1,time_'=1&(l()>=x|x>=r())&time_>=0&x=time_+x_0}](l()<=x&x<=r())".asSequent
   }
 
 }

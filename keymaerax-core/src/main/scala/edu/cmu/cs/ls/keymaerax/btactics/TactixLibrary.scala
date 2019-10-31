@@ -567,6 +567,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
     * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
   lazy val dW         : DependentPositionTactic = DifferentialTactics.diffWeaken
+
+  /** Same as dW but preserves information about the initial conditions */
+  lazy val dWPlus     : DependentPositionTactic = DifferentialTactics.diffWeakenPlus
+
   /** DC: Differential Cut a new invariant, use old(x) to refer to initial values of variable x.
     * Use special function old(.) to introduce a discrete ghost for the starting value of a variable that can be
     * used in the evolution domain constraint.
