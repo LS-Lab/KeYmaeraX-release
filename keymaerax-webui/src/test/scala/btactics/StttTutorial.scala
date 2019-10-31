@@ -63,7 +63,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
     val tactic = implyR('_) & SaturateTactic(andL('_)) & dC("v>=0".asFormula)(1) & Idioms.<(
       dC("x>=old(x)".asFormula)(1) & Idioms.<(
-        dW(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop,
+        dW(1) & SaturateTactic(alphaRule) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop,
         dI()(1)
       ),
       dI()(1)
@@ -75,7 +75,7 @@ class StttTutorial extends TacticTestBase {
   it should "be provable with multi-arg invariant" in withQE { _ => withDatabase { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
     val tactic = implyR('_) & SaturateTactic(andL('_)) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
-      dW(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop
+      dW(1) & SaturateTactic(alphaRule) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
 //    db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -306,7 +306,7 @@ class StttTutorial extends TacticTestBase {
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
           printIndexed("Acc") & hideL(-15, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
             SaturateTactic(alphaRule) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-6, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-13, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(hideQE & speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(hideQE & speculativeQE)
@@ -332,7 +332,7 @@ class StttTutorial extends TacticTestBase {
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
           printIndexed("Acc") & hideL(-15, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
             SaturateTactic(alphaRule) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-6, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-13, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(hideQE & speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(hideQE & speculativeQE)
