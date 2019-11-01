@@ -73,7 +73,7 @@ object TacticHelper {
       case _ => assert(false, "s(pos) should hve form [a]p or <a>p.")
     }
 
-    val freeInGamma = s.ante.map(StaticSemantics.freeVars).reduce(_ ++ _)
+    val freeInGamma = s.ante.map(StaticSemantics.freeVars).fold(SetLattice.bottom)(_ ++ _)
     val freeInModality = StaticSemantics.freeVars(s(pos))
     val boundInProgram = StaticSemantics.boundVars(program)
 

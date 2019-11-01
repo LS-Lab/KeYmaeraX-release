@@ -680,4 +680,9 @@ class ODEInvarianceTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), time_=0, x_0=x ==> [{x'=1,time_'=1&(l()>=x|x>=r())&time_>=0&x=time_+x_0}](l()<=x&x<=r())".asSequent
   }
 
+  it should "prove a trivial ODE" in withMathematica { _ =>
+    val result = proveBy("==> [{x'=x}]1=1".asSequent, odeInvariant(1))
+    result shouldBe 'proved
+  }
+
 }
