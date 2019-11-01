@@ -440,6 +440,9 @@ object Ax extends Logging {
     key = "0", recursor = "1.1.1;1.1.0;1;0")
   val RIclosedgeq = coreAxiom("RI& closed real induction >=")
 
+  @Axiom("IVT", conclusion = "<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z&p(t,x))→t<=z→<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t=z∧<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z∧p(t,x))", unifier = "full")
+  val IVT = coreAxiom("IVT")
+
   /* DIFFERENTIAL AXIOMS */
 
   @Axiom("c()'", conclusion = "__(c)'__=0", unifier = "linear",

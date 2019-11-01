@@ -391,6 +391,13 @@ Axiom "RI& closed real induction >="
   [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
 
+Axiom "IVT"
+  <{c&q(||)}>(f(||)>=0&p(||)) -> f(||)<=0 -> <{c&q(||)}> (f(||)=0 & <{c&q(||)}>(f(||)>=0&p(||)))
+  /* @note formal proof IVTaxiom in https://github.com/LS-Lab/Isabelle-dL/blob/d6ca357/Differential_Axioms2.thy
+   * soundness requires f(||) to be continuous
+   */
+End.
+
 /** DIFFERENTIAL AXIOMS */
 
 Axiom "c()' derive constant fn"
