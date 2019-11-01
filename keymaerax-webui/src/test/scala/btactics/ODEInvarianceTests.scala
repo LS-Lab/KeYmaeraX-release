@@ -680,9 +680,16 @@ class ODEInvarianceTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), time_=0, x_0=x ==> [{x'=1,time_'=1&(l()>=x|x>=r())&time_>=0&x=time_+x_0}](l()<=x&x<=r())".asSequent
   }
 
-  it should "prove a trivial ODE" in withMathematica { _ =>
-    val result = proveBy("==> [{x'=x}]1=1".asSequent, odeInvariant(1))
-    result shouldBe 'proved
+  "diffDivConquer" should "divide and conquer" in withMathematica { qeTool =>
+
+    val pr = proveBy("x*y=1 , A() = 5 ==> x > b() , [{x'=A() * x & b() * x < A()}] x=b()+A()".asSequent,
+      diffDivConquer("x".asTerm)(2)
+    )
+
+    pr.subgoals(0) shouldBe "x*y=1, A()=5, x=0  ==>  x>b(), [{x'=A()*x&b()*x < A()&x=0}]x=b()+A()".asSequent
+    pr.subgoals(1) shouldBe "x*y=1, A()=5, x>0  ==>  x>b(), [{x'=A()*x&b()*x < A()&x>0}]x=b()+A()".asSequent
+    pr.subgoals(2) shouldBe "x*y=1, A()=5, x<0  ==>  x>b(), [{x'=A()*x&b()*x < A()&x<0}]x=b()+A()".asSequent
+
   }
 
 }
