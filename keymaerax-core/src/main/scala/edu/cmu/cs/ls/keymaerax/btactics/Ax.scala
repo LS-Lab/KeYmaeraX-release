@@ -442,6 +442,9 @@ object Ax extends Logging {
 
   @Axiom("IVT", conclusion = "<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z&p(t,x))→t<=z→<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t=z∧<{t'=f(t,x),x'=g(t,x)&q(t,x)}>(t>=z∧p(t,x))", unifier = "full")
   val IVT = coreAxiom("IVT")
+  @Axiom("DCC", conclusion = "__[{x'=f(x)&R}](P→Q)__←([{x'=f(x)&R&P}]Q∧[{x'=f(x)&R}](¬P→[{x'=f(x)&R}]¬P)", unifier = "linear",
+    key = "1", recursor = "0")
+  val DCC = coreAxiom("DCC")
 
   /* DIFFERENTIAL AXIOMS */
 

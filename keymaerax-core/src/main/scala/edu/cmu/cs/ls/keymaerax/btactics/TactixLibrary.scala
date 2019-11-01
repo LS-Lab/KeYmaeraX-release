@@ -567,6 +567,12 @@ object TactixLibrary extends HilbertCalculus
   @Tactic()
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
+  @Tactic(
+    names = ("differential conditional cut", "dCC"),
+    premises = "Γ |- [x'=f(x)&R&P]Q ;; Γ, R, !P |- [x'=f(x)&R]!P",
+    conclusion = "Γ |- [x'=f(x)&R](P -> Q)"
+  )
+  val dCC: DependentPositionTactic = DifferentialTactics.dCC
 
   // more
 

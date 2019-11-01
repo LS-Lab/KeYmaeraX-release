@@ -316,6 +316,10 @@ private object DifferentialTactics extends Logging {
     }
   }
 
+  /** @see [[TactixLibrary.dCC()]] */
+  val dCC: DependentPositionTactic = "dCC" by { (pos: Position, seq: Sequent) =>
+    useAt(Ax.DCC, PosInExpr(1::Nil))(pos) & andR(pos) & Idioms.<(skip, dWPlus(pos) & implyR('Rlast) & implyR('Rlast))
+  }
   /** @see [[TactixLibrary.dC()]] */
   //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.dC(Formula)
   private[btactics] def diffCut(formula: Formula): DependentPositionTactic = diffCut(List(formula))

@@ -1740,6 +1740,18 @@ class DifferentialTests extends TacticTestBase {
     proveBy(prv, Idioms.<(QE, QE)) shouldBe 'proved
   }
 
+  "DCC" should "correctly apply in succ" in {
+    val seq = "G(x) ==> S(x), [{x'=f(x)&r(x)}](p(x)->q(x)), T(x)".asSequent
+    val res = proveBy(seq, dCC(2))
+    res.subgoals.length shouldBe 2
+    res.subgoals(0) shouldBe
+      Sequent(IndexedSeq("G(x)".asFormula), "S(x),[{x'=f(x)&r(x)&p(x)}]q(x),T(x)".split(",").map(_.asFormula).toIndexedSeq)
+    res.subgoals(1) shouldBe
+      Sequent("G(x_0),r(x),!p(x)".split(",").map(_.asFormula).toIndexedSeq,
+        "S(x_0),T(x_0),[{x'=f(x)&r(x)}](!p(x))".split(",").map(_.asFormula).toIndexedSeq)
+    // @todo: [[_.asSequent]] does not work here.
+  }
+
   "Derive" should "correctly derive" taggedAs IgnoreInBuildTest in withMathematica { tool =>
     val vx = Variable("x")
     val vy = Variable("y")
