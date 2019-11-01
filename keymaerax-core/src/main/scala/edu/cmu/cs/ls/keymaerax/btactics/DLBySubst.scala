@@ -703,4 +703,25 @@ private object DLBySubst {
     case Some(e) => throw new TacticInapplicableFailure("[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
+
+  /**
+    * finds a matching Box in the antecedent to generalize the Box at succedent position pos
+    * Q |- P
+    * ----------------------------------- boxElim(pos)
+    * Γ1, [a]Q, Γ2  |- Δ1, pos: [a]P, Δ2
+    * */
+  val boxElim = "boxElim" by { (pos: Position, sequent: Sequent) =>
+    sequent.sub(pos) match {
+      case Some(Box(prg, _)) =>
+        val b = sequent.ante.find {
+          case Box(prg2, _) => prg == prg2
+          case _ => false
+        }.getOrElse(throw new TacticInapplicableFailure("boxElim without matching assumption in the antecedent"))
+        val fml2 = b.asInstanceOf[Box].child
+        TactixLibrary.generalize(fml2)(pos) & Idioms.<(closeId, skip)
+      case Some(e) => throw new TacticInapplicableFailure("boxElim not on Box but on " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+  }
+
 }

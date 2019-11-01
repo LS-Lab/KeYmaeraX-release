@@ -3420,6 +3420,85 @@ object Ax extends Logging {
         )
     )
 
+  @Axiom("dualIVT")
+  lazy val dualIVT = derivedFormula("dualIVT", "[{c&q(||)}](f(||)>=z()->p(||)) <- (f(||)<=z() & [{c&q(||)}](f(||)=z()->[{c&q(||)}](f(||)>=z()->p(||))))".asFormula,
+    implyR(1) & andL(-1) & useAt(box, PosInExpr(1 :: Nil))(-2) & useAt(box, PosInExpr(1 :: Nil))(1) &
+      notL(-2) & notR(1) & useAt(notImply, PosInExpr(0 :: Nil))(-2, 1 :: Nil) &
+      useAt(notImply, PosInExpr(0 :: Nil))(1, 1 :: Nil) &
+      useAt(geNormalize)(-2, 1::0::Nil) &
+      useAt(IVT, PosInExpr(0 :: Nil))(-2) & implyL(-2) &
+      Idioms.<(
+        useAt(metricLe)(-1) & closeId,
+        useAt(box, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 0 :: Nil) &
+          useAt(doubleNegation, PosInExpr(0 :: Nil))(1, 1 :: 1 :: Nil) &
+          useAt(notImply, PosInExpr(0 :: Nil))(1, 1 :: 1 :: 1 :: Nil) &
+          useAt(eqNormalize)(1, 1::0::Nil) &
+          useAt(geNormalize)(1, 1::1::1::0::Nil) &
+          closeId
+      )
+  )
+
+  @Axiom("oneGeZero")
+  lazy val oneGeZero = derivedFormula("oneGeZero", "1>=0".asFormula, QE & done)
+
+  @Axiom("timeCond")
+  lazy val timeCond = derivedFormula("timeCond", "[{x_'=1, c{|x_|} & q(||)}](!x_ <= h() -> [{x_'=1, c{|x_|} & q(||)}](!x_ <= h()))".asFormula,
+    generalize(True)(1) & Idioms.<(useAt(boxTrue)(1),
+      implyR(1) & useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(-2) &
+        useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(1, 1 :: Nil)) &
+      useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(closeId,
+      derive(1, 1 :: Nil) &
+        cohideR(1) & useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
+        generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))
+    )
+  )
+
+  @Axiom("timeStep")
+  lazy val timeStep = derivedFormula("timeStep", "[{x_'=1,c{|x_|}&q(||)}]p(||)<-(x_ <= h() & [{x_'=1,c{|x_|}&q(||)&x_<=h()}](p(||) & (x_=h()->[{x_'=1,c{|x_|}&q(||)&x_>=h()}]p(||))))".asFormula,
+      implyR(1) & andL(-1) &
+        cutR("[{x_'=1, c{|x_|} & q(||)}]((x_>=h()->p(||))&(x_<=h()->p(||)))".asFormula)(1) &
+        Idioms.<(
+          useAt(boxAnd)(1) & andR(1) &
+            Idioms.<(
+              useAt(Ax.dualIVT, PosInExpr(1 :: Nil))(1) & andR(1) &
+                Idioms.<(closeId,
+                  useAt(boxAnd)(-2) & andL(-2) & hideL(-2) &
+                    cutR("[{x_'=1, c{|x_|} & q(||)}](x_ <= h() -> x_ = h() -> [{x_'=1, c{|x_|} & q(||)}](x_ >= h() -> p(||)))".asFormula)(1) &
+                    Idioms.<(
+                      useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
+                        DLBySubst.boxElim(1) & prop & useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) &
+                          Idioms.<(closeId, hideL(-1) & HilbertCalculus.DC("x_>=h()".asFormula)(1) &
+                            Idioms.<(
+                              useAt(DW)(1) & generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), prop & done),
+                              useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(
+                                hideL(-2) & useAt(Ax.equalExpand, PosInExpr(0::Nil))(-1) & andL(-1) &
+                                  useAt(Ax.flipLessEqual, PosInExpr(0::Nil))(-2) & closeId & done,
+                                useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
+                                  generalize(True)(1) &
+                                  Idioms.<(cohideR(1) & useAt(boxTrue)(1),
+                                    derive(1, 1 :: Nil) & useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))))),
+                        prop & cohideR(1) & by(timeCond)
+                      ),
+                      cohideR(1) & implyR(1) & DLBySubst.boxElim(1) & implyR(1) & implyL(-1) &
+                        Idioms.<(
+                          hideR(1) & useAt(Ax.equalExpand, PosInExpr(0::Nil))(-1) & andL(-1) & closeId,
+                          prop & done)
+                    )
+                ),
+              useAt(boxAnd)(-2) & andL(-2) &
+                useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
+                DLBySubst.boxElim(1) & closeId,
+                cohideR(1) & by(timeCond)
+              )
+            ),
+          cohideR(1) & implyR(1) & DLBySubst.boxElim(1) & andL(-1) & cutR("x_>=h() | x_<=h()".asFormula)(1) &
+            Idioms.<(
+              cohideR(1) & useAt(Ax.flipLessEqual, PosInExpr(1::Nil))(1, 0::Nil) & byUS(Ax.lessEqualTotal),
+              prop & done
+            )
+        )
+    )
+
   /**
     * {{{
     *   Axiom "[d] dual".
