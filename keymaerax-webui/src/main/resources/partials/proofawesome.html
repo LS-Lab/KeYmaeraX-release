@@ -538,7 +538,7 @@
                         <div class="col-sm-11" ng-if="$first"
                              data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal'><dt>Left-click</dt><dd>default step</dd><dt>Right-click</dt><dd>list tactics</dd><dt>Alt/Option-click</dt><dd>chase subformula away</dd><dt>Hover &#8866;</dt><dd>transform entire subgoal</dd></dl>"
                              data-position="bottom">
-                            <span class="fa fa-tasks"></span>
+                            <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
@@ -552,7 +552,6 @@
                                     <span ng-if="taskPrefixLabel(task.id) || taskPostfixLabel(task.id)">: </span>
                                 </small>
                                 <span ng-bind-html="task.name"></span>
-
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
                                 <small>
@@ -568,7 +567,7 @@
                             </span>
                         </div>
                         <div class="col-sm-11" ng-if="!$first">
-                            <span class="fa fa-tasks"></span>
+                            <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data, task.name)" buttons="no" blur="submit">
