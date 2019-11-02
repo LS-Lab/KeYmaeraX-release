@@ -68,16 +68,18 @@ object ToolProvider extends ToolProvider with Logging {
   def tools(): List[Tool] = f.tools()
 
   def initFallbackZ3(p: => ToolProvider, toolName: String): ToolProvider = {
+    //@note p is call-by-name to catch exceptions here instead of on allocation of p outside initFallback,
+    //      but use lazy val tp to not initialize multiple times when accessing p
     try {
-      val withZ3 = new MultiToolProvider(p :: new Z3ToolProvider() :: Nil)
-      if (!p.tools().forall(_.isInitialized)) {
+      lazy val tp = p
+      if (!tp.tools().forall(_.isInitialized)) {
         val msg =
           s"""Unable to connect to $toolName, switching to Z3
              |Please check your $toolName configuration in KeYmaera X->Preferences
             """.stripMargin
         logger.info(msg)
         new Z3ToolProvider
-      } else withZ3
+      } else new MultiToolProvider(tp :: new Z3ToolProvider() :: Nil)
     } catch {
       case ex: Throwable =>
         val msg =
