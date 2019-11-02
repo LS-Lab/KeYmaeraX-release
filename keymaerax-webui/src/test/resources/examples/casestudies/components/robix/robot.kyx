@@ -87,9 +87,9 @@ implyR(1) ; andL('L)* ; loop({`v>=0&dx^2+dy^2=1&0<=t&t<=ep()&-V()*t<=xo-xo0&xo-x
     diffInvariant({`0<=t`}, 1) ; diffInvariant({`dx^2+dy^2=1`}, 1) ; diffInvariant({`v=old(v)-B()*t`}, 1) ;
     diffInvariant({`-t*(v+B()/2*t)<=x-old(x)&x-old(x)<=t*(v+B()/2*t)`}, 1) ;
     diffInvariant({`-t*(v+B()/2*t)<=y-old(y)&y-old(y)<=t*(v+B()/2*t)`}, 1) ; dW(1) ; unfold ; simplify(1) ;
-    orR(1) ; orR(2) ; orL(-16) ; <(
+    orR(1) ; orR(2) ; orL(-14) ; <(
       hideR(2=={`abs(x-xo)>v^2/(2*B())+V()*(v/B())`}) ; hideR(2=={`abs(y-yo)>v^2/(2*B())+V()*(v/B())`}) ; QE,
-      orL(-16) ; <(
+      orL(-14) ; <(
         hideR(3=={`abs(y-yo)>v^2/(2*B())+V()*(v/B())`}) ; smartQE,
         hideR(2=={`abs(x-xo)>v^2/(2*B())+V()*(v/B())`}) ; smartQE
         )
@@ -99,19 +99,19 @@ implyR(1) ; andL('L)* ; loop({`v>=0&dx^2+dy^2=1&0<=t&t<=ep()&-V()*t<=xo-xo0&xo-x
     diffInvariant({`0<=t`}, 1) ; diffInvariant({`dx^2+dy^2=1`}, 1) ; diffInvariant({`v=old(v)+a*t`}, 1) ;
     diffInvariant({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) ;
     diffInvariant({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) ; dW(1) ; unfold ; simplify(1) ; orR(1) ;
-    orR(2) ; hideL(-20=={`v_0=0|abs(x_0-xo_0)>v_0^2/(2*B())+V()*(v_0/B())|abs(y_0-yo_0)>v_0^2/(2*B())+V()*(v_0/B())`}) ;
-    hideL(-25=={`dx^2+dy^2=1`}) ; hideL(-13=={`dx_0^2+dy_0^2=1`}) ; hideL(-7=={`v_0*k=w_0`}) ; orL(-7) ; <(
-      hideR(3=={`abs(y-yo)>v^2/(2*B())+V()*(v/B())`}) ; hideR(1=={`v=0`}) ; hideL(-16=={`-V()*t_1<=yo_0-yo0_0`}) ;
-      hideL(-16=={`yo_0-yo0_0<=V()*t_1`}) ; hideL(-16=={`-t*(v-a/2*t)<=y-y_0`}) ; hideL(-16=={`y-y_0<=t*(v-a/2*t)`}) ;
-      hideL(-24=={`-V()*t<=yo-yo0`}) ; hideL(-24=={`yo-yo0<=V()*t`}) ; hideL(-9=={`yo0=yo_0`}) ;
+    orR(2) ; hideL(-17=={`v_0=0|abs(x_0-xo_0)>v_0^2/(2*B())+V()*(v_0/B())|abs(y_0-yo_0)>v_0^2/(2*B())+V()*(v_0/B())`}) ;
+    hideL(-22=={`dx^2+dy^2=1`}) ; orL(-7) ; <(
+      hideR(3=={`abs(y-yo)>v^2/(2*B())+V()*(v/B())`}) ; hideR(1=={`v=0`}) ; hideL(-15=={`-V()*t_0<=yo_0-yo0_0`}) ;
+      hideL(-15=={`yo_0-yo0_0<=V()*t_0`}) ; hideL(-15=={`-t*(v-a/2*t)<=y-y_0`}) ; hideL(-15=={`y-y_0<=t*(v-a/2*t)`}) ;
+      hideL(-23=={`-V()*t<=yo-yo0`}) ; hideL(-23=={`yo-yo0<=V()*t`}) ; hideL(-9=={`yo0=yo_0`}) ;
       edit({`abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V()))`}, -7) ;
-      hideL(-12=={`t_1<=ep()`}) ; hideL(-18=={`t<=ep()`}) ; hideL(-4=={`ep()>0`}) ; smartQE
+      hideL(-11=={`t_0<=ep()`}) ; hideL(-17=={`t<=ep()`}) ; hideL(-4=={`ep()>0`}) ; smartQE
       ,
-      hideR(2=={`abs(x-xo)>v^2/(2*B())+V()*(v/B())`}) ; hideL(-8=={`xo0=xo_0`}) ; hideL(-13=={`-V()*t_1<=xo_0-xo0_0`}) ;
-      hideL(-13=={`xo_0-xo0_0<=V()*t_1`}) ; hideL(-17=={`-t*(v-a/2*t)<=x-x_0`}) ; hideL(-17=={`x-x_0<=t*(v-a/2*t)`}) ;
-      hideL(-21=={`-V()*t<=xo-xo0`}) ; hideL(-21=={`xo-xo0<=V()*t`}) ;
+      hideR(2=={`abs(x-xo)>v^2/(2*B())+V()*(v/B())`}) ; hideL(-8=={`xo0=xo_0`}) ; hideL(-12=={`-V()*t_0<=xo_0-xo0_0`}) ;
+      hideL(-12=={`xo_0-xo0_0<=V()*t_0`}) ; hideL(-16=={`-t*(v-a/2*t)<=x-x_0`}) ; hideL(-16=={`x-x_0<=t*(v-a/2*t)`}) ;
+      hideL(-20=={`-V()*t<=xo-xo0`}) ; hideL(-20=={`xo-xo0<=V()*t`}) ;
       edit({`abs(y_0-yo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V()))`}, -7) ;
-      hideL(-11=={`0<=t_1`}) ; hideL(-11=={`t_1<=ep()`}) ; hideL(-17=={`t<=ep()`}) ; hideL(-4=={`ep()>0`}) ; smartQE
+      hideL(-10=={`0<=t_0`}) ; hideL(-10=={`t_0<=ep()`}) ; hideL(-16=={`t<=ep()`}) ; hideL(-4=={`ep()>0`}) ; smartQE
       )
     )
   )

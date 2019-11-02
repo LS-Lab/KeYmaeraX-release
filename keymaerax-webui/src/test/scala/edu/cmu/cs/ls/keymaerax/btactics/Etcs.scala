@@ -81,7 +81,7 @@ class Etcs extends TacticTestBase {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyx"))
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/ETCS-essentials-bare.kyt")).mkString)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "v_0^2<=2*b()*(m()-z_0), b()>0, A()>=0, m()-z_0>=SB, t>=0, v_0+A()*t>=0, t<=ep() ==> (v_0+A()*t)^2<=2*b()*(m()-(z_0+v_0*t+A()/2*t^2))".asSequent
+    result.subgoals.loneElement shouldBe "v_0^2<=2*b()*(m()-z_0), b()>0, t>=0, A()>=0, v_0+A()*t>=0, t<=ep(), m()-z_0>=SB ==> (v_0+A()*t)^2<=2*b()*(m()-(z_0+v_0*t+A()/2*t^2))".asSequent
   }
 
   it should "prove rbc controllability characterization with master" in withMathematica { _ =>

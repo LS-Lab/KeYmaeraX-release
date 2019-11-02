@@ -32,8 +32,8 @@ class FMTutorial extends TacticTestBase {
     val tactic = entry.tactics.head._3
     val result = db.proveBy(modelContent, tactic)
     result.subgoals should have size 2
-    result.subgoals(0) shouldBe "==> m-x>=A/2*ep^2+ep*v".asSequent
-    result.subgoals(1) shouldBe "==> m-x>=v^2/(2*b)".asSequent
+    result.subgoals(0) shouldBe "x<=m, A>=0, b>0, ep>0, m-x>=sb, t=0 ==> m-x>=A/2*ep^2+ep*v".asSequent
+    result.subgoals(1) shouldBe "x<=m, A>=0, b>0, ep>0, t=0 ==> m-x>=v^2/(2*b)".asSequent
   }}
 
   "Example 3" should "be provable with master" in withQE { _ => withDatabase { db =>

@@ -4,11 +4,13 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Function, Real, SubstitutionPair, USubst, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -56,11 +58,13 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "have 4 open goals for abstract invariant J(x,v) with master" taggedAs TodoTest in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val result = proveBy(s, master(keepQEFalse=false))
+    val cgen = TactixLibrary.invGenerator match { case c: ConfigurableGenerator[GenProduct] => c }
+    val result = proveBy(s, explore(cgen))
     result.subgoals should have size 4
+    //@todo explore keeps false
     result.subgoals(0) shouldBe "x!=m(), b()>0 ==> J(x,v)".asSequent
     result.subgoals(1) shouldBe "J(x,v), b()>0 ==> x!=m()".asSequent
-    result.subgoals(2) shouldBe "J(x,v), b()>0, t_>=0, !SB(x,m()) ==> J(a*(t_^2/2)+v*t_+x,a*t_+v)".asSequent
+    result.subgoals(2) shouldBe "J(x,v), b()>0, !SB(x,m()), t_>=0 ==> J(a*(t_^2/2)+v*t_+x,a*t_+v)".asSequent
     result.subgoals(3) shouldBe "J(x,v), b()>0, t_>=0 ==> J((-b())*(t_^2/2)+v*t_+x,(-b())*t_+v)".asSequent
   }
 
@@ -163,9 +167,9 @@ class CpsWeekTutorial extends TacticTestBase {
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyt")).mkString)
     val result = proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic)
     result.subgoals should have size 2
-    //unsimplified
-    result.subgoals.last.succ should contain only "(m() < 0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t>0&((v < 0|v=0&((ep() < t|ep()=t&(A()<=0|A()>0&(b()<=0|b()>0&((x < m()|x=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&((ep() < t|ep()=t&(A() < 0|A()>=0&(b()<=0|b()>0&((x < m()|x=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|m()=0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))))|m()>0&((t < 0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(-2*v*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))".asFormula
-    //@todo simplify with transform
+    //simplified some
+    result.subgoals.last.succ should contain only "(m() < 0&(t<=0&((v < 0|v=0&(A()<=0|A()>0&x<=1/2*((-t^2)*A()+2*t*A()*ep()+(-A())*ep()^2+2*m())))|v>0&x<=1/2*(2*t*v+(-t^2)*A()+-2*v*ep()+2*t*A()*ep()+(-A())*ep()^2+2*m()))|t>0&((v < 0|v=0&((ep() < t|ep()=t&(A()<=0|A()>0&(x < m()|x=1/2*((-t^2)*A()+2*t*A()*ep()+(-A())*ep()^2+2*m()))))|ep()>t&(A()<=0|A()>0&x<=1/2*((-t^2)*A()+2*t*A()*ep()+(-A())*ep()^2+2*m()))))|v>0&((ep() < t|ep()=t&(x < m()|x=1/2*(2*t*v+(-t^2)*A()+-2*v*ep()+2*t*A()*ep()+(-A())*ep()^2+2*m())))|ep()>t&x<=1/2*(2*t*v+(-t^2)*A()+-2*v*ep()+2*t*A()*ep()+(-A())*ep()^2+2*m()))))|m()=0&(t<=0&((v < 0|v=0&(A()<=0|A()>0&(x<=1/2*((-t^2)*A()+2*t*A()*ep()+(-A())*ep()^2)|x>0)))|v>0&(x<=1/2*(2*t*v+(-t^2)*A()+-2*v*ep()+2*t*A()*ep()+(-A())*ep()^2)|x>0))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(x<=1/2*((-t^2)*A()+2*t*A()*ep()+(-A())*ep()^2)|x>0))))|v>0&(ep()<=t|ep()>t&(x<=1/2*(2*t*v+(-t^2)*A()+-2*v*ep()+2*t*A()*ep()+(-A())*ep()^2)|x>0)))))|m()>0&((t < 0&((v < 0|v=0&(A()<=0|A()>0&x<=1/2*((-t^2)*A()+2*t*A()*ep()+(-A())*ep()^2+2*m())))|v>0&x<=1/2*(2*t*v+(-t^2)*A()+-2*v*ep()+2*t*A()*ep()+(-A())*ep()^2+2*m()))|t=0&((v < 0|v=0&(A()<=0|A()>0&x<=1/2*((-A())*ep()^2+2*m())))|v>0&x<=1/2*(-2*v*ep()+(-A())*ep()^2+2*m())))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&x<=1/2*((-t^2)*A()+2*t*A()*ep()+(-A())*ep()^2+2*m()))))|v>0&(ep()<=t|ep()>t&x<=1/2*(2*t*v+(-t^2)*A()+-2*v*ep()+2*t*A()*ep()+(-A())*ep()^2+2*m()))))".asFormula
+    //@todo simplify with FullSimplify
   }
 
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { _ =>
@@ -187,9 +191,16 @@ class CpsWeekTutorial extends TacticTestBase {
     val s = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
 
-    def di(a: String) = diffInvariant("dx^2+dy^2=1".asFormula, "t>=0".asFormula, s"v=old(v)+$a*t".asFormula,
-      s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t)".asFormula,
-      s"-t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R)
+    def di(a: String) = {
+      val accCond = "2*b()*abs(mx-x)>v^2+(A()+b())*(A()*ep()^2+2*ep()*v)|2*b()*abs(my-y)>v^2+(A()+b())*(A()*ep()^2+2*ep()*v)".asFormula
+      diffInvariant("dx^2+dy^2=1".asFormula, "t>=0".asFormula, s"v=old(v)+$a*t".asFormula)('R) &
+      DebuggingTactics.print("Now what?") &
+      dC(s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t) & -t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R) <(
+        skip,
+        Idioms.doIf(_.subgoals.head.ante.contains(accCond))(hideL('L, accCond)) &
+        (boxAnd('R) & andR('R) <(dI()('R), skip))*3 & dI()('R) & done
+      )
+    }
 
     val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & SaturateTactic(andL('L)) &
       print("Before diffWeaken") & dW(1) & print("After diffWeaken")
@@ -203,13 +214,16 @@ class CpsWeekTutorial extends TacticTestBase {
       print("Base case") & QE,
       print("Use case") & QE,
       print("Step") & chase('R) & andR('R) <(
-        allR('R) & implyR('R) & di("-b()") & dw & prop <(hideQE("y") & QE, hideQE("x") & QE),
+        allR('R) & implyR('R) & di("-b()") & dw & prop <(hideQE("y") & QE, hideQE("x") & QE)
+        ,
         // in tutorial: only show braking branch, acceleration takes too long (needs abs and hiding and cuts etc.)
         SaturateTactic(allR('R) | implyR('R)) & di("A()") & dw
         )
       )
 
-    proveBy(s, tactic).subgoals should have size 1
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      proveBy(s, tactic).subgoals should have size 1
+    }
   }, 300)
 
   "Motzkin" should "be provable with DI+DW" in withQE { _ =>
