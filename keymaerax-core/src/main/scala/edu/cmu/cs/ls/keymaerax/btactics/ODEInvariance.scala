@@ -1587,4 +1587,48 @@ object ODEInvariance {
     )
   })
 
+  /** Implements the differential divide-and-conquer rule (with 3 premises)
+    * The input is a polynomial p.
+    * The branches marked (*) are closed automatically, assuming p is a Darboux polynomial
+    * @see Andrew Sogokon, Khalil Ghorbal, Paul B. Jackson and André Platzer. [[https://doi.org/10.1007/978-3-662-49122-5_13]].
+    *
+    * G, p=0 -> [x'=f(x)&Q] p=0  (*)
+    * G, p>0 -> [x'=f(x)&Q] p>0  (* - @todo: note redundancy, could just prove [x'=f(x)&Q]p!=0)
+    * G, p<0 -> [x'=f(x)&Q] p<0  (* - see above )
+    *
+    * G, p=0 -> [x'=f(x)&Q & p=0] P
+    * G, p>0 -> [x'=f(x)&Q & p>0] P
+    * G, p<0 -> [x'=f(x)&Q & p<0] P
+    * --------------- (DDC)
+    * G |- [x'=f(x)&Q]P
+    *
+    * @param p the DDC polynomial
+    * @return See the rule rendition above
+    */
+
+  private lazy val trichotomy = remember("f_()=0 | (f_() > 0 | f_() < 0)".asFormula, QE, namespace)
+
+  def diffDivConquer(p : Term) : DependentPositionTactic = "diffDivConquer" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "DDC only applicable in top-level succedent")
+
+    val (ode,dom,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
+      case _ => throw new BelleThrowable("DDC only applicable to box ODE in succedent")
+    }
+
+    val zero = Number(0)
+
+    cutR(Or(Equal(p,zero),Or(Greater(p,zero),Less(p,zero))))(pos) <(
+      cohideR(pos) &byUS(trichotomy),
+      implyR(pos) & orL('Llast) <(
+        /* p = 0*/
+        dC(Equal(p,zero))(pos) <(skip, dgDbxAuto(pos)),
+        /* p > 0 | p < 0 */
+        orL('Llast) <(
+          dC(Greater(p,zero))(pos) <(skip, dgDbxAuto(pos)),
+          dC(Less(p,zero))(pos) <(skip, dgDbxAuto(pos))
+        )
+      )
+    )
+  })
 }
