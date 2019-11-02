@@ -63,7 +63,7 @@
                             <uib-tab-heading><span class="fa fa-spinner fa-spin" ng-if="axiomsLoading"></span> Axioms, Rules, and Tactics</uib-tab-heading>
                             <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
                                  class="k4-tactic-popover-entry">
-                                <k4-tactic-info user-id="userId" proof-id="proofId" node-id="nodeId"
+                                <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                                                 formula-id="tacticPopover.formulaId()"
                                                 tactic="tactic" axiom-readonly="false"
                                                 on-tactic="onTactic(tacticPopover.formulaId(), tacticId)"
