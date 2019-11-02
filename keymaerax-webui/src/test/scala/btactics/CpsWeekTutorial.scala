@@ -56,12 +56,11 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals(3) shouldBe "J(x,v), b()>0 ==> \\forall t_ (t_>=0 -> J((-b())*(t_^2/2)+v*t_+x,(-b())*t_+v))".asSequent
   }
 
-  it should "have 4 open goals for abstract invariant J(x,v) with master" taggedAs TodoTest in withQE { _ =>
+  it should "have 4 open goals for abstract invariant J(x,v) with master" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
     val cgen = TactixLibrary.invGenerator match { case c: ConfigurableGenerator[GenProduct] => c }
     val result = proveBy(s, explore(cgen))
     result.subgoals should have size 4
-    //@todo explore keeps false
     result.subgoals(0) shouldBe "x!=m(), b()>0 ==> J(x,v)".asSequent
     result.subgoals(1) shouldBe "J(x,v), b()>0 ==> x!=m()".asSequent
     result.subgoals(2) shouldBe "J(x,v), b()>0, !SB(x,m()), t_>=0 ==> J(a*(t_^2/2)+v*t_+x,a*t_+v)".asSequent

@@ -296,7 +296,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         (inv: Formula) => loop(inv)(pos) & onAll(explore(gen))
       )
     case _ => throw BelleIllFormedError("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
-  }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=true)
+  }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
 
   /*******************************************************************
     * unification and matching based auto-tactics
