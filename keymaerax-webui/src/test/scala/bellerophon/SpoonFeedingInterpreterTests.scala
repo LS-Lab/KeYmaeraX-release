@@ -895,9 +895,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |      dC("dx^2+dy^2=1", 1) ; <(
         |        dC("v=old(v)+a*c", 1) ; <(
         |          dC("-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)", 1) ; <(
-        |            dW(1) ;
-        |            implyR('R) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ;
-        |            transformEquality("ep()=c", -6=="abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()") ; prop ; smartQE,
+        |            dW(1) ; implyR('R) ;
+        |            andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ;
+        |            andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ; andL('L) ;
+        |            transformEquality("ep()=c",-13=="abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()") ;
+        |            prop ; smartQE
+        |            ,
         |            dI(1)
         |          ),
         |          dI(1)
