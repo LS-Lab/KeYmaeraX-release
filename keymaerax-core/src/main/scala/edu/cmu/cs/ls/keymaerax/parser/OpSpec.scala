@@ -263,9 +263,11 @@ object OpSpec {
   val sDifferentialProduct = BinaryOpSpec(COMMA,       95, RightAssociative, bindiffprog, DifferentialProduct.apply _)
   val sODESystem    = BinaryOpSpec[Expression](AMP,   150, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
   val sLoop         = UnaryOpSpec[Program](STAR,      220, PostfixFormat, unprog, Loop.apply _)
+  val sDLoop        = UnaryOpSpec[Program](DSTAR,     220, PostfixFormat, unprog, (p: Program) => Dual(Loop(Dual(p))))
   val sDual         = UnaryOpSpec[Program](DUAL,      220, PostfixFormat, unprog, Dual.apply _)
   val sCompose      = BinaryOpSpec[Program](SEMI,     230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   val sChoice       = BinaryOpSpec[Program](CHOICE,   250, RightAssociative, binprog, Choice.apply _)
+  val sDChoice      = BinaryOpSpec[Program](DCHOICE,  250, RightAssociative, binprog, (l: Program, r: Program) => Dual(Choice(Dual(l), Dual(r))))
 
   // pseudo tokens
 

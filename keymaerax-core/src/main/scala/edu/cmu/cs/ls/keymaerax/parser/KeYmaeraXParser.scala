@@ -1029,7 +1029,7 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
   private def formulaBinOp(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
 
   /** Is la a (unary/binary) operator that only works for programs? */
-  private def programOp(la: Terminal): Boolean = la==SEMI || la==CHOICE || la==DUAL
+  private def programOp(la: Terminal): Boolean = la==SEMI || la==CHOICE || la==DCHOICE || la==DSTAR || la==DUAL
 
   /** Follow(Term): Can la follow after a term? */
   private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
@@ -1037,8 +1037,8 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
     la==EQ || la==NOTEQ || la==GREATEREQ || la==RDIA || la==LESSEQ || la==LDIA || // from T in formulas
     followsFormula(la) ||
     (if (statementSemicolon) la==SEMI || la==RBRACE || la==AMP
-    else la==SEMI || la==CHOICE || la==STAR || la==RBRACE || la==COMMA) || // from T in programs
-    la == COMMA || // from T in ODE systems
+    else la==SEMI || la==CHOICE || la==STAR || la==DCHOICE || la==DSTAR || la==RBRACE || la==COMMA) || // from T in programs
+    la==COMMA || // from T in ODE systems
     la==PRIME || la==EOF
 
   /** Is la a (binary) operator that only works for terms? */
@@ -1049,6 +1049,7 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
+    la==DCHOICE || la==DSTAR ||
     (if (statementSemicolon) firstProgram(la) || /*Not sure:*/ la==SEMI else la==SEMI)  ||
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
@@ -1256,7 +1257,8 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
       case sDual.op => sDual
       case sCompose.op => sCompose
       case sChoice.op => sChoice
-
+      case sDChoice.op => sDChoice
+      case sDLoop.op => sDLoop
 
       case INVARIANT => sNone
       //case

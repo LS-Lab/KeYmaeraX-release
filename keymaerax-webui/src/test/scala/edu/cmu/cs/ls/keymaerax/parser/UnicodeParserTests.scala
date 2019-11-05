@@ -16,18 +16,28 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 @CheckinTest
 class UnicodeParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   "The parser" should "parse conjunctions of inequalities and such" in {
-    val f = "g > 0 ∧ 1 ≥ c ∧ c ≥ 0".asFormula
+    "g > 0 ∧ 1 ≥ c ∧ c ≥ 0".asFormula shouldBe "g > 0 & 1>=c & c>=0".asFormula
   }
 
   it should "parse disjunctions of inequalities with implications and equivalences" in {
-    val f = "1=1 ∨ 2=2 → 3=3 ∨ 2=2 ↔ 3=3 ∨ 2=2 ← 3=3 ∨ ∀ eps (∃ delta (eps < delta))".asFormula
+    "1=1 ∨ 2=2 → 3=3 ∨ 2=2 ↔ 3=3 ∨ 2=2 ← 3=3 ∨ ∀ eps (∃ delta (eps < delta))".asFormula shouldBe
+      "1=1 | 2=2 -> 3=3 | 2=2 <-> 3=3 | 2=2 <- 3=3 | \\forall eps (\\exists delta (eps < delta))".asFormula
   }
 
-  ignore should "parse unequal" in {
-    val f = "1 ≠ 2".asFormula //@todo
+  it should "parse choice" in {
+    "[x:=2; ∪ x:=3;]x>=1".asFormula shouldBe "[x:=2; ++ x:=3;]x>=1".asFormula
+    "[x:=2; ∩ x:=3;]x>=1".asFormula shouldBe "[{x:=2;^@ ++ x:=3;^@}^@]x>=1".asFormula
+  }
+
+  it should "parse repetition" in {
+    "[{x:=x+1;}×]x>=1".asFormula shouldBe "[{{x:=x+1;^@}*}^@]x>=1".asFormula
+  }
+
+  it should "parse unequal" in {
+    "1 ≠ 2".asFormula shouldBe "1 != 2".asFormula
   }
 
   "Tactic parser" should "parse when unicode is used as a tactic argument" in {
-    val t = "cut({`g > 0 ∧ 1 ≥ c ∧ c ≥ 0`})".asTactic
+    """cut("g > 0 ∧ 1 ≥ c ∧ c ≥ 0")""".asTactic shouldBe """cut("g>0 & 1>=c & c>=0")""".asTactic
   }
 }

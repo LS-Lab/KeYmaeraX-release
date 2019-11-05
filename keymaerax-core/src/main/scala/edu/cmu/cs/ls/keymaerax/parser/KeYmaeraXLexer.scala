@@ -191,6 +191,13 @@ private object CHOICE  extends OPERATOR("++") {
 private object DUAL    extends OPERATOR("^@") {
   override def regexp: Regex = """\^\@""".r
 }
+private object DCHOICE extends OPERATOR("\u2229") {
+  override def regexp: Regex = """\u2229""".r
+}
+private object DSTAR extends OPERATOR("\u00D7") {
+  override def regexp: Regex = """\u00D7""".r
+}
+
 private object TILDE      extends OPERATOR("~")
 private object BACKSLASH extends Terminal("\\\\")
 private object QUOTATION_MARK extends Terminal("\"")
@@ -586,7 +593,8 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
     CHOICE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, CHOICE, loc))),
     //This has to come before MINUS because otherwise -- because MINUS,MINUS instead of DCHOICE.
-    //@TODO case DCHOICE.startPattern(_*) => consumeTerminalLength(s, DCHOICE, loc)
+    DCHOICE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, DCHOICE, loc))),
+    DSTAR.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, DSTAR, loc))),
     //@note must be before POWER
     DUAL.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, DUAL, loc))),
     //
@@ -614,7 +622,7 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     EXISTS_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, EXISTS_UNICODE, loc, EXISTS))),
     //
     EQ.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, EQ, loc))),
-    UNEQUAL_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => ???),
+    UNEQUAL_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, UNEQUAL_UNICODE, loc, NOTEQ))),
     TRUE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, TRUE, loc))),
     FALSE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, FALSE, loc))),
     //
