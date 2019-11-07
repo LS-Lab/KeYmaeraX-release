@@ -190,9 +190,10 @@ class TaylorModelTests extends TacticTestBase {
       """.stripMargin.asSequent
   }
 
+  val vdp = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
+
   it should "prove a lemma about van der Pol" in withMathematica { _ =>
-    val ode = "{x' = y, y' = (1 - x^2)*y - x, t' = 1}".asDifferentialProgram
-    val tm = TaylorModel(ode, 1).lemma
+    val tm = TaylorModel(vdp, 1).lemma
     tm shouldBe 'proved
   }
 
@@ -222,7 +223,7 @@ class TaylorModelTests extends TacticTestBase {
       val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), BigDecimalQETool)(1)))
       val res2 = IntervalArithmeticV2Tests.timing("Mathematica     ")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1)))
       res1 shouldEqual res2
-      val res = proveBy(res1, SimplifierV3.simpTac()(1, 0::1::Nil))
+      val res = proveBy(res1, SimplifierV3.simpTac()(1, 0 :: 1 :: Nil))
       // println(new KeYmaeraXPrettierPrinter(80).stringify(res.subgoals.loneElement))
       res.subgoals.loneElement.ante.loneElement shouldBe assms
       res.subgoals.loneElement.succ.loneElement shouldBe
