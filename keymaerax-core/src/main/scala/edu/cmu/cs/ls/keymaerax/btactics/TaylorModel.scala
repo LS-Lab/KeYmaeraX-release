@@ -522,7 +522,7 @@ object TaylorModelTactics extends Logging {
     }
     toc("post")
 
-    private val box = Box(ODESystem(ode, And(LessEqual(Number(0), time), LessEqual(time, timestep))), post.reduceRight(And))
+    private val boxTMEnclosure = Box(ODESystem(ode, And(LessEqual(Number(0), time), LessEqual(time, timestep))), post.reduceRight(And))
     private val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
         case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
@@ -533,9 +533,8 @@ object TaylorModelTactics extends Logging {
 
     val lemma : ProvableSig = proveBy(
         Imply(
-          And(And(initial_condition, right_tm_domain),
-            numbericCondition),
-          box),
+          And(And(initial_condition, right_tm_domain), numbericCondition),
+          boxTMEnclosure),
         debugTac("start") &
           implyR(1) &
           unfoldExists(1) &
