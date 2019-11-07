@@ -1988,14 +1988,14 @@ private object DifferentialTactics extends Logging {
       case (t::Nil) => t
       case (t::ts) => Pair(t, tuple_of_list(ts))
     }
-    private def p(vs: List[Term]) = FuncOf(Function("p_", None, tuple_of_list(vs).sort, Real), tuple_of_list(vs))
-    private def P(vs: List[Term]) = PredOf(Function("P_", None, tuple_of_list(vs).sort, Bool), tuple_of_list(vs))
-    private def q(vs: List[Term]) = FuncOf(Function("q_", None, tuple_of_list(vs).sort, Real), tuple_of_list(vs))
-    private def r(vs: List[Term]) = PredOf(Function("r_", None, tuple_of_list(vs).sort, Bool), tuple_of_list(vs))
+    private[btactics] def p(vs: List[Term]) = FuncOf(Function("p_", None, tuple_of_list(vs).sort, Real), tuple_of_list(vs))
+    private[btactics] def P(vs: List[Term]) = PredOf(Function("P_", None, tuple_of_list(vs).sort, Bool), tuple_of_list(vs))
+    private[btactics] def q(vs: List[Term]) = FuncOf(Function("q_", None, tuple_of_list(vs).sort, Real), tuple_of_list(vs))
+    private[btactics] def r(vs: List[Term]) = PredOf(Function("r_", None, tuple_of_list(vs).sort, Bool), tuple_of_list(vs))
 
-    private val q_pat = q(vars)
-    private val p_pat = p(vars)
-    private val P_pat = P(vars)
+    private[btactics] val q_pat = q(vars)
+    private[btactics] val p_pat = p(vars)
+    private[btactics] val P_pat = P(vars)
 
     private def pos(t: Term) = Greater(t, Number(0))
     private def nonneg(t: Term) = GreaterEqual(t, Number(0))
