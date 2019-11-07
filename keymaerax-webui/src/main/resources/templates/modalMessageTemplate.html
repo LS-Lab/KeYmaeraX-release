@@ -4,9 +4,13 @@
         <span class="pull-right" ng-if="mode == 'ok'">
             <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
         </span>
-        <span class="pull-right" ng-if="mode == 'yesno'">
+        <span class="pull-right" ng-if="mode == 'okcancel'">
             <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>OK</button>
             <button type="submit" class="btn btn-primary" ng-click="cancel()">Cancel</button>
+        </span>
+        <span class="pull-right" ng-if="mode == 'yesno'">
+            <button type="submit" class="btn btn-primary" ng-click="ok()" autofocus>Yes</button>
+            <button type="submit" class="btn btn-primary" ng-click="cancel()">No</button>
         </span>
     </h3>
 </div>

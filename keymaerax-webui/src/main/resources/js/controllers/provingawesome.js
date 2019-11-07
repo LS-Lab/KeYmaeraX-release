@@ -138,7 +138,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                 title: function() { return "Large proof step result"; },
                 message: function() { return "Proof step resulted in " + taskResult.newNodes.length +
                   " additional proof goals. Do you want to keep all goals (displaying may take a long time)?"; },
-                mode: function() { return "yesno"; }
+                mode: function() { return "okcancel"; }
               }
             });
             modalInstance.result.then(

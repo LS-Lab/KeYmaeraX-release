@@ -21,6 +21,8 @@ object Configuration {
     val GUEST_USER = "GUEST_USER"
     val HOST = "HOST"
     val IS_HOSTED = "IS_HOSTED"
+    val DEFAULT_USER = "DEFAULT_USER"
+    val USE_DEFAULT_USER = "USE_DEFAULT_USER"
     val JKS = "JKS"
     val MATHEMATICA_LINK_NAME = "MATHEMATICA_LINK_NAME"
     val MATHEMATICA_JLINK_LIB_DIR = "MATHEMATICA_JLINK_LIB_DIR"
@@ -114,6 +116,10 @@ object Configuration {
     val missing = default.getKeys().asScala.toSet -- config.getKeys().asScala.toSet
     if (missing.nonEmpty) {
       missing.foreach(m => config.setProperty(m, default.getString(m)))
+      if (missing.contains(Configuration.Keys.USE_DEFAULT_USER) && missing.contains(Configuration.Keys.DEFAULT_USER)) {
+        // update from a version without default login functionality -> set USE_DEFAULT_USER = "ask"
+        config.setProperty(Configuration.Keys.USE_DEFAULT_USER, "ask")
+      }
       config.write(new PrintWriter(new File(CONFIG_PATH)))
     }
     config

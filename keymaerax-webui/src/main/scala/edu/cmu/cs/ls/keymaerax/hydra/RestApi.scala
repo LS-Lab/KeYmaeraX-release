@@ -132,7 +132,31 @@ object RestApi extends Logging {
     }}
   private val homePage = path("") { get {
     respondWithHeader(`Cache-Control`(scala.collection.immutable.Seq(`no-cache`, `max-age`(0)))) {
-      getFromResource("index_bootstrap.html")
+      if (!HyDRAServerConfig.isHosted) {
+        // on non-hosted instance: offer default login feature
+        if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
+          Configuration.getOption(Configuration.Keys.DEFAULT_USER) match {
+            case Some(userName) => database.getUser(userName) match {
+              case Some(user) =>
+                // login default user and show models
+                SessionManager.defaultUserTokenKey = Some(SessionManager.add(user))
+                redirect("/dashboard.html?#/models", StatusCodes.TemporaryRedirect)
+              case _ =>
+                // database does not know default user: first time use by a user with a fresh database, show license and
+                // ask for preferred user mode
+                getFromResource("index_localhost.html")
+            }
+            // default user not set (this should not happen, but if it does): show login page
+            case _ => getFromResource("index_bootstrap.html")
+          }
+        } else if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("false")) {
+          // user opted out of localhost default login, show login page
+          getFromResource("index_bootstrap.html")
+        } else if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("ask")) {
+          // first time use by a user with a prior installation without default user feature
+          getFromResource("index_bootstrap.html")
+        } else getFromResource("index_bootstrap.html")
+      } else getFromResource("index_bootstrap.html")
     }
   }}
 
@@ -154,9 +178,20 @@ object RestApi extends Logging {
     }
   }}
 
+  val setDefaultUser: Route = pathPrefix("user" / Segment / Segment / "setDefaultUser" / Segment) { (username, password, useDefault) => {
+    pathEnd {
+      post {
+        val request = new SetDefaultUserRequest(database, username, password, useDefault == "true")
+        completeRequest(request, EmptyToken())
+      }
+    }
+  }}
+
   val logoff: SessionToken=>Route  = (t: SessionToken) => path("user" / "logoff") { pathEnd { get {
     t match {
-      case ut: UserToken => SessionManager.remove(ut.token)
+      case ut: UserToken =>
+        SessionManager.defaultUserTokenKey = None
+        SessionManager.remove(ut.token)
       case NewlyExpiredToken(_) => //Well, that was convienant.
       case _ => //that works too.
     }
@@ -1136,6 +1171,7 @@ object RestApi extends Logging {
     extractdb          ::
     shutdown           ::
     users              ::
+    setDefaultUser     ::
     cookie_echo        ::
     kyxConfig          ::
     keymaeraXVersion   ::
@@ -1236,8 +1272,10 @@ object RestApi extends Logging {
     Nil
 
   val sessionRoutes: List[Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
-    case Some(token) => routeForSession(SessionManager.token(token))
-    case None => routeForSession(EmptyToken())
+    case Some(token) if  HyDRAServerConfig.isHosted => routeForSession(SessionManager.token(token))
+    case Some(token) if !HyDRAServerConfig.isHosted => routeForSession(SessionManager.token(SessionManager.defaultUserTokenKey.getOrElse(token)))
+    case None if  HyDRAServerConfig.isHosted => routeForSession(EmptyToken())
+    case None if !HyDRAServerConfig.isHosted => routeForSession(SessionManager.defaultUserTokenKey.map(SessionManager.token).getOrElse(EmptyToken()))
   })
 
   val api: Route = handleExceptions(catchAllExceptionHandler)((publicRoutes ++ sessionRoutes).reduce(_ ~ _))
@@ -1258,6 +1296,7 @@ object SessionManager {
 
   private var sessionMap : Map[String, (UserPOJO, Date)] = Map() //Session tokens -> usernames
   private var sessions: Map[String, Session] = Map()
+  private[hydra] var defaultUserTokenKey: Option[String] = None
 
   def token(key: String): SessionToken = sessionMap.get(key) match {
     case Some((user, timeout)) =>

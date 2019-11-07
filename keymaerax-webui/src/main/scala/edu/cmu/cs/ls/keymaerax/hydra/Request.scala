@@ -163,6 +163,22 @@ class CreateUserRequest(db: DBAbstraction, username: String, password: String, m
   }
 }
 
+class SetDefaultUserRequest(db: DBAbstraction, username: String, password: String, useDefault: Boolean) extends LocalhostOnlyRequest with WriteRequest {
+  override def resultingResponses(): List[Response] = {
+    if (useDefault) {
+      if (db.checkPassword(username, password)) {
+        Configuration.set(Configuration.Keys.DEFAULT_USER, username, saveToFile = true)
+        Configuration.set(Configuration.Keys.USE_DEFAULT_USER, "true", saveToFile = true)
+        BooleanResponse(flag = true) :: Nil
+      } else new ErrorResponse("Failed to set default user") :: Nil
+    } else {
+      Configuration.remove(Configuration.Keys.DEFAULT_USER, saveToFile = true)
+      Configuration.set(Configuration.Keys.USE_DEFAULT_USER, "false", saveToFile = true)
+      BooleanResponse(flag = true) :: Nil
+    }
+  }
+}
+
 class LoginRequest(db : DBAbstraction, username : String, password : String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val check = db.checkPassword(username, password)

@@ -22,6 +22,7 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
@@ -297,6 +298,7 @@ class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String])
     "key" -> JsString("userId"),
     "value" -> JsString(user.userName.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")),
     "userAuthLevel" -> JsNumber(user.level),
+    "askUseDefaultUser" -> (if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("false")) JsFalse else JsTrue),
     "type" -> JsString("LoginResponse")
   )
 }
