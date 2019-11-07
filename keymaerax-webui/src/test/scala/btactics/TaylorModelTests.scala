@@ -1,13 +1,15 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.AntePosition
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import org.scalatest.LoneElement._
 import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 import TactixLibrary._
+import TacticFactory._
+import Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool
 
@@ -29,13 +31,13 @@ class TaylorModelTests extends TacticTestBase {
     val ode = "{x' = 1 + y, y' = -x^2, t'=1}".asDifferentialProgram
     val tm = TaylorModel(ode, 2).lemma
     tm shouldBe 'proved
-//    println(new KeYmaeraXPrettierPrinter(100).stringify(tm.conclusion))
+    //    println(new KeYmaeraXPrettierPrinter(100).stringify(tm.conclusion))
     tm.conclusion shouldBe
       """
         |==>
         |(
         |    (t = 0 & x = a00() * r0() + a01() * r1() + aC0() & y = a10() * r0() + a11() * r1() + aC1()) &
-        |    (-1 <= r0() & r0() <= 1) & -1 <= r1() & r1() <= 1
+        |    (rL0() <= r0() & r0() <= rU0()) & rL1() <= r1() & r1() <= rU1()
         |  ) &
         |\forall t
         |  \forall Rem0
@@ -163,7 +165,7 @@ class TaylorModelTests extends TacticTestBase {
       """
         |==>
         |((t = 0 & x = a00() * r0() + aC0()) &
-        |(-1 <= r0() & r0() <= 1)) &
+        |(rL0() <= r0() & r0() <= rU0())) &
         |\forall t
         |  \forall Rem0
         |    (

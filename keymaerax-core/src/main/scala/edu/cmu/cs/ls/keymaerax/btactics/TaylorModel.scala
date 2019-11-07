@@ -260,6 +260,8 @@ object TaylorModelTactics extends Logging {
     def precond(i: Int, j: Int) : FuncOf = constR(precond_prefix + i + j)
     def precondC(i: Int) : FuncOf = constR(precond_prefix + "C" + i)
     def right(i: Int) : FuncOf = constR(right_prefix + i)
+    def rightL(i: Int) : FuncOf = constR(right_prefix + "L" + i)
+    def rightU(i: Int) : FuncOf = constR(right_prefix + "U" + i)
     def lower(i: Int) : FuncOf = constR(interval_prefix + "L" + i)
     def upper(i: Int) : FuncOf = constR(interval_prefix + "U" + i)
     def interval(i: Int) : FuncOf = constR(interval_prefix + i)
@@ -462,9 +464,11 @@ object TaylorModelTactics extends Logging {
       LessEqual(remainder(i), maxF(Number(0), Times(t, td(i))))
     )
 
-    def in_domain(t: Term) = And(LessEqual(Number(-1), t), LessEqual(t, Number(1)))
+    def in_domain(ltu:(Term, Term, Term)) = ltu match {
+      case (l: Term, t: Term, u: Term) => And(LessEqual(l, t), LessEqual(t, u))
+    }
 
-    val right_tm_domain = names.right_vars(dim).map(in_domain).reduceRight(And)
+    val right_tm_domain = (0 until dim).map(i => (names.rightL(i), names.right(i), names.rightU(i))).map(in_domain).reduceRight(And)
 
     val lemma : ProvableSig = {
       tic()
