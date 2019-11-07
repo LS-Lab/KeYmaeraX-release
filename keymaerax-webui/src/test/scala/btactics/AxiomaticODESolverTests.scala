@@ -270,6 +270,11 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     proveBy(result, QE()).subgoals.loneElement shouldBe "==> false".asSequent
   }
 
+  it should "rename duration variable correctly when solving nested ODEs" in withMathematica { _ =>
+    val result = proveBy("x=3 & y=8 ==> [{x'=1 & x<=5}][{y'=-1 & y>7}](x<=5 & y>7)".asSequent, solve(1) & solve(1, 0::1::1::Nil))
+    result.subgoals.loneElement shouldBe "x=3 & y=8 ==> \\forall t__0 (t__0>=0->\\forall s_ (0<=s_&s_<=t__0->s_+x<=5)->\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->-s_+y>7)->t__0+x<=5&-t_+y>7))".asSequent
+  }
+
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> <{x'=v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)

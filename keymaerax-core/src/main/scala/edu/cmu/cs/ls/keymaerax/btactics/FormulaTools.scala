@@ -4,11 +4,12 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.collection.immutable.List
 
 /**
@@ -61,6 +62,7 @@ object FormulaTools extends Logging {
   /**
     * Gets the (unquantified) kernel part of a quantified formula by peeling off quantifiers.
     */
+  @tailrec
   def kernel(formula: Formula): Formula = formula match {
     case Forall(vars, p) => kernel(p)
     case Exists(vars, p) => kernel(p)
@@ -236,6 +238,7 @@ object FormulaTools extends Logging {
   }
 
   /** Finds the closest parent to `pos` in `formula` that is a formula. */
+  @tailrec
   def parentFormulaPos(pos: PosInExpr, fml: Formula): PosInExpr =
     if (pos.pos.isEmpty) pos
     else Augmentors.FormulaAugmentor(fml).sub(pos) match {

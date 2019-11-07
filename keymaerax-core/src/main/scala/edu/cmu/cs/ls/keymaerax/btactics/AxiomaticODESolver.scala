@@ -13,8 +13,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ElidingProvable$}
+import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 
+import scala.annotation.tailrec
 import scala.collection.immutable._
 
 /**
@@ -93,6 +94,16 @@ object AxiomaticODESolver {
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
+    val renameDuration =
+      if (StaticSemanticsTools.boundAt(s(pos.top), pos.inExpr).contains(DURATION)) {
+        @tailrec
+        def findDurationBoundPos(seed: Position): Position = s.sub(seed) match {
+          case Some(Forall(v, _)) if v.contains(DURATION) => seed
+          case _ => findDurationBoundPos(seed.parent.get)
+        }
+        boundRename(DURATION, TacticHelper.freshNamedSymbol(DURATION, s))(findDurationBoundPos(pos))
+      } else nil
+
     val assumptions = if (pos.isAnte) s.ante.patch(pos.index0, Nil, 1) else s.ante
     val odeVars = StaticSemantics.boundVars(ode).toSet + DURATION + EVOL_DOM_TIME
     val consts = assumptions.filter(_.isFOL).flatMap(FormulaTools.conjuncts).
@@ -141,6 +152,8 @@ object AxiomaticODESolver {
     val cutConsts = consts != True && pos.isTopLevel && polarity >= 0
 
     DebuggingTactics.debug("SOLVE Start", ODE_DEBUGGER) &
+      renameDuration &
+      DebuggingTactics.debug("Renamed duration", ODE_DEBUGGER) &
       //@todo support the cases we now skip
       (if (cutConsts) DifferentialTactics.diffCut(consts)(pos) <(skip, V('Rlast) & prop &
         DebuggingTactics.done("Expected to prove constants invariant"))
@@ -181,7 +194,7 @@ object AxiomaticODESolver {
         TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         (TactixLibrary.useAt("true->")(pos ++ PosInExpr(0 :: 1 :: Nil))
           | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0 :: 1 :: Nil)))
-      else if (instEnd && q != True) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
+      else if (instEnd && q != True) TactixLibrary.allL(DURATION)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         TactixLibrary.useAt("<= flip")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil))
       else TactixLibrary.skip) &
       DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &
