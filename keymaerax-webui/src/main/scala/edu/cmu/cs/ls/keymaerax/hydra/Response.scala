@@ -23,8 +23,8 @@ import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.launcher.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer

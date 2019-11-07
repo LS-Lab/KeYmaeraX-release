@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.launcher
+package edu.cmu.cs.ls.keymaerax.tools
 
 import java.util.Locale
 
@@ -6,6 +6,7 @@ import scala.collection.immutable.Map
 
 /**
  * Created by smitsch on 7/14/15.
+ *
  * @author Stefan Mitsch
  * @author Ran Ji
  */

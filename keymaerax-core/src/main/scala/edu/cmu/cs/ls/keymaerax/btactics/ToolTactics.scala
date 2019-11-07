@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
 
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
@@ -24,6 +25,20 @@ import scala.collection.immutable._
 private object ToolTactics {
 
   private val namespace = "tooltactics"
+
+  def switchSolver(name: String): BelleExpr = "useSolver" byWithInput(name, {
+    val config = ToolConfiguration.config(name)
+    name.toLowerCase match {
+      case "mathematica" =>
+        ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+      case "wolframengine" =>
+        Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
+        ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
+      case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
+      case _ => throw BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
+    }
+    nil
+  })
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {

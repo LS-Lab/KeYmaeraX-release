@@ -10,8 +10,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.tools.DefaultConfiguration
 import org.scalatest.events.{Event, TestFailed, TestIgnored, TestSucceeded}
 import org.scalatest.{Args, Reporter, Suite}
 

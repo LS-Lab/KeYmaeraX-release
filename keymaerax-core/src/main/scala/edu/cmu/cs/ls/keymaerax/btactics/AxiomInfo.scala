@@ -1079,6 +1079,10 @@ object DerivationInfo {
       case _ => ??? // extract annotated invariants into a configurable generator
     } }, needsGenerator = true, revealInternalSteps = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true, revealInternalSteps = true),
+    InputTacticInfo("useSolver"
+      , "useSolver"
+      , List(StringArg("tool"))
+      , _ => ((tool: String) => ToolTactics.switchSolver(tool)): TypedFunc[String, BelleExpr]),
     InputTacticInfo("QE", "QE",
       List(OptionArg(StringArg("tool")), OptionArg(TermArg("timeout"))),
       _ => { case Some(toolName: String) => {

@@ -3,6 +3,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import org.scalatest.Inside._
@@ -268,6 +270,17 @@ class ToolTacticsTests extends TacticTestBase {
   it should "transform postcondition of modal" in withQE { _ =>
     val result = proveBy("x<0 -> [x:=x-1;](x<0&v^2>=0)".asFormula, edit("x<0 -> [x:=x-1;]x<0".asFormula)(1))
     result.subgoals.loneElement shouldBe "==> x<0 -> [x:=x-1;]x<0".asSequent
+  }
+
+  "Use solver" should "switch to Z3" in withMathematica { _ =>
+    def checkTool(name: String) = "ANON" by ((_: Sequent) => {
+      ToolProvider.tools().head.name shouldBe name
+      nil
+    })
+    proveBy("x>0 -> x>=0".asFormula,
+      ToolTactics.switchSolver("Z3") & checkTool("Z3") & implyR(1) &
+      ToolTactics.switchSolver("Mathematica") & checkTool("Mathematica") &
+      master()) shouldBe 'proved
   }
 
 }

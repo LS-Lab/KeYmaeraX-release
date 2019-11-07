@@ -1,8 +1,4 @@
-/**
-  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-  * See LICENSE.txt for the conditions of this license.
-  */
-package edu.cmu.cs.ls.keymaerax.launcher
+package edu.cmu.cs.ls.keymaerax.tools
 
 import java.io.File
 
@@ -16,7 +12,8 @@ import scala.util.Try
 
 /**
  * Tool configuration from config file/default configuration.
- * @author Stefan Mitsch
+  *
+  * @author Stefan Mitsch
  */
 object ToolConfiguration {
   /** Configuration suggestions. */
