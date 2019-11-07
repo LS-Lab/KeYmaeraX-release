@@ -2023,7 +2023,16 @@ private object DifferentialTactics extends Logging {
           ).reduceRight(And),
           Box(ODESystem(ode, r(vars)), P(vars))),
         implyR(1) & andL(-1) & andL('Llast) & andL('Llast) &
-          dR(And(r(vars), nonneg(p(vars))))(-2) & Idioms.<(skip, cohideOnlyL('Llast) & dW(1) & FOQuantifierTactics.allLs(vars)(-1) & prop & done) &
+          dR(And(r(vars), nonneg(p(vars))))(-2) &
+          Idioms.<(
+            skip,
+            cohideOnlyL('Llast) &
+              dW(1) &
+              implyR(1) &
+              FOQuantifierTactics.allLs(vars)(-1, 1::Nil) &
+              prop &
+              done
+          ) &
           TactixLibrary.generalize(nonneg(p(vars)))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
           useAt("RI& closed real induction >=")(1) &
           andR(1) &
