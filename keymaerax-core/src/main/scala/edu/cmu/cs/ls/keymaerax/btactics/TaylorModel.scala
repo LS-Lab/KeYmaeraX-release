@@ -570,11 +570,11 @@ object TaylorModelTactics extends Logging {
               tocTac("unfoldMinMax") &
               coarsenTimesBounds(time) &
               tocTac("coarsenTimesBounds") &
-              FOQuantifierTactics.allLs(time :: remainders)(-1) &
-              implyL(-1) &
+              FOQuantifierTactics.allLs(time :: remainders)('L) &
+              implyL('L) &
               Idioms.<(
                 cohideOnlyR(2) & prop & done,
-                  cohideOnlyL(-1) &
+                  cohideOnlyL(Find(0, Some("P_() & Q_()".asFormula), AntePosition(1), false)) &
                   implyRi()(AntePosition(1), SuccPosition(1)) &
                   debugTac("refine it!") &
                   tocTac("to refine") &
