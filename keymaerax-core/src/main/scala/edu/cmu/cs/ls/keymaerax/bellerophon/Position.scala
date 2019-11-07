@@ -103,6 +103,9 @@ sealed trait Position {
   /** The top-level part of this position */
   def top: SeqPos
 
+  /** The parent of this position (None if this is a top-level position) */
+  def parent: Option[Position] = if (isTopLevel) None else Some(topLevel ++ inExpr.parent)
+
   //  def getIndex: Int = index
 
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
