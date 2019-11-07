@@ -431,83 +431,79 @@ object TaylorModelTactics extends Logging {
     * A class capturing all lemmas and tactics for Taylor models for the given ode
     * */
   case class TaylorModel(ode: DifferentialProgram, order: Int, names: TMNames = TMNames("a", "r", "i", "Rem", "h")) {
-    val time = getTime(ode)
+    private val time = getTime(ode)
 
     // State Variables of Expansion and Actual Evolution
-    val vars = DifferentialHelper.getPrimedVariables(ode)
-    val state = vars.filterNot(_ == time)
-    val dim = state.length
+    private val vars = DifferentialHelper.getPrimedVariables(ode)
+    private val state = vars.filterNot(_ == time)
+    private val dim = state.length
+    private val timestep = names.timestep
+    private val remainder = names.remainder(_)
+    private val picRem = names.interval(_)
+    private val tdL = names.lower(_)
+    private val tdU = names.upper(_)
+    private val remainders = (0 until dim).map(remainder(_)).toList
 
     // Establish connection to the rings-library
-    val ringsLib = new RingsLibrary(vars++names.all_vars(dim))
-    val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim),
+    private val ringsLib = new RingsLibrary(vars++names.all_vars(dim))
+    private val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim),
       DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
-    val initial_condition = And(Equal(time, Number(0)),
-      state.zipWithIndex.map { case (v, i) => Equal(v,
-        Plus(
-          (0 until dim).map(j => Times(names.precond(i, j), names.right(j))).reduceLeft(Plus),
-          names.precondC(i)))
-      }.reduceRight(And))
+    private val initial_condition =
+      And(Equal(time, Number(0)),
+        (state, templateTmCompose(names, dim)).zipped.map { case (v, tm) => Equal(v, tm) }.reduceRight(And))
 
-    val timestep = names.timestep
-    val remainder = names.remainder(_)
-    val picRem = names.interval(_)
-    val tdL = names.lower(_)
-    val tdU = names.upper(_)
-    val remainders = (0 until dim).map(remainder(_)).toList
-
-    def lower_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
+    private def lower_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
       LessEqual(minF(Number(0), Times(t, td(i))), remainder(i))
     )
-    def upper_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
+    private def upper_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
       LessEqual(remainder(i), maxF(Number(0), Times(t, td(i))))
     )
 
-    def in_domain(ltu:(Term, Term, Term)) = ltu match {
+    private def in_domain(ltu:(Term, Term, Term)) : Formula = ltu match {
       case (l: Term, t: Term, u: Term) => And(LessEqual(l, t), LessEqual(t, u))
     }
 
-    val right_tm_domain = (0 until dim).map(i => (names.rightL(i), names.right(i), names.rightU(i))).map(in_domain).reduceRight(And)
+    private val right_tm_domain = (0 until dim).map(i => (names.rightL(i), names.right(i), names.rightU(i))).map(in_domain).reduceRight(And)
 
     tic()
     private val odeTac = DifferentialTactics.ODESpecific(ode)
     toc("odeTac")
 
-    val tm0 = templateTmCompose(names, dim)
-    val tm0R = tm0.map(ringsLib.toRing)
-    val picard_iterationR = ringsODE.PicardIteration(tm0R, order)
-    val picard_iteration = picard_iterationR.map(ringsLib.fromRing(_))
+    private val tm0 = templateTmCompose(names, dim)
+    private val tm0R = tm0.map(ringsLib.toRing)
+    private val picard_iterationR = ringsODE.PicardIteration(tm0R, order)
+    private val picard_iteration = picard_iterationR.map(ringsLib.fromRing(_))
     toc("Picard Iteration")
 
-    val picard_remainder_vars = (0 until dim) map (picRem(_))
-    val picard_remainder_varsR = picard_remainder_vars.map(ringsLib.toRing(_))
-    val picard_remainder_varsI = picard_remainder_vars.map(v => ringsLib.ring.index(ringsLib.mapper(v.func)))
+    private val picard_remainder_vars = (0 until dim) map (picRem(_))
+    private val picard_remainder_varsR = picard_remainder_vars.map(ringsLib.toRing(_))
+    private val picard_remainder_varsI = picard_remainder_vars.map(v => ringsLib.ring.index(ringsLib.mapper(v.func)))
 
-    val picard_poly_rem = (picard_iterationR, picard_remainder_varsR).zipped.map(_ + _)
+    private val picard_poly_rem = (picard_iterationR, picard_remainder_varsR).zipped.map(_ + _)
 
-    val (_, picard_iterate_remainder) = ringsODE.PicardOperation(tm0R, picard_poly_rem, order, picard_remainder_varsI)
+    private val (_, picard_iterate_remainder) = ringsODE.PicardOperation(tm0R, picard_poly_rem, order, picard_remainder_varsI)
     toc("Picard Iterate")
 
-    val right_vars = names.right_vars(dim)
-    val bounded_vars = right_vars ++ (0 until dim).map(remainder(_)) // variables for which we assume interval bounds somewhen
+    private val right_vars = names.right_vars(dim)
+    private val bounded_vars = right_vars ++ (0 until dim).map(remainder(_)) // variables for which we assume interval bounds somewhen
 
     /* this tries to keep even powers to exploit r:[-1,1]->r^2:[0,1] */
-    val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (time :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
-    val horner_orderR = horner_order.map(ringsLib.toRing)
+    private val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (time :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
+    private val horner_orderR = horner_order.map(ringsLib.toRing)
 
     toc("horner_order")
     // TODO: use ringsLib here, as well
     // f (p + r)
-    val fpr = ringsODE.applyODE(picard_iterationR.zipWithIndex.map{case (p, i) => p + ringsLib.toRing(remainder(i))})
+    private val fpr = ringsODE.applyODE(picard_iterationR.zipWithIndex.map{case (p, i) => p + ringsLib.toRing(remainder(i))})
     // p'
-    val pp = picard_iteration.map(ringsLib.lieDerivative{
+    private val pp = picard_iteration.map(ringsLib.lieDerivative{
       case v: Variable if v == time => Some(ringsLib.ring(1))
       case _ => None
     })
     // Horner(f (p + r) - p')
-    val hornerFprPp = (fpr, pp).zipped.map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
-    val numbericCondition =
+    private val hornerFprPp = (fpr, pp).zipped.map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
+    private val numbericCondition =
       FormulaTools.quantify(time :: remainders,
         Imply(
           And(And(LessEqual(Number(0), time), LessEqual(time, timestep)),
@@ -517,17 +513,17 @@ object TaylorModelTactics extends Logging {
     toc("numbericCondition")
 
 
-    def tm_enclosure(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
+    private def tm_enclosure(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
       val r = remainder(i)
       Exists(List(r), And(Equal(r, Minus(x, p)), And(LessEqual(l, r), LessEqual(r, u))))
     }
-    val post = (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+    private val post = (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
       tm_enclosure(x, i, p, Times(time, tdL(i)), Times(time, tdU(i)))
     }
     toc("post")
 
-    val box = Box(ODESystem(ode, And(LessEqual(Number(0), time), LessEqual(time, timestep))), post.reduceRight(And))
-    val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
+    private val box = Box(ODESystem(ode, And(LessEqual(Number(0), time), LessEqual(time, timestep))), post.reduceRight(And))
+    private val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
         case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
           ProofRuleTactics.boundRenaming(vs.head, remainder(state.indexOf(v)))(pos) & existsL(pos)
