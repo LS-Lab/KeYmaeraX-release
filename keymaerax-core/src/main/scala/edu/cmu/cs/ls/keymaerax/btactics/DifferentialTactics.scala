@@ -2029,7 +2029,7 @@ private object DifferentialTactics extends Logging {
             cohideOnlyL('Llast) &
               dW(1) &
               implyR(1) &
-              FOQuantifierTactics.allLs(vars)(-1, 1::Nil) &
+              FOQuantifierTactics.allLs(vars)(-1, 1 :: Nil) &
               prop &
               done
           ) &
@@ -2051,7 +2051,7 @@ private object DifferentialTactics extends Logging {
               implyR(1) &
                 orL('Llast) < (
                   useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & prop & done,
-                  dR(And(r(vars),nonneg(q(vars))), false)(1) & Idioms.<(
+                  dR(And(r(vars), nonneg(q(vars))), false)(1) & Idioms.<(
                     useAt(ODEInvariance.uniqAx, PosInExpr(1 :: Nil))(1) &
                       andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId),
                     andL('L) &
@@ -2061,7 +2061,7 @@ private object DifferentialTactics extends Logging {
                       cohideOnlyL(-6) &
                         FOQuantifierTactics.allLs(vars)(-1) &
                         DifferentialTactics.inverseDiffGhost(1) &
-                        derive(1, 1::Nil) &
+                        derive(1, 1 :: Nil) &
                         closeId)
                   )
                 )
