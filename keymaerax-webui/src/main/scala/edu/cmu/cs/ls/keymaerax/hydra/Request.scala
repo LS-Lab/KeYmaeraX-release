@@ -1612,7 +1612,8 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
           DerivationInfo.locate(parentTactic) match {
-            case Some(ptInfo) => ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil, marginLeft, marginRight) :: Nil
+            case Some(ptInfo) => ExpandTacticResponse(localProofId, Nil, Nil,
+              ptInfo.codeName, "", Nil, Nil, marginLeft, marginRight) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
           }
         } else {
@@ -1621,8 +1622,16 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
+          val goals = innerTree.openGoals.map(_.conclusion)
+          val backendGoals = innerTree.openGoals.map(n =>
+            if (n.conclusion.isFOL) Some(
+              (KeYmaeraToMathematica(n.conclusion.toFormula).toString,
+               DefaultSMTConverter(n.conclusion.toFormula)))
+            else None
+          )
 
-          ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
+          ExpandTacticResponse(localProofId, goals, backendGoals, parentStep, stepDetails, innerSteps,
+            agendaItems, marginLeft, marginRight) :: Nil
         }
     }
   }
@@ -1637,7 +1646,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId.toString))
     //@todo fill in parent step for empty ""
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
-    ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
+    ExpandTacticResponse(proofId.toInt, Nil, Nil, "", tree.tacticString, innerSteps, agendaItems, marginLeft, marginRight) :: Nil
   }
 }
 

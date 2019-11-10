@@ -1343,7 +1343,8 @@ case class GetTacticResponse(tacticText: String) extends Response {
   )
 }
 
-case class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, stepsTactic: String,
+case class ExpandTacticResponse(detailsProofId: Int, goalSequents: List[Sequent], backendGoals: List[Option[(String, String)]],
+                                tacticParent: String, stepsTactic: String,
                                 tree: List[ProofTreeNode], openGoals: List[AgendaItem],
                                 marginLeft: Int, marginRight: Int) extends Response {
   private lazy val proofTree = {
@@ -1360,6 +1361,11 @@ case class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, steps
     ),
     "detailsProofId" -> JsString(detailsProofId.toString),
     if (tree.nonEmpty) "proofTree" -> proofTree else "proofTree" -> JsObject(),
+    "goalSequents" -> JsArray(goalSequents.map(g => JsString(g.toString)):_*),
+    "backendGoals" -> JsArray(backendGoals.map(g =>
+      if (g.nonEmpty) JsObject("mathematica" -> JsString(g.get._1), "z3" -> JsString(g.get._2))
+      else JsObject()
+    ):_*),
     "openGoals" -> JsObject(openGoals.map(itemJson):_*)
   )
 }

@@ -205,6 +205,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
                 details: {
                   proofId: response.data.detailsProofId,
                   tactic: response.data.tactic.stepsTactic,
+                  //@todo access the correct one that fits the displayed goal
+                  goalSequent: response.data.goalSequents[0],
+                  backendGoal: response.data.backendGoals[0],
                   proofTree: new ProofTree(),
                   agenda: new Agenda()
                 }

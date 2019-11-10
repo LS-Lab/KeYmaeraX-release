@@ -201,9 +201,24 @@
                         <i class="fa fa-bug"></i> Counterexample
                     </a>
                     <a class="btn btn-xs btn-default"
-                       uib-popover-template="'proofStepTactic.html'"
+                       uib-popover="{{justification.details.tactic}}"
                        popover-trigger="'outsideClick'"
                        popover-placement="auto bottom-right"><span class="fa fa-file-code-o"> Tactic</span></a>
+                    <a class="btn btn-xs btn-default"
+                       ng-if="justification.details.goalSequent"
+                       uib-popover="{{justification.details.goalSequent}}"
+                       popover-trigger="'outsideClick'"
+                       popover-placement="auto bottom-right"><i class="fa fa-file-text-o"></i> Print Subgoal</a>
+                    <a class="btn btn-xs btn-default"
+                       ng-if="justification.details.backendGoal.mathematica"
+                       uib-popover="{{justification.details.backendGoal.mathematica}}"
+                       popover-trigger="'outsideClick'"
+                       popover-placement="auto bottom-right"><i class="fa fa-calculator"></i> Print Mathematica</a>
+                    <a class="btn btn-xs btn-default"
+                       ng-if="justification.details.backendGoal.z3"
+                       uib-popover="{{justification.details.backendGoal.z3}}"
+                       popover-trigger="'outsideClick'"
+                       popover-placement="auto bottom-right"><i class="fa fa-calculator"></i> Print SMTLib</a>
                     <a class="btn btn-xs btn-default" ng-if="!readOnly" ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a>
 <!--                    <span ng-if="justification.details.standardDerivation.codeName !== 'nil'"-->
 <!--                          uib-popover-template="fetchJustificationHelp(justification.details.standardDerivation.codeName)"-->
