@@ -34,6 +34,11 @@ object AxiomaticODESolver {
 
   private lazy val simplifier = SimplifierV3.simpTac()
 
+  /** Simplifier that does not simplify dependent formulas F->(F<->true) to true */
+  private lazy val postCondSimplifier = SimplifierV3.simpTac(Nil,
+    SimplifierV3.composeIndex(SimplifierV3.baseIndexWithoutDepFmlSimp, SimplifierV3.boolIndex, SimplifierV3.cmpIndex),
+    SimplifierV3.defaultTaxs)
+
   /** The name of the explicit time variables. */
   //WARNING global mutable state. Changed by addTimeVar. Do not run 2 AxiomaticODESolvers sequentially!
   private var TIMEVAR: Variable = "kyxtime".asVariable
@@ -99,6 +104,7 @@ object AxiomaticODESolver {
         @tailrec
         def findDurationBoundPos(seed: Position): Position = s.sub(seed) match {
           case Some(Forall(v, _)) if v.contains(DURATION) => seed
+          case Some(Exists(v, _)) if v.contains(DURATION) => seed
           case _ => findDurationBoundPos(seed.parent.get)
         }
         boundRename(DURATION, TacticHelper.freshNamedSymbol(DURATION, s))(findDurationBoundPos(pos))
@@ -116,7 +122,8 @@ object AxiomaticODESolver {
       filterNot(f => f==True || f==False). //@todo improve DI
       reduceOption(And).getOrElse(True)
 
-    val simpSol = simplifier(pos ++ (if (q == True) PosInExpr(0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 1 :: Nil)))
+    //@note do not simplify dependent formulas in postcondition, since diamond solver relies on duplicated formulas
+    val simpSol = postCondSimplifier(pos ++ (if (q == True) PosInExpr(0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 1 :: Nil)))
     val simpEvolDom =
       if (q == True) TactixLibrary.skip //evolution domain constraint is trivial, so simplification is not necessary.
       else if (instEnd) simplifier(pos ++ PosInExpr(0 :: Nil))
@@ -540,7 +547,7 @@ object AxiomaticODESolver {
       TactixLibrary.assignb(pp ++ PosInExpr(1::Nil))
     }))(pos)*odeSize &
       (if (polarity > 0) TactixLibrary.useAt(rewrite3, PosInExpr(1::Nil))(pos)
-       else TactixLibrary.skip) & simplifier(pos)
+       else TactixLibrary.skip) & postCondSimplifier(pos) //@note do not simplify dependent formulas in postcondition, since diamond solver relies on duplicated formulas
   })
 
   //endregion

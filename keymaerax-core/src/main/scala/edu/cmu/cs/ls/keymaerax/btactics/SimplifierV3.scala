@@ -900,6 +900,15 @@ object SimplifierV3 {
     }
   }
 
+  /** Base index without F->(F<->true) dependent formula simplification. */
+  def baseIndexWithoutDepFmlSimp(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match {
+      case True => List()
+      case False => List(tauto3)
+      case _ => List(tauto2,tauto3)
+    }
+  }
+
   //TODO: These are annoying to add to the derived axioms database...
   private def qeSearch(cmp1:(Term,Term)=>Formula,cmps:List[(Term,Term)=>Formula]) : List[ProvableSig] = {
     //Use partial QE because I don't want to do everything by hand..

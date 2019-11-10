@@ -381,6 +381,11 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.loneElement shouldBe "==> (-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> 0<=fpost_0()*s_+l&s_+c<=ep) & (fpost()=fpost_0()&lpost()=fpost_0()*t_+l)&cpost()=t_+c))".asSequent
   }
 
+  it should "rename duration variable correctly when solving nested ODEs" in withMathematica { _ =>
+    val result = proveBy("x=3 & y=8 ==> <{x'=1 & x<=5}><{y'=-1 & y>7}>(x<=5 & y>7)".asSequent, solve(1) & solve(1, 0::1::1::Nil))
+    result.subgoals.loneElement shouldBe "x=3 & y=8 ==> \\exists t__0 (t__0>=0 & \\forall s_ (0<=s_&s_<=t__0->s_+x<=5) & \\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_->-s_+y>7) & t__0+x<=5&-t_+y>7))".asSequent
+  }
+
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1) & DebuggingTactics.print("About to QE on") & QE()
