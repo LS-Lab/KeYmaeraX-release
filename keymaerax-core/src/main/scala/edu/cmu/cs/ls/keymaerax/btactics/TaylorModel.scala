@@ -426,11 +426,39 @@ object TaylorModelTactics extends Logging {
       }
     }
     toc("post")
+    private val postUnfolded = SubstitutionHelper.replaceFree(
+      (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+        val r = Minus(x, p)
+        And(LessEqual(Times(localTime, tdL(i)), r), LessEqual(r, Times(localTime, tdU(i))))
+      }.reduceRight(And))(localTime, Minus(time, time0))
+    toc("postUnfolded")
 
     private val boxTMEnclosure = Box(ODESystem(ode, And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep)))),
-      FormulaTools.quantifyExists(localTime :: remainders,
-        (Equal(time, Plus(time0, localTime)):: post).reduceRight(And))
+      FormulaTools.quantifyExists(localTime :: remainders, (Equal(time, Plus(time0, localTime)):: post).reduceRight(And))
     )
+
+    lazy val eqAddIff = remember("f_() = g_() + h_() <-> h_() = f_() - g_()".asFormula, QE & done)
+    lazy val plusDiffRefl = remember("f_() = g_() + (f_() - g_())".asFormula, QE & done)
+    val postEq = proveBy(Equiv(boxTMEnclosure.child, postUnfolded),
+      equivR(1) &
+        Idioms.<(
+          existsL(-1) * (dim + 1) &
+            andL(-1) &
+            useAt(eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & hideL(-1) &
+            (andL(-1) & andL(-1) & andR(1) &
+              Idioms.<(useAt(eqAddIff, PosInExpr(0 :: Nil))(-2) & eqL2R(-2)(-3) & hideL(-2) & closeId, hideL(-3) & hideL(-2))) * (dim - 1) &
+            andL(-1) & useAt(eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & hideL(-1) & closeId,
+          existsR(Minus(time, time0))(1) &
+            (state, picard_iteration).zipped.foldRight(skip) { case ((x, p), tac) =>
+              existsR(Minus(x, SubstitutionHelper.replaceFree(p)(localTime, Minus(time, time0))))(1) & tac
+            } &
+            andR(1) &
+            Idioms.<(cohideR(1) & byUS(plusDiffRefl)/* time */,
+              (andL(-1) & andR(1) & Idioms.<(andR(1) & Idioms.<(cohideR(1) & byUS(plusDiffRefl), hideL(-2) & closeId), hideL(-1)))*(dim - 1)) &
+            andR(1) & Idioms.<(cohideR(1) & byUS(plusDiffRefl), closeId)
+        )
+    )
+
     private val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
         case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
@@ -448,11 +476,9 @@ object TaylorModelTactics extends Logging {
         boxTMEnclosure),
       debugTac("start") &
         implyR(1) &
-        // push in existential quantifiers
-        SaturateTactic(rewriteFormula(partialVacuousExistsAxiom2.fact)(1) |!
-          rewriteFormula(Ax.pexistsV.provable)(1) |!
-          rewriteFormula(TaylorModelTactics.unfoldExistsLemma.fact)(1)
-        ) &
+        debugTac("pre push") &
+        useAt(postEq, PosInExpr(0::Nil))(1, 1::Nil) &
+        debugTac("post push") &
         tocTac("pre dIClosed") &
         useAt(domain_rewrite, PosInExpr(0::Nil))(1, 0::1::Nil) &
         odeTac.dIClosed(1) &
