@@ -2016,10 +2016,10 @@ private object DifferentialTactics extends Logging {
           List(
             P(vars),
             Box(ODESystem(ode, And(r(vars), P(vars))), pos(q(vars))),
-            FormulaTools.quantify(vvars,
+            FormulaTools.quantifyForall(vvars,
               Box(ODESystem(ode2, And(r(vvars), nonneg(q(vvars)))),
                 DifferentialFormula(P(vvars)))),
-            FormulaTools.quantify(vvars, Equiv(P(vvars), nonneg(p(vvars)))),
+            FormulaTools.quantifyForall(vvars, Equiv(P(vvars), nonneg(p(vvars)))),
           ).reduceRight(And),
           Box(ODESystem(ode, r(vars)), P(vars))),
         implyR(1) & andL(-1) & andL('Llast) & andL('Llast) &

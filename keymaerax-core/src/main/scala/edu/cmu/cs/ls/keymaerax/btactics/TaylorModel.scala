@@ -248,6 +248,37 @@ object TaylorModelTactics extends Logging {
   }
 
 
+  // TODO: sort in somewhere
+  lazy val partialVacuousExistsAxiom2 = remember(
+    "\\exists x_ (p_() & q_(x_)) <-> p_() & \\exists x_ q_(x_)".asFormula,
+    equivR(1) <(
+      existsL(-1) & andR(1) <(prop & done, existsR("x_".asVariable)(1) & prop & done),
+      andL('L) & existsL(-2) & existsR("x_".asVariable)(1) & prop & done
+    )
+  )
+
+  def rewriteFormula(prv: ProvableSig) = "rewriteFormula" by { (pos: Position, seq: Sequent) =>
+    val failFast = new BuiltInTactic("ANON") with NoOpTactic {
+      override def result(provable: ProvableSig): ProvableSig = throw BelleUserGeneratedError("Fail")
+    }
+    prv.conclusion.succ.toList match {
+      case Equiv(lhs, rhs) :: Nil =>
+        seq.sub(pos) match {
+          case Some(fml: Formula) =>
+            val poss = FormulaTools.posOf(fml, a => a match {
+              case (subfml: Formula) => {
+                val um = UnificationMatch.unifiable(lhs, subfml)
+                um.isDefined
+              }
+              case _ => false
+            })
+            poss.foldRight(fail){ case (subpos, a) => useAt(prv, PosInExpr(0 :: Nil))(pos ++ subpos) | a }
+          case _ => throw new IllegalArgumentException("rewriteFormula not on Formula.")
+        }
+      case _ => throw new IllegalArgumentException("rewriteFormula expects an Equiv as single conclusion of provable but got:\\n" + prv)
+    }
+  }
+
   // Generic TaylormModel functions
 
   // names
@@ -284,22 +315,17 @@ object TaylorModelTactics extends Logging {
   // Specialized Tactics
   private val namespace = "taylormodel"
   def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
-  private lazy val unfoldExistsLemma = remember("\\exists x (x = r() & P(x)) <-> P(r())".asFormula, prop & Idioms.<(
-    existsL(-1) & andL(-1) & eqL2R(-1)(-2) & closeId,
-    existsR("r()".asTerm)(1) & prop & QE & done))
-  val unfoldExists = "unfoldExists" by { (pos: Position, seq: Sequent) =>
-    Idioms.mapSubpositions(pos, seq, {
-      case (Exists(vs, And(Equal(v, _), _)), pos) if vs.length == 1 && vs.head == v =>
-        Some(useAt(unfoldExistsLemma, PosInExpr(0 :: Nil))(pos): BelleExpr)
-      case _ => None
-    }).reduceLeft(_ & _)
-  }
+  lazy val unfoldExistsLemma = remember("\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
+    existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms.<(QE & done, implyR(1) & eqL2R(-3)(1) & closeId),
+    existsR("r_() - s_()".asTerm)(1) & prop & QE & done))
 
-  private lazy val foldAndLessEqExistsLemma = remember(("(a() <= x - b() & x - b() <= c()) <->" +
-    "(\\exists xr_ (x = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula, QE & done)
-  val foldAndLessEqExists = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
+  private lazy val foldAndLessEqExistsLemma = remember(("(a() <= x_ - b() & x_ - b() <= c()) <->" +
+    "(\\exists xr_ (x_ = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula, QE & done)
+  def foldAndLessEqExists(but: Seq[Variable] = Nil) = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
     Idioms.mapSubpositions(pos, seq, {
-      case (And(LessEqual(_, Minus(v1: Variable, _)), LessEqual(Minus(v2: Variable, _), _)), pos) if v1 == v2 =>
+      case (And(LessEqual(_, Minus(v1: Variable, _)), LessEqual(Minus(v2: Variable, _), _)), pos)
+        if v1 == v2 && !but.contains(v1)
+      =>
         Some(useAt(foldAndLessEqExistsLemma, PosInExpr(0::Nil))(pos): BelleExpr)
       case _ =>
         None
@@ -432,6 +458,8 @@ object TaylorModelTactics extends Logging {
     * */
   case class TaylorModel(ode: DifferentialProgram, order: Int, names: TMNames = TMNames("a", "r", "i", "Rem", "h")) {
     private val time = getTime(ode)
+    private val time0 = "t0()".asTerm // TODO: parameterize!
+    private val localTime = "s".asVariable // TODO: parameterize!
 
     // State Variables of Expansion and Actual Evolution
     private val vars = DifferentialHelper.getPrimedVariables(ode)
@@ -445,12 +473,12 @@ object TaylorModelTactics extends Logging {
     private val remainders = (0 until dim).map(remainder(_)).toList
 
     // Establish connection to the rings-library
-    private val ringsLib = new RingsLibrary(vars++names.all_vars(dim))
-    private val ringsODE = ringsLib.ODE(time, state, names.right_vars(dim),
+    private val ringsLib = new RingsLibrary(time0::localTime::vars++names.all_vars(dim))// TODO: time0, localTime?!
+    private val ringsODE = ringsLib.ODE(localTime, state, names.right_vars(dim),
       DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
     private val initial_condition =
-      And(Equal(time, Number(0)),
+      And(Equal(time, time0),
         (state, templateTmCompose(names, dim)).zipped.map { case (v, tm) => Equal(v, tm) }.reduceRight(And))
 
     private def lower_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
@@ -489,7 +517,7 @@ object TaylorModelTactics extends Logging {
     private val bounded_vars = right_vars ++ (0 until dim).map(remainder(_)) // variables for which we assume interval bounds somewhen
 
     /* this tries to keep even powers to exploit r:[-1,1]->r^2:[0,1] */
-    private val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (time :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
+    private val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (localTime :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
     private val horner_orderR = horner_order.map(ringsLib.toRing)
 
     toc("horner_order")
@@ -498,31 +526,42 @@ object TaylorModelTactics extends Logging {
     private val fpr = ringsODE.applyODE(picard_iterationR.zipWithIndex.map{case (p, i) => p + ringsLib.toRing(remainder(i))})
     // p'
     private val pp = picard_iteration.map(ringsLib.lieDerivative{
-      case v: Variable if v == time => Some(ringsLib.ring(1))
+      case v: Variable if v == localTime => Some(ringsLib.ring(1))
       case _ => None
     })
     // Horner(f (p + r) - p')
     private val hornerFprPp = (fpr, pp).zipped.map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
     private val numbericCondition =
-      FormulaTools.quantify(time :: remainders,
+      FormulaTools.quantifyForall(localTime :: remainders,
         Imply(
-          And(And(LessEqual(Number(0), time), LessEqual(time, timestep)),
+          And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
             (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
           hornerFprPp.zipWithIndex.map{case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i)))}.reduceRight(And)
         ))
     toc("numbericCondition")
 
 
-    private def tm_enclosure(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
+    private def tmEnclosureEx(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
       val r = remainder(i)
       Exists(List(r), And(Equal(r, Minus(x, p)), And(LessEqual(l, r), LessEqual(r, u))))
     }
-    private val post = (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
-      tm_enclosure(x, i, p, Times(time, tdL(i)), Times(time, tdU(i)))
+
+    private def tmEnclosure(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
+      val r = remainder(i)
+      And(Equal(x, Plus(p, r)), And(LessEqual(l, r), LessEqual(r, u)))
+    }
+    // Taylor Model postcondition without existentials and instantiated with t for time.
+    private val post = {
+      (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+        tmEnclosure(x, i, p, Times(localTime, tdL(i)), Times(localTime, tdU(i)))
+      }
     }
     toc("post")
 
-    private val boxTMEnclosure = Box(ODESystem(ode, And(LessEqual(Number(0), time), LessEqual(time, timestep))), post.reduceRight(And))
+    private val boxTMEnclosure = Box(ODESystem(ode, And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep)))),
+      FormulaTools.quantifyExists(localTime :: remainders,
+        (Equal(time, Plus(time0, localTime)):: post).reduceRight(And))
+    )
     private val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
         case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
@@ -531,53 +570,95 @@ object TaylorModelTactics extends Logging {
       }
     }
 
-    val lemma : ProvableSig = proveBy(
-        Imply(
-          And(And(initial_condition, right_tm_domain), numbericCondition),
-          boxTMEnclosure),
-        debugTac("start") &
-          implyR(1) &
-          unfoldExists(1) &
-          tocTac("pre dIClosed") &
-          odeTac.dIClosed(1) &
-          Idioms.<(
-            // Initial Condition
-            tocTac("dIClosed") &
+    val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
+      And(LessEqual(Number(0), Minus(time, time0)), LessEqual(Minus(time, time0), timestep))), QE & done)
+
+    val lemma: ProvableSig = proveBy(
+      Imply(
+        And(And(initial_condition, right_tm_domain), numbericCondition),
+        boxTMEnclosure),
+      debugTac("start") &
+        implyR(1) &
+        // push in existencial quantifiers
+        SaturateTactic(rewriteFormula(partialVacuousExistsAxiom2.fact)(1) |
+          rewriteFormula(DerivedAxioms.partialVacuousExistsAxiom.fact)(1) |
+          rewriteFormula(TaylorModelTactics.unfoldExistsLemma.fact)(1)
+        ) &
+        tocTac("pre dIClosed") &
+        useAt(domain_rewrite, PosInExpr(0::Nil))(1, 0::1::Nil) &
+        odeTac.dIClosed(1) &
+        Idioms.<(
+          // Initial Condition
+          tocTac("dIClosed") &
             debugTac("Initial Condition") &
-              andL(-1) & cohideOnlyL(-1) &
-              SaturateTactic(andL('L)) &
-              rewriteAnte(true)(1) &
-              cohideR(1) &
-              debugTac("initial QEs") &
-              solveTrivialInequalities(1) &
-              tocTac("Initial Condition done") &
-              done,
-            // Differential Invariant
-            tocTac("Differential Invariant") &
-            foldAndLessEqExists(1) &
-              tocTac("foldAndLessEqExists") &
-              implyR(1) &
-              SaturateTactic(andL('L) | instLeq('L)) &
-              tocTac("Saturate instLeq") &
-              rewriteAnte(true)(1) &
-              tocTac("rewriteAnte") &
-              unfoldMinMax(1) &
-              tocTac("unfoldMinMax") &
-              coarsenTimesBounds(time) &
-              tocTac("coarsenTimesBounds") &
-              FOQuantifierTactics.allLs(time :: remainders)('L) &
-              implyL('L) &
-              Idioms.<(
-                cohideOnlyR(2) & prop & done,
-                  cohideOnlyL(Find(0, Some("P_() & Q_()".asFormula), AntePosition(1), false)) &
-                  implyRi()(AntePosition(1), SuccPosition(1)) &
-                  debugTac("refine it!") &
-                  tocTac("to refine") &
-                  refineTrivialInequalities(1) &
-                  tocTac("refined it")
+            andL(-1) & cohideOnlyL(-1) &
+            SaturateTactic(andL('L)) &
+            rewriteAnte(true)(1) &
+            cohideR(1) &
+            debugTac("initial QEs") &
+            solveTrivialInequalities(1) &
+            tocTac("Initial Condition done") &
+            done,
+          // Differential Invariant
+          tocTac("Differential Invariant") &
+            foldAndLessEqExists(time::Nil)(1) &
+            tocTac("foldAndLessEqExists") &
+            implyR(1) &
+            SaturateTactic(andL('L) | instLeq('L)) &
+            tocTac("Saturate instLeq") &
+            rewriteAnte(true)(1) &
+            tocTac("rewriteAnte") &
+            unfoldMinMax(1) &
+            tocTac("unfoldMinMax") &
+            debugTac("unfoldMinMax") &
+            coarsenTimesBounds(Minus(time, time0)) &
+            tocTac("coarsenTimesBounds") &
+            FOQuantifierTactics.allLs(Minus(time, time0):: remainders)('L) &
+            implyL('L) &
+            Idioms.<(
+              cohideOnlyR(2) & prop & done,
+              cohideOnlyL(Find(0, Some("P_() & Q_()".asFormula), AntePosition(1), false)) &
+                implyRi()(AntePosition(1), SuccPosition(1)) &
+                debugTac("refine it!") &
+                tocTac("to refine") &
+                refineTrivialInequalities(1) &
+                tocTac("refined it") &
+                done
+            )
+        )
+    )
+
+    val timestepLemma = {
+      proveBy(
+        Imply(
+          And(And(And(And(
+            // t=0, x = A*r + A_c
+            initial_condition,
+            // r : [rL, rU]
+            right_tm_domain),
+            // condition for valid TM conclusion
+            numbericCondition),
+            // \forall t x Rem ( x = TM(x,t,Rem) -> P(t, x))
+            FormulaTools.quantifyForall(localTime :: state ++ remainders,
+              Imply(
+                And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
+                  SubstitutionHelper.replaceFree(post.reduceRight(And))(time, localTime))
+                ,
+                SubstitutionHelper.replaceFree(odeTac.P_pat)(time, Plus(time, localTime)))
+            )),
+            // \forall x Rem ( x = TM(x,h,Rem) -> [x'=f(x)]P(t+h,x) )
+            FormulaTools.quantifyForall(state++remainders,
+              Imply(
+                SubstitutionHelper.replaceFree(post.reduceRight(And))(time, timestep),
+                Box(ODESystem(ode, True), SubstitutionHelper.replaceFree(odeTac.P(vars))(time, timestep))
               )
-          )
+            )
+          ),
+          Box(ODESystem(ode, True), odeTac.P_pat)
+        ),
+        skip
       )
+    }
 
     private def getBoundees(fml: Formula): List[Term] = fml match {
       case And(And(Less(_, t1), Less(t2, _)), ivls) if t1 == t2 =>
@@ -593,7 +674,7 @@ object TaylorModelTactics extends Logging {
       val lowers = lower_rembounds(timebound){i => Number(ivls(i)._1)}
       val uppers = upper_rembounds(timebound){i => Number(ivls(i)._2)}
       // TODO: compute bounds except lowers/uppers earlier?!
-      val bounds = IntervalArithmeticV2.collect_bounds(prec, LessEqual(Number(0), time) :: LessEqual(time, timebound) :: right_bounds ++ lowers ++ uppers)
+      val bounds = IntervalArithmeticV2.collect_bounds(prec, LessEqual(Number(0), localTime) :: LessEqual(localTime, timebound) :: right_bounds ++ lowers ++ uppers)
       boundees.map(IntervalArithmeticV2.eval_ivl(prec)(bounds))
     }
 
@@ -635,13 +716,13 @@ object TaylorModelTactics extends Logging {
       pos.checkSucc
       pos.checkTop
       seq.sub(pos) match {
-        case Some(Box(ODESystem(ode1, And(LessEqual(time0, time1), LessEqual(time2, timebound))), goal))
+        case Some(Box(ODESystem(ode1, And(LessEqual(t0, time1), LessEqual(time2, Plus(t00, timebound)))), goal))
           // TODO: more flexible domain, lookup ode?
-          if ode1 == ode && time0 == Number(0) && time1 == time && time2 == time =>
+          if ode1 == ode && time1 == time && time2 == time && t0 == t00 =>
         {
           require(seq.sub(antepos).isDefined)
           val concrete_initial_condition = seq.sub(antepos).get
-          val subst = USubst(SubstitutionPair(names.timestep, timebound)::Nil)++UnificationMatch(And(initial_condition, right_tm_domain), concrete_initial_condition).usubst
+          val subst = USubst(SubstitutionPair(time0, t0)::SubstitutionPair(names.timestep, timebound)::Nil)++UnificationMatch(And(initial_condition, right_tm_domain), concrete_initial_condition).usubst
           val lemma1 = lemma(subst)
           require(lemma1.conclusion.succ.length == 1)
           val (boundees, concrete_right_bound) = lemma1.conclusion.succ(0) match {
