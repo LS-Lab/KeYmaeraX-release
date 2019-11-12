@@ -596,32 +596,105 @@ object TaylorModelTactics extends Logging {
     val timestepLemma = {
       proveBy(
         Imply(
-          And(And(And(And(
+          And(And(And(And(And(
             // t=0, x = A*r + A_c
             initial_condition,
             // r : [rL, rU]
             right_tm_domain),
             // condition for valid TM conclusion
             numbericCondition),
-            // \forall t x Rem ( x = TM(x,t,Rem) -> P(t, x))
-            FormulaTools.quantifyForall(localTime :: state ++ remainders,
+            // nonnegative time step
+            LessEqual(Number(0), timestep)),
+            // \forall t x ( x = TM(x,t) -> P(t, x))
+            FormulaTools.quantifyForall(localTime :: state,
               Imply(
                 And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
-                  SubstitutionHelper.replaceFree(post.reduceRight(And))(time, localTime))
+                  post.reduceRight(And))
                 ,
                 SubstitutionHelper.replaceFree(odeTac.P_pat)(time, Plus(time, localTime)))
             )),
-            // \forall x Rem ( x = TM(x,h,Rem) -> [x'=f(x)]P(t+h,x) )
-            FormulaTools.quantifyForall(state++remainders,
+            // \forall t x Rem ( (t=t0+h() & x = TM(x,h,Rem)) -> [x'=f(x)]P(t,x) )
+            FormulaTools.quantifyForall(time::state,
               Imply(
-                SubstitutionHelper.replaceFree(post.reduceRight(And))(time, timestep),
-                Box(ODESystem(ode, True), SubstitutionHelper.replaceFree(odeTac.P(vars))(time, timestep))
+                And(Equal(time, Plus(time0, timestep)), SubstitutionHelper.replaceFree(post.reduceRight(And))(localTime, timestep)),
+                Box(ODESystem(ode, True), odeTac.P(vars))
               )
             )
           ),
           Box(ODESystem(ode, True), odeTac.P_pat)
         ),
-        skip
+        implyR(1) &
+        // Cut and prove lower bound for time
+        dC(LessEqual(time0, time))(1) & Idioms.<(useAt(Ax.trueAnd)(1, 0::1::Nil), dI('diffInd)(1) &
+          Idioms.<(
+            useAt(Ax.lessEqual, PosInExpr(0::Nil))(1) & orR(1) & hideR(1) & useAt(Ax.equalSym, PosInExpr(1::0::Nil))(1) & prop & done,
+            chase(1) & ToolTactics.hideNonFOL & QE & done)) &
+        // apply time step axiom (and shuffle around ODEs)
+          useAt(Ax.commaCommute)(1) * vars.indexOf(time) &
+            useAt(Ax.timeStep, PosInExpr(1 :: Nil),
+            (substo: Option[TactixLibrary.Subst]) =>
+              substo.getOrElse(RenUSubst(Nil))++ RenUSubst((timestep, Plus(time0, timestep)) :: Nil))(1) &
+          useAt(Ax.commaCommute)(1, 1::Nil) * (vars.length - vars.indexOf(time)) &
+          useAt(Ax.commaCommute)(1, 1::1::1::1::Nil) * (vars.length - vars.indexOf(time)) &
+          andR(1) &
+          Idioms.<(
+            // time step is nonnegative
+            (andL(-1) & hideL(-2))*2 & andL(-1) & (andL(-1) & hideL(-3)) & SaturateTactic(andL(-2) & hideL(-3)) & QE & done,
+            boxAnd(1) & andR(1) &
+              Idioms.<(
+                // safety throughout first step
+                andL(-1) & hideL(-2) & andL(-1) & andL(-1) & hideL(-3) & cutR(boxTMEnclosure)(1) /* TODO: does a dC here yield better structure and less overhead? */ &
+                Idioms.<(
+                  useAt(lemma, PosInExpr(1::Nil))(1) & closeId,
+                  andL(-2) & hideL(-3) &
+                    SaturateTactic(andL(-2) & hideL(-3)) /* extract t=t0() */ &
+                    eqL2R(-2)(-1) & hideL(-2) &
+                    implyR(1) & dC(boxTMEnclosure.child)(1) &
+                  Idioms.<(
+                    // make implication via dW
+                    hideL(-2) & dWPlus(1) & implyR(1) & andL(-2) &
+                      // obtain existential witnesses
+                      existsL(-3) /* local time */ &
+                      // instantiate them
+                      allL(localTime)(-1) &
+                        FOQuantifierTactics.allLs(state)(-1) &
+                      andLstable(-3) & andLstable(-3) & eqL2R(-3)(1) & implyL(-1) &
+                      Idioms.<(
+                        hideR(1) & andR(1) &
+                        Idioms.<(
+                          hideL(-3) & QE & done,
+                          closeId
+                        ),
+                        closeId),
+                    closeId
+                  )
+                ),
+                // safety for next step
+                andL(-1) & andL(-1) & hideL(-3) & andL(-2) & hideL(-3) &
+                  dC(boxTMEnclosure.child)(1) &
+                  Idioms.<(
+                    hideL(-2) &
+                    dWPlus(1) &
+                    implyR(1) & implyR(1) & andL(-2) &
+                      existsL(-4) /* time */ &
+                      allL(time)(-1) & FOQuantifierTactics.allLs(state)(-1) &
+                      DifferentialTactics.diffRefine(True)(1) &
+                      Idioms.<(
+                        implyL(-1) &
+                        Idioms.<(
+                          hideR(1) &
+                          cutR(Equal(localTime, timestep))(1) &
+                          Idioms.<(
+                            andL(-3) & hideL(-4) & hideL(-2) & QE & done,
+                            implyR(1) & eqL2R(-4)(-3) &
+                            prop & done
+                          ),
+                          closeId
+                        ),
+                        cohideR(1) & boxTrue(1) & done),
+                    useAt(lemma, PosInExpr(1::Nil))(1) & closeId)
+              )
+          )
       )
     }
 

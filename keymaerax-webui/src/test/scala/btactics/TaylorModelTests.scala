@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.tools.ext.BigDecimalTool
 
 import scala.collection.immutable._
@@ -404,6 +405,116 @@ class TaylorModelTests extends TacticTestBase {
     }
   }
 
+  "Taylor model time step lemma" should "work with low order sin,cos" in withMathematica { _ =>
+    val pp = new KeYmaeraXPrettierPrinter(100)
+    val ode = "{x' = y, y' = -x, t'=1}".asDifferentialProgram
+    val tm = TaylorModel(ode, 1)
+    val tslemma = tm.timestepLemma
+     println(pp.stringify(tslemma))
+    tslemma shouldBe 'proved
+    tslemma.conclusion.ante shouldBe 'empty
+    tslemma.conclusion.succ.loneElement shouldBe
+      """    (
+        |      (
+        |        (
+        |          (
+        |            (
+        |              t = t0() &
+        |              x = a00() * r0() + a01() * r1() + aC0() & y = a10() * r0() + a11() * r1() + aC1()
+        |            ) &
+        |            (rL0() <= r0() & r0() <= rU0()) & rL1() <= r1() & r1() <= rU1()
+        |          ) &
+        |          (
+        |            (
+        |              icL0() <=
+        |              -tm0e000() + aC0() + r1() * (-tm0e001() + a01()) + r0() * (-tm0e010() + a00()) &
+        |              -tm0e000() + aC0() + r1() * (-tm0e001() + a01()) + r0() * (-tm0e010() + a00()) <=
+        |              icU0()
+        |            ) &
+        |            icL1() <=
+        |            -tm1e000() + aC1() + r1() * (-tm1e001() + a11()) + r0() * (-tm1e010() + a10()) &
+        |            -tm1e000() + aC1() + r1() * (-tm1e001() + a11()) + r0() * (-tm1e010() + a10()) <= icU1()
+        |          ) &
+        |          \forall s
+        |            \forall Rem0
+        |              \forall Rem1
+        |                (
+        |                  (0 <= s & s <= h()) &
+        |                  (min(0,h() * iL0()) + icL0() <= Rem0 & Rem0 <= max(0,h() * iU0()) + icU0()) &
+        |                  min(0,h() * iL1()) + icL1() <= Rem1 & Rem1 <= max(0,h() * iU1()) + icU1() ->
+        |                  (
+        |                    iL0() <
+        |                    tm1e000() + -tm0e100() + Rem1 + r1() * tm1e001() + r0() * tm1e010() +
+        |                    s * tm1e100() &
+        |                    tm1e000() + -tm0e100() + Rem1 + r1() * tm1e001() + r0() * tm1e010() +
+        |                    s * tm1e100() <
+        |                    iU0()
+        |                  ) &
+        |                  iL1() <
+        |                  -tm1e100() + -tm0e000() + -Rem0 + r1() * (-tm0e001()) + r0() * (-tm0e010()) +
+        |                  s * (-tm0e100()) &
+        |                  -tm1e100() + -tm0e000() + -Rem0 + r1() * (-tm0e001()) + r0() * (-tm0e010()) +
+        |                  s * (-tm0e100()) <
+        |                  iU1()
+        |                )
+        |        ) &
+        |        0 <= h()
+        |      ) &
+        |      \forall s
+        |        \forall x
+        |          \forall y
+        |            (
+        |              (0 <= s & s <= h()) &
+        |              \exists Rem0
+        |                (
+        |                  x = tm0e000() + tm0e001() * r1() + tm0e010() * r0() + tm0e100() * s + Rem0 &
+        |                  s * iL0() + icL0() <= Rem0 & Rem0 <= s * iU0() + icU0()
+        |                ) &
+        |              \exists Rem1
+        |                (
+        |                  y = tm1e000() + tm1e001() * r1() + tm1e010() * r0() + tm1e100() * s + Rem1 &
+        |                  s * iL1() + icL1() <= Rem1 & Rem1 <= s * iU1() + icU1()
+        |                ) ->
+        |              P_(x,y,t + s)
+        |            )
+        |    ) &
+        |    \forall t
+        |      \forall x
+        |        \forall y
+        |          (
+        |            t = t0() + h() &
+        |            \exists Rem0
+        |              (
+        |                x = tm0e000() + tm0e001() * r1() + tm0e010() * r0() + tm0e100() * h() + Rem0 &
+        |                h() * iL0() + icL0() <= Rem0 & Rem0 <= h() * iU0() + icU0()
+        |              ) &
+        |            \exists Rem1
+        |              (
+        |                y = tm1e000() + tm1e001() * r1() + tm1e010() * r0() + tm1e100() * h() + Rem1 &
+        |                h() * iL1() + icL1() <= Rem1 & Rem1 <= h() * iU1() + icU1()
+        |              ) ->
+        |            [{x'=y, y'=-x, t'=1}]P_(x,y,t)
+        |          ) ->
+        |    [{x'=y, y'=-x, t'=1}]P_(x,y,t)""".stripMargin.asFormula
+  }
+
+  it should "work with higher order sin,cos,exp" in withMathematica { _ =>
+    val pp = new KeYmaeraXPrettierPrinter(100)
+    val ode = "{x' = y, y' = -x, z'=z, t'=1}".asDifferentialProgram
+    val tm = TaylorModel(ode, 3)
+    val tslemma = tm.timestepLemma
+    tslemma shouldBe 'proved
+    // println(pp.stringify(tslemma))
+  }
+
+  it should "work with van der Pol" in withMathematica { _ =>
+    val pp = new KeYmaeraXPrettierPrinter(100)
+    val tm = TaylorModel(vdp, 3)
+    val tslemma = tm.timestepLemma
+    tslemma shouldBe 'proved
+    // println(pp.stringify(tslemma))
+  }
+
   "big StaticSingleAssignmentExpression" should "be constructed in a reasonable amount of time" in withMathematica { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       import Timing._
@@ -414,4 +525,5 @@ class TaylorModelTests extends TacticTestBase {
       println(ssa.unfoldMap.toList.length)
     }
   }
+
 }
