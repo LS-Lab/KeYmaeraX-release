@@ -342,7 +342,6 @@ object TaylorModelTactics extends Logging {
     private val dim = state.length
     private val timestep = names.timestep
     private val remainder = names.remainder(_)
-    private val picRem = names.interval(_)
     private val tdL = names.lower(_)
     private val tdU = names.upper(_)
     private val remainders = (0 until dim).map(remainder(_)).toList
@@ -379,13 +378,6 @@ object TaylorModelTactics extends Logging {
     private val picard_iteration = picard_iterationR.map(ringsLib.fromRing(_))
     toc("Picard Iteration")
 
-    private val picard_remainder_vars = (0 until dim) map (picRem(_))
-    private val picard_remainder_varsR = picard_remainder_vars.map(ringsLib.toRing(_))
-    private val picard_remainder_varsI = picard_remainder_vars.map(v => ringsLib.ring.index(ringsLib.mapper(v.func)))
-
-    private val picard_poly_rem = (picard_iterationR, picard_remainder_varsR).zipped.map(_ + _)
-
-    private val (_, picard_iterate_remainder) = ringsODE.PicardOperation(tm0R, picard_poly_rem, order, picard_remainder_varsI)
     toc("Picard Iterate")
 
     private val right_vars = names.right_vars(dim)
