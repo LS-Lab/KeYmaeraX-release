@@ -220,6 +220,28 @@ class RingsLibrary(terms: Traversable[Term]) {
     }
   }
 
+  /** a distributive representation w.r.t. Variables in `xs` */
+  def distributive(t: Ring, xs: Seq[Term]) = {
+    val monomials = t.collection().asScala.toList
+    val exponentIndices = xs.map{
+      case n: NamedSymbol => ring.index(mapper(n))
+      case FuncOf(f, Nothing) => ring.index(mapper(f))
+      case _ => throw new IllegalArgumentException("distributive only for variables and constants.")
+    }
+    def makeMonomialRep(m: Monomial[Rational[BigInteger]]) : List[Int] = exponentIndices.map(m.exponents(_)).toList
+    monomials.foldLeft(Map[List[Int],Term]()){case(coeffs, m) =>
+      val monRep = makeMonomialRep(m)
+      val exponents2 = m.exponents.clone // TODO: how immutable is this rings library?
+      exponentIndices.foreach(i => exponents2.update(i, 0))
+      val monomial2 = fromRing(m.setDegreeVector(exponents2))
+      coeffs.updated(monRep,
+        coeffs.get(monRep) match {
+          case None => monomial2
+          case Some(trm) => Plus(trm, monomial2)
+        })
+    }
+  }
+
   /** Substitute into a polynomial: simultaneously replace Variables v */
   def substitutes(subst: Variable => Option[Ring])(t: Term) : Ring = t match {
     case v: Variable => subst(v) match {

@@ -50,6 +50,13 @@ class RingsAlgebraToolTests extends TacticTestBase  {
     res._2 shouldBe "1+y*z".asTerm
   }
 
+  it should "return a custom distributive representation" in withMathematica { _ =>
+    val R = new RingsLibrary("t,x,y,z,a(),b(),i,j,r0(),r1(),r2()".split(',').map(_.asTerm))
+    val mv = R.toRing("4.2*x*t*r1()*r2()^2 + 1.3*t*a()*r1()*r2()^2 + r1() + x*r1() + t*r1()".asTerm)
+    R.distributive(mv, ("t,r1(),r2()".split(',').map(_.asTerm)).toList) shouldBe
+      Map(List(0, 1, 0) -> "1+x".asTerm, List(1, 1, 0) -> "1".asTerm, List(1, 1, 2) -> "13/10*a()+21/5*x".asTerm)
+  }
+
   it should "compute the Lie derivative" in withMathematica { _ =>
     val R = new RingsLibrary("t,x,y,z,i,j".split(',').map(_.asTerm))
     val t = "x*y*(x + z*x - 13)/4 + 4*z*z*(x + x^5)".asTerm
