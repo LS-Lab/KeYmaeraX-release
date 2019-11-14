@@ -90,33 +90,33 @@ class RingsLibrary(terms: Traversable[Term]) {
     }
   }
 
+  def fromRing(m: Monomial[Rational[BigInteger]]): Term = {
+    val v = m.coefficient
+
+    val vn = v.numerator().longValueExact()
+    val vd = v.denominator().longValueExact()
+    val cof = if (vd == 1) Number(vn) else Divide(Number(vn), Number(vd))
+
+    val k = m.exponents.toList
+    val xis = (cof::k.zipWithIndex.map( i =>
+      if(i._1==0)  Number(1)
+      else if(i._1 == 1) unmapper(i._2)
+      else Power(unmapper(i._2), Number(i._1))
+    )).filterNot(t => t==Number(1))
+    def cleverTimes(a: Term, b: Term) = a match {
+      case Number(n) if n == 1 => b
+      case Number(n) if n == -1 => Neg(b)
+      case _ => Times(a, b)
+    }
+    if(xis.isEmpty) cof
+    else xis.tail.fold(xis.head)(cleverTimes)
+  }
+
   def fromRing( p: Ring ): Term =
   {
     //Monomials contain their coefficients as well
     val monomials = p.collection().asScala.toList
-    val ls1 = monomials.map(
-      m => {
-        val v = m.coefficient
-
-        val vn = v.numerator().longValueExact()
-        val vd = v.denominator().longValueExact()
-        val cof = if (vd == 1) Number(vn) else Divide(Number(vn), Number(vd))
-
-        val k = m.exponents.toList
-        val xis = (cof::k.zipWithIndex.map( i =>
-          if(i._1==0)  Number(1)
-          else if(i._1 == 1) unmapper(i._2)
-          else Power(unmapper(i._2), Number(i._1))
-        )).filterNot(t => t==Number(1))
-        def cleverTimes(a: Term, b: Term) = a match {
-          case Number(n) if n == 1 => b
-          case Number(n) if n == -1 => Neg(b)
-          case _ => Times(a, b)
-        }
-        if(xis.isEmpty) cof
-        else xis.tail.fold(xis.head)(cleverTimes)
-      }
-    )
+    val ls1 = monomials.map(fromRing)
 
     val ls2 = ls1.filterNot(t => t==Number(0))
     if(ls2.isEmpty) Number(0)
