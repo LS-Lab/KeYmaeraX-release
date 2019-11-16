@@ -53,10 +53,7 @@ private object EqualityTactics {
             case (Box(Assign(x, _), _), pp) if freeRhs.contains(x) =>
               Some(boundRename(x, createNextSymbol(x))(pp))
             case (Box(AssignAny(x), _), pp) if freeRhs.contains(x) =>
-              //@note no direct bound renaming of nondeterministic assignment in core
-              Some(useAt("[:*] assign nondet")(pp) &
-                boundRename(x, createNextSymbol(x))(pp) &
-                useAt("[:*] assign nondet", PosInExpr(1::Nil))(pp))
+              Some(boundRename(x, createNextSymbol(x))(pp))
             case _ => None
           }).reduceRightOption[BelleExpr](_ & _).getOrElse(nil)
         })

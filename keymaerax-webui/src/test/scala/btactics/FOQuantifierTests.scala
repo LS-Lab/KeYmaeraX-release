@@ -420,8 +420,7 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> a>0 -> [a:=a+1;]a>0".asSequent
   }
 
-  it should "rename nondeterministic assignments" ignore {
-    //@todo not yet supported
+  it should "rename nondeterministic assignments" in {
     val result = proveBy("[a:=*;][b:=*;]a>0 ==> \\forall b [a:=*;]a>0".asSequent, allSkolemize(1))
     result.subgoals.loneElement shouldBe "[a:=*;][b:=*;]a>0 ==> [a:=*;]a>0".asSequent
   }
