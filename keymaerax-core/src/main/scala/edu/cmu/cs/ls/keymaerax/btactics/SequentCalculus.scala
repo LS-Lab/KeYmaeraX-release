@@ -26,6 +26,7 @@ object SequentCalculus extends SequentCalculus
   * @author Andre Platzer
   * @author Stefan Mitsch
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   */
 trait SequentCalculus {
@@ -164,7 +165,8 @@ trait SequentCalculus {
   })
 
 
-  // closing
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // closing tactics
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close: BelleExpr = "close" by ((seq: Sequent) => {
@@ -220,6 +222,7 @@ trait SequentCalculus {
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
   val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // derived propositional
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
