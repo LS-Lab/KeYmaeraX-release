@@ -3,21 +3,21 @@ package edu.cmu.cs.ls.keymaerax
 /**
   * Tactic library in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon]] tactic language.
   *
-  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]` Main tactic library
-  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]` Hilbert Calculus for differential dynamic logic
-  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus]]` Sequent Calculus for propositional and first-order logic
-  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.HybridProgramCalculus]]` Hybrid Program Calculus for differential dynamic logic
-  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus]]` Differential Equation Calculus for differential dynamic logic
-  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]` Unification-based Uniform Substitution Calculus
+  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]` Main tactic library consisting of:
+  *     - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus HilbertCalculus]]` Hilbert Calculus for differential dynamic logic
+  *     - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus SequentCalculus]]` Sequent Calculus for propositional and first-order logic
+  *     - `[[edu.cmu.cs.ls.keymaerax.btactics.HybridProgramCalculus HybridProgramCalculus]]` Hybrid Program Calculus for differential dynamic logic
+  *     - `[[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus DifferentialEquationCalculus]]` Differential Equation Calculus for differential dynamic logic
+  *     - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` Unification-based Uniform Substitution Calculus
   *
   *   - Tactic tools
-  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.Position]]: Tactic positioning types.
-  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch]]: Unification and matchers.
-  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]: Axiom Indexing data structures for canonical proof strategies.
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]: Meta-information for derivation steps such as axioms for user interface etc.
+  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.Position Position]]: Tactic positioning types.
+  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch UnificationMatch]]: Unification and matchers.
+  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.Context Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex] AxiomIndex]: Axiom Indexing data structures for canonical proof strategies.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo DerivationInfo]]: Meta-information for derivation steps such as axioms for user interface etc.
   *
   * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon tactic language]],
   * including its dependent tactics, which ultimately produce

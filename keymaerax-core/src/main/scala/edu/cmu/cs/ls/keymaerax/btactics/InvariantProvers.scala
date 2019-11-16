@@ -24,7 +24,7 @@ import scala.collection.mutable
 import util.control.Breaks._
 
 /**
-  * Created by aplatzer on 5/17/18.
+  * Invariant proof automation with generators.
   *
   * @author Andre Platzer
   */
