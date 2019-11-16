@@ -163,7 +163,9 @@ object TaylorModelTactics extends Logging {
                      right_prefix: String,
                      interval_prefix: String,
                      remainder_suffix: String,
-                     timestepN: String) {
+                     timestepN: String,
+                     postCoeff_prefix: String
+                    ) {
     def remainder(i: Int) : Variable = Variable("Rem" + i)
     def precond(i: Int, j: Int) : FuncOf = constR(precond_prefix + i + j)
     def precondC(i: Int) : FuncOf = constR(precond_prefix + "C" + i)
@@ -172,16 +174,31 @@ object TaylorModelTactics extends Logging {
     def rightU(i: Int) : FuncOf = constR(right_prefix + "U" + i)
     def lower(i: Int) : FuncOf = constR(interval_prefix + "L" + i)
     def upper(i: Int) : FuncOf = constR(interval_prefix + "U" + i)
+    def lowerC(i: Int) : FuncOf = constR(interval_prefix + "cL" + i)
+    def upperC(i: Int) : FuncOf = constR(interval_prefix + "cU" + i)
+    def postCoeff(i: Int, exponents: List[Int]) : FuncOf =
+      constR(postCoeff_prefix + i + "e" + exponents.map(e => if (e < 9) e.toString else "X" + e).mkString)
     def interval(i: Int) : FuncOf = constR(interval_prefix + i)
     val timestep = constR(timestepN)
     def right_vars(n: Int) : List[FuncOf] = ((0 until n) map right).toList
 
-    def all_vars(n: Int) : List[Term] = {
+    def monomials(len: Int, order: Int) : List[List[Int]] = {
+      def monomialsAcc(len: Int, xs: List[Int], n: Int, acc: List[List[Int]]): List[List[Int]] = {
+        if (len == 0) xs :: acc
+        else (0 to n).foldLeft(acc) { case (a, i) => monomialsAcc(len - 1, i :: xs, n - i, a) }
+      }
+      monomialsAcc(len, Nil, order, Nil)
+    }
+    def postCoeffs(i: Int, n: Int, order: Int) : List[FuncOf] = monomials(n, order).map(mon => postCoeff(i, mon))
+
+    def all_vars(n: Int, order: Int) : List[Term] = {
       def make(f: Int => Term) = (0 until n) map f
-      val preconds : List[Int => Term] = (0 until n).map(i => (j: Int) => precond(i, j)).toList
+      val preconds: List[Int => Term] = (0 until n).map(i => (j: Int) => precond(i, j)).toList
+      val allPostCoeffs: List[FuncOf] = (0 until n).map(i => postCoeffs(i, n+1 /* time */, order)).flatten.toList
       // Scala does not like this?
       // (precondC::right::lower::upper::interval::preconds).flatMap(make)
-      (make(precondC)::make(right)::make(lower)::make(upper)::make(interval)::make(remainder)::preconds.map(make)).flatten
+      (make(precondC)::make(right)::make(lower)::make(upper)::make(lowerC)::make(upperC)::make(interval)::make(remainder)::preconds.map(make)).flatten ++
+        allPostCoeffs
     }
   }
 
@@ -210,14 +227,14 @@ object TaylorModelTactics extends Logging {
   }
 
   private lazy val leTimesMonoLemma =
-    remember("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() -> R_() <= max((0,h_() * U_()))".asFormula, QE & done)
+    remember("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() + cU_() -> R_() <= max((0,h_() * U_())) + cU_()".asFormula, QE & done)
   private lazy val timesLeMonoLemma =
-    remember("0 <= t_() & t_() <= h_() -> t_() * L_() <= U_() -> min((0,h_() * L_())) <= U_()".asFormula, QE & done)
+    remember("0 <= t_() & t_() <= h_() -> t_() * L_() + cL_() <= U_() -> min((0,h_() * L_())) + cL_() <= U_()".asFormula, QE & done)
   private[btactics] def coarsenTimesBounds(t: Term) = "coarsenTimesBounds" by { (seq: Sequent) =>
     val leTimesMono = "leTimesMono" by { (pos: Position, seq: Sequent) =>
       pos.checkAnte
       seq.sub(pos) match {
-        case Some(LessEqual(l, Times(t, g))) =>
+        case Some(LessEqual(l, Plus(Times(t, g), c))) =>
           toc("cTB")
           seq.ante.find{ case (LessEqual(Number(n), s)) if n==0 && s==t => true case _ => false } match {
             case None => throw new IllegalArgumentException("could not find matching nonnegativity assumption")
@@ -225,9 +242,9 @@ object TaylorModelTactics extends Logging {
               toc(" found nonnegative ")
               seq.ante.collectFirst{ case fml @ LessEqual(s, _) if s == t => fml } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
-                case Some(ub_fml @ LessEqual(_, ub)) =>
+                case Some(ub_fml@LessEqual(_, ub)) =>
                   toc(" found upper bound")
-                  cutL(LessEqual(l, FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g)))))(pos) &
+                  cutL(LessEqual(l, Plus(FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g))), c)))(pos) &
                     Idioms.<(skip,
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
@@ -247,14 +264,14 @@ object TaylorModelTactics extends Logging {
     val timesLeMono = "timesLeMono" by { (pos: Position, seq: Sequent) =>
       pos.checkAnte
       seq.sub(pos) match {
-        case Some(LessEqual(Times(t, g), u)) =>
+        case Some(LessEqual(Plus(Times(t, g), c), u)) =>
           seq.ante.find{ case (LessEqual(Number(n), s)) if n==0 && s==t => true case _ => false } match {
             case None => throw new IllegalArgumentException("could not find matching nonnegativity assumption")
             case Some(nonneg) =>
               seq.ante.collectFirst{ case fml @ LessEqual(s, _) if s==t => fml } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
                 case Some(ub_fml @ LessEqual(_, ub)) =>
-                  cutL(LessEqual(FuncOf(BigDecimalQETool.minF, Pair(Number(0), Times(ub, g))), u))(pos) &
+                  cutL(LessEqual(Plus(FuncOf(BigDecimalQETool.minF, Pair(Number(0), Times(ub, g))), c), u))(pos) &
                     Idioms.<( skip,
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
@@ -269,9 +286,9 @@ object TaylorModelTactics extends Logging {
     }
 
     seq.zipAnteWithPositions.map{
-      case (LessEqual(Times(s, _), _), pos) if s == t =>
+      case (LessEqual(Plus(Times(s, _), _), _), pos) if s == t =>
         timesLeMono(pos)
-      case (LessEqual(_, Times(s, _)), pos) if s == t =>
+      case (LessEqual(_, Plus(Times(s, _), _)), pos) if s == t =>
         leTimesMono(pos)
       case _ => skip
     }.reduceOption(_ & _).getOrElse(skip)
@@ -331,7 +348,7 @@ object TaylorModelTactics extends Logging {
   /**
     * A class capturing all lemmas and tactics for Taylor models for the given ode
     * */
-  case class TaylorModel(ode: DifferentialProgram, order: Int, names: TMNames = TMNames("a", "r", "i", "Rem", "h")) {
+  case class TaylorModel(ode: DifferentialProgram, order: Int, names: TMNames = TMNames("a", "r", "i", "Rem", "h", "tm")) {
     private val time = getTime(ode)
     private val time0 = "t0()".asTerm // TODO: parameterize!
     private val localTime = "s".asVariable // TODO: parameterize!
@@ -344,10 +361,15 @@ object TaylorModelTactics extends Logging {
     private val remainder = names.remainder(_)
     private val tdL = names.lower(_)
     private val tdU = names.upper(_)
+    private val cL = names.lowerC(_)
+    private val cU = names.upperC(_)
     private val remainders = (0 until dim).map(remainder(_)).toList
+    private val right_vars = names.right_vars(dim)
+    private val bounded_vars = right_vars ++ (0 until dim).map(remainder(_)) // variables for which we assume interval bounds somewhen
+
 
     // Establish connection to the rings-library
-    private val ringsLib = new RingsLibrary(time0::localTime::vars++names.all_vars(dim))// TODO: time0, localTime?!
+    private val ringsLib = new RingsLibrary(time0::localTime::vars++names.all_vars(dim, order))
     private val ringsODE = ringsLib.ODE(localTime, state, names.right_vars(dim),
       DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
@@ -355,11 +377,11 @@ object TaylorModelTactics extends Logging {
       And(Equal(time, time0),
         (state, templateTmCompose(names, dim)).zipped.map { case (v, tm) => Equal(v, tm) }.reduceRight(And))
 
-    private def lower_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
-      LessEqual(minF(Number(0), Times(t, td(i))), remainder(i))
+    private def lower_rembounds(t: Term)(td: Int => Term)(c: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
+      LessEqual(Plus(minF(Number(0), Times(t, td(i))), c(i)), remainder(i))
     )
-    private def upper_rembounds(t: Term)(td: Int => Term) : Seq[Formula] = (0 until dim).map(i =>
-      LessEqual(remainder(i), maxF(Number(0), Times(t, td(i))))
+    private def upper_rembounds(t: Term)(td: Int => Term)(c: Int => Term)  : Seq[Formula] = (0 until dim).map(i =>
+      LessEqual(remainder(i), Plus(maxF(Number(0), Times(t, td(i))), c(i)))
     )
 
     private def in_domain(ltu:(Term, Term, Term)) : Formula = ltu match {
@@ -375,24 +397,53 @@ object TaylorModelTactics extends Logging {
     private val tm0 = templateTmCompose(names, dim)
     private val tm0R = tm0.map(ringsLib.toRing)
     private val picard_iterationR = ringsODE.PicardIteration(tm0R, order)
-    private val picard_iteration = picard_iterationR.map(ringsLib.fromRing(_))
+
+    /** the exact coefficients of the polynomial resulting from Picard iteration */
+    private val exactCoefficients: List[Map[List[Int], Term]] = picard_iterationR.map(p => ringsLib.distributive(p, localTime::right_vars)).toList
+    /** Just a template polynomial whose coefficients are supposed to be close to [[picard_iterationR]]
+      * only uses those coefficients that are actually used
+      * */
+    def tmMonomial(coeff: Term, exponents: List[Int]) = {
+      val monomial = (localTime::right_vars, exponents).zipped.toList.
+        filter{case (_, e) => e > 0}.
+        map{ case (v, e) => if (e == 1) v else Power(v, Number(e))}
+      if (monomial.isEmpty) coeff else Times(coeff, monomial.reduceLeft(Times))
+    }
+
+    private val picard_iteration_approx =
+      exactCoefficients.zipWithIndex.map { case (c, i) => c.keys.toList.sortBy(_.sum).
+        map(k => tmMonomial(names.postCoeff(i, k), k)).reduceLeft(Plus) }
+    private val picard_iteration_approxR = picard_iteration_approx.map(ringsLib.toRing(_))
+
     toc("Picard Iteration")
 
     toc("Picard Iterate")
 
-    private val right_vars = names.right_vars(dim)
-    private val bounded_vars = right_vars ++ (0 until dim).map(remainder(_)) // variables for which we assume interval bounds somewhen
-
     /* this tries to keep even powers to exploit r:[-1,1]->r^2:[0,1] */
     private val horner_order = (0 until dim).flatMap(i => List(tdL(i), tdU(i))).toList ++ (localTime :: bounded_vars.map(Power(_, Number(2))) ++ bounded_vars)
     private val horner_orderR = horner_order.map(ringsLib.toRing)
-
     toc("horner_order")
-    // TODO: use ringsLib here, as well
+
+    // numeric condition for initial approximation:
+    private val initialNumbericCondition = (0 until dim).map{ i =>
+      /** time-constant coefficients, i.e., at initial time. this is the same as [[initial_condition]],
+        * but perhaps a bit more convenient to use here, because we directly get the exponents. */
+      val constantCoeffs = exactCoefficients(i).filterKeys(e => e(0) == 0)
+      val diff = ringsLib.toHorner(
+        ringsLib.toRing(
+          Minus(
+            constantCoeffs.map { case (e, c) => tmMonomial(c, e) }.reduceLeft(Plus),
+            constantCoeffs.keys.map { e => tmMonomial(names.postCoeff(i, e), e) }.reduceLeft(Plus)
+          )),
+        horner_orderR
+      )
+      And(LessEqual(cL(i), diff), LessEqual(diff, cU(i)))
+    }.reduceRight(And)
+
     // f (p + r)
-    private val fpr = ringsODE.applyODE(picard_iterationR.zipWithIndex.map{case (p, i) => p + ringsLib.toRing(remainder(i))})
+    private val fpr = ringsODE.applyODE(picard_iteration_approxR.zipWithIndex.map{case (p, i) => p + ringsLib.toRing(remainder(i))})
     // p'
-    private val pp = picard_iteration.map(ringsLib.lieDerivative{
+    private val pp = picard_iteration_approx.map(ringsLib.lieDerivative{
       case v: Variable if v == localTime => Some(ringsLib.ring(1))
       case _ => None
     })
@@ -401,12 +452,15 @@ object TaylorModelTactics extends Logging {
     private [btactics] val innerNumbericCondition =
       hornerFprPp.zipWithIndex.map { case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i))) }.reduceRight(And)
     private [btactics] val numbericCondition =
-      FormulaTools.quantifyForall(localTime :: remainders,
-        Imply(
-          And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
-            (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
-          innerNumbericCondition
-        ))
+      And(
+        initialNumbericCondition,
+        FormulaTools.quantifyForall(localTime :: remainders,
+          Imply(
+            And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
+              (lower_rembounds(timestep)(tdL)(cL), upper_rembounds(timestep)(tdU)(cU)).zipped.map(And).reduceRight(And)),
+            innerNumbericCondition
+          ))
+      )
     toc("numbericCondition")
 
 
@@ -421,15 +475,24 @@ object TaylorModelTactics extends Logging {
     }
     // Taylor Model postcondition without existentials and instantiated with t for time.
     private val post = {
-      (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
-        tmEnclosure(x, i, p, Times(localTime, tdL(i)), Times(localTime, tdU(i)))
+      (state, picard_iteration_approx).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+        tmEnclosure(x, i, p, postIvlL(i), postIvlU(i))
       }
     }
+
+    private def postIvlL(i: Int) = {
+      Plus(Times(localTime, tdL(i)), cL(i))
+    }
+
+    private def postIvlU(i: Int) = {
+      Plus(Times(localTime, tdU(i)), cU(i))
+    }
+
     toc("post")
     private val postUnfolded = SubstitutionHelper.replaceFree(
-      (state, picard_iteration).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+      (state, picard_iteration_approx).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
         val r = Minus(x, p)
-        And(LessEqual(Times(localTime, tdL(i)), r), LessEqual(r, Times(localTime, tdU(i))))
+        And(LessEqual(postIvlL(i), r), LessEqual(r, postIvlU(i)))
       }.reduceRight(And))(localTime, Minus(time, time0))
     toc("postUnfolded")
 
@@ -449,7 +512,7 @@ object TaylorModelTactics extends Logging {
               Idioms.<(useAt(eqAddIff, PosInExpr(0 :: Nil))(-2) & eqL2R(-2)(-3) & hideL(-2) & closeId, hideL(-3) & hideL(-2))) * (dim - 1) &
             andL(-1) & useAt(eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & hideL(-1) & closeId,
           existsR(Minus(time, time0))(1) &
-            (state, picard_iteration).zipped.foldRight(skip) { case ((x, p), tac) =>
+            (state, picard_iteration_approx).zipped.foldRight(skip) { case ((x, p), tac) =>
               existsR(Minus(x, SubstitutionHelper.replaceFree(p)(localTime, Minus(time, time0))))(1) & tac
             } &
             andR(1) &
@@ -486,16 +549,23 @@ object TaylorModelTactics extends Logging {
           // Initial Condition
           tocTac("dIClosed") &
             debugTac("Initial Condition") &
-            andL(-1) & cohideOnlyL(-1) &
+            andL(-1) &
+            // obtain initial numberic condition
+            andL(-2) &
+            hideL(-3) &
+            debugTac("obtained initial numberic condition") &
+            ringsLib.normalizeLessEquals(QE)(-2) &
             SaturateTactic(andL('L)) &
             rewriteAnte(true)(1) &
-            cohideR(1) &
-            debugTac("initial QEs") &
-            solveTrivialInequalities(1) &
-            tocTac("Initial Condition done") &
+            ringsLib.normalizeLessEquals(QE)(1) &
+            debugTac("Initial Condition numeric trivialities") &
+            prop &
+            tocTac("Initial Condition done?") &
+            debugTac("Initial Condition done?") &
             done,
           // Differential Invariant
           tocTac("Differential Invariant") &
+            debugTac("Differential Invariant") &
             foldAndLessEqExists(time::Nil)(1) &
             tocTac("foldAndLessEqExists") &
             implyR(1) &
@@ -508,6 +578,7 @@ object TaylorModelTactics extends Logging {
             debugTac("unfoldMinMax") &
             coarsenTimesBounds(Minus(time, time0)) &
             tocTac("coarsenTimesBounds") &
+            debugTac("coarsenTimesBounds") &
             FOQuantifierTactics.allLs(Minus(time, time0):: remainders)('L) &
             implyL('L) &
             Idioms.<(
@@ -563,18 +634,35 @@ object TaylorModelTactics extends Logging {
       case _ => throw new TacticInapplicableFailure("getBoundees called on non-And")
     }
 
-    private def numericPicard(prec: Integer, boundees: IndexedSeq[Term], timebound: Term, right_bounds: List[Formula])
+    private def instantiationForBound(prec: Int, bounds: IntervalArithmeticV2.DecimalBounds, fml: Formula) : ((Term, BigDecimal), (Term, BigDecimal)) = fml match {
+      case And(LessEqual(l, t1), LessEqual(t2, u)) if t1 == t2 => {
+        val ivl = IntervalArithmeticV2.eval_ivl(prec)(bounds)(t1)
+        ((l, ivl._1),(u, ivl._2))
+      }
+      case _ => throw new TacticInapplicableFailure("instantiationForBound called on non-Bound")
+    }
+    private def instantiationForBounds(prec: Int, bounds: IntervalArithmeticV2.DecimalBounds, fml: Formula): List[((Term, BigDecimal), (Term, BigDecimal))] = fml match {
+      case And(fml1 @ And(LessEqual(_, t1), LessEqual(t2, _)), ivls) if t1 == t2 =>
+        instantiationForBound(prec, bounds, fml1) :: instantiationForBounds(prec, bounds, ivls)
+      case And(LessEqual(_, t1), LessEqual(t2, _)) if t1 == t2 =>
+        instantiationForBound(prec, bounds, fml)::Nil
+      case _ => throw new TacticInapplicableFailure("instantiationForBounds called on non-And")
+    }
+
+    private def numericPicard(prec: Integer, boundees: IndexedSeq[Term], timebound: Term, right_bounds: List[Formula],
+                              constant_errors: IndexedSeq[(BigDecimal, BigDecimal)])
                      (ivls: IndexedSeq[(BigDecimal, BigDecimal)]) : IndexedSeq[(BigDecimal, BigDecimal)] =
     {
-      val lowers = lower_rembounds(timebound){i => Number(ivls(i)._1)}
-      val uppers = upper_rembounds(timebound){i => Number(ivls(i)._2)}
+      val lowers = lower_rembounds(timebound){i => Number(ivls(i)._1)}{i=>Number(constant_errors(i)._1)}
+      val uppers = upper_rembounds(timebound){i => Number(ivls(i)._2)}{i=>Number(constant_errors(i)._2)}
       // TODO: compute bounds except lowers/uppers earlier?!
       val bounds = IntervalArithmeticV2.collect_bounds(prec, LessEqual(Number(0), localTime) :: LessEqual(localTime, timebound) :: right_bounds ++ lowers ++ uppers)
       boundees.map(IntervalArithmeticV2.eval_ivl(prec)(bounds))
     }
 
     def numericPicardIteration(prec: Integer, boundees: IndexedSeq[Term], timebound: Term, right_bounds: List[Formula],
-                               remainder_estimation: IndexedSeq[(BigDecimal, BigDecimal)])
+                               remainder_estimation: IndexedSeq[(BigDecimal, BigDecimal)],
+                               constant_errors: IndexedSeq[(BigDecimal, BigDecimal)])
     :
     Option[IndexedSeq[(BigDecimal, BigDecimal)]] =
     {
@@ -583,7 +671,7 @@ object TaylorModelTactics extends Logging {
       var subset = false
       for (k <- 0 until 40) {
         val remainders0 = remainders
-        val remainders1 = numericPicard(prec, boundees, timebound, right_bounds)(remainders0)
+        val remainders1 = numericPicard(prec, boundees, timebound, right_bounds, constant_errors)(remainders0)
         subset = (remainders0, remainders1).zipped.forall{ case ((l0, u0), (l, u)) => l0 < l && u < u0 }
         val remainders2 = if (!subset) {
           // epsilon inflation -- values for eps and algorithm from Ingo Eble: "Ueber Taylor Modelle", PhD thesis 2007
@@ -617,23 +705,35 @@ object TaylorModelTactics extends Logging {
         {
           require(seq.sub(antepos).isDefined)
           val concrete_initial_condition = seq.sub(antepos).get
-          val subst = USubst(SubstitutionPair(time0, t0)::SubstitutionPair(names.timestep, timebound)::Nil)++UnificationMatch(And(initial_condition, right_tm_domain), concrete_initial_condition).usubst
-          val lemma1 = lemma(subst)
+          val subst0 = USubst(SubstitutionPair(time0, t0)::SubstitutionPair(names.timestep, timebound)::Nil)++UnificationMatch(And(initial_condition, right_tm_domain), concrete_initial_condition).usubst
+          val lemma1 = lemma(subst0)
           require(lemma1.conclusion.succ.length == 1)
-          val (boundees, concrete_right_bound) = lemma1.conclusion.succ(0) match {
-            case Imply(And(And(_, crb), fml : Forall), _) => stripForalls(fml) match {
-              case Imply(bound_fml, conclusion) => (getBoundees(conclusion), FormulaTools.conjuncts(crb))
+          val (boundees, initApprox, concrete_right_bound) = lemma1.conclusion.succ(0) match {
+            case Imply(And(And(_, crb), And(initApprox, fml : Forall)), _) => stripForalls(fml) match {
+              case Imply(bound_fml, conclusion) => (getBoundees(conclusion), initApprox, FormulaTools.conjuncts(crb))
               case _ => throw new RuntimeException("Taylor model lemma not of expected shape (inner)")
             }
             case _ => throw new RuntimeException("Taylor model lemma not of expected shape")
           }
-          val subst_remainders = numericPicardIteration(prec, boundees.toIndexedSeq, timebound, concrete_right_bound, remainder_estimation) match {
+          val right_bounds = IntervalArithmeticV2.collect_bounds(prec, concrete_right_bound)
+
+          // Approximate values for coefficients
+          def midpoint(ivl: (BigDecimal, BigDecimal)) : BigDecimal = (ivl._1 + ivl._2)/2
+          val approxCoeffs = exactCoefficients.map(_.mapValues(t => midpoint(IntervalArithmeticV2.eval_ivl(prec)(IntervalArithmeticV2.DecimalBounds())(subst0(t)))))
+          val approxCoeffSubst = USubst(approxCoeffs.zipWithIndex.flatMap{ case (coeffs, i) =>
+            coeffs.map{case (e, t) => SubstitutionPair(names.postCoeff(i, e), Number(t)) }
+          })
+          val initApproxInstantiations = instantiationForBounds(prec, right_bounds, approxCoeffSubst(initApprox))
+          val initApproxSubst = USubst(initApproxInstantiations.flatMap{case ((t, x), (u, y)) => SubstitutionPair(t, Number(x))::SubstitutionPair(u, Number(y))::Nil})
+          val constant_errors = initApproxInstantiations.map{case ((a, b), (c, d)) => (b, d)}
+          val subst_remainders = numericPicardIteration(prec, boundees.map(approxCoeffSubst(_)).toIndexedSeq, timebound, concrete_right_bound, remainder_estimation, constant_errors.toIndexedSeq) match {
             case None => throw new RuntimeException("Picard Iteration did not converge")
             case Some(remainders) =>
               USubst(remainders.zipWithIndex.map{case ((l, _), i) => SubstitutionPair(names.lower(i), IntervalArithmeticV2.mathematicaFriendly(l))} ++
                 remainders.zipWithIndex.map{case ((_, u), i) => SubstitutionPair(names.upper(i), IntervalArithmeticV2.mathematicaFriendly(u))})
           }
-          val lemma2 = lemma1(subst_remainders)
+          val subst1 = subst_remainders ++ approxCoeffSubst ++ initApproxSubst
+          val lemma2 = lemma1(subst1)
           require(lemma2.conclusion.succ.length == 1)
           val cut_fml = lemma2.conclusion.succ(0) match {
             case Imply(_, Box(_, cut_fml)) => cut_fml
@@ -641,15 +741,22 @@ object TaylorModelTactics extends Logging {
           }
           debugTac("Starting to do something") &
             DC(cut_fml)(pos) &
-              Idioms.<(skip,
-                useAt(lemma2, PosInExpr(1::Nil))(1) &
-                  andR(1) & Idioms.<(closeId,
-                      SaturateTactic(allR(1)) &
-                      SaturateTactic(implyR(1)) &
-                      SaturateTactic(andL('L)) &
-                      debugTac("Numberic condition") &
-                      IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool)(1) &
-                      done
+            Idioms.<(skip,
+              useAt(lemma2, PosInExpr(1 :: Nil))(1) &
+                debugTac("Used Lemma") &
+                andR(1) & Idioms.<(closeId,
+                andR(1) & Idioms.<(
+                  debugTac("Initial Numberic condition") &
+                    SaturateTactic(andL('L)) &
+                    IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool)(1) &
+                    done,
+                  SaturateTactic(allR(1)) &
+                    SaturateTactic(implyR(1)) &
+                    SaturateTactic(andL('L)) &
+                    debugTac("Numberic condition") &
+                    IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool)(1) &
+                    done
+                    )
                 )
               )
         }
