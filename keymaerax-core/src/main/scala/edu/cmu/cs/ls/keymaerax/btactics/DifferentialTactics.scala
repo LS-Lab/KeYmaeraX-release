@@ -460,20 +460,22 @@ private object DifferentialTactics extends Logging {
     * }}}
     * @param ghost A differential program of the form y'=a*y+b or y'=a*y or y'=b.
     * @see [[dG()]]
+    * @todo generalize to diamond ODEs since it's an equivalence
     */
   private def DG(ghost: DifferentialProgram): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
-    val (y, a, b) = try {
+    val (y:Variable, a:Term, b:Term) = try {
       DifferentialHelper.parseGhost(ghost)
     } catch {
       case ex: CoreException =>
         val wrongShapeStart = ex.getMessage.indexOf("b(|y_|)~>")
         throw new BelleFriendlyUserMessage(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
-          " is not of the expected shape a*y_+b, please provide a differential program of the shape y'=a*y+b.")
+          " is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b.")
     }
 
     sequent.sub(pos) match {
-      case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
-        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
+      case Some(fml@Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
+        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) &&
+        !StaticSemantics.freeVars(fml).contains(y) =>
 
         //SOUNDNESS-CRITICAL: DO NOT ALLOW SINGULARITIES IN GHOSTS.
         //@TODO This is a bit hacky. We should either:
@@ -521,6 +523,22 @@ private object DifferentialTactics extends Logging {
                 (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
         }
+
+      case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(ode).bv.contains(y) =>
+        throw new BelleFriendlyUserMessage(
+          "Differential ghost " + y + " of " + ghost + " is not new but already has a differential equation in " + ode + ".\nChoose a new name for the differential ghost.")
+
+      case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics.symbols(a).contains(y) || StaticSemantics.symbols(b).contains(y) =>
+        throw new BelleFriendlyUserMessage(
+          "Differential ghost " + y + " occurs nonlinearly or in the wrong place of the new differential equation " + ghost + ".\nChoose a differential equation " + y + "'=a*" + y + "+b that is linear in the differential ghost.")
+
+      case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(ode).fv.contains(y) =>
+        throw new BelleFriendlyUserMessage(
+          "Differential ghost " + y + " of " + ghost + " is not new but already read in the differential equation " + ode + ".\nChoose a new name for the differential ghost.")
+
+      case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(p).fv.contains(y) =>
+        throw new BelleFriendlyUserMessage(
+          "Differential ghost " + y + " of " + ghost + " is not new but already read in the postcondition " + p + ".\nChoose a new name for the differential ghost.")
     }
   })
 
