@@ -306,7 +306,12 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "pick a name when generalizing only free occurrences" in {
     val result = proveBy("(\\forall x x>5) & x<2".asFormula, universalGen(None, "x".asTerm)(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x ((\\forall x x>5) & x<2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x_0 ((\\forall x x>5) & x_0<2)".asSequent
+  }
+
+  it should "not auto-generate names that overlap with bound variables and cause clashes" in {
+    proveBy("B()<=2 -> \\exists B B()<=2".asFormula, universalGen(None, "B()".asTerm)(1)).
+      subgoals.loneElement shouldBe "==> \\forall B_0 (B_0<=2 -> \\exists B B_0<=2)".asSequent
   }
 
   "Universal closure" should "work for simple formula" in {
@@ -331,7 +336,7 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "not ignore variables that are not bound everywhere" in {
     val result = proveBy("(\\forall x x>5) & x<2".asFormula, universalClosure(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x ((\\forall x x>5) & x<2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x_0 ((\\forall x x>5) & x_0<2)".asSequent
   }
 
   it should "not do anything if all variables are bound" in {

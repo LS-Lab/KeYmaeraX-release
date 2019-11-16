@@ -254,17 +254,19 @@ protected object FOQuantifierTactics {
   def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = "allGeneralize" by ((pos: Position, sequent: Sequent) => {
     val quantified: Variable = x match {
       case Some(xx) => xx
-      case None if sequent.ante.isEmpty && sequent.succ.size == 1 =>
+      case None =>
+        val bv = StaticSemantics.boundVars(sequent)
         t match {
-          case v: Variable => v
-          case FuncOf(fn, _) => Variable(fn.name, fn.index, fn.sort)
+          case v: Variable if !bv.contains(v) => v
+          case v: Variable if  bv.contains(v) => TacticHelper.freshNamedSymbol(v, sequent)
+          case FuncOf(fn, _) =>
+            val funcVar = Variable(fn.name, fn.index, fn.sort)
+            if (bv.contains(funcVar)) {
+              val fresh = TacticHelper.freshNamedSymbol(fn, sequent)
+              Variable(fresh.name, fresh.index, fresh.sort)
+            } else funcVar
           case _ => throw BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
         }
-      case None => t match {
-        case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
-        case FuncOf(fn, _) => val fresh = TacticHelper.freshNamedSymbol(fn, sequent); Variable(fresh.name, fresh.index, fresh.sort)
-        case _ => throw BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
-      }
     }
 
     val (genFml, axiomName, subst) = sequent.sub(pos) match {

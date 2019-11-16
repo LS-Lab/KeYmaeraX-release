@@ -84,7 +84,9 @@ class SubstitutionHelper(what: Term, repl: Term) {
 //      case d: DifferentialSymbol if d != what => d
       case d: Differential if d == what => repl
       case d: Differential if d != what => d
-      case app@FuncOf(_, _) if u.intersect(StaticSemantics(t)).isEmpty && app == what => repl
+      case app@FuncOf(_, _) if u.intersect(StaticSemantics(t)).isEmpty && app == what =>
+        requireAdmissible(u, StaticSemantics(repl), repl, t)
+        repl
       case app@FuncOf(fn, theta) if app != what => FuncOf(fn, usubst(o, u, theta))
       case Nothing => Nothing
       case Number(_) if t == what => repl
@@ -164,5 +166,11 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case DifferentialProduct(a, b) => primedVariables(a) ++ primedVariables(b)
     case AtomicODE(DifferentialSymbol(x), _) => Set(x)
     case _: DifferentialProgramConst => Set.empty
+  }
+
+  @inline private def requireAdmissible(taboo: SetLattice[Variable], frees: SetLattice[Variable], e: Expression, context: Expression): Unit = {
+    val clashes = taboo.intersect(frees)
+    if (!clashes.isEmpty)
+      throw new SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
   }
 }
