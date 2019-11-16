@@ -473,8 +473,9 @@ private object DifferentialTactics extends Logging {
     }
 
     sequent.sub(pos) match {
-      case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
-        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
+      case Some(fml@Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
+        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) &&
+        !StaticSemantics.freeVars(fml).contains(y) =>
 
         //SOUNDNESS-CRITICAL: DO NOT ALLOW SINGULARITIES IN GHOSTS.
         //@TODO This is a bit hacky. We should either:
