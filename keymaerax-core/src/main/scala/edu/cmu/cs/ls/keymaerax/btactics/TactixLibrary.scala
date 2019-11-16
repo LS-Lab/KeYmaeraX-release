@@ -518,16 +518,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = DLBySubst.con(v, variant, pre)
 
 
-  // differential equations
+  // major differential equation automation
 
   /** ODE: try to prove a property of a differential equation automatically.
     *
     * @see [[solve]]
     * @todo @see [[dC]]
     * @see [[dI]]
-    * @see [[diffInvariant]]
     * @see [[dW]]
-    * @see [[openDiffInd]]
     * @see [[dG]]
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
@@ -540,21 +538,21 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /**
     * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
     * G |- P    P |- [x'=f(x)&Q]P
-    * ---
+    * ---------------------------
     * G |- [x'=f(x)&Q]P
     * (Default behavior: fast (but incomplete) version, no solving attempted)
+    * @see André Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, pp. 819-828. ACM 2018.
+    * @see [[odeInvariantComplete]]
     **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
   /** Same as odeInvariant but directly reports an error when it detects that the postcondition should be invariant
-    * but currently unprovable
+    * but is currently unprovable.
+    * @see [[odeInvariant]]
     */
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
-  /** DG/DA differential ghosts that are generated automatically to prove differential equations.
-    *
-    * @see [[dG]] */
-  lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
+  // differential equation automation
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (\forall 0<=s<=t q(solution(s)) -> [x:=solution(t)]p(x))`. */
@@ -563,6 +561,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** diffSolve with evolution domain check at duration end: solve `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)`.
     * Similarly, `[x'=f(x)&q(x)]p(x)` turns to `\forall t>=0 (q(solution(t)) -> [x:=solution(t)]p(x))`. */
   lazy val solveEnd: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve(instEnd = true)
+
 
   /** DW: Differential Weakening uses evolution domain constraint so `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))`.
     * @note FV(post)/\BV(x'=f(x)) subseteq FV(q(x)) usually required to have a chance to succeed. */
@@ -602,34 +601,25 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
 
-  /** Refine top-level antecedent/succedent ODE domain constraint
-    * G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R, (D)?
-    * --- dR
-    * G|- [x'=f(x)&Q]P, D
-    * @param formula the formula R to refine Q to
-    * @param hide whether to keep the extra succedents (D) around (default true), which makes position management easier
-    */
-  def dR(formula: Formula, hide: Boolean=true): DependentPositionTactic = DifferentialTactics.diffRefine(formula,hide)
-
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
     *
     * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
-    *             'full: tries to close everything after diffInd rule
+    *             'full: tries to close everything after diffInd rule (turning free variables to constants)
     *                    {{{
     *                        *
     *                      --------------------------
     *                      G |- [x'=f(x)&q(x)]p(x), D
     *                    }}}
-    *             'none: behaves as DI rule per cheat sheet
+    *             'none: behaves as using DI axiom per cheat sheet
     *                    {{{
     *                      G, q(x) |- p(x), D    G, q(x) |- [x'=f(x)&q(x)](p(x))', D
     *                      ---------------------------------------------------------
     *                                  G |- [x'=f(x)&q(x)]p(x), D
     *                    }}}
-    *             'diffInd: behaves as diffInd rule per cheat sheet
+    *             'diffInd: behaves as dI rule per cheat sheet
     *                    {{{
-    *                      G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p(x')    @note derive on (p(x))' already done
+    *                      G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p'(x')    @note derive on (p(x))' already done
     *                      ----------------------------------------------
     *                                  G |- [x'=f(x)&q(x)]p(x), D
     *                    }}}
@@ -662,6 +652,38 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @incontext
     */
   def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
+
+  /** dG(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
+    * ghost of the form y'=a*y+b and the postcondition replaced by r, if provided.
+    * {{{
+    * G |- \exists y [x'=f(x),y'=g(x,y)&q(x)]r(x,y), D
+    * ----------------------------------------------------------  dG using p(x) <-> \exists y. r(x,y) by QE
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    *
+    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    * @param ghost the extra differential equation for an extra variable y to ghost in of the form
+    *              y'=a*y+b or y'=a*y or y'=b or y'=a*y-b
+    * @param r the optional equivalent new postcondition to prove that can mention y; keeps p(x) if omitted.
+    * @example
+    * {{{
+    * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
+    *   dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) &
+    *     diffInd()(1, 0::Nil) & QE
+    *   )
+    * }}}
+    * with optional instantiation of initial y
+    * {{{
+    * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
+    *   dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) &
+    *     existsR("1/x^(1/2)".asFormula)(1) & diffInd()(1) & QE
+    *   )
+    * }}}
+    */
+  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = DifferentialTactics.dG(ghost, r)
+
+  // more DI/DC/DG variants
+
   /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[dC]] followed by [[dI]]
     * Combines differential cut and differential induction. Use special function old(.) to introduce a ghost for the
     * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
@@ -721,34 +743,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def diffVar: DependentPositionTactic = DifferentialTactics.diffVar
 
-  /** dG(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
-    * ghost of the form y'=a*y+b and the postcondition replaced by r, if provided.
-    * {{{
-    * G |- \exists y [x'=f(x),y'=g(x,y)&q(x)]r(x,y), D
-    * ----------------------------------------------------------  dG using p(x) <-> \exists y. r(x,y) by QE
-    * G |- [x'=f(x)&q(x)]p(x), D
-    * }}}
+  /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
-    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
-    * @param ghost the extra differential equation for an extra variable y to ghost in of the form
-    *              y'=a*y+b or y'=a*y or y'=b or y'=a*y-b
-    * @param r the optional equivalent new postcondition to prove that can mention y; keeps p(x) if omitted.
-    * @example
-    * {{{
-    * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
-    *   dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) &
-    *     diffInd()(1, 0::Nil) & QE
-    *   )
-    * }}}
-    * with optional instantiation of initial y
-    * {{{
-    * proveBy("x>0->[{x'=-x}]x>0".asFormula, implyR(1) &
-    *   dG("{y'=(1/2)*y}".asDifferentialProgram, Some("x*y^2=1".asFormula))(1) &
-    *     existsR("1/x^(1/2)".asFormula)(1) & diffInd()(1) & QE
-    *   )
-    * }}}
+    * @see [[dG]] */
+  lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
+
+  /** Refine top-level antecedent/succedent ODE domain constraint
+    * G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R, (D)?
+    * ---------------------------------------------- dR
+    * G|- [x'=f(x)&Q]P, D
+    * @param formula the formula R to refine Q to
+    * @param hide whether to keep the extra succedents (D) around (default true), which makes position management easier
     */
-  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = DifferentialTactics.dG(ghost, r)
+  def dR(formula: Formula, hide: Boolean=true): DependentPositionTactic = DifferentialTactics.diffRefine(formula,hide)
 
 
   // more
