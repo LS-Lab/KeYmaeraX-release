@@ -1,14 +1,13 @@
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
-import edu.cmu.cs.ls.keymaerax.btactics.Context
-
 /**
   * Tactic library in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon]] tactic language.
   *
   *   - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]` Main tactic library
   *   - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]` Hilbert Calculus for differential dynamic logic
   *   - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus]]` Sequent Calculus for propositional and first-order logic
+  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.HybridProgramCalculus]]` Hybrid Program Calculus for differential dynamic logic
+  *   - `[[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus]]` Differential Equation Calculus for differential dynamic logic
   *   - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]` Unification-based Uniform Substitution Calculus
   *
   *   - Tactic tools
@@ -23,7 +22,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon tactic language]],
   * including its dependent tactics, which ultimately produce
   * [[edu.cmu.cs.ls.keymaerax.core.Provable]] proof certificates by the [[edu.cmu.cs.ls.keymaerax.bellerophon.Interpreter Bellerophon interpreter]].
-  * The Provables that tactics produce can be extracted, for example, with [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.proveBy()]].
+  * The [[edu.cmu.cs.ls.keymaerax.core.Provable Provables]] that tactics produce can be extracted, for example, with [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.proveBy()]].
   *
   *
   * =Proof Styles=
@@ -305,8 +304,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * @todo Expand descriptions
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.HybridProgramCalculus]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]
   */
 package object btactics {}

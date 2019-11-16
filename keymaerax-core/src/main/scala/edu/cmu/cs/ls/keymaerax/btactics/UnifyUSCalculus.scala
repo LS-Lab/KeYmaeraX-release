@@ -4,8 +4,10 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, _}
-import SequentCalculus.{cohide2, cohideR, commuteEqual, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
+import edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex
+
+import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{cohide2, cohideR, commuteEqual, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutLR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
@@ -21,6 +23,16 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable._
+
+/**
+  * Automatic unification-based Uniform Substitution Calculus with indexing.
+  * Provides a tactic framework for automatically applying axioms and axiomatic rules
+  * by matching inputs against them by unification according to the axiom's [[AxiomIndex]].
+  *
+  * @author Andre Platzer
+  * @see [[UnifyUSCalculus]]
+  */
+object UnifyUSCalculus extends UnifyUSCalculus
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.

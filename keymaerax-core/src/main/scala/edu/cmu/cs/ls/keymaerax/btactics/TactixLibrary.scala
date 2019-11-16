@@ -38,9 +38,10 @@ import scala.collection.immutable.{List, _}
   *   - [[TactixLibrary.step]] performs one canonical simplifying proof step
   *   - [[TactixLibrary.chase]] chase the given formula away by automatic reduction proofs
   *
-  * The tactic library also includes individual proof calculi:
+  * The tactic library also includes important proof calculus subcollections:
   *   - [[HilbertCalculus]]: Hilbert Calculus for differential dynamic logic.
   *   - [[SequentCalculus]]: Sequent Calculus for propositional and first-order logic.
+  *   - [[HybridProgramCalculus]]: Hybrid program derived proof rules for differential dynamic logic.
   *   - [[DifferentialEquationCalculus]]: Differential equation proof rules for differential dynamic logic.
   *   - [[UnifyUSCalculus]]: Automatic unification-based Uniform Substitution Calculus with indexing.
   *
@@ -51,16 +52,23 @@ import scala.collection.immutable.{List, _}
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
   * @see [[HilbertCalculus]]
   * @see [[SequentCalculus]]
+  * @see [[DifferentialEquationCalculus]]
+  * @see [[HybridProgramCalculus]]
   * @see [[UnifyUSCalculus]]
   * @see [[DerivedAxioms]]
   * @see [[AxiomInfo]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   * @see [[ToolProvider]]
   */
-object TactixLibrary extends HilbertCalculus with SequentCalculus with DifferentialEquationCalculus {
+object TactixLibrary extends HilbertCalculus
+  with SequentCalculus
+  with DifferentialEquationCalculus
+  with HybridProgramCalculus {
   import Generator.Generator
 
   private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+
+  // active invariant generators etc.
 
   /** Default generator for loop invariants and differential invariants to use.
     * @see [[InvariantGenerator]] */
@@ -68,6 +76,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
   /** Default generator for differential invariants to use.
     * @see [[InvariantGenerator]] */
   var differentialInvGenerator: Generator[GenProduct] = InvariantGenerator.differentialInvariantCandidates
+
+
+  // Hilbert calculus axioms @see [[HilbertCalculus]]
+  // Propositional/first-order sequent calculus @see [[SequentCalculus]]
+  // Hybrid program derived rules @see [[HybridProgramCalculus]]
+  // Differential equation derived rules @see [[DifferentialEquationCalculus]]
+
 
   // high-level generic proof automation
 
@@ -339,29 +354,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
 
   // modalities
 
-  /** iG discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.
-    * {{{
-    *   G, y=e |- p(y), D
-    *   ------------------iG (where y is new)
-    *        G |- p(x), D
-    * }}}
-    * @example{{{
-    *         |- [y_0:=y;]x>0
-    *         ----------------discreteGhost("y".asTerm)(1)
-    *         |- x>0
-    * }}}
-    * @example{{{
-    *         |- [z:=2;][y:=5;]x>0
-    *         ---------------------discreteGhost("0".asTerm, Some("y".asVariable))(1, 1::Nil)
-    *         |- [z:=2;]x>0
-    * }}}
-    * @param t The ghost's initial value.
-    * @param ghost The new ghost variable. If `None`, the tactic chooses a name by inspecting t (must be a variable then).
-    *              For robustness you are advised to choose a name.
-    * @incontext
-    */
-  def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
-
   /** GVR abstractionb: turns `[a]p` into `\forall BV(a) p` by universally quantifying over all variables modified in program `a`.
     * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
     * of that modality.
@@ -403,34 +395,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
     }
   }
 
-  /** loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
-    * Wipes conditions that contain bound variables of the loop.
-    * {{{
-    *   use:                        init:        step:
-    *   I, G\BV(a) |- p, D\BV(a)    G |- I, D    I, G\BV(a) |- [a]p, D\BV(a)
-    *   --------------------------------------------------------------------
-    *   G |- [{a}*]p, D
-    * }}}
-    *
-    * @example{{{
-    *   use:          init:         step:
-    *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
-    *   ------------------------------------------------I("x>1".asFormula)(1)
-    *   x>2 |- [{x:=x+1;}*]x>0
-    * }}}
-    * @example{{{
-    *   use:               init:              step:
-    *   x>1, y>0 |- x>0    x>2, y>0 |- x>1    x>1, y>0 |- [x:=x+y;]x>1
-    *   ---------------------------------------------------------------I("x>1".asFormula)(1)
-    *   x>2, y>0 |- [{x:=x+y;}*]x>0
-    * }}}
-    * @param invariant The loop invariant `I`.
-    * @note Currently uses I induction axiom, which is unsound for hybrid games.
-    */
-  def loop(invariant: Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
-
   /** loop: prove a property of a loop by induction, if the given invariant generator finds a loop invariant
-    * @see [[loop(Formula)]] */
+    * @see [[HybridProgramCalculus.loop(Formula)]] */
   def loop(gen: Generator[GenProduct]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos).map(_._1).iterator,
@@ -439,7 +405,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
     }
   }
   /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
-    * @see [[loop(Formula)]] */
+    * @see [[HybridProgramCalculus.loop(Formula)]] */
   def loopauto(gen: Generator[GenProduct] = InvariantGenerator.loopInvariantGenerator): DependentPositionTactic =
       "loopauto" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(Loop(_), _) | Diamond(Loop(_), _)) =>
@@ -557,7 +523,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
     */
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
-  // more DI/DC/DG variants
+  // more
 
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
@@ -566,31 +532,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
 
 
   // more
-
-  /**
-    * Generalize postcondition to C and, separately, prove that C implies postcondition.
-    * The operational effect of {a;b;}@generalize(f1) is generalize(f1).
-    * {{{
-    *   genUseLbl:        genShowLbl:
-    *   G |- [a]C, D      C |- B
-    *   -------------------------
-    *          G |- [a]B, D
-    * }}}
-    *
-    * @example{{{
-    *   genUseLbl:        genShowLbl:
-    *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
-    *   ------------------------------------generalize("x>1".asFormula)(1)
-    *   |- [x:=2;][y:=x;]y>1
-    * }}}
-    * @example{{{
-    *   genUseLbl:                      genShowLbl:
-    *   |- a=2 -> [z:=3;][x:=2;]x>1     x>1 |- [y:=x;]y>1
-    *   -------------------------------------------------generalize("x>1".asFormula)(1, 1::1::Nil)
-    *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
-    * }}}
-   */
-  def generalize(C: Formula)  : DependentPositionTactic = DLBySubst.generalize(C)
 
   /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
     * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
@@ -617,8 +558,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
   def postCut(cut: Formula)   : DependentPositionTactic = DLBySubst.postCut(cut)
 
 
-
-  // closing
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // closing rules
 
   /** QE: Quantifier Elimination to decide real arithmetic (after simplifying logical transformations).
     * Applies simplifying transformations to the real arithmetic questions before solving it via [[RCF]].
@@ -685,16 +626,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus with Different
 
   def heuQE: BelleExpr = ToolTactics.heuristicQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("QE requires a QETool, but got None")))
   def heuQEPO (po:Ordering[Variable]): BelleExpr = ToolTactics.heuristicQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("QE requires a QETool, but got None")),po)
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Utility Tactics
-  /** nil=skip is a no-op tactic that has no effect */
-  val nil : BelleExpr = Idioms.ident
-  /** nil=skip is a no-op tactic that has no effect
+  /** skip is a no-op tactic that has no effect
     * @see [[done]] */
-  val skip : BelleExpr = nil
+  val skip : BelleExpr = Idioms.ident
+  /** nil=skip is a no-op tactic that has no effect */
+  val nil : BelleExpr = skip
   /** fail is a tactic that always fails
     * @see [[skip]] */
   val fail : BelleExpr = assertT(seq=>false, "fail")

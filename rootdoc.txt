@@ -27,6 +27,8 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary TactixLibrary]]` - Main KeYmaera X tactic library
       - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus SequentCalculus]]` - Sequent Calculus for propositional and first-order logic
+      - `[[edu.cmu.cs.ls.keymaerax.btactics.HybridProgramCalculus HybridProgramCalculus]]` - Hybrid Program Calculus for differential dynamic logic
+      - `[[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus DifferentialEquationCalculus]]` - Differential Equation Calculus for differential dynamic logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` - Unification-based uniform substitution calculus
 
   - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
@@ -50,6 +52,8 @@ Additional entry points and usage points for KeYmaera X API:
   - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
 
   - `[[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]` - Axiom indexing data structures for canonical proof strategies.
+
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]` - Axiom information data structures for naming and rendering and codeName information for axioms etc.
 
 ==References==
 

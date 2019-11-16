@@ -19,6 +19,7 @@ object DifferentialEquationCalculus extends DifferentialEquationCalculus
 
 /**
   * Differential Equation Calculus for differential dynamic logic.
+  * Basic axioms for differential equations are in [[HilbertCalculus]].
   *
   * Provides the elementary derived proof rules for differential equations from Figure 11.20 and Figure 12.9 in:
   * Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
@@ -31,7 +32,7 @@ object DifferentialEquationCalculus extends DifferentialEquationCalculus
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
   */
-trait DifferentialEquationCalculus extends UnifyUSCalculus {
+trait DifferentialEquationCalculus {
 
   /*******************************************************************
     * Differential Equation Proof Rules
