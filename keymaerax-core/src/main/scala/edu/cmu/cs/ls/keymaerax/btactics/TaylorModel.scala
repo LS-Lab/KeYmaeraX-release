@@ -16,6 +16,7 @@ import org.apache.logging.log4j.scala.Logging
 import java.util.UUID
 
 import cc.redberry.rings
+import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -71,6 +72,25 @@ object TaylorModelTactics extends Logging {
         provable
       }
     }
+
+  // Tactics
+
+  val andLstable = new BuiltInLeftTactic("andLstable") {
+    override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+      ProofRuleTactics.requireOneSubgoal(provable, name)
+      val subgoal = provable.subgoals(0)
+      /** [[pos.checkTop]] like in [[andL]] */
+      val antepos = pos.checkTop
+      /** matching on [[And]] like in [[AndLeft]] */
+      val fml@And(p, q) = subgoal(pos.checkTop)
+      val Llast = subgoal.ante.length
+      provable(core.Cut(fml), 0).
+        apply(Close(antepos, SuccPos(subgoal.succ.length)), 1).
+        apply(AndLeft(AntePos(Llast)), 0).
+        apply(ExchangeLeftRule(antepos, AntePos(Llast)), 0).
+        apply(HideLeft(AntePos(Llast)), 0)
+    }
+  }
 
   // Terms
 
