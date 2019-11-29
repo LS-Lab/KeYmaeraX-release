@@ -111,7 +111,9 @@ object RestApi extends Logging {
         case _ => JsArray(responses.map(_.getJson): _*).compactPrint
       }
     } catch {
-      case ex: Throwable => new ErrorResponse("Error serializing response", ex).print
+      case ex: Throwable =>
+        ex.printStackTrace()
+        new ErrorResponse("Error serializing response", ex).print
     }
   }
 
