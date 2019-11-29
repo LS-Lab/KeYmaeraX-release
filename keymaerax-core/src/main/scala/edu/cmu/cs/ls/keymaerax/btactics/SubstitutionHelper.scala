@@ -15,24 +15,36 @@ import scala.collection.immutable.Set
  * @todo generalize to replacing formula by formula, too.
  */
 object SubstitutionHelper {
-  /** Return the result of replacing all free occurrences of `what` in formula `f` by `repl`. */
-  def replaceFree(f: Formula)(what: Term, repl:Term): Formula =
-    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], f)
-  /** Return the result of replacing all free occurrences of `what` in formula `f` by `repl`. */
-  def replaceFree(t: Term)(what: Term, repl:Term): Term =
-    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], t)
-  /** Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl`. */
-  def replaceFree(seq: Sequent)(what: Term, repl:Term): Sequent =
-    Sequent(seq.ante.map((f:Formula)=>replaceFree(f)(what,repl)), seq.succ.map((f:Formula)=>replaceFree(f)(what,repl)))
-  /** Return the result of replacing all free occurrences of `what` in program `prg` by `repl`. */
-  def replaceFree(prg: Program)(what: Term, repl:Term): Program =
-    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], prg).p
-  /** Return the result of replacing all free occurrences of `what` in expression `expr` by `repl`. */
-  def replaceFree[T <: Expression](expr: T)(what: Term, repl:Term): T = expr match {
-    case f: Formula => replaceFree(f)(what, repl).asInstanceOf[T]
-    case t: Term => replaceFree(t)(what, repl).asInstanceOf[T]
-    case p: Program => replaceFree(p)(what, repl).asInstanceOf[T]
+  /** Return the result of replacing all free occurrences of `what` in term `t` by `repl` whenever `replaces(what) = Some(repl)`. */
+  def replacesFree(f: Formula)(replaces: Term => Option[Term]): Formula =
+    new SubstitutionHelper(replaces).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], f)
+  /** Return the result of replacing all free occurrences of `what` in formula `f` by `repl` whenever `replaces(what) = Some(repl)`. */
+  def replacesFree(t: Term)(replaces: Term => Option[Term]): Term =
+    new SubstitutionHelper(replaces).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], t)
+  /** Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl` whenever `replaces(what) = Some(repl)`. */
+  def replacesFree(seq: Sequent)(replaces: Term => Option[Term]): Sequent =
+    Sequent(seq.ante.map((f:Formula)=>replacesFree(f)(replaces)), seq.succ.map((f:Formula)=>replacesFree(f)(replaces)))
+  /** Return the result of replacing all free occurrences of `what` in program `prg` by `repl` whenever `replaces(what) = Some(repl)`. */
+  def replacesFree(prg: Program)(replaces: Term => Option[Term]): Program =
+    new SubstitutionHelper(replaces).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], prg).p
+  /** Return the result of replacing all free occurrences of `what` in expression `expr` by `repl` whenever `replaces(what) = Some(repl)`. */
+  def replacesFree[T <: Expression](expr: T)(replaces: Term => Option[Term]): T = expr match {
+    case f: Formula => replacesFree(f)(replaces).asInstanceOf[T]
+    case t: Term => replacesFree(t)(replaces).asInstanceOf[T]
+    case p: Program => replacesFree(p)(replaces).asInstanceOf[T]
   }
+
+  private def replaceOne(what: Term, repl: Term)(t: Term) : Option[Term] = if (what == t) Some(repl) else None
+  /** Return the result of replacing all free occurrences of `what` in term `t` by `repl`. */
+  def replaceFree(f: Formula)(what: Term, repl:Term): Formula = replacesFree(f)(replaceOne(what, repl))
+  /** Return the result of replacing all free occurrences of `what` in formula `f` by `repl`. */
+  def replaceFree(t: Term)(what: Term, repl:Term): Term = replacesFree(t)(replaceOne(what, repl))
+  /** Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl`. */
+  def replaceFree(seq: Sequent)(what: Term, repl:Term): Sequent = replacesFree(seq)(replaceOne(what, repl))
+  /** Return the result of replacing all free occurrences of `what` in program `prg` by `repl`. */
+  def replaceFree(prg: Program)(what: Term, repl:Term): Program = replacesFree(prg)(replaceOne(what, repl))
+  /** Return the result of replacing all free occurrences of `what` in expression `expr` by `repl`. */
+  def replaceFree[T <: Expression](expr: T)(what: Term, repl:Term): T = replacesFree[T](expr)(replaceOne(what, repl))
 
   /** Replaces the any unary function application fn(.) per `subst`. */
   def replaceFn(fn: String, fml: Formula, subst: Map[Term, Variable]): Formula = {
@@ -47,7 +59,7 @@ object SubstitutionHelper {
   }
 }
 
-class SubstitutionHelper(what: Term, repl: Term) {
+class SubstitutionHelper(replace: Term => Option[Term]) {
 
   /**
    * Records the result of uniform substitution in a program.
@@ -63,37 +75,37 @@ class SubstitutionHelper(what: Term, repl: Term) {
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
    */
   private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], t: Term): Term = {
-    t match {
+    (t, replace(t)) match {
       // homomorphic cases
-      case Neg(e) if t != what => Neg(usubst(o, u, e))
-      case Neg(_) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case Plus(l, r) if t != what => Plus(usubst(o, u, l), usubst(o, u, r))
-      case Plus(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case Minus(l, r) if t != what => Minus(usubst(o, u, l), usubst(o, u, r))
-      case Minus(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case Times(l, r) if t != what => Times(usubst(o, u, l), usubst(o, u, r))
-      case Times(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case Divide(l, r) if t != what => Divide(usubst(o, u, l), usubst(o, u, r))
-      case Divide(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case Power(l, r) if t != what => Power(usubst(o, u, l), usubst(o, u, r))
-      case Power(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case (Neg(e), None) => Neg(usubst(o, u, e))
+      case (Neg(_), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
+      case (Plus(l, r), None) => Plus(usubst(o, u, l), usubst(o, u, r))
+      case (Plus(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
+      case (Minus(l, r), None) => Minus(usubst(o, u, l), usubst(o, u, r))
+      case (Minus(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
+      case (Times(l, r), None) => Times(usubst(o, u, l), usubst(o, u, r))
+      case (Times(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
+      case (Divide(l, r), None) => Divide(usubst(o, u, l), usubst(o, u, r))
+      case (Divide(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
+      case (Power(l, r), None) => Power(usubst(o, u, l), usubst(o, u, r))
+      case (Power(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
       // base cases
-      case x: Variable if !u.contains(x) && x == what => repl
-      case x: Variable if  u.contains(x) || x != what => x
+      case (x: Variable, Some(repl)) if !u.contains(x) => repl
+      case (x: Variable, _) => x
 //      case d: DifferentialSymbol if d == what => repl
 //      case d: DifferentialSymbol if d != what => d
-      case d: Differential if d == what => repl
-      case d: Differential if d != what => d
-      case app@FuncOf(_, _) if u.intersect(StaticSemantics(t)).isEmpty && app == what =>
+      case (d: Differential, Some(repl)) => repl
+      case (d: Differential, None) => d
+      case (FuncOf(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty =>
         requireAdmissible(u, StaticSemantics(repl), repl, t)
         repl
-      case app@FuncOf(fn, theta) if app != what => FuncOf(fn, usubst(o, u, theta))
-      case Nothing => Nothing
-      case Number(_) if t == what => repl
-      case x: AtomicTerm => x
-      case Pair(l, r) if t != what => Pair(usubst(o, u, l), usubst(o, u, r))
-      case Pair(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case _ if t == what && !u.intersect(StaticSemantics(t)).isEmpty => what
+      case (FuncOf(fn, theta), None) => FuncOf(fn, usubst(o, u, theta))
+      case (Nothing, _) => Nothing
+      case (Number(_), Some(repl)) => repl
+      case (x: AtomicTerm, _) => x
+      case (Pair(l, r), None) => Pair(usubst(o, u, l), usubst(o, u, r))
+      case (Pair(_, _), Some(repl)) if u.intersect(StaticSemantics(t)).isEmpty => repl
+      case (_, Some(repl)) if !u.intersect(StaticSemantics(t)).isEmpty => t
       case _ => throw UnknownOperatorException("Not implemented yet", t)
     }
   }

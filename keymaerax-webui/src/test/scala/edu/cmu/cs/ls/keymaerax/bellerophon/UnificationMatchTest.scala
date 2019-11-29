@@ -516,42 +516,53 @@ class UnificationMatchTest extends SystemTestBase {
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
-  "Projection unification" should "projection unify 3+f(x,y) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
-    //val dot = DotTerm(Tuple(Real, Real))
+  "colored dots unification" should "unify 3+f(x,y) with 3+(x^2+y)" in {
     shouldUnify("3+f(x,y)".asTerm,
       "3+(x^2+y)".asTerm, USubst(
         SubstitutionPair(
-          //FuncOf(Function("f", None, Tuple(Real, Real), Real), dot),
-          "f(.(.,.))".asTerm,
-          //Plus(Power(Projection(dot, 0::Nil), Number(2)), Projection(dot, 1::Nil))
-          "π(.(.,.),1,0)^2+π(.(.,.),1,1)".asTerm) :: Nil
+          "f((•_1,•_2))".asTerm,
+          "•_1^2+•_2".asTerm
+        ) :: Nil
       ))
   }
 
-  it should "projection unify 3+f(x,y,z) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
+  it should "unify 3+f(x,y,z) with 3+(x^y+z)" in {
     shouldUnify("3+f(x,y,z)".asTerm,
       "3+(x^y+z)".asTerm, USubst(
         SubstitutionPair(
-          "f(.(.,.,.))".asTerm,
-          "π(.(.,.,.),1,0)^π(.(.,.,.),2,2)+π(.(.,.,.),2,3)".asTerm
+          "f((•_1,•_2,•_3))".asTerm,
+          "•_1^•_2+•_3".asTerm
         ) :: Nil
       ))
   }
 
 
-  it should "projection unify renaming and instance p(x,y) and x*y>5" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
+  it should "unify renaming and instance p(x,y) and x*y>5" in {
     shouldMatch("p(x,y)".asFormula,
       "x*y>5".asFormula, RenUSubst(
-        ("p(.(.,.))".asFormula,
-          "π(.(.,.),1,0)*π(.(.,.),1,1)>5".asFormula) :: Nil
+        ("p((•_1,•_2))".asFormula,
+          "•_1*•_2>5".asFormula) :: Nil
       ))
   }
 
-  it should "projection unify renaming and instance p(x,y,z) and x*y>z" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
+  it should "unify renaming and instance p(x,y,z) and x*y>z" in {
     shouldMatch("p(x,y,z)".asFormula,
       "x*y>z".asFormula, RenUSubst(
-        ("p(.(.,.,.))".asFormula,
-          "π(.(.,.,.),1,0)*π(.(.,.,.),2,2)>π(.(.,.,.),2,3)".asFormula) :: Nil
+        ("p((•_1,•_2,•_3))".asFormula,
+          "•_1*•_2>•_3".asFormula) :: Nil
+      ))
+  }
+
+  it should "unify renaming and instance f(x,y,x*y)" in {
+    shouldMatch("f(x,y,x*y) = f(a, b, c)".asFormula,
+      "x*y = a*b".asFormula, RenUSubst(
+        ("f((•_1,•_2,•_3))".asTerm,
+          "•_1*•_2".asTerm) :: Nil
+      ))
+    shouldMatch("f(x,y,x*y) = f(a, b, c)".asFormula,
+      "x*y = c".asFormula, RenUSubst(
+        ("f((•_1,•_2,•_3))".asTerm,
+          "•_3".asTerm) :: Nil
       ))
   }
 }

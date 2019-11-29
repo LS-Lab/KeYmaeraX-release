@@ -226,6 +226,49 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else e2 match { case _: Variable => unifier(x1,e2.asInstanceOf[Variable]) case _ => ununifiable(x1,e2)}
   protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else e2 match { case xp2: DifferentialSymbol => unifier(xp1.x,xp2.x) case _ => ununifiable(xp1,e2)}
 
+  /** DotTerms of different "colors" for components of a Tuple, uncolored DotTerm for non-Tuples
+    * @example
+    *   coloredDotsTerm(Real) = •
+    *   coloredDotsTerm(Real*Real) = (•_1, •_2)
+    *   coloredDotsTerm(Real*Real*Real) = (•_1, •_2, •_3)
+    * */
+  def coloredDotsTerm(s: Sort, color: Int = 1) : Term = {
+    def coloredDotsTermWithIndex(s: Sort, color: Int) : (Int, Term) = s match {
+      case Tuple(l, r) => {
+        val (colorLeft, dotsLeft) = coloredDotsTermWithIndex(l, color)
+        val (colorRight, dotsRight) = coloredDotsTermWithIndex(r, colorLeft)
+        (colorRight, Pair(dotsLeft, dotsRight))
+      }
+      case _ => (color + 1, DotTerm(s, Some(color)))
+    }
+    s match {
+      case Tuple(_, _) => coloredDotsTermWithIndex(s, color)._2
+      case _ => DotTerm(s)
+    }
+  }
+
+  /** Unify `f(t)` with `e2`. `F`  will be either `FuncOf` or `PredOf`
+    *
+    * 1) unify the argument `t` with a DotTerm abstraction `•` (t may be a tuple, then `•` is a tuple: [[coloredDotsTerm]])
+    *    `ua = unify(•, t)`
+    * 2) unifier = substitute with the inverse of the argument unifier e2
+    *    `f(•) ~> ua^-1(e2)`
+    *
+    * @example given `t = (a, b)`, `e2 = a^2*b`
+    *   1) `unify((•_1, •_2), (a, b))` yields
+    *      `ua = •_1 ~> a, •_2 ~> b`
+    *   2) the inverse is `ua^-1 = a ~> •_1, b ~> •_2`, therefore
+    *      `ua^-1(e2) = •_1^2*•_2`, resulting in
+    *      `f(•_1, •_2) ~> (•_1^2*•_2)`
+    *
+    * the inverse substitution is applied top-down, i.e., larger abstractions get precedence when components of `t` overlap:
+    *   `t = (x, y, x + y)` and `e2 = x + y` yields `f(•_1, •_2, •_3) ~> •_3`; not `f(•_1, •_2, •_3) ~> •_1 + •_2`
+    * */
+  protected def unifyFunction(F: (Function, Term) => Expression, f: Function, t: Term, e2: Expression): List[SubstRepl] = {
+    val dt = coloredDotsTerm(t.sort)
+    val uInv = unify(dt, t).map(_.swap.asInstanceOf[(Term, Term)])
+    unifier(F(f, dt), SubstitutionHelper.replacesFree(e2)(uInv.toMap.get))
+  }
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   protected def unify(e1: Term, e2: Term): List[SubstRepl] = e1 match {
@@ -235,11 +278,11 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     case n: Number                        => if (e1==e2) id else ununifiable(e1,e2)
     case f: UnitFunctional                => unifier(e1, e2)
     case FuncOf(f:Function, Nothing)      => unifier(e1, e2)
-    case FuncOf(f:Function, t)            => e2 match {
-      case FuncOf(g, t2) if f==g => unify(t,t2) /*case DotTerm => List(SubstRepl(DotTerm, t1))*/
+    case FuncOf(f: Function, t)           => e2 match {
+      case FuncOf(g, t2) if f == g => unify(t, t2)
       // otherwise DotTerm abstraction of all occurrences of the argument
       case _ =>
-        unifier(FuncOf(f, DotTerm(f.domain)), replaceFree(e2)(t, DotTerm(f.domain)))
+        unifyFunction(FuncOf, f, t, e2)
     }
     case Nothing                          => if (e1==e2) id else ununifiable(e1,e2)
     case _: DotTerm                       => unifier(e1, e2)
@@ -265,11 +308,8 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     case PredOf(f:Function, t)            => e2 match {
       case PredOf(g, t2) if f == g => unify(t, t2)
       // otherwise DotTerm abstraction of all occurrences of the argument
-      //@todo stutter  if not free
       case _ =>
-        logger.trace("unify " + e1 + "\nwith  " + e2 + "\ngives " + unifier(PredOf(f,DotTerm(f.domain)), replaceFree(e2)(t,DotTerm(f.domain))))
-        unifier(PredOf(f, DotTerm(f.domain)), replaceFree(e2)(t, DotTerm(f.domain)))
-      //@todo heuristic: for p(f()) simply pass since f() must occur somewhere else in isolation to match on it. In general may have to remember p(subst(f())) = e2 constraint regardless and post-unify.
+        unifyFunction(PredOf, f, t, e2)
     }
     case PredicationalOf(f:Function, DotFormula) => unifier(e1, e2)
     case PredicationalOf(c, fml) => e2 match {
