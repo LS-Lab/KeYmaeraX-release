@@ -229,7 +229,7 @@ class DLTests extends TacticTestBase {
 
   it should "work in front of a loop in the antecedent" in {
     val result = proveBy("[x:=1;][{x:=x+1;}*]x>0 ==> ".asSequent, assignb(-1))
-    result.subgoals.loneElement shouldBe "\\forall x (x=1 -> [{x:=x+1;}*]x>0) ==> ".asSequent
+    result.subgoals.loneElement shouldBe "x=1, [{x:=x+1;}*]x>0 ==> ".asSequent
   }
 
   it should "work in front of a loop in context" in {
@@ -275,6 +275,20 @@ class DLTests extends TacticTestBase {
   it should "handle use self-assign in assignb" in {
     val result = proveBy("[x:=x;][x':=2;](x>0)'".asFormula, assignb(1))
     result.subgoals.loneElement shouldBe "==> [x':=2;](x>0)'".asSequent
+  }
+
+  it should "introduce universal quantifiers in succedent + positive polarity / antecedent + negative polarity" in {
+    proveBy("==> [y:=2;][x:=3;][{x:=x+y+1;}*]x>0".asSequent, assignb(1, 1::Nil)).subgoals.
+      loneElement shouldBe "==> [y:=2;]\\forall x (x=3 -> [{x:=x+y+1;}*]x>0)".asSequent
+    proveBy("[y:=2;][x:=3;][{x:=x+y+1;}*]x>0 -> z>0 ==> ".asSequent, assignb(-1, 0::1::Nil)).subgoals.
+      loneElement shouldBe "[y:=2;]\\forall x (x=3 -> [{x:=x+y+1;}*]x>0) -> z>0 ==> ".asSequent
+  }
+
+  it should "introduce existential quantifiers in antecedent + positive polarity / succedent + negative polarity" in {
+    proveBy("[y:=2;][x:=3;][{x:=x+y+1;}*]x>0 ==> ".asSequent, assignb(-1, 1::Nil)).subgoals.
+      loneElement shouldBe "[y:=2;]\\exists x (x=3 & [{x:=x+y+1;}*]x>0) ==> ".asSequent
+    proveBy("==> [y:=2;][x:=3;][{x:=x+y+1;}*]x>0 -> z>0".asSequent, assignb(1, 0::1::Nil)).subgoals.
+      loneElement shouldBe "==> [y:=2;]\\exists x (x=3 & [{x:=x+y+1;}*]x>0) -> z>0".asSequent
   }
 
   "generalize" should "introduce intermediate condition" in {
@@ -442,6 +456,20 @@ class DLTests extends TacticTestBase {
   it should "work with loop in antecedent and context" in {
     val result = proveBy("0>=0, <x:=x+1;><{x:=x+1;}*>x>0, 1>=1, 2>=2 ==> ".asSequent, assignd(-2))
     result.subgoals.loneElement shouldBe "0>=0, 1>=1, 2>=2, x=x_0+1, <{x:=x+1;}*>x>0 ==> ".asSequent
+  }
+
+  it should "introduce universal quantifiers in succedent + positive polarity / antecedent + negative polarity" in {
+    proveBy("==> [y:=2;]<x:=3;>[{x:=x+y+1;}*]x>0".asSequent, assignd(1, 1::Nil)).subgoals.
+      loneElement shouldBe "==> [y:=2;]\\forall x (x=3 -> [{x:=x+y+1;}*]x>0)".asSequent
+    proveBy("[y:=2;]<x:=3;>[{x:=x+y+1;}*]x>0 -> z>0 ==> ".asSequent, assignd(-1, 0::1::Nil)).subgoals.
+      loneElement shouldBe "[y:=2;]\\forall x (x=3 -> [{x:=x+y+1;}*]x>0) -> z>0 ==> ".asSequent
+  }
+
+  it should "introduce existential quantifiers in antecedent + positive polarity / succedent + negative polarity" in {
+    proveBy("[y:=2;]<x:=3;>[{x:=x+y+1;}*]x>0 ==> ".asSequent, assignd(-1, 1::Nil)).subgoals.
+      loneElement shouldBe "[y:=2;]\\exists x (x=3 & [{x:=x+y+1;}*]x>0) ==> ".asSequent
+    proveBy("==> [y:=2;]<x:=3;>[{x:=x+y+1;}*]x>0 -> z>0".asSequent, assignd(1, 0::1::Nil)).subgoals.
+      loneElement shouldBe "==> [y:=2;]\\exists x (x=3 & [{x:=x+y+1;}*]x>0) -> z>0".asSequent
   }
 
   "Convergence" should "work in easy case" in {
@@ -657,22 +685,22 @@ class DLTests extends TacticTestBase {
 
   "Discrete ghost" should "introduce assignment to fresh variable" in {
     val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable)(1))
-    result.subgoals.loneElement shouldBe "==> [y_0:=y;]y_0>0".asSequent
+    result.subgoals.loneElement shouldBe "y_0=y ==> y_0>0".asSequent
   }
 
   it should "introduce assignment to fresh variable in antecedent" in {
     val result = proveBy(Sequent(IndexedSeq("y>0".asFormula), IndexedSeq()), discreteGhost("y".asVariable)(-1))
-    result.subgoals.loneElement shouldBe "[y_0:=y;]y_0>0 ==> ".asSequent
+    result.subgoals.loneElement shouldBe "y_0=y, y_0>0 ==> ".asSequent
   }
 
   it should "assign term t to fresh variable" in {
     val result = proveBy("y+1>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
-    result.subgoals.loneElement shouldBe "==> [z:=y+1;]z>0".asSequent
+    result.subgoals.loneElement shouldBe "z=y+1 ==> z>0".asSequent
   }
 
   it should "allow arbitrary terms t when a ghost name is specified" in {
     val result = proveBy("y>0".asFormula, discreteGhost("x+5".asTerm, Some("z".asVariable))(1))
-    result.subgoals.loneElement shouldBe "==> [z:=x+5;]y>0".asSequent
+    result.subgoals.loneElement shouldBe "z=x+5 ==> y>0".asSequent
   }
 
   it should "use same variable if asked to do so" in {
@@ -686,12 +714,12 @@ class DLTests extends TacticTestBase {
 
   it should "work on assignments" in {
     val result = proveBy("[y:=2;]y>0".asFormula, discreteGhost("y".asVariable)(1))
-    result.subgoals.loneElement shouldBe "==> [y_0:=y;][y:=2;]y>0".asSequent
+    result.subgoals.loneElement shouldBe "y_0=y ==> [y:=2;]y>0".asSequent
   }
 
   it should "introduce ghosts in the middle of formulas" in {
     val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable)(1, 1::Nil))
-    result.subgoals.loneElement shouldBe "==> [x:=1;][y_0:=y;][y:=2;]y>0".asSequent
+    result.subgoals.loneElement shouldBe "==> [x:=1;]\\forall y_0 (y_0=y -> [y:=2;]y>0)".asSequent
   }
 
   it should "introduce self-assignment ghosts in the middle of formulas when not bound before" in {
@@ -712,37 +740,37 @@ class DLTests extends TacticTestBase {
 
   it should "work on loops" in {
     val result = proveBy("[{y:=y+1;}*]y>0".asFormula, discreteGhost("y".asVariable)(1))
-    result.subgoals.loneElement shouldBe "==> [y_0:=y;][{y:=y+1;}*]y>0".asSequent
+    result.subgoals.loneElement shouldBe "y_0=y ==> [{y:=y+1;}*]y>0".asSequent
   }
 
   it should "work on ODEs" in {
     val result = proveBy("[{y'=1}]y>0".asFormula, discreteGhost("y".asVariable)(1))
-    result.subgoals.loneElement shouldBe "==> [y_0:=y;][{y'=1}]y>0".asSequent
+    result.subgoals.loneElement shouldBe "y_0=y ==> [{y'=1}]y>0".asSequent
   }
 
   it should "work on ODEs mentioning the ghost in the evolution domain" in {
     val result = proveBy("[{y'=1 & y+1>0}]y>0".asFormula, discreteGhost("y+1".asTerm)(1))
-    result.subgoals.loneElement shouldBe "==> [ghost:=y+1;][{y'=1 & y+1>0}]y>0".asSequent
+    result.subgoals.loneElement shouldBe "ghost=y+1 ==> [{y'=1 & y+1>0}]y>0".asSequent
   }
 
   it should "not propagate arbitrary terms into ODEs" in {
     val result = proveBy("[{y'=1}]y>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
-    result.subgoals.loneElement shouldBe "==> [z:=y+1;][{y'=1}]y>0".asSequent
+    result.subgoals.loneElement shouldBe "z=y+1 ==> [{y'=1}]y>0".asSequent
   }
 
   it should "abbreviate terms in a formula" in {
     val result = proveBy("[x:=5+0;]x>0".asFormula, discreteGhost("0".asTerm, Some("z".asVariable))(1))
-    result.subgoals.loneElement shouldBe "==> [z:=0;][x:=5+z;]x>z".asSequent
+    result.subgoals.loneElement shouldBe "z=0 ==> [x:=5+z;]x>z".asSequent
   }
 
   it should "introduce anonymous ghosts for terms" in {
     val result = proveBy("x>0".asFormula, discreteGhost("y+v/1".asTerm)(1))
-    result.subgoals.loneElement shouldBe "==> [ghost:=y+v/1;]x>0".asSequent
+    result.subgoals.loneElement shouldBe "ghost=y+v/1 ==> x>0".asSequent
   }
 
   it should "not clash with preexisting variables when introducing anonymous ghosts" in {
     val result = proveBy("ghost>0 ==> x>0".asSequent, discreteGhost("y+v/1".asTerm)(1))
-    result.subgoals.loneElement shouldBe "ghost>0 ==> [ghost_0:=y+v/1;]x>0".asSequent
+    result.subgoals.loneElement shouldBe "ghost>0, ghost_0=y+v/1 ==> x>0".asSequent
   }
 
   "[:=] assign exists" should "turn existential quantifier into assignment" in {

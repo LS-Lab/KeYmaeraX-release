@@ -178,8 +178,8 @@ private object DLBySubst {
 
     /**
     * Equality assignment to a fresh variable.
-    * Always introduces universal quantifier, which is already skolemized if applied at top-level in the
-    * succedent; quantifier remains unhandled in the antecedent and in non-top-level context.
+    * Introduces a universal quantifier when applied in the succedent/existential quantifier in the antecedent,
+    * which is already skolemized if applied at top-level; quantifier remains unhandled in non-top-level context.
     *
     * @example{{{
     *    x_0=x+1 |- [{x_0:=x_0+1;}*]x_0>0
@@ -187,9 +187,9 @@ private object DLBySubst {
     *        |- [x:=x+1;][{x:=x+1;}*]x>0
     * }}}
     * @example{{{
-    *    \\forall x_0 (x_0=x+1 -> [{x_0:=x_0+1;}*]x_0>0) |-
-    *    --------------------------------------------------- assignEquality(-1)
-    *                 [x:=x+1;][{x:=x+1;}*]x>0 |-
+    *    x_0=x+1, [{x_0:=x_0+1;}*]x_0>0) |-
+    *    ------------------------------------ assignEquality(-1)
+    *           [x:=x+1;][{x:=x+1;}*]x>0 |-
     * }}}
     * @example Other uses of the variable in the context remain unchanged.
     * {{{
@@ -205,10 +205,13 @@ private object DLBySubst {
     // [x:=f(x)]P(x)
     case Some(Box(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
+      val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       ProofRuleTactics.boundRenaming(x, y)(pos) &
-      useAt("[:=] assign equality")(pos) &
+      (if (universal) useAt("[:=] assign equality")(pos) else useAt("[:=] assign equality exists")(pos)) &
       ProofRuleTactics.uniformRenaming(y, x) &
-      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
+      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+       else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
+       else ident)
   })
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
@@ -217,12 +220,13 @@ private object DLBySubst {
     // [x:=f(x)]P(x)
     case Some(Diamond(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
+      val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       ProofRuleTactics.boundRenaming(x, y)(pos) &
-        (if (pos.isSucc) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos)) &
-        ProofRuleTactics.uniformRenaming(y, x) &
-        (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-         else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
-         else ident)
+      (if (universal) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos)) &
+      ProofRuleTactics.uniformRenaming(y, x) &
+      (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+       else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
+       else ident)
   })
 
   /** @see [[TactixLibrary.generalize()]]
@@ -239,10 +243,8 @@ private object DLBySubst {
           freshOld = nextCandidate
           (old -> ghost,
             ghostPos match {
-              case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
-                TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
               case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-              case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
+              case _ => discreteGhost(old, Some(ghost))(pos)
             })
         }).toList
         val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
@@ -464,7 +466,7 @@ private object DLBySubst {
   })
 
   /** @see [[TactixLibrary.discreteGhost()]] */
-  def discreteGhost(t: Term, ghost: Option[Variable]): DependentPositionWithAppliedInputTactic = "discreteGhost" byWithInputs (
+  def discreteGhost(t: Term, ghost: Option[Variable], assignInContext: Boolean = true): DependentPositionWithAppliedInputTactic = "discreteGhost" byWithInputs (
       ghost match { case Some(g) => List(t, g) case _ => List(t) }, (pos: Position, seq: Sequent) => {
     require(ghost match { case Some(g) => g != t case None => true }, "Expected ghost different from t, use stutter instead")
     seq.sub(pos) match {
@@ -492,7 +494,15 @@ private object DLBySubst {
           Nil
         )
 
-        useAt("[:=] assign", PosInExpr(1::Nil), subst)(pos)
+        val execAssignment = assignEquality(pos) &
+          //@note allR2L does not allow rewriting numbers
+          (if (!t.isInstanceOf[Number] && pos.isTopLevel) {
+            if (pos.isSucc) TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) // from implyR
+            else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
+          } else skip)
+
+        useAt("[:=] assign", PosInExpr(1::Nil), subst)(pos) &
+          (if (assignInContext || pos.isTopLevel) execAssignment else skip)
     }
   })
 
@@ -506,10 +516,8 @@ private object DLBySubst {
       freshOld = nextCandidate
       (old -> ghost,
         ghostPos match {
-          case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
-            TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
           case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-          case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
+          case _ => discreteGhost(old, Some(ghost))(pos)
         })
     }).toList
     cont(ghosts)
