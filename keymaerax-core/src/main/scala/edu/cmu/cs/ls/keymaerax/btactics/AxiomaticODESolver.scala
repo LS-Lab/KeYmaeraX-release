@@ -65,7 +65,12 @@ object AxiomaticODESolver {
         useAt("<> diamond", PosInExpr(1::Nil))(pos) &
         boxAxiomaticSolve(instEnd)(pos ++ PosInExpr(0::Nil)) &
         pushNegation(pos) &
-        useAt("PC10", PosInExpr(1::Nil))(pos ++ PosInExpr(0::1::1::Nil)) &
+        // pushNegation may turn disjunction into implication
+        ("ANON" by ((p: Position, s: Sequent) => s.sub(p) match {
+          case Some(Or(_, _)) => useAt("PC10", PosInExpr(1::Nil))(p)
+          case Some(Imply(_, _)) => useAt("-> expand")(p) & useAt("PC10", PosInExpr(1::Nil))(p)
+          case _ => skip
+        }))(pos ++ PosInExpr(0::1::1::Nil)) &
         simplifier(pos)
       case _ => boxAxiomaticSolve(instEnd)(pos)
     }
@@ -75,9 +80,29 @@ object AxiomaticODESolver {
   private def pushNegation: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
     s.sub(pos) match {
       case Some(Not(Not(_))) => useAt("!! double negation")(pos)
-      case Some(Not(Forall(_, _))) => useAt("!all")(pos) & pushNegation(pos ++ PosInExpr(0::Nil))
-      case Some(Not(Imply(_, _))) => useAt("!-> deMorgan")(pos) & pushNegation(pos ++ PosInExpr(1::Nil))
-      case Some(Not(And(_, _))) => useAt("!& deMorgan")(pos) & pushNegation(pos ++ PosInExpr(1::Nil))
+      case Some(Not(Forall(x, p))) if  StaticSemantics.boundVars(p).intersect(x.toSet).isEmpty => useAt("!all")(pos) & pushNegation(pos ++ PosInExpr(0::Nil))
+      case Some(Not(Forall(x, p))) if !StaticSemantics.boundVars(p).intersect(x.toSet).isEmpty =>
+        x.map(DLBySubst.stutter(_)(pos ++ PosInExpr(0::0::Nil))).reduce[BelleExpr](_ & _) & // stutter
+        useAt("!all")(pos) &
+        assignb(pos ++ PosInExpr(0::0::Nil))*x.size & // unstutter
+        pushNegation(pos ++ PosInExpr(0::Nil))
+      case Some(Not(Exists(x, p))) if  StaticSemantics.boundVars(p).intersect(x.toSet).isEmpty => useAt("!exists")(pos) & pushNegation(pos ++ PosInExpr(0::Nil))
+      case Some(Not(Exists(x, p))) if !StaticSemantics.boundVars(p).intersect(x.toSet).isEmpty =>
+        x.map(DLBySubst.stutter(_)(pos ++ PosInExpr(0::0::Nil))).reduce[BelleExpr](_ & _) & // stutter
+        useAt("!exists")(pos) &
+        assignb(pos ++ PosInExpr(0::0::Nil))*x.size & // unstutter
+        pushNegation(pos ++ PosInExpr(0::Nil))
+      case Some(Not(Imply(_, _))) => useAt("!-> deMorgan")(pos) &
+        pushNegation(pos ++ PosInExpr(0::Nil)) & pushNegation(pos ++ PosInExpr(1::Nil))
+      case Some(Not(And(_, _))) => useAt("!& deMorgan")(pos) &
+        pushNegation(pos ++ PosInExpr(0::Nil)) & pushNegation(pos ++ PosInExpr(1::Nil)) &
+        // heuristic: turn !p|q into -> to create more natural assign equality look \forall x (x=y -> q(x)) instead of \forall x (x!=y | q(x))
+        ("ANON" by ((p: Position, s: Sequent) => s.sub(p) match {
+          case Some(Or(Not(Equal(_, _)), q)) if !q.isInstanceOf[Not] => useAt("-> expand", PosInExpr(1::Nil))(p)
+          case _ => skip
+        }))(pos)
+      case Some(Not(Or(_, _))) => useAt("!| deMorgan")(pos) &
+        pushNegation(pos ++ PosInExpr(0::Nil)) & pushNegation(pos ++ PosInExpr(1::Nil))
       case _ => skip
     }
   })
@@ -387,7 +412,7 @@ object AxiomaticODESolver {
     makeCanonical(ode, dom, post, pos) &
     DebuggingTactics.debug("After Canonicalization") &
     StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
-      foldLeft[BelleExpr](Idioms.nil)((a, b) => a & TactixLibrary.discreteGhost(b)(pos))
+      foldLeft[BelleExpr](Idioms.nil)((a, b) => a & DLBySubst.discreteGhost(b, None, assignInContext=false)(pos))
   })
 
   //endregion
@@ -542,8 +567,9 @@ object AxiomaticODESolver {
             ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
             Nil), rewrite2)
       }
+
       DLBySubst.stutter(xx)(pp ++ PosInExpr(1::Nil)) &
-      TactixLibrary.useAt(rewrite, if (polarity > 0) PosInExpr(1::Nil) else PosInExpr(0::Nil), subst)(pp) &
+      TactixLibrary.useAt(rewrite, if (polarity >= 0) PosInExpr(1::Nil) else PosInExpr(0::Nil), subst)(pp) &
       TactixLibrary.assignb(pp ++ PosInExpr(1::Nil))
     }))(pos)*odeSize &
       (if (polarity > 0) TactixLibrary.useAt(rewrite3, PosInExpr(1::Nil))(pos)
