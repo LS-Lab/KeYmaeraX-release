@@ -4,7 +4,7 @@ import java.io.PrintWriter
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{SuccPosition, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic, SuccPosition, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint, ProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
-import org.scalatest.{AppendedClues, Suites}
+import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.prop.TableDrivenPropertyChecks._
@@ -29,7 +29,7 @@ import scala.collection.mutable.ListBuffer
  * [[edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator]].
  */
 @UsualTest
-class InvariantGeneratorTests extends TacticTestBase {
+class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
 
   "Loop invariants" should "be generated from pre and postconditions" in {
     InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0)).toList should
@@ -132,6 +132,17 @@ class InvariantGeneratorTests extends TacticTestBase {
 
   it should "prove simple loop from postcondition invariant" in withQE { _ =>
     proveBy("x=1 -> [{x:=x+1;}*]x>=1".asFormula, auto) shouldBe 'proved
+  }
+
+  it should "discrete ghost on old(.) notation in ODE annotations" in withQE { _ =>
+    //@note unprovable so that we can inspect the effect of the invariant generator
+    val fastODE = PrivateMethod[DependentPositionTactic]('fastODE)
+    val s = "==> [{x'=3}@invariant(x>=old(x))]x>=0".asSequent
+    val invs = TactixLibrary.invGenerator("==> [{x'=3}]x>=0".asSequent, SuccPosition(1))
+    invs.loneElement shouldBe ("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true)))
+    //@note ODE will return with counterexample before even trying fastODE, so call fastODE directly
+    proveBy(s, (DifferentialTactics invokePrivate fastODE(() => invs.toIterator, skip))(1)).subgoals.
+      loneElement shouldBe "x_0=x ==> [{x'=3 & true&x>=x_0}]x>=0".asSequent
   }
 
   "Configurable generator" should "return annotated conditional invariants" in withQE { _ =>
