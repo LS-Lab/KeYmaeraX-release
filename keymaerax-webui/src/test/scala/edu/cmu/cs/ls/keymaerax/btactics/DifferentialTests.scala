@@ -657,16 +657,16 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1) shouldBe "v_0>=0, x>0, v_0=v ==> [{x'=v,v'=2}]v>=v_0".asSequent
   }
 
-  it should "not expand old() ghosts in context" in withQE { _ =>
+  it should "expand old() ghosts in context" in withQE { _ =>
     val result = proveBy("[x:=0;][{x'=1}]x>=0".asFormula, dC("x>=old(x)".asFormula)(1, 1::Nil))
     result.subgoals should have size 2
-    result.subgoals.head shouldBe "==> [x:=0;][x_0:=x;][{x'=1 & true & x>=x_0}]x>=0".asSequent
+    result.subgoals.head shouldBe "==> [x:=0;]\\forall x_0 (x_0=x -> [{x'=1 & true & x>=x_0}]x>=0)".asSequent
   }
 
   it should "compute the followup position correctly" in withQE { _ =>
     val result = proveBy("y=1 ==> [x:=0;][{x'=1,y'=-1}]x>=0".asSequent, dC("x>=old(x) & y<=old(y)".asFormula)(1, 1::Nil))
     result.subgoals should have size 2
-    result.subgoals.head shouldBe "y=1 ==> [x:=0;][y_0:=y;][x_0:=x;][{x'=1,y'=-1 & true & (x>=x_0 & y<=y_0)}]x>=0".asSequent
+    result.subgoals.head shouldBe "y=1 ==> [x:=0;]\\forall y_0 (y_0=y -> \\forall x_0 (x_0=x -> [{x'=1,y'=-1 & true & (x>=x_0 & y<=y_0)}]x>=0))".asSequent
   }
 
   "Diamond differential cut" should "cut in a simple formula" in withQE { _ =>
@@ -1068,7 +1068,7 @@ class DifferentialTests extends TacticTestBase {
       have message """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
                      |    [{x'=2&true}]x>0
                      |at position 1
-                     |because x*y_*x^2 is not of the expected shape a*y_+b, please provide a differential program of the shape y'=a*y+b.""".stripMargin
+                     |because x*y_*x^2 is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b.""".stripMargin
   }
 
   "DA" should "add y'=1 to [x'=2]x>0" in withQE { _ =>
@@ -1281,7 +1281,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "solve outer nested ODEs even when innermost cannot be solved" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=2}][{x'=3}][{x'=x}]x>0".asSequent, solve(1) & solve(1, 0::1::0::1::Nil))
-    result.subgoals.loneElement shouldBe "x_1>0 ==> \\forall t_ (t_>=0->\\forall x_2 (x_2=2*t_+x_1->\\forall t_ (t_>=0->\\forall x (x=3*t_+x_2->[{x'=x}]x>0))))".asSequent
+    result.subgoals.loneElement shouldBe "x_1>0 ==> \\forall t__0 (t__0>=0->\\forall x_2 (x_2=2*t__0+x_1->\\forall t_ (t_>=0->\\forall x (x=3*t_+x_2->[{x'=x}]x>0))))".asSequent
   }
 
   it should "not try to preserve t_>=0 in evolution domain constraint when solving nested ODEs" in withQE { _ =>

@@ -1521,7 +1521,7 @@ object ODEInvariance {
 
     // Introduce the initial values x0
     val storeInitialVals =
-      x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))('Rlast) & DLBySubst.assignEquality('Rlast)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+      x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))('Rlast)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
 
     // Partial solutions
     val sp = np.map(m => matvec_prod(m, oldx))

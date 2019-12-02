@@ -830,7 +830,6 @@ private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = 
     val last = acc.subgoals.head.ante.length+1
     val e:BelleExpr =
       discreteGhost(v,Some(vv))(1) &
-      DLBySubst.assignEquality(1) &
       TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
       TactixLibrary.eqL2R(-last)(1) &
       (if (invCurrent) {TactixLibrary.eqL2R(-last)(1 + accVs.length - last)} else { nil })

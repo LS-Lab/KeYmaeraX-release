@@ -313,7 +313,7 @@ private object DifferentialTactics extends Logging {
           val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
           val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
           if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
-          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(0::1::Nil).flatten))
         }
       )(pos)
     }
@@ -682,9 +682,8 @@ private object DifferentialTactics extends Logging {
         val storeInitialVals = "ANON" by ((seq: Sequent) => {
           val anteSymbols = seq.ante.flatMap(StaticSemantics.symbols)
           val storePrimedVars = primedVars.filter(anteSymbols.contains)
-          storePrimedVars.
-            map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
-            (DLBySubst.assignEquality(pos) & exhaustiveEqR2L('Llast) & hideL('Llast))*storePrimedVars.size
+          storePrimedVars.map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
+            (exhaustiveEqR2L('Llast) & hideL('Llast))*storePrimedVars.size
         })
 
         val dw = "ANON" by ((seq: Sequent) => {
