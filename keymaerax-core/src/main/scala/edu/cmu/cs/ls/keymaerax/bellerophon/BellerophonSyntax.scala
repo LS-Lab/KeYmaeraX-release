@@ -33,11 +33,6 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   def |(other: BelleExpr)             = EitherTactic(this, other)
   /** this > other: followup composition executes other on the output or error of this, failing if other fails. */
   def >(other: BelleExpr)             = AfterTactic(this, other)
-  /** (this*): saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
-  @deprecated("Use SaturateTactic(this) instead to avoid postfix parse")
-  def * = SaturateTactic(this)
-  /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
-  //def + = this & this.*
   /** this*n: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
   def *(n: Int) = RepeatTactic(this, n)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.

@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, LazySequentialInterpreter, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, LazySequentialInterpreter, SaturateTactic, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
@@ -67,7 +67,7 @@ class AcasXSafe extends AcasXBase {
     if (containsLemma("nodelay_ucLoLemma")) removeLemma("nodelay_ucLoLemma")
 
     val ucLoFormula = Imply(invariant, postcond)
-    val ucLoTac = implyR('R) & (andL('L)*) &
+    val ucLoTac = implyR('R) & SaturateTactic(andL('L)) &
       allL(Variable("t"), Number(0))('L) &
       allL(Variable("ro"), Number(0))('L) &
       allL(Variable("ho"), Number(0))('L) & implyL('L) & Idioms.<(
@@ -110,9 +110,9 @@ class AcasXSafe extends AcasXBase {
     // Formula from print in Theorem 1
     val safeLemmaFormula = """(w*dhd>=w*dhf|w*ao>=a)&(((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)&maxI=max((0,w*(dhf-dhd)))->[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)""".stripMargin.asFormula
 
-    val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & solveEnd('R) &
-      dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
-      SimplifierV3.simpTac()(1) & dT("Simplified using known facts") & (allR('R)*) &
+    val safeLemmaTac = dT("lemma") & implyR('R) & SaturateTactic(andL('L)) & solveEnd('R) &
+      dT("Before skolem") & SaturateTactic((allR('R) | implyR('R))) & dT("After skolem") &
+      SimplifierV3.simpTac()(1) & dT("Simplified using known facts") & SaturateTactic(allR('R)) &
       //here we'd want to access previously introduced skolem symbol and
       // time introduced by diffSolution;goal 90
       allL(Variable("t"), "t_+t".asTerm)('L) & // t_22+t_23: t_ == t_22, t == t_23
@@ -167,22 +167,22 @@ class AcasXSafe extends AcasXBase {
       val safeSeq = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
 
-      val safeTac = implyR('R) & (andL('L) *) & loop(invariant)('R) & Idioms.<(
+      val safeTac = implyR('R) & SaturateTactic(andL('L)) & loop(invariant)('R) & Idioms.<(
         (initCase, dT("Base case") & prop & done)
         ,
         (useCase, dT("Use case") & andR('R) & Idioms.<(
           cohide2(-1, 1) & implyRi & useLemma("nodelay_ucLoLemma", None) & done,
-          (andL('L) *) & closeId & done
+          SaturateTactic(andL('L)) & closeId & done
         ) & done)
         ,
         (indStep, dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
-          dT("Generalization Holds") & chase('R) & (andL('L)*) & SimplifierV3.simpTac()('R) &  close
+          dT("Generalization Holds") & chase('R) & SaturateTactic(andL('L)) & SimplifierV3.simpTac()('R) &  close
           ,
           dT("Generalization Strong Enough") &
             EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &
 
             DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
-            dT("Preparing for safeLoLemma") & hideL(-1) & (andLi *) & implyRi &
+            dT("Preparing for safeLoLemma") & hideL(-1) & SaturateTactic(andLi) & implyRi &
             useLemma("nodelay_safeLoLemma", None) & done
           ) /* End indStepLbl */
         )
@@ -209,7 +209,7 @@ class AcasXSafe extends AcasXBase {
             hideL('L, "w*dhf < 0->(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,w*(dhf-dhd)))/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)".asFormula) &
             implyL('L, "w*dhf>=0->(-rp<=r&r < -rp-rv*min((0,w*dhd))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*min((0,w*dhd))/a<=r&r<=rp-rv*min((0,w*dhd))/a->w*h < (-min((0,w*dhd))^2)/(2*a)-hp)&(rp-rv*min((0,w*dhd))/a < r&r<=rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*max((0,w*(dhf-dhd)))/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)".asFormula) & Idioms.<(
               hideR('R, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)".asFormula) & closeId,
-              (allR('R)*) &
+              SaturateTactic(allR('R)) &
                 cut("((r< -rp) | (-rp<=r & r < -rp-rv*min((0,w*dhd))/a) | (-rp-rv*min((0,w*dhd))/a<=r & r<=rp-rv*min((0,w*dhd))/a) | (rp-rv*min((0,w*dhd))/a < r & r<=rp+rv*max((0,w*(dhf-dhd)))/a) | (rp+rv*max((0,w*(dhf-dhd)))/a < r))".asFormula)
                 & Idioms.<(
                   (cutUse, EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxA"))) &
@@ -297,8 +297,8 @@ class AcasXSafe extends AcasXBase {
             )
             ,
             dT("w*dhf<0") &
-            (andL('L)*) & dT("2nd mark") &
-            (allR('R)*) &
+            SaturateTactic(andL('L)) & dT("2nd mark") &
+            SaturateTactic(allR('R)) &
             hideL('L, "w*dhf>=0->(-rp<=r&r < -rp-rv*min((0,w*dhd))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*min((0,w*dhd))/a<=r&r<=rp-rv*min((0,w*dhd))/a->w*h < (-min((0,w*dhd))^2)/(2*a)-hp)&(rp-rv*min((0,w*dhd))/a < r&r<=rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*max((0,w*(dhf-dhd)))/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)".asFormula) &
             implyL('L, "w*dhf < 0->(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,w*(dhf-dhd)))/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)".asFormula) & Idioms.<(
               closeId & done
@@ -362,7 +362,7 @@ class AcasXSafe extends AcasXBase {
       max('L, "max(0,w*(dhf-dhd))".asTerm) &
       andR('R) & Idioms.<(
         implyR('R) & andR('R) & Idioms.<(
-          dT("<- 1") & min('R, "min(0,w*dhd)".asTerm) & implyR('R) & (andL('L)*) & cut("rv=0|rv>0".asFormula) & Idioms.<(
+          dT("<- 1") & min('R, "min(0,w*dhd)".asTerm) & implyR('R) & SaturateTactic(andL('L)) & cut("rv=0|rv>0".asFormula) & Idioms.<(
             (cutUse, orL('L, "rv=0|rv>0".asFormula) & Idioms.<(
               dT("<- 1:rv=0") &
                 allL(Variable("t"), "0".asTerm)('L) &
@@ -391,7 +391,7 @@ class AcasXSafe extends AcasXBase {
             dT("<- 2") &
             EqualityTactics.abbrv("min((0,w*dhd))".asTerm, Some(Variable("minA"))) &
             min('L, "min((0,w*dhd))".asTerm) &
-            implyR('R) & (andL('L)*) & cut("rv=0|rv>0".asFormula) & Idioms.<(
+            implyR('R) & SaturateTactic(andL('L)) & cut("rv=0|rv>0".asFormula) & Idioms.<(
               (cutUse, orL('L, "rv=0|rv>0".asFormula) & Idioms.<(
                 dT("<- 2:rv=0") &
                   allL(Variable("t"), "-minA/a".asTerm)('L) &
@@ -420,7 +420,7 @@ class AcasXSafe extends AcasXBase {
             )
             ,
             andR('R) & Idioms.<(
-              dT("<- 3") & min('R, "min(0,w*dhd)".asTerm) & implyR('R)  & (andL('L)*) &
+              dT("<- 3") & min('R, "min(0,w*dhd)".asTerm) & implyR('R)  & SaturateTactic(andL('L)) &
               cut("rv=0|rv>0".asFormula) & Idioms.<(
                 (cutUse, orL('L, "rv=0|rv>0".asFormula) & Idioms.<(
                     dT("<- 3:rv=0") &
@@ -446,7 +446,7 @@ class AcasXSafe extends AcasXBase {
                 (cutShow, QE & done)
               )
               ,
-              dT("<- 4") & (andL('L)*) & implyR('R) &
+              dT("<- 4") & SaturateTactic(andL('L)) & implyR('R) &
               cut("rv=0|rv>0".asFormula) & Idioms.<(
                 (cutUse, orL('L, "rv=0|rv>0".asFormula) & Idioms.<(
                   dT("<- 4:rv=0") &
@@ -472,7 +472,7 @@ class AcasXSafe extends AcasXBase {
         )
         ,
         implyR('R) & andR('R) & Idioms.<(
-          dT("<- 5")  & (andL('L)*) &
+          dT("<- 5")  & SaturateTactic(andL('L)) &
           cut("rv=0|rv>0".asFormula) & Idioms.<(
             (cutUse, orL('L, "rv=0|rv>0".asFormula) & Idioms.<(
               dT("<- 5:rv=0") &
@@ -498,7 +498,7 @@ class AcasXSafe extends AcasXBase {
             (cutShow, QE & done)
           )
           ,
-          dT("<- 6") & (andL('L)*) & implyR('R) &
+          dT("<- 6") & SaturateTactic(andL('L)) & implyR('R) &
           cut("rv=0|rv>0".asFormula) & Idioms.<(
             (cutUse, orL('L, "rv=0|rv>0".asFormula) & Idioms.<(
               dT("<- 6:rv=0") & orR('R)  &

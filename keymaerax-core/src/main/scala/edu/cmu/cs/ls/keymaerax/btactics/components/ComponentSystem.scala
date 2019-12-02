@@ -517,7 +517,7 @@ object ComponentSystem {
             cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
             cr2.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
             (cr1.head to cr2.last).map(i => PosInExpr(List.fill(i)(1))).reverse.map(abstractionb(1, _)).reduce[BelleExpr](_ & _) &
-            (allR(1)*) & cohideR(1) & by(comGuaranteeSafety) &
+            SaturateTactic(allR(1)) & cohideR(1) & by(comGuaranteeSafety) &
             DebuggingTactics.print("Done proving communication guarantee (zeta step)") &
             DebuggingTactics.done("Proving communication guarantee (zeta step)")
         )

@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -55,8 +56,8 @@ class AcasXSafeable extends AcasXBase {
       "->" +
       "\\forall t \\forall ro \\forall ho ((t<=tl-to_3|tl < 0)&(0<=t&t < max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=w*a/2*t^2+dhd_3*t|t>=max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd_3)))^2/(2*a))->abs(r_3-ro)>rp|w*h_3 < w*ho-hp)"
 
-    val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) &
-      dT("Before skolem") & (allR('R)*) & dT("After skolem") &
+    val safeLemmaTac = dT("lemma") & implyR('R) & SaturateTactic(andL('L)) &
+      dT("Before skolem") & SaturateTactic(allR('R)) & dT("After skolem") &
       implyR('R) & orR('R) &
       allL("t".asVariable, "(t_+t)".asTerm)('L) &
       allL("ro".asVariable, "rv*(t_+t)".asTerm)('L) &
@@ -67,7 +68,7 @@ class AcasXSafeable extends AcasXBase {
           hideR('R, "abs(r_3-ro)>rp".asFormula) & hideR('R, "w*h_3<w*ho-hp".asFormula) &
           dT("Show Cut 2") & orR('R) & andL('L) & hideL('L, "t<=tl-to_3|tl < 0".asFormula) &
           orL('L, "0<=t&t<max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=w*a/2*t^2+dhd_3*t|t>=max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd_3)))^2/(2*a)".asFormula) &
-          (andL('L)*) & atomicQE(onAll(andR)*, dT("End CutShowLbl"))
+          SaturateTactic(andL('L)) & atomicQE(SaturateTactic(onAll(andR)), dT("End CutShowLbl"))
       )(
         (Case("0<=(t_+t)&(t_+t)<maxI/a".asFormula),
           dT("Goal 110") & hideL('L, initDomain) & // TODO remove this hide
@@ -102,7 +103,7 @@ class AcasXSafeable extends AcasXBase {
             & Idioms.<(
               dT("left of -> 2 Lo") & andL('L) &
               hideR('R, "abs(r_3-ro)>rp".asFormula) & hideR('R, "w*h_3<w*ho-hp".asFormula) &
-              hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) & atomicQE(onAll(andR('R))*, dT("TL 2"))
+              hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) & atomicQE(SaturateTactic(onAll(andR('R))), dT("TL 2"))
             ,
             dT("right of -> 2 Lo") &
               andL('L, "(t<=tl-to_3|tl < 0)&(0<=t&t < max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=w*a/2*t^2+dhd_3*t|t>=max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd_3)))^2/(2*a))".asFormula) &
@@ -138,8 +139,8 @@ class AcasXSafeable extends AcasXBase {
       "->" +
       "\\forall t \\forall ro \\forall ho ((t<=tl-to_3|tl < 0)&(0<=t&t < max((0,w*(dhfUp-dhd_3)))/aM&ro=rv*t&ho=w*aM/2*t^2+dhd_3*t|t>=max((0,w*(dhfUp-dhd_3)))/aM&ro=rv*t&ho=(dhd_3+w*max((0,w*(dhfUp-dhd_3))))*t-w*max((0,w*(dhfUp-dhd_3)))^2/(2*aM))->abs(r_3-ro)>rp|w*h_3>w*ho+hp)"
 
-    val safeUpLemmaTac = dT("lemma Up") & implyR('R) & (andL('L)*) &
-      dT("Before skolem Up") & (allR('R)*) & dT("After skolem Up") &
+    val safeUpLemmaTac = dT("lemma Up") & implyR('R) & SaturateTactic(andL('L)) &
+      dT("Before skolem Up") & SaturateTactic(allR('R)) & dT("After skolem Up") &
       implyR('R) & orR('R) &
       allL(Variable("t"), "t_+t".asTerm)('L) &
       allL(Variable("ro"), "rv*(t_+t)".asTerm)('L) &
@@ -151,7 +152,7 @@ class AcasXSafeable extends AcasXBase {
         dT("Show Cut 2") & orR('R) & andL('L) &
         hideL('L, "t<=tl-to_3|tl < 0".asFormula) &
         orL('L, "0<=t&t < max((0,w*(dhfUp-dhd_3)))/aM&ro=rv*t&ho=w*aM/2*t^2+dhd_3*t|t>=max((0,w*(dhfUp-dhd_3)))/aM&ro=rv*t&ho=(dhd_3+w*max((0,w*(dhfUp-dhd_3))))*t-w*max((0,w*(dhfUp-dhd_3)))^2/(2*aM)".asFormula)
-        & atomicQE(onAll(andR('R))*, dT("End CutShowLbl"))),
+        & atomicQE(SaturateTactic(onAll(andR('R))), dT("End CutShowLbl"))),
       (cutUse, dT("Use Cut") &
         orL('L, "0<=(t_+t)&(t_+t)<maxUpI/aM|(t_+t)>=maxUpI/aM".asFormula) & Idioms.<(
         dT("final time in parabola") & // add hide initDomain?
@@ -258,8 +259,8 @@ class AcasXSafeable extends AcasXBase {
     val max_1 = "max(0, w*(vt1-v1))"
     val cut_0 = "0 <= t & t < max(0, w*(vt0-v0)) / a0 | t >= max(0, w*(vt0-v0)) / a0"
 
-    val propagateLoTac = (allR('R)*) & implyR('R) & (andL('L)*) &
-      (allR('R)*) & implyR('R) & andL('L) &
+    val propagateLoTac = SaturateTactic(allR('R)) & implyR('R) & SaturateTactic(andL('L)) &
+      SaturateTactic(allR('R)) & implyR('R) & andL('L) &
       allL("t".asVariable, "t".asTerm)('L) & allL("ro".asVariable, "rv*t".asTerm)('L) &
       cutEZ(cut_0.asFormula, dT("cut_0") &
         hideL('L, "\\forall ho ((t <= tl-to0|tl < 0)&(0<=t&t < max((0,w*(vt0-v0)))/a0&rv*t=rv*t&ho=w*a0/2*t^2+v0*t|t>=max((0,w*(vt0-v0)))/a0&rv*t=rv*t&ho=vt0*t-w*max((0,w*(vt0-v0)))^2/(2*a0))->abs(r-rv*t)>rp|w*h0 < w*ho-hp)".asFormula) &
@@ -278,13 +279,13 @@ class AcasXSafeable extends AcasXBase {
           ,
           hideL('L, "t <= tl-to1|tl < 0".asFormula) & dT("post para") &
           orL('L, "0<=t&t < max_1/a1&ro=rv*t&ho=w*a1/2*t^2+v1*t|t>=max_1/a1&ro=rv*t&ho=vt1*t-w*max_1^2/(2*a1)".asFormula) & Idioms.<(
-          (andL('L)*) & orR('R) &
+          SaturateTactic(andL('L)) & orR('R) &
             eqHide("ro=rv*t") & eqHide("ho=w*a1/2*t^2+v1*t") &
             orL('L, "abs(r-rv*t)>rp|w*h0 < w*(w*a0/2*t^2+v0*t)-hp".asFormula) & Idioms.<(
             closeId,
             dT("height") & hideR('R, "abs(r-rv*t)>rp".asFormula) & QE
             ),
-          (andL('L)*) & orR('R) &
+          SaturateTactic(andL('L)) & orR('R) &
             eqHide("ro=rv*t") & eqHide("ho=vt1*t-w*max_1^2/(2*a1)") &
             orL('L, "abs(r-rv*t)>rp|w*h0 < w*(w*a0/2*t^2+v0*t)-hp".asFormula) & Idioms.<(
             closeId,
@@ -300,13 +301,13 @@ class AcasXSafeable extends AcasXBase {
           ,
           hideL('L, "t <= tl-to1|tl < 0".asFormula) & dT("post line") &
           orL('L, "0<=t&t < max_1/a1&ro=rv*t&ho=w*a1/2*t^2+v1*t|t>=max_1/a1&ro=rv*t&ho=vt1*t-w*max_1^2/(2*a1)".asFormula) & Idioms.<(
-          (andL('L)*) & orR('R) &
+          SaturateTactic(andL('L)) & orR('R) &
             eqHide("ro=rv*t") & eqHide("ho=w*a1/2*t^2+v1*t") &
             orL('L, "abs(r-rv*t)>rp|w*h0 < w*(vt0*t-w*max_0^2/(2*a0))-hp".asFormula) & Idioms.<(
             closeId,
             dT("height") & hideR('R, "abs(r-rv*t)>rp".asFormula) & QE
             ),
-          (andL('L)*) & orR('R) &
+          SaturateTactic(andL('L)) & orR('R) &
             eqHide("ro=rv*t") & eqHide("ho=vt1*t-w*max_1^2/(2*a1)") &
             orL('L, "abs(r-rv*t)>rp|w*h0 < w*(vt0*t-w*max_0^2/(2*a0))-hp".asFormula) & Idioms.<(
             closeId,
@@ -448,7 +449,7 @@ class AcasXSafeable extends AcasXBase {
       loop(invariant)('R) & Idioms.<(
       (initCase, Idioms.rememberAs("Safeable_BaseCase", dT("Base case") & prop & done)),
       (useCase, Idioms.rememberAs("Safeable_UseCase", dT("Use case") & andR('R) & Idioms.<(
-          SimplifierV2.fullSimpTac & dT("andL*") & (andL('L)*) &
+          SimplifierV2.fullSimpTac & dT("andL*") & SaturateTactic(andL('L)) &
           dT("before orL") &
           orL('L, condImplSafeableStr.asFormula) & Idioms.<(
           dT("before inst 0 lower") & andL('L, condImplSafeableLoStr.asFormula) &
@@ -458,7 +459,7 @@ class AcasXSafeable extends AcasXBase {
               dT("Use case 1 Lo") & hideR('R, "abs(r)>rp|abs(h)>hp".asFormula) &
               EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
               max('L, "max(0,w*(dhf-dhd))".asTerm) &
-              dT("MinMax Lower") & atomicQE(onAll(andR('R))*, dT("MinMax Lower QE")) & done
+              dT("MinMax Lower") & atomicQE(SaturateTactic(onAll(andR('R))), dT("MinMax Lower QE")) & done
               ,
               dT("Absolute value Lo") & ArithmeticSpeculativeSimplification.speculativeQE & done
             ),
@@ -468,7 +469,7 @@ class AcasXSafeable extends AcasXBase {
               dT("Use case 1 Up") & hideR('R, "abs(r)>rp|abs(h)>hp".asFormula) &
               EqualityTactics.abbrv("max((0,w*(dhfUp-dhd)))".asTerm, Some(Variable("maxUpI"))) &
               max('L, "max(0,w*(dhfUp-dhd))".asTerm) &
-              dT("MinMax Upper") & atomicQE(onAll(andR('R))*, dT("MinMax Upper QE")) & done
+              dT("MinMax Upper") & atomicQE(SaturateTactic(onAll(andR('R))), dT("MinMax Upper QE")) & done
               ,
               dT("Absolute value Up") & ArithmeticSpeculativeSimplification.speculativeQE & done
             )
@@ -483,14 +484,14 @@ class AcasXSafeable extends AcasXBase {
           dT("1.21") & chase('R) & dT("After chase") & andR('R) & Idioms.<(
             implyR('R) & allR('R) & close & done
             ,
-            (andL('L)*) & hideL('L, "\\forall t \\forall ro \\forall ho ((t<=tl-to|tl < 0)&(0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a))->abs(r-ro)>rp|w*h < w*ho-hp)&\\forall hNew \\forall dhdNew (0<=tl-to&tl-to < max((0,w*(dhf-dhd)))/a&hNew=w*a/2*(tl-to)^2+dhd*(tl-to)&dhdNew=w*a*(tl-to)+dhd|tl-to>=max((0,w*(dhf-dhd)))/a&hNew=dhf*(tl-to)-w*max((0,w*(dhf-dhd)))^2/(2*a)&dhdNew=dhf->\\forall t \\forall ro \\forall ho ((t<=-1-to|-1 < 0)&(0<=t&t < max((0,w*(dhfExtr-dhdNew)))/a&ro=rv*t&ho=w*a/2*t^2+dhdNew*t|t>=max((0,w*(dhfExtr-dhdNew)))/a&ro=rv*t&ho=dhfExtr*t-w*max((0,w*(dhfExtr-dhdNew)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|w*(h-hNew) < w*ho-hp))|\\forall t \\forall ro \\forall ho ((t<=tl-to|tl < 0)&(0<=t&t < max((0,w*(dhfUp-dhd)))/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=max((0,w*(dhfUp-dhd)))/aM&ro=rv*t&ho=(dhd+w*max((0,w*(dhfUp-dhd))))*t-w*max((0,w*(dhfUp-dhd)))^2/(2*aM))->abs(r-ro)>rp|w*h>w*ho+hp)&\\forall hNew \\forall dhdNew (0<=tl-to&tl-to < max((0,w*(dhfUp-dhd)))/aM&hNew=w*aM/2*(tl-to)^2+dhd*(tl-to)&dhdNew=w*aM*(tl-to)+dhd|tl-to>=max((0,w*(dhfUp-dhd)))/aM&hNew=(dhd+w*max((0,w*(dhfUp-dhd))))*(tl-to)-w*max((0,w*(dhfUp-dhd)))^2/(2*aM)&dhdNew=dhd+w*max((0,w*(dhfUp-dhd)))->\\forall t \\forall ro \\forall ho ((t<=-1-to|-1 < 0)&(0<=t&t < max((0,(-w)*(dhfUpExtr-dhdNew)))/a&ro=rv*t&ho=(-w)*a/2*t^2+dhdNew*t|t>=max((0,(-w)*(dhfUpExtr-dhdNew)))/a&ro=rv*t&ho=dhfUpExtr*t-(-w)*max((0,(-w)*(dhfUpExtr-dhdNew)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(-w)*(h-hNew) < (-w)*ho-hp))".asFormula) &
+            SaturateTactic(andL('L)) & hideL('L, "\\forall t \\forall ro \\forall ho ((t<=tl-to|tl < 0)&(0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a))->abs(r-ro)>rp|w*h < w*ho-hp)&\\forall hNew \\forall dhdNew (0<=tl-to&tl-to < max((0,w*(dhf-dhd)))/a&hNew=w*a/2*(tl-to)^2+dhd*(tl-to)&dhdNew=w*a*(tl-to)+dhd|tl-to>=max((0,w*(dhf-dhd)))/a&hNew=dhf*(tl-to)-w*max((0,w*(dhf-dhd)))^2/(2*a)&dhdNew=dhf->\\forall t \\forall ro \\forall ho ((t<=-1-to|-1 < 0)&(0<=t&t < max((0,w*(dhfExtr-dhdNew)))/a&ro=rv*t&ho=w*a/2*t^2+dhdNew*t|t>=max((0,w*(dhfExtr-dhdNew)))/a&ro=rv*t&ho=dhfExtr*t-w*max((0,w*(dhfExtr-dhdNew)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|w*(h-hNew) < w*ho-hp))|\\forall t \\forall ro \\forall ho ((t<=tl-to|tl < 0)&(0<=t&t < max((0,w*(dhfUp-dhd)))/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=max((0,w*(dhfUp-dhd)))/aM&ro=rv*t&ho=(dhd+w*max((0,w*(dhfUp-dhd))))*t-w*max((0,w*(dhfUp-dhd)))^2/(2*aM))->abs(r-ro)>rp|w*h>w*ho+hp)&\\forall hNew \\forall dhdNew (0<=tl-to&tl-to < max((0,w*(dhfUp-dhd)))/aM&hNew=w*aM/2*(tl-to)^2+dhd*(tl-to)&dhdNew=w*aM*(tl-to)+dhd|tl-to>=max((0,w*(dhfUp-dhd)))/aM&hNew=(dhd+w*max((0,w*(dhfUp-dhd))))*(tl-to)-w*max((0,w*(dhfUp-dhd)))^2/(2*aM)&dhdNew=dhd+w*max((0,w*(dhfUp-dhd)))->\\forall t \\forall ro \\forall ho ((t<=-1-to|-1 < 0)&(0<=t&t < max((0,(-w)*(dhfUpExtr-dhdNew)))/a&ro=rv*t&ho=(-w)*a/2*t^2+dhdNew*t|t>=max((0,(-w)*(dhfUpExtr-dhdNew)))/a&ro=rv*t&ho=dhfUpExtr*t-(-w)*max((0,(-w)*(dhfUpExtr-dhdNew)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(-w)*(h-hNew) < (-w)*ho-hp))".asFormula) &
               SimplifierV2.simpTac(1) & atomicQE(ArithmeticLibrary.exhaustiveBeta, dT("Gen Holds QE"))
           )) & done
           ,
         /*use*/ dT("Generalization Strong Enough") & Idioms.cases(prop)(
           (Case(Not(evolutionDomain)),
             dT("Before DI") &
-            DifferentialTactics.diffUnpackEvolutionDomainInitially('R) & (hideR('R)*) & notL('L) & close & done
+            DifferentialTactics.diffUnpackEvolutionDomainInitially('R) & SaturateTactic(hideR('R)) & notL('L) & close & done
           ),
           (Case(evolutionDomain),
             dT("Before diff. solution") &
@@ -499,7 +500,7 @@ class AcasXSafeable extends AcasXBase {
               solveEnd('R) &
               dT("Diff. Solution") & allR('R) & implyR('R)*2 &
               andR('R) & Idioms.<(
-                (andL('L)*) & andR('R) & Idioms.<(
+                SaturateTactic(andL('L)) & andR('R) & Idioms.<(
                   dT("Showing w=-1|w=1") & close & done
                   ,
                   dT("bla2") & orR('R) &
@@ -527,7 +528,7 @@ class AcasXSafeable extends AcasXBase {
                     dT("DONE after tl") &
                       hideL('L, "\\forall t \\forall ro \\forall ho ((t <= tl-to|tl < 0)&(0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a))->abs(r-ro)>rp|w*h < w*ho-hp)".asFormula) &
                       cutEZ("(0<=tl-to&tl-to < maxI/a) | tl-to >= maxI/a".asFormula, QE) & dT("cutEZ on tl-to") &
-                      (allR('R)*) & implyR('R) & dT("skolemize hnew") &
+                      SaturateTactic(allR('R)) & implyR('R) & dT("skolemize hnew") &
                       orL('L, "(0<=tl-to&tl-to < maxI/a) | tl-to >= maxI/a".asFormula) & Idioms.<(
                         dT("tlmto case 1") &
                         EqualityTactics.abbrv("w*a/2*(tl-to)^2+dhd*(tl-to)".asTerm, Some(Variable("hNew1"))) &
@@ -576,7 +577,7 @@ class AcasXSafeable extends AcasXBase {
                               ),
                               dT("concl") &
                               hideL('L, "\\forall t \\forall ro \\forall ho ((t <= -1-to|-1 < 0)&(0<=t&t < max((0,(w)*(dhfExtr-dhdNew1)))/a&ro=rv*t&ho=(w)*a/2*t^2+dhdNew1*t|t>=max((0,(w)*(dhfExtr-dhdNew1)))/a&ro=rv*t&ho=dhfExtr*t-(w)*max((0,(w)*(dhfExtr-dhdNew1)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(w)*(h-hNew1) < (w)*ho-hp)".asFormula) &
-                              (allR('R)*) &
+                              SaturateTactic(allR('R)) &
                               allTRoHoL("Somewhere", "t", "ro", "ho") &
                               abs('R, "abs(r_3-rv*(tl-to_3)-ro)".asTerm) &
                               abs('L, "abs(r-rv*(tl-to)-ro)".asTerm) & dT("qe") & QE
@@ -630,7 +631,7 @@ class AcasXSafeable extends AcasXBase {
                             ),
                             dT("concl") &
                               hideL('L, "\\forall t \\forall ro \\forall ho ((t <= -1-to|-1 < 0)&(0<=t&t < max((0,(w)*(dhfExtr-dhf)))/a&ro=rv*t&ho=(w)*a/2*t^2+dhf*t|t>=max((0,(w)*(dhfExtr-dhf)))/a&ro=rv*t&ho=dhfExtr*t-(w)*max((0,(w)*(dhfExtr-dhf)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(w)*(h-hNew1) < (w)*ho-hp)".asFormula) &
-                              (allR('R)*) &
+                              SaturateTactic(allR('R)) &
                               allTRoHoL("Somewhere else", "t", "ro", "ho") &
                               abs('R, "abs(r_3-rv*(tl-to_3)-ro)".asTerm) &
                               abs('L, "abs(r-rv*(tl-to)-ro)".asTerm) & dT("qe") & QE
@@ -660,7 +661,7 @@ class AcasXSafeable extends AcasXBase {
                       ,
                       dT("after tl") &
                       hideL('L, "\\forall t \\forall ro \\forall ho ((t <= tl-to|tl < 0)&(0<=t&t < maxUpI/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=maxUpI/aM&ro=rv*t&ho=(dhd+w*maxUpI)*t-w*maxUpI^2/(2*aM))->abs(r-ro)>rp|w*h>w*ho+hp)".asFormula) &
-                      (allR('R)*) & implyR('R) & dT("skolemize hnew") &
+                      SaturateTactic(allR('R)) & implyR('R) & dT("skolemize hnew") &
                         Idioms.cases(QE)(
                         (Case("(0<=tl-to&tl-to < maxUpI/aM)".asFormula),
                           dT("tlmto case 1") &
@@ -710,7 +711,7 @@ class AcasXSafeable extends AcasXBase {
                                 ),
                                 dT("concl") &
                                   hideL('L, "\\forall t \\forall ro \\forall ho ((t <= -1-to|-1 < 0)&(0<=t&t < max((0,(-w)*(dhfUpExtr-dhdNew1)))/a&ro=rv*t&ho=(-w)*a/2*t^2+dhdNew1*t|t>=max((0,(-w)*(dhfUpExtr-dhdNew1)))/a&ro=rv*t&ho=dhfUpExtr*t-(-w)*max((0,(-w)*(dhfUpExtr-dhdNew1)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(-w)*(h-hNew1) < (-w)*ho-hp)".asFormula) &
-                                  (allR('R)*) &
+                                  SaturateTactic(allR('R)) &
                                   allTRoHoL("Yet somewhere else", "t", "ro", "ho") &
                                   //cutEZ("r_3-rv*(tl-to_3)=r-rv*(tl-to)".asFormula, QE) &
                                   // eqHide("r_3-rv*(tl-to_3)=r-rv*(tl-to)") & closeId // ??? DOES NOW WORK EVEN AFTER INSTANTIATION
@@ -770,7 +771,7 @@ class AcasXSafeable extends AcasXBase {
                                 ),
                                 dT("concl") &
                                   hideL('L, "\\forall t \\forall ro \\forall ho ((t <= -1-to|-1 < 0)&(0<=t&t < max((0,(-w)*(dhfUpExtr-dhdNew1)))/a&ro=rv*t&ho=(-w)*a/2*t^2+dhdNew1*t|t>=max((0,(-w)*(dhfUpExtr-dhdNew1)))/a&ro=rv*t&ho=dhfUpExtr*t-(-w)*max((0,(-w)*(dhfUpExtr-dhdNew1)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(-w)*(h-hNew1) < (-w)*ho-hp)".asFormula) &
-                                  (allR('R)*) &
+                                  SaturateTactic(allR('R)) &
                                   allTRoHoL("Final else", "t", "ro", "ho") &
                                   abs('R, "abs(r_3-rv*(tl-to_3)-ro)".asTerm) &
                                   abs('L, "abs(r-rv*(tl-to)-ro)".asTerm) & QE

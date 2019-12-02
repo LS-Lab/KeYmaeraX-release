@@ -159,7 +159,7 @@ class ODETests extends TacticTestBase {
   }
 
   it should "split* and on all prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withQE { _ =>
-    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & ((boxAnd(1) & andR(1))*) & onAll(
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & SaturateTactic(boxAnd(1) & andR(1)) & onAll(
       ODE(1)
     )) shouldBe 'proved
   }
@@ -550,7 +550,7 @@ class ODETests extends TacticTestBase {
     val pr = proveBy(fml,implyR(1) &
       cut("\\exists u1 \\exists u3 ( (u1^2+u3^2) !=0 & u1 -u3*(x^2-y^2)=0)".asFormula)
         <(
-        (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
+        SaturateTactic(existsL('L)) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
           <(
           dWPlus(1) & QE,
           dI('full)(1)

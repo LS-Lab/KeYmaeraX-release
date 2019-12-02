@@ -81,7 +81,7 @@ class AcasXSafeArithWitness extends AcasXBase {
         }
       )
     val ucLoFormula = Imply(invariant, postcond)
-    val ucLoTac = implyR('R) & (andL('L)*) &
+    val ucLoTac = implyR('R) & SaturateTactic(andL('L)) &
       allL(Variable("t"), Number(0))('L) &
       allL(Variable("ro"), Number(0))('L) &
       allL(Variable("ho"), Number(0))('L) & implyL('L) & Idioms.<(

@@ -712,7 +712,7 @@ object ODEInvariance {
       if(negate)
         proveBy(Equiv(cutp, Greater(sump,zero)), QE)
       else
-        proveBy(Equiv(cutp,LessEqual(sump,zero)), ((useAt(fastSOS,PosInExpr(1::Nil))(1) & andR(1) <( prove_sos_positive, skip ))*) & QE )
+        proveBy(Equiv(cutp,LessEqual(sump,zero)), SaturateTactic(useAt(fastSOS,PosInExpr(1::Nil))(1) & andR(1) <( prove_sos_positive, skip )) & QE )
 
     //Construct the term ||G||^2 + 1
     val cofactorPre = Plus(Gco.map(ts => ts.map(t=>Times(t,t):Term).reduceLeft(Plus)).reduceLeft(Plus),one)
@@ -875,7 +875,7 @@ object ODEInvariance {
     val vnorm = dot_prod(vs,vs)
     val fml1 = LessEqual(Times(dp,dp), Times(unorm,vnorm))
     val pr1 = proveBy(fml1,
-      ((useAt(cauchy_schwartz_lem,PosInExpr(1::Nil))(1) & andR(1) <(prove_sos_positive, andR(1) <(prove_sos_positive,skip)))*) & QE)
+      SaturateTactic(useAt(cauchy_schwartz_lem,PosInExpr(1::Nil))(1) & andR(1) <(prove_sos_positive, andR(1) <(prove_sos_positive,skip))) & QE)
     //val pr1 = proveBy(fml1 , QE)
     //println(pr1)
     val sgn = And(GreaterEqual(unorm,Number(0)),GreaterEqual(vnorm,Number(0)))

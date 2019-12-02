@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
@@ -93,8 +93,8 @@ class AcasXSafeTwoSided extends AcasXBase {
   "ACAS X 2-sided safe" should "prove Theorem 3, lemma safe implicit" in withQE { _ =>
     if (containsLemma("2side_safe_implicit")) removeLemma("2side_safe_implicit")
 
-    def safeLemmaTac(r: String, h: String, dhd: String) = dT("lemma") & implyR('R) & (andL('L)*) &
-      dT("Before skolem") & (allR('R)*) & dT("After skolem") &
+    def safeLemmaTac(r: String, h: String, dhd: String) = dT("lemma") & implyR('R) & SaturateTactic(andL('L)) &
+      dT("Before skolem") & SaturateTactic(allR('R)) & dT("After skolem") &
       implyR('R) & orR('R) &
       //here we'd want to access previously introduced skolem symbol and
       // time introduced by diffSolution;goal 90
@@ -151,8 +151,8 @@ class AcasXSafeTwoSided extends AcasXBase {
 
     //@todo same tactic as above, but with different instances
 
-    def safeUpLemmaTac(r: String, h: String, dhd: String) = dT("lemma Up") & implyR('R) & (andL('L)*) &
-      dT("Before skolem Up") & (allR('R)*) & dT("After skolem Up") &
+    def safeUpLemmaTac(r: String, h: String, dhd: String) = dT("lemma Up") & implyR('R) & SaturateTactic(andL('L)) &
+      dT("Before skolem Up") & SaturateTactic(allR('R)) & dT("After skolem Up") &
       implyR('R) & orR('R) &
       allL(Variable("t"), "t_ + t".asTerm)('L) &
       allL(Variable("ro"), "rv*(t_ + t)".asTerm)('L) &
@@ -203,7 +203,7 @@ class AcasXSafeTwoSided extends AcasXBase {
 
   it should "prove Theorem 3: uc lo lemma" in withQE { _ =>
     if (containsLemma("twosided_implicit_usecase")) removeLemma("twosided_implicit_usecase")
-    val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula), implyR('R) & (andL('L)*) & ucLoTac(condImpl))
+    val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula), implyR('R) & SaturateTactic(andL('L)) & ucLoTac(condImpl))
     ucLoLemma shouldBe 'proved
     storeLemma(ucLoLemma, "twosided_implicit_usecase")
   }
@@ -240,11 +240,11 @@ class AcasXSafeTwoSided extends AcasXBase {
         (useCase, dT("Use case") &
           andR('R) & Idioms.<(
           useLemma("twosided_implicit_usecase", Some(prop)) & done,
-          (andL('L) *) & closeId & done
+          SaturateTactic(andL('L)) & closeId & done
         ) & done)
         ,
         (indStep, dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
-          /*show*/ dT("Generalization Holds") & chase('R) & dT("After chase") & ((SimplifierV2.simpTac('R) & (andL('L) *)) *) & dT("Simplified") & normalize & done
+          /*show*/ dT("Generalization Holds") & chase('R) & dT("After chase") & SaturateTactic((SimplifierV2.simpTac('R) & SaturateTactic(andL('L)))) & dT("Simplified") & normalize & done
           ,
           /*use*/ dT("Generalization Strong Enough") &
             cutEZ(Or(Not(evolutionDomain), evolutionDomain),
@@ -257,7 +257,7 @@ class AcasXSafeTwoSided extends AcasXBase {
               hideL('L, Not(evolutionDomain)) &
               dT("After DI") & dC("0=1".asFormula)('R) & Idioms.<(
               /*use*/ dT("After DC 2") & dW('R) & dT("after DW") &
-                implyR('R) & (andL('L)*) & cohideL('L, "0=1".asFormula) & dT("before QE") & QE,
+                implyR('R) & SaturateTactic(andL('L)) & cohideL('L, "0=1".asFormula) & dT("before QE") & QE,
               /*show*/ dT("After DC 1") & closeId & done
             )
             ,
@@ -265,7 +265,7 @@ class AcasXSafeTwoSided extends AcasXBase {
               EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
               EqualityTactics.abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) &
               solveEnd('R) &
-              dT("Diff. Solution") & allR('R) & implyR('R) * 2 & (andL('L) *) &
+              dT("Diff. Solution") & allR('R) & implyR('R) * 2 & SaturateTactic(andL('L)) &
               andR('R) & Idioms.<(
               andR('R) & Idioms.<(
                 closeId,
@@ -313,7 +313,7 @@ class AcasXSafeTwoSided extends AcasXBase {
 
     def caseSmasher(caseName: String): BelleExpr = dT(caseName) &
       //@note cases are not pairwise disjoint, meaning that simplifier can't fully simplify on case split; but we can simplify a little further still
-      (andL('L)*) & (SimplifierV2.simpTac('Llike, "p_() -> q_()".asFormula)*) & (hideL('L, True)*) &
+      SaturateTactic(andL('L)) & SaturateTactic(SimplifierV2.simpTac('Llike, "p_() -> q_()".asFormula)) & SaturateTactic(hideL('L, True)) &
       atomicQE(ArithmeticLibrary.exhaustiveBeta, dT(s"$caseName QE")) & done
 
     def caseInst(caseName: String, tInst: String, roInst: String, hoInst: String): BelleExpr =
@@ -360,12 +360,12 @@ class AcasXSafeTwoSided extends AcasXBase {
     )
 
     val tactic =
-      implyR('R) & (andL('L)*) & EqualityTactics.abbrv("max(0, w*(dhfM - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
+      implyR('R) & SaturateTactic(andL('L)) & EqualityTactics.abbrv("max(0, w*(dhfM - dhd))".asTerm, Some(Variable("maxAbbrv"))) &
       cut("maxAbbrv>=0".asFormula) & Idioms.<(
         (cutShow, /*cohide2('L, "maxAbbrv=max(0, w*(dhfM - dhd))")('Rlast)*/ QE & dT("Show maxAbbrv>=0 done") & done)
         ,
         (cutUse, Idioms.cases(
-          (Case("rv=0".asFormula), dT("rv=0 case") & atomicQE(onAll(equivR('R) | andR('R))*, dT("rv=0 QE case")) & done),
+          (Case("rv=0".asFormula), dT("rv=0 case") & atomicQE(SaturateTactic(onAll(equivR('R) | andR('R))), dT("rv=0 QE case")) & done),
           (Case("rv>0".asFormula), dT("rv>0 case") & rvp & done)
         ))
     )

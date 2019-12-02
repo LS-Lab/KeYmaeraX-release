@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, OnAll, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -8,7 +8,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, TermProvable$}
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
 import scala.collection.immutable._
@@ -41,7 +40,7 @@ class WitnessArithTests extends TacticTestBase {
          problems += f
        }catch { case e:ParseException => ()}
 
-    val res = problems.map( s => proveBy(s,(allR(1)*) & prop & OnAll((allR(1)*) & prop) & OnAll(SimplifierV3.fullSimpTac() & ((RCF | close)*))))
+    val res = problems.map( s => proveBy(s,SaturateTactic(allR(1)) & prop & OnAll(SaturateTactic(allR(1)) & prop) & OnAll(SimplifierV3.fullSimpTac() & SaturateTactic(RCF | close))))
 
     val nontriv = res.filterNot(_.isProved)
 

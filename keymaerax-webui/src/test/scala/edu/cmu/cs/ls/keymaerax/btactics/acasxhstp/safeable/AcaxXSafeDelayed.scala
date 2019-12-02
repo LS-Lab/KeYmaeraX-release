@@ -471,8 +471,8 @@ class AcaxXSafeDelayed extends AcasXBase {
     val safeLemmaFormula = """((((w=-1|w=1)&\forall t \forall rt \forall ht \forall hd \forall dhd (rt=rv*t&(0<=t&t < max((0,d))&ht=-w*ad/2*t^2+dho*t|(hd=-w*ad/2*max((0,d))^2+dho*max((0,d))&dhd-dho=-w*ad*max((0,d)))&(0<=t-max((0,d))&t-max((0,d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,d)))^2+dhd*(t-max((0,d)))|t-max((0,d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs(r-rt)>rp|w*(h-ht) < -hp))&rp>=0&hp>0&rv>=0&ar>0&ad>=0&dp>=0&dl>=0)&tl=0&w*a>=-ad)&tl<=dl&(d<=0->w*dho>=w*dhf|w*a>=ar)->[{r'=-rv,h'=-dho,dho'=a,d'=-1,tl'=1&tl<=dl&(d<=0->w*dho>=w*dhf|w*a>=ar)}](((w=-1|w=1)&\forall t \forall rt \forall ht \forall hd \forall dhd (rt=rv*t&(0<=t&t < max((0,d))&ht=-w*ad/2*t^2+dho*t|(hd=-w*ad/2*max((0,d))^2+dho*max((0,d))&dhd-dho=-w*ad*max((0,d)))&(0<=t-max((0,d))&t-max((0,d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,d)))^2+dhd*(t-max((0,d)))|t-max((0,d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs(r-rt)>rp|w*(h-ht) < -hp))&rp>=0&hp>0&rv>=0&ar>0&ad>=0&dp>=0&dl>=0)""".stripMargin.asFormula
 
     val safeLemmaTac = dT("lemma") & implyR('R) & eAndL & dT("solving") & solve('R) &
-      dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
-      SimplifierV3.simpTac()(1) & dT("Simplified using known facts") & (allR('R)*) &
+      dT("Before skolem") & SaturateTactic(allR('R) | implyR('R)) & dT("After skolem") &
+      SimplifierV3.simpTac()(1) & dT("Simplified using known facts") & SaturateTactic(allR('R)) &
       useLemma("delay_implicitArith", None)
 
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac)
@@ -513,7 +513,7 @@ class AcaxXSafeDelayed extends AcasXBase {
               ,
               dT("Generalization Strong Enough") &
                 DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
-                dT("Preparing for delay_safeLoLemma") & (andLi *) & implyRi &
+                dT("Preparing for delay_safeLoLemma") & SaturateTactic(andLi) & implyRi &
                 dT("status") &
                 useLemma("delay_safeLoLemma", None) & done
               )

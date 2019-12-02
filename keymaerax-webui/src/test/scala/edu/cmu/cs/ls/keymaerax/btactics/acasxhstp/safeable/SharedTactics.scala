@@ -86,10 +86,10 @@ object SharedTactics {
   }
 
   //Exhaustive andL*
-  val eAndL: BelleExpr = andL('L)*
+  val eAndL: BelleExpr = SaturateTactic(andL('L))
 
   //Exhaustive or cases at a position
-  def eOrLPos(i: Int): BelleExpr = OnAll(Idioms.?(orL(i)))*
+  def eOrLPos(i: Int): BelleExpr = SaturateTactic(OnAll(Idioms.?(orL(i))))
 
   //Cuts a duplicate of an antecedent at the end of the sequent
   def dupL(i:Int) = new SingleGoalDependentTactic("dup L") {
