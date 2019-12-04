@@ -418,7 +418,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "chase multiple tactic options" in withMathematica { _ =>
     val result = proveBy("l() < r(), l()<=x, x<=r(), x=l() ==> [{x'=1&l()>=x|x>=r()}](l()<=x&x<=r())".asSequent,
       allTacticChase()(ODE, solve))
-    result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), time_=0, x_0=x ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(l()>=s_+x|s_+x>=r())&s_+time_>=0&s_+x=s_+time_+x_0)->t_+x<=r())".asSequent
+    result.subgoals.loneElement shouldBe "l() < r(), l()<=x_0, x_0<=r(), x_0=l(), l()>=x_0|x_0>=r(), time_=0, x_0=x ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(l()>=s_+x|s_+x>=r())&s_+time_>=0&s_+x=s_+time_+x_0)->t_+x<=r())".asSequent
   }
 
   "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica { _ =>

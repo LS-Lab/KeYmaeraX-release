@@ -209,7 +209,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("()", implyR(1))
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
-      case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _, _, _) =>
+      case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "implyR"
         stepsTactic shouldBe ""
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
@@ -226,7 +226,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("()", prop)
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
-      case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _, _, _) =>
+      case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "prop"
         stepsTactic shouldBe "implyR(1) ; andL(-1)"
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
@@ -243,7 +243,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("()", master())
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "(1,0)", false).getResultingResponses(t).loneElement) {
-      case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _, _, _, _, _) =>
+      case ExpandTacticResponse(_, _, _, parentTactic, stepsTactic, _, _, _, _) =>
         parentTactic shouldBe "master"
         stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; QE"
       case e: ErrorResponse if e.exn != null => fail(e.msg, e.exn)
