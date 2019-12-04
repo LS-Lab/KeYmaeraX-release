@@ -10,23 +10,25 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.core.Number
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags
+import testHelper.KeYmaeraXTestTags.TodoTest
+
+import org.scalatest.LoneElement._
 
 /**
   * Tests the series expansion tactics.
   * @author Nathan Fulton
   */
 class ApproximatorTests extends TacticTestBase {
-  "circularApproximate approximator" should "approximate {s'=c, c'=s, t'=1} with some initial help." in withMathematica(_ => {
+  "circularApproximate approximator" should "approximate {s'=c, c'=s, t'=1} with some initial help." in withMathematica { _ =>
     val f = "c=1 & s=0 & t=0->[{s'=c,c'=-s,t'=1&s^2+c^2=1&s<=t&c<=1}]1=0".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.circularApproximate("s".asVariable, "c".asVariable, Number(5))(1)
 
-
     val result = proveBy(f,t)
-    result.subgoals.length shouldBe 1
+    result.subgoals.loneElement shouldBe "c=1&s=0&t=0, old=s^2+c^2 ==> [{s'=c,c'=-s,t'=1&(((((((((s^2+c^2=1&s<=t&c<=1)&s^2+c^2=old)&c>=1+-t^2/2)&s>=t+-t^3/6)&c<=1+-t^2/2+t^4/24)&s<=t+-t^3/6+t^5/120)&c>=1+-t^2/2+t^4/24+-t^6/720)&s>=t+-t^3/6+t^5/120+-t^7/5040)&c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320)&s<=t+-t^3/6+t^5/120+-t^7/5040+t^9/362880}]1=0".asSequent
     println(result.prettyString)
-  })
+  }
 
-  it should "approximate {s'=c, c'=s, t'=1} from c=1,s=0" in withMathematica(_ => {
+  it should "FEATURE_REQUEST: approximate {s'=c, c'=s, t'=1} from c=1,s=0" taggedAs TodoTest in withMathematica(_ => {
     val f = "c=1 & s=0 & t=0->[{s'=c,c'=-s,t'=1}]1=0".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.circularApproximate("s".asVariable, "c".asVariable, Number(5))(1)
 
@@ -35,7 +37,7 @@ class ApproximatorTests extends TacticTestBase {
     println(result.prettyString)
   })
 
-  it should "prove some of the high bounds on s and c" in withMathematica(_ => {
+  it should "FEATURE_REQUEST: prove some of the high bounds on s and c" taggedAs TodoTest in withMathematica(_ => {
     val f = """c=1 & s=0 & t=0->[{s'=c,c'=-s,t'=1}](c>=1+-t^2/2+t^4/24+-t^6/720 &
               |s>=t+-t^3/6+t^5/120+-t^7/5040 &
               |c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320 &
@@ -125,7 +127,7 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
-  it should "approximate sin/cos" taggedAs KeYmaeraXTestTags.DeploymentTest in withMathematica(_ => {
+  it should "FEATURE_REQUEST: approximate sin/cos" taggedAs TodoTest in withMathematica(_ => {
     val f = """c=1 & s=0 & t=0->[{s'=c,c'=-s,t'=1}](c>=1+-t^2/2+t^4/24+-t^6/720 &
               |s>=t+-t^3/6+t^5/120+-t^7/5040 &
               |c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320 &
@@ -150,7 +152,7 @@ class ApproximatorTests extends TacticTestBase {
     result.subgoals.length shouldBe 1
   })
 
-  ignore should "prove cut in context using ceat with helper method" in withMathematica(_ => {
+  it should "prove cut in context using ceat with helper method" ignore withMathematica(_ => {
     val f = "[{x'=v,v'=a&1=1}](false)".asFormula
     val cut = "1+1=2".asFormula
     val cutProof = TactixLibrary.dI()(1)

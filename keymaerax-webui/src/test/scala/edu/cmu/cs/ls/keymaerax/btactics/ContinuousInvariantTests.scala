@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.{ExtremeTest, SlowTest}
+import testHelper.KeYmaeraXTestTags.{ExtremeTest, IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
@@ -38,7 +38,7 @@ class ContinuousInvariantTests extends TacticTestBase {
       ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
-  "Continuous invariant generation" should "generate a simple invariant" in withMathematicaMatlab { _ =>
+  "Continuous invariant generation" should "generate a simple invariant" taggedAs IgnoreInBuildTest in withMathematicaMatlab { _ =>
     val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
     proveBy(problem, ODE(1)) shouldBe 'proved
 

@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import testHelper.KeYmaeraXTestTags.{CheckinTest, NotfixedTest, SlowTest, SummaryTest, UsualTest}
 import testHelper.CustomAssertions._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -91,7 +91,7 @@ class PrimeSubstituterTest extends TacticTestBase {
   }
 
   //@author Yong Kiam Tan
-  it should "not prove x'=1 by putting primes into DX postconditions" in withMathematica { qeTool =>
+  it should "EXPLOIT: not prove x'=1 by putting primes into DX postconditions" taggedAs (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in withMathematica { qeTool =>
     //@note test is supposed to fail until DX axiom is fixed
 
     val ante = IndexedSeq()
@@ -108,7 +108,7 @@ class PrimeSubstituterTest extends TacticTestBase {
   }
 
   //@author Andre Platzer
-  it should "not put primes into DX's evolution domain constraint" in {
+  it should "EXPLOIT: not put primes into DX's evolution domain constraint" taggedAs (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in {
     //@note test is supposed to fail until DX axiom is fixed
 
     // [{c&q(||)}]p(||) -> (q(||)->p(||))

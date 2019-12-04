@@ -1,10 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
+import testHelper.KeYmaeraXTestTags.NotfixedTest
 
 import scala.collection.immutable.Nil
 
@@ -17,7 +18,8 @@ import scala.collection.immutable.Nil
 @AdvocatusTest
 class AxiomBaseTest extends TacticTestBase {
 
-  it should "Axiom DV differential variant >= needs existence assumption" in withMathematica { _ =>
+  it should "EXPLOIT: Axiom DV differential variant >= needs existence assumption" taggedAs
+    (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in withMathematica { _ =>
     // Exploit an unsound instance of DV
     // It requires a side condition that solutions exist for sufficient duration
     // This side condition is semantical, and difficult to express syntactically

@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 import scala.collection.immutable
 import scala.io.Source
@@ -204,7 +205,8 @@ class ProofTermCheckerTests extends TacticTestBase {
     }
   })
 
-  it should "convert leaderfollower" in withMathematica(_ => {
+  it should "FEATURE_REQUEST: convert leaderfollower" taggedAs TodoTest in withMathematica(_ => {
+    //@note TermProvable throws DebugMeException on unfold (swallowed by interpreter, since unfold executes optional chase steps)
     val archive = "SharedDefinitions.\n  R A.\n  R B.\n  R T.\n\n  R SB(R vl, R vf) = ( vf*vf - vl*vl + (A()+B())*(A()*T()*T() + 2*T()*vf) ).\n\n  /* predicates */\n  B bounds() <-> ( A()>=0 & B()>0 & T()>=0 ).\n  B loopinv(R vl, R pl, R vf, R pf) <-> ( vl>=0 & vf>=0 & (pl-pf)*2*B()>=vf*vf-vl*vl & pl>=pf ).\n\n  /* differential invariants */\n  B vinv(R v, R a, R t) <-> ( v=old(v)+a*t ).\n  B pinv(R p, R v, R a, R t) <-> ( p=old(p)+old(v)*t+a*t^2/2 ).\n\n  /* programs */\n  HP ctrl ::= {\n    {   ?(posLead - posCtrl)*2*B() >= SB(velLead, velCtrl); accCtrl := A();\n     ++ accCtrl := -B();\n    };\n    t := 0;\n  }.\n\n  HP plant ::= {\n       { velCtrl' = accCtrl, velLead' =  A(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}\n    ++ { velCtrl' = accCtrl, velLead' = -B(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}\n  }.\nEnd.\n\nLemma \"Leader-Follower Preserves Invariant\".\n\nProgramVariables.\n  R velLead.\n  R velCtrl.\n  R posLead.\n  R posCtrl.\n  R accCtrl.\n  R accLead.\n  R t.\nEnd.\n\nProblem.\nbounds() & loopinv(velLead, posLead, velCtrl, posCtrl)\n->\n[\n  ctrl;\n  plant;\n]\nloopinv(velLead, posLead, velCtrl, posCtrl)\nEnd.\n\n\nTactic \"Proof Leader-Follower Preserves Loop Invariant\".\nunfold ; <(\n  diffInvariant({`vinv(velCtrl, A(), t)`}, 1);\n  diffInvariant({`vinv(velLead, A(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, A(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, A(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1);\n  implyR(1);\n  andL('L)*;\n  hideL(-3=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0`});\n  print({`Transforming`});\n  cut({`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*t*t+2*t*velCtrl_0)`}); <(\n    hideL(-7=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*T()*T()+2*T()*velCtrl_0)`}),\n    hideR(1);\n    hideL('L=={`posLead=posLead_0+velLead_0*t+A()*t^2/2`});\n    hideL('L=={`posCtrl=posCtrl_0+velCtrl_0*t+A()*t^2/2`});\n    hideL('L=={`velLead=velLead_0+A()*t`});\n    hideL('L=={`velCtrl=velCtrl_0+A()*t`});\n    hideL('L=={`velCtrl>=0`});\n    hideL('L=={`velLead>=0`});\n    QE\n  );\n  hideL('L=={`T()>=0`});\n  hideL('L=={`t<=T()`});\n  print({`Lead=A(), Follow=A()`}); master; print({`...done`})\n  ,\n  diffInvariant({`vinv(velCtrl, -B(), t)`}, 1);\n  diffInvariant({`vinv(velLead, A(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, -B(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, A(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1); print({`Lead=A(), Follow=-B()`}); master; print({`...done`})\n  ,\n  diffInvariant({`vinv(velCtrl, A(), t)`}, 1);\n  diffInvariant({`vinv(velLead, -B(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, A(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, -B(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1);\n  implyR(1);\n  andL('L)*;\n  hideL(-3=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0`});\n  print({`Transforming`});\n  cut({`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*t*t+2*t*velCtrl_0)`}); <(\n    hideL(-7=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*T()*T()+2*T()*velCtrl_0)`}),\n    hideR(1);\n    hideL('L=={`posLead=posLead_0+velLead_0*t+(-B())*t^2/2`});\n    hideL('L=={`posCtrl=posCtrl_0+velCtrl_0*t+A()*t^2/2`});\n    hideL('L=={`velLead=velLead_0+(-B())*t`});\n    hideL('L=={`velCtrl=velCtrl_0+A()*t`});\n    hideL('L=={`velCtrl>=0`});\n    hideL('L=={`velLead>=0`});\n    QE\n  );\n  hideL('L=={`T()>=0`});\n  hideL('L=={`t<=T()`});\n  print({`Lead=-B(), Follow=A()`}); master; print({`...done`})\n  ,\n  diffInvariant({`vinv(velCtrl, -B(), t)`}, 1);\n  diffInvariant({`vinv(velLead, -B(), t)`}, 1);\n  diffInvariant({`pinv(posCtrl, velCtrl, -B(), t)`}, 1);\n  diffInvariant({`pinv(posLead, velLead, -B(), t)`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1); print({`Lead=-B(), Follow=-B()`}); master; print({`...done`})\n)\nEnd.\n\nEnd.\n\nTheorem \"Leader-Follower Safety\".\n\nProgramVariables.\n  R velLead.\n  R velCtrl.\n  R posLead.\n  R posCtrl.\n  R accCtrl.\n  R accLead.\n  R t.\nEnd.\n\nProblem.\nbounds() & velLead=0 & velCtrl=0 & posLead>=posCtrl\n->\n[{\n   ctrl;\n   plant;\n }*@invariant(loopinv(velLead, posLead, velCtrl, posCtrl))\n]\nposLead>=posCtrl\nEnd.\n\nTactic \"Proof Leader-Follower Safety\".\nimplyR(1); loop({`loopinv(velLead, posLead, velCtrl, posCtrl)`}, 1); <(\n  QE,\n  QE,\n  useLemma({`Leader-Follower Preserves Invariant`}, {`prop`})\n)\nEnd.\n\nEnd."
     val ParsedArchiveEntry(name, kind, modelText, _, _, formula, parsedTactics,_) = KeYmaeraXArchiveParser.parse(archive).head
     val provable = TermProvable.startProof(formula.asInstanceOf[Formula])
@@ -230,7 +232,7 @@ class ProofTermCheckerTests extends TacticTestBase {
       //println(source)
     }})
 
-  it should "convert VelocityCarDist" in withMathematica(_ => {
+  it should "FEATURE_REQUEST: convert VelocityCarDist" taggedAs TodoTest in withMathematica(_ => {
     val f = "(d>=0 & (V()>=0 & ep()>=0)) -> [{{{{?d>=V()*ep(); v:=*; ?0<=v&v<=V();} ++ v:=0;}t := 0;}{d'=-v, t'=1 & t<=ep()}}*@invariant(d>=0)] ( d>=0)".asFormula
     val t =
       implyR(1) &
@@ -316,12 +318,48 @@ class ProofTermCheckerTests extends TacticTestBase {
     ("( A()>=0 & B()>0 & T()>=0 ) &" +
         "( velLead>=0 & velCtrl>=0 & (posLead-posCtrl)*2*B()>=velCtrl*velCtrl-velLead*velLead & posLead>=posCtrl ) ->" +
         "[    {   ?(posLead - posCtrl)*2*B() >= ( velCtrl*velCtrl - velLead*velLead + (A()+B())*(A()*T()*T() + 2*T()*velCtrl) ); accCtrl := A();\n     ++ accCtrl := -B();\n    };\n    t := 0;" +
-        "       { velCtrl' = accCtrl, velLead' =  A(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}\n    ++ { velCtrl' = accCtrl, velLead' = -B(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}]" +
+        "       {{ velCtrl' = accCtrl, velLead' =  A(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}\n    ++ { velCtrl' = accCtrl, velLead' = -B(), posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t <= T() & velCtrl >= 0 & velLead >= 0}}]" +
         "( velLead>=0 & velCtrl>=0 & (posLead-posCtrl)*2*B()>=velCtrl*velCtrl-velLead*velLead & posLead>=posCtrl )").asFormula
 
     /*val lab2Fml ="velLead >= 0 &\nvelCtrl >= 0 &\nA() > 0 & \nB() > 0 & \n(posLead - posCtrl)*B() >= velCtrl*velCtrl - velLead*velCtrl &\n posLead >= posCtrl &\n T() > 0\n->\n[{\n  SB := (velCtrl - velLead)*T()*2*B() + B()*(A() + B())*T()*T() + 2*(T()*(A()+B()) + velCtrl - velLead)*((velCtrl + T()*A()));\n {{?2*B()*(posLead - posCtrl) > SB;\n   accCtrl := A(); }\n ++\n   accCtrl := -B();};\n {accLead := A() ;++ accLead := -B(); };\n t := 0;\n { velCtrl' = accCtrl, velLead' = accLead, posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t < T() & velCtrl >= 0 & velLead >= 0}\n}*@invariant(velLead >= 0 & velCtrl >= 0 &  (posLead - posCtrl)*B() >= velCtrl*velCtrl - velLead*velCtrl & posLead >= posCtrl)\n]posLead >= posCtrl".asFormula*/
     /*val lab2Tac:BelleExpr = BelleParser("unfold ; loop({`velLead>=0&velCtrl>=0&(posLead-posCtrl)*B()>=velCtrl*velCtrl-velLead*velCtrl&posLead>=posCtrl`}, 1) ; <(  unfold,  unfold,  unfold ; <(    dC({`velCtrl=old(velCtrl)+A()*t`}, 1) ; <(      dC({`velLead=old(velLead)+A()*t`}, 1) ; <(        dC({`posCtrl=old(posCtrl)+old(velCtrl)*t+A()*t*t*0.5`}, 1) ; <(          dC({`posLead=old(posLead)+old(velLead)*t+A()*t*t*0.5`}, 1) ; <(            dC({`t>=0`}, 1) ; <(              dW(1) ; master,              dI(1)              ),            dI(1)            ),          dI(1)          ),        dI(1)        ),      dI(1)      ),    dC({`velCtrl=old(velCtrl)+-B()*t`}, 1) ; <(      dC({`velLead=old(velLead)+A()*t`}, 1) ; <(        dC({`posCtrl=old(posCtrl)+old(velCtrl)*t-B()*t*t*0.5`}, 1) ; <(          dC({`posLead=old(posLead)+old(velLead)*t+A()*t*t*0.5`}, 1) ; <(            dC({`t>=0`}, 1) ; <(              dW(1) ; master,              dI(1)              ),            dI(1)            ),          dI(1)          ),        dI(1)        ),      dI(1)      ),    dC({`velCtrl=old(velCtrl)+A()*t`}, 1) ; <(      dC({`velLead=old(velLead)+-B()*t`}, 1) ; <(        dC({`posCtrl=old(posCtrl)+old(velCtrl)*t+A()*t*t*0.5`}, 1) ; <(          dC({`posLead=old(posLead)+old(velLead)*t-B()*t*t*0.5`}, 1) ; <(            dC({`t>=0`}, 1) ; <(              dC({`2*B()*(posLead-posCtrl)>(velCtrl-velLead)*(T()-t)*2*B()+B()*(A()+B())*(T()-t)*(T()-t)+2*((T()-t)*(A()+B())+velCtrl-velLead)*(velCtrl+(T()-t)*A())`}, 1) ; <(                dC({`B()*t<=old(velLead)`}, 1) ; <(                  dW(1) ; unfold ; <(                    QE,                    QE                    ),                  ODE(1)                  ),                dI(1)                ),              dI(1)              ),            dI(1)            ),          dI(1)          ),        dI(1)        ),      dI(1)      ),    dC({`velCtrl=old(velCtrl)+-B()*t`}, 1) ; <(      dC({`velLead=old(velLead)+-B()*t`}, 1) ; <(        dC({`posCtrl=old(posCtrl)+old(velCtrl)*t-B()*t*t*0.5`}, 1) ; <(          dC({`posLead=old(posLead)+old(velLead)*t-B()*t*t*0.5`}, 1) ; <(            dC({`t>=0`}, 1) ; <(              dW(1) ; master,              dI(1)              ),            dI(1)            ),          dI(1)          ),        dI(1)        ),      dI(1)      )    )  )")*/
-    val lab2Tac = BelleParser("unfold ; <(\n  diffInvariant({`velCtrl=old(velCtrl)+A()*t`}, 1);\n  diffInvariant({`velLead=old(velLead)+A()*t`}, 1);\n  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t+A()*t*t*0.5`}, 1);\n  diffInvariant({`posLead=old(posLead)+old(velLead)*t+A()*t*t*0.5`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1); print({`Lead=A(), Follow=A()`}); master; print({`...done`})\n  ,\n  diffInvariant({`velCtrl=old(velCtrl)-B()*t`}, 1);\n  diffInvariant({`velLead=old(velLead)+A()*t`}, 1);\n  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t-B()*t*t*0.5`}, 1);\n  diffInvariant({`posLead=old(posLead)+old(velLead)*t+A()*t*t*0.5`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1); print({`Lead=A(), Follow=-B()`}); master; print({`...done`})\n  ,\n\n  diffInvariant({`velCtrl=old(velCtrl)+A()*t`}, 1);\n  diffInvariant({`velLead=old(velLead)-B()*t`}, 1);\n  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t+A()*t*t*0.5`}, 1);\n  diffInvariant({`posLead=old(posLead)+old(velLead)*t-B()*t*t*0.5`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1);\n  implyR(1);\n  print({`Transforming`});\n  transform(\n    {`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*t*t+2*t*velCtrl_0)`},\n    'L=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*T()*T()+2*T()*velCtrl_0)`}\n  );\n  print({`Lead=-B(), Follow=A()`}); master; print({`...done`})\n  ,\n  diffInvariant({`velCtrl=old(velCtrl)-B()*t`}, 1);\n  diffInvariant({`velLead=old(velLead)-B()*t`}, 1);\n  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t-B()*t*t*0.5`}, 1);\n  diffInvariant({`posLead=old(posLead)+old(velLead)*t-B()*t*t*0.5`}, 1);\n  diffInvariant({`t>=0`}, 1);\n  dW(1); print({`Lead=-B(), Follow=-B()`}); master; print({`...done`})\n)")
+    val lab2Tac = BelleParser("""unfold ; <(
+                                |  diffInvariant({`velCtrl=old(velCtrl)+A()*t`}, 1);
+                                |  diffInvariant({`velLead=old(velLead)+A()*t`}, 1);
+                                |  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t+A()*t*t*0.5`}, 1);
+                                |  diffInvariant({`posLead=old(posLead)+old(velLead)*t+A()*t*t*0.5`}, 1);
+                                |  diffInvariant({`t>=0`}, 1);
+                                |  dW(1); print({`Lead=A(), Follow=A()`}); master; print({`...done`})
+                                |  ,
+                                |  diffInvariant({`velCtrl=old(velCtrl)-B()*t`}, 1);
+                                |  diffInvariant({`velLead=old(velLead)+A()*t`}, 1);
+                                |  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t-B()*t*t*0.5`}, 1);
+                                |  diffInvariant({`posLead=old(posLead)+old(velLead)*t+A()*t*t*0.5`}, 1);
+                                |  diffInvariant({`t>=0`}, 1);
+                                |  dW(1); print({`Lead=A(), Follow=-B()`}); master; print({`...done`})
+                                |  ,
+                                |
+                                |  diffInvariant({`velCtrl=old(velCtrl)+A()*t`}, 1);
+                                |  diffInvariant({`velLead=old(velLead)-B()*t`}, 1);
+                                |  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t+A()*t*t*0.5`}, 1);
+                                |  diffInvariant({`posLead=old(posLead)+old(velLead)*t-B()*t*t*0.5`}, 1);
+                                |  diffInvariant({`t>=0`}, 1);
+                                |  dWplus(1);
+                                |  implyR(1);
+                                |  print({`Transforming`});
+                                |  transform(
+                                |    {`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*t*t+2*t*velCtrl_0)`},
+                                |    'L=={`(posLead_0-posCtrl_0)*2*B()>=velCtrl_0*velCtrl_0-velLead_0*velLead_0+(A()+B())*(A()*T()*T()+2*T()*velCtrl_0)`}
+                                |  );
+                                |  print({`Lead=-B(), Follow=A()`}); master; print({`...done`})
+                                |  ,
+                                |  diffInvariant({`velCtrl=old(velCtrl)-B()*t`}, 1);
+                                |  diffInvariant({`velLead=old(velLead)-B()*t`}, 1);
+                                |  diffInvariant({`posCtrl=old(posCtrl)+old(velCtrl)*t-B()*t*t*0.5`}, 1);
+                                |  diffInvariant({`posLead=old(posLead)+old(velLead)*t-B()*t*t*0.5`}, 1);
+                                |  diffInvariant({`t>=0`}, 1);
+                                |  dW(1); print({`Lead=-B(), Follow=-B()`}); master; print({`...done`})
+                                |)""".stripMargin)
     val provable = ProvableSig.startProof(lab2Fml)
     val tacticResult = proveBy(provable,lab2Tac)
     tacticResult match {

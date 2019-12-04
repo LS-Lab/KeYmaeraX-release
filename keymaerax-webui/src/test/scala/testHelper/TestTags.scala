@@ -78,6 +78,9 @@ object KeYmaeraXTestTags {
   /** Tests codifying todo's. These may be ignored and should be un-ignored occasionally. */
   object TodoTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.TodoTest")
 
+  /** Tests of unfixed bugs. */
+  object NotfixedTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.NotfixedTest")
+
   /** Tests that are added for coverage analysis and not critically used. */
   object CoverageTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.CoverageTest")
 
