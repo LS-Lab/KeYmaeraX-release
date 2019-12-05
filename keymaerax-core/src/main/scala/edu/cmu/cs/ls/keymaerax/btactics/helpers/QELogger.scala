@@ -201,11 +201,25 @@ object QELogger extends Logging {
 
   /** Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath` */
   def exportSmtLibFormat(logPath: String, exportPath: String): Unit = {
+    val uniqueIndex: scala.collection.mutable.Map[String, Int] = scala.collection.mutable.Map.empty
+
+    def uniqueName(n: String): String = {
+      val name = n.replaceAllLiterally(" ", "_")
+      uniqueIndex.get(name) match {
+        case Some(i) =>
+          uniqueIndex(name) = i+1
+          name + "_" + i
+        case None =>
+          uniqueIndex(name) = 0
+          name
+      }
+    }
+
     val filePath = if (exportPath.contains("${entryname}")) exportPath else exportPath + "${entryname}"
     def export(e: (String, Sequent)): Unit = {
       print("Exporting " + e._1 + "...")
       try {
-        exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", e._1.replaceAllLiterally(" ", "_")))
+        exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", uniqueName(e._1)))
         println("done")
       } catch {
         case ex: Throwable => println("failed: " + ex.getMessage)
