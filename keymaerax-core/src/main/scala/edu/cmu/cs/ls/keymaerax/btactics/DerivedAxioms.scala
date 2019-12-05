@@ -113,7 +113,7 @@ object DerivedAxioms extends Logging {
     }
   }
 
-  private[btactics] def derivedRule(name: String, derived: Sequent, tactic: BelleExpr): Lemma =
+  private[btactics] def derivedRule(name: String, derived: => Sequent, tactic: => BelleExpr): Lemma =
     derivedAxiomDB.get(DerivedRuleInfo(name).storedName) match {
       case Some(lemma) => lemma
       case None =>
@@ -122,7 +122,7 @@ object DerivedAxioms extends Logging {
     }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, derived: Sequent, tactic: BelleExpr): Lemma =
+  private[btactics] def derivedAxiom(name: String, derived: => Sequent, tactic: => BelleExpr): Lemma =
     derivedAxiomDB.get(DerivedAxiomInfo(name).storedName) match {
       case Some(lemma) => lemma
       case None =>
