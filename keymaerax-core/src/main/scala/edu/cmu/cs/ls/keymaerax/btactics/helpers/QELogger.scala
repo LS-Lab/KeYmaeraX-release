@@ -18,11 +18,21 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.DefaultSMTConverter
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 /**
-  * Helper tools to log QE calls
+  *   A simple QE logging facility
+  *   Each sequent is recorded together with the underlying conclusion of the provable that it is linked to
+  *   # separates the conclusion and the actual sequent, @ separates lines
+  *
+  *   @ name_1 # Concl_1 # Seq_1
+  *   @ name_2 # Concl_2 # Seq_2
+  *   @ name_3 # Concl_3 # Seq_3
+  *   ...
+  *
+  *   Sequents with the same name are grouped together when the file is re-parsed
   */
 object QELogger extends Logging {
 
@@ -55,20 +65,10 @@ object QELogger extends Logging {
 
   def measure(s:Sequent): Int = s.succ.map(measure).sum + s.ante.map(measure).sum
 
-  /**
-    *   A simple QE logging facility
-    *   Each sequent is recorded together with the underlying conclusion of the provable that it is linked to
-    *   # separates the conclusion and the actual sequent, @ separates lines
-    *
-    *   @ name_1 # Concl_1 # Seq_1
-    *   @ name_2 # Concl_2 # Seq_2
-    *   @ name_3 # Concl_3 # Seq_3
-    *   ...
-    *
-    *   Sequents with the same name are grouped together when the file is re-parsed
-    */
+  /** Default path from the configuration. */
   private val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
 
+  /** Returns a default 'qe.txt' file if path points to a directory, the path file otherwise. */
   private def file(filename: String): java.io.File =
     if (new java.io.File(filename).isDirectory) {
       new java.io.File(filename, "qe.txt")
@@ -76,9 +76,10 @@ object QELogger extends Logging {
       new java.io.File(filename)
     }
 
-  def clearLog(filename: String = defaultPath): Unit = {
+  /** Deletes the log file at `path`. */
+  def clearLog(path: String = defaultPath): Unit = {
     try {
-      val f = file(filename)
+      val f = file(path)
       f.delete()
     } catch {
       case ex: Exception =>
@@ -86,13 +87,15 @@ object QELogger extends Logging {
     }
   }
 
+  /** Appends the conclusion `pr` and the goal `s` under `name` to the file at `path`. */
   def logSequent(pr: Sequent, s: Sequent, name: String, filename: String = defaultPath): Unit = {
     try {
       val f = file(filename)
       val parent = f.getParentFile
       if (parent != null) parent.mkdirs()
+      //@note opening and closing file on every write negligible to cost of contract-checking Sequent.toString
       val namestr = "@"+name+"#"+pr.toString+"#"+s.toString+"\n"
-      val fw = new FileWriter(f)
+      val fw = new FileWriter(f, true)
       fw.append(namestr)
       fw.close()
     } catch {
@@ -101,7 +104,7 @@ object QELogger extends Logging {
     }
   }
 
-  // Must be of the form Seq # Seq # Seq
+  /** Parses string `s` of the form Name # Seq # Seq; returns None if not of that form. */
   def parseStr(s: String): Option[(String, Sequent, Sequent)] = {
     val ss = s.split("#")
     if (ss.length != 3) None
@@ -116,6 +119,7 @@ object QELogger extends Logging {
     }
   }
 
+  /** Parses string `s` of the form Name # Seq-1 # Seq-2; returns Some(Name, Seq-2), or None if not of that form. */
   def parseStr2(s: String): Option[(String, Sequent)] = {
     val ss = s.split("#")
     if (ss.length != 3) None
@@ -233,6 +237,7 @@ object QELogger extends Logging {
     }
   }
 
+  @tailrec
   private def parseOptions(parsedOptions: Map[String, String], options: List[String]): Map[String, String] = options match {
     case Nil => parsedOptions
     case "-convert" :: value :: tail => parseOptions(parsedOptions ++ Map("convert" -> value), tail)
