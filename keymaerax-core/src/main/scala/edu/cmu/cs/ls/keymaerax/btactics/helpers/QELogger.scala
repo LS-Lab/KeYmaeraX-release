@@ -89,7 +89,8 @@ object QELogger extends Logging {
   def logSequent(pr: Sequent, s: Sequent, name: String, filename: String = defaultPath): Unit = {
     try {
       val f = file(filename)
-      f.mkdirs()
+      val parent = f.getParentFile
+      if (parent != null) parent.mkdirs()
       val namestr = "@"+name+"#"+pr.toString+"#"+s.toString+"\n"
       val fw = new FileWriter(f)
       fw.append(namestr)
