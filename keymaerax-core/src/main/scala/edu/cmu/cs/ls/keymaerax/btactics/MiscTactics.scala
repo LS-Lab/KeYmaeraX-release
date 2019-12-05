@@ -182,7 +182,9 @@ object DebuggingTactics {
         print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
         if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
         provable
-      } else throw new BelleUnexpectedProofStateError(msg + ": expected to have proved, but got open goals", provable.underlyingProvable)
+      } else if (provable.subgoals.size == 1 && provable.subgoals.head.ante.isEmpty && provable.subgoals.head.succ == False :: Nil) {
+        throw new BelleUnexpectedProofStateError(msg + {if (msg.nonEmpty) ": " else ""} + "expected to have proved, but got false", provable.underlyingProvable)
+      } else throw new BelleUnexpectedProofStateError(msg + {if (msg.nonEmpty) ": " else ""} + "expected to have proved, but got open goals", provable.underlyingProvable)
     }
   }
 
