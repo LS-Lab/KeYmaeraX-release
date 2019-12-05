@@ -6,8 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import testHelper.KeYmaeraXTestTags.{CheckinTest, NotfixedTest, SlowTest, SummaryTest, UsualTest}
-import testHelper.CustomAssertions._
+import testHelper.KeYmaeraXTestTags.NotfixedTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
@@ -30,11 +29,17 @@ class PrimeSubstituterTest extends TacticTestBase {
     val pr = ProvableSig.axioms("DS& differential equation solution")
 
     pr shouldBe 'proved
-    a [CoreException] shouldBe thrownBy {pr(USubst(
+    the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), GreaterEqual(DifferentialSymbol(x_),Number(5))) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), "x<9".asFormula) ::
-        Nil))}
+        Nil))} should have message
+      """Substitution clash:
+        |USubstOne{(c()~>2), (q(•)~>x_'>=5), (p(||)~>x < 9)}
+        |is not ({x_,x_'})-admissible
+        |for x_'>=5
+        |when substituting in q(x_)
+        |""".stripMargin
     // would prove bogus [x'=2&x'>=5]x<9 <-> \forall t>=0 (\forall 0<=s<=t x'>=5 -> [x:=x+2*t;]x<9)
     // which is not valid in a state where x'=0
   }
@@ -45,10 +50,16 @@ class PrimeSubstituterTest extends TacticTestBase {
     val pr = AxiomInfo("DS differential equation solution").provable
 
     pr shouldBe 'proved
-    a [CoreException] shouldBe thrownBy {pr(USubst(
+    the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c_",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("p_",None,Real,Bool),DotTerm()), Equal(DifferentialSymbol(x_),Number(5))) ::
-        Nil))}
+        Nil))} should have message
+      """Substitution clash:
+        |USubstOne{(c_()~>2), (p_(•)~>x_'=5)}
+        |is not ({x_,x_'})-admissible
+        |for x_'=5
+        |when substituting in p_(x_)
+        |""".stripMargin
     // would prove bogus [x'=2]x'=5 <-> \forall t>=0 [x:=x+2*t;]x'=5
     // which is not valid in a state where x'=5
   }
@@ -61,7 +72,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     pr shouldBe 'proved
     try {
       pr(USubst(
-      SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
+        SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), Equal(DifferentialSymbol(x_),Number(5))) ::
         Nil))
@@ -81,17 +92,17 @@ class PrimeSubstituterTest extends TacticTestBase {
     val pr = ProvableSig.axioms("DS& differential equation solution")
 
     pr shouldBe 'proved
-    a [CoreException] shouldBe thrownBy {pr(USubst(
+    the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
         SubstitutionPair(UnitPredicational("p",Except(DifferentialSymbol(x_))), Equal(DifferentialSymbol(x_),Number(5))) ::
-        Nil))}
+        Nil))} should have message "Core requirement failed: Space-compatible substitution expected: (p(|x_'|)~>x_'=5)"
     // would prove bogus [x'=2&true]x'=5 <-> \forall t>=0 (\forall 0<=s<=t true -> [x:=x+2*t;]x'=5)
     // which is not valid in a state where x'=5
   }
 
   //@author Yong Kiam Tan
-  it should "EXPLOIT: not prove x'=1 by putting primes into DX postconditions" taggedAs (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in withMathematica { qeTool =>
+  it should "EXPLOIT: not prove x'=1 by putting primes into DX postconditions" taggedAs (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in withMathematica { _ =>
     //@note test is supposed to fail until DX axiom is fixed
 
     val ante = IndexedSeq()
@@ -108,24 +119,23 @@ class PrimeSubstituterTest extends TacticTestBase {
   }
 
   //@author Andre Platzer
-  it should "EXPLOIT: not put primes into DX's evolution domain constraint" taggedAs (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in {
-    //@note test is supposed to fail until DX axiom is fixed
-
+  it should "not put primes into DX's evolution domain constraint" taggedAs (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in {
     // [{c&q(||)}]p(||) -> (q(||)->p(||))
     val pr = ProvableSig.axioms("DX differential skip")
 
     pr shouldBe 'proved
-    a [CoreException] shouldBe thrownBy {pr(USubst(
+    //@note currently core datastructure assertion prevents bug until DX axiom is fixed
+    the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(ode, "{x'=2}".asDifferentialProgram) ::
         SubstitutionPair(UnitPredicational("q",AnyArg), "x'>=5".asFormula) ::
         SubstitutionPair(UnitPredicational("p",AnyArg), False) ::
-        Nil))}
+        Nil))} should have message "Core requirement failed: No differentials in evolution domain constraints {{x'=2} & x'>=5}"
     // would prove bogus [x'=2&x'>=5]false -> (x'>=5 -> false)
     // which is not valid in a state where x'=5
   }
 
   //@author Andre Platzer
-  it should "not put primes into DX's postcondition" in {
+  it should "EXPLOIT: not put primes into DX's postcondition" taggedAs (NotfixedTest, testHelper.KeYmaeraXTestTags.AdvocatusTest) in {
     //@note test is supposed to fail until DX axiom is fixed
 
     // [{c&q(||)}]p(||) -> (q(||)->p(||))
