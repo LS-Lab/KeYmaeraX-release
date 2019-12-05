@@ -1570,7 +1570,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val p = ProvableSig.startProof(problem)
     val pId = sql.createProof(modelFile, "model1")
     val tactic = prop & done
-    intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("[Bellerophon Runtime] : expected to have proved, but got open goals")
+    intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("[Bellerophon Runtime] expected to have proved, but got open goals")
     sql.extractTactic(pId) shouldBe BelleParser("nil")
 
     implicit val db: DBAbstraction = new InMemoryDB()
