@@ -28,9 +28,11 @@ object ToolConfiguration {
 
     Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
       case Some(l) => Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
-        //@todo unify command line name and internal mathematica name (mathkernel vs. linkName)
-        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "tcpip" -> tcpip)
-        case None => Map("mathkernel" -> l, "linkName" -> l, "tcpip" -> tcpip)
+        //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+        case None =>
+          val libDir = DefaultConfiguration.defaultMathLinkPath._2
+          Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
       }
       case None => DefaultConfiguration.defaultMathematicaConfig
 
@@ -46,9 +48,11 @@ object ToolConfiguration {
 
     Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
       case Some(l) => Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
-        //@todo unify command line name and internal mathematica name (mathkernel vs. linkName)
-        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "tcpip" -> tcpip)
-        case None => Map("mathkernel" -> l, "linkName" -> l, "tcpip" -> tcpip)
+        //@todo unify command line name and internal mathematica name (mathkernel vs. linkName, jlink vs libDir)
+        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
+        case None =>
+          val libDir = DefaultConfiguration.defaultWolframEnginePath._2
+          Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "jlink" -> libDir, "tcpip" -> tcpip)
       }
       case None => DefaultConfiguration.defaultWolframEngineConfig
 
