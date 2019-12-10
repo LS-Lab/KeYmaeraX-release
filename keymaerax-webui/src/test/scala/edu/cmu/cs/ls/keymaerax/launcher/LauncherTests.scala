@@ -22,6 +22,18 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     actualFileContent should include (expectedProof)
   }
 
+  it should "prove with wildcards from command line" in {
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/*.kyx"
+    val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
+    val (output, exitVal) = runKeYmaeraX("-prove", inputFileName, "-out", outputFileName)
+    val proofStatOutputs = output.lines.toList.takeRight(4)
+    proofStatOutputs(0) should startWith ("PROVED")
+    proofStatOutputs(1) should startWith ("UNFINISHED")
+    proofStatOutputs(2) should startWith ("DISPROVED")
+    proofStatOutputs(3) should startWith ("PROVED")
+    exitVal shouldBe 254 //@note -2 since one entry disproved
+  }
+
   it should "FEATURE_REQUEST: prove entries without tactics with auto" taggedAs (TodoTest, SlowTest) ignore {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-notac.kyx"
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
