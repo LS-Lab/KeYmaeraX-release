@@ -680,6 +680,9 @@ object KeYmaeraX {
     val csvStatistics = statistics.map(_.toCsv).mkString("\n")
     val statisticsLogger = Logger(getClass)
     statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"), csvStatistics)
+
+    if (statistics.exists(_.status=="unfinished")) sys.exit(-1)
+    if (statistics.exists(_.status=="disproved")) sys.exit(-2)
   }
 
   /**

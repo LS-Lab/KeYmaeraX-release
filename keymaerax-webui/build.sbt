@@ -20,6 +20,8 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 libraryDependencies += "org.pegdown" % "pegdown" % "1.6.0" % "test"      // (For Html Scalatest reports)
 
+libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0" // automatic resource management
+
 /// sqlite driver
 
 libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
