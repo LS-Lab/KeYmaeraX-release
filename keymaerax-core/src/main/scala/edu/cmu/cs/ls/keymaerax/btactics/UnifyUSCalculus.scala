@@ -341,7 +341,8 @@ trait UnifyUSCalculus {
   def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
 
   /** @see [[US()]] */
-  def uniformSubstitute(subst: USubst): BuiltInTactic = US(subst)
+  def uniformSubstitute(subst: USubst): InputTactic = "US" byWithInputs(subst.subsDefsInput.
+    map(p => p.what.prettyString + "~>" + p.repl.prettyString), US(subst))
 
 
   def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =

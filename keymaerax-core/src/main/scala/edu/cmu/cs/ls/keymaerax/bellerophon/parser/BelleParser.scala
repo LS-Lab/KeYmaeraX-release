@@ -57,7 +57,8 @@ object BelleParser extends (String => BelleExpr) with Logging {
     '∃',
     '→',
     '↔',
-    '←'
+    '←',
+    '•'
   )
 
   /** Returns the location and value of the first non-ASCII character in a string that is not in [[allowedUnicodeChars]] */
@@ -545,17 +546,18 @@ object BelleParser extends (String => BelleExpr) with Logging {
           nonPosArgCount = nonPosArgCount + 1
           theArg +: arguments(tail)
         case BelleToken(SEARCH_SUCCEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(Find.FindR(0, Some(defs.exhaustiveSubst(expr.expression)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindR(0, Some(expr.expression.left.get), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_ANTECEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(Find.FindL(0, Some(defs.exhaustiveSubst(expr.expression)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindL(0, Some(expr.expression.left.get), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_EVERYWHERE, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(new Find(0, Some(defs.exhaustiveSubst(expr.expression)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(new Find(0, Some(expr.expression.left.get), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(ABSOLUTE_POSITION(posString), _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
           val Fixed(pp, _, _) = parsePositionLocator(posString, loc)
-          val what: Formula = defs.exhaustiveSubst(expr.expression) match {
-            case f: Formula => f
-            case FuncOf(Function(name, idx, domain, _, _), child) => PredOf(Function(name, idx, domain, Bool), child)
-            case e => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, loc)
+          val what: Formula = expr.expression match {
+            case Left(f: Formula) => f
+            case Left(FuncOf(Function(name, idx, domain, _, _), child)) => PredOf(Function(name, idx, domain, Bool), child)
+            case Left(e) => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, loc)
+            case e => throw ParseException("Expected formula as exact position locator match, but got " + e.toString, loc)
           }
           Right(new Fixed(pp.top, Some(what), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case tok::tail => parseArgumentToken(None)(tok, UnknownLocation) +: arguments(tail)
@@ -606,25 +608,27 @@ object BelleParser extends (String => BelleExpr) with Logging {
         }
         unwrappedExpectedType match {
           case _:StringArg => Left(tok.undelimitedExprString)
-          case _:FormulaArg if tok.expression.isInstanceOf[Formula] => Left(tok.expression)
+          case _:SubstitutionArg if tok.expression.isRight => Left(tok.expression.right.get)
+          case _:SubstitutionArg => throw ParseException(s"Could not parse ${tok.exprString} as a substitution pair, when a substitution pair was expected.", loc)
+          case _:FormulaArg if tok.expression.left.exists(_.isInstanceOf[Formula]) => Left(tok.expression.left.get)
           case _:FormulaArg => try {
             Left(tok.undelimitedExprString.asFormula)
           } catch {
             case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Formula, but a formula was expected. Error: $exn", loc, exn)
           }
-          case _:TermArg if tok.expression.isInstanceOf[Term] => Left(tok.expression)
+          case _:TermArg if tok.expression.left.exists(_.isInstanceOf[Term]) => Left(tok.expression.left.get)
           case _:TermArg => try {
             Left(tok.undelimitedExprString.asTerm)
           } catch {
             case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Term, but a term was expected. Error: $exn", loc, exn)
           }
-          case _:VariableArg if tok.expression.isInstanceOf[Variable] => Left(tok.expression)
+          case _:VariableArg if tok.expression.left.exists(_.isInstanceOf[Variable]) => Left(tok.expression.left.get)
           case _:VariableArg => try {
             Left(tok.undelimitedExprString.asVariable)
           } catch {
             case exn: ParseException => throw ParseException(s"Could not parse ${tok.exprString} as a Variable, but a variable was expected. Error: $exn", loc, exn)
           }
-          case _:ExpressionArg if tok.expression.isInstanceOf[Expression] => Left(tok.expression)
+          case _:ExpressionArg if tok.expression.left.exists(_.isInstanceOf[Expression]) => Left(tok.expression.left.get)
           case _:ExpressionArg => try {
             Left(tok.undelimitedExprString.asExpr)
           } catch {

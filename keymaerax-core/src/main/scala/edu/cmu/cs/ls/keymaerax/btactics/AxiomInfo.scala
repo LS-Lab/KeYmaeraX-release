@@ -1139,6 +1139,11 @@ object DerivationInfo {
           }))
           TactixLibrary.byUS(axiomName, (_: UnificationMatch.Subst) => subst)
       }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
+    InputTacticInfo("US"
+      , RuleDisplayInfo(("US", "US"), (List(),List("sigma(phi)")),
+        List((List(), List("phi"))))
+      , List(SubstitutionArg("sigma"))
+      , _ => ((subst: USubst) => TactixLibrary.uniformSubstitute(subst)): TypedFunc[USubst, BelleExpr]),
 
     InputPositionTacticInfo("useLemmaAt"
       , "useLemmaAt"
@@ -1406,6 +1411,9 @@ case class TermArg (override val name: String, override val allowsFresh: List[St
 }
 case class StringArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "string"
+}
+case class SubstitutionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
+  val sort = "subst"
 }
 case class OptionArg(arg: ArgInfo) extends ArgInfo {
   val name: String = arg.name

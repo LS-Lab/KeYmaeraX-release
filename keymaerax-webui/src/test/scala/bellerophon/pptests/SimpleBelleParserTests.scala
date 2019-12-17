@@ -684,6 +684,11 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("transform({`x+2`},1)") shouldBe (round trip TactixLibrary.transform("x+2".asTerm)(1))
   }
 
+  it should "parse substitution arguments" in {
+    BelleParser("US({`init(.) ~> .=0`})") shouldBe (round trip TactixLibrary.uniformSubstitute(
+      RenUSubst(("init(.)".asFormula, ".=0".asFormula) :: Nil).usubst))
+  }
+
   it should "parse mixed arguments" in {
     BelleParser("dG({`{z'=-1*z+0}`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1))
   }
@@ -692,7 +697,7 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("hideL(1==\"p(x)\")") shouldBe (round trip TactixLibrary.hideL(Fixed(1, Nil, Some("p(x)".asFormula))))
   }
 
-  it should "expand definitions when parsing arguments" in {
+  it should "not expand definitions when parsing arguments" in {
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None, Declaration(Map()))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
@@ -702,39 +707,39 @@ class SimpleBelleParserTests extends TacticTestBase {
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
         Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
-        'inputs ("y>0".asFormula::Nil)
+        'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
   }
 
-  it should "not forget definitions in the middle of parsing" in {
+  it should "not expand definitions in the middle of parsing" in {
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
       Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case SeqTactic(_, adpt: AppliedDependentPositionTactic) => adpt.pt should have (
-        'inputs ("y>0".asFormula::Nil)
+        'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
   }
 
-  it should "expand definitions when parsing locators" in {
+  it should "not expand definitions when parsing locators" in {
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, Declaration(Map()))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
     }
 
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
         Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
-      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=y".asFormula))
+      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
     }
   }
 
-  it should "expand definitions when parsing position check locators" in {
+  it should "not expand definitions when parsing position check locators" in {
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None, Declaration(Map()))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
     }
 
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
       Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
-      case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
+      case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
     }
   }
 

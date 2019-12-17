@@ -1784,51 +1784,65 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXArchiveParser.Declaration): Response = {
     try {
-      val (arg, exprs) = input match {
-        case BelleTermInput(value, Some(arg: TermArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg: FormulaArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg: VariableArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg: ExpressionArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(OptionArg(arg))) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => arg -> value.split(",").map(KeYmaeraXParser).toList
-      }
-
-      val sortMismatch = (arg, exprs) match {
-        case (_: TermArg, (t: Term) :: Nil) => arg.convert(t).right.toOption
-        case (_: FormulaArg, (f: Formula) :: Nil) => arg.convert(f).right.toOption
-        case (_: VariableArg, (v: Variable) :: Nil) => arg.convert(v).right.toOption
-        case (_: ExpressionArg, (e: Expression) :: Nil) => arg.convert(e).right.toOption
-        case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
-        case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
-      }
-
-      sortMismatch match {
-        case None =>
-          val symbols = StaticSemantics.symbols(sequent)
-          val paramFV: Set[NamedSymbol] =
-            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet -- defs.asFunctions - Function("old", None, Real, Real)
-
-          val (hintFresh, allowedFresh) = arg match {
-            case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
-            case _ => (paramFV -- symbols, arg.allowsFresh) //@todo would need other inputs to check
-          }
-
-          if (hintFresh.size > allowedFresh.size) {
-            val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
-              filter(_._2.isDefined)
-            if (fnVarMismatch.isEmpty) {
-              BooleanResponse(flag = false, Some("Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
-                (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
-                else ", is it a typo?")))
-            } else BooleanResponse(flag=true)
-          } else {
-            BooleanResponse(flag=true)
-          }
-        case Some(mismatch) => BooleanResponse(flag=false, Some(mismatch))
+      input match {
+        case BelleTermInput(value, Some(arg: TermArg)) => checkExpressionInput(arg, value.asTerm :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: FormulaArg)) => checkExpressionInput(arg, value.asFormula :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: VariableArg)) => checkExpressionInput(arg, value.asVariable :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: ExpressionArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: SubstitutionArg)) => checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(OptionArg(arg))) if  arg.isInstanceOf[SubstitutionArg] =>
+          checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => checkExpressionInput(arg, value.split(",").map(KeYmaeraXParser).toList, sequent, defs)
       }
     } catch {
       case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
     }
+  }
+
+  /** Checks expression inputs. */
+  private def checkExpressionInput[E <: Expression](arg: ArgInfo, exprs: List[E], sequent: Sequent,
+                                                    defs: KeYmaeraXArchiveParser.Declaration) = {
+    val sortMismatch = (arg, exprs) match {
+      case (_: TermArg, (t: Term) :: Nil) => arg.convert(t).right.toOption
+      case (_: FormulaArg, (f: Formula) :: Nil) => arg.convert(f).right.toOption
+      case (_: VariableArg, (v: Variable) :: Nil) => arg.convert(v).right.toOption
+      case (_: ExpressionArg, (e: Expression) :: Nil) => arg.convert(e).right.toOption
+      case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
+      case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
+    }
+
+    sortMismatch match {
+      case None =>
+        val symbols = StaticSemantics.symbols(sequent)
+        val paramFV: Set[NamedSymbol] =
+          exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet -- defs.asFunctions - Function("old", None, Real, Real)
+
+        val (hintFresh, allowedFresh) = arg match {
+          case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
+          case _ => (paramFV -- symbols, arg.allowsFresh) //@todo would need other inputs to check
+        }
+
+        if (hintFresh.size > allowedFresh.size) {
+          val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
+            filter(_._2.isDefined)
+          if (fnVarMismatch.isEmpty) {
+            BooleanResponse(flag = false, Some("Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
+              (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
+              else ", is it a typo?")))
+          } else BooleanResponse(flag=true)
+        } else {
+          BooleanResponse(flag=true)
+        }
+      case Some(mismatch) => BooleanResponse(flag=false, Some(mismatch))
+    }
+  }
+
+  /** Checks substitution inputs. */
+  private def checkSubstitutionInput(arg: ArgInfo, exprs: List[SubstitutionPair], sequent: Sequent,
+                                     defs: KeYmaeraXArchiveParser.Declaration) = {
+    //@note parsed as substitution pair is all we check for now
+    BooleanResponse(flag=true)
   }
 
   override protected def doResultingResponses(): List[Response] = {
@@ -1871,6 +1885,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(_:SubstitutionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
@@ -1964,7 +1979,9 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
             try {
               val proofSession = session(proofId).asInstanceOf[ProofSession]
-              val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator), proofSession.defs)
+              val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator),
+                //@note do not auto-expand definitions
+                KeYmaeraXArchiveParser.Declaration(Map.empty))
 
               val appliedExpr: BelleExpr = (pos, pos2, expr) match {
                 case (None, None, _: AtPosition[BelleExpr]) =>

@@ -62,22 +62,6 @@ object KeYmaeraXArchiveParser {
     lazy val asFunctions: List[Function] = decls.map({ case ((name, idx), (domain, codomain, _, _)) =>
       Function(name, idx, domain.getOrElse(Unit), codomain) }).toList
 
-    /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
-    def exhaustiveSubst[T <: Expression](arg: T): T = elaborateToFunctions(arg) match {
-      case e: Expression =>
-        def exhaustiveSubst(f: Expression): Expression = {
-          val fs = try {
-            USubst(substs)(f)
-          } catch {
-            case ex: SubstitutionClashException =>
-              throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
-          }
-          if (fs != f) exhaustiveSubst(fs) else fs
-        }
-        exhaustiveSubst(e).asInstanceOf[T]
-      case e => e
-    }
-
     /** Joins two declarations. */
     def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls)
 
@@ -834,7 +818,7 @@ object KeYmaeraXArchiveParser {
           case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
         }
 
-        val elaborated = definitions.exhaustiveSubst(problem)
+        val elaborated = problem
         typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 
         // check that definitions and use match
@@ -860,8 +844,8 @@ object KeYmaeraXArchiveParser {
         // report annotations
         (defAnnotations ++ entry.annotations).foreach({
           case Annotation(e: Program, a: Formula) =>
-            val substPrg = definitions.exhaustiveSubst(e)
-            val substFml = definitions.exhaustiveSubst(a)
+            val substPrg = e
+            val substFml = a
             typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
             KeYmaeraXParser.annotationListener(substPrg, substFml)
           case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
