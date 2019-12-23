@@ -4,11 +4,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent, StaticSemantics, SubstitutionPair, USubst}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.collection.immutable.{List, Map}
 import scala.util.Try
 
@@ -78,7 +79,7 @@ trait ProofTreeNode {
   def tacticInputSuggestions(pos: Position): Map[ArgInfo, Expression]
 
   /** The overall provable with the sub-proofs filled in for the local subgoals (potentially expensive). */
-  def provable: ProvableSig = theProvable
+  def provable: ProvableSig = theProvable._1
 
   /** Indicates whether or not the proof from this node downwards is done (potentially expensive). */
   def done: Boolean = provable.isProved
@@ -99,9 +100,9 @@ trait ProofTreeNode {
   def pruneBelow(): Unit
 
   // cached computations
-  private lazy val theProvable = {
-    if (localProvable.isProved) localProvable
-    else if (children.isEmpty) localProvable.sub(goalIdx) //@note if no followup proof step happened, then return stuttering proof step
+  private lazy val theProvable: (ProvableSig, List[SubstitutionPair]) = {
+    if (localProvable.isProved) localProvable -> Nil
+    else if (children.isEmpty) localProvable.sub(goalIdx) -> Nil //@note if no followup proof step happened, then return stuttering proof step
     else {
       // the provable representing our proof step is the localProvable stored in all children (for lookup performance)
       // myProvable := obtain the unique localProvable that all children agree on, because they are off to prove its respective subgoals
@@ -109,15 +110,41 @@ trait ProofTreeNode {
       val myProvable = children.head.localProvable
       assert(children.forall(_.localProvable == myProvable), "All children share the same local provable, only differing in goalIdx")
 
-      // merge finalized provables from all children into myProvable
+      // merge finalized provables from all children into local provable;
+      // if they cannot be merged verbatim, merge by delayed substitution;
       // if they cannot be merged (backsubstitution failed, see SequentialInterpreter Let): keep global
-      if (myProvable.isProved) myProvable
-      else children.map(_.provable).zipWithIndex.foldRight(myProvable)({ case ((sub, i), global) =>
-        if (global.subgoals(i) == sub.conclusion) global(sub, i)
-        else global
+      if (myProvable.isProved) {
+        val substs = children.flatMap(c => c.theProvable._2 ++ makerSubst(c.maker).toList)
+        myProvable -> substs
+      } else children.map(c => (c.theProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
+        val ms = makerSubst(subMaker).toList
+        val preSubsts = (globalSubsts ++ subSubsts)
+        val substs = (preSubsts ++ ms).distinct
+
+        if (global.subgoals(i) == sub.conclusion) global(sub, i) -> substs
+        else if (substs.nonEmpty) {
+          val substGlob = exhaustiveSubst(global, RenUSubst(substs.map(sp => sp.what -> sp.repl)).usubst)
+          substGlob(sub, i) -> substs
+        } else global -> substs
       })
     }
   }
+
+  /** Applies substitutions `s` to provable `p` exhaustively. */
+  @tailrec
+  private def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
+    val substituted = p(s)
+    if (substituted != p) exhaustiveSubst(substituted, s)
+    else substituted
+  }
+
+  /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
+  private def makerSubst(maker: Option[String]): Option[SubstitutionPair] = maker.flatMap(m => {
+    if (m.startsWith("US")) {
+      import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+      Some(m.stripPrefix("US(\"").stripSuffix("\")").asSubstitutionPair)
+    } else None
+  })
 
   private lazy val theDescendants = children ++ children.flatMap(_.allDescendants)
   private lazy val theAncestors = parent.toList ++ parent.map(_.allAncestors).getOrElse(Nil)

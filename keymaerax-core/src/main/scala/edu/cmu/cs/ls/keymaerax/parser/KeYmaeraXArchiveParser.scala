@@ -68,6 +68,23 @@ object KeYmaeraXArchiveParser {
     /** Finds the definition with `name` and index `idx`. */
     def find(name: String, idx: Option[Int] = None): Option[Signature] = decls.get(name -> idx)
 
+    /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
+    def exhaustiveSubst[T <: Expression](arg: T): T = elaborateToFunctions(arg) match {
+      case e: Expression =>
+        @tailrec
+        def exhaustiveSubst(f: Expression): Expression = {
+          val fs = try {
+            USubst(substs)(f)
+          } catch {
+            case ex: SubstitutionClashException =>
+              throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
+          }
+          if (fs != f) exhaustiveSubst(fs) else fs
+        }
+        exhaustiveSubst(e).asInstanceOf[T]
+      case e => e
+    }
+
     /** Turns a function declaration (with defined body) into a substitution pair. */
     private def declAsSubstitutionPair(name: Name, signature: Signature): SubstitutionPair = {
       assert(signature._3.isDefined, "Substitution only for defined functions")
