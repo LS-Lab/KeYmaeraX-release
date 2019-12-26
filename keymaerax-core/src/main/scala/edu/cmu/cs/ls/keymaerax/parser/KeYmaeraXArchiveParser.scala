@@ -45,7 +45,10 @@ object KeYmaeraXArchiveParser {
                                 defs: Declaration,
                                 model: Expression, tactics: List[(String, String, BelleExpr)],
                                 info: Map[String, String]) {
+    /** True if this entry is an exercise, false otherwise. */
     def isExercise: Boolean = kind=="exercise"
+    /** The model with all definitions expanded. */
+    def expandedModel: Expression = defs.exhaustiveSubst(model)
   }
 
   /** Name is alphanumeric name and index. */
@@ -83,6 +86,22 @@ object KeYmaeraXArchiveParser {
         }
         exhaustiveSubst(e).asInstanceOf[T]
       case e => e
+    }
+
+    /** Elaborates variable uses of declared functions. */
+    def elaborateToFunctions[T <: Expression](expr: T): T = {
+      val freeVars = StaticSemantics.freeVars(expr)
+      if (freeVars.isInfinite) {
+        //@note program constant occurs
+        expr
+      } else {
+        val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
+          case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1.contains(Unit)
+          case _ => false
+        })
+        elaboratables.foldLeft(expr)((e, v) =>
+          SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+      }
     }
 
     /** Turns a function declaration (with defined body) into a substitution pair. */
@@ -138,22 +157,6 @@ object KeYmaeraXArchiveParser {
 
       SubstitutionPair(what, repl)
     }
-
-    /** Elaborates variable uses of declared functions. */
-    private def elaborateToFunctions[T <: Expression](expr: T): T = {
-      val freeVars = StaticSemantics.freeVars(expr)
-      if (freeVars.isInfinite) {
-        //@note program constant occurs
-        expr
-      } else {
-        val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
-          case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1.contains(Unit)
-          case _ => false
-        })
-        elaboratables.foldLeft(expr)((e, v) =>
-          SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
-      }
-    }
   }
 
   /** Returns all the quantified variables in an expression. Used in [[typeAnalysis()]] */
@@ -204,7 +207,8 @@ object KeYmaeraXArchiveParser {
       case x: Variable =>
         val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
           case Some((None,sort, _, loc)) => (sort, loc)
-          case Some((Some(domain), sort, _, loc)) => throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
+          case Some((Some(domain), sort, _, loc)) =>
+            throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
           case None => throw ParseException.typeDeclGuessError(name +": undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
             "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
         }
@@ -835,7 +839,7 @@ object KeYmaeraXArchiveParser {
           case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
         }
 
-        val elaborated = problem
+        val elaborated = definitions.elaborateToFunctions(problem)
         typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 
         // check that definitions and use match
@@ -861,8 +865,8 @@ object KeYmaeraXArchiveParser {
         // report annotations
         (defAnnotations ++ entry.annotations).foreach({
           case Annotation(e: Program, a: Formula) =>
-            val substPrg = e
-            val substFml = a
+            val substPrg = definitions.elaborateToFunctions(e)
+            val substFml = definitions.elaborateToFunctions(a)
             typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
             KeYmaeraXParser.annotationListener(substPrg, substFml)
           case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)

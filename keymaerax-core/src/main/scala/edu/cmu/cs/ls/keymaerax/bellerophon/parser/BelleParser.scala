@@ -542,20 +542,23 @@ object BelleParser extends (String => BelleExpr) with Logging {
         case (tok@BelleToken(_: EXPRESSION, loc))::tail =>
           assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
           assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
-          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc)
+          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc) match {
+            case Left(v: Expression) => Left(defs.elaborateToFunctions(v))
+            case v => v
+          }
           nonPosArgCount = nonPosArgCount + 1
           theArg +: arguments(tail)
         case BelleToken(SEARCH_SUCCEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(Find.FindR(0, Some(expr.expression.left.get), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindR(0, Some(defs.elaborateToFunctions(expr.expression.left.get)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_ANTECEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(Find.FindL(0, Some(expr.expression.left.get), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindL(0, Some(defs.elaborateToFunctions(expr.expression.left.get)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_EVERYWHERE, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(new Find(0, Some(expr.expression.left.get), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(new Find(0, Some(defs.elaborateToFunctions(expr.expression.left.get)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(ABSOLUTE_POSITION(posString), _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
           val Fixed(pp, _, _) = parsePositionLocator(posString, loc)
           val what: Formula = expr.expression match {
-            case Left(f: Formula) => f
-            case Left(FuncOf(Function(name, idx, domain, _, _), child)) => PredOf(Function(name, idx, domain, Bool), child)
+            case Left(f: Formula) => defs.elaborateToFunctions(f)
+            case Left(FuncOf(Function(name, idx, domain, _, _), child)) => PredOf(Function(name, idx, domain, Bool), defs.elaborateToFunctions(child))
             case Left(e) => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, loc)
             case e => throw ParseException("Expected formula as exact position locator match, but got " + e.toString, loc)
           }

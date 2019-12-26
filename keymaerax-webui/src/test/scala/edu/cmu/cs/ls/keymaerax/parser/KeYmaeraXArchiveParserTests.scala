@@ -115,7 +115,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -142,7 +143,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -166,7 +168,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("t", None) -> (None, Real, None, UnknownLocation),
         ("x", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
+    entry.model shouldBe "[a;]x<=2".asFormula
+    entry.expandedModel shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -190,7 +193,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "f(x)>g(x,y) & x+2>5".asFormula
+    entry.model shouldBe "f(x)>g(x,y) & h(x)>5".asFormula
+    entry.expandedModel shouldBe "f(x)>g(x,y) & x+2>5".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -210,7 +214,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("f", None) -> (Some(Unit), Real, Some("5".asTerm), UnknownLocation),
         ("p", None) -> (Some(Real), Bool, Some(".>0".asFormula), UnknownLocation)
       )))
-    entry.model shouldBe "5>0".asFormula
+    entry.model shouldBe "p(f())".asFormula
+    entry.expandedModel shouldBe "5>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -636,6 +641,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry.model shouldBe "x>y -> [{x'=1}]x>=y".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"x>=old(x)\", 1)", implyR(1) & dC("x>=old(x)".asFormula)(1)) :: Nil
+    entry.info shouldBe empty
+  }
+
+  it should "elaborate to functions when parsing a tactic" in withQE { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real y; End.
+        | ProgramVariables Real x; End.
+        | Problem x>y -> [{x'=1}]x>=y End.
+        | Tactic "Simple". implyR(1) ; dC("y=old(y)", 1) End.
+        |End.
+      """.stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (Some(Unit), Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y() -> [{x'=1}]x>=y()".asFormula
+    entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
     entry.info shouldBe empty
   }
 
@@ -1209,7 +1238,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry1.model shouldBe "x>y -> x>=y".asFormula
+    entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
+    entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
     entry1.info shouldBe empty
 
@@ -1233,7 +1263,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry2.model shouldBe "x>y -> x>=y".asFormula
+    entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemma("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
@@ -1302,7 +1333,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "\\exists t (t=1 & x*t>y) -> x>=y".asFormula
+    entry.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry.expandedModel shouldBe "\\exists t (t=1 & x*t>y) -> x>=y".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -1736,15 +1768,17 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
   
   it should "report substitution errors" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    val entries = KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> y>=0; End.
         | ProgramVariables Real y; End.
         | Problem [y:=0;]p() End.
         |End.""".stripMargin
-    ) should have message """<somewhere> Definition p() as y>=0 must declare arguments {y}
-                            |Found:    <unknown> at <somewhere>
-                            |Expected: <unknown>""".stripMargin
+    )
+    the [ParseException] thrownBy entries.loneElement.expandedModel should have message
+      """<somewhere> Definition p() as y>=0 must declare arguments {y}
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "report imbalanced parentheses in predicate definitions" in {
