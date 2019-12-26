@@ -1,9 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, ExhaustiveSequentialInterpreter, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.{FormulaArg, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
@@ -368,6 +369,94 @@ class ProofTreeTests extends TacticTestBase {
     tree.openGoals(1).goal shouldBe g1.goal
     tree.tactic shouldBe cut("y=37".asFormula) <(nil, nil)
   }
+
+  "Delayed substitution" should "create a provable with expanded definitions" in withDatabase { db => withMathematica { _ =>
+    val modelContent =
+      """
+        |ArchiveEntry "Delayed Substitution"
+        |
+        |Definitions
+        |  Real sq(Real x) = x*x;
+        |  Bool init(Real x) <-> sq(x)=0;
+        |  Bool inv(Real x)  <-> x>=0;
+        |  Bool safe(Real x) <-> x>=0;
+        |  HP inc ::= { x:=x+1; };
+        |End.
+        |
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |
+        |Problem
+        |  init(x) -> [{inc;inc;inc;}*@invariant(inv(x))]safe(x)
+        |End.
+        |
+        |Tactic "Delayed Substitution Test: Proof"
+        |implyR(1) ; loop("inv(x)", 1) ; <(
+        |  US("init(•)~>sq(•)=0") ; US("inv(•)~>•>=0") ; US("sq(•)~>•*•") ; QE,
+        |  US("inv(•)~>•>=0") ; US("inc;~>x:=x+1;") ; unfold ; QE,
+        |  US("inv(•)~>•>=0") ; US("safe(•)~>•>=0") ; id
+        |  )
+        |End.
+        |
+        |End.
+        |""".stripMargin
+    val proofId = db.createProof(modelContent)
+
+    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
+
+    var tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.runTactic("guest",
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), tactic, "proof", wait = true)
+    tree = DbProofTree(db.db, proofId.toString)
+    val p = tree.root.provable
+    p shouldBe 'proved
+    p.conclusion shouldBe "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent
+  }}
+
+  it should "create a provable with expanded definitions with the lazy interpreter" in withDatabase { db => withMathematica { _ =>
+    val modelContent =
+      """
+        |ArchiveEntry "Delayed Substitution"
+        |
+        |Definitions
+        |  Real sq(Real x) = x*x;
+        |  Bool init(Real x) <-> sq(x)=0;
+        |  Bool inv(Real x)  <-> x>=0;
+        |  Bool safe(Real x) <-> x>=0;
+        |  HP inc ::= { x:=x+1; };
+        |End.
+        |
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |
+        |Problem
+        |  init(x) -> [{inc;inc;inc;}*@invariant(inv(x))]safe(x)
+        |End.
+        |
+        |Tactic "Delayed Substitution Test: Proof"
+        |implyR(1) ; loop("inv(x)", 1) ; <(
+        |  US("init(•)~>sq(•)=0") ; US("inv(•)~>•>=0") ; US("sq(•)~>•*•") ; QE,
+        |  US("inv(•)~>•>=0") ; US("inc;~>x:=x+1;") ; unfold ; QE,
+        |  US("inv(•)~>•>=0") ; US("safe(•)~>•>=0") ; id
+        |  )
+        |End.
+        |
+        |End.
+        |""".stripMargin
+    val proofId = db.createProof(modelContent)
+
+    val tactic = KeYmaeraXArchiveParser(modelContent).head.tactics.head._3
+
+    var tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.runTactic("guest",
+      LazySequentialInterpreter(_, throwWithDebugInfo = false), tactic, "proof", wait = true)
+    tree = DbProofTree(db.db, proofId.toString)
+    val p = tree.root.provable
+    p shouldBe 'proved
+    p.conclusion shouldBe "==> x*x=0 -> [{x:=x+1;x:=x+1;x:=x+1;}*]x>=0".asSequent
+  }}
 
   "Performance" should "not degrade when doing the usual interaction (without tactic extraction) in a loop" in withDatabase { db =>
     val modelContent = "ProgramVariables Real x; End.\nProblem x>0 -> x>0 End."

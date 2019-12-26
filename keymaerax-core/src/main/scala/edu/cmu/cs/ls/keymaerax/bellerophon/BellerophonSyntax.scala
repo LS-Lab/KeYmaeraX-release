@@ -750,10 +750,16 @@ trait BelleValue {
   def prettyString: String = toString
 }
 /** A Provable during a Bellerophon interpreter run, readily paired with an optional list of BelleLabels */
-case class BelleProvable(p : ProvableSig, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
-  if(label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
+case class BelleProvable(p: ProvableSig, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
+  if (label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
   override def toString: String = p.prettyString
   override def prettyString: String = p.prettyString
+}
+
+/** A Provable that was produced with a delayed substitution `subst`. */
+class BelleDelayedSubstProvable(override val p: ProvableSig, override val label: Option[List[BelleLabel]] = None, val subst: USubst) extends BelleProvable(p, label) {
+  override def toString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
+  override def prettyString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
 }
 
 /** Internal: To communicate proof IDs of subproofs opened in the spoon-feeding interpreter in Let between requests.
