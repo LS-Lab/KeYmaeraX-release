@@ -327,10 +327,11 @@ object BelleParser extends (String => BelleExpr) with Logging {
       //region def
       case r :+ BelleToken(EXPAND, loc) => st.input match {
         case BelleToken(expr: EXPRESSION, identLoc) :: tail =>
-          // even predicate and program names will parse as terms when only looking at their names
-          val x = expr.undelimitedExprString.asTerm match {
+          val x: NamedSymbol = expr.undelimitedExprString.asExpr match {
             case v: Variable => v
             case FuncOf(fn, _) => fn
+            case PredOf(fn, _) => fn
+            case p: ProgramConst => p
           }
           defs.substs.find(sp => sp.what match {
             case PredOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
