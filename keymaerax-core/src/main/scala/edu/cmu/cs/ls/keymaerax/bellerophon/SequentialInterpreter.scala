@@ -365,6 +365,13 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
       apply(TactixLibrary.US(USubst(subst)), v)
     case ExpandDef(_) => v
+
+    case Expand(_, s) => apply(TactixLibrary.US(USubst(s :: Nil)), v)
+
+    case ExpandAll(defs) =>
+      apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
+        reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v)
+
     case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
     case named: NamedTactic => apply(named.tactic, v)
 

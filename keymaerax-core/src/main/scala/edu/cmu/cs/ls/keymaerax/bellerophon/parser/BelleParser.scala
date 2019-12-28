@@ -165,7 +165,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
           case Some(BelleToken(ON_ALL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(TACTIC, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(LET, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-          case Some(BelleToken(DEF, _)) => ParserState(stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(EXPANDALLDEFS, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(EXPAND, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
           case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
@@ -323,27 +323,24 @@ object BelleParser extends (String => BelleExpr) with Logging {
       //endregion
 
       //region def
-      case r :+ BelleToken(DEF, loc) => st.input match {
-        case BelleToken(expr: EXPRESSION, exprLoc) :: tail =>
-          val defFml = expr.undelimitedExprString.asFormula
-          val (key, _) = defFml match {
-            case Equal(fn@FuncOf(_, _), t) => (fn, t)
-            case Equiv(p@PredOf(_, _), q) => (p, q)
-          }
-          if (exprDefs.defs.contains(key)) throw ParseException(s"Expression definition: unique '$key' expected in scope", st)
-          exprDefs.defs(key) = DefExpression(defFml)
-          ParserState(r :+ ParsedBelleExpr(DefExpression(defFml), loc.spanTo(exprLoc)), tail)
-      }
-
       case r :+ BelleToken(EXPAND, loc) => st.input match {
-        case BelleToken(expr: EXPRESSION, exprLoc) :: tail =>
-          val key = expr.undelimitedExprString.asExpr
-          exprDefs.get(key) match {
-            case Some(x) => ParserState(r :+ ParsedBelleExpr(ExpandDef(x), loc.spanTo(exprLoc)), tail)
-            case None => throw ParseException(s"Expression definition not found: '$key'", st)
+        case BelleToken(expr: EXPRESSION, identLoc) :: tail =>
+          // even predicate and program names will parse as terms when only looking at their names
+          val x = expr.undelimitedExprString.asTerm match {
+            case v: Variable => v
+            case FuncOf(fn, _) => fn
           }
-
+          defs.substs.find(sp => sp.what match {
+            case PredOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
+            case FuncOf(Function(n, i, _, _, _), _) => n == x.name && i == x.index
+            case ProgramConst(n, _) => n == x.name
+          }) match {
+            case Some(s) => ParserState(r :+ ParsedBelleExpr(Expand(x, s), loc.spanTo(identLoc)), tail)
+            case None => throw ParseException(s"Expression definition not found: '${x.prettyString}'", st)
+          }
       }
+      case r :+ BelleToken(EXPANDALLDEFS, loc) =>
+        ParserState(r :+ ParsedBelleExpr(ExpandAll(defs.substs), loc), st.input)
       //endregion
 
       //region Stars and Repitition
@@ -472,7 +469,8 @@ object BelleParser extends (String => BelleExpr) with Logging {
     case ON_ALL => true
     case LET => true
     case TACTIC => true
-    case DEF => true
+    case EXPANDALLDEFS => true
+    case EXPAND => true
     case _ => false
   }
 

@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Lemma, Real}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
@@ -654,18 +654,20 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic shouldBe (round trip tDef & ApplyDefTactic(tDef))
   }
 
-  //@todo delete from parser
-  "def function" should "parse a simple definition" in {
-    val tactic = BelleParser("def {`f(x)=x^2+1`} ; implyR(1) ; expand {`f(x)`}")
-    val fDef = DefExpression("f(x)=x^2+1".asFormula)
-    tactic shouldBe fDef & (TactixLibrary.implyR(1) & ExpandDef(fDef))
+  "Expand" should "parse a simple definition expand" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expand \"f()\"", None,
+      Declaration(scala.collection.immutable.Map((("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)))))
+    tactic shouldBe TactixLibrary.implyR(1) & Expand(Function("f", None, Unit, Real), "f() ~> 3*2".asSubstitutionPair)
   }
 
-  it should "parse multiple defs" in {
-    val tactic = BelleParser("def {`f(x)=x^2+1`} ; def {`g(x)=x+1`} ; implyR(1) ; expand {`f(x)`}")
-    val fDef = DefExpression("f(x)=x^2+1".asFormula)
-    val gDef = DefExpression("g(x)=x+1".asFormula)
-    tactic shouldBe fDef & (gDef & (TactixLibrary.implyR(1) & ExpandDef(fDef)))
+  "ExpandAll" should "expand multiple definitions" in {
+    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expandAllDefs", None,
+      Declaration(scala.collection.immutable.Map(
+        (("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, Some("4".asTerm), UnknownLocation))
+      )))
+    tactic shouldBe TactixLibrary.implyR(1) & ExpandAll(
+      "f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
   }
 
   //endregion

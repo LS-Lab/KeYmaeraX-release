@@ -84,9 +84,9 @@ private object TACTIC extends BelleTerminal("tactic", "[\\s]")
 
 private object AS extends BelleTerminal("as", "[\\s]")
 
-private object DEF extends BelleTerminal("def", "[\\s]")
+private object EXPAND extends BelleTerminal("expand")
 
-private object EXPAND extends BelleTerminal("expand", "[\\s]")
+private object EXPANDALLDEFS extends BelleTerminal("expandAllDefs")
 
 private object RIGHT_ARROW extends BelleTerminal("=>")
 

@@ -101,7 +101,7 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     IN.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, IN, loc))),
     TACTIC.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, TACTIC, loc))),
     AS.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, AS, loc))),
-    DEF.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, DEF, loc))),
+    EXPANDALLDEFS.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, EXPANDALLDEFS, loc))),
     EXPAND.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, EXPAND, loc))),
     // built-in tactics.
     IDENT.startPattern -> ((s: String, loc: Location, name: String) => Right(consumeTerminalLength(s, IDENT(name), loc))),

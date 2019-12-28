@@ -720,7 +720,19 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
   override def prettyString: String = t.name
 }
 
+/** Expands symbol `name` per substitution `s`. */
+case class Expand(name: NamedSymbol, s: SubstitutionPair) extends BelleExpr {
+  //@note do not serialize `s` since definition provided in the model
+  override def prettyString: String = s"expand ${name.prettyString}"
+}
+/** Expands all definitions from the model provided in `defs`. */
+case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
+  //@note do not serialize `defs` since definition provided in the model
+  override def prettyString: String = "expandAll"
+}
+
 /** Defines an expression (function or predicate) for later expansion. */
+@deprecated("Use let instead of DefExpression+Expand")
 case class DefExpression(exprDef: Formula) extends BelleExpr {
   assert(exprDef match {
     case Equal(FuncOf(_, _), _) => true
@@ -731,6 +743,7 @@ case class DefExpression(exprDef: Formula) extends BelleExpr {
 }
 
 /** Expands a function or predicate. */
+@deprecated("Use let instead of DefExpression+Expand")
 case class ExpandDef(expr: DefExpression) extends BelleExpr {
   override def prettyString: String = "expand \"" + (expr.exprDef match {
     case Equal(fn@FuncOf(_, _), _) => fn.prettyString

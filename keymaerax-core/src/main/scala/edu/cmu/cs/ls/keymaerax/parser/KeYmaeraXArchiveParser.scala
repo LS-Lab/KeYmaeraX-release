@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefExpression, DefTactic, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefExpression, DefTactic, ExpandAll, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefScope}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleLexer, BelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -935,7 +935,13 @@ object KeYmaeraXArchiveParser {
     val tactic = BelleParser.parseTokenStream(tokens,
       DefScope[String, DefTactic](), DefScope[Expression, DefExpression](), None, defs)
 
-    (t.name, t.tacticText, tactic)
+    // backwards compatibility: start with expandAll if model has expansible definitions and tactic does not expand any
+    val fullTactic =
+      if (defs.decls.exists(_._2._3.isDefined) && !t.tacticText.matches("(expand(?!All))|(expandAllDefs)")) {
+        ExpandAll(defs.substs) & tactic
+      } else tactic
+
+    (t.name, t.tacticText, fullTactic)
   }
 
   private def slice(text: String, loc: Location): String = {
