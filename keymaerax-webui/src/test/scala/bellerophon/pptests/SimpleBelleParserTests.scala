@@ -699,7 +699,7 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("hideL(1==\"p(x)\")") shouldBe (round trip TactixLibrary.hideL(Fixed(1, Nil, Some("p(x)".asFormula))))
   }
 
-  it should "not expand definitions when parsing arguments" in {
+  it should "expand definitions when parsing arguments only when asked to" in {
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None, Declaration(Map()))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
@@ -712,18 +712,32 @@ class SimpleBelleParserTests extends TacticTestBase {
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
+
+    inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
+      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      case SeqTactic(ExpandAll(substs), adpt: AppliedDependentPositionTactic) =>
+        substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
+        adpt.pt should have ('inputs ("y>0".asFormula::Nil))
+    }
   }
 
-  it should "not expand definitions in the middle of parsing" in {
+  it should "expand definitions in the middle of parsing only when asked to" in {
     inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
       Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case SeqTactic(_, adpt: AppliedDependentPositionTactic) => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
+
+    inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
+      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      case SeqTactic(ExpandAll(substs), SeqTactic(_, adpt: AppliedDependentPositionTactic)) =>
+        substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
+        adpt.pt should have ('inputs ("y>0".asFormula::Nil))
+    }
   }
 
-  it should "not expand definitions when parsing locators" in {
+  it should "expand definitions when parsing locators only when asked to" in {
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, Declaration(Map()))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
     }
@@ -732,9 +746,16 @@ class SimpleBelleParserTests extends TacticTestBase {
         Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
     }
+
+    inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
+      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
+        substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
+        apt.locator shouldBe Find.FindL(0, Some("s=y".asFormula))
+    }
   }
 
-  it should "not expand definitions when parsing position check locators" in {
+  it should "expand definitions when parsing position check locators only when asked to" in {
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None, Declaration(Map()))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
     }
@@ -742,6 +763,13 @@ class SimpleBelleParserTests extends TacticTestBase {
     inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
       Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
+    }
+
+    inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
+      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))), expandAll = true)) {
+      case SeqTactic(ExpandAll(substs), apt: AppliedPositionTactic) =>
+        substs should contain theSameElementsAs "safeDist() ~> y".asSubstitutionPair :: Nil
+        apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
     }
   }
 

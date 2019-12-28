@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
+
 /**
   * The Bellerophon parser
   *
@@ -27,17 +29,17 @@ object BelleParser extends (String => BelleExpr) with Logging {
     }
   }
 
-  /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators. */
+  /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators and does not expand definitions. */
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
   /** Parses the string `s` as a Bellerophon tactic. Uses optional invariant generator `g` and definitions `defs` to
     * expand function and predicate symbols. */
   def parseWithInvGen(s: String, g: Option[Generator.Generator[GenProduct]] = None,
-                      defs: Declaration = Declaration(Map())): BelleExpr =
+                      defs: Declaration = Declaration(Map()), expandAll: Boolean = false): BelleExpr =
     firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
       case None => try {
-        parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs)
+        parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs, expandAll)
       } catch {
         case e: Throwable =>
           logger.error("Error parsing\n" + s, e)
@@ -103,30 +105,30 @@ object BelleParser extends (String => BelleExpr) with Logging {
     * symbols according to `defs`, and passes the invariant generator `g` on to tactics requiring a generator. */
   def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic],
                        g: Option[Generator.Generator[GenProduct]],
-                       defs: Declaration): BelleExpr = {
-    val result = parseLoop(ParserState(Bottom, toks), tacticDefs, g, defs)
+                       defs: Declaration, expandAll: Boolean): BelleExpr = {
+    val result = parseLoop(ParserState(Bottom, toks), tacticDefs, g, defs, expandAll)
     result.stack match {
-      case Bottom :+ BelleAccept(e) => e
+      case Bottom :+ BelleAccept(e) => if (expandAll) ExpandAll(defs.substs) & e else e
       case _ :+ (BelleErrorItem(msg,loc,st)) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st) //@todo not sure why I need the extra () around ErrorList.
       case _ => throw new AssertionError(s"Parser terminated with unexpected stack ${result.stack}")
     }
   }
 
-  //@tailrec
+  @tailrec
   private def parseLoop(st: ParserState, tacticDefs: DefScope[String, DefTactic],
                         g: Option[Generator.Generator[GenProduct]],
-                        defs: Declaration): ParserState = {
+                        defs: Declaration, expandAll: Boolean): ParserState = {
     logger.debug(s"Current state: $st")
 
     st.stack match {
       case _ :+ (_: FinalBelleItem) => st
-      case _ => parseLoop(parseStep(st, tacticDefs, g, defs), tacticDefs, g, defs)
+      case _ => parseLoop(parseStep(st, tacticDefs, g, defs, expandAll), tacticDefs, g, defs, expandAll)
     }
   }
 
   private def parseInnerExpr(tokens: List[BelleToken], tacticDefs: DefScope[String, DefTactic],
-                             g: Option[Generator.Generator[GenProduct]],
-                             defs: Declaration): (BelleExpr, Location, List[BelleToken]) = tokens match {
+                             g: Option[Generator.Generator[GenProduct]], defs: Declaration,
+                             expandAll: Boolean): (BelleExpr, Location, List[BelleToken]) = tokens match {
     case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
       //@note find matching closing parenthesis, parse inner expr, then continue with remainder
       var openParens = 1
@@ -137,13 +139,13 @@ object BelleParser extends (String => BelleExpr) with Logging {
       })
       val innerExpr = parseTokenStream(inner,
         DefScope(scala.collection.mutable.Map.empty, Some(tacticDefs)),
-        g, defs)
+        g, defs, expandAll)
       (innerExpr, oParenLoc.spanTo(cParenLoc), remainder)
   }
 
   private def parseStep(st: ParserState, tacticDefs: DefScope[String, DefTactic],
                         g: Option[Generator.Generator[GenProduct]],
-                        defs: Declaration): ParserState = {
+                        defs: Declaration, expandAll: Boolean): ParserState = {
     val stack : Stack[BelleItem] = st.stack
 
     stack match {
@@ -290,20 +292,20 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
       //region OnAll combinator
       case r :+ BelleToken(ON_ALL, loc) =>
-        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, g, defs)
+        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, g, defs, expandAll)
         ParserState(r :+ ParsedBelleExpr(OnAll(innerExpr), loc.spanTo(innerLoc)), remainder)
       //endregion
 
       //region ? combinator
       case r :+ BelleToken(OPTIONAL, loc) =>
-        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, g, defs)
+        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, g, defs, expandAll)
         ParserState(r :+ ParsedBelleExpr(Idioms.?(innerExpr), loc.spanTo(innerLoc.end)), remainder)
       //endregion
 
       //region let
       case r :+ BelleToken(LET, loc) => st.input match {
         case BelleToken(OPEN_PAREN, _) :: BelleToken(expr: EXPRESSION, _) :: BelleToken(CLOSE_PAREN, _) :: BelleToken(IN, _) :: tail =>
-          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs)
+          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs, expandAll)
           val (abbrv, value) = expr.undelimitedExprString.asFormula match {
             case Equal(a, v) => (a, v)
             case Equiv(a, v) => (a, v)
@@ -316,7 +318,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
       case r :+ BelleToken(TACTIC, loc) => st.input match {
         case BelleToken(IDENT(name), _) :: BelleToken(AS, _) :: tail =>
           if (tacticDefs.defs.contains(name)) throw ParseException(s"Tactic definition: unique name '$name' expected in scope", st)
-          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs)
+          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs, expandAll)
           tacticDefs.defs(name) = DefTactic(name, innerExpr)
           ParserState(r :+ ParsedBelleExpr(DefTactic(name, innerExpr), loc.spanTo(innerLoc)), remainder)
       }
@@ -390,7 +392,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
             ParserState(r :+ ParsedBelleExpr(parsedExpr, identLoc), st.input)
           }
           else {
-            val (args, remainder) = parseArgumentList(name, st.input, defs)
+            val (args, remainder) = parseArgumentList(name, st.input, defs, expandAll)
 
             //Do our best at computing the entire range of positions that is encompassed by the tactic application.
             val endLoc = remainder match {
@@ -522,7 +524,8 @@ object BelleParser extends (String => BelleExpr) with Logging {
     * @param input A TokenStream containing: arg :: "," :: arg :: "," :: arg :: "," :: ... :: ")" :: remainder
     * @return Parsed arguments and the remainder token string.
     */
-  private def parseArgumentList(codeName: String, input: TokenStream, defs: Declaration): (List[TacticArg], TokenStream) = input match {
+  private def parseArgumentList(codeName: String, input: TokenStream, defs: Declaration,
+                                expandAll: Boolean): (List[TacticArg], TokenStream) = input match {
     case BelleToken(OPEN_PAREN, _) +: rest =>
       val (argList, closeParenAndRemainder) = rest.span(tok => tok.terminal != CLOSE_PAREN)
 
@@ -531,6 +534,8 @@ object BelleParser extends (String => BelleExpr) with Logging {
         throw ParseException("Expected argument list but could not find closing parenthesis.", input.head.location)
       assert(closeParenAndRemainder.head.terminal == CLOSE_PAREN)
       val remainder = closeParenAndRemainder.tail
+
+      def expand[T <: Expression](e: T): T = if (expandAll) defs.exhaustiveSubst(e) else defs.elaborateToFunctions(e)
 
       //Parse all the arguments.
       var nonPosArgCount = 0 //Tracks the number of non-positional arguments that have already been processed.
@@ -541,22 +546,22 @@ object BelleParser extends (String => BelleExpr) with Logging {
           assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
           assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
           val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc) match {
-            case Left(v: Expression) => Left(defs.elaborateToFunctions(v))
+            case Left(v: Expression) => Left(expand(v))
             case v => v
           }
           nonPosArgCount = nonPosArgCount + 1
           theArg +: arguments(tail)
         case BelleToken(SEARCH_SUCCEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(Find.FindR(0, Some(defs.elaborateToFunctions(expr.expression.left.get)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindR(0, Some(expand(expr.expression.left.get)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_ANTECEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(Find.FindL(0, Some(defs.elaborateToFunctions(expr.expression.left.get)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindL(0, Some(expand(expr.expression.left.get)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_EVERYWHERE, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, _)::tail =>
-          Right(new Find(0, Some(defs.elaborateToFunctions(expr.expression.left.get)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(new Find(0, Some(expand(expr.expression.left.get)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(ABSOLUTE_POSITION(posString), _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
           val Fixed(pp, _, _) = parsePositionLocator(posString, loc)
           val what: Formula = expr.expression match {
-            case Left(f: Formula) => defs.elaborateToFunctions(f)
-            case Left(FuncOf(Function(name, idx, domain, _, _), child)) => PredOf(Function(name, idx, domain, Bool), defs.elaborateToFunctions(child))
+            case Left(f: Formula) => expand(f)
+            case Left(FuncOf(Function(name, idx, domain, _, _), child)) => PredOf(Function(name, idx, domain, Bool), expand(child))
             case Left(e) => throw ParseException("Expected formula as exact position locator match, but got " + e.prettyString, loc)
             case e => throw ParseException("Expected formula as exact position locator match, but got " + e.toString, loc)
           }

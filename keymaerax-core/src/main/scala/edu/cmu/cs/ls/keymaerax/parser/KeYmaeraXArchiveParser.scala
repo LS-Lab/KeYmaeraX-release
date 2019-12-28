@@ -932,15 +932,11 @@ object KeYmaeraXArchiveParser {
   private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
 
-    val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs)
+    // backwards compatibility: expandAll if model has expansible definitions and tactic does not expand any, and expand all tactic arguments
+    val expandAll = defs.decls.exists(_._2._3.isDefined) && "(expand(?!All))|(expandAllDefs)".r.findFirstIn(t.tacticText).isEmpty
+    val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs, expandAll)
 
-    // backwards compatibility: start with expandAll if model has expansible definitions and tactic does not expand any
-    val fullTactic =
-      if (defs.decls.exists(_._2._3.isDefined) && !t.tacticText.matches("(expand(?!All))|(expandAllDefs)")) {
-        ExpandAll(defs.substs) & tactic
-      } else tactic
-
-    (t.name, t.tacticText, fullTactic)
+    (t.name, t.tacticText, tactic)
   }
 
   private def slice(text: String, loc: Location): String = {
