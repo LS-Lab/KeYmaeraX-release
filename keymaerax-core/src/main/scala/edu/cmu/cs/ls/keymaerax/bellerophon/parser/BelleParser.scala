@@ -37,7 +37,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
     firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
       case None => try {
-        parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), DefScope[Expression, DefExpression](), g, defs)
+        parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), g, defs)
       } catch {
         case e: Throwable =>
           logger.error("Error parsing\n" + s, e)
@@ -102,9 +102,9 @@ object BelleParser extends (String => BelleExpr) with Logging {
   /** Parses the token stream `toks`. Expands tactic abbreviations according to `tacticDefs`, function and predicate
     * symbols according to `defs`, and passes the invariant generator `g` on to tactics requiring a generator. */
   def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic],
-                       exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
+                       g: Option[Generator.Generator[GenProduct]],
                        defs: Declaration): BelleExpr = {
-    val result = parseLoop(ParserState(Bottom, toks), tacticDefs, exprDefs, g, defs)
+    val result = parseLoop(ParserState(Bottom, toks), tacticDefs, g, defs)
     result.stack match {
       case Bottom :+ BelleAccept(e) => e
       case _ :+ (BelleErrorItem(msg,loc,st)) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st) //@todo not sure why I need the extra () around ErrorList.
@@ -114,18 +114,18 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
   //@tailrec
   private def parseLoop(st: ParserState, tacticDefs: DefScope[String, DefTactic],
-                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
+                        g: Option[Generator.Generator[GenProduct]],
                         defs: Declaration): ParserState = {
     logger.debug(s"Current state: $st")
 
     st.stack match {
       case _ :+ (_: FinalBelleItem) => st
-      case _ => parseLoop(parseStep(st, tacticDefs, exprDefs, g, defs), tacticDefs, exprDefs, g, defs)
+      case _ => parseLoop(parseStep(st, tacticDefs, g, defs), tacticDefs, g, defs)
     }
   }
 
   private def parseInnerExpr(tokens: List[BelleToken], tacticDefs: DefScope[String, DefTactic],
-                             exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
+                             g: Option[Generator.Generator[GenProduct]],
                              defs: Declaration): (BelleExpr, Location, List[BelleToken]) = tokens match {
     case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
       //@note find matching closing parenthesis, parse inner expr, then continue with remainder
@@ -137,12 +137,12 @@ object BelleParser extends (String => BelleExpr) with Logging {
       })
       val innerExpr = parseTokenStream(inner,
         DefScope(scala.collection.mutable.Map.empty, Some(tacticDefs)),
-        DefScope(scala.collection.mutable.Map.empty, Some(exprDefs)), g, defs)
+        g, defs)
       (innerExpr, oParenLoc.spanTo(cParenLoc), remainder)
   }
 
   private def parseStep(st: ParserState, tacticDefs: DefScope[String, DefTactic],
-                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
+                        g: Option[Generator.Generator[GenProduct]],
                         defs: Declaration): ParserState = {
     val stack : Stack[BelleItem] = st.stack
 
@@ -290,20 +290,20 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
       //region OnAll combinator
       case r :+ BelleToken(ON_ALL, loc) =>
-        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, exprDefs, g, defs)
+        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, g, defs)
         ParserState(r :+ ParsedBelleExpr(OnAll(innerExpr), loc.spanTo(innerLoc)), remainder)
       //endregion
 
       //region ? combinator
       case r :+ BelleToken(OPTIONAL, loc) =>
-        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, exprDefs, g, defs)
+        val (innerExpr, innerLoc, remainder) = parseInnerExpr(st.input, tacticDefs, g, defs)
         ParserState(r :+ ParsedBelleExpr(Idioms.?(innerExpr), loc.spanTo(innerLoc.end)), remainder)
       //endregion
 
       //region let
       case r :+ BelleToken(LET, loc) => st.input match {
         case BelleToken(OPEN_PAREN, _) :: BelleToken(expr: EXPRESSION, _) :: BelleToken(CLOSE_PAREN, _) :: BelleToken(IN, _) :: tail =>
-          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, exprDefs, g, defs)
+          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs)
           val (abbrv, value) = expr.undelimitedExprString.asFormula match {
             case Equal(a, v) => (a, v)
             case Equiv(a, v) => (a, v)
@@ -316,7 +316,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
       case r :+ BelleToken(TACTIC, loc) => st.input match {
         case BelleToken(IDENT(name), _) :: BelleToken(AS, _) :: tail =>
           if (tacticDefs.defs.contains(name)) throw ParseException(s"Tactic definition: unique name '$name' expected in scope", st)
-          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, exprDefs, g, defs)
+          val (innerExpr, innerLoc, remainder) = parseInnerExpr(tail, tacticDefs, g, defs)
           tacticDefs.defs(name) = DefTactic(name, innerExpr)
           ParserState(r :+ ParsedBelleExpr(DefTactic(name, innerExpr), loc.spanTo(innerLoc)), remainder)
       }

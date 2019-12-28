@@ -350,21 +350,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     }
 
     case DefTactic(_, _) => v //@note noop, but included for serialization purposes
-    case DefExpression(Equal(fn@FuncOf(name, arg), t)) =>
-      val subst = arg match {
-        case Nothing => SubstitutionPair(fn, t)::Nil
-        case term => SubstitutionPair(FuncOf(name, DotTerm()), t.replaceFree(term, DotTerm()))::Nil
-      }
-      //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
-      apply(TactixLibrary.US(USubst(subst)), v)
-    case DefExpression(Equiv(p@PredOf(name, arg), q)) =>
-      val subst = arg match {
-        case Nothing => SubstitutionPair(p, q)::Nil
-        case term => SubstitutionPair(FuncOf(name, DotTerm()), q.replaceFree(term, DotTerm()))::Nil
-      }
-      //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
-      apply(TactixLibrary.US(USubst(subst)), v)
-    case ExpandDef(_) => v
 
     case Expand(_, s) => apply(TactixLibrary.US(USubst(s :: Nil)), v)
 

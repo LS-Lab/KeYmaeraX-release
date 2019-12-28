@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefExpression, DefTactic, ExpandAll, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic, ExpandAll, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefScope}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleLexer, BelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -932,8 +932,7 @@ object KeYmaeraXArchiveParser {
   private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
 
-    val tactic = BelleParser.parseTokenStream(tokens,
-      DefScope[String, DefTactic](), DefScope[Expression, DefExpression](), None, defs)
+    val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs)
 
     // backwards compatibility: start with expandAll if model has expansible definitions and tactic does not expand any
     val fullTactic =
