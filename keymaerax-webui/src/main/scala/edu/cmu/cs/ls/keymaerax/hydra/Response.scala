@@ -1022,6 +1022,20 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def getJson = JsArray(derivationInfos.map(derivationJson):_*)
 }
 
+case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, SubstitutionPair)]) extends Response {
+  private def getDefJson(n: NamedSymbol, s: SubstitutionPair): JsValue = {
+    JsObject(
+      "symbol" -> JsString(n.prettyString),
+      "definition" -> JsObject(
+        "what" -> JsString(s.what.prettyString),
+        "repl" -> JsString(s.repl.prettyString)
+      )
+    )
+  }
+
+  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2)):_*)
+}
+
 class PruneBelowResponse(item: AgendaItem) extends Response {
   def getJson: JsObject = JsObject(
     "agendaItem" -> Helpers.itemJson(item)._2

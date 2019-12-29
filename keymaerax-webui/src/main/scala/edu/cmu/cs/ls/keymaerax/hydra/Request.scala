@@ -16,10 +16,10 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -1674,15 +1674,14 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
   }
 }
 
-class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position)
+class GetApplicableAxiomsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
-
+    if (tree.isClosed) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
-      case Some((tactics, inputs)) => new ApplicableAxiomsResponse(tactics, inputs) :: Nil
-      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     }
   }
 }
@@ -1707,6 +1706,32 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
       case None => DerivationInfo.allInfo.map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
     }
     ApplicableAxiomsResponse(infos, Map.empty) :: Nil
+  }
+}
+
+/** Gets the definitions that can be expanded at node `nodeId`. */
+class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+  extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    if (tree.isClosed) return ApplicableDefinitionsResponse(Nil) :: Nil
+
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
+      case Some(symbols) =>
+        val expansions = symbols.flatMap(s => proofSession.defs.find(s.name, s.index).
+          map(s -> _)).filter(_._2._3.isDefined).map({
+          case (s: Function, (domain, sort, Some(repl), _)) =>
+            val dots = domain.map({ case Unit => Nothing case s: Tuple => s.toDots(0)._1 case s => DotTerm(s) }).getOrElse(Nothing)
+            sort match {
+              case Real => Expand(s, SubstitutionPair(FuncOf(s, dots), repl))
+              case Bool => Expand(s, SubstitutionPair(PredOf(s, dots), repl))
+            }
+          case (s: ProgramConst, (_, _, Some(repl: Program), _)) => Expand(s, SubstitutionPair(s, repl))
+        })
+        ApplicableDefinitionsResponse(expansions.map(e => e.name -> e.s).toList.sortBy(_._1)) :: Nil
+      case None => ApplicableDefinitionsResponse(Nil) :: Nil
+    }
   }
 }
 
@@ -1979,9 +2004,11 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
             try {
               val proofSession = session(proofId).asInstanceOf[ProofSession]
-              val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator),
-                //@note do not auto-expand definitions
-                KeYmaeraXArchiveParser.Declaration(Map.empty))
+              val tacticString = fullExpr(sequent)
+              val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator),
+                // expand on demand, but do not auto-expand definitions
+                if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(tacticString).isDefined) proofSession.defs
+                else KeYmaeraXArchiveParser.Declaration(Map.empty))
 
               val appliedExpr: BelleExpr = (pos, pos2, expr) match {
                 case (None, None, _: AtPosition[BelleExpr]) =>
@@ -2637,6 +2664,7 @@ object RequestHelper {
   def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator]): Either[String,DerivationInfo] = {
     val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
+    val expandPattern = "(expand).*".r
     tacticId.toLowerCase match {
       case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
         sequent.sub(pos.get) match {
@@ -2655,6 +2683,7 @@ object RequestHelper {
               case None => Left(tacticId)
             }
         }
+      case expandPattern(_) if pos.isEmpty && pos2.isEmpty => Left(tacticId)
       case _ => Right(DerivationInfo.ofCodeName(tacticId))
     }
   }

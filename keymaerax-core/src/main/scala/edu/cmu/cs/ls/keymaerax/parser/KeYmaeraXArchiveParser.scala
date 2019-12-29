@@ -108,15 +108,6 @@ object KeYmaeraXArchiveParser {
     private def declAsSubstitutionPair(name: Name, signature: Signature): SubstitutionPair = {
       assert(signature._3.isDefined, "Substitution only for defined functions")
 
-      /** Converts sort `s` into nested pairs of DotTerms. Returns the nested dots and the next unused dot index. */
-      def toDots(s: Sort, idx: Int): (Term, Int) = s match {
-        case Real => (DotTerm(s, Some(idx)), idx+1)
-        case Tuple(l, r) =>
-          val (lDots, lNextIdx) = toDots(l, idx)
-          val (rDots, rNextIdx) = toDots(r, lNextIdx)
-          (Pair(lDots, rDots), rNextIdx)
-      }
-
       /** Returns the dots used in expression `e`. */
       def dotsOf(e: Expression): Set[DotTerm] = {
         val dots = scala.collection.mutable.Set[DotTerm]()
@@ -136,7 +127,7 @@ object KeYmaeraXArchiveParser {
 
       val (arg, sig) = signature._1 match {
         case Some(Unit) => (Nothing, Unit)
-        case Some(s@Tuple(_, _)) => (toDots(s, 0)._1, s)
+        case Some(s@Tuple(_, _)) => (s.toDots(0)._1, s)
         case Some(s) => (DotTerm(s), s)
         case None => (Nothing, Unit)
       }

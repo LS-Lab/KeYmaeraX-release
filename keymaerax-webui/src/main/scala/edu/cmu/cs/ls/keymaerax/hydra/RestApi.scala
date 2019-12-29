@@ -588,6 +588,13 @@ object RestApi extends Logging {
       }
     }}}
 
+    val definitionsList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment/ "listDefinitions") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new GetApplicableDefinitionsRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
     val sequentList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "listStepSuggestions") { (userId, proofId, nodeId) => { pathEnd {
       get {
         val request = new GetSequentStepSuggestionRequest(database, userId, proofId, nodeId)
@@ -1227,6 +1234,7 @@ object RestApi extends Logging {
     proofNodeSequent      ::
     axiomList             ::
     sequentList           ::
+    definitionsList       ::
     twoPosList            ::
     derivationInfo        ::
     doAt                  ::
