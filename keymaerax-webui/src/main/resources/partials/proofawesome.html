@@ -119,12 +119,36 @@
                                                 popover-class="k4-rulemenu-helppopover"
                                                 popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span></a></li>
-                        <li class="nav-item"><a ng-click="undoLastProofStep()"
-                               data-intro="<center>Undo</center>" data-position="top"
-                               uib-popover-template="fetchRuleHelp('undo')"
-                               popover-class="k4-rulemenu-helppopover"
-                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                            <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
+                        <li class="nav-item">
+                            <span>
+                                <span ng-click="undoLastProofStep()"
+                                      data-intro="<center>Undo</center>" data-position="top"
+                                      uib-popover-template="fetchRuleHelp('undo')"
+                                      popover-class="k4-rulemenu-helppopover"
+                                      popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span>
+                                    </span>
+                                <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                                   aria-haspopup="true" aria-expanded="false">
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-right">
+                                    <li><a ng-click="undoLastProofStep()"
+                                           data-intro="<center>Undo</center>" data-position="top"
+                                           uib-popover-template="fetchRuleHelp('undo')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
+                                    </li>
+                                    <li><a ng-controller="ModelProofCreateCtrl" ng-click="createProof(agenda.modelId, '', '')"
+                                           data-intro="<center>Restart</center>" data-position="top"
+                                           uib-popover-template="fetchRuleHelp('restart')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-eraser"><span class="k4-btn-optional-text"> Restart</span></span></a>
+                                    </li>
+                                </ul>
+                            </span>
                         </li>
                         <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
                             data-intro="<center>Switch edit/prove</center>" data-position="top"
