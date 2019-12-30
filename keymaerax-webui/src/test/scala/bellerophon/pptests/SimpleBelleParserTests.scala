@@ -661,13 +661,38 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   "ExpandAll" should "expand multiple definitions" in {
-    val tactic = BelleParser.parseWithInvGen("implyR(1) ; expandAllDefs", None,
+    val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
       Declaration(scala.collection.immutable.Map(
         (("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)),
         (("g", None), (Some(Unit), Real, Some("4".asTerm), UnknownLocation))
       )))
-    tactic shouldBe TactixLibrary.implyR(1) & ExpandAll(
-      "f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
+    tactic match {
+      case ExpandAll(defs) => defs should contain theSameElementsAs("f() ~> 3*2".asSubstitutionPair :: "g() ~> 4".asSubstitutionPair :: Nil)
+    }
+  }
+
+  it should "topologically sort definitions" in {
+    val tactic = BelleParser.parseWithInvGen("expandAllDefs", None,
+      Declaration(scala.collection.immutable.Map(
+        (("h", None), (Some(Unit), Real, Some("g()*2".asTerm), UnknownLocation)),
+        (("i", None), (Some(Unit), Real, Some("1".asTerm), UnknownLocation)),
+        (("f", None), (Some(Unit), Real, Some("3*2".asTerm), UnknownLocation)),
+        (("g", None), (Some(Unit), Real, Some("f()+4".asTerm), UnknownLocation)),
+        (("j", None), (Some(Unit), Trafo, Some("x:=g()+i();".asProgram), UnknownLocation))
+      )))
+    tactic match {
+      case ExpandAll(defs) =>
+        defs should contain theSameElementsAs("h() ~> g()*2".asSubstitutionPair :: "j; ~> x:=g()+i();".asSubstitutionPair ::
+          "i() ~> 1".asSubstitutionPair :: "g() ~> f()+4".asSubstitutionPair :: "f() ~> 3*2".asSubstitutionPair :: Nil)
+        val hi = defs.indexOf("h() ~> g()*2".asSubstitutionPair)
+        val ji = defs.indexOf("j; ~> x:=g()+i();".asSubstitutionPair)
+        val ii = defs.indexOf("i() ~> 1".asSubstitutionPair)
+        val gi = defs.indexOf("g() ~> f()+4".asSubstitutionPair)
+        val fi = defs.indexOf("f() ~> 3*2".asSubstitutionPair)
+        hi should be < gi
+        ji should (be < gi and be < ii)
+        gi should be < fi
+    }
   }
 
   //endregion

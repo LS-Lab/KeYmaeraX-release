@@ -7,12 +7,12 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.InputStream
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic, ExpandAll, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefScope}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleLexer, BelleParser}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, Idioms, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.btactics.{DependencyAnalysis, ExpressionTraversal, Idioms, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 
@@ -57,13 +57,20 @@ object KeYmaeraXArchiveParser {
   type Signature = (Option[Sort], Sort, Option[Expression], Location)
   /** A parsed declaration, which assigns a signature to names */
   case class Declaration(decls: Map[Name, Signature]) {
-    /** The declarations as substitution pair. */
-    lazy val substs: List[SubstitutionPair] = decls.filter(_._2._3.isDefined).
-      map((declAsSubstitutionPair _).tupled).toList
+    /** The declarations as topologically sorted substitution pairs. */
+    lazy val substs: List[SubstitutionPair] = topSortDefs(decls.filter(_._2._3.isDefined).
+      map((declAsSubstitutionPair _).tupled).toList)
 
     /** Declared names and signatures as functions. */
     lazy val asFunctions: List[Function] = decls.map({ case ((name, idx), (domain, codomain, _, _)) =>
       Function(name, idx, domain.getOrElse(Unit), codomain) }).toList
+
+    /** Topologically sorts the substitution pairs in `defs`. */
+    def topSortDefs(defs: List[SubstitutionPair]): List[SubstitutionPair] = {
+      def symbol(s: SubstitutionPair): NamedSymbol = s.what match { case FuncOf(fn, _) => fn case PredOf(fn, _) => fn case p: ProgramConst => p }
+      val sortedNames = DependencyAnalysis.dfs[NamedSymbol](defs.map(s => symbol(s) -> StaticSemantics.signature(s.repl)).toMap)
+      defs.sortBy(s => sortedNames.indexOf(symbol(s)))
+    }
 
     /** Joins two declarations. */
     def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls)
