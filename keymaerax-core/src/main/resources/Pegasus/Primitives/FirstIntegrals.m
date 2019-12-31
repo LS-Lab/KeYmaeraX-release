@@ -12,11 +12,11 @@ Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 BeginPackage[ "FirstIntegrals`"];
 
 FindFirstIntegrals::usage="
-FindFirstIntegral[deg_Integer?NonNegative, vars_List, vectorField_List] 
-Method of undetermined coefficients relies on Solve";
+FindFirstIntegrals[{vectorField_List,vars_List,domain},deg_Integer?NonNegative] 
+Uses the method of undetermined coefficients relying on Solve";
 
 FindFirstIntegralsMatringe::usage="
-FindFirstIntegrals[deg_Integer?NonNegative, vars_List, vectorField_List] 
+FindFirstIntegrals[{vectorField_List,vars_List,domain},deg_Integer?NonNegative] 
 computes a list of polynomial first integrals (up to some given maximum
 polynomial total degree in the variables 'vars') for the system of ODEs
 described by vectorField. The variable order MATTERS, e.g. if vars={x,y} and
@@ -25,7 +25,7 @@ y'=x+y-2. Changing the order of variables or entries in vectorField will
 generally result in different systems of ODEs.";
 
 FindFirstIntegralsPDE::usage="
-FindFirstIntegralsPDE[vars_List, vectorField_List] 
+FindFirstIntegralsPDE[{vectorField_List,vars_List,domain}] 
 computes a list of POTENTIALLY NON-POLYNOMIAL first integrals in the variables 'vars'
 for the system of ODEs described by vectorField. The variable order MATTERS, e.g. if vars={x,y} and
 vectorField={x^2+1, x+y-2}, this is interpreted as the system of ODEs x'=x^2+1,
@@ -69,7 +69,7 @@ span, polys]
 
 
 (* Implementation of the Matringe-Moura-Rebiha polynomial first integral generation method *)
-FindFirstIntegralsMatringe[deg_Integer?NonNegative,vars_List,vectorField_List]:=Module[{MonBas,LieDMonBas,LieDMonBasCoeffs,NewBasisMat,MD,FIs,
+FindFirstIntegralsMatringe[{vectorField_List,vars_List,domain_},deg_Integer?NonNegative]:=Module[{MonBas,LieDMonBas,LieDMonBasCoeffs,NewBasisMat,MD,FIs,
 (* Maximum total polynomial degree of the first integral being sought *)
 r=deg, 
 (* Maximum total polynomial degree of the vector field *)
@@ -86,13 +86,13 @@ NewBasisMat=Table[GenMonomialBasis[vars,r+d-1], {i,1,Length[MonBas]}];
 MD=Transpose[Table[Map[If[ListQ[#],0,#]&,NewBasisMat[[j]]/.LieDMonBasCoeffs[[j]]], {j,1,Length[MonBas]}]];
 (* Turn the null space vectors into polynomials in the monomial basis and return the result *)
 FIs=Map[Apply[Plus,Times[MonBas,#]]&,NullSpace[MD]];
-(* Return  non-constant first integrals *)
+(* Return non-constant first integrals *)
 Rest[FIs]
 ]
 
 
-
-FindFirstIntegrals[deg_Integer?NonNegative,vars_List,vectorField_List]:=Module[{MonBas,TemplateCoeffs,FITemplate,LieDTemplate,problem,sol,FIs,
+FindFirstIntegrals[{vectorField_List,vars_List,domain_},deg_Integer?NonNegative]:=Module[
+{MonBas,TemplateCoeffs,FITemplate,LieDTemplate,problem,probsimp,sol,FIs,
 (* Maximum total polynomial degree of the first integral being sought *)
 r=deg, 
 (* Maximum total polynomial degree of the vector field *)
@@ -103,10 +103,12 @@ MonBas=MonomialList[FromCoefficientRules[Map[Rule[#,1]&,GenMonomialBasis[vars,r]
 TemplateCoeffs=Table[Symbol["COEFF"<>ToString[i]], {i,1,Length[MonBas]}];
 FITemplate=Evaluate[TemplateCoeffs.MonBas];
 (* Compute the Lie derivatives of the monomial basis *)
-LieDTemplate=Expand[Grad[FITemplate,vars].vectorField];
+LieDTemplate=Assuming[domain,Simplify[Expand[Grad[FITemplate,vars].vectorField]]];
 (* Equate the template derivative coefficients to zero and solve a system of linear equations *)
 problem=Map[#==0&,DeleteDuplicates[Flatten[CoefficientList[LieDTemplate,vars]]]];
-sol=Solve[problem, TemplateCoeffs];
+(* Simplify the problem using Mathematica's simplifier *)
+probsimp=Assuming[domain,Simplify[problem]];
+sol=Solve[probsimp, TemplateCoeffs,Reals];
 (* Use the solutions to create instances of the original template *)
 FIs=(FITemplate/.sol);
 (* Filter out the first integrals *)
@@ -116,7 +118,7 @@ Select[DeleteDuplicates[Grad[FIs, TemplateCoeffs]//Flatten], Not[NumericQ[#]]&]
 
 
 (* Implementation of a first integral generation method based on solving PDEs *)
-FindFirstIntegralsPDE[vars_List,vectorField_List]:=Module[{FIC,PDE,OverReals,solution,integrals},
+FindFirstIntegralsPDE[{vectorField_List,vars_List,domain_}]:=Module[{FIC,PDE,OverReals,solution,integrals},
 (* Set FIC to be the First Integral Candidate in the state variables *)
 FIC=FICandidate[Apply[Sequence,vars]];
 (* Formulate PDE problem: seeking function in the state variables, i.e. (\[PartialD]FIC/\[PartialD]x)*x' + (\[PartialD]FIC/\[PartialD]y)*y' + etc. = 0 *)
