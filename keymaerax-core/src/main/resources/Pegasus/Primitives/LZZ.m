@@ -12,7 +12,7 @@ InfS::usage="InfS[S,f,vars] Computes the local progress formula for S wrt f, var
 IvInfS::usage="IvInfS[S,f,vars] Same as InfS except for -f instead of f";
 InvS::usage="InvS[S,f,H] LZZ decision procedure determining continuous invariance of semi-algebaic set S 
 under the flow of a polynomial vector field f with evolution constraint H.";
-InvSFast::usage="InvSFast[S,f,H] Same as InvS but does not run the full check. Sound but incomplete.";
+InvSFast::usage="InvSF[S,f,H] Same as InvS but does not run the full check. Sound but incomplete.";
 
 
 Begin["`Private`"];
