@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 import KMComparator._
 import MKComparator._
-import edu.cmu.cs.ls.keymaerax.core.{BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Expression, Function, Number, Quantified, Real, Tuple, UnaryCompositeFormula, UnaryCompositeTerm}
+import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Expression, Function, Number, Quantified, Real, Tuple, UnaryCompositeFormula, UnaryCompositeTerm}
 
 /**
   * Mathematica conversion stuff.
@@ -166,6 +166,7 @@ class MKComparator[T](val l: T) {
     case (lt: UnaryCompositeTerm, rt: UnaryCompositeTerm) if lt.getClass == rt.getClass => lt.child === rt.child
     case (lt: BinaryCompositeTerm, rt: BinaryCompositeTerm) if lt.getClass == rt.getClass => lt.left === rt.left && lt.right === rt.right
     case (lq: Quantified, rq: Quantified) if lq.getClass == rq.getClass => lq.vars == rq.vars && lq.child === rq.child
+    case (lf: ApplicationOf, rf: ApplicationOf) if lf.func == rf.func => lf.child === rf.child
     case (Number(lv), Divide(Number(rn), Number(rd))) => lv == rn/rd
     case (Divide(Number(ln), Number(ld)), Number(rv)) => ln/ld == rv
     case _ => l == r
