@@ -10,7 +10,17 @@
         <div class="panel-heading">
             <h4 class="panel-title"><i class="fa fa-exclamation-circle"></i> Formula not valid, found a counter-example</h4>
         </div>
-        <div class="panel-body"><span ng-bind-html="cexFormula"></span></div>
+        <div class="panel-body">
+            <p>
+            <span ng-bind-html="cexFormula"></span>
+            </p>
+            <p class="input-group">
+            <span class="input-group-addon">What if</span>
+            <input type="text" class="form-control" ng-model="assumptions.additional"
+                   name="assumptions" id="assumptions" placeholder="additional assumptions"/>
+            <a class="input-group-btn btn btn-default" ng-click="counterexample()">Recalculate</a>
+            </p>
+        </div>
     </div>
 
     <div class="panel panel-default" ng-if="cexValues.length > 0">

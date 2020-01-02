@@ -27,12 +27,15 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             //@todo duplicate with provingawesome.js#getCounterExample
-            scope.getCounterExample = function() {
+            scope.getCounterExample = function(additionalAssumptions) {
+                //@todo timeout request canceller
                 spinnerService.show('counterExampleSpinner');
-                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample')
+                var additional = additionalAssumptions ? additionalAssumptions : {};
+                var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample'
+                $http.get(url, { params: { assumptions: additional } })
                     .then(function(response) {
                       var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
-                      $uibModal.open({
+                      var modalInstance = $uibModal.open({
                         templateUrl: 'templates/counterExample.html',
                         controller: 'CounterExampleCtrl',
                         size: dialogSize,
@@ -44,6 +47,23 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                           speculatedValues: function() { return response.data.speculatedValues; }
                         }
                       });
+                      modalInstance.result.then(
+                        function(result) {
+                          // dialog closed with request to recalculate using additional assumptions
+                          $scope.getCounterExample(result);
+                        },
+                        function() { /* dialog cancelled */ }
+                      );
+                    })
+                    .catch(function(err) {
+                      $uibModal.open({
+                        templateUrl: 'templates/parseError.html',
+                        controller: 'ParseErrorCtrl',
+                        size: 'md',
+                        resolve: {
+                          model: function () { return undefined; },
+                          error: function () { return err.data; }
+                      }});
                     })
                     .finally(function() { spinnerService.hide('counterExampleSpinner'); });
             }

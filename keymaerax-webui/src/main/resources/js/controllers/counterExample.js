@@ -10,9 +10,16 @@ angular.module('keymaerax.controllers').controller('CounterExampleCtrl',
   $scope.cexFormula = cexFormula;
   $scope.cexValues = cexValues;
   $scope.speculatedValues = speculatedValues;
+  $scope.assumptions = {
+    additional: undefined
+  }
 
   $scope.cancel = function() {
     $uibModalInstance.dismiss('ok');
+  }
+
+  $scope.counterexample = function() {
+    $uibModalInstance.close($scope.assumptions);
   }
 
 });

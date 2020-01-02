@@ -222,7 +222,7 @@ class FailedRequest(userId: String, msg: String, cause: Throwable = null) extend
   def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
-class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, assumptions: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t => t match {
         case FuncOf(func, _) if fn.sort == Real => func == fn
@@ -245,6 +245,14 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
   }
 
   override protected def doResultingResponses(): List[Response] = {
+    val json = assumptions.parseJson.asJsObject.fields.get("additional")
+    val additionalAssumptions: Option[Formula] = try {
+      json.map(_.convertTo[String].asFormula)
+    } catch {
+      case ex: ParseException => return ParseErrorResponse("Expected assumptions as a formula, but got " + json.getOrElse("<empty>"),
+        ex.expect, ex.found, ex.getDetails, ex.loc, ex) :: Nil
+    }
+
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => new ErrorResponse("Unknown node " + nodeId)::Nil
@@ -270,8 +278,12 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
               val skolemized = TactixLibrary.proveBy(sequent,
                 SaturateTactic(TactixLibrary.alphaRule | TactixLibrary.allR('R) | TactixLibrary.existsL('L)))
               val fml = skolemized.subgoals.map(_.toFormula).reduceRight(And)
+              val withAssumptions = additionalAssumptions match {
+                case Some(a) => Imply(a, fml)
+                case None => fml
+              }
               try {
-                findCounterExample(fml, cexTool) match {
+                findCounterExample(withAssumptions, cexTool) match {
                   //@todo return actual sequent, use collapsiblesequentview to display counterexample
                   case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
                   case None => new CounterExampleResponse("cex.none") :: Nil
