@@ -18,15 +18,15 @@
               <i class="fa fa-expand"></i> Expand Definitions
           </a>
           <ul class="dropdown-menu" uib-dropdown-menu aria-labelledby="definitions-dropdown">
+              <li>
+                  <a href ng-click="onTactic(undefined, 'expandAllDefs')">Expand all<code class="pull-right">expandAllDefs</code></a>
+              </li>
+              <li class="divider"></li>
               <li ng-repeat="d in definitions">
                   <a href ng-click='onTactic(undefined, "expand \"" + d.symbol + "\"")'>
                       <span>{{d.definition.what}}</span>~><span>{{d.definition.repl}}</span>
                       <code class="pull-right">expand {{d.symbol}}</code>
                   </a>
-              </li>
-              <li class="divider"></li>
-              <li>
-                  <a href ng-click="onTactic(undefined, 'expandAllDefs')">Expand all<code class="pull-right">expandAllDefs</code></a>
               </li>
           </ul>
         </span>
