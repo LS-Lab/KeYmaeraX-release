@@ -17,10 +17,10 @@ All logical and program operators except `<-` and `<->` are right-associative.
 
 ==Terms==
 
-    T ::= x | x' | num | ∙ | f(T) | f() | T^T | T*T | T/T | -T | T+T | T-T | (T)' | (T) 
+    T ::= x | x' | num | ∙ | f(T) | f() | T^T | T*T | T/T | -T | T+T | T-T | (T)' |(T,T) | (T) 
 
 Operators are left-associative, i.e. x-y-z is (x-y)-z.
-Except that `T^T` is right-associative, i.e. x^4^2 is x^(4^2)
+Except that `T^T` and pairs are right-associative, i.e. x^4^2 is x^(4^2)
 
 ==Formulas==
 
@@ -36,7 +36,7 @@ Except that `<->` is non-associative.
     P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | {P} | if (F) {P} else {P} | if (F) {P}
 
 Operators are right-associative.
-Even the invisible `;` in P P is right-associative, i.e. x:=1;x:=2;x:=3; is x:=1;{x:=2;x:=3;}
+Even the invisible `;` in `P P` is right-associative, i.e. x:=1;x:=2;x:=3; is x:=1;{x:=2;x:=3;}
 
 ==Differential Programs==
 
@@ -57,7 +57,7 @@ The grammar of the concrete syntax for programs is to be contrasted with the abs
 
     P ::= a | x:=T | x':=T | ?F | D&F | P* | P;P | P++P | (P)
 
-with the visible `;` in P;P right-associative (and `++` being still right-associative) yet without `;` terminating atomic programs. In theory there's also no distinction between { } parentheses for programs and ( ) parentheses for terms and formulas.
+with the visible `;` in `P;P` right-associative (and `++` being still right-associative) yet without `;` terminating atomic programs. In theory there's also no distinction between { } parentheses for programs and ( ) parentheses for terms and formulas.
 
 
 References
@@ -65,15 +65,15 @@ References
 
 1. André Platzer.
 [A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
-Journal of Automated Reasoning, 2016.
+Journal of Automated Reasoning, 59(2), pages 219-265, 2017.
 
 2. André Platzer.
 [Logics of dynamical systems](https://doi.org/10.1109/LICS.2012.13).
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012.
 
 3. André Platzer.
-[Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/).
-Springer, 2018.
+[Logical Foundations of Cyber-Physical Systems](https://doi.org/10.1007/978-3-319-63588-0).
+Springer, 2018. 659 pages. ISBN 978-3-319-63587-3.
 
 4. André Platzer.
 [Differential dynamic logic for hybrid systems](https://doi.org/10.1007/s10817-008-9103-8).
@@ -81,4 +81,4 @@ Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 
 6. André Platzer.
 [Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics](https://doi.org/10.1007/978-3-642-14509-4).
-Springer, 2010. 426 p. ISBN 978-3-642-14508-7. 
+Springer, 2010. 426 pages. ISBN 978-3-642-14508-7. 
