@@ -1,6 +1,6 @@
 <div class="modal-header">
     <h3 class="modal-title">
-        <span>Counter-example search result</span>
+        <span>Counter-Example Search</span>
         <span class="pull-right"><button class="btn btn-primary" ng-click="cancel()">Ok</button></span>
     </h3>
 
@@ -63,14 +63,14 @@
 </div>
 <div ng-if="result === 'cex.nonfo'" class="modal-body">
     <p>
-    No counter-example found, but the sequent contains box modalities <code>[a]p</code> or diamond modalities
+    No counter-example found, but the conjecture still contains box modalities <code>[a]p</code> or diamond modalities
         <code>&lt;a&gt;p</code>, which make counter-example search less effective.
     </p>
     <p>
     Please use more proof steps on formula
     </p>
     <p class="text-center"><code>{{origFormula}}</code></p>
-    <p> to handle modalities, until only arithmetic formulas remain and then try again.
+    <p> to handle program modalities, until only arithmetic formulas remain and then try again.
     </p>
 </div>
 <div ng-if="result === 'cex.notool'" class="modal-body">
@@ -78,6 +78,6 @@
         The current backend tool does not support counter-example search.
     </p>
     <p>
-        Please go to <mark>Help &rarr; Tool Configuration</mark> and configure Mathematica as backend tool.
+        Please go to <mark>KeYmaera&#160;X &rarr; Preferences</mark> and configure Mathematica as backend tool.
     </p>
 </div>
