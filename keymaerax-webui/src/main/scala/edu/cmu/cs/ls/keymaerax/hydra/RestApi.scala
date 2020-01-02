@@ -836,10 +836,10 @@ object RestApi extends Logging {
 
     val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
       pathEnd {
-        get {
-          val request = new CounterExampleRequest(database, userId, proofId, nodeId)
+        get { parameters('assumptions.as[String]) { assumptions =>
+          val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions)
           completeRequest(request, t)
-        }
+        }}
       }}
     }
 

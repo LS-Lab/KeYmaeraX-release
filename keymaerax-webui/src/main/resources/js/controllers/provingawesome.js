@@ -675,14 +675,16 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     //@todo duplicate with sequent.js#getCounterExample
-    $scope.getCounterExample = function() {
+    $scope.getCounterExample = function(additionalAssumptions) {
       var requestCanceller = $q.defer();
       $scope.$parent.runningRequest.canceller = requestCanceller;
       spinnerService.show('counterExampleSpinner');
-      $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample', { timeout: requestCanceller.promise })
+      var additional = additionalAssumptions ? additionalAssumptions : {};
+      var url = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.agenda.selectedId() + '/counterExample'
+      $http.get(url, { params: { assumptions: additional }, timeout: requestCanceller.promise })
         .then(function(response) {
           var dialogSize = (response.data.result === 'cex.found') ? 'lg' : 'md';
-          $uibModal.open({
+          var modalInstance = $uibModal.open({
             templateUrl: 'templates/counterExample.html',
             controller: 'CounterExampleCtrl',
             size: dialogSize,
@@ -694,6 +696,23 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
               speculatedValues: function() { return response.data.speculatedValues; }
             }
           });
+          modalInstance.result.then(
+            function(result) {
+              // dialog closed with request to recalculate using additional assumptions
+              $scope.getCounterExample(result);
+            },
+            function() { /* dialog cancelled */ }
+          );
+        })
+        .catch(function(err) {
+          $uibModal.open({
+            templateUrl: 'templates/parseError.html',
+            controller: 'ParseErrorCtrl',
+            size: 'md',
+            resolve: {
+              model: function () { return undefined; },
+              error: function () { return err.data; }
+          }});
         })
         .finally(function() { spinnerService.hide('counterExampleSpinner'); });
     }

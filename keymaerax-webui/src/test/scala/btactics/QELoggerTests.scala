@@ -63,12 +63,6 @@ class QELoggerTests extends TacticTestBase {
     }
   }
 
-  "QE logger" should "re-parse logs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
-    val entry = List("ACAS X Safe#w=-1|w=1, hp>0, rp>=0, rv>=0, a>0  ==>  abs(r)>rp|abs(h)>hp, 0<=0&0 < max((0,w*(dhf-dhd)))/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=max((0,w*(dhf-dhd)))/a&0=rv*0&0=dhf*0-w*max((0,w*(dhf-dhd)))^2/(2*a)#w=-1|w=1, hp>0, rp>=0, rv>=0, a>0, maxI=max_0, 0>=w*(dhf-dhd)&max_0=0|0 < w*(dhf-dhd)&max_0=w*(dhf-dhd)  ==>  0<=0&0 < maxI/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=maxI/a&0=rv*0&0=dhf*0-w*maxI^2/(2*a)","AxiomaticODESolver#  ==>  x=1&v=2->[{x'=v&true}]x^3>=1#x=1&v=2  ==>  \\forall t_ (t_>=0->(v*t_+x)^3>=1)")
-
-    println(entry.map(s =>parseStr(s)))
-  }
-
   "QE logger" should "log my lab 2" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString //Avoid committing the solution to cse repo
     enableLogging((10,"L2"))

@@ -119,12 +119,36 @@
                                                 popover-class="k4-rulemenu-helppopover"
                                                 popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-compress"><span class="k4-btn-optional-text"> Simplify</span></span></a></li>
-                        <li class="nav-item"><a ng-click="undoLastProofStep()"
-                               data-intro="<center>Undo</center>" data-position="top"
-                               uib-popover-template="fetchRuleHelp('undo')"
-                               popover-class="k4-rulemenu-helppopover"
-                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                            <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
+                        <li class="nav-item">
+                            <span>
+                                <span ng-click="undoLastProofStep()"
+                                      data-intro="<center>Undo</center>" data-position="top"
+                                      uib-popover-template="fetchRuleHelp('undo')"
+                                      popover-class="k4-rulemenu-helppopover"
+                                      popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span>
+                                    </span>
+                                <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                                   aria-haspopup="true" aria-expanded="false">
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-right">
+                                    <li><a ng-click="undoLastProofStep()"
+                                           data-intro="<center>Undo</center>" data-position="top"
+                                           uib-popover-template="fetchRuleHelp('undo')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-undo"><span class="k4-btn-optional-text"> Undo</span></span></a>
+                                    </li>
+                                    <li><a ng-controller="ModelProofCreateCtrl" ng-click="createProof(agenda.modelId, '', '')"
+                                           data-intro="<center>Restart</center>" data-position="top"
+                                           uib-popover-template="fetchRuleHelp('restart')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-eraser"><span class="k4-btn-optional-text"> Restart</span></span></a>
+                                    </li>
+                                </ul>
+                            </span>
                         </li>
                         <li class="nav-item"><a ng-click="setFormulaMode('edit')" ng-if="getFormulaMode()=='prove' || getFormulaMode() == 'select'"
                             data-intro="<center>Switch edit/prove</center>" data-position="top"
@@ -150,7 +174,7 @@
                     </ul>
                 <!-- Global list of proof rules, axiom and proof tactics -->
                     <ul class="nav navbar-nav k4-tactics-nav-last mr-auto" id="provingbasictactics"
-                        data-intro="Basic tactics for propositional reasoning, hybrid programs, differential equations, and arithmetic."
+                        data-intro="Basic tactics and tools."
                         data-position="right">
                         <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
@@ -536,7 +560,7 @@
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
                         <div class="col-sm-11" ng-if="$first"
-                             data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal'><dt>Left-click</dt><dd>default step</dd><dt>Right-click</dt><dd>list tactics</dd><dt>Alt/Option-click</dt><dd>chase subformula away</dd><dt>Hover &#8866;</dt><dd>transform entire subgoal</dd></dl>"
+                             data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. On formulas: <dl class='dl-horizontal' style='margin-left: 30%'><dt>Left-click</dt><dd>default step</dd><dt>Right-click</dt><dd>list tactics</dd><dt>Alt/Option-click</dt><dd>chase subformula away</dd><dt>Hover &#8866;</dt><dd>transform entire subgoal</dd></dl> </div>"
                              data-position="bottom">
                             <span class="fa" ng-class="{'fa-tasks' : !(taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'), 'fa-bolt text-danger' : taskPostfixLabel(task.id)=='QE CEX' || taskPrefixLabel(task.id) == 'QE CEX'}"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->

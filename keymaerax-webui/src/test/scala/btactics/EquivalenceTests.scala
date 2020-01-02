@@ -55,22 +55,4 @@ class EquivalenceTests extends TacticTestBase {
     proveBy(f,t).subgoals.loneElement shouldBe "\\forall x (p(x) <-> q(x)) ==> p(z)".asSequent
   }
 
-  it should "work on ACAS X Cimpl example" in {
-    val equiv = "\\forall rt \\forall h \\forall hoDot (Cimpl((rt,(h,hoDot)))<->\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp))".asFormula
-    val fnApp = "Cimpl((rt,(h,hoDot)))".asFormula
-    val f = Imply(equiv, fnApp)
-
-    val t =  TactixLibrary.implyR(1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(1))
-    proveBy(f,t).subgoals.loneElement shouldBe (equiv.prettyString + " ==> \\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp)").asSequent
-  }
-
-  it should "work on ACAS X Cimpl example 2" in {
-    val equiv = "\\forall rt \\forall h \\forall hoDot (Cimpl((rt,(h,hoDot)))<->\\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp))".asFormula
-    val fnApp = "Cimpl((rt,(h,hoDot)))".asFormula
-    val f = Not(And(equiv, fnApp))
-
-    val t =  TactixLibrary.notR(1) & TactixLibrary.andL(-1) & PropositionalTactics.equivRewriting(SeqPos(-1),SeqPos(-2))
-    proveBy(f,t).subgoals.loneElement shouldBe (equiv.prettyString + ", \\forall t \\forall rt \\forall ht (rt=rv*t&A((t,(ht,hoDot)))->abs(r-rt)>rp|w*(h-ht) < -hp) ==> ").asSequent
-  }
-
 }

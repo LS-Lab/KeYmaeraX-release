@@ -136,20 +136,6 @@ class SimplifierV3Tests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> true".asSequent
   }
 
-  it should "simplify ACAS X goal" in withMathematica { _ =>
-    val minusSimp1 = proveBy("F_() + G_() - G_() = F_()".asFormula,TactixLibrary.QE)
-    val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
-
-    val minus = (t: Term, _: context) => t match {
-      case Minus(Plus(_, b), c) if b == c => List(minusSimp1)
-      case Plus(Minus(_, b), c) if b == c => List(minusSimp2)
-      case _ => List()
-    }
-    val fml = "0<=t_+t&t_+t < max((0,d))&dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)+(-w*ad/2*max((0,d))^2+dho*max((0,d)))=-w*ad/2*(t_+t)^2+dho*(t_+t)|dhf*(t_+t-max((0,d)))=dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)+w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)->abs(r-rv*(t_+t))>rp|w*(h-(dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)+(-w*ad/2*max((0,d))^2+dho*max((0,d))))) < -hp".asFormula
-    val result = proveBy(fml, SimplifierV3.simpTac(taxs = composeIndex(minus,defaultTaxs))(1))
-    result.subgoals.loneElement shouldBe "==> abs(r-rv*(t_+t))>rp|w*(h-(dhf*(t_+t-max((0,d)))-w*max((0,w*(dhf-(-w*ad*max((0,d))+dho))))^2/(2*ar)+(-w*ad/2*max((0,d))^2+dho*max((0,d))))) < -hp".asSequent
-  }
-
   it should "simplify sole function arguments" in withMathematica { _ =>
     val fml = "abs(0*1+0)>=0".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))

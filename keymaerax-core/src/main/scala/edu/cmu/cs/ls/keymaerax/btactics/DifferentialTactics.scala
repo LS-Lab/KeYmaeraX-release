@@ -998,24 +998,26 @@ private object DifferentialTactics extends Logging {
       () => invariantCandidates,
       (prod: GenProduct) => prod match {
         case (inv, proofHint) =>
+          //@todo workaround for diffCut/useAt unstable positioning
+          val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
           DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
             /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
             diffCut(inv)(pos) <(
               skip,
               proofHint match {
                 case Some(PegasusProofHint(_, Some("Barrier"))) =>
-                  dgDbxAuto(pos) & done |
-                    dgBarrier(pos) & done |
-                    odeInvariant(tryHard = true, useDw = false)(pos) & done
+                  dgDbxAuto(afterCutPos) & done |
+                    dgBarrier(afterCutPos) & done |
+                    odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
                 case Some(PegasusProofHint(_, Some("Darboux"))) =>
-                  dgDbxAuto(pos) & done |
-                    odeInvariant(tryHard = true, useDw = false)(pos) & done
+                  dgDbxAuto(afterCutPos) & done |
+                    odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
                 case Some(PegasusProofHint(_, Some("FirstIntegral"))) =>
-                  dI()(pos) & done |
-                    odeInvariant(tryHard = true, useDw = false)(pos) & done
-                case Some(PegasusProofHint(_, _)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
-                case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(pos) & done
-                case _ => odeInvariant(tryHard = false, useDw = false)(pos) & done
+                  dI()(afterCutPos) & done |
+                    odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
+                case Some(PegasusProofHint(_, _)) => odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
+                case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(afterCutPos) & done
+                case _ => odeInvariant(tryHard = false, useDw = false)(afterCutPos) & done
               }
             ) &
           // continue outside <(skip, ...) so that cut is proved before used

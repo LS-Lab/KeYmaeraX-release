@@ -45,6 +45,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 /**
@@ -221,7 +222,7 @@ class FailedRequest(userId: String, msg: String, cause: Throwable = null) extend
   def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
-class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, assumptions: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t => t match {
         case FuncOf(func, _) if fn.sort == Real => func == fn
@@ -244,6 +245,14 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
   }
 
   override protected def doResultingResponses(): List[Response] = {
+    val json = assumptions.parseJson.asJsObject.fields.get("additional")
+    val additionalAssumptions: Option[Formula] = try {
+      json.map(_.convertTo[String].asFormula)
+    } catch {
+      case ex: ParseException => return ParseErrorResponse("Expected assumptions as a formula, but got " + json.getOrElse("<empty>"),
+        ex.expect, ex.found, ex.getDetails, ex.loc, ex) :: Nil
+    }
+
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => new ErrorResponse("Unknown node " + nodeId)::Nil
@@ -255,24 +264,36 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
           new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
         }
 
-        def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): List[CounterExampleResponse] = {
+        @tailrec
+        def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): List[Response] = {
           val sequent = node.goal.get
-          val fml = sequent.toFormula
-          if (fml.isFOL) {
-            if (StaticSemantics.symbols(fml).isEmpty) {
+          if (sequent.isFOL) {
+            if (StaticSemantics.symbols(sequent).isEmpty) {
               //@note counterexample on false (e.g., after QE on invalid formula)
               node.parent match {
                 case Some(parent) => getCex(parent, cexTool)
                 case None => new CounterExampleResponse("cex.none") :: Nil
               }
             } else {
-              findCounterExample(fml, cexTool) match {
-                //@todo return actual sequent, use collapsiblesequentview to display counterexample
-                case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-                case None => new CounterExampleResponse("cex.none") :: Nil
+              val skolemized = TactixLibrary.proveBy(sequent,
+                SaturateTactic(TactixLibrary.alphaRule | TactixLibrary.allR('R) | TactixLibrary.existsL('L)))
+              val fml = skolemized.subgoals.map(_.toFormula).reduceRight(And)
+              val withAssumptions = additionalAssumptions match {
+                case Some(a) => Imply(a, fml)
+                case None => fml
+              }
+              try {
+                findCounterExample(withAssumptions, cexTool) match {
+                  //@todo return actual sequent, use collapsiblesequentview to display counterexample
+                  case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+                  case None => new CounterExampleResponse("cex.none") :: Nil
+                }
+              } catch {
+                case ex: ToolException => new ErrorResponse("Error executing counterexample tool", ex) :: Nil
               }
             }
           } else {
+            val fml = sequent.toFormula
             /* TODO: Case on this instead */
             val qeTool: QETool = ToolProvider.qeTool().get
             val snode: SearchNode = ProgramSearchNode(fml)(qeTool)

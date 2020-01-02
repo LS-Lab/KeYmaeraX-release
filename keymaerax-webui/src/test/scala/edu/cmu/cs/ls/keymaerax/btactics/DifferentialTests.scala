@@ -669,6 +669,19 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head shouldBe "y=1 ==> [x:=0;]\\forall y_0 (y_0=y -> \\forall x_0 (x_0=x -> [{x'=1,y'=-1 & true & (x>=x_0 & y<=y_0)}]x>=0))".asSequent
   }
 
+  it should "FEATURE_REQUEST: keep positioning stable in succedent" taggedAs(TodoTest) in withQE { _ =>
+    //@todo useAt has unstable positioning (when fixing: some tactics - e.g., ODE - may change midway from using pos to 'Rlast as a workaround)
+    val result = proveBy("x=0 ==> [{x'=y}]x>=-1, !y<0".asSequent, dC("x>=0".asFormula)(2))
+    result.subgoals(0) shouldBe "x=0 ==> !y!=3, [{x'=y & true & x>=0}]x>=-1, !y<0".asSequent
+    result.subgoals(1) shouldBe "x=0 ==> !y!=3, [{x'=y}]x>=0, !y<0".asSequent
+  }
+
+  it should "keep positioning stable in antecedent" in withQE { _ =>
+    val result = proveBy("y=3, [{x'=y}]x>=-1, x=0 ==> !y<0".asSequent, dC("x>=0".asFormula)(-2))
+    result.subgoals(0) shouldBe "y=3, [{x'=y & true & x>=0}]x>=-1, x=0 ==> !y<0".asSequent
+    result.subgoals(1) shouldBe "y=3, x=0 ==> !y<0, [{x'=y}]x>=0".asSequent
+  }
+
   "Diamond differential cut" should "cut in a simple formula" in withQE { _ =>
     val result = proveBy("x>0 ==> <{x'=2}>x>=0".asSequent, dC("x>0".asFormula)(1))
     result.subgoals should have size 2
