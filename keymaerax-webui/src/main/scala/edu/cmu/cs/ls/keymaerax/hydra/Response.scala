@@ -24,6 +24,7 @@ import java.io.{PrintWriter, StringWriter}
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
 import org.apache.logging.log4j.scala.Logging
@@ -1022,18 +1023,20 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def getJson = JsArray(derivationInfos.map(derivationJson):_*)
 }
 
-case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, SubstitutionPair)]) extends Response {
-  private def getDefJson(n: NamedSymbol, s: SubstitutionPair): JsValue = {
+case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, SubstitutionPair, InputSignature)]) extends Response {
+  private def getDefJson(n: NamedSymbol, s: SubstitutionPair, is: InputSignature): JsValue = {
     JsObject(
       "symbol" -> JsString(n.prettyString),
       "definition" -> JsObject(
         "what" -> JsString(s.what.prettyString),
-        "repl" -> JsString(s.repl.prettyString)
+        "repl" -> JsString(s.repl.prettyString),
+        "inWhat" -> JsString(n.prettyString + (if (is._1.nonEmpty) "(" + is._1.mkString(",") + ")" else "")),
+        "inRepl" -> JsString(is._2.map(_.prettyString).getOrElse(""))
       )
     )
   }
 
-  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2)):_*)
+  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3)):_*)
 }
 
 class PruneBelowResponse(item: AgendaItem) extends Response {

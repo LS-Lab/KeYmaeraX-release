@@ -42,7 +42,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -1736,21 +1736,25 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     if (tree.isClosed) return ApplicableDefinitionsResponse(Nil) :: Nil
-
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
       case Some(symbols) =>
-        val expansions = symbols.flatMap(s => proofSession.defs.find(s.name, s.index).
-          map(s -> _)).filter(_._2._3.isDefined).map({
-          case (s: Function, (domain, sort, Some(repl), _)) =>
+        val applicable: Map[NamedSymbol, (Signature, InputSignature)] = symbols.flatMap(s => {
+          val defs = proofSession.defs.find(s.name, s.index)
+          defs._1.filter(_._3.isDefined) match {
+            case Some(f) => Some(s -> (f, defs._2.get))
+            case None => None
+          }}).toMap
+        val expansions: Map[InputSignature, Expand] = applicable.map({
+          case (s: Function, ((domain, sort, Some(repl), _), insig)) =>
             val dots = domain.map({ case Unit => Nothing case s: Tuple => s.toDots(0)._1 case s => DotTerm(s) }).getOrElse(Nothing)
             sort match {
-              case Real => Expand(s, SubstitutionPair(FuncOf(s, dots), repl))
-              case Bool => Expand(s, SubstitutionPair(PredOf(s, dots), repl))
+              case Real => insig -> Expand(s, SubstitutionPair(FuncOf(s, dots), repl))
+              case Bool => insig -> Expand(s, SubstitutionPair(PredOf(s, dots), repl))
             }
-          case (s: ProgramConst, (_, _, Some(repl: Program), _)) => Expand(s, SubstitutionPair(s, repl))
+          case (s: ProgramConst, ((_, _, Some(repl: Program), _), insig)) => insig -> Expand(s, SubstitutionPair(s, repl))
         })
-        ApplicableDefinitionsResponse(expansions.map(e => e.name -> e.s).toList.sortBy(_._1)) :: Nil
+        ApplicableDefinitionsResponse(expansions.map({ case (sig, e) => (e.name, e.s, sig) }).toList.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
     }
   }

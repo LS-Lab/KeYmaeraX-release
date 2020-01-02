@@ -55,8 +55,10 @@ object KeYmaeraXArchiveParser {
   type Name = (String, Option[Int])
   /** Signature is a domain sort, codomain sort, expression used as "interpretation", location that starts the declaration. */
   type Signature = (Option[Sort], Sort, Option[Expression], Location)
-  /** A parsed declaration, which assigns a signature to names */
-  case class Declaration(decls: Map[Name, Signature]) {
+  /** Input signature as defined in the input file ([[Signature]] is extracted from it). */
+  type InputSignature = (List[NamedSymbol], Option[Expression])
+  /** A parsed declaration, which assigns a signature to names, with `inputDecls` as literally listed in the file */
+  case class Declaration(decls: Map[Name, Signature], inputDecls: Map[Name, InputSignature] = Map.empty) {
     /** The declarations as topologically sorted substitution pairs. */
     lazy val substs: List[SubstitutionPair] = topSortDefs(decls.filter(_._2._3.isDefined).
       map((declAsSubstitutionPair _).tupled).toList)
@@ -73,10 +75,11 @@ object KeYmaeraXArchiveParser {
     }
 
     /** Joins two declarations. */
-    def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls)
+    def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls, inputDecls ++ other.inputDecls)
 
     /** Finds the definition with `name` and index `idx`. */
-    def find(name: String, idx: Option[Int] = None): Option[Signature] = decls.get(name -> idx)
+    def find(name: String, idx: Option[Int] = None): (Option[Signature], Option[InputSignature]) =
+      (decls.get(name -> idx), inputDecls.get(name -> idx))
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
     def exhaustiveSubst[T <: Expression](arg: T): T = elaborateToFunctions(arg) match {
@@ -813,7 +816,7 @@ object KeYmaeraXArchiveParser {
     val illegalOverride = entry.definitions.filter(e => entry.inheritedDefinitions.exists(_.name == e.name))
     if (illegalOverride.nonEmpty) throw ParseException("Symbol '" + illegalOverride.head.name + "' overrides inherited definition; must declare override", illegalOverride.head.loc)
 
-    val definitions = ((entry.inheritedDefinitions ++ entry.definitions).map(convert) ++ entry.vars.map(convert)).reduceOption(_++_).getOrElse(Declaration(Map.empty))
+    val definitions = ((entry.inheritedDefinitions ++ entry.definitions).map(convert) ++ entry.vars.map(convert)).reduceOption(_++_).getOrElse(Declaration(Map.empty, Map.empty))
 
     val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
       "SharedDefinitions\n" +
@@ -911,15 +914,23 @@ object KeYmaeraXArchiveParser {
           case _ => dotted
         }
       }))
-      Declaration(Map((name, index) -> (Some(toSort(signature)), sort, dottedDef, loc)))
+      Declaration(
+        Map((name, index) -> (Some(toSort(signature)), sort, dottedDef, loc)),
+        Map((name, index) -> (signature, definition)))
     case FuncPredDef(name, index, sort, signature, Right(_), loc) =>
-      Declaration(Map((name, index) -> (Some(toSort(signature)), sort, None, loc)))
+      Declaration(
+        Map((name, index) -> (Some(toSort(signature)), sort, None, loc)),
+        Map((name, index) -> (signature, None)))
     case ProgramDef(name, index, Left(definition), _, loc) =>
-      Declaration(Map((name, index) -> (Some(Unit), Trafo, definition, loc)))
+      Declaration(
+        Map((name, index) -> (Some(Unit), Trafo, definition, loc)),
+        Map((name, index) -> (List.empty, definition)))
     case ProgramDef(name, index, Right(_), _, loc) =>
-      Declaration(Map((name, index) -> (Some(Unit), Trafo, None, loc)))
+      Declaration(
+        Map((name, index) -> (Some(Unit), Trafo, None, loc)),
+        Map((name, index) -> (List.empty, None)))
     case VarDef(name, index, loc) =>
-      Declaration(Map((name, index) -> (None, Real, None, loc)))
+      Declaration(Map((name, index) -> (None, Real, None, loc)), Map((name, index) -> (List.empty, None)))
   }
 
   private def toSort(signature: List[NamedSymbol]): Sort = {
@@ -949,6 +960,7 @@ object KeYmaeraXArchiveParser {
     }
   }
 
+  @tailrec
   private def slice(text: String, loc: Location, except: List[Location]): String = {
     if (except.isEmpty) slice(text, loc)
     else slice(
@@ -964,7 +976,7 @@ object KeYmaeraXArchiveParser {
     val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v =>
       (v.name, v.index) -> (None, v.sort, None, UnknownLocation)
     ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[Expression], Location)]
-    Declaration(fnDecls ++ varDecls)
+    Declaration(fnDecls ++ varDecls, Map.empty)
   }
   
   private def shiftLoc(loc: Location, offset: Location): Location = {
