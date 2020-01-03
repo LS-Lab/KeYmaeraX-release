@@ -1,6 +1,5 @@
 (* ::Package:: *)
 
-Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolynomials.m"}]] (* Load algorithms for Darboux polynomial generation from current directory *)
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* Load primitives package *)
 
 
@@ -8,23 +7,27 @@ Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* 
 (*(* Polynomial generation for qualitative analysis *)*)
 
 
-BeginPackage["QualitativeAbstraction`"];
+BeginPackage["QualAbsPolynomials`"];
 
 
-PolyProductFactors::usage="PolyProductFactors[list]"
-QualitativePolys::usage="QualitativePolys[problem]"
-PostRHSFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition."
-PostRHSLieDFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives."
-PostRHSLieDProductFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition."
-PostRHSLieNFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition."
-PostRHSProductFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives."
-DarbouxPolynomials::usage="DarbouxPolynomials[problem]"
-SummandFactors::usage="SummandFactors[problem]"
-SFactorList::usage="SFactorList[problem] returns factors of RHS (1 list per RHS)"
-PhysicalQuantities::usage="PhysicalQuantities[problem]"
+PolyProductFactors::usage="PolyProductFactors[polynomials_List] multiplies all polynomials in the list then factors the result";
+ProblemFactors::usage="ProblemFactors[problem] Generate irreducible factors using all polynomials appearing anywhere in the problem.";
+ProblemFactorsWithLie::usage="ProblemFactorsWithLie[problem] Generate irreducible factors using all polynomials appearing anywhere in the problem, and then takes all their Lie derivatives.";
+
+(* TODO Deprecate these?? *)
+QualitativePolys::usage="QualitativePolys[problem]";
+PostRHSFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition.";
+PostRHSLieDFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives.";
+PostRHSLieDProductFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition.";
+PostRHSLieNFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition.";
+PostRHSProductFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives.";
+DarbouxPolynomials::usage="DarbouxPolynomials[problem]";
+SummandFactors::usage="SummandFactors[problem]";
+SFactorList::usage="SFactorList[problem] returns factors of RHS (1 list per RHS)";
+PhysicalQuantities::usage="PhysicalQuantities[problem]";
 
 
-Begin["`Private`"]
+Begin["`Private`"];
 
 
 SF[p_]:=Module[{},
@@ -37,29 +40,8 @@ Cases[DeleteDuplicates[Flatten[Map[FactorList[#, Extension->Automatic]&, polynom
 ]
 
 
-ExtractPolynomials[semialg_]:=Module[{predicates=Flatten[{DNFNormalizeLtLeq[semialg]}/.{And->List,Or->List}]},
+ExtractPolynomials[semialg_]:=Module[{predicates=Flatten[{Primitives`DNFNormalizeLtLeq[semialg]}/.{And->List,Or->List,True->{}}]},
 DeleteDuplicates[predicates/.{Less[p_,0]:> p, LessEqual[p_,0]:> p, Equal[p_,0]:> p}]
-]
-
-
-(* Generate a list of polynomials A with linear factors of the RHS of the ODE and the polynomials describing the postcondition *)
-PostRHSFactors[problem_List]:=Module[{precond, f,vars,Q, postcond},
-(* Pattern match problem input *)
-{precond,{f,vars,Q},postcond} = problem;
-DeleteDuplicates[
-	Union[
-		ExtractFactors[{f}],  (* Use FACTORS of polynomials from the RHS of ODE *)
-		ExtractFactors[ExtractPolynomials[postcond]]
-	]
-]
-]
-
-
-(* Generate a list of polynomials A with linear factors of the RHS of the ODE and the polynomials describing the postcondition *)
-QualitativePolys[problem_List]:=Module[{precond, f,vars,Q, postcond},
-(* Pattern match problem input *)
-{precond,{f,vars,Q},postcond} = problem;
-ExtractFactors[{Div[f,vars]}]
 ]
 
 
@@ -67,6 +49,41 @@ ExtractFactors[{Div[f,vars]}]
 LieDFactors[polynomials_List, f_List, vars_List]:=Module[{result},
 result=Union[Map[Primitives`Lf[#,f,vars]&,polynomials],polynomials]//DeleteDuplicates;
 Select[Expand[result],Not[IntegerQ[#]]&]
+]
+
+
+(* Generate a list of polynomials A with linear factors of the RHS of the ODE and the polynomials describing the postcondition *)
+PolyProductFactors[polynomials_List]:=Module[{},
+ExtractFactors[{Apply[Times, polynomials]}]
+]
+
+
+(* Generate a list of irreducible factors of all polynomials appearing anywhere in the problem *)
+ProblemFactors[problem_List]:=Module[{precond, f,vars,Q, postcond},
+(* Pattern match problem input *)
+{precond,{f,vars,Q},postcond} = problem;
+DeleteDuplicates[
+	Union[
+		ExtractFactors[{f}],  (* Use FACTORS of polynomials from the RHS of ODE *)
+		ExtractFactors[ExtractPolynomials[postcond]],
+		ExtractFactors[ExtractPolynomials[precond]],
+		ExtractFactors[ExtractPolynomials[Q]]
+	]
+]
+];
+
+ProblemFactorsWithLie[problem_List]:=Module[{precond, f,vars,Q, postcond},
+(* Pattern match problem input *)
+{precond,{f,vars,Q},postcond} = problem;
+LieDFactors[ProblemFactors[problem],f,vars]
+];
+
+
+(* Generate a list of polynomials A with linear factors of the RHS of the ODE and the polynomials describing the postcondition *)
+QualitativePolys[problem_List]:=Module[{precond, f,vars,Q, postcond},
+(* Pattern match problem input *)
+{precond,{f,vars,Q},postcond} = problem;
+ExtractFactors[{Div[f,vars]}]
 ]
 
 
@@ -89,12 +106,6 @@ PostRHSLieDProductFactors[problem_List]:=Module[{precond, f,vars,Q, postcond},
 (* Pattern match problem input *)
 {precond,{f,vars,Q},postcond} = problem;
 PolyProductFactors[LieDFactors[PostRHSFactors[problem], f, vars]]
-]
-
-
-(* Generate a list of polynomials A with linear factors of the RHS of the ODE and the polynomials describing the postcondition *)
-PolyProductFactors[polynomials_List]:=Module[{},
-ExtractFactors[{Apply[Times, polynomials]}]
 ]
 
 
@@ -193,5 +204,5 @@ Throw[flist];
 ]];
 
 
- End[]
-EndPackage[]
+ End[];
+EndPackage[];
