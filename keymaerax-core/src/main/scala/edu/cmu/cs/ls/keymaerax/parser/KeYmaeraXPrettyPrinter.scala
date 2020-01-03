@@ -272,13 +272,12 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
         case t => t :: Nil
       }
       val flattened = flattenPairs(p)
+      // PosInExpr for a list [a,b,c,d] ~> .0, .1.0, .1.1.0, .1.1.1, which are the binary digits of [0,2,6,7] computed as [2^1-2, 2^2-2, 2^3-2, 2^3-1]
       val posInExpr = ListBuffer.empty[PosInExpr]
-      for (i <- flattened.indices.takeRight(flattened.size-1).reverse) {
-        if (i+1 == flattened.size) posInExpr.prepend(
-          PosInExpr(((1<<i)-2).toBinaryString.toCharArray.map(_.asDigit).toList),
-          PosInExpr(((1<<i)-1).toBinaryString.toCharArray.map(_.asDigit).toList)
-        ) else posInExpr.prepend(PosInExpr(((1<<i)-2).toBinaryString.toCharArray.map(_.asDigit).toList))
+      for (i <- flattened.indices.takeRight(flattened.size-1)) {
+        posInExpr.append(PosInExpr(((1<<i)-2).toBinaryString.toCharArray.map(_.asDigit).toList))
       }
+      posInExpr.append(PosInExpr(((1<<posInExpr.size)-1).toBinaryString.toCharArray.map(_.asDigit).toList))
       wrap(flattened.zipWithIndex.map({ case (p, i) => pp(q++posInExpr(i), p) }).mkString(ppOp(term)), term)
     case UnitFunctional(name,space,sort) => name + "(" + space + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
@@ -565,7 +564,12 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
     case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
-    case Pair(l, r)             => wrapDoc((Doc.lineBreak + docOf(l) + Doc.text(ppOp(term)) + Doc.lineBreak + docOf(r) + Doc.lineBreak).nested(2).grouped, term)
+    case p: Pair                =>
+      def flattenPairs(e: Term): List[Term] = e match {
+        case Pair(l, r) => l +: flattenPairs(r)
+        case t => t :: Nil
+      }
+      wrapDoc((Doc.lineBreak + flattenPairs(p).map(docOf).reduce[Doc]({ case (a, b) => a + Doc.text(ppOp(term)) + Doc.lineBreak + b + Doc.lineBreak })).nested(2).grouped, term)
     case Neg(Number(_))         => Doc.text(pp(HereP, term))
     case t: Neg if !negativeBrackets =>
       val c = pp(HereP, t.child)
