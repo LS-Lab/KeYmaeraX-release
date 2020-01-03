@@ -1,0 +1,13 @@
+<div>
+  <p>
+  <i class="fa fa-expand"></i><kbd>expandAllDefs</kbd> expands all definitions of function symbols, predicate symbols, and program symbols according to the <kbd>Definitions</kbd> block of the model file.
+  </p>
+  <p>
+    For example, occurrences of <kbd>dist(a,b+1)</kbd> are expanded to <kbd>a^2+(b+1)^2</kbd> etc. given these definitions:
+    <pre>Definitions
+  Real dist(Real x, Real y) = (x^2+y^2).
+  Bool sep(Real x, Real y) <-> (x^2+y^2 > 9).
+  HP ctrl ::= {x:=x+1;}.
+End.</pre>
+  </p>
+</div>
