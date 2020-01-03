@@ -113,6 +113,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       } else {
         spinnerService.show('proofLoadingSpinner');
         sequentProofData.fetchAgenda($scope.userId, $scope.proofId);
+        derivationInfos.sequentApplicableDefinitions($scope.userId, $scope.proofId, sequentProofData.agenda.selectedTab).then(function(defs) {
+          $scope.definitions = defs;
+        });
       }
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
