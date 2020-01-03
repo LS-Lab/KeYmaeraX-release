@@ -26,6 +26,8 @@ DNFNormalizeLtLeq::usage="DNFNormalizeLtLeq[fml] normalizes fml to a normal form
 WeakenInequalities::usage="WeakenInequalities[fml] turns all strict inequalities to their weakened versions"
 DrawPlanarProb::usage="DrawPlanarProb[prob,inv,w] draws a planar problem and invariant inv"
 
+FuncIndep::usage="FuncIndep[polynomials_List, vars_List] Returns a list of functionally independent polynomials from a given list.";
+
 
 Begin["`Private`"]
 
@@ -141,6 +143,27 @@ DrawPlanarProb[prob_List, invariant_:False, w_:6 ] := Module[{init,f,x,y,H,safe,
     (* Plot domain in blue *)
     RegionPlot[H, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.05,Blue]]
     ]
+]
+
+
+FuncIndep[polys_List, vars_List]:=Module[{sortedlist,span,pool,gradList,Gramian},
+If[Length[polys]>0,
+sortedlist=Sort[polys,And[Primitives`PolynomDegree[#1]<=Primitives`PolynomDegree[#2], Length[#1]<=Length[#2]]&];
+span={First[sortedlist]};
+pool=Rest[sortedlist];
+While[Length[pool]>0 && Length[span]<Length[vars],
+gradList = Map[Grad[#,vars]&, Append[span,First[pool]]];
+Gramian=gradList.Transpose[gradList];
+(* Debugging 
+Print[Gramian//MatrixForm];
+Print[Det[Gramian]];
+*)
+If[TrueQ[Reduce[Exists[vars,Det[Gramian]>0],Reals]],
+ span=Append[span,First[pool]]; 
+pool=Rest[pool],
+pool=Rest[pool]
+]];
+span, polys]
 ]
 
 

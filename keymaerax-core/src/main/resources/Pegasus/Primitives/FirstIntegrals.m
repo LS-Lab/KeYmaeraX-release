@@ -34,10 +34,6 @@ vectorField={x^2+1, x+y-2}, this is interpreted as the system of ODEs x'=x^2+1,
 y'=x+y-2. Changing the order of variables or entries in vectorField will
 generally result in different systems of ODEs.";
 
-FuncIndep::usage="
-FuncIndep[polynomials_List, vars_List] 
-Returns a list of functionally independent polynomials from a given list.";
-
 GenMonomialBasis::usage="Generate a monomial basis";
 
 Begin[ "Private`" ];
@@ -46,27 +42,6 @@ Begin[ "Private`" ];
 (* Computing the monomial basis for polynomials of maximal total degree maxdeg *)
 GenMonomialBasis[vars_List,maxdeg_Integer?NonNegative]:=Module[{},
 Select[Permutations[Flatten[Table[Table[j,{i,1,Length[vars]}],{j,0,maxdeg}]],{Length[vars]}], Apply[Plus, #] <= maxdeg &]
-]
-
-
-FuncIndep[polys_List, vars_List]:=Module[{sortedlist,span,pool,gradList,Gramian},
-If[Length[polys]>0,
-sortedlist=Sort[polys,And[Primitives`PolynomDegree[#1]<=Primitives`PolynomDegree[#2], Length[#1]<=Length[#2]]&];
-span={First[sortedlist]};
-pool=Rest[sortedlist];
-While[Length[pool]>0 && Length[span]<Length[vars],
-gradList = Map[Grad[#,vars]&, Append[span,First[pool]]];
-Gramian=gradList.Transpose[gradList];
-(* Debugging 
-Print[Gramian//MatrixForm];
-Print[Det[Gramian]];
-*)
-If[TrueQ[Reduce[Exists[vars,Det[Gramian]>0],Reals]],
- span=Append[span,First[pool]]; 
-pool=Rest[pool],
-pool=Rest[pool]
-]];
-span, polys]
 ]
 
 
