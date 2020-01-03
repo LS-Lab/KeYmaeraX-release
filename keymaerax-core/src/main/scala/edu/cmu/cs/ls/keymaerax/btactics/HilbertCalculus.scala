@@ -7,8 +7,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{chase, skip}
 
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
 
 /**
   * Hilbert Calculus for differential dynamic logic.
@@ -298,7 +301,23 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
     * @see [[UnifyUSCalculus.chase]]
     */
-  lazy val derive: DependentPositionTactic = "derive" by {(pos:Position) => chase(pos)}
+  lazy val derive: DependentPositionTactic = "derive" by {(pos:Position, seq: Sequent) =>
+    val chaseNegations = seq.sub(pos) match {
+      case Some(post: DifferentialFormula) =>
+        val notPositions = ListBuffer.empty[PosInExpr]
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+            case Not(_) if !notPositions.exists(_.isPrefixOf(p)) => notPositions.append(p); Left(None)
+            case _ => Left(None)
+          }
+        }, post)
+        notPositions.map(p => chase('Rlast, pos.inExpr ++ p)).
+          reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+      case _ => skip
+    }
+
+    chaseNegations & chase(pos)
+  }
 
   /**
     * Derive: provides individual differential axioms bundled as [[HilbertCalculus.derive]].

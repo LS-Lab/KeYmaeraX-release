@@ -253,6 +253,12 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
 
+  it should "auto-prove x>=5 -> [{x'=2}]!x<5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+    proveBy("x>=5 -> [{x'=2}]!x<5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 -> [{x'=2}](!x<5 | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 -> [{x'=2}](!(x<5 & (x<2 & !x>3)) | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+  }
+
   it should "disregard other modalities when auto-proving x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
     proveBy("x>=5, [y:=3;]y<=3 ==> [{x'=2}]x>=5".asSequent, dI()(1)) shouldBe 'proved
   }
