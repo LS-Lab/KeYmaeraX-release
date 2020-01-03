@@ -17,8 +17,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
 
 import scala.collection.immutable._
 import org.typelevel.paiges._
-
 import edu.cmu.cs.ls.keymaerax.core._
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
@@ -265,7 +266,20 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     } else n.bigDecimal.toPlainString
     case FuncOf(f, c)           => f.asString + "(" + pp(q++0, c) + ")"
     // special notation
-    case Pair(l, r)             => wrap(pp(q++0, l) + ppOp(term) + pp(q++1, r), term)
+    case p: Pair                =>
+      def flattenPairs(e: Term): List[Term] = e match {
+        case Pair(l, r) => l +: flattenPairs(r)
+        case t => t :: Nil
+      }
+      val flattened = flattenPairs(p)
+      val posInExpr = ListBuffer.empty[PosInExpr]
+      for (i <- flattened.indices.takeRight(flattened.size-1).reverse) {
+        if (i+1 == flattened.size) posInExpr.prepend(
+          PosInExpr(((1<<i)-2).toBinaryString.toCharArray.map(_.asDigit).toList),
+          PosInExpr(((1<<i)-1).toBinaryString.toCharArray.map(_.asDigit).toList)
+        ) else posInExpr.prepend(PosInExpr(((1<<i)-2).toBinaryString.toCharArray.map(_.asDigit).toList))
+      }
+      wrap(flattened.zipWithIndex.map({ case (p, i) => pp(q++posInExpr(i), p) }).mkString(ppOp(term)), term)
     case UnitFunctional(name,space,sort) => name + "(" + space + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => ppOp(t) + "(" + pp(q++0, Number(n)) + ")"
