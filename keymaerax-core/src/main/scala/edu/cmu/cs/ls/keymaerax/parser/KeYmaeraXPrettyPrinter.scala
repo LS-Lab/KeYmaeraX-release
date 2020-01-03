@@ -565,7 +565,12 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
     case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
-    case Pair(l, r)             => wrapDoc((Doc.lineBreak + docOf(l) + Doc.text(ppOp(term)) + Doc.lineBreak + docOf(r) + Doc.lineBreak).nested(2).grouped, term)
+    case p: Pair                =>
+      def flattenPairs(e: Term): List[Term] = e match {
+        case Pair(l, r) => l +: flattenPairs(r)
+        case t => t :: Nil
+      }
+      wrapDoc((Doc.lineBreak + flattenPairs(p).map(docOf).reduce[Doc]({ case (a, b) => a + Doc.text(ppOp(term)) + Doc.lineBreak + b + Doc.lineBreak })).nested(2).grouped, term)
     case Neg(Number(_))         => Doc.text(pp(HereP, term))
     case t: Neg if !negativeBrackets =>
       val c = pp(HereP, t.child)
