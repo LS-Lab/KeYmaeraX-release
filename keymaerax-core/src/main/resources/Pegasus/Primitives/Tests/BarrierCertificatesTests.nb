@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     86208,       2092]
-NotebookOptionsPosition[     85210,       2071]
-NotebookOutlinePosition[     85543,       2086]
-CellTagsIndexPosition[     85500,       2083]
+NotebookDataLength[     87193,       2115]
+NotebookOptionsPosition[     86193,       2094]
+NotebookOutlinePosition[     86526,       2109]
+CellTagsIndexPosition[     86483,       2106]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -2046,16 +2046,36 @@ Cell[BoxData[
 Cell[BoxData[
  RowBox[{
   RowBox[{"(*", " ", 
-   RowBox[{"Handling", " ", 
-    RowBox[{"constants", "?"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+   "Handling", " ", "of", " ", "constants", " ", "and", " ", "constant", " ", 
+    "assumptions"}], " ", "*)"}], "\[IndentingNewLine]", 
   RowBox[{
    RowBox[{
     RowBox[{"prob", "=", 
      RowBox[{"{", 
       RowBox[{
        RowBox[{
-        RowBox[{"x", " ", ">", " ", "0"}], "&&", 
-        RowBox[{"a", ">", "0"}]}], ",", 
+        RowBox[{"x", " ", ">", " ", "1"}], "&&", 
+        RowBox[{"a", ">", "0"}], "&&", 
+        RowBox[{
+         RowBox[{"a", "*", "b"}], ">", "0"}]}], ",", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"a", "*", "x"}], "}"}], ",", 
+         RowBox[{"{", "x", "}"}], ",", "True"}], "}"}], ",", 
+       RowBox[{"x", ">", "0"}]}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{"SOSBarrierMATLAB", "[", "prob", "]"}], "\[IndentingNewLine]", 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"prob", "=", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"b", " ", "<", " ", "5"}], " ", "&&", " ", 
+        RowBox[{"b", " ", "\[GreaterEqual]", " ", "0.5"}], "&&", 
+        RowBox[{"a", ">", "b"}], "&&", 
+        RowBox[{"x", ">", "a"}]}], ",", 
        RowBox[{"{", 
         RowBox[{
          RowBox[{"{", 
@@ -2064,10 +2084,13 @@ Cell[BoxData[
        RowBox[{"x", ">", "0"}]}], "}"}]}], ";"}], "\[IndentingNewLine]", 
    RowBox[{"SOSBarrierMATLAB", "[", "prob", "]"}]}]}]], "Input",
  CellChangeTimes->{{3.78707701984654*^9, 3.7870770233012447`*^9}, {
-  3.787077062037692*^9, 3.78707710328617*^9}, {3.787077137161644*^9, 
-  3.787077138294551*^9}},
- CellLabel->
-  "In[268]:=",ExpressionUUID->"403cc614-b14c-49a9-846a-2281ba4a8c91"]
+   3.787077062037692*^9, 3.78707710328617*^9}, {3.787077137161644*^9, 
+   3.787077138294551*^9}, {3.787079132667337*^9, 3.787079142846334*^9}, 
+   3.787079242656921*^9, {3.787079429061111*^9, 3.7870794298368*^9}, {
+   3.787079754228114*^9, 3.7870797578878813`*^9}, 3.787079814324918*^9, {
+   3.787079852988634*^9, 
+   3.7870799081290607`*^9}},ExpressionUUID->"403cc614-b14c-49a9-846a-\
+2281ba4a8c91"]
 },
 WindowSize->{960, 1148},
 WindowMargins->{{Automatic, 0}, {0, Automatic}},
@@ -2093,7 +2116,7 @@ Cell[63972, 1590, 4650, 77, 124, "Input",ExpressionUUID->"187da441-0601-4b89-a3a
 Cell[68625, 1669, 7822, 167, 446, "Input",ExpressionUUID->"8ce1e23e-2381-4157-807e-da428538f5f8"],
 Cell[76450, 1838, 4290, 105, 262, "Input",ExpressionUUID->"c4d5dd76-e9c6-4ef6-9211-829bacbcc0e1"],
 Cell[80743, 1945, 3568, 98, 262, "Input",ExpressionUUID->"cd249607-5701-44d0-823b-fcbe75a0f219"],
-Cell[84314, 2045, 892, 24, 78, "Input",ExpressionUUID->"403cc614-b14c-49a9-846a-2281ba4a8c91"]
+Cell[84314, 2045, 1875, 47, 147, "Input",ExpressionUUID->"403cc614-b14c-49a9-846a-2281ba4a8c91"]
 }
 ]
 *)

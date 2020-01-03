@@ -111,13 +111,22 @@ DeleteDuplicates[{-1,0,1,Div[vf,vars],-Div[vf,vars](*,JacobianDeterminant[vf,var
 
 
 SOSBarrierMATLAB[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
-{init,unsafe,Q,f,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas},
+{init,unsafe,Q,f,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas,allvars,cvars,rvars,vfc,Qc},
 
 Print["Attempting to generate a barrier certificate with SOS Programming"];
 
 init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
 Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
+
+allvars=Union[Variables[init],Variables[unsafe],Variables[Q],Variables[vf]];
+cvars = Complement[allvars, vars];
+rvars = Complement[vars,cvars];
+
+Qc = Union[Q,Select[init,Intersection[Variables[#],rvars]=={}&]];
+
+(* Extend vf with constant equations *)
+vfc=Join[vf,ConstantArray[0,Length[cvars]]];
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
@@ -133,18 +142,20 @@ sosprog="
 clear;
 % Inputs from Mathematica
 % Variables
-pvar "<>StringRiffle[Map[MmaToMatlab, vars], " "]<>";
-vars = "<>MmaToMatlab[vars]<>";
+pvar "<>StringRiffle[Map[MmaToMatlab, allvars], " "]<>";
+vars = "<>MmaToMatlab[allvars]<>";
+rvars= "<>MmaToMatlab[rvars]<>";
+cvars= "<>MmaToMatlab[cvars]<>";
 
 % Problem specification
 % The vector field for each coordinate
-field = "<>MmaToMatlab[vf]<>";
+field = "<>MmaToMatlab[vfc]<>";
 % Conj. Polynomials characterizing the initial set
 inits = "<>MmaToMatlab[init]<>";
 % Conj. Polynomials characterizing the unsafe set
 unsafes = "<>MmaToMatlab[unsafe]<>" ;
 % Conj. Polynomials characterizing the ev. domain
-dom = "<>MmaToMatlab[Q]<>" ;
+dom = "<>MmaToMatlab[Qc]<>" ;
 
 % Configurable options from Mathematica
 % Configurable lambda in B' >= lambda B
@@ -169,8 +180,9 @@ dom_dim = length(dom);
 for deg = mindeg : maxdeg
     sosdeg = ceil(sqrt(deg));
     fprintf('monomial degree: %i sos degree: %i\\n', deg, sosdeg);
-    monvec = vertcat(monomials(vars,0:1:deg),monheu);
-    monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
+    monvec = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:deg}),monheu);
+    monvec2 = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:sosdeg}),monheu2);
+    % monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
     for i = 1 : length(lambdas)
         lambda = lambdas(i);
         fprintf('Trying lambda: \\n');
@@ -234,6 +246,7 @@ for deg = mindeg : maxdeg
 end
 B2 = 0
 ";
+
 sosprog=StringReplace[sosprog,{"`"->"backtick","$"->"dollar"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (*Print[sosprog];*)
