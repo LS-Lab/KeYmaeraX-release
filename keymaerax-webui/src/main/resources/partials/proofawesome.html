@@ -97,7 +97,6 @@
                                         <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span>
                                     </span>
                                 <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                                   ng-if="definitions.length > 0"
                                    aria-haspopup="true" aria-expanded="false">
                                     <span class="caret"></span>
                                 </a>
@@ -108,11 +107,17 @@
                                            popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                         <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
                                     </li>
-                                    <li><a ng-click="doTactic(undefined, 'expandAllDefs;master')"
+                                    <li ng-if="definitions.length > 0"><a ng-click="doTactic(undefined, 'expandAllDefs;master')"
                                            uib-popover-template="fetchRuleHelp('master')"
                                            popover-class="k4-rulemenu-helppopover"
                                            popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                         <span class="fa fa-play"><span class="k4-btn-optional-text"> Expand+Auto</span></span></a>
+                                    </li>
+                                    <li><a ng-click="doTactic(undefined, 'explore')"
+                                           uib-popover-template="fetchRuleHelp('explore')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
                                     </li>
                                 </ul>
                             </span>
@@ -123,10 +128,6 @@
                                                 popover-class="k4-rulemenu-helppopover"
                                                 popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
-                        </li>
-                        <li class="nav-item"><a ng-click="doTactic(undefined, 'explore')"
-                                                data-intro="<center>Until (dis)proved</center>" data-position="top">
-                            <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'unfold')"
                                data-intro="<center>Unfold all operators</center>" data-position="top"
