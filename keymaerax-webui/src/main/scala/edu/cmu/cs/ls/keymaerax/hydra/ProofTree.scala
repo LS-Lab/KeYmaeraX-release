@@ -142,9 +142,12 @@ trait ProofTreeNode {
   private def makerSubst(maker: Option[String]): List[SubstitutionPair] = maker.map(m => {
     if (m.startsWith("US")) {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-      // expandAll serializes to sequence of US
-      val substitutions = m.split(";")
-      substitutions.map(s => s.stripPrefix("US(\"").stripSuffix("\")").asSubstitutionPair).toList
+      // collect substitutions of expandAll (serializes to sequence of US), and
+      // at beginning of custom tactics, e.g., "expand Q; unfold; expand P; master" (inner expand P not recorded)
+      val substitutions = m.split(";").map(_.trim)
+      val firstNonSubst = substitutions.indexWhere(!_.startsWith("US"))
+      val substs = if (firstNonSubst >= 0) substitutions.take(firstNonSubst) else substitutions
+      substs.map(s => s.stripPrefix("US(\"").stripSuffix("\")").asSubstitutionPair).toList
     } else Nil
   }).getOrElse(Nil)
 

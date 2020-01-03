@@ -8,13 +8,13 @@ import java.util.concurrent.ExecutionException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -351,9 +351,16 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case DefTactic(_, _) => v //@note noop, but included for serialization purposes
 
-    case Expand(_, s) => apply(TactixLibrary.US(USubst(s :: Nil)), v)
+    case Expand(_, s) =>
+      val substs = USubst(s :: Nil) :: Nil
+      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, substs)
+      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, substs)
+      apply(TactixLibrary.US(USubst(s :: Nil)), v)
 
     case ExpandAll(defs) =>
+      val substs = defs.map(s => USubst(s :: Nil))
+      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, substs)
+      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, substs)
       apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
         reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v)
 
@@ -565,6 +572,20 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     val substituted = p(s)
     if (substituted != p) exhaustiveSubst(substituted, s)
     else substituted
+  }
+
+  /** Applies substitutions `substs` to the products of `generator` and returns a new generator that includes both
+    * original and substituted products */
+  private def substGenerator[A](generator: Generator[A], substs: List[USubst]): Generator[A] = {
+    generator match {
+      case c: ConfigurableGenerator[(Formula, Option[InvariantGenerator.ProofHint])] =>
+        new ConfigurableGenerator(c.products ++ c.products.map(p =>
+          substs.foldRight[(Expression, Seq[(Formula, Option[InvariantGenerator.ProofHint])])](p)({ case (s, p) => s(p._1) -> p._2.map({ case (f: Formula, h) => s(f) -> h })}))).asInstanceOf[Generator[A]]
+      case c: FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])] =>
+        FixedGenerator(c.list ++ c.list.map(p =>
+          substs.foldRight[(Formula, Option[InvariantGenerator.ProofHint])](p)({ case (s, p) => s(p._1) -> p._2}))).asInstanceOf[Generator[A]]
+      case _ => generator // other generators do not include predefined invariants; they produce their results when asked
+    }
   }
 }
 

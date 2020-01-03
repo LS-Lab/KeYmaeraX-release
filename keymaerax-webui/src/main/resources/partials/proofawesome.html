@@ -87,12 +87,34 @@
                 <!-- Global toolbar with global proof tactics -->
                 <div class="collapse navbar-collapse" id="tacticnavbar">
                     <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
-                        <li class="nav-item"><a ng-click="doTactic(undefined, 'master')"
-                                                data-intro="<center>Automatic search</center>" data-position="top"
-                                                uib-popover-template="fetchRuleHelp('master')"
-                                                popover-class="k4-rulemenu-helppopover"
-                                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                            <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
+                        <li class="nav-item">
+                            <span>
+                                <span ng-click="doTactic(undefined, 'master')"
+                                      data-intro="<center>Automatic search</center>" data-position="top"
+                                      uib-popover-template="fetchRuleHelp('master')"
+                                      popover-class="k4-rulemenu-helppopover"
+                                      popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span>
+                                    </span>
+                                <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                                   aria-haspopup="true" aria-expanded="false">
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a ng-click="doTactic(undefined, 'master')"
+                                           uib-popover-template="fetchRuleHelp('master')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
+                                    </li>
+                                    <li><a ng-click="doTactic(undefined, 'expandAllDefs;master')"
+                                           uib-popover-template="fetchRuleHelp('master')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-play"><span class="k4-btn-optional-text"> Expand+Auto</span></span></a>
+                                    </li>
+                                </ul>
+                            </span>
                         </li>
                         <li class="nav-item"><a ng-click="onTacticScript('propAuto',false)"
                                                 data-intro="<center>Propositional proof</center>" data-position="top"
