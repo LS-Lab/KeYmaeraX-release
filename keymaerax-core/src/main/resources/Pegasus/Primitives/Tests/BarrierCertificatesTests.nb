@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     87193,       2115]
-NotebookOptionsPosition[     86193,       2094]
-NotebookOutlinePosition[     86526,       2109]
-CellTagsIndexPosition[     86483,       2106]
+NotebookDataLength[     93701,       2286]
+NotebookOptionsPosition[     91702,       2253]
+NotebookOutlinePosition[     92035,       2268]
+CellTagsIndexPosition[     91992,       2265]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -1943,10 +1943,18 @@ Cell[BoxData[
    3.762793701554242*^9}, {3.763048771522353*^9, 3.763048780387356*^9}},
  CellLabel->"In[57]:=",ExpressionUUID->"c4d5dd76-e9c6-4ef6-9211-829bacbcc0e1"],
 
+Cell[CellGroupData[{
+
 Cell[BoxData[
  RowBox[{
   RowBox[{"(*", " ", 
-   RowBox[{"Automatic", " ", "splitting"}], " ", "*)"}], 
+   RowBox[{"Experimental", ":", " ", 
+    RowBox[{"automatic", " ", "problem", " ", "splitting", " ", 
+     RowBox[{"(", 
+      RowBox[{
+      "should", " ", "be", " ", "combined", " ", "with", " ", "rounding", " ",
+        "at", " ", "a", " ", "higher", " ", "level", " ", "than", " ", 
+       RowBox[{"primitives", "!"}]}], ")"}]}]}], " ", "*)"}], 
   "\[IndentingNewLine]", 
   RowBox[{
    RowBox[{
@@ -2039,9 +2047,160 @@ Cell[BoxData[
  CellChangeTimes->{{3.787075667112627*^9, 3.78707568092064*^9}, {
   3.7870758499142847`*^9, 3.787076086029044*^9}, {3.787076305190235*^9, 
   3.787076351015418*^9}, {3.7870764462787*^9, 3.787076490256344*^9}, {
-  3.7870770523621817`*^9, 3.787077055658928*^9}},
+  3.7870770523621817`*^9, 3.787077055658928*^9}, {3.787080619288842*^9, 
+  3.787080646696149*^9}},
  CellLabel->
-  "In[261]:=",ExpressionUUID->"cd249607-5701-44d0-823b-fcbe75a0f219"],
+  "In[364]:=",ExpressionUUID->"cd249607-5701-44d0-823b-fcbe75a0f219"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"-", 
+      FractionBox["1", "5"]}], "\[LessEqual]", "x1", "\[LessEqual]", 
+     FractionBox["1", "5"]}], "&&", 
+    RowBox[{
+     FractionBox["3", "10"], "\[LessEqual]", "x2", "\[LessEqual]", 
+     FractionBox["7", "10"]}]}], ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"-", "x1"}], "+", 
+        RowBox[{"2", " ", 
+         SuperscriptBox["x1", "3"], " ", 
+         SuperscriptBox["x2", "2"]}]}], ",", 
+       RowBox[{"-", "x2"}]}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"x1", ",", "x2"}], "}"}], ",", 
+     RowBox[{
+      RowBox[{"-", "5"}], "\[LessEqual]", "x2", "\[LessEqual]", "5"}]}], 
+    "}"}], ",", 
+   RowBox[{"x2", "<", "4"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.787081336370512*^9},
+ CellLabel->
+  "Out[365]=",ExpressionUUID->"81b1ba99-16da-41a9-8212-1175266baafb"],
+
+Cell[BoxData["\<\"Attempting to generate a barrier certificate with SOS \
+Programming\"\>"], "Print",
+ CellChangeTimes->{3.787081336378785*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"f2912d6c-2afc-400c-a320-de553eb6276e"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "OpenMATLAB","wspo","\"The MATLAB workspace is already open.\"",2,367,16,
+   22462703787268569422,"Local","MATLink`OpenMATLAB"},
+  "MessageTemplate2"]], "Message", "MSG",
+ CellChangeTimes->{3.7870813363812733`*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"74d25099-c2db-4f5d-92b2-bc03f0adf9c9"],
+
+Cell[BoxData["\<\"Attempting to generate a barrier certificate with SOS \
+Programming\"\>"], "Print",
+ CellChangeTimes->{3.787081336933617*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"15d88a2e-994b-4b17-8f22-94dd5c8b00d4"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "OpenMATLAB","wspo","\"The MATLAB workspace is already open.\"",2,367,17,
+   22462703787268569422,"Local","MATLink`OpenMATLAB"},
+  "MessageTemplate2"]], "Message", "MSG",
+ CellChangeTimes->{3.787081336980938*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"065aa863-4220-45d9-8775-0b19ef0dba25"],
+
+Cell[BoxData["\<\"Attempting to generate a barrier certificate with SOS \
+Programming\"\>"], "Print",
+ CellChangeTimes->{3.787081337513195*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"cb2d7728-25b9-4702-874e-c477ab0adf21"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "OpenMATLAB","wspo","\"The MATLAB workspace is already open.\"",2,367,18,
+   22462703787268569422,"Local","MATLink`OpenMATLAB"},
+  "MessageTemplate2"]], "Message", "MSG",
+ CellChangeTimes->{3.787081337540957*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"994ce71e-6f17-445c-8f59-63c57642eab9"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "General","stop",
+   "\"Further output of \\!\\(\\*StyleBox[RowBox[{\\\"OpenMATLAB\\\", \
+\\\"::\\\", \\\"wspo\\\"}], \\\"MessageName\\\"]\\) will be suppressed during \
+this calculation.\"",2,367,19,22462703787268569422,"Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{3.787081337559722*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"1b7795c4-4c34-40d0-bf67-c791ac4328b4"],
+
+Cell[BoxData["\<\"Attempting to generate a barrier certificate with SOS \
+Programming\"\>"], "Print",
+ CellChangeTimes->{3.787081342837731*^9},
+ CellLabel->
+  "During evaluation of \
+In[364]:=",ExpressionUUID->"4fe71524-c350-4290-b625-ce1b394568af"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", "1.1736`"}], "-", 
+      RowBox[{"6.968`*^-10", " ", "x1"}], "-", 
+      RowBox[{"2.2279`", " ", "x2"}], "+", 
+      RowBox[{"1.9115`*^-15", " ", 
+       SuperscriptBox["x1", "3"], " ", 
+       SuperscriptBox["x2", "2"]}]}], "\[LessEqual]", "0"}], "&&", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", "2.4107`"}], "-", 
+      RowBox[{"9.869000000000001`*^-17", " ", "x1"}], "+", 
+      RowBox[{"0.82747`", " ", "x2"}], "+", 
+      RowBox[{"5.541699999999999`*^-25", " ", 
+       SuperscriptBox["x1", "3"], " ", 
+       SuperscriptBox["x2", "2"]}]}], "\[LessEqual]", "0"}]}], ")"}], "||", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", "0.00070785`"}], "+", 
+      RowBox[{"3.3095`*^-7", " ", "x1"}], "+", 
+      RowBox[{"0.078564`", " ", 
+       SuperscriptBox["x1", "2"]}], "-", 
+      RowBox[{"7.289799999999999`*^-6", " ", "x2"}], "+", 
+      RowBox[{"0.23004`", " ", "x1", " ", "x2"}], "+", 
+      RowBox[{"0.726`", " ", 
+       SuperscriptBox["x2", "2"]}], "-", 
+      RowBox[{"0.016677`", " ", 
+       SuperscriptBox["x1", "3"], " ", 
+       SuperscriptBox["x2", "2"]}]}], "\[LessEqual]", "0"}], "&&", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", "2.1257`"}], "-", 
+      RowBox[{"4.0179`*^-10", " ", "x1"}], "+", 
+      RowBox[{"0.76074`", " ", "x2"}], "+", 
+      RowBox[{"1.2992`*^-15", " ", 
+       SuperscriptBox["x1", "3"], " ", 
+       SuperscriptBox["x2", "2"]}]}], "\[LessEqual]", "0"}]}], 
+   ")"}]}]], "Output",
+ CellChangeTimes->{3.787081343407058*^9},
+ CellLabel->
+  "Out[367]=",ExpressionUUID->"e4233e77-cb65-411a-a66f-ae7009582b1d"]
+}, Open  ]],
 
 Cell[BoxData[
  RowBox[{
@@ -2115,8 +2274,20 @@ Cell[63697, 1581, 272, 7, 31, "Input",ExpressionUUID->"58ae8ecb-29ae-4456-ab08-3
 Cell[63972, 1590, 4650, 77, 124, "Input",ExpressionUUID->"187da441-0601-4b89-a3ac-1782b7e18b8c"],
 Cell[68625, 1669, 7822, 167, 446, "Input",ExpressionUUID->"8ce1e23e-2381-4157-807e-da428538f5f8"],
 Cell[76450, 1838, 4290, 105, 262, "Input",ExpressionUUID->"c4d5dd76-e9c6-4ef6-9211-829bacbcc0e1"],
-Cell[80743, 1945, 3568, 98, 262, "Input",ExpressionUUID->"cd249607-5701-44d0-823b-fcbe75a0f219"],
-Cell[84314, 2045, 1875, 47, 147, "Input",ExpressionUUID->"403cc614-b14c-49a9-846a-2281ba4a8c91"]
+Cell[CellGroupData[{
+Cell[80765, 1947, 3910, 105, 285, "Input",ExpressionUUID->"cd249607-5701-44d0-823b-fcbe75a0f219"],
+Cell[84678, 2054, 927, 29, 53, "Output",ExpressionUUID->"81b1ba99-16da-41a9-8212-1175266baafb"],
+Cell[85608, 2085, 249, 5, 25, "Print",ExpressionUUID->"f2912d6c-2afc-400c-a320-de553eb6276e"],
+Cell[85860, 2092, 351, 8, 23, "Message",ExpressionUUID->"74d25099-c2db-4f5d-92b2-bc03f0adf9c9"],
+Cell[86214, 2102, 249, 5, 25, "Print",ExpressionUUID->"15d88a2e-994b-4b17-8f22-94dd5c8b00d4"],
+Cell[86466, 2109, 349, 8, 23, "Message",ExpressionUUID->"065aa863-4220-45d9-8775-0b19ef0dba25"],
+Cell[86818, 2119, 249, 5, 25, "Print",ExpressionUUID->"cb2d7728-25b9-4702-874e-c477ab0adf21"],
+Cell[87070, 2126, 349, 8, 23, "Message",ExpressionUUID->"994ce71e-6f17-445c-8f59-63c57642eab9"],
+Cell[87422, 2136, 450, 10, 23, "Message",ExpressionUUID->"1b7795c4-4c34-40d0-bf67-c791ac4328b4"],
+Cell[87875, 2148, 249, 5, 25, "Print",ExpressionUUID->"4fe71524-c350-4290-b625-ce1b394568af"],
+Cell[88127, 2155, 1681, 46, 121, "Output",ExpressionUUID->"e4233e77-cb65-411a-a66f-ae7009582b1d"]
+}, Open  ]],
+Cell[89823, 2204, 1875, 47, 147, "Input",ExpressionUUID->"403cc614-b14c-49a9-846a-2281ba4a8c91"]
 }
 ]
 *)

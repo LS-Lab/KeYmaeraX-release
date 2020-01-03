@@ -180,8 +180,13 @@ dom_dim = length(dom);
 for deg = mindeg : maxdeg
     sosdeg = ceil(sqrt(deg));
     fprintf('monomial degree: %i sos degree: %i\\n', deg, sosdeg);
-    monvec = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:deg}),monheu);
-    monvec2 = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:sosdeg}),monheu2);
+    if size(cvars) == 0
+        monvec = vertcat(monomials(rvars,0:1:deg),monheu);
+        monvec2 = vertcat(monomials(rvars,0:1:sosdeg),monheu2);        
+    else
+        monvec = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:deg}),monheu);
+        monvec2 = vertcat(mpmonomials({cvars,rvars},{0:1,0:1:sosdeg}),monheu2);
+    end
     % monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
     for i = 1 : length(lambdas)
         lambda = lambdas(i);
@@ -595,13 +600,14 @@ Print["No feasible solution found by Linear Programming."];
 Throw[{}]]];
 
 
-SplittingBarrierMATLAB[{ pre_, { vf_List, vars_List, evoConst_ }, post_}]:=Catch[Module[
-{prenorm,postnorm},
+SplittingBarrierMATLAB[{ pre_, ode_List, post_}]:=Catch[Module[
+{prenorm,postnorm,prei,posti},
 
 prenorm=Primitives`DNFNormalizeGtGeq[pre];
 postnorm=Primitives`CNFNormalizeGtGeq[post];
-Print[prenorm,postnorm];
-(* TODO: *) 
+
+Map[Function[{prev},Map[SOSBarrierMATLAB[{prev,ode,#}]&,postnorm]],prenorm]
+
 ]]
 
 
