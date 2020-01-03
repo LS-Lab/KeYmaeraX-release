@@ -3,10 +3,6 @@
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* Load primitives package *)
 
 
-(* ::Input:: *)
-(*(* Polynomial generation for qualitative analysis *)*)
-
-
 BeginPackage["Dependency`"];
 
 
@@ -82,6 +78,7 @@ returnList = DeleteDuplicates[returnList];
 returnList = SortBy[returnList, Length];
 Return[returnList];
 ];
+
 VariableDependencies[problem_List]:=Module[
 {pre,f,vars,Q,post, varsList},
 {pre,{f,vars,Q},post}=problem;

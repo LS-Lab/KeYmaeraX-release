@@ -7,6 +7,10 @@ Needs["MATLink`"]
 BeginPackage["BarrierCertificates`"];
 
 
+(* This should be at a higher level than primitives, probably... *)
+SplittingBarrierMATLAB::usage="SplittingBarrierMATLAB[problem_List] uses SOSBarrierMATLAB internally but automatically splits problems";
+
+
 SOSBarrierMATLAB::usage="SOSBarrierMATLAB[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
 Options[SOSBarrierMATLAB]= {Lambda -> {}, MaxDeg -> 10};
 
@@ -576,6 +580,16 @@ For[i=1,i<=OptionValue[MaxDeg],i++,
 	{lambda,heulambdas}]];
 Print["No feasible solution found by Linear Programming."];
 Throw[{}]]];
+
+
+SplittingBarrierMATLAB[{ pre_, { vf_List, vars_List, evoConst_ }, post_}]:=Catch[Module[
+{prenorm,postnorm},
+
+prenorm=Primitives`DNFNormalizeGtGeq[pre];
+postnorm=Primitives`CNFNormalizeGtGeq[post];
+Print[prenorm,postnorm];
+(* TODO: *) 
+]]
 
 
 End[];
