@@ -413,6 +413,12 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equation <span class="caret"></span></a>
                             <ul class="dropdown-menu">
+                                <li><a ng-click="doSearch('ODE', 'R')"
+                                  uib-popover-template="fetchRuleHelp('ODE')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                  <span>Auto</span><code class="pull-right">ODE</code></a></li>
+                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('solve', 'R')"
                                        uib-popover-template="fetchRuleHelp('solve')"
                                        popover-class="k4-rulemenu-helppopover"
@@ -500,13 +506,16 @@
                                         <span>Find Assumptions</span><code class="pull-right">pQE</code>
                                     </a>
                                 </li>
+                                <li><a ng-click="getPegasusODECandidates()"
+                                  uib-popover-template="fetchRuleHelp('odeInvariantCandidates')"
+                                                                         popover-class="k4-rulemenu-helppopover"
+                                                                         popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>Find ODE Invariant Candidates</span></a></li>
                                 <li><a ng-click="getODEConditions()" uib-popover-template="fetchRuleHelp('odeConditions')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                         <span>Find ODE Conditions</span>
                                     </a>
                                 </li>
-                                <li><a ng-click="getPegasusODECandidates()"><span>Find ODE Invariant Candidates</span></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('intervalArithmetic', 'R')"
                                        uib-popover-template="fetchRuleHelp('intervalArithmetic')"
