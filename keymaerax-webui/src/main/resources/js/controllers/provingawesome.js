@@ -4,7 +4,7 @@
 
 angular.module('keymaerax.controllers').controller('ProofCtrl',
     function($scope, $rootScope, $http, $route, $routeParams, $q, $uibModal, $timeout,
-             sequentProofData, spinnerService, sessionService) {
+             sequentProofData, spinnerService, sessionService, derivationInfos) {
 
   $scope.userId = sessionService.getUser();
   $scope.proofId = $routeParams.proofId;
@@ -13,6 +13,16 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   $scope.runningRequest = {
     canceller: undefined
   }
+
+  $scope.sequentProofData = sequentProofData;
+  $scope.definitions = undefined;
+  $scope.$watch('sequentProofData.agenda.selectedTab', function(newValue, oldValue) {
+    if (newValue != oldValue) {
+      derivationInfos.sequentApplicableDefinitions($scope.userId, $scope.proofId, newValue).then(function(defs) {
+        $scope.definitions = defs;
+      });
+    }
+  });
 
   $scope.taskExplanation = {
     selection: "Rule"

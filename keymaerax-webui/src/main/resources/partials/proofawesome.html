@@ -97,6 +97,7 @@
                                         <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span>
                                     </span>
                                 <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                                   ng-if="definitions.length > 0"
                                    aria-haspopup="true" aria-expanded="false">
                                     <span class="caret"></span>
                                 </a>
@@ -188,10 +189,42 @@
                                                 data-intro="<center>Browse all rules</center>" data-position="top">
                             <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse</span></span></a>
                         </li>
-                        <li class="nav-item"><a ng-click="openModelEditor(agenda.modelId)"
-                               data-intro="<center>View and edit model</center>" data-position="top">
-                            <span class="fa fa-keyboard-o"
-                             uib-tooltip="View model or edit model and rerun proof"><span class="k4-btn-optional-text"> Model</span></span></a>
+
+                        <li class="nav-item">
+                            <span>
+                                <span ng-click="openModelEditor(agenda.modelId)"
+                                      data-intro="<center>View and edit model</center>" data-position="top">
+                                        <span class="fa fa-keyboard-o"
+                                              uib-tooltip="View model or edit model and rerun proof">
+                                            <span class="k4-btn-optional-text"> Model</span>
+                                        </span>
+                                </span>
+                                <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                                   ng-if="definitions.length > 0"
+                                   aria-haspopup="true" aria-expanded="false">
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-right">
+                                    <li><a ng-click="openModelEditor(agenda.modelId)"
+                                           data-intro="<center>View and edit model</center>" data-position="top">
+                                        <span class="fa fa-keyboard-o"
+                                              uib-tooltip="View model or edit model and rerun proof">
+                                            <span class="k4-btn-optional-text"> Model</span>
+                                        </span>
+                                        </a>
+                                    </li>
+                                    <li class="divider" ng-if="definitions.length > 0"></li>
+                                    <li ng-if="definitions.length > 0">
+                                        <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all definitions<code class="pull-right">expandAllDefs</code></a>
+                                    </li>
+                                    <li ng-repeat="d in definitions">
+                                        <a href ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+                                            <span>{{d.definition.inWhat}}</span> ~> <span>{{d.definition.inRepl}}</span>
+                                            <code class="pull-right">expand {{d.symbol}}</code>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </span>
                         </li>
                     </ul>
                 <!-- Global list of proof rules, axiom and proof tactics -->
