@@ -114,10 +114,10 @@ trait ProofTreeNode {
       // if they cannot be merged verbatim, merge by delayed substitution;
       // if they cannot be merged (backsubstitution failed, see SequentialInterpreter Let): keep global
       if (myProvable.isProved) {
-        val substs = children.flatMap(c => c.theProvable._2 ++ makerSubst(c.maker).toList)
+        val substs = children.flatMap(c => c.theProvable._2 ++ makerSubst(c.maker))
         myProvable -> substs
       } else children.map(c => (c.theProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
-        val ms = makerSubst(subMaker).toList
+        val ms = makerSubst(subMaker)
         val preSubsts = (globalSubsts ++ subSubsts)
         val substs = (preSubsts ++ ms).distinct
 
@@ -139,12 +139,14 @@ trait ProofTreeNode {
   }
 
   /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
-  private def makerSubst(maker: Option[String]): Option[SubstitutionPair] = maker.flatMap(m => {
+  private def makerSubst(maker: Option[String]): List[SubstitutionPair] = maker.map(m => {
     if (m.startsWith("US")) {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-      Some(m.stripPrefix("US(\"").stripSuffix("\")").asSubstitutionPair)
-    } else None
-  })
+      // expandAll serializes to sequence of US
+      val substitutions = m.split(";")
+      substitutions.map(s => s.stripPrefix("US(\"").stripSuffix("\")").asSubstitutionPair).toList
+    } else Nil
+  }).getOrElse(Nil)
 
   private lazy val theDescendants = children ++ children.flatMap(_.allDescendants)
   private lazy val theAncestors = parent.toList ++ parent.map(_.allAncestors).getOrElse(Nil)
