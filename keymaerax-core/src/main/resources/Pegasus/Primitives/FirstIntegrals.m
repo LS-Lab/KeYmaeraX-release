@@ -6,7 +6,9 @@ Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 	Implementation of a procedure for generating polynomial first integrals for
 	autonomous (i.e. time-independent) systems of polynomial ODEs.
 
-   Comments: Tested in Mathematica 10.0   *)
+   TODO: Add support for using the domains to Matringe and PDE methods
+   Comments: Tested in Mathematica 10.0
+ *)
 
 
 BeginPackage[ "FirstIntegrals`"];
