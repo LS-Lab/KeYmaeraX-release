@@ -14,6 +14,53 @@ angular.module('keymaerax.ui.mouseevents')
     };
   }]);
 
+/* Override ng-click to not fire on alt option. */
+angular.module('keymaerax.ui.mouseevents')
+  .directive('ngClick', ['$parse', function($parse) {
+    return {
+      restrict: 'A',
+      priority: 10,
+      link: function(scope, element, attrs) {
+        var fn = $parse(attrs.ngClick);
+        element.bind('click', function(event) {
+          if (!event.altKey) {
+            scope.$apply(function() {
+              event.preventDefault();
+              fn(scope, {$event:event});
+            });
+          }
+        });
+      }
+    }
+  }]);
+
+angular.module('keymaerax.ui.mouseevents').config(function($provide) {
+    $provide.decorator('ngClickDirective', ['$delegate', function($delegate) {
+        // remove builtin ng-click so that only the conditional ngClick above remains
+        $delegate.shift();
+        return $delegate;
+    }]);
+});
+
+/** Alt-click directive */
+angular.module('keymaerax.ui.mouseevents')
+  .directive('ngAltClick', ['$parse', function($parse) {
+    return {
+      restrict: 'A',
+      link: function(scope, element, attrs) {
+        var fn = $parse(attrs.ngAltClick);
+        element.bind('click', function(event) {
+          scope.$apply(function() {
+            if (event.altKey) {
+              event.preventDefault();
+              fn(scope, {$event:event});
+            }
+          });
+        });
+      }
+    }
+  }]);
+
 angular.module('keymaerax.ui.mouseevents')
   .directive('k4Draggable', ['$parse', function($parse) {
     return {
