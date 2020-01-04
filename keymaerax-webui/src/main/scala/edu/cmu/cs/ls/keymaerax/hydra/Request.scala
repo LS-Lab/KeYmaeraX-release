@@ -1955,6 +1955,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Right(t: InputPositionTacticInfo) => (t.codeName, pos, None)
         case Right(t: TwoPositionTacticInfo) => (t.codeName, pos, pos2)
         case Right(t: InputTwoPositionTacticInfo) => (t.codeName, pos, pos2)
+        case Right(t: BuiltinInfo) => (t.codeName, None, None)
         case Right(t) => (t.codeName, None, None)
       }
       else (belleTerm, pos, pos2)
@@ -2689,7 +2690,6 @@ object RequestHelper {
   def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator]): Either[String,DerivationInfo] = {
     val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
-    val expandPattern = "(expand).*".r
     tacticId.toLowerCase match {
       case ("step" | "stepat") if pos.isDefined && pos2.isEmpty =>
         sequent.sub(pos.get) match {
@@ -2708,7 +2708,6 @@ object RequestHelper {
               case None => Left(tacticId)
             }
         }
-      case expandPattern(_) if pos.isEmpty && pos2.isEmpty => Left(tacticId)
       case _ => Right(DerivationInfo.ofCodeName(tacticId))
     }
   }

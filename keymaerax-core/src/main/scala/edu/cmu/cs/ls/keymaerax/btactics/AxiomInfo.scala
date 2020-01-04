@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
@@ -1331,7 +1332,8 @@ object DerivationInfo {
     }
 
   /** Retrieve meta-information on an inference by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivationInfo = byCanonicalName.getOrElse(axiomName, throw AxiomNotFoundException(axiomName))
+  def apply(axiomName: String): DerivationInfo = byCanonicalName.getOrElse(axiomName,
+    ofBuiltinName(axiomName).getOrElse(throw AxiomNotFoundException(axiomName)))
 
   /** Throw an AssertionError if id does not conform to the rules for code names. */
   def assertValidIdentifier(id: String): Unit = { assert(id.forall(_.isLetterOrDigit), "valid code name: " + id)}
@@ -1341,9 +1343,18 @@ object DerivationInfo {
     assert(byCodeName != null, "byCodeName should not be null.")
     assert(codeName != null, "codeName should not be null.")
 
-    byCodeName.getOrElse(codeName,
+    byCodeName.getOrElse(codeName, ofBuiltinName(codeName).getOrElse(
       throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
-    )
+    ))
+  }
+
+  /** Retrieve meta-information on a builtin tactic expression by the given `name`. */
+  def ofBuiltinName(name: String): Option[DerivationInfo] = {
+    val expandPattern = "(expand(?!All).*)|(expandAllDefs)".r
+    name match {
+      case expandPattern(_*) => Some(new BuiltinInfo(name, SimpleDisplayInfo(name, name)))
+      case _ => None
+    }
   }
 
   /** Locate the derivation info for said tactic */
@@ -1589,6 +1600,14 @@ object DerivedAxiomInfo {
 }
 
 // tactics
+
+/** Meta-information on builtin tactic expressions (expand etc.). */
+class BuiltinInfo(override val codeName: String, override val display: DisplayInfo,
+                 override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
+  extends DerivationInfo {
+  def belleExpr: BelleExpr = BelleParser(codeName)
+  val canonicalName: String = codeName
+}
 
 /** Meta-information on a tactic performing a proof step (or more) */
 class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false,
