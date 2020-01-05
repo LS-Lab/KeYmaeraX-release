@@ -19,13 +19,11 @@ angular.module('keymaerax.ui.mouseevents')
   .directive('ngClick', ['$parse', function($parse) {
     return {
       restrict: 'A',
-      priority: 10,
       link: function(scope, element, attrs) {
         var fn = $parse(attrs.ngClick);
         element.bind('click', function(event) {
           if (!event.altKey) {
             scope.$apply(function() {
-              event.preventDefault();
               fn(scope, {$event:event});
             });
           }
