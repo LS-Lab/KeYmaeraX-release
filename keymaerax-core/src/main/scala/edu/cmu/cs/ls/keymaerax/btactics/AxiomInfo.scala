@@ -1127,9 +1127,9 @@ object DerivationInfo {
         TactixLibrary.useLemma(lemmaName, tactic.map(_.asTactic))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputTacticInfo("byUS"
-      , RuleDisplayInfo(("US", "byUS"), (List(),List("sigma(phi)")),
-        List((List(), List("phi"))))
-      , List(StringArg("phi"), FormulaArg("sigma"))
+      , RuleDisplayInfo(("US", "byUS"), (List(),List("S(P)")),
+        List((List(), List("P"))))
+      , List(StringArg("P"), FormulaArg("S"))
       , _ => ((axiomName: String) => ({
         case None => TactixLibrary.byUS(axiomName)
         case Some(substFml: Formula) =>
@@ -1141,9 +1141,9 @@ object DerivationInfo {
           TactixLibrary.byUS(axiomName, (_: UnificationMatch.Subst) => subst)
       }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
     InputTacticInfo("US"
-      , RuleDisplayInfo(("US", "US"), (List(),List("sigma(phi)")),
-        List((List(), List("phi"))))
-      , List(SubstitutionArg("sigma"))
+      , RuleDisplayInfo(("US", "US"), (List(),List("S(P)")),
+        List((List(), List("P"))))
+      , List(SubstitutionArg("S"))
       , _ => ((subst: USubst) => TactixLibrary.uniformSubstitute(subst)): TypedFunc[USubst, BelleExpr]),
 
     InputPositionTacticInfo("useLemmaAt"
