@@ -13,25 +13,7 @@
 <div class="row">
     <div class="col-md-12">
         <span class="pull-right">
-        <span uib-dropdown ng-if="definitions.length > 0">
-          <a href id="definitions-dropdown" uib-dropdown-toggle>
-              <i class="fa fa-expand"></i> Expand Definitions
-          </a>
-          <ul class="dropdown-menu dropdown-menu-right" uib-dropdown-menu aria-labelledby="definitions-dropdown">
-              <li>
-                  <a href ng-click="onTactic(undefined, 'expandAllDefs')">Expand all<code class="pull-right">expandAllDefs</code></a>
-              </li>
-              <li class="divider"></li>
-              <li ng-repeat="d in definitions">
-                  <a href ng-click='onTactic(undefined, "expand \"" + d.symbol + "\"")'>
-                      <span>{{d.definition.inWhat}}</span> ~> <span>{{d.definition.inRepl}}</span>
-                      <code class="pull-right">expand {{d.symbol}}</code>
-                  </a>
-              </li>
-          </ul>
-        </span>
-        <a ng-click="tacticPopover.close()"><span class="fa fa-close"></span>
-        </a>
+            <a ng-click="tacticPopover.close()"><span class="fa fa-close"></span></a>
         </span>
     </div>
 </div>
