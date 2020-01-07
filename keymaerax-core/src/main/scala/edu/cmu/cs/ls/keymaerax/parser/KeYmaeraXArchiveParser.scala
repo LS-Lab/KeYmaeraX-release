@@ -63,9 +63,12 @@ object KeYmaeraXArchiveParser {
     lazy val substs: List[SubstitutionPair] = topSortDefs(decls.filter(_._2._3.isDefined).
       map((declAsSubstitutionPair _).tupled).toList)
 
-    /** Declared names and signatures as functions. */
-    lazy val asFunctions: List[Function] = decls.map({ case ((name, idx), (domain, codomain, _, _)) =>
-      Function(name, idx, domain.getOrElse(Unit), codomain) }).toList
+    /** Declared names and signatures as [[NamedSymbol]]. */
+    lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, _)) => sort match {
+      case Real | Bool if domain.isEmpty => Variable(name, idx, sort)
+      case Real | Bool if domain.isDefined => Function(name, idx, domain.get, sort)
+      case Trafo => assert(idx.isEmpty, "Program constants are not allowed to have an index, but got " + name + "_" + idx); ProgramConst(name)
+    }}).toList
 
     /** Topologically sorts the substitution pairs in `defs`. */
     def topSortDefs(defs: List[SubstitutionPair]): List[SubstitutionPair] = {
