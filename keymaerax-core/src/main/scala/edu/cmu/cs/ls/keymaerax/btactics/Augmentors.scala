@@ -340,11 +340,20 @@ object Augmentors {
   implicit class SortAugmentor(val sort: Sort) {
     /** Converts this `sort` into nested pairs of DotTerms. Returns the nested dots and the next unused dot index. */
     def toDots(idx: Int): (Term, Int) = sort match {
-      case Real => (DotTerm(sort, Some(idx)), idx+1)
+      case Real | Bool => (DotTerm(sort, Some(idx)), idx+1)
       case Tuple(l, r) =>
         val (lDots, lNextIdx) = l.toDots(idx)
         val (rDots, rNextIdx) = r.toDots(lNextIdx)
         (Pair(lDots, rDots), rNextIdx)
+    }
+
+    /** Converts this `sort` into a flat list of [[DotTerm]].  */
+    def toFlatDots(idx: Int): (List[DotTerm], Int) = toDots(idx) match {
+      case (d: DotTerm, i) => (d :: Nil, i)
+      case (Pair(d: DotTerm, r), i) =>
+        val (rd, ni) = r.sort.toFlatDots(i)
+        (d :: rd, ni)
+      case _ => throw new IllegalArgumentException("Sort cannot be flattened")
     }
   }
 }
