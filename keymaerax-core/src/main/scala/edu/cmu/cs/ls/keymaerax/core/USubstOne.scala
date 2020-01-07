@@ -96,11 +96,11 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
 
-  /** apply this uniform substitution everywhere in a formula with allVariables as taboos */
+  /** apply this uniform substitution everywhere in a formula with [[SetLattice.allVars]] as taboos. */
   def applyAllTaboo(f: Formula): Formula = try usubst(allVars, f) catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
 
   /**
-    * Apply uniform substitution everywhere in the sequent with allVariables as taboos.
+    * Apply uniform substitution everywhere in the sequent with [[SetLattice.allVars]] as taboos.
     */
   //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
   def applyAllTaboo(s: Sequent): Sequent = try { Sequent(s.ante.map(applyAllTaboo(_)), s.succ.map(applyAllTaboo(_))) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
@@ -129,15 +129,15 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case app@FuncOf(of, theta) if matchHead(app) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[FuncOf] && sp.sameHead(app))
         val FuncOf(wf, wArg) = subs.what
-        assert(wf == of, "match on same function heads")
-        assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
+        //redundant: assert(wf == of, "match on same function heads")
+        //redundant: assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         requireAdmissible(u, subs.freeVars, subs.repl, term)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubstOne(toSubsPairs(u, wArg, theta)).usubst(bottom[Variable], subs.repl.asInstanceOf[Term])
       case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(u, theta))
       case Nothing =>
-        assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
+        //redundant: assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
         Nothing
       case d: DotTerm if  subsDefs.exists(_.what==d) =>
         val subs = subsDefs.find(_.what==d).get
@@ -169,8 +169,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case app@PredOf(op, theta) if matchHead(app) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
         val PredOf(wp, wArg) = subs.what
-        assert(wp == op, "match only if same head")
-        assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
+        //redundant: assert(wp == op, "match only if same head")
+        //redundant: assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         requireAdmissible(u, subs.freeVars, subs.repl, formula)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
@@ -180,8 +180,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case app@PredicationalOf(op, fml) if matchHead(app) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app))
         val PredicationalOf(wp, wArg) = subs.what
-        assert(wp == op, "match only if same head")
-        assert(wArg == DotFormula)
+        //redundant: assert(wp == op, "match only if same head")
+        //redundant: assert(wArg == DotFormula)
         USubstOne(SubstitutionPair(wArg, usubst(allVars, fml)) :: Nil).usubst(bottom[Variable], subs.repl.asInstanceOf[Formula])
       // unofficial
       case app@PredicationalOf(q, fml) if !matchHead(app) =>
