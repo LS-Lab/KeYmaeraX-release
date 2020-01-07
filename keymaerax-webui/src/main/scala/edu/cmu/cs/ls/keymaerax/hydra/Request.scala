@@ -1490,6 +1490,9 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
+    // add unexpanded functions, predicates, programs of the open goals of all leaves to the proof session
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    session(proofId) = leaves.flatMap(_.parent).foldLeft(proofSession)(RequestHelper.updateProofSessionDefinitions)
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
@@ -1739,23 +1742,63 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
       case Some(symbols) =>
-        val applicable: Map[NamedSymbol, (Signature, InputSignature)] = symbols.flatMap(s => {
-          val defs = proofSession.defs.find(s.name, s.index)
-          defs._1.filter(_._3.isDefined) match {
-            case Some(f) => Some(s -> (f, defs._2.get))
-            case None => None
-          }}).toMap
-        val expansions: Map[InputSignature, Expand] = applicable.map({
-          case (s: Function, ((domain, sort, Some(repl), _), insig)) =>
-            val dots = domain.map({ case Unit => Nothing case s: Tuple => s.toDots(0)._1 case s => DotTerm(s) }).getOrElse(Nothing)
-            sort match {
-              case Real => insig -> Expand(s, SubstitutionPair(FuncOf(s, dots), repl))
-              case Bool => insig -> Expand(s, SubstitutionPair(PredOf(s, dots), repl))
+        val applicable: Map[NamedSymbol, (Signature, Option[InputSignature])] = symbols.
+          filter({ case _: Function => true case _: ProgramConst => true case _ => false }).
+          flatMap(s => {
+            val defs = proofSession.defs.find(s.name, s.index)
+            defs._1 match {
+              case Some(f) => Some(s -> (f, defs._2))
+              case None => None
             }
-          case (s: ProgramConst, ((_, _, Some(repl: Program), _), insig)) => insig -> Expand(s, SubstitutionPair(s, repl))
+          }).toMap
+        // name, name expression (what), optional repl, optional plaintext definition from the model file
+        val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
+          // functions, predicates, and programs with definition
+          case (s: Function, ((domain, sort, repl, _), insig)) if repl.isDefined => sort match {
+            case Real => (s, FuncOf(s, insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)), repl, insig)
+            case Bool => (s, PredOf(s, insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)), repl, insig)
+          }
+          case (s: ProgramConst, ((_, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
+          // functions, predicates, and programs without definition
+          case (s: Function, ((domain, sort, None, _), _)) =>  sort match {
+            case Real => (s, FuncOf(s, domain.map(_.toDots(0)._1).getOrElse(Nothing)), None, None)
+            case Bool => (s, PredOf(s, domain.map(_.toDots(0)._1).getOrElse(Nothing)), None, None)
+          }
+          case (s: ProgramConst, ((_, _, None, _), _)) => (s, s, None, None)
         })
-        ApplicableDefinitionsResponse(expansions.map({ case (sig, e) => (e.name, e.s, sig) }).toList.sortBy(_._1)) :: Nil
+        ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
+    }
+  }
+}
+
+class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, what: String, repl: String)
+  extends UserProofRequest(db, userId, proofId) with WriteRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    Try(what.asExpr).toEither match {
+      case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'what': " + ex.getMessage)) :: Nil
+      case Right(e) =>
+        val (name: String, index: Option[Int], domain: Option[Sort], sort: Sort) = e match {
+          case FuncOf(Function(n, i, d, s, _), _) =>
+            // uninterpreted predicates parse as functions when parsed standalone
+            proofSession.defs.asNamedSymbols.find(ns => ns.name == n && ns.index == i) match {
+              case Some(ns: Function) if ns.domain == d => (n, i, Some(d), ns.sort)
+              case None => (n, i, Some(d), s)
+            }
+          case PredOf(Function(n, i, d, s, _), _) => (n, i, Some(d), s)
+          case ProgramConst(n, _) => (n, None, None, Trafo)
+        }
+
+        Try(repl.asExpr).toEither match {
+          case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage)) :: Nil
+          case Right(r) if r.sort == sort =>
+            session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+              ((name, index) -> (domain, sort, Some(r), UnknownLocation))))
+            BooleanResponse(flag = true) :: Nil
+          case Right(r) if r.sort != sort =>
+            BooleanResponse(flag = false, Some("Expected a replacement of sort " + sort + ", but got " + r.sort)) :: Nil
+        }
     }
   }
 }
@@ -2197,6 +2240,8 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
             case Some(node) =>
               //@todo construct provable (expensive!)
               //assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
+              val proofSession = session(proofId).asInstanceOf[ProofSession]
+              session(proofId) = RequestHelper.updateProofSessionDefinitions(proofSession, node)
               TaskResultResponse(proofId, node, marginLeft, marginRight, progress=true)
           }
 //          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
@@ -2718,6 +2763,18 @@ object RequestHelper {
       val codeName = tn.split("\\(").head
       Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName)).getOrElse(tn)
     })(proofId)(tacticName, parentInTrace, branch)
+  }
+
+  /** Updates the definitions in `proofSession` to include the unexpanded symbols of the open goals in `node`. */
+  def updateProofSessionDefinitions(proofSession: ProofSession, node: ProofTreeNode): ProofSession = {
+    val signatures = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.signature)).toSet
+    val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s))
+    val newDefs: Map[KeYmaeraXArchiveParser.Name, KeYmaeraXArchiveParser.Signature] = undefined.map({
+      case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, UnknownLocation)
+      case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, UnknownLocation)
+      case u => (u.name, u.index) -> (None, u.sort, None, UnknownLocation) // should not happen
+    }).toMap
+    proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs))
   }
 
 }

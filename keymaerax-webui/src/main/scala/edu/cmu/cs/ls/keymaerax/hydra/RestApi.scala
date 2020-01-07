@@ -595,6 +595,16 @@ object RestApi extends Logging {
       }
     }}}
 
+    val setDefinition: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "definitions") { (userId, proofId) => { pathEnd {
+      post {
+        entity(as[String]) { params => {
+          val (what: JsString) :: (repl: JsString) :: Nil = JsonParser(params).asJsObject.getFields("what", "repl").toList
+          val request = new SetDefinitionsRequest(database, userId, proofId, what.value, repl.value)
+          completeRequest(request, t)
+        }}
+      }
+    }}}
+
     val sequentList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "listStepSuggestions") { (userId, proofId, nodeId) => { pathEnd {
       get {
         val request = new GetSequentStepSuggestionRequest(database, userId, proofId, nodeId)
@@ -1235,6 +1245,7 @@ object RestApi extends Logging {
     axiomList             ::
     sequentList           ::
     definitionsList       ::
+    setDefinition         ::
     twoPosList            ::
     derivationInfo        ::
     doAt                  ::
