@@ -723,12 +723,15 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
 /** Expands symbol `name` per substitution `s`. */
 case class Expand(name: NamedSymbol, s: SubstitutionPair) extends BelleExpr {
   //@note serialize `s` for database since required in the proof tree when assembling provables
-  override def prettyString: String = s"""US("${s.what.prettyString}~>${s.repl.prettyString}")"""
+  override def prettyString: String =
+    s"""/* expand "${name.prettyString}" */ US("${s.what.prettyString}~>${s.repl.prettyString}")"""
 }
 /** Expands all definitions from the model provided in topologically sorted `defs`. */
 case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
   //@note serialize `defs` for database since required in the proof tree when assembling provables
-  override def prettyString: String = defs.map(s => s"""US("${s.what.prettyString}~>${s.repl.prettyString}")""").mkString(";")
+  override def prettyString: String = "/* expandAllDefs */ " +
+    defs.map(s => s"""US("${s.what.prettyString}~>${s.repl.prettyString}")""").mkString(";") +
+    " /* end expandAllDefs */"
 }
 
 @deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
