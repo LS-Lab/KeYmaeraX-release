@@ -302,15 +302,18 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     program match {
       // base cases
       //@todo optimizable: store boundVars(ProgramConst/SystemConst/DifferentialProgramConst) in substitution pair
-      case a: ProgramConst if subsDefs.exists(_.what == a) =>
-        StaticSemantics.boundVars(subsDefs.find(_.what == a).get.repl.asInstanceOf[Program])
-      case a: ProgramConst if !subsDefs.exists(_.what == a) => StaticSemantics.spaceVars(a.space)
-      case a: SystemConst  if subsDefs.exists(_.what == a) =>
-        StaticSemantics.boundVars(subsDefs.find(_.what == a).get.repl.asInstanceOf[Program])
-      case a: SystemConst  if !subsDefs.exists(_.what == a) => allVars
-      case c: DifferentialProgramConst if subsDefs.exists(_.what == c) =>
-        StaticSemantics.boundVars(subsDefs.find(_.what == c).get.repl.asInstanceOf[DifferentialProgram])
-      case c: DifferentialProgramConst if !subsDefs.exists(_.what == c) => StaticSemantics.spaceVars(c.space)
+      case a: ProgramConst => subsDefs.find(_.what == a) match {
+        case Some(subs) => StaticSemantics.boundVars(subs.repl.asInstanceOf[Program])
+        case None       => StaticSemantics.spaceVars(a.space)
+      }
+      case a: SystemConst  => subsDefs.find(_.what == a) match {
+        case Some(subs) => StaticSemantics.boundVars(subs.repl.asInstanceOf[Program])
+        case None       => allVars
+      }
+      case c: DifferentialProgramConst => subsDefs.find(_.what == c) match {
+        case Some(subs) => StaticSemantics.boundVars(subs.repl.asInstanceOf[DifferentialProgram])
+        case None       => StaticSemantics.spaceVars(c.space)
+      }
       case Assign(x, e)                => SetLattice(x)
       case Test(f)                     => bottom
       case AtomicODE(xp@DifferentialSymbol(x), e) => SetLattice(Set(x,xp))
