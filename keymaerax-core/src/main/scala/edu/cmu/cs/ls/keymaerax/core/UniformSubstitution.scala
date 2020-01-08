@@ -56,6 +56,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case _: Formula => repl.isInstanceOf[Formula]
     case _: DifferentialProgram => repl.isInstanceOf[DifferentialProgram]
     case _: Program => repl.isInstanceOf[Program]
+    case _ => false
   }, "(redundant test) substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
   insist(noException(matchKey), "Substitutable expression expected: " + this)
   insist(what match {
@@ -95,6 +96,10 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case Compose(a, b)   => dualFree(a) && dualFree(b)
     case Loop(a)         => dualFree(a)
     case Dual(a)         => false
+    // improper/internal cases
+    case _: AtomicODE    => true
+    case _: DifferentialProduct => true
+    case _: DifferentialProgramConst => true
   }
 
 
