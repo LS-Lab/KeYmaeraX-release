@@ -108,7 +108,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
                        defs: Declaration, expandAll: Boolean): BelleExpr = {
     val result = parseLoop(ParserState(Bottom, toks), tacticDefs, g, defs, expandAll)
     result.stack match {
-      case Bottom :+ BelleAccept(e) => if (expandAll) ExpandAll(defs.substs) & e else e
+      case Bottom :+ BelleAccept(e) => if (expandAll && defs.substs.nonEmpty) ExpandAll(defs.substs) & e else e
       case _ :+ (BelleErrorItem(msg,loc,st)) => throw ParseException(msg, loc, "<unknown>", "<unknown>", "", st) //@todo not sure why I need the extra () around ErrorList.
       case _ => throw new AssertionError(s"Parser terminated with unexpected stack ${result.stack}")
     }
