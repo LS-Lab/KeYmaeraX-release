@@ -1,15 +1,20 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Uniform Substitution for KeYmaera X
+  * @author Andre Platzer
+  * @author smitsch
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+  * @note Code Review:
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
-import StaticSemantics.freeVars
 import StaticSemantics.boundVars
 import SetLattice.allVars
 import SetLattice.bottom
-
-object USubstOne {
-  @inline
-  private val optima = true
-}
 
 /**
   * A Uniform Substitution with its one-pass application mechanism.
@@ -26,7 +31,6 @@ object USubstOne {
   * Created by aplatzer on 2019-2-12.
   */
 final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
-  import USubstOne.optima
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private/*[this]*/ val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
@@ -250,8 +254,9 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
       case Compose(a, b)     => val (v,ra) = usubst(u,a); val (w,rb) = usubst(v,b); (w, Compose(ra, rb))
-      case Loop(a) if!optima => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
-      case Loop(a) if optima => val v = u++substBoundVars(a); val (w,ra) = usubst(v,a);
+        // unoptimized version:  //case Loop(a) if!optima => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
+        // optimized version:
+      case Loop(a)           => val v = u++substBoundVars(a); val (w,ra) = usubst(v,a);
         // redundant: check result of substBoundVars for equality to make it not soundness-critical
         if (v==w) (v, Loop(ra)) else {val (_,rb) = usubst(w, a); (w, Loop(rb))}
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
