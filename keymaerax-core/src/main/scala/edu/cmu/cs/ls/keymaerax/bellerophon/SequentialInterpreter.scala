@@ -17,7 +17,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
-import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration.{Duration, MILLISECONDS}
@@ -551,38 +550,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
   /** Maps sequents to BelleProvables. */
   protected def bval(s: Sequent, lbl: Option[List[BelleLabel]]) = BelleProvable(ProvableSig.startProof(s), lbl)
-
-  /**
-    * Replaces the nth subgoal of `original`` with the remaining subgoals of `subderivation`.
-    *
-    * @param original A Provable whose nth subgoal is equal to the conclusion of `subderivation` (modulo substitution).
-    * @param n The numerical index of the subgoal of original to rewrite (Seqs are zero-indexed)
-    * @param subderivation The provable to replace the original subgoal.
-    * @return A pair of:
-    *         * A new provable that is identical to `original`, except that the nth subgoal is replaced with the
-    *           remaining subgoals of `subderivation`; and
-    *         * The next index for the interpreter to continue, n if `subderivation` is proved (i.e., all later
-    *           subgoals move up by 1), or (n+1) if subderivation is not proved.
-    */
-  protected def replaceConclusion(original: ProvableSig, n: Int, subderivation: ProvableSig, subst: Option[USubst]): (ProvableSig, Int) = {
-    assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
-    val substituted =
-      if (original.subgoals(n) == subderivation.conclusion) original
-      else subst.map(exhaustiveSubst(original, _)).getOrElse(original)
-    if (substituted.subgoals(n) != subderivation.conclusion)
-      throw new BelleThrowable(s"Subgoal #$n of the original provable (${substituted.subgoals(n)}}) should be equal to the conclusion of the subderivation (${subderivation.conclusion}})")
-    val newProvable = substituted(subderivation, n)
-    val nextIdx = if (subderivation.isProved) n else n + 1
-    (newProvable, nextIdx)
-  }
-
-  /** Applies substitutions `s` to provable `p` exhaustively. */
-  @tailrec
-  private def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
-    val substituted = p(s)
-    if (substituted != p) exhaustiveSubst(substituted, s)
-    else substituted
-  }
 
   /** Applies substitutions `substs` to the products of `generator` and returns a new generator that includes both
     * original and substituted products */
