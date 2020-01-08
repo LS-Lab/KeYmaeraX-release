@@ -33,10 +33,11 @@ object SubstitutionAdmissibility {
 
 /**
   * Representation of a substitution replacing `what` with `repl` uniformly, everywhere.
+  * Data structure invariant: Only substitutable expressions will be accepted for `what` with compatible `repl`.
   *
   * @param what the expression to be replaced. `what` can have one of the following forms:
-  *          - [[PredOf]](p:[[Function]], [[DotTerm]]/[[Nothing]])
-  *          - [[FuncOf]](f:[[Function]], [[DotTerm]]/[[Nothing]])
+  *          - [[PredOf]](p:[[Function]], [[DotTerm]]/[[Nothing]]/Nested [[Pair]] of [[DotTerm]])
+  *          - [[FuncOf]](f:[[Function]], [[DotTerm]]/[[Nothing]]/Nested [[Pair]] of [[DotTerm]])
   *          - [[ProgramConst]] or [[DifferentialProgramConst]] or [[SystemConst]]
   *          - [[UnitPredicational]]
   *          - [[UnitFunctional]]
@@ -133,9 +134,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   }
 
   /**
-    * Occurrences of what symbol this SubstitutionPair will be replacing.
+    * Occurrences of what top-level symbol this SubstitutionPair will be replacing.
     * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
-    * @note Checks that what is a substitutable expression.
+    * @note Data structure invariant: Checks that `what` is a substitutable expression.
     */
   private[core] lazy val matchKey: NamedSymbol = what match {
     case p: UnitPredicational        => p
@@ -158,13 +159,13 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     */
   private[core] def sameHead(other: ApplicationOf): Boolean = what match {
     case FuncOf(lf, arg) =>
-      assert(SubstitutionAdmissibility.isSubstitutableArg(arg), "Only DotTerm/Nothing allowed as argument")
+      //redundant: assert(SubstitutionAdmissibility.isSubstitutableArg(arg), "Only DotTerm/Nothing allowed as argument")
       other match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, arg) =>
-      assert(SubstitutionAdmissibility.isSubstitutableArg(arg), "Only DotTerm/Nothing allowed as argument")
+      //redundant: assert(SubstitutionAdmissibility.isSubstitutableArg(arg), "Only DotTerm/Nothing allowed as argument")
       other match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, arg) =>
-      assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
+      //redundant: assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
       other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
     case _ => assert(false, "sameHead only used for ApplicationOf"); false
   }
