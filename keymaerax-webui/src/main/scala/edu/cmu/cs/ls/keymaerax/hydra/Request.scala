@@ -1754,16 +1754,20 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
         // name, name expression (what), optional repl, optional plaintext definition from the model file
         val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
           // functions, predicates, and programs with definition
-          case (s: Function, ((domain, sort, repl, _), insig)) if repl.isDefined => sort match {
-            case Real => (s, FuncOf(s, insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)), repl, insig)
-            case Bool => (s, PredOf(s, insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)), repl, insig)
-          }
+          case (s: Function, ((domain, sort, repl, _), insig)) if repl.isDefined =>
+            val arg = insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
+            sort match {
+              case Real => (s, FuncOf(s, arg), repl, insig)
+              case Bool => (s, PredOf(s, arg), repl, insig)
+            }
           case (s: ProgramConst, ((_, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
           // functions, predicates, and programs without definition
-          case (s: Function, ((domain, sort, None, _), _)) =>  sort match {
-            case Real => (s, FuncOf(s, domain.map(_.toDots(0)._1).getOrElse(Nothing)), None, None)
-            case Bool => (s, PredOf(s, domain.map(_.toDots(0)._1).getOrElse(Nothing)), None, None)
-          }
+          case (s: Function, ((domain, sort, None, _), _)) =>
+            val arg = domain.map({ case edu.cmu.cs.ls.keymaerax.core.Unit => Nothing case d => d.toDots(0)._1}).getOrElse(Nothing)
+            sort match {
+              case Real => (s, FuncOf(s, arg), None, None)
+              case Bool => (s, PredOf(s, arg), None, None)
+            }
           case (s: ProgramConst, ((_, _, None, _), _)) => (s, s, None, None)
         })
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
@@ -2160,9 +2164,13 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
     val proofInfo = db.getProofInfo(proofId)
     proofInfo.tactic match {
       case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
-      case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
+      case Some(_) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
-        val tactic = BelleParser(t)
+        val expandPattern = "(expand(?!All).*)|(expandAllDefs)".r
+        val proofSession = session(proofId).asInstanceOf[ProofSession]
+        val tactic =
+          if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
+          else BelleParser.parseWithInvGen(t, None, proofSession.defs, expandAll = true) // backwards compatibility
 
         def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
