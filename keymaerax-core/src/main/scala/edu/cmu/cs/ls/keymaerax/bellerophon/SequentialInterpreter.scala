@@ -91,6 +91,8 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case builtIn: BuiltInTactic => v match {
       case BelleProvable(pr, lbl) => try {
         val result = builtIn.execute(pr)
+        //@todo builtIn tactic UnifyUSCalculus.US performs uniform substitutions that may need to be communicated
+        // to the outside world but are not accessible here
         BelleProvable(result, adjustLabels(result, lbl))
       } catch {
         case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(BelleDot, pr.prettyString)
@@ -352,17 +354,25 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case DefTactic(_, _) => v //@note noop, but included for serialization purposes
 
     case Expand(_, s) =>
-      val substs = USubst(s :: Nil) :: Nil
-      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, substs)
-      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, substs)
-      apply(TactixLibrary.US(USubst(s :: Nil)), v)
+      val subst = USubst(s :: Nil)
+      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, subst :: Nil)
+      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, subst :: Nil)
+      apply(TactixLibrary.US(subst), v) match {
+        case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ subst)
+        case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, subst)
+        case v => v
+      }
 
     case ExpandAll(defs) =>
       val substs = defs.map(s => USubst(s :: Nil))
       TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, substs)
       TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, substs)
       apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
-        reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v)
+        reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v) match {
+        case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ substs.reduceRight(_++_))
+        case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, substs.reduceRight(_++_))
+        case v => v
+      }
 
     case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
     case named: NamedTactic => apply(named.tactic, v)
