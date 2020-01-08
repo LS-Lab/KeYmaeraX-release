@@ -2166,7 +2166,6 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
       case Some(_) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
-        val expandPattern = "(expand(?!All).*)|(expandAllDefs)".r
         val proofSession = session(proofId).asInstanceOf[ProofSession]
         val tactic =
           if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
