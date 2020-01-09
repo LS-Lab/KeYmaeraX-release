@@ -10,10 +10,14 @@ import testHelper.CustomAssertions.withSafeClue
 
 import org.scalatest._
 import org.scalatest.LoneElement._
+import org.scalatest.Inside._
+import org.scalatest.OptionValues._
+
+import org.scalamock.scalatest.MockFactory
 
 import scala.collection.immutable._
 
-class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with MockFactory {
   override def beforeEach(): Unit = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
   override def afterEach(): Unit = { KeYmaeraXParser.setAnnotationListener((_, _) => {}) }
 
@@ -55,7 +59,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  J() -> [{x:=x+1;}*@invariant(J())]J()
       |End.
     """.stripMargin
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "1>=0 -> [{x:=x+1;}*]1>=0".asFormula
+    val entry = KeYmaeraXArchiveParser(input).loneElement
+    entry.defs.decls(("J", None))._3.value shouldBe "1>=0".asFormula
+    entry.model shouldBe "J() -> [{x:=x+1;}*]J()".asFormula
   }
 
   it should "parse unary predicate definitions" in {
@@ -70,7 +76,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  J(x) -> [{x:=x+1;}*@invariant(J(x))]J(x)
       |End.
     """.stripMargin
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+    val entry = KeYmaeraXArchiveParser(input).loneElement
+    inside (entry.defs.decls(("J", None))) {
+      case (domain, sort, expr, _) =>
+        domain.value shouldBe Real
+        sort shouldBe Bool
+        expr.value shouldBe ".>=0".asFormula
+    }
+    entry.model shouldBe "J(x) -> [{x:=x+1;}*]J(x)".asFormula
   }
 
   it should "parse binary predicate definitions" in {
@@ -86,7 +99,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  J(x,y) -> [{x:=x+1;}*@invariant(J(x,y))]J(x,y)
       |End.
     """.stripMargin
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y -> [{x:=x+1;}*]x>=y".asFormula
+    val entry = KeYmaeraXArchiveParser(input).loneElement
+    inside (entry.defs.decls(("J", None))) {
+      case (domain, sort, expr, _) =>
+        domain.value shouldBe Tuple(Real, Real)
+        sort shouldBe Bool
+        expr.value shouldBe "._0>=._1".asFormula
+    }
+    entry.model shouldBe "J(x,y) -> [{x:=x+1;}*]J(x,y)".asFormula
   }
 
   it should "parse program definitions" in {
@@ -101,7 +121,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
       |End.
     """.stripMargin
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+    val entry = KeYmaeraXArchiveParser(input).loneElement
+    inside (entry.defs.decls(("prg", None))) {
+      case (domain, sort, expr, _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Trafo
+        expr.value shouldBe "x:=x+1;".asProgram
+    }
+    entry.model shouldBe "x>=0 -> [{prg;}*]x>=0".asFormula
   }
 
   it should "report useful message on missing semicolon in program variable declaration" in {
@@ -377,120 +404,106 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Annotation parsing" should "populate easy loop annotations" in {
     val input = "x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0"
-    //@todo mock objects
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=1".asFormula
-    })
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=1".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXParser(input)
-    called shouldBe true
   }
 
   it should "add () to functions used as variables" in {
     val input = "Functions. R y(). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
-    //@todo mock objects
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=y()+1".asFormula
-    })
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
-    called shouldBe true
   }
 
-  it should "expand functions to their definition" in {
+  it should "not expand functions to their definition" in {
     val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
-    //@todo mock objects
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=(3+7)+1".asFormula
-    })
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
-    called shouldBe true
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "expand functions recursively to their definition" in {
+  it should "not expand functions recursively to their definition" in {
     val input = "Functions. R y() = (3+z()). R z() = (7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=(3+7)+1".asFormula
-    })
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
-    called shouldBe true
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
   //@todo
   it should "detect cycles when expanding functions recursively to their definition" ignore {
     val input = "Functions. R y() = (3+z()). R z() = (7*y()). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=(3+7)+1".asFormula
-    })
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
-    called shouldBe true
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "add () and then expand functions to their definition" in {
+  it should "add () but not expand functions to their definition" in {
     val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
-    //@todo mock objects
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=(3+7)+1".asFormula
-    })
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
-    called shouldBe true
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "x>=y()+1".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
   }
 
-  it should "expand properties to their definition" in {
+  it should "not expand properties to their definition" in {
     val input = "Functions. B init() <-> (x>=2). B safe(R) <-> (.>=0). End. ProgramVariables. R x. End. Problem. init() -> [{x:=x+1;}*]safe(x) End."
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    val entry = KeYmaeraXArchiveParser(input).loneElement
+    inside (entry.defs.decls(("init", None))) {
+      case (domain, sort, expr, _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Bool
+        expr.value shouldBe "x>=2".asFormula
+    }
+    inside (entry.defs.decls(("safe", None))) {
+      case (domain, sort, expr, _) =>
+        domain.value shouldBe Real
+        sort shouldBe Bool
+        expr.value shouldBe ".>=0".asFormula
+    }
+    entry.model shouldBe "init() -> [{x:=x+1;}*]safe(x)".asFormula
   }
 
-  it should "expand properties to their definition in annotations" in {
+  it should "not expand properties to their definition in annotations" in {
     val input = "Functions. B inv() <-> (x>=1). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=1".asFormula
-    })
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
-    called shouldBe true
   }
 
-  it should "expand functions in properties" in {
+  it should "not expand functions in properties" in {
     val input = "Functions. R y() = (3+7). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+1;}*".asProgram
-      fml shouldBe "x>=3+7".asFormula
-    })
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+1;}*".asProgram, "inv()".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
-    called shouldBe true
   }
 
-  it should "add () when expanding functions in properties" in {
+  it should "add () to functions in properties" in {
     val input = "Functions. R b. R y() = (3+b). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+b;}*@invariant(inv())]x>=0 End."
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x:=x+b();}*".asProgram
-      fml shouldBe "x>=3+b()".asFormula
-    })
-    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+b();}*]x>=0".asFormula
-    called shouldBe true
+    val listener = mock[(Program,Formula) => Unit]
+    (listener.apply _).expects("{x:=x+b();}*".asProgram, "inv()".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
+    val entry = KeYmaeraXArchiveParser(input).loneElement
+    inside (entry.defs.decls(("inv", None))) {
+      case (domain, sort, expr, _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Bool
+        expr.value shouldBe "x>=y()".asFormula
+    }
+    inside (entry.defs.decls(("y", None))) {
+      case (domain, sort, expr, _) =>
+        domain.value shouldBe Unit
+        sort shouldBe Real
+        expr.value shouldBe "3+b()".asTerm
+    }
+    entry.model shouldBe "x>=2 -> [{x:=x+b();}*]x>=0".asFormula
   }
 
   it should "complain about sort mismatches in function declaration and operator" in {
@@ -520,42 +533,29 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "populate easy ODE annotations" in {
     val input = "x>=2 -> [{x'=1}@invariant(x>=1)]x>=0"
-    //@todo mock objects
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x'=1}".asProgram
-      fml shouldBe "x>=1".asFormula
-    })
+    val listener = mock[(Program, Formula) => Unit]
+    (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXParser(input)
-    called shouldBe true
   }
 
   it should "populate ODE annotations with old(.)" in {
     val input = "x>=2 -> [{x'=1}@invariant(x>=old(x))]x>=0"
-    //@todo mock objects
-    var called = false
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      called = true
-      prg shouldBe "{x'=1}".asProgram
-      fml shouldBe "x>=old(x)".asFormula
-    })
+    val listener = mock[(Program, Formula) => Unit]
+    (listener.apply _).expects("{x'=1}".asProgram, "x>=old(x)".asFormula).once
+    KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXParser(input)
-    called shouldBe true
   }
 
   it should "parse multiple annotations" in {
     val input = "x>=3 -> [{x'=1}@invariant(x>=2, x>=1)]x>=0"
-    //@todo mock objects
-    var idx = 0
-    var invs = ("{x'=1}".asProgram -> "x>=2".asFormula) :: ("{x'=1}".asProgram -> "x>=1".asFormula) :: Nil
-    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
-      prg shouldBe invs(idx)._1
-      fml shouldBe invs(idx)._2
-      idx = idx + 1
-    })
+    val listener = mock[(Program, Formula) => Unit]
+    inSequence {
+      (listener.apply _).expects("{x'=1}".asProgram, "x>=2".asFormula).once
+      (listener.apply _).expects("{x'=1}".asProgram, "x>=1".asFormula).once
+    }
+    KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXParser(input)
-    idx shouldBe 2
   }
   
   //////////////////////////////////////////////////////////////////////////////

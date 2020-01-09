@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PartialTactic
+import edu.cmu.cs.ls.keymaerax.bellerophon.{ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, Trafo, Tuple, Unit}
@@ -1265,7 +1265,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})",
+      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemma("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
