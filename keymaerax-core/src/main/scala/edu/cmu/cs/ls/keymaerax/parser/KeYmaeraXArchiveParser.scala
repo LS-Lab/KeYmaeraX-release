@@ -819,7 +819,9 @@ object KeYmaeraXArchiveParser {
     val illegalOverride = entry.definitions.filter(e => entry.inheritedDefinitions.exists(_.name == e.name))
     if (illegalOverride.nonEmpty) throw ParseException("Symbol '" + illegalOverride.head.name + "' overrides inherited definition; must declare override", illegalOverride.head.loc)
 
-    val definitions = ((entry.inheritedDefinitions ++ entry.definitions).map(convert) ++ entry.vars.map(convert)).reduceOption(_++_).getOrElse(Declaration(Map.empty, Map.empty))
+    val mergedDefinitions = ((entry.inheritedDefinitions ++ entry.definitions).map(convert) ++ entry.vars.map(convert)).
+      reduceOption(_++_).getOrElse(Declaration(Map.empty, Map.empty))
+    val definitions = mergedDefinitions.copy(decls = mergedDefinitions.decls.map({ case (k,v) => k -> (v._1, v._2, v._3.map(mergedDefinitions.elaborateToFunctions), v._4) }))
 
     val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
       "SharedDefinitions\n" +
