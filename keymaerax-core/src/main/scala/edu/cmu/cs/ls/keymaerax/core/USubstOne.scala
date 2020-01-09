@@ -6,6 +6,7 @@
   * Uniform Substitution for KeYmaera X
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @note Code Review:
   */
 package edu.cmu.cs.ls.keymaerax.core
@@ -26,9 +27,12 @@ import SetLattice.bottom
   *
   * @note Implements the one-pass version that checks admissibility on the fly and checking upon occurrence.
   *       Faster than alternative [[USubstChurch]].
+  * Main ingredient of prover core.
   * @note soundness-critical
   * @author Andre Platzer
   * Created by aplatzer on 2019-2-12.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubstOne)]]
   * @see [[USubstChurch]]
   */
 final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
