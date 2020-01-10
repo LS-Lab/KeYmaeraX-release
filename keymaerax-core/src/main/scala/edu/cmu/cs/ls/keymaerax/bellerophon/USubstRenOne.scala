@@ -41,7 +41,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
       // program constants are always admissible, since their meaning doesn't depend on state
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-           ProgramConst(_, _) | SystemConst(_) | DifferentialProgramConst(_, _) => bottom
+           ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
     }
     case _ => StaticSemantics.freeVars(repl)
   }
