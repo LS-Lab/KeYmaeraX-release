@@ -506,6 +506,10 @@ Axiom "I induction".
   (p(||) & [{a{|^@|};}*](p(||) -> [a{|^@|};] p(||))) -> [{a{|^@|};}*]p(||)
 End.
 
+/*Axiom "B Barcan".
+  [a{|^@x_|};]\forall x_ p(x_) <-> \forall x_ [a{|^@x_|};]p(x_)
+End.*/
+
 /**
  * FIRST-ORDER QUANTIFIER AXIOMS
  */

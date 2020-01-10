@@ -249,6 +249,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         case Some(subs) =>
           val r = subs.repl.asInstanceOf[Program]
           (u++boundVars(r), r)
+        //@todo improve: for SystemConst(_,Taboo(except)) could return allVars-except
         case None => (allVars, a)
       }
       case Assign(x, e)      => (u+x, Assign(x, usubst(u,e)))
@@ -319,7 +320,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       }
       case a: SystemConst  => subsDefs.find(_.what == a) match {
         case Some(subs) => StaticSemantics.boundVars(subs.repl.asInstanceOf[Program])
-        case None       => allVars
+        case None       => StaticSemantics.spaceVars(a.space)
       }
       case c: DifferentialProgramConst => subsDefs.find(_.what == c) match {
         case Some(subs) => StaticSemantics.boundVars(subs.repl.asInstanceOf[DifferentialProgram])

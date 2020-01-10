@@ -75,11 +75,13 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
           //@note by previous insists, repl has to be a Program in this case
           case _: ProgramConst => val vc = StaticSemantics(repl.asInstanceOf[Program])
             vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
+          //@note by previous insists, repl has to be a Program in this case
+          case _: SystemConst => val vc = StaticSemantics(repl.asInstanceOf[Program])
+            vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty && dualFree(repl.asInstanceOf[Program])
           case _: UnitPredicational => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
           case _: UnitFunctional    => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
       }
     }
-    case _: SystemConst => dualFree(repl.asInstanceOf[Program])
     // only space-dependents have space-compatibility requirements
     case _ => true
   }, "Space-compatible substitution expected: " + this)
@@ -119,7 +121,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       // program constants are always admissible, since their meaning doesn't depend on state
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-           ProgramConst(_, _) | SystemConst(_) | DifferentialProgramConst(_, _) => bottom
+           ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
     }
     case _ => StaticSemantics.freeVars(repl)
   }

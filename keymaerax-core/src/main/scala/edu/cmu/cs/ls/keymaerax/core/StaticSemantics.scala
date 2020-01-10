@@ -218,7 +218,7 @@ object StaticSemantics {
     program match {
       // base cases
       case a: ProgramConst             => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
-      case a: SystemConst              => VCP(fv = allVars, bv = allVars, mbv = bottom)
+      case a: SystemConst              => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
       case Test(f) => VCP(fv = StaticSemantics(f).fv, bv = bottom, mbv = bottom)
