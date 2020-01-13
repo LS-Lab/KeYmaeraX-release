@@ -28,10 +28,29 @@ CNFNormalizeLtLeq::usage="DNFNormalizeLtLeq[fml] normalizes fml to a normal form
 WeakenInequalities::usage="WeakenInequalities[fml] turns all strict inequalities to their weakened versions"
 DrawPlanarProb::usage="DrawPlanarProb[prob,inv,w] draws a planar problem and invariant inv"
 
-FuncIndep::usage="FuncIndep[polynomials_List, vars_List] Returns a list of functionally independent polynomials from a given list.";
+FuncIndep::usage="FuncIndep[polynomials_List, vars_List] Returns a list of functionally independent polynomials from a given list."
+
+ConjugatePolynomial::usage="ConjugatePolynomial[poly] Returns the conjugate of a complex polynomial"
+IsRealPolynomial::usage="IsRealPolynomial[poly] Returns true if poly is in R[x] and false if poly is not a real polynomial"
+IsConcretePolynomial::usage="IsConcretePolynomial[poly, vars] returns true if the variables of poly are a subset of vars and false otherwise";
 
 
 Begin["`Private`"]
+
+
+ConjugatePolynomial[poly_]:=Module[{vars=Variables[poly]},
+FromCoefficientRules[CoefficientRules[poly,vars]/.{Rule[a_,b_]:>Rule[a,Conjugate[b]]},vars]
+]
+
+
+IsRealPolynomial[poly_]:=Module[{vars=Variables[poly]},
+AllTrue[Flatten[CoefficientList[poly,vars]], PossibleZeroQ[Im[#]]&]
+]
+
+
+IsConcretePolynomial[poly_,vars_]:=Module[{pvars=Variables[poly]},
+  SubsetQ[vars,pvars]
+]
 
 
 (* Computing the maximal total polynomial degree of a given polynomial P *)
