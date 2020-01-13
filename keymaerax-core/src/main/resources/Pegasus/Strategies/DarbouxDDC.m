@@ -34,7 +34,7 @@ Throw[realdbx]
 
 
 TestConsistency[vars_, pre_, post_] := Module[{},
-Return[Resolve[Exists[vars, pre && post]]];
+Return[Resolve[Exists[vars, pre && post], Reals]];
 ]
 
 
@@ -51,8 +51,8 @@ For[i = 1, i <= Length[DPList], i++,
 	item = DPList[[i]];
 	For[j = 1, j <= Length[returnList], j++, 
 		prob = returnList[[j]];
-		If[TestConsistency[vars, pre, item >= 0], returnListRefined = Append[returnListRefined, {prob[[1]], prob[[2]], prob[[3]] && item >= 0}]];
-		If[TestConsistency[vars, pre, item <= 0], returnListRefined = Append[returnListRefined, {prob[[1]], prob[[2]], prob[[3]] && item <= 0}]];
+		If[TestConsistency[vars, pre, Q&&item >= 0], returnListRefined = Append[returnListRefined, {prob[[1]]&&item>=0, {prob[[2]][[1]], prob[[2]][[2]], prob[[2]][[3]]&& item >= 0}, prob[[3]]}]];
+		If[TestConsistency[vars, pre, Q&&item <= 0], returnListRefined = Append[returnListRefined, {prob[[1]]&&item<=0, {prob[[2]][[1]], prob[[2]][[2]], prob[[2]][[3]]&& item <= 0}, prob[[3]]}]];
 	];
 	returnList = returnListRefined;
 ];
@@ -74,9 +74,9 @@ For[i = 1, i <= Length[DPList], i++,
 	item = DPList[[i]];
 	For[j = 1, j <= Length[returnList], j++, 
 		prob = returnList[[j]];
-		If[TestConsistency[vars, pre, item == 0], returnListRefined = Append[returnListRefined, {prob[[1]], prob[[2]], prob[[3]] && item == 0}]];
-		If[TestConsistency[vars, pre, item > 0], returnListRefined = Append[returnListRefined, {prob[[1]], prob[[2]], prob[[3]] && item > 0}]];
-		If[TestConsistency[vars, pre, item < 0], returnListRefined = Append[returnListRefined, {prob[[1]], prob[[2]], prob[[3]] && item < 0}]];
+		If[TestConsistency[vars, pre, Q&&item == 0], returnListRefined = Append[returnListRefined, {prob[[1]]&&item==0, {prob[[2]][[1]], prob[[2]][[2]], prob[[2]][[3]]&& item == 0}, prob[[3]]}]];
+		If[TestConsistency[vars, pre, Q&&item > 0], returnListRefined = Append[returnListRefined, {prob[[1]]&&item>0, {prob[[2]][[1]], prob[[2]][[2]], prob[[2]][[3]]&& item > 0}, prob[[3]]}]];
+		If[TestConsistency[vars, pre, Q&&item < 0], returnListRefined = Append[returnListRefined, {prob[[1]]&&item<0, {prob[[2]][[1]], prob[[2]][[2]], prob[[2]][[3]]&& item < 0}, prob[[3]]}]];
 	];
 	returnList = returnListRefined;
 ];
