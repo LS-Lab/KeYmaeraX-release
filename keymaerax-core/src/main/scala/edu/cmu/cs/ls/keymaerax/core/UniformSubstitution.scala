@@ -56,6 +56,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case _: Formula => repl.isInstanceOf[Formula]
     case _: DifferentialProgram => repl.isInstanceOf[DifferentialProgram]
     case _: Program => repl.isInstanceOf[Program]
+    case _ => false
   }, "(redundant test) substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
   insist(noException(matchKey), "Substitutable expression expected: " + this)
   insist(what match {
@@ -74,11 +75,13 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
           //@note by previous insists, repl has to be a Program in this case
           case _: ProgramConst => val vc = StaticSemantics(repl.asInstanceOf[Program])
             vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
+          //@note by previous insists, repl has to be a Program in this case
+          case _: SystemConst => val vc = StaticSemantics(repl.asInstanceOf[Program])
+            vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty && dualFree(repl.asInstanceOf[Program])
           case _: UnitPredicational => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
           case _: UnitFunctional    => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
       }
     }
-    case _: SystemConst => dualFree(repl.asInstanceOf[Program])
     // only space-dependents have space-compatibility requirements
     case _ => true
   }, "Space-compatible substitution expected: " + this)
@@ -95,6 +98,10 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case Compose(a, b)   => dualFree(a) && dualFree(b)
     case Loop(a)         => dualFree(a)
     case Dual(a)         => false
+    // improper/internal cases
+    case _: AtomicODE    => true
+    case _: DifferentialProduct => true
+    case _: DifferentialProgramConst => true
   }
 
 
@@ -114,7 +121,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       // program constants are always admissible, since their meaning doesn't depend on state
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-           ProgramConst(_, _) | SystemConst(_) | DifferentialProgramConst(_, _) => bottom
+           ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
     }
     case _ => StaticSemantics.freeVars(repl)
   }
@@ -186,12 +193,14 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *
   * @note Implements the "global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
   * Main ingredient of prover core.
+  * @note Superseded by faster alternative [[USubstOne]].
   * @note soundness-critical
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.UniformSubstitution)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubstChurch)]]
+  * @see [[USubstOne]]
   * @example Uniform substitution can be applied to a formula
   * {{{
   *   val p = Function("p", None, Real, Bool)
