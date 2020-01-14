@@ -947,7 +947,10 @@ object KeYmaeraXArchiveParser {
     val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
 
     // backwards compatibility: expandAll if model has expansible definitions and tactic does not expand any, and expand all tactic arguments
-    val expandAll = defs.decls.exists(_._2._3.isDefined) && "(expand(?!All))|(expandAllDefs)".r.findFirstIn(t.tacticText).isEmpty
+    val usMatchers = defs.decls.filter(_._2._3.isDefined).map({ case ((name, idx), _) => name + idx.map("_" + _).getOrElse("") })
+    val expandAll = usMatchers.nonEmpty &&
+      "(expand(?!All))|(expandAllDefs)".r.findFirstIn(t.tacticText).isEmpty &&
+      usMatchers.mkString("US\\(\"(", "|", ")").r.findFirstIn(t.tacticText).isEmpty
     val tactic = BelleParser.parseTokenStream(tokens, DefScope[String, DefTactic](), None, defs, expandAll)
 
     (t.name, t.tacticText, tactic)

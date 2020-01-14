@@ -5,10 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{ExpandAll, PartialTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Function, Real, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
@@ -1267,6 +1267,162 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})",
       ExpandAll(entry2.defs.substs) & TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.info shouldBe empty
+  }
+
+  it should "add to all entries but not auto-expand if tactic expands" in {
+    val input =
+      """SharedDefinitions.
+        | B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.
+        |
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". expand "gt" ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 2
+
+    val entry1 = entries.head
+    entry1.name shouldBe "Entry 1"
+    entry1.kind shouldBe "lemma"
+    entry1.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.problemContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0>._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
+    entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry1.tactics shouldBe empty
+    entry1.info shouldBe empty
+
+    val entry2 = entries(1)
+    entry2.name shouldBe "Entry 2"
+    entry2.kind shouldBe "theorem"
+    entry2.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". expand "gt" ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    entry2.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
+      Expand("gt".asNamedSymbol, "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair) &
+        TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.info shouldBe empty
+  }
+
+  it should "add to all entries but not auto-expand if tactic uses US to expand" in {
+    val input =
+      """SharedDefinitions.
+        | B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.
+        |
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 2
+
+    val entry1 = entries.head
+    entry1.name shouldBe "Entry 1"
+    entry1.kind shouldBe "lemma"
+    entry1.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.problemContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0>._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
+    entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry1.tactics shouldBe empty
+    entry1.info shouldBe empty
+
+    val entry2 = entries(1)
+    entry2.name shouldBe "Entry 2"
+    entry2.kind shouldBe "theorem"
+    entry2.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    entry2.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`})""",
+      TactixLibrary.uniformSubstitute(RenUSubst(("gt(._0,._1)".asFormula,  "._0>._1".asFormula) :: Nil).usubst) &
+        TactixLibrary.useLemma("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
