@@ -79,7 +79,7 @@ trait ProofTreeNode {
   def tacticInputSuggestions(pos: Position): Map[ArgInfo, Expression]
 
   /** The overall provable with the sub-proofs filled in for the local subgoals (potentially expensive). */
-  def provable: ProvableSig = theProvable._1
+  def provable: ProvableSig = theProvable
 
   /** Indicates whether or not the proof from this node downwards is done (potentially expensive). */
   def done: Boolean = provable.isProved
@@ -99,8 +99,30 @@ trait ProofTreeNode {
   /** Deletes this node with the entire subtree underneath. */
   def pruneBelow(): Unit
 
+  /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
+    * Returns `goal` if `sub` is not applicable at `i`. */
+  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]) = {
+    if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
+    else if (substs.nonEmpty) {
+      // apply only substitutions for difference between goal and sub
+      val goalSig = StaticSemantics.signature(goal.subgoals(i)) ++ substs.flatMap(s => StaticSemantics.signature(s.repl))
+      val subSig = StaticSemantics.signature(sub.conclusion)
+      val sigDiff = goalSig -- subSig
+      val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
+      exhaustiveSubst(goal, RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst)(sub, i)
+    } else goal
+  }
+
   // cached computations
-  private lazy val theProvable: (ProvableSig, List[SubstitutionPair]) = {
+
+  /** Merges all descendent provables into the local provable. */
+  private lazy val theProvable: ProvableSig = {
+    if (localProvable.isProved) localProvable
+    else (applyWithSubst(localProvable, _, goalIdx, _)).tupled(mergedDescendentProvable)
+  }
+
+  /** Creates intermediate provables for all descendents of the shape mergable into the local provable's subgoal. */
+  private lazy val mergedDescendentProvable: (ProvableSig, List[SubstitutionPair]) = {
     if (localProvable.isProved) localProvable -> Nil
     else if (children.isEmpty) localProvable.sub(goalIdx) -> Nil //@note if no followup proof step happened, then return stuttering proof step
     else {
@@ -114,18 +136,13 @@ trait ProofTreeNode {
       // if they cannot be merged verbatim, merge by delayed substitution;
       // if they cannot be merged (backsubstitution failed, see SequentialInterpreter Let): keep global
       if (myProvable.isProved) {
-        val substs = children.flatMap(c => c.theProvable._2 ++ makerSubst(c.maker))
+        val substs = children.flatMap(c => c.mergedDescendentProvable._2 ++ makerSubst(c.maker))
         myProvable -> substs
-      } else children.map(c => (c.theProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
+      } else children.map(c => (c.mergedDescendentProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
         val ms = makerSubst(subMaker)
         val preSubsts = (globalSubsts ++ subSubsts)
         val substs = (preSubsts ++ ms).distinct
-
-        if (global.subgoals(i) == sub.conclusion) global(sub, i) -> substs
-        else if (substs.nonEmpty) {
-          val substGlob = exhaustiveSubst(global, RenUSubst(substs.map(sp => sp.what -> sp.repl)).usubst)
-          substGlob(sub, i) -> substs
-        } else global -> substs
+        applyWithSubst(global, sub, i, substs) -> substs
       })
     }
   }
@@ -138,17 +155,15 @@ trait ProofTreeNode {
     else substituted
   }
 
+  private lazy val usMatcher = """(US\(")([^"]*)("\))""".r
+
   /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
   private def makerSubst(maker: Option[String]): List[SubstitutionPair] = maker.map(m => {
-    if (m.startsWith("US")) {
+    if (m.contains("US(")) {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       // collect substitutions of expandAll (serializes to sequence of US), and
-      // at beginning of custom tactics, e.g., "expand Q; unfold; expand P; master" (inner expand P not recorded)
-      // program constants and programs may contain ;, so split on suffix "); with arbitrary whitespace
-      val substitutions = m.split("\"\\s*\\)\\s*;").map(_.trim)
-      val firstNonSubst = substitutions.indexWhere(!_.startsWith("US"))
-      val substs = if (firstNonSubst >= 0) substitutions.take(firstNonSubst) else substitutions
-      substs.map(s => s.stripPrefix("US(\"").stripSuffix("\")").asSubstitutionPair).toList
+      // anywhere in custom tactics, e.g., "expand Q; unfold; expand P; master"
+      usMatcher.findAllMatchIn(m).map(m => m.group(2).trim).map(_.asSubstitutionPair).toList.distinct
     } else Nil
   }).getOrElse(Nil)
 
