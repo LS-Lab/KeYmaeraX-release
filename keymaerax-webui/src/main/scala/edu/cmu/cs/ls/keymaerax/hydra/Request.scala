@@ -1882,9 +1882,9 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXArchiveParser.Declaration): Response = {
     try {
       input match {
-        case BelleTermInput(value, Some(arg: TermArg)) => checkExpressionInput(arg, value.asTerm :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: FormulaArg)) => checkExpressionInput(arg, value.asFormula :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg: VariableArg)) => checkExpressionInput(arg, value.asVariable :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: TermArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: FormulaArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: VariableArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(arg: ExpressionArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(arg: SubstitutionArg)) => checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
         case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
@@ -1911,9 +1911,9 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
 
     sortMismatch match {
       case None =>
-        val symbols = StaticSemantics.symbols(sequent)
+        val symbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols + Function("old", None, Real, Real)
         val paramFV: Set[NamedSymbol] =
-          exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet -- defs.asNamedSymbols - Function("old", None, Real, Real)
+          exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
 
         val (hintFresh, allowedFresh) = arg match {
           case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)

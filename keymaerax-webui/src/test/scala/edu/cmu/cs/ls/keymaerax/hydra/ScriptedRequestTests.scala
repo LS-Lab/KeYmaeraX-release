@@ -345,14 +345,11 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      Declaration(Map(("f", None) -> (None, Real, Some("3+5".asTerm), null))))
+      Declaration(Map(("f", None) -> (Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement
-    response should have (
-      'flag (false),
-      'errorText (Some("Argument J uses new names that do not occur in the sequent: f, is it a typo?"))
-    )
+    response should have ('flag (true))
   }
 
   private def importExamplesIntoDB(db: TempDBTools): Unit = {
