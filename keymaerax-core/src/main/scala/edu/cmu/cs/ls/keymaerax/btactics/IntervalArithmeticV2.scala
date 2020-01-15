@@ -842,7 +842,7 @@ object IntervalArithmeticV2 {
     }
   }
 
-  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
     requireOneSucc(seq, "intervalArithmeticBool")
     seq.succ(0) match {
       case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))
@@ -852,12 +852,11 @@ object IntervalArithmeticV2 {
     }
   }
 
-  val intervalArithmetic = "intervalArithmetic" by {
-    val qeTool = ToolProvider.qeTool().get
+  lazy val intervalArithmetic: BelleExpr = "intervalArithmetic" by {
     val precision = 15
     SaturateTactic(orRi) &
       intervalArithmeticPreproc(1) &
-      intervalArithmeticBool(precision, qeTool)
+      intervalArithmeticBool(precision, ToolProvider.qeTool().get)
   }
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
