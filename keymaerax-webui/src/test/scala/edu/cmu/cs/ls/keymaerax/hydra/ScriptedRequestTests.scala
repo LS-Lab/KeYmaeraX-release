@@ -417,8 +417,8 @@ class ScriptedRequestTests extends TacticTestBase {
           // double check extracted tactic
           println("Reproving extracted tactic...")
           val extractedTactic = BelleParser(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value)
-          proveBy(KeYmaeraXArchiveParser.parse(db.db.getModel(id).keyFile).head.model.asInstanceOf[Formula],
-            extractedTactic) shouldBe 'proved
+          val entry = KeYmaeraXArchiveParser.parse(db.db.getModel(id).keyFile).head
+          proveBy(entry.model.asInstanceOf[Formula], extractedTactic, defs = entry.defs) shouldBe 'proved
       }
       println("Done")
     }
