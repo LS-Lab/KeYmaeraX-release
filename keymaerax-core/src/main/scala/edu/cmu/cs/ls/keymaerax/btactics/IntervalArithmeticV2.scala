@@ -33,10 +33,10 @@ object IntervalArithmeticV2 {
                           (bounds: DecimalBounds)
                           (lat: Term, uat: Term)
                           (lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) = {
-    val (la, _) = eval_ivl(prec)(bounds)(lat)
-    val (_, ua) = eval_ivl(prec)(bounds)(uat)
-    val (lb, _) = eval_ivl(prec)(bounds)(lbt)
-    val (_, ub) = eval_ivl(prec)(bounds)(ubt)
+    val (la, ua1) = eval_ivl(prec)(bounds)(lat)
+    val ua = if (lat == uat) ua1 else eval_ivl(prec)(bounds)(uat)._2
+    val (lb, ub1) = eval_ivl(prec)(bounds)(lbt)
+    val ub = if (lbt == ubt) ub1 else eval_ivl(prec)(bounds)(ubt)._2
     val pairs = (List(la, la, ua, ua), List(lb, ub, lb, ub)).zipped
     val lowers = pairs map ((a, b) => f(a, b, downContext(prec)))
     val uppers = pairs map ((a, b) => f(a, b, upContext(prec)))
