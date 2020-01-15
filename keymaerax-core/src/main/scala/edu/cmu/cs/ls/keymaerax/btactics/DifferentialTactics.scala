@@ -1977,53 +1977,153 @@ private object DifferentialTactics extends Logging {
     )
   })
 
-  /**
-    * assume closure of postcondition for proof of invariant interior
-    *
-    * G, p |- [{ode&p}](closure(q)->(interior(q))')          G |- interior(q)
-    * ------------------------------------------------------------------------dIClosure
-    * G |- [{ode&p}]q
-    *
-    * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
-    * @see [[FormulaTools.interior]]
-    * @see [[FormulaTools.closure]]
-    *
-    */
-  val dIClosure: DependentPositionTactic = "dIClosure" by ((pos:Position,seq: Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "dIClosure expects to be called on top-level succedent")
+  /** Lemmas that can be proved only for specific instances of ODEs. */
+  case class ODESpecific(ode: DifferentialProgram, variant: String => String = (x => x + "_")) {
+    private val vars = DifferentialHelper.getPrimedVariables(ode)
+    private val vvars = vars.zipWithIndex.map(vi => Variable(variant(vi._1.name), vi._1.index))
+    private val ode2 = (vars,vvars).zipped.foldLeft(ode)((a, b) => URename(b._1, b._2)(a))
 
-    val (ode,p_fml,post) = seq.sub(pos) match {
-      case Some(Box(sys:ODESystem,p)) => (sys.ode,sys.constraint,p)
-      case _ => throw new BelleThrowable("dIClosure expects succedent of shape [{ode&p}]q")
+    private def tuple_of_list(ts: List[Term]) : Term = ts match {
+      case Nil => Nothing
+      case (t::Nil) => t
+      case (t::ts) => Pair(t, tuple_of_list(ts))
     }
+    private[btactics] def p(vs: List[Term]) = FuncOf(Function("p_", None, tuple_of_list(vs).sort, Real), tuple_of_list(vs))
+    private[btactics] def P(vs: List[Term]) = PredOf(Function("P_", None, tuple_of_list(vs).sort, Bool), tuple_of_list(vs))
+    private[btactics] def q(vs: List[Term]) = FuncOf(Function("q_", None, tuple_of_list(vs).sort, Real), tuple_of_list(vs))
+    private[btactics] def r(vs: List[Term]) = PredOf(Function("r_", None, tuple_of_list(vs).sort, Bool), tuple_of_list(vs))
 
-    val (q_fml, propt) = semiAlgNormalize(post)
-    /* Apply the semialg normalization step */
-    val starter = propt.map(pr => useAt(pr)(pos ++ PosInExpr(1 :: Nil))).getOrElse(skip)
+    private[btactics] val q_pat = q(vars)
+    private[btactics] val p_pat = p(vars)
+    private[btactics] val P_pat = P(vars)
 
-    val interior = FormulaTools.interior(q_fml)
+    private def pos(t: Term) = Greater(t, Number(0))
+    private def nonneg(t: Term) = GreaterEqual(t, Number(0))
 
-    val closure = FormulaTools.closure(q_fml)
-
-    starter &
-    cutR(interior)(pos) <(
-      skip, //QE
-      implyR(1) &
-      dCClosure(cutInterior=true)(pos) <(
-        closeId,
-        //dI('full)(pos)
-        DI(pos) & implyR(pos) & andR(pos) <(
-          closeId,
-          DW(pos) & diffRefine(p_fml)(pos) <(
-            generalize(Imply(closure,DifferentialFormula(interior)))(pos) <(
-              hideL(AntePosition(seq.ante.length+1)) & andL('Llast) & hideL('Llast),
-              implyL('Llast) <( implyR(1) & andL('Llast) & closeId , implyR(1) & closeId )
+    /**
+      * A lemma of the following form for tuples x of dimension n
+      * (
+      *   P(x)                             &
+      *   [{x'=f(x) & r(x) & P(x)}] q(x)>0  &
+      *   \forall x [{x'=f(x) & r(x) & q(x)>=0}] P(x)' &
+      *   \forall x P(x) <-> p(x)>=0
+      * ) ->
+      *     [{x'=f(x) & r(x)}] P(x)
+      * */
+    val dIopenClosedProvable: ProvableSig =
+      proveBy(
+        Imply(
+          List(
+            P(vars),
+            Box(ODESystem(ode, And(r(vars), P(vars))), pos(q(vars))),
+            FormulaTools.quantifyForall(vvars,
+              Box(ODESystem(ode2, And(r(vvars), nonneg(q(vvars)))),
+                DifferentialFormula(P(vvars)))),
+            FormulaTools.quantifyForall(vvars, Equiv(P(vvars), nonneg(p(vvars)))),
+          ).reduceRight(And),
+          Box(ODESystem(ode, r(vars)), P(vars))),
+        implyR(1) & andL(-1) & andL('Llast) & andL('Llast) &
+          dR(And(r(vars), nonneg(p(vars))))(-2) &
+          Idioms.<(
+            skip,
+            cohideOnlyL('Llast) &
+              dW(1) &
+              implyR(1) &
+              FOQuantifierTactics.allLs(vars)(-1, 1 :: Nil) &
+              prop &
+              done
+          ) &
+          TactixLibrary.generalize(nonneg(p(vars)))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
+          useAt("RI& closed real induction >=")(1) &
+          andR(1) &
+          Idioms.<(FOQuantifierTactics.allLs(vars)('Llast) & prop & done, skip) &
+          composeb(1) &
+          DW(1) &
+          TactixLibrary.generalize(pos(q(vars)))(1) &
+          Idioms.<(
+            closeId,
+            implyR(1) &
+              assignb(1) &
+              implyR(1) &
+              /* @TODO: the following is somewhat close to ODEInvariance.lpstep */
+              cutR(Or(pos(p(vars)), Equal(p(vars), Number(0))))(1) & Idioms.<(
+              useAt(ODEInvariance.geq, PosInExpr(1 :: Nil))(1) & prop & done,
+              implyR(1) &
+                orL('Llast) < (
+                  useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & prop & done,
+                  dR(And(r(vars), nonneg(q(vars))), false)(1) & Idioms.<(
+                    useAt(ODEInvariance.uniqAx, PosInExpr(1 :: Nil))(1) &
+                      andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId),
+                    andL('L) &
+                      TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
+                      DI(1) & implyR(1) & andR(1) & Idioms.<(
+                      FOQuantifierTactics.allLs(vars)(-7) & prop & done,
+                      cohideOnlyL(-6) &
+                        FOQuantifierTactics.allLs(vars)(-1) &
+                        DifferentialTactics.inverseDiffGhost(1) &
+                        derive(1, 1 :: Nil) &
+                        closeId)
+                  )
+                )
             )
-            ,
-            diffWeakenG(pos) & implyR(1) & andL(-1) & closeId
           )
-        )
       )
-    )
-  })
+
+    /**
+      * If P is a closed set (i.e., can be normalized to p(x)>=0), applies differential induction by assuming P(x) in
+      * the domain constraint and P(x)' <-> q(x)>=0 pointing strictly inwards ( q(x)>0 )
+      *
+      * if P(x)' normalizes to q(x)>=0:
+      *
+      * P(x)            [{x'=f(x) & r(x) & P(x)}] q(x)>0
+      * ------------------------------------------------ dIClosed
+      *             [{x'=f(x) & r(x)}] P(x)
+      *  */
+    val dIClosed = "dIClosed" by { (pos: Position, seq: Sequent) =>
+      pos.checkTop
+      seq.sub(pos) match {
+        case Some(Box(ODESystem(ode, constraint), post)) =>
+          import TaylorModelTactics.Timing._
+          toc("== dIClosed")
+          val postD = DifferentialHelper.lieDerivative(ode, post)
+          toc("== lieDerivative")
+          val post_semi = SimplifierV3.semiAlgNormalize(post)
+          toc("== semiAlgNormalize post")
+          val postD_semi = SimplifierV3.semiAlgNormalize(postD)
+          toc("== semiAlgNormalize postD")
+          (SimplifierV3.maxMinGeqNormalize(post_semi._1), SimplifierV3.maxMinGeqNormalize(postD_semi._1)) match {
+            case ((GreaterEqual(p, Number(np)), Some(p_prv)),
+            (GreaterEqual(q, Number(nq)), Some(q_prv))) if np == 0 && nq == 0 =>
+            {
+              toc("== maxMinGeqNormalize")
+              val usubst = (UnificationMatch(p_pat, p) ++ UnificationMatch(q_pat, q) ++ UnificationMatch(P_pat, post)).usubst
+              val lastpos = - seq.ante.length - 1
+                useAt(dIopenClosedProvable(usubst), PosInExpr(1::Nil))(pos) &
+                andR(pos) & Idioms.<( skip, andR(pos) & Idioms.<(skip, andR(pos))) &
+                Idioms.<(
+                    skip /* initial condition */,
+                  tocTac("== Tactic start") &
+                  dW(pos) /* (open) differential invariant */,
+                  tocTac("== dW") &
+                  cohideR(pos) & allR(pos)*vars.length & derive(pos++PosInExpr(1::Nil)) &
+                    DE(pos) & Dassignb(pos ++ PosInExpr(1::Nil))*vars.length & dW(pos) &
+                    tocTac("== DE") &
+                    QE & done,
+                  tocTac("== QE") &
+                  cohideR(pos) & allR(pos)*vars.length &
+                    useAt(post_semi._2.get, PosInExpr(0::Nil))(1, 0::Nil) &
+                    useAt(p_prv, PosInExpr(0::Nil))(1, 0::Nil) &
+                    byUS("<-> reflexive") &
+                    tocTac("== done") &
+                    done
+                )
+            }
+            case unexpected =>
+              throw new RuntimeException("dIClosed: maxMinGeqNormalize produced something unexpected: " + unexpected)
+          }
+        case _ => throw new IllegalArgumentException("dIClosed must be applied on box ODE [']")
+      }
+    }
+  }
+
 }

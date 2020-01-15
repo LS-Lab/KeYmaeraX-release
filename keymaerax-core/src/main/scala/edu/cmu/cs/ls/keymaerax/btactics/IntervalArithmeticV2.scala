@@ -49,21 +49,29 @@ object IntervalArithmeticV2 {
     op_endpoints((a, b, c) => a.bigDecimal.divide(b.bigDecimal, c))(prec)(bounds)(lat, uat)(lbt, ubt)
 
   private def power_endpoints(prec: Int)(bounds: DecimalBounds)(lat: Term, uat: Term)(n: Int) : (BigDecimal, BigDecimal) = {
-    val (la, _) = eval_ivl(prec)(bounds)(lat)
-    val (_, ua) = eval_ivl(prec)(bounds)(uat)
-    val lower: BigDecimal =
-      if (n % 2 == 1) la.bigDecimal.pow(n, downContext(prec))
-      else {
-        if (0 <= la) la.bigDecimal.pow(n, downContext(prec))
-        else {
-          if (ua <= 0) ua.bigDecimal.pow(n, downContext(prec))
-          else 0
-        }
+    if (n >= 0) {
+      val (la, _) = eval_ivl(prec)(bounds)(lat)
+      val (_, ua) = eval_ivl(prec)(bounds)(uat)
+      if (n == 0) {
+        if (la > 0 || ua < 0) (1, 1)
+        else throw new IllegalArgumentException("Power [" + la + ", " + ua + "]^0 is not defined")
       }
-    val upper = (la.bigDecimal.pow(n, upContext(prec))) max (ua.bigDecimal.pow(n, upContext(prec)))
-    (lower, upper)
+      val lower: BigDecimal =
+        if (n % 2 == 1) la.bigDecimal.pow(n, downContext(prec))
+        else {
+          if (0 <= la) la.bigDecimal.pow(n, downContext(prec))
+          else {
+            if (ua <= 0) ua.bigDecimal.pow(n, downContext(prec))
+            else 0
+          }
+        }
+      val upper = (la.bigDecimal.pow(n, upContext(prec))) max (ua.bigDecimal.pow(n, upContext(prec)))
+      (lower, upper)
+    } else {
+      val (l, u) = power_endpoints(prec)(bounds)(lat, uat)(-n)
+      divide_endpoints(prec)(bounds)(Number(1), Number(1))(Number(l), Number(u))
+    }
   }
-
   /** Compute interval bounds by recursing over the input term structure.
     * An environment of bounds for variables and function symbols can be provided, too.
     *
@@ -202,12 +210,23 @@ object IntervalArithmeticV2 {
       case Some(prv) => prv
       case None =>
         val prv: ProvableSig =
-          if (n % 2 == 0)
-            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
-              "((((0<=ff_() & h_()<=ff_()^"+n+") | (F_()<=0 & h_()<=F_()^"+n+") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true))" +
-              "==> h_()<=f_()^"+n).asSequent, QE & done)
-          else
-            proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^"+n+"))<->true)) ==> h_()<=f_()^"+n+"").asSequent, QE & done)
+          if (n >= 0) {
+            if (n % 2 == 0)
+              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+                "((((0<=ff_() & h_()<=ff_()^" + n + ") | (F_()<=0 & h_()<=F_()^" + n + ") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true))" +
+                "==> h_()<=f_()^" + n).asSequent, QE & done)
+            else
+              proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^" + n + "))<->true)) ==> h_()<=f_()^" + n + "").asSequent, QE & done)
+          } else {
+            if (n % 2 == 0)
+              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+                "((((0<ff_() & h_()*F_()^" + -n + "<=1) | (F_()<0 & h_()*ff_()^" + -n + "<=1)))<->true))" +
+                "==> h_()<=f_()^" + n).asSequent, QE & done)
+            else
+              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+                "(((ff_()>0 & h_()*F_()^" + -n + "<=1) | (F_()<0 & h_()*F_()^" + -n + ">=1))<->true))" +
+                "==> h_()<=f_()^" + n + "").asSequent, QE & done)
+          }
         powerDownCache = powerDownCache.updated(n, prv)
         prv
     }
@@ -216,7 +235,18 @@ object IntervalArithmeticV2 {
     powerUpCache.get(n) match {
       case Some(prv) => prv
       case None =>
-        val prv: ProvableSig = proveBy(("((ff_()<=f_() & f_()<=F_()) & (((ff_()^" + n + " <= h_() & F_()^" + n + " <=h_()))<->true)) ==> f_()^" + n + " <=h_()").asSequent, QE & done)
+        val prv: ProvableSig =
+          if (n >= 0)
+            proveBy(("((ff_()<=f_() & f_()<=F_()) & (((ff_()^" + n + " <= h_() & F_()^" + n + " <=h_()))<->true)) ==> f_()^" + n + " <=h_()").asSequent, QE & done)
+          else if (n % 2 == 0) {
+            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+              "(((ff_()>0 & 1 <=ff_()^" + -n + "*h_()) | (F_()<0 & 1 <=F_()^" + -n + "*h_()))<->true))" +
+              "==> f_()^" + n + " <=h_()").asSequent, QE & done)
+          } else {
+            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+              "(((ff_()>0 & 1 <=ff_()^" + -n + "*h_()) | (F_()<0 & 1 >=ff_()^" + -n + "*h_()))<->true))" +
+              "==> f_()^" + n + " <=h_()").asSequent, QE & done)
+          }
         powerUpCache = powerUpCache.updated(n, prv)
         prv
     }
@@ -475,7 +505,7 @@ object IntervalArithmeticV2 {
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
-          case Power(_, i: Number) if i.value.isValidInt && i.value >= 1 =>
+          case Power(_, i: Number) if i.value.isValidInt =>
             // Lower Bound
             val n = i.value.toIntExact
             val ivl = power_endpoints(prec)(DecimalBounds())(ff, F)(n)
@@ -812,7 +842,7 @@ object IntervalArithmeticV2 {
     }
   }
 
-  private def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
     requireOneSucc(seq, "intervalArithmeticBool")
     seq.succ(0) match {
       case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))

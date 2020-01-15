@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
 import scala.collection.immutable._
 import org.typelevel.paiges._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.mutable.ListBuffer
 
@@ -629,12 +630,19 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     doc.render(margin)
   }
 
-  override def stringify(seq: Sequent): String = {
-    val doc = Doc.intercalate(Doc.line,(1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
+  def docOf(seq: Sequent) : Doc =
+    Doc.intercalate(Doc.line, (1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
       Doc.line + Doc.text(" ==> ") + Doc.line +
       Doc.intercalate(Doc.line, (1 to seq.succ.length).map(i => Doc.text(+i + ": ") + (Doc.line + docOf(seq.succ(i - 1))).nested(2)))
-    doc.render(margin)
-  }
 
+  override def stringify(seq: Sequent): String = docOf(seq).render(margin)
+
+  def docOf(prv: ProvableSig): Doc =
+    Doc.text("Conclusion:") + (Doc.line + docOf(prv.conclusion)).nested(2) +
+      Doc.line + Doc.text(prv.subgoals.length + " subgoals" + (if (prv.subgoals.length == 0) "." else ":")) + Doc.line +
+      Doc.intercalate(Doc.line, prv.subgoals.zipWithIndex.map{case (seq, i) =>
+        Doc.text("Subgoal " + i + ": ") + (Doc.line + docOf(seq).nested(2))})
+
+  def stringify(prv: ProvableSig): String = docOf(prv).render(margin)
 
 }
