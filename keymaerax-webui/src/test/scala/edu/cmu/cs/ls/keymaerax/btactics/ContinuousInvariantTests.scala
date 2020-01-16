@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{ExtremeTest, IgnoreInBuildTest, SlowTest}
@@ -15,7 +15,6 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
-import org.scalatest.time.SpanSugar._
 import org.scalatest.LoneElement._
 
 /**
@@ -57,8 +56,8 @@ class ContinuousInvariantTests extends TacticTestBase {
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
-      case gen: ConfigurableGenerator[Formula] => gen
+    val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
+      case gen: ConfigurableGenerator[GenProduct] => gen
     }
     TactixLibrary.invGenerator = FixedGenerator(Nil)
     forEvery(Table(("Name", "Model"),
@@ -74,7 +73,7 @@ class ContinuousInvariantTests extends TacticTestBase {
 
         annotatedInvariants.products.get(ode) match {
           case Some(invs) =>
-            invariants.map(_._1) should contain theSameElementsInOrderAs invs
+            invariants.map(_._1) should contain theSameElementsInOrderAs invs.map(_._1)
           case None =>
             //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
             // fail if invariant generator improves and finds an invariant.
@@ -89,8 +88,8 @@ class ContinuousInvariantTests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "-1")) {
       val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-      val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
-        case gen: ConfigurableGenerator[Formula] => gen
+      val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
+        case gen: ConfigurableGenerator[GenProduct] => gen
       }
 
       forEvery(Table(("Name", "Model"),
@@ -100,7 +99,7 @@ class ContinuousInvariantTests extends TacticTestBase {
           println("\n" + name)
           val Imply(_, Box(ode@ODESystem(_, _), _)) = model
           annotatedInvariants.products.get(ode) match {
-            case Some(invs) => tool.lzzCheck(ode, invs.reduce(And)) shouldBe true
+            case Some(invs) => tool.lzzCheck(ode, invs.map(_._1).reduce(And)) shouldBe true
             case None => // no invariant to fast-check
           }
           println(name + " done")
