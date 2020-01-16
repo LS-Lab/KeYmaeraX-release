@@ -1,32 +1,41 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Uniform Substitution for KeYmaera X
+  * @author Andre Platzer
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @note Code Review:
+  */
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
-import StaticSemantics.freeVars
 import StaticSemantics.boundVars
 import SetLattice.allVars
 import SetLattice.bottom
-
-object USubstOne {
-  @inline
-  private val optima = true
-}
 
 /**
   * A Uniform Substitution with its one-pass application mechanism.
   * A Uniform Substitution uniformly replaces all occurrences of a given predicate p(.) by a formula in (.).
   * It can also replace all occurrences of a function symbol f(.) by a term in (.)
-  * and all occurrences of a quantifier symbols C(-) by a formula in (-)
-  * and all occurrences of program constant b by a hybrid program.
+  * and all occurrences of a predicational / quantifier symbols C(-) by a formula in (-)
+  * and all occurrences of program constant symbol b by a hybrid program.
   *
   * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
   *
-  * @note Implements the onepassversion that checks admissibility on the fly and checking upon occurrence.
+  * @note Implements the one-pass version that checks admissibility on the fly and checking upon occurrence.
+  *       Faster than alternative [[USubstChurch]].
+  * Main ingredient of prover core.
   * @note soundness-critical
   * @author Andre Platzer
   * Created by aplatzer on 2019-2-12.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubstOne)]]
+  * @see [[USubstChurch]]
   */
 final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
-  import USubstOne.optima
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private/*[this]*/ val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
@@ -35,6 +44,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /** unique left hand sides in subsDefs */
   private def dataStructureInvariant: Unit = {
     // check that we never replace n by something and then again replacing the same n by something
+    // this check is redundant except that it also yells at {p(.)~>.>=0,p(.)~>p(.)}
     val lefts = subsDefsInput.map(_.what).toList
     insist(lefts.distinct.size == lefts.size, "conflict: no duplicate substitutions for the same substitutee " + subsDefsInput)
     // check that we never replace p(x) by something and also p(t) by something
@@ -239,6 +249,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         case Some(subs) =>
           val r = subs.repl.asInstanceOf[Program]
           (u++boundVars(r), r)
+        //@todo improve: for SystemConst(_,Taboo(except)) could return allVars-except
         case None => (allVars, a)
       }
       case Assign(x, e)      => (u+x, Assign(x, usubst(u,e)))
@@ -250,8 +261,9 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
       case Compose(a, b)     => val (v,ra) = usubst(u,a); val (w,rb) = usubst(v,b); (w, Compose(ra, rb))
-      case Loop(a) if!optima => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
-      case Loop(a) if optima => val v = u++substBoundVars(a); val (w,ra) = usubst(v,a);
+        // unoptimized version:  //case Loop(a) if!optima => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
+        // optimized version:
+      case Loop(a)           => val v = u++substBoundVars(a); val (w,ra) = usubst(v,a);
         // redundant: check result of substBoundVars for equality to make it not soundness-critical
         if (v==w) (v, Loop(ra)) else {val (_,rb) = usubst(w, a); (w, Loop(rb))}
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
@@ -308,7 +320,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       }
       case a: SystemConst  => subsDefs.find(_.what == a) match {
         case Some(subs) => StaticSemantics.boundVars(subs.repl.asInstanceOf[Program])
-        case None       => allVars
+        case None       => StaticSemantics.spaceVars(a.space)
       }
       case c: DifferentialProgramConst => subsDefs.find(_.what == c) match {
         case Some(subs) => StaticSemantics.boundVars(subs.repl.asInstanceOf[DifferentialProgram])

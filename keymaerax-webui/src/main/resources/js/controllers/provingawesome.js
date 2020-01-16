@@ -4,7 +4,7 @@
 
 angular.module('keymaerax.controllers').controller('ProofCtrl',
     function($scope, $rootScope, $http, $route, $routeParams, $q, $uibModal, $timeout,
-             sequentProofData, spinnerService, sessionService) {
+             sequentProofData, spinnerService, sessionService, derivationInfos) {
 
   $scope.userId = sessionService.getUser();
   $scope.proofId = $routeParams.proofId;
@@ -14,6 +14,26 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     canceller: undefined
   }
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Definitions.
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  $scope.sequentProofData = sequentProofData;
+  $scope.definitions = undefined;
+  $scope.$watch('sequentProofData.agenda.selectedTab', function(newValue, oldValue) {
+    if (newValue != oldValue) {
+      derivationInfos.sequentApplicableDefinitions($scope.userId, $scope.proofId, newValue).then(function(defs) {
+        $scope.definitions = defs;
+      });
+    }
+  });
+
+  $scope.setDefinition = function(what, repl) {
+    derivationInfos.setDefinition($scope.userId, $scope.proofId, what, repl);
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Explanations and help.
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   $scope.taskExplanation = {
     selection: "Rule"
   };
@@ -79,6 +99,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     doneLabel: 'Done'
   }
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Object initialization from server.
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   $http.get("/config/tool").success(function(data) {
     $scope.tool = data.tool;
   });
@@ -103,9 +126,16 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       } else {
         spinnerService.show('proofLoadingSpinner');
         sequentProofData.fetchAgenda($scope.userId, $scope.proofId);
+        derivationInfos.sequentApplicableDefinitions($scope.userId, $scope.proofId, sequentProofData.agenda.selectedTab).then(function(defs) {
+          $scope.definitions = defs;
+        });
       }
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Proof updates.
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   $scope.updateFreshProof = function(taskResult) {
     if (taskResult.type === 'taskresult') {

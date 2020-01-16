@@ -90,13 +90,13 @@ class Compbased extends TacticTestBase {
   "STTT Examples" should "prove remote control contract compliance" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Remote Control Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
 
   it should "prove obstacle contract compliance" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
 
   it should "prove choice implementation" in withMathematica { _ =>
@@ -162,8 +162,8 @@ class Compbased extends TacticTestBase {
 
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(entry.model.asInstanceOf[Formula],
       ("po"::"po0"::"so"::"t"::"t0"::Nil).map(Variable(_)):_*)
-    val monitor = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1))
-    monitor.subgoals.loneElement shouldBe "==> (0<=sopost&sopost<=S())&S()>=0&(((t0post<=tpost&t=t0post)&sopost=sopost)&po+sopost*tpost=popost+sopost*t)&po=po0post".asSequent
+    val monitor = proveBy(modelplexInput, ExpandAll(entry.defs.substs) & ModelPlex.modelMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1), defs = entry.defs)
+    monitor.subgoals.loneElement shouldBe "==> (0<=sopost&sopost<=S())&true&(((t0post<=tpost&t=t0post)&sopost=sopost)&po+sopost*tpost=popost+sopost*t)&po=po0post".asSequent
 
     val (equalities, inequalities) = FormulaTools.conjuncts(monitor.subgoals.loneElement.succ.loneElement).partition(_.isInstanceOf[Equal])
     val orderedMonitorFml = inequalities.reduceRightOption(And) match {
@@ -173,14 +173,14 @@ class Compbased extends TacticTestBase {
       }
       case None => equalities.reduceRightOption(And).getOrElse(True)
     }
-    orderedMonitorFml shouldBe "t=t0post&sopost=sopost&po+sopost*tpost=popost+sopost*t&po=po0post&0<=sopost&sopost<=S()&S()>=0&t0post<=tpost".asFormula
+    orderedMonitorFml shouldBe "t=t0post&sopost=sopost&po+sopost*tpost=popost+sopost*t&po=po0post&0<=sopost&sopost<=S()&true&t0post<=tpost".asFormula
     val orderedMonitor = proveBy(monitor, useAt(proveBy(Equiv(monitor.subgoals.loneElement.succ.loneElement, orderedMonitorFml), prop & done), PosInExpr(0::Nil))(1))
     orderedMonitor.subgoals should have size 1
 
     val monitorAsTestsProgram = proveBy(orderedMonitor,
       RepeatTactic(ModelPlex.chaseToTests(combineTests=true)(1, PosInExpr(List.fill(equalities.size)(1))), 2) &
       ModelPlex.chaseToTests(combineTests=false)(1))
-    monitorAsTestsProgram.subgoals.loneElement shouldBe "==> <?t=t0post;><?sopost=sopost;><?po+sopost*tpost=popost+sopost*t;><?po=po0post;><?((0<=sopost&sopost<=S())&S()>=0)&t0post<=tpost;>true".asSequent
+    monitorAsTestsProgram.subgoals.loneElement shouldBe "==> <?t=t0post;><?sopost=sopost;><?po+sopost*tpost=popost+sopost*t;><?po=po0post;><?((0<=sopost&sopost<=S())&true)&t0post<=tpost;>true".asSequent
 
     val compile = chaseCustom({
 //      case Diamond(Test(False), _) => (compileFalseTest, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil) :: Nil
@@ -190,35 +190,35 @@ class Compbased extends TacticTestBase {
     })
 
     proveBy(monitorAsTestsProgram, compile(1) & toMetric(1) /* todo toMetric of all other tests */).subgoals.loneElement shouldBe
-      "==> <?t=t0post;?<?sopost=sopost;?<?po+sopost*tpost=popost+sopost*t;?<?po=po0post;?<?((0<=sopost&sopost<=S())&S()>=0)&t0post<=tpost;?true;++?!(((0<=sopost&sopost<=S())&S()>=0)&t0post<=tpost);?false;>true;++?!po=po0post;?false;>true;++?!po+sopost*tpost=popost+sopost*t;?false;>true;++?!sopost=sopost;?false;>true;++?!t=t0post;?<margin:=1;>margin<=0;>true".asSequent
+      "==> <?t=t0post;?<?sopost=sopost;?<?po+sopost*tpost=popost+sopost*t;?<?po=po0post;?<?((0<=sopost&sopost<=S())&true)&t0post<=tpost;?true;++?!(((0<=sopost&sopost<=S())&true)&t0post<=tpost);?false;>true;++?!po=po0post;?false;>true;++?!po+sopost*tpost=popost+sopost*t;?false;>true;++?!sopost=sopost;?false;>true;++?!t=t0post;?<margin:=1;>margin<=0;>true".asSequent
   }
 
   it should "prove robot contract compliance" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Robot Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
 
   it should "prove compatibility of obstacle and robot" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Compatibility of Obstacle and Robot",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
   }
 
   it should "prove communication guarantees" in withMathematica { _ =>
     val entry1 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3, defs = entry1.defs) shouldBe 'proved)
     val entry2 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Liveness",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3, defs = entry2.defs) shouldBe 'proved)
   }
 
   it should "prove system safety" in withMathematica { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val entry = KeYmaeraXArchiveParser.getEntry("Remote-Controlled Robot System Avoids Obstacles",
         io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-      proveBy(entry.model.asInstanceOf[Formula], proveSystem(
+      proveBy(entry.model.asInstanceOf[Formula], ExpandAll(entry.defs.substs) & proveSystem(
         "robotcomponents/Robot Obstacle",
         "robotcomponents/Robot Base Case",
         "robotcomponents/Robot Use Case",
@@ -229,9 +229,9 @@ class Compbased extends TacticTestBase {
         "robotcomponents/Compatibility of Obstacle and Robot",
         "robotcomponents/Communication Guarantee Safety",
         "robotcomponents/Communication Guarantee Liveness"
-      )(1)) shouldBe 'proved
+      )(1), defs = entry.defs) shouldBe 'proved
 
-      entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+      entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3, defs = entry.defs) shouldBe 'proved)
     }
   }
 

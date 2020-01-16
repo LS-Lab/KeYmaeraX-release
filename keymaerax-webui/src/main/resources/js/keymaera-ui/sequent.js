@@ -152,6 +152,12 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               }
             }
 
+            scope.fetchApplicableDefinitions = function() {
+              derivationInfos.sequentApplicableDefinitions(scope.userId, scope.proofId, scope.nodeId).then(function(defs) {
+                scope.definitions = defs;
+              });
+            }
+
             scope.lemma = {
               selected: undefined,
               allInfos: function(formulaId, partialLemmaName) {
@@ -221,6 +227,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             scope.turnstileDragEnter = function(dragData) { turnstileTooltipOpen = true; }
             scope.turnstileDragLeave = function(dragData) { turnstileTooltipOpen = false; }
             scope.isTurnstileTooltipOpen = function() {return turnstileTooltipOpen;}
+
+            scope.fetchApplicableDefinitions();
         },
         templateUrl: 'partials/collapsiblesequent.html'
     };

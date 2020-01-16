@@ -150,7 +150,7 @@ object Kaisar {
       case BaseVariable(id, _, _) => Some(id)
       case UnitFunctional(id, _, _) => Some(id)
       case ProgramConst(id, _) => Some(id)
-      case SystemConst(id) => Some(id)
+      case SystemConst(id, _) => Some(id)
       case _ => None
     }
   }
@@ -486,7 +486,7 @@ object Kaisar {
         e match {
           case ProgramConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
-          case SystemConst(fname) if c.hasDef(fname) =>
+          case SystemConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
           case DifferentialProgramConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
@@ -1155,7 +1155,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
     case BaseVariable(id, _, _) if c.hasDef(id) => matchDef(id)
     case UnitFunctional(id, _, _) if c.hasDef(id) => matchDef(id)
     case ProgramConst(id, _) if c.hasDef(id) => matchDef(id)
-    case SystemConst(id) if c.hasDef(id) => matchDef(id)
+    case SystemConst(id, _) if c.hasDef(id) => matchDef(id)
     case PredOf(Function("p", _, _, _, _), args) if collectVarPat(args).isDefined || collectNegVarPat(args).isDefined =>
       (collectVarPat(args), collectNegVarPat(args)) match {
         case (Some(pos), _) =>
@@ -1286,7 +1286,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
       } else {
         throw exn
       }
-    case SystemConst(name: String) =>
+    case SystemConst(name: String, _) =>
       if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {

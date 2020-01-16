@@ -18,6 +18,8 @@ libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
+libraryDependencies += "org.scalamock" %% "scalamock" % "4.4.0" % "test"
+
 libraryDependencies += "org.pegdown" % "pegdown" % "1.6.0" % "test"      // (For Html Scalatest reports)
 
 libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0" // automatic resource management

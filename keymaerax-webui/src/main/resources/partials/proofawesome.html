@@ -87,12 +87,35 @@
                 <!-- Global toolbar with global proof tactics -->
                 <div class="collapse navbar-collapse" id="tacticnavbar">
                     <ul class="nav navbar-nav nav-pills k4-tactics-nav-first mr-auto" id="provingautomation">
-                        <li class="nav-item"><a ng-click="doTactic(undefined, 'master')"
-                                                data-intro="<center>Automatic search</center>" data-position="top"
-                                                uib-popover-template="fetchRuleHelp('master')"
-                                                popover-class="k4-rulemenu-helppopover"
-                                                popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                            <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
+                        <li class="nav-item">
+                            <span>
+                                <span ng-click="doTactic(undefined, 'master')"
+                                      ng-alt-click="onTacticScript('expandAllDefs;master', false)"
+                                      data-intro="<center>Automatic search</center>" data-position="top"
+                                      uib-popover-template="fetchRuleHelp('master')"
+                                      popover-class="k4-rulemenu-helppopover"
+                                      popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span>
+                                    </span>
+                                <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                                   aria-haspopup="true" aria-expanded="false">
+                                    <span class="fa fa-caret-down fa-lg"></span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a ng-click="doTactic(undefined, 'master')"
+                                           uib-popover-template="fetchRuleHelp('master')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-play"><span class="k4-btn-optional-text"> Auto</span></span></a>
+                                    </li>
+                                    <li><a ng-click="doTactic(undefined, 'explore')"
+                                           uib-popover-template="fetchRuleHelp('explore')"
+                                           popover-class="k4-rulemenu-helppopover"
+                                           popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
+                                    </li>
+                                </ul>
+                            </span>
                         </li>
                         <li class="nav-item"><a ng-click="onTacticScript('propAuto',false)"
                                                 data-intro="<center>Propositional proof</center>" data-position="top"
@@ -100,10 +123,6 @@
                                                 popover-class="k4-rulemenu-helppopover"
                                                 popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                             <span class="fa fa-magic"><span class="k4-btn-optional-text"> Prop</span></span></a>
-                        </li>
-                        <li class="nav-item"><a ng-click="doTactic(undefined, 'explore')"
-                                                data-intro="<center>Until (dis)proved</center>" data-position="top">
-                            <span class="fa fa-fast-forward"><span class="k4-btn-optional-text"> Explore</span></span></a>
                         </li>
                         <li class="nav-item"><a ng-click="doTactic(undefined, 'unfold')"
                                data-intro="<center>Unfold all operators</center>" data-position="top"
@@ -130,7 +149,7 @@
                                     </span>
                                 <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                    aria-haspopup="true" aria-expanded="false">
-                                    <span class="caret"></span>
+                                    <span class="fa fa-caret-down fa-lg"></span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-right">
                                     <li><a ng-click="undoLastProofStep()"
@@ -166,16 +185,44 @@
                                                 data-intro="<center>Browse all rules</center>" data-position="top">
                             <span class="fa fa-binoculars"><span class="k4-btn-optional-text"> Browse</span></span></a>
                         </li>
-                        <li class="nav-item"><a ng-click="openModelEditor(agenda.modelId)"
-                               data-intro="<center>View and edit model</center>" data-position="top">
-                            <span class="fa fa-keyboard-o"
-                             uib-tooltip="View model or edit model and rerun proof"><span class="k4-btn-optional-text"> Model</span></span></a>
-                        </li>
                     </ul>
                 <!-- Global list of proof rules, axiom and proof tactics -->
                     <ul class="nav navbar-nav k4-tactics-nav-last mr-auto" id="provingbasictactics"
                         data-intro="Basic tactics and tools."
                         data-position="right">
+                        <li class="nav-item dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Defs <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a ng-click="openModelEditor(agenda.modelId)">
+                                    <span class="fa fa-keyboard-o"
+                                          uib-tooltip="View model or edit model and rerun proof">
+                                        <span class="k4-btn-optional-text"> Edit Model...</span>
+                                    </span>
+                                    </a>
+                                </li>
+                                <li class="divider" ng-if="definitions.length > 0"></li>
+                                <li ng-if="definitions.length > 0">
+                                    <a href ng-click="doTactic(undefined, 'expandAllDefs')">Expand all definitions<code class="pull-right">expandAllDefs</code></a>
+                                </li>
+                                <li ng-repeat="d in definitions">
+                                    <a ng-if="d.definition.editable">
+                                        <span ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+                                            {{d.definition.what}}
+                                        </span>
+                                        ~>
+                                        <input type="text" ng-model="d.definition.repl"
+                                               ng-click="$event.stopPropagation()"
+                                               ng-blur="setDefinition(d.definition.what, d.definition.repl)">
+                                    </a>
+                                    <a ng-if="!d.definition.editable"
+                                       ng-click='doTactic(undefined, "expand \"" + d.symbol + "\"")'>
+                                        <span>{{d.definition.what}}</span> ~> <span>{{d.definition.repl}}</span>
+                                        <code class="pull-right">expand "{{d.symbol}}"</code>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
@@ -413,6 +460,12 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equation <span class="caret"></span></a>
                             <ul class="dropdown-menu">
+                                <li><a ng-click="doSearch('ODE', 'R')"
+                                  uib-popover-template="fetchRuleHelp('ODE')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                  <span>Auto</span><code class="pull-right">ODE</code></a></li>
+                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('solve', 'R')"
                                        uib-popover-template="fetchRuleHelp('solve')"
                                        popover-class="k4-rulemenu-helppopover"
@@ -500,13 +553,16 @@
                                         <span>Find Assumptions</span><code class="pull-right">pQE</code>
                                     </a>
                                 </li>
+                                <li><a ng-click="getPegasusODECandidates()"
+                                  uib-popover-template="fetchRuleHelp('odeInvariantCandidates')"
+                                                                         popover-class="k4-rulemenu-helppopover"
+                                                                         popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000"><span>Find ODE Invariant Candidates</span></a></li>
                                 <li><a ng-click="getODEConditions()" uib-popover-template="fetchRuleHelp('odeConditions')"
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                         <span>Find ODE Conditions</span>
                                     </a>
                                 </li>
-                                <li><a ng-click="getPegasusODECandidates()"><span>Find ODE Invariant Candidates</span></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('intervalArithmetic', 'R')"
                                        uib-popover-template="fetchRuleHelp('intervalArithmetic')"

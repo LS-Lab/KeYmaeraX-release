@@ -99,7 +99,9 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
     withClue(tutorialName + ": " + name + "/" + tactic._1) {
       val (decls, invGen) = parseProblem(model)
       println(s"Proving $name with ${tactic._1}")
-      val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
+      // backwards compatibility: start with expandAll if model has expansible definitions and tactic does not expand any
+      val expandAll = decls.decls.exists(_._2._3.isDefined) && "(expand(?!All))|(expandAllDefs)".r.findFirstIn(tactic._2).isEmpty
+      val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls, expandAll)
 
       val start = System.currentTimeMillis()
       val proof = db.proveBy(model, t, l => LazySequentialInterpreter(l :+ new PrintProgressListener(t), throwWithDebugInfo = false), name)

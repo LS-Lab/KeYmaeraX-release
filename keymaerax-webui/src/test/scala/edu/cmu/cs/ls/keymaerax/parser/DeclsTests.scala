@@ -107,7 +107,7 @@ class DeclsTests extends FlatSpec with Matchers {
       codomain shouldBe Bool
       interpretation shouldBe "(._0) + (._1) <= (._2)".asFormula
     }
-    parsed.model shouldBe "0+1 <= 2 <-> true".asFormula
+    parsed.model shouldBe "Pred(0,1,2) <-> true".asFormula
   }
 
   "Declarations type analysis" should "elaborate variables to no-arg functions per declaration" in {

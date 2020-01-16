@@ -470,7 +470,11 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
 abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExpr with NamedBelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String =
-    s"$name(${inputs.map({case input: Expression => "\"" + input.prettyString + "\"" case input => "\"" + input.toString + "\""}).mkString(",")})"
+    s"$name(${inputs.map({
+      case input: Expression => "\"" + input.prettyString + "\""
+      case input: USubst => input.subsDefsInput.map(p => "\"" + p.what.prettyString + "~>" + p.repl.prettyString + "\"").mkString(",")
+      case input: SubstitutionPair => "\"" + input.what.prettyString + "~>" + input.repl.prettyString + "\""
+      case input => "\"" + input.toString + "\""}).mkString(",")})"
 }
 abstract class StringInputTactic(override val name: String, val inputs: Seq[String]) extends BuiltInTactic(name) {
   override def prettyString: String =
@@ -716,22 +720,15 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
   override def prettyString: String = t.name
 }
 
-/** Defines an expression (function or predicate) for later expansion. */
-case class DefExpression(exprDef: Formula) extends BelleExpr {
-  assert(exprDef match {
-    case Equal(FuncOf(_, _), _) => true
-    case Equiv(PredOf(_, _), _) => true
-    case _ => false
-  }, s"Expected either function definition of shape f(x)=t or predicate definition of shape p(x) <-> q, but got ${exprDef.prettyString}")
-  override def prettyString: String = "def \"" + exprDef.prettyString + "\""
+/** Expands symbol `name` per substitution `s`. */
+case class Expand(name: NamedSymbol, s: SubstitutionPair) extends BelleExpr {
+  //@note serialize `s` for database since required in the proof tree when assembling provables
+  override def prettyString: String = s"""US("${s.what.prettyString}~>${s.repl.prettyString}")"""
 }
-
-/** Expands a function or predicate. */
-case class ExpandDef(expr: DefExpression) extends BelleExpr {
-  override def prettyString: String = "expand \"" + (expr.exprDef match {
-    case Equal(fn@FuncOf(_, _), _) => fn.prettyString
-    case Equiv(p@PredOf(_, _), _) => p.prettyString
-  }) + "\""
+/** Expands all definitions from the model provided in topologically sorted `defs`. */
+case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
+  //@note serialize `defs` for database since required in the proof tree when assembling provables
+  override def prettyString: String = defs.map(s => s"""US("${s.what.prettyString}~>${s.repl.prettyString}")""").mkString(";")
 }
 
 @deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
@@ -746,10 +743,16 @@ trait BelleValue {
   def prettyString: String = toString
 }
 /** A Provable during a Bellerophon interpreter run, readily paired with an optional list of BelleLabels */
-case class BelleProvable(p : ProvableSig, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
-  if(label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
+case class BelleProvable(p: ProvableSig, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
+  if (label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
   override def toString: String = p.prettyString
   override def prettyString: String = p.prettyString
+}
+
+/** A Provable that was produced with a delayed substitution `subst`. */
+class BelleDelayedSubstProvable(override val p: ProvableSig, override val label: Option[List[BelleLabel]] = None, val subst: USubst) extends BelleProvable(p, label) {
+  override def toString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
+  override def prettyString: String = "Delayed substitution\n" + p.prettyString + "\nby\n" + subst.toString
 }
 
 /** Internal: To communicate proof IDs of subproofs opened in the spoon-feeding interpreter in Let between requests.

@@ -4,11 +4,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent, StaticSemantics, SubstitutionPair, USubst}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.collection.immutable.{List, Map}
 import scala.util.Try
 
@@ -98,10 +99,32 @@ trait ProofTreeNode {
   /** Deletes this node with the entire subtree underneath. */
   def pruneBelow(): Unit
 
+  /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
+    * Returns `goal` if `sub` is not applicable at `i`. */
+  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]) = {
+    if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
+    else if (substs.nonEmpty) {
+      // apply only substitutions for difference between goal and sub
+      val goalSig = StaticSemantics.signature(goal.subgoals(i)) ++ substs.flatMap(s => StaticSemantics.signature(s.repl))
+      val subSig = StaticSemantics.signature(sub.conclusion)
+      val sigDiff = goalSig -- subSig
+      val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
+      exhaustiveSubst(goal, RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst)(sub, i)
+    } else goal
+  }
+
   // cached computations
-  private lazy val theProvable = {
+
+  /** Merges all descendent provables into the local provable. */
+  private lazy val theProvable: ProvableSig = {
     if (localProvable.isProved) localProvable
-    else if (children.isEmpty) localProvable.sub(goalIdx) //@note if no followup proof step happened, then return stuttering proof step
+    else (applyWithSubst(localProvable, _, goalIdx, _)).tupled(mergedDescendentProvable)
+  }
+
+  /** Creates intermediate provables for all descendents of the shape mergable into the local provable's subgoal. */
+  private lazy val mergedDescendentProvable: (ProvableSig, List[SubstitutionPair]) = {
+    if (localProvable.isProved) localProvable -> Nil
+    else if (children.isEmpty) localProvable.sub(goalIdx) -> Nil //@note if no followup proof step happened, then return stuttering proof step
     else {
       // the provable representing our proof step is the localProvable stored in all children (for lookup performance)
       // myProvable := obtain the unique localProvable that all children agree on, because they are off to prove its respective subgoals
@@ -109,15 +132,40 @@ trait ProofTreeNode {
       val myProvable = children.head.localProvable
       assert(children.forall(_.localProvable == myProvable), "All children share the same local provable, only differing in goalIdx")
 
-      // merge finalized provables from all children into myProvable
+      // merge finalized provables from all children into local provable;
+      // if they cannot be merged verbatim, merge by delayed substitution;
       // if they cannot be merged (backsubstitution failed, see SequentialInterpreter Let): keep global
-      if (myProvable.isProved) myProvable
-      else children.map(_.provable).zipWithIndex.foldRight(myProvable)({ case ((sub, i), global) =>
-        if (global.subgoals(i) == sub.conclusion) global(sub, i)
-        else global
+      if (myProvable.isProved) {
+        val substs = children.flatMap(c => c.mergedDescendentProvable._2 ++ makerSubst(c.maker))
+        myProvable -> substs
+      } else children.map(c => (c.mergedDescendentProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
+        val ms = makerSubst(subMaker)
+        val preSubsts = (globalSubsts ++ subSubsts)
+        val substs = (preSubsts ++ ms).distinct
+        applyWithSubst(global, sub, i, substs) -> substs
       })
     }
   }
+
+  /** Applies substitutions `s` to provable `p` exhaustively. */
+  @tailrec
+  private def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
+    val substituted = p(s)
+    if (substituted != p) exhaustiveSubst(substituted, s)
+    else substituted
+  }
+
+  private lazy val usMatcher = """(US\(")([^"]*)("\))""".r
+
+  /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
+  private def makerSubst(maker: Option[String]): List[SubstitutionPair] = maker.map(m => {
+    if (m.contains("US(")) {
+      import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+      // collect substitutions of expandAll (serializes to sequence of US), and
+      // anywhere in custom tactics, e.g., "expand Q; unfold; expand P; master"
+      usMatcher.findAllMatchIn(m).map(m => m.group(2).trim).map(_.asSubstitutionPair).toList.distinct
+    } else Nil
+  }).getOrElse(Nil)
 
   private lazy val theDescendants = children ++ children.flatMap(_.allDescendants)
   private lazy val theAncestors = parent.toList ++ parent.map(_.allAncestors).getOrElse(Nil)
