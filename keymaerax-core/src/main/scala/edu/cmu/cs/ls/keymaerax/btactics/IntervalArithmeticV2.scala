@@ -133,72 +133,65 @@ object IntervalArithmeticV2 {
     }
   }
 
-  /** Map to construct static single assignment form */
-  class SSAMap(m: Map[Term, Variable], nextIndex: Int, prefix: String) {
-    def this(prefix: String) = this(Map(), 0, prefix)
-
-    lazy val termMap = m.toList.reverse.map{case(a, b)=>(b, a)}.toMap
+  class StaticSingleAssignmentExpression[E <: Expression](e: E, prefix: String = "ssa") {
 
     private def nextVar(i: Int) = Variable(prefix + i + "_")
 
-    private def insert(t: Term) = {
+    private def insert(t: Term, m: Map[Term, Variable], nextIndex: Int) : (Variable, Map[Term, Variable], Int) = {
       m.get(t) match {
-        case Some(v) => (v, new SSAMap(m, nextIndex, prefix))
+        case Some(v) => (v, m, nextIndex)
         case None =>
           val v = nextVar(nextIndex)
-          (v, new SSAMap(m.updated(t, v), nextIndex+1, prefix))
+          (v, m.updated(t, v), nextIndex+1)
       }
     }
 
-    def collectSubterms(t: Term) : (Variable, SSAMap) = t match {
+    private def collectSubterms(t: Term, m: Map[Term, Variable], i: Int) : (Variable, Map[Term, Variable], Int) = t match {
       case b: BinaryCompositeTerm =>
-        val (lv, labbrvs) = collectSubterms(b.left)
-        val (rv, rabbrvs) = labbrvs.collectSubterms(b.right)
-        val b2 = b.reapply(lv, rv)
-        rabbrvs.insert(b2)
+        val (lv, lm, li) = collectSubterms(b.left, m, i)
+        val (rv, rm, ri) = collectSubterms(b.right, lm, li)
+        insert(b.reapply(lv, rv), rm, ri)
       case u: UnaryCompositeTerm =>
-        val (cv, cabbrvs) = collectSubterms(u.child)
-        val u2 = u.reapply(cv)
-        cabbrvs.insert(u2)
+        val (cv, cm, ci) = collectSubterms(u.child, m, i)
+        insert(u.reapply(cv), cm, ci)
       // Binary function, e.g., min/max
       case FuncOf(f, Pair(l, r)) =>
-        val (lv, labbrvs) = collectSubterms(l)
-        val (rv, rabbrvs) = labbrvs.collectSubterms(r)
-        val b2 = FuncOf(f, Pair(lv, rv))
-        rabbrvs.insert(b2)
+        val (lv, lm, li) = collectSubterms(l, m, i)
+        val (rv, rm, ri) = collectSubterms(r, lm, li)
+        insert(FuncOf(f, Pair(lv, rv)), rm, ri)
       // Unary function, e.g., abs
       case FuncOf(f, c) if c.sort == Real =>
-        val (cv, cabbrvs) = collectSubterms(c)
-        val u2 = FuncOf(f, cv)
-        cabbrvs.insert(u2)
+        val (cv, cm, ci) = collectSubterms(c, m, i)
+        insert(FuncOf(f, cv), cm, ci)
       // Constant symbols
-      case FuncOf(f, Nothing) => insert(t)
-      case a: AtomicTerm => insert(a)
+      case FuncOf(f, Nothing) => insert(t, m, i)
+      case a: AtomicTerm => insert(a, m, i)
     }
 
-    def collectSubformulas(fml: Formula): (Formula, SSAMap) = fml match {
+    private def collectSubformulas(fml: Formula, m: Map[Term, Variable], i: Int) : (Formula, Map[Term, Variable], Int) = fml match {
       case b: ComparisonFormula =>
-        val (lv, labbrvs) = collectSubterms(b.left)
-        val (rv, rabbrvs) = labbrvs.collectSubterms(b.right)
-        (b.reapply(lv, rv), rabbrvs)
+        val (lv, lm, li) = collectSubterms(b.left, m, i)
+        val (rv, rm, ri) = collectSubterms(b.right, lm, li)
+        (b.reapply(lv, rv), rm, ri)
       case b: BinaryCompositeFormula =>
-        val (lv, labbrvs) = collectSubformulas(b.left)
-        val (rv, rabbrvs) = labbrvs.collectSubformulas(b.right)
-        (b.reapply(lv, rv), rabbrvs)
+        val (lv, lm, li) = collectSubformulas(b.left, m, i)
+        val (rv, rm, ri) = collectSubformulas(b.right, lm, li)
+        (b.reapply(lv, rv), rm, ri)
       case u: UnaryCompositeFormula =>
-        val (cv, cabbrvs) = collectSubformulas(u.child)
-        (u.reapply(cv), cabbrvs)
+        val (cv, cm, ci) = collectSubformulas(u.child, m, i)
+        (u.reapply(cv), cm, ci)
     }
 
-  }
+    val (expression : E, abbrev : Map[Term, Variable]) = e match {
+      case t: Term =>
+        val (fml, unm, _) = collectSubterms(t, Map(), 0)
+        (fml, unm)
+      case fml: Formula =>
+        val (fml2, unm, _) = collectSubformulas(fml, Map(), 0)
+        (fml2, unm)
+    }
 
-  object SSAMap {
-    private val defaultPrefix = "ssa"
-    def apply() : SSAMap = new SSAMap(defaultPrefix)
-    def apply(t: Term, prefix : String) : (Variable, SSAMap) = new SSAMap(prefix).collectSubterms(t)
-    def apply(t: Term) : (Variable, SSAMap) = apply(t, defaultPrefix)
-    def apply(fml: Formula, prefix : String) : (Formula, SSAMap) = new SSAMap(prefix).collectSubformulas(fml)
-    def apply(fml: Formula) : (Formula, SSAMap) = apply(fml, defaultPrefix)
+    val  unfold : Map[Variable, Term] = abbrev.map{case (t, v) => (v, t)}
   }
 
   /** Populate environment with bounds (only LessEqual are being considered)
