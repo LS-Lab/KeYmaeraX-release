@@ -133,6 +133,76 @@ object IntervalArithmeticV2 {
     }
   }
 
+  /** Map to construct static single assignment form */
+  class SSAMap(m: Map[Term, Variable], ts: List[(Term, Variable)], nextIndex: Int, prefix: String) {
+    def this(prefix: String) = {
+      this(HashMap(), Nil, 0, prefix)
+    }
+    lazy val termMap = ts.reverse.map{case(a, b)=>(b, a)}.toMap
+    def get(v: Variable) = termMap.get(v)
+
+    private def nextVar(i: Int) = Variable(prefix + i + "_")
+
+    private def insert(t: Term) = {
+      m.get(t) match {
+        case Some(v) => (v, new SSAMap(m, ts, nextIndex, prefix))
+        case None =>
+          val v = nextVar(nextIndex)
+          (v, new SSAMap(m.updated(t, v), (t, v)::ts, nextIndex+1, prefix))
+      }
+    }
+
+    def collectSubterms(t: Term) : (Variable, SSAMap) = t match {
+      case b: BinaryCompositeTerm =>
+        val (lv, labbrvs) = collectSubterms(b.left)
+        val (rv, rabbrvs) = labbrvs.collectSubterms(b.right)
+        val b2 = b.reapply(lv, rv)
+        rabbrvs.insert(b2)
+      case u: UnaryCompositeTerm =>
+        val (cv, cabbrvs) = collectSubterms(u.child)
+        val u2 = u.reapply(cv)
+        cabbrvs.insert(u2)
+      // Binary function, e.g., min/max
+      case FuncOf(f, Pair(l, r)) =>
+        val (lv, labbrvs) = collectSubterms(l)
+        val (rv, rabbrvs) = labbrvs.collectSubterms(r)
+        val b2 = FuncOf(f, Pair(lv, rv))
+        rabbrvs.insert(b2)
+      // Unary function, e.g., abs
+      case FuncOf(f, c) if c.sort == Real =>
+        val (cv, cabbrvs) = collectSubterms(c)
+        val u2 = FuncOf(f, cv)
+        cabbrvs.insert(u2)
+      // Constant symbols
+      case FuncOf(f, Nothing) => insert(t)
+      case a: AtomicTerm => insert(a)
+    }
+
+    def collectSubformulas(fml: Formula): (Formula, SSAMap) = fml match {
+      case b: ComparisonFormula =>
+        val (lv, labbrvs) = collectSubterms(b.left)
+        val (rv, rabbrvs) = labbrvs.collectSubterms(b.right)
+        (b.reapply(lv, rv), rabbrvs)
+      case b: BinaryCompositeFormula =>
+        val (lv, labbrvs) = collectSubformulas(b.left)
+        val (rv, rabbrvs) = labbrvs.collectSubformulas(b.right)
+        (b.reapply(lv, rv), rabbrvs)
+      case u: UnaryCompositeFormula =>
+        val (cv, cabbrvs) = collectSubformulas(u.child)
+        (u.reapply(cv), cabbrvs)
+    }
+
+  }
+
+  object SSAMap {
+    private val defaultPrefix = "ssa"
+    def apply() : SSAMap = new SSAMap(defaultPrefix)
+    def apply(t: Term, prefix : String) : (Variable, SSAMap) = new SSAMap(prefix).collectSubterms(t)
+    def apply(t: Term) : (Variable, SSAMap) = apply(t, defaultPrefix)
+    def apply(fml: Formula, prefix : String) : (Formula, SSAMap) = new SSAMap(prefix).collectSubformulas(fml)
+    def apply(fml: Formula) : (Formula, SSAMap) = apply(fml, defaultPrefix)
+  }
+
   /** Populate environment with bounds (only LessEqual are being considered)
     *
     * @param prec decimal precision
@@ -278,43 +348,33 @@ object IntervalArithmeticV2 {
   }
 
   type BoundMap = HashMap[Term, ProvableSig]
-  type EqMap = HashMap[Term, Int]
   def BoundMap(): BoundMap = HashMap[Term, ProvableSig]()
-  def EqMap(): EqMap = HashMap[Term, Int]()
 
   /**
     * prec: numerical precision
     * qeTool: QETool for ground numerical computations
-    * assms: assumptions on variables (call them "bounded"):
-    *   - inequalites: any (in)equality with a variable on one side and a numerical term on the other side,
-    *   - equalities with a variable on the left and a term in "bounded" variables on the right (which makes the lhs "bounded")
+    * assms: assumptions on variables - any (in)equality with a variable on one side and a numerical term on the other side
+    * ssaMap: A map of abbreviations for subterms, used as keys, theorems proved with "expanded"
     * */
   private def recurse(prec: Int)
              (qeTool: QETacticTool)
              (assms: IndexedSeq[Formula])
-             (lowers: BoundMap, uppers: BoundMap, eqMap: EqMap)
-             (t: Term): (BoundMap, BoundMap)
+             (lowers: BoundMap, uppers: BoundMap, ssaMap: SSAMap)
+             (s: Term): (BoundMap, BoundMap)
   = {
     def unknown_bound(v: Term) : String = "\nCould not find bounds for " + v + ".\n" +
       "Both upper and lower bound are required and need to be separate formulas in the antecedent.\n" +
       "Bounds must be given with a number on one side of one of the comparison operators <,<=,=,>=,>.\n" +
       "Maybe try Propositional->Exhaustive (prop) first?"
-    if (lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) (lowers, uppers)
-    else t match {
-      case v if PolynomialArith.isVar(v) => {
-        eqMap.get(v) match {
-          case Some(i) =>
-            val f = assms(i).asInstanceOf[Equal].right
-            val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
-            val ff_prv = lowers2(f)
-            val F_prv = uppers2(f)
-            val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
-            val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
-            val ff = ff_fml.left
-            val F = F_fml.right
-            val v_prv = proveBy(Sequent(assms, IndexedSeq(LessEqual(ff, v))), eqL2R(-i-1)(1, 1::Nil)).apply(ff_prv, 0)
-            val V_prv = proveBy(Sequent(assms, IndexedSeq(LessEqual(v, F))), eqL2R(-i-1)(1, 0::Nil)).apply(F_prv, 0)
-            (lowers.updated(v, v_prv), uppers.updated(v, V_prv))
+    if (lowers.isDefinedAt(s) && uppers.isDefinedAt(s)) (lowers, uppers)
+    else s match {
+      case v : Variable => {
+        ssaMap.get(v) match {
+          case Some(rhs) =>
+            val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(rhs)
+            val ff_prv = lowers2(rhs)
+            val F_prv = uppers2(rhs)
+            (lowers2.updated(v, ff_prv), uppers2.updated(v, F_prv))
           case None =>
             throw new InputFormatFailure(unknown_bound(v))
         }
@@ -325,12 +385,13 @@ object IntervalArithmeticV2 {
           apply(leRefl.apply(USubst(SubstitutionPair(t_F, n) :: Nil)), 0)
         (lowers.updated(n, refl), uppers.updated(n, refl))
       case Neg(a) =>
-        val f = a
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
-        val ff_prv = lowers2(f)
-        val F_prv = uppers2(f)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(a)
+        val ff_prv = lowers2(a)
+        val F_prv = uppers2(a)
         val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val f = ff_fml.right // @note: this can be different from [[a]], if a has been further resolved via the [[ssaMap]]
+        val t = Neg(f)
         val ff = ff_fml.left
         val F = F_fml.right
         val (h, _) = eval_ivl_term(prec)(Neg(F))
@@ -359,20 +420,23 @@ object IntervalArithmeticV2 {
           apply(CoHideRight(SuccPos(0)), 1).
           apply(H_le, 1).
           apply(ff_prv, 0)
-        (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+        (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
       case binop: BinaryCompositeTerm =>
-        val f = binop.left
-        val g = binop.right
-        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, eqMap)(g)
-        val ff_prv = lowers2(f)
-        val gg_prv = lowers2(g)
-        val F_prv = uppers2(f)
-        val G_prv = uppers2(g)
+        val a = binop.left
+        val b = binop.right
+        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(a)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, ssaMap)(b)
+        val ff_prv = lowers2(a)
+        val gg_prv = lowers2(b)
+        val F_prv = uppers2(a)
+        val G_prv = uppers2(b)
         val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val G_fml = G_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val f = ff_fml.right  /* @note: this can be different from [[f0]], if a has been further resolved via the [[ssaMap]] */
+        val g = gg_fml.right /* @note: this can be different from [[g0]], if a has been further resolved via the [[ssaMap]] */
+        val t = binop.reapply(f, g)
         val ff = ff_fml.left
         val gg = gg_fml.left
         val F = F_fml.right
@@ -413,7 +477,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(G_prv, 1).
               apply(F_prv, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _: Minus =>
             val h = eval_ivl_term(prec)(Minus(ff, G))._1
             val H = eval_ivl_term(prec)(Minus(F, gg))._2
@@ -449,7 +513,7 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(gg_prv, 1).
               apply(F_prv, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _: Times =>
             // Bounds
             val bnds = mult_endpoints(prec)(DecimalBounds)(ff, F)(gg, G)
@@ -495,7 +559,7 @@ object IntervalArithmeticV2 {
               apply(CoHideRight(SuccPos(0)), 1).
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _: Divide =>
             // Bounds
             val bnds = divide_endpoints(prec)(DecimalBounds())(ff, F)(gg, G)
@@ -541,7 +605,7 @@ object IntervalArithmeticV2 {
               apply(CoHideRight(SuccPos(0)), 1).
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case Power(_, i: Number) if i.value.isValidInt =>
             // Lower Bound
             val n = i.value.toIntExact
@@ -578,22 +642,25 @@ object IntervalArithmeticV2 {
               apply(AndRight(SuccPos(0)), 0).
               apply(F_prv, 1).
               apply(ff_prv, 0)
-            (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+            (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
           case _ =>
             throw new UnsupportedTacticFeature("\nUnable to compute bound for " + t + "\n" +
               "Binary operation " + t.getClass.getSimpleName + " not implemented.")
         }
-      case FuncOf(m, Pair(f, g)) if m == minF || m == maxF =>
-        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, eqMap)(g)
-        val ff_prv = lowers2(f)
-        val gg_prv = lowers2(g)
-        val F_prv = uppers2(f)
-        val G_prv = uppers2(g)
+      case FuncOf(m, Pair(a, b)) if m == minF || m == maxF =>
+        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, ssaMap)(a)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, ssaMap)(b)
+        val ff_prv = lowers2(a)
+        val gg_prv = lowers2(b)
+        val F_prv = uppers2(a)
+        val G_prv = uppers2(b)
         val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val G_fml = G_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+        val f = ff_fml.right // @note: this can be different from [[a]], if a has been further resolved via the [[ssaMap]]
+        val g = gg_fml.right  // @note: this can be different from [[b]], if b has been further resolved via the [[ssaMap]]
+        val t = FuncOf(m, Pair(f, g))
         val ff = ff_fml.left
         val gg = gg_fml.left
         val F = F_fml.right
@@ -634,7 +701,7 @@ object IntervalArithmeticV2 {
             apply(AndRight(SuccPos(0)), 0).
             apply(G_prv, 1).
             apply(F_prv, 0)
-          (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+          (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
         } else /* max */ {
           val maxDown = maxDownSeq.apply(USubst(
             SubstitutionPair(t_h, h) ::
@@ -668,11 +735,11 @@ object IntervalArithmeticV2 {
             apply(AndRight(SuccPos(0)), 0).
             apply(G_prv, 1).
             apply(F_prv, 0)
-          (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
+          (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
         }
       case _ =>
-        throw new UnsupportedTacticFeature("\nUnable to compute bound for " + t + "\n" +
-          t.getClass.getSimpleName + " not implemented for Interval Arithmetic.")
+        throw new UnsupportedTacticFeature ("\nUnable to compute bound for " + s + "\n" +
+          s.getClass.getSimpleName + " not implemented for Interval Arithmetic.")
     }
   }
 
@@ -681,39 +748,35 @@ object IntervalArithmeticV2 {
       apply(CoHide2(AntePos(index), SuccPos(0)), 0).
       apply(rule.apply(USubst(instantiation map (ab => SubstitutionPair(ab._1, ab._2)))), 0)
 
-  private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap, eqs0: EqMap) : (BoundMap, BoundMap, EqMap) =
-  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0, eqs0) { (lue: (BoundMap, BoundMap, EqMap), assmi) =>
+  private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap) : (BoundMap, BoundMap) =
+  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0) { (lue: (BoundMap, BoundMap), assmi) =>
     (lue, assmi) match {
-      case ((lowers, uppers, eqs), (assm, i)) =>
+      case ((lowers, uppers), (assm, i)) =>
         assm match {
           case LessEqual(t, n) if isNumeric(n) =>
-            (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), eqs)
+            (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
           case LessEqual(n, t) if isNumeric(n) =>
-            (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers, eqs)
+            (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
           case Equal(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t) :: (t_g, n) :: Nil)),
-              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)),
-              eqs)
+              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)))
           case Equal(n, t) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound1, (t_f, n) :: (t_g, t) :: Nil)),
-              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n) :: (t_g, t) :: Nil)),
-              eqs)
-          case Equal(v: Variable, rhs) =>
-            (lowers, uppers, eqs.updated(v, i))
+              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n) :: (t_g, t) :: Nil)))
           case Less(t, n) if isNumeric(n) =>
-            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t) :: (t_g, n) :: Nil)), eqs)
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t) :: (t_g, n) :: Nil)))
           case Less(n, t) if isNumeric(n) =>
-            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n) :: (t_g, t) :: Nil)), uppers, eqs)
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n) :: (t_g, t) :: Nil)), uppers)
           case Greater(t, n) if isNumeric(n) =>
-            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t) :: (t_g, n) :: Nil)), uppers, eqs)
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
           case Greater(n, t) if isNumeric(n) =>
-            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n) :: (t_g, t) :: Nil)), eqs)
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n) :: (t_g, t) :: Nil)))
           case GreaterEqual(t, n) if isNumeric(n) =>
-            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t) :: (t_g, n) :: Nil)), uppers, eqs)
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
           case GreaterEqual(n, t) if isNumeric(n) =>
-            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n) :: (t_g, t) :: Nil)), eqs)
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n) :: (t_g, t) :: Nil)))
           case _ =>
-            (lowers, uppers, eqs)
+            (lowers, uppers)
         }
     }
   }
@@ -735,14 +798,14 @@ object IntervalArithmeticV2 {
                  (qeTool: QETacticTool)
                  (assms: IndexedSeq[Formula])
                  (include_assms: Boolean)
-                 (lowers0: BoundMap, uppers0: BoundMap, eqs0: EqMap)
+                 (lowers0: BoundMap, uppers0: BoundMap, ssaMap: SSAMap)
                  (terms: Seq[Term]): (BoundMap, BoundMap) = {
     // collect bounds from assms
-    val (newlowers: BoundMap, newuppers: BoundMap, neweqs: EqMap) =
-      if(!include_assms) (lowers0, uppers0, eqs0)
-      else collectBounds(assms)(lowers0, uppers0, eqs0)
+    val (newlowers: BoundMap, newuppers: BoundMap) =
+      if(!include_assms) (lowers0, uppers0)
+      else collectBounds(assms)(lowers0, uppers0)
     // recurse over the structure of t and compute new bounds
-    terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2, neweqs)(t))
+    terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2, ssaMap)(t))
   }
 
   private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
@@ -780,7 +843,7 @@ object IntervalArithmeticV2 {
           val f = fml.left
           val g = fml.right
           // TODO: collect bounds outside, if in boolean combination?!
-          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap(), EqMap())(List(f, g))
+          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap(), SSAMap())(List(f, g))
           val ff_prv = lowers(f)
           val gg_prv = lowers(g)
           val F_prv = uppers(f)
@@ -911,7 +974,7 @@ object IntervalArithmeticV2 {
       val nantes = sequent.ante.length
       val prec = 5
       val qe = ToolProvider.qeTool().get
-      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), EqMap())(terms)
+      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), SSAMap())(terms)
       val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
       (prvs, prvs.indices).zipped.foldLeft(provable) {
         (result, prvi) => prvi match {
@@ -953,7 +1016,7 @@ object IntervalArithmeticV2 {
     val assms = IndexedSeq((l1, i1), (i1, u1), (l2, i2), (i2, u2)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1, i2)
     // @todo: could be more efficient in caching bounds for context
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.EqMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), SSAMap())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
@@ -985,7 +1048,7 @@ object IntervalArithmeticV2 {
     val i1 = BaseVariable("i1_")
     val assms = IndexedSeq((l1, i1), (i1, u1)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1)
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.EqMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), SSAMap())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
@@ -1130,106 +1193,6 @@ object IntervalArithmeticV2 {
       recurseFormula
     }
 
-  }
-
-  private def tempVar(prefix: String, i: Int) = Variable(prefix + i + "_")
-
-  def collectSubterms(t: Term, prefix: String, i: Int, abbrvs: List[(Term, Variable)]): (Term, Int, List[(Term, Variable)]) = t match {
-    case b: BinaryCompositeTerm =>
-      val (lv, li, labbrvs) = collectSubterms(b.left, prefix, i, abbrvs)
-      val (rv, ri, rabbrvs) = collectSubterms(b.right, prefix, li, labbrvs)
-      val b2 = b.reapply(lv, rv)
-      rabbrvs.find(_._1 == b2) match {
-        case Some((_, v)) => (v, ri, rabbrvs)
-        case None => {
-          val v = tempVar(prefix, ri)
-          (v, ri + 1, (b2, v)::rabbrvs)
-        }
-      }
-    case u: UnaryCompositeTerm =>
-      val (cv, ci, cabbrvs) = collectSubterms(u.child, prefix, i, abbrvs)
-      val u2 = u.reapply(cv)
-      cabbrvs.find(_._1 == u2) match {
-        case Some((_, v)) => (v, ci, cabbrvs)
-        case None => {
-          val v = tempVar(prefix, ci)
-          (v, ci + 1, (u2, v)::cabbrvs)
-        }
-      }
-    // Binary function, e.g., min/max
-    case FuncOf(f, Pair(l, r)) =>
-      val (lv, li, labbrvs) = collectSubterms(l, prefix, i, abbrvs)
-      val (rv, ri, rabbrvs) = collectSubterms(r, prefix, li, labbrvs)
-      val b2 = FuncOf(f, Pair(lv, rv))
-      rabbrvs.find(_._1 == b2) match {
-        case Some((_, v)) => (v, ri, rabbrvs)
-        case None => {
-          val v = tempVar(prefix, ri)
-          (v, ri + 1, (b2, v)::rabbrvs)
-        }
-      }
-    // Unary function, e.g., abs
-    case FuncOf(f, c) if c.sort == Real =>
-      val (cv, ci, cabbrvs) = collectSubterms(c, prefix, i, abbrvs)
-      val u2 = FuncOf(f, cv)
-      cabbrvs.find(_._1 == u2) match {
-        case Some((_, v)) => (v, ci, cabbrvs)
-        case None => {
-          val v = tempVar(prefix, ci)
-          (v, ci + 1, (u2, v)::cabbrvs)
-        }
-      }
-    // Constant symbols
-    case FuncOf(f, Nothing) =>
-      (t, i, abbrvs)
-    case a: AtomicTerm =>
-      abbrvs.find(_._1 == a) match {
-        case Some((_, v)) => (v, i, abbrvs)
-        case None => {
-          val v = tempVar(prefix, i)
-          (v, i + 1, (a, v)::abbrvs)
-        }
-      }
-  }
-
-  // TODO: lists are not ideal here, could use maps and sort according to dependencies in the end
-  def collectSubformulas(fml: Formula, prefix: String, i: Int, abbrvs: List[(Term, Variable)]): (Formula, Int, List[(Term, Variable)]) = fml match {
-    case b: ComparisonFormula =>
-      val (lv, li, labbrvs) = collectSubterms(b.left, prefix, i, abbrvs)
-      val (rv, ri, rabbrvs) = collectSubterms(b.right, prefix, li, labbrvs)
-      val b2 = b.reapply(lv, rv)
-      (b2, ri, rabbrvs)
-    case b: BinaryCompositeFormula =>
-      val (lv, li, labbrvs) = collectSubformulas(b.left, prefix, i, abbrvs)
-      val (rv, ri, rabbrvs) = collectSubformulas(b.right, prefix, li, labbrvs)
-      val b2 = b.reapply(lv, rv)
-      (b2, ri, rabbrvs)
-    case u: UnaryCompositeFormula =>
-      val (cv, ci, cabbrvs) = collectSubformulas(u.child, prefix, i, abbrvs)
-      (u.reapply(cv), ci, cabbrvs)
-  }
-
-  lazy val elimEqImp = proveBy("(a_() = a_() -> P_()) <-> P_()".asFormula, prop & QE & done)
-
-  def extractSubterms(fml: Formula, prefix: String) : ProvableSig = {
-    val (fml2, _, ms) = collectSubformulas(fml, prefix, 0, Nil)
-    def unfold(xs: List[(Term, Variable)]) : List[(Term, Variable)] = xs match {
-      case Nil => Nil
-      case (lhs, rhs)::ys =>
-        (lhs, rhs)::unfold(ys.map{case (t, v) => (t.replaceFree(rhs, lhs), v)})
-    }
-    val us = unfold(ms.reverse).map(_._1)
-    val ssa = FormulaTools.quantifyForall(ms.reverse.map(_._2), ms.foldLeft(fml2){case(f, (t, v)) => Imply(Equal(v, t), f)})
-    val equiv = Equiv(fml, ssa)
-    proveBy(equiv, equivR(1) & Idioms.<(
-      SaturateTactic(allR(1)) &
-        SaturateTactic(implyR(1) & eqL2R(-2)(1) & hideL(-2)) &
-          closeId
-        ,
-      us.map(allL(_)(-1) : BelleExpr).reduce(_ & _) &
-        SaturateTactic(useAt(elimEqImp, PosInExpr(0::Nil))(-1)) &
-        closeId
-    ))
   }
 
 }
