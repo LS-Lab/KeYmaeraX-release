@@ -5,7 +5,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Neg, Plus, Sequent, True}
+import edu.cmu.cs.ls.keymaerax.core.{Forall, Neg, Plus, Sequent, True}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import org.scalatest.LoneElement._
 import testHelper.KeYmaeraXTestTags.SlowTest
 
@@ -271,6 +272,13 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
       IntervalArithmeticV2.proveUnop(qeTool)(10)(IndexedSeq())(Neg)("0.1".asTerm, "0.3".asTerm)
     res shouldBe 'proved
     res.conclusion.succ.loneElement shouldBe "\\forall i1_ (0.1<=i1_&i1_<=0.3->-3*10^-1<=-i1_&-i1_<=-1*10^-1)".asFormula
+  }
+
+  "extract" should "extract subterms" in withMathematica { _ =>
+    val fml = "a + b * (a * b + c * (a*b)) >= 0".asFormula
+    val pp = new KeYmaeraXPrettierPrinter(120)
+    val res = extractSubterms(fml, "ss")
+    println(pp.stringify(res))
   }
 
 }

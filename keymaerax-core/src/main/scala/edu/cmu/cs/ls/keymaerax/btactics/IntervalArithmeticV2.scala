@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool.{minF, maxF}
@@ -1130,6 +1130,106 @@ object IntervalArithmeticV2 {
       recurseFormula
     }
 
+  }
+
+  private def tempVar(prefix: String, i: Int) = Variable(prefix + i + "_")
+
+  def collectSubterms(t: Term, prefix: String, i: Int, abbrvs: List[(Term, Variable)]): (Term, Int, List[(Term, Variable)]) = t match {
+    case b: BinaryCompositeTerm =>
+      val (lv, li, labbrvs) = collectSubterms(b.left, prefix, i, abbrvs)
+      val (rv, ri, rabbrvs) = collectSubterms(b.right, prefix, li, labbrvs)
+      val b2 = b.reapply(lv, rv)
+      rabbrvs.find(_._1 == b2) match {
+        case Some((_, v)) => (v, ri, rabbrvs)
+        case None => {
+          val v = tempVar(prefix, ri)
+          (v, ri + 1, (b2, v)::rabbrvs)
+        }
+      }
+    case u: UnaryCompositeTerm =>
+      val (cv, ci, cabbrvs) = collectSubterms(u.child, prefix, i, abbrvs)
+      val u2 = u.reapply(cv)
+      cabbrvs.find(_._1 == u2) match {
+        case Some((_, v)) => (v, ci, cabbrvs)
+        case None => {
+          val v = tempVar(prefix, ci)
+          (v, ci + 1, (u2, v)::cabbrvs)
+        }
+      }
+    // Binary function, e.g., min/max
+    case FuncOf(f, Pair(l, r)) =>
+      val (lv, li, labbrvs) = collectSubterms(l, prefix, i, abbrvs)
+      val (rv, ri, rabbrvs) = collectSubterms(r, prefix, li, labbrvs)
+      val b2 = FuncOf(f, Pair(lv, rv))
+      rabbrvs.find(_._1 == b2) match {
+        case Some((_, v)) => (v, ri, rabbrvs)
+        case None => {
+          val v = tempVar(prefix, ri)
+          (v, ri + 1, (b2, v)::rabbrvs)
+        }
+      }
+    // Unary function, e.g., abs
+    case FuncOf(f, c) if c.sort == Real =>
+      val (cv, ci, cabbrvs) = collectSubterms(c, prefix, i, abbrvs)
+      val u2 = FuncOf(f, cv)
+      cabbrvs.find(_._1 == u2) match {
+        case Some((_, v)) => (v, ci, cabbrvs)
+        case None => {
+          val v = tempVar(prefix, ci)
+          (v, ci + 1, (u2, v)::cabbrvs)
+        }
+      }
+    // Constant symbols
+    case FuncOf(f, Nothing) =>
+      (t, i, abbrvs)
+    case a: AtomicTerm =>
+      abbrvs.find(_._1 == a) match {
+        case Some((_, v)) => (v, i, abbrvs)
+        case None => {
+          val v = tempVar(prefix, i)
+          (v, i + 1, (a, v)::abbrvs)
+        }
+      }
+  }
+
+  // TODO: lists are not ideal here, could use maps and sort according to dependencies in the end
+  def collectSubformulas(fml: Formula, prefix: String, i: Int, abbrvs: List[(Term, Variable)]): (Formula, Int, List[(Term, Variable)]) = fml match {
+    case b: ComparisonFormula =>
+      val (lv, li, labbrvs) = collectSubterms(b.left, prefix, i, abbrvs)
+      val (rv, ri, rabbrvs) = collectSubterms(b.right, prefix, li, labbrvs)
+      val b2 = b.reapply(lv, rv)
+      (b2, ri, rabbrvs)
+    case b: BinaryCompositeFormula =>
+      val (lv, li, labbrvs) = collectSubformulas(b.left, prefix, i, abbrvs)
+      val (rv, ri, rabbrvs) = collectSubformulas(b.right, prefix, li, labbrvs)
+      val b2 = b.reapply(lv, rv)
+      (b2, ri, rabbrvs)
+    case u: UnaryCompositeFormula =>
+      val (cv, ci, cabbrvs) = collectSubformulas(u.child, prefix, i, abbrvs)
+      (u.reapply(cv), ci, cabbrvs)
+  }
+
+  lazy val elimEqImp = proveBy("(a_() = a_() -> P_()) <-> P_()".asFormula, prop & QE & done)
+
+  def extractSubterms(fml: Formula, prefix: String) : ProvableSig = {
+    val (fml2, _, ms) = collectSubformulas(fml, prefix, 0, Nil)
+    def unfold(xs: List[(Term, Variable)]) : List[(Term, Variable)] = xs match {
+      case Nil => Nil
+      case (lhs, rhs)::ys =>
+        (lhs, rhs)::unfold(ys.map{case (t, v) => (t.replaceFree(rhs, lhs), v)})
+    }
+    val us = unfold(ms.reverse).map(_._1)
+    val ssa = FormulaTools.quantifyForall(ms.reverse.map(_._2), ms.foldLeft(fml2){case(f, (t, v)) => Imply(Equal(v, t), f)})
+    val equiv = Equiv(fml, ssa)
+    proveBy(equiv, equivR(1) & Idioms.<(
+      SaturateTactic(allR(1)) &
+        SaturateTactic(implyR(1) & eqL2R(-2)(1) & hideL(-2)) &
+          closeId
+        ,
+      us.map(allL(_)(-1) : BelleExpr).reduce(_ & _) &
+        SaturateTactic(useAt(elimEqImp, PosInExpr(0::Nil))(-1)) &
+        closeId
+    ))
   }
 
 }
