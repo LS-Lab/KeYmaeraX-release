@@ -29,26 +29,26 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
 
   "proveBounds" should "pick up all kinds of constraints" in withMathematica { qeTool =>
     val assms = IndexedSeq("a = 0", "1 = b", "2 < c", "c < 3", "d <= 4", "5 <= d", "e >= 6", "7 >= e", "f > 8", "9 > f") map (_.asFormula)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), SSAMap())(List("0".asTerm))
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), Map())(List("0".asTerm))
     ("a,b,c,d,e,f" split(',')).toList.map(_.asTerm).forall(t => lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) shouldBe true
   }
 
   it should "pick up all kinds of non-numbers" in withMathematica { qeTool =>
     val assms = IndexedSeq("0 <= f(x)", "f(x) <= 1", "0 <= x", "x <= 1", "0 <= c()", "c() <= 1") map (_.asFormula)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), SSAMap())(List("0".asTerm))
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), Map())(List("0".asTerm))
     ("f(x),x,c()" split(',')).toList.map(_.asTerm).forall(t => lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) shouldBe true
   }
 
   it should "pick up numeric constraints" in withMathematica { qeTool =>
     val assms = IndexedSeq("1 + 2 <= x", "x <= 4*5") map (_.asFormula)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), SSAMap())(List("0".asTerm))
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), Map())(List("0".asTerm))
     val x = "x".asVariable
     lowers.isDefinedAt(x) shouldBe true
   }
 
   it should "pick up interpreted functions in constraints" in withMathematica { qeTool =>
     val assms = IndexedSeq("min(1, 2) <= x", "x <= max(4,5)") map (_.asFormula)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), SSAMap())(List("0".asTerm))
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), Map())(List("0".asTerm))
     val x = "x".asVariable
     lowers.isDefinedAt(x) shouldBe true
   }
@@ -56,7 +56,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   it should "compute bounds given by interpreted functions" in withMathematica { qeTool =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val assms = IndexedSeq("min(1, 2) <= x", "x <= max(4,5)", "max(1, 2) <= y", "y <= min(4,5)") map (_.asFormula)
-      val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), SSAMap())(List("x + y".asTerm))
+      val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), Map())(List("x + y".asTerm))
       val x = "x".asVariable
       lowers(x) shouldBe 'proved
       lowers(x).conclusion.ante shouldBe assms
@@ -70,7 +70,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   it should "compute with interpreted functions" in withMathematica { qeTool => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val assms = IndexedSeq("1 <= x", "x <= 2", "3 <= y", "y <= 5") map (_.asFormula)
     val t = "min(x, y) + max (x, y)".asTerm
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), SSAMap())(List(t))
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), Map())(List(t))
     lowers(t) shouldBe 'proved
     lowers(t).conclusion.ante shouldBe assms
     lowers(t).conclusion.succ.loneElement shouldBe "4*10^0<=min((x,y))+max((x,y))".asFormula
@@ -83,7 +83,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   it should "work with a precomputed static single assignment form" in withMathematica { qeTool =>
     val assms = IndexedSeq("0 <= a", "a <= 1", "2<=b", "b<=3") map (_.asFormula)
     val (v, ssa) = SSAMap("(a*b + a*b)*(a*b + a*b)+a*b*b+a*(a*b)".asTerm)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), ssa)(List(v))
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), ssa.termMap)(List(v))
     println(lowers)
     println(uppers)
   }

@@ -139,8 +139,6 @@ object IntervalArithmeticV2 {
 
     lazy val termMap = m.toList.reverse.map{case(a, b)=>(b, a)}.toMap
 
-    def get(v: Variable) = termMap.get(v)
-
     private def nextVar(i: Int) = Variable(prefix + i + "_")
 
     private def insert(t: Term) = {
@@ -359,7 +357,7 @@ object IntervalArithmeticV2 {
   private def recurse(prec: Int)
              (qeTool: QETacticTool)
              (assms: IndexedSeq[Formula])
-             (lowers: BoundMap, uppers: BoundMap, ssaMap: SSAMap)
+             (lowers: BoundMap, uppers: BoundMap, ssaMap: Map[Variable, Term])
              (s: Term): (BoundMap, BoundMap)
   = {
     def unknown_bound(v: Term) : String = "\nCould not find bounds for " + v + ".\n" +
@@ -798,7 +796,7 @@ object IntervalArithmeticV2 {
                  (qeTool: QETacticTool)
                  (assms: IndexedSeq[Formula])
                  (include_assms: Boolean)
-                 (lowers0: BoundMap, uppers0: BoundMap, ssaMap: SSAMap)
+                 (lowers0: BoundMap, uppers0: BoundMap, ssaMap: Map[Variable, Term])
                  (terms: Seq[Term]): (BoundMap, BoundMap) = {
     // collect bounds from assms
     val (newlowers: BoundMap, newuppers: BoundMap) =
@@ -843,7 +841,7 @@ object IntervalArithmeticV2 {
           val f = fml.left
           val g = fml.right
           // TODO: collect bounds outside, if in boolean combination?!
-          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap(), SSAMap())(List(f, g))
+          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(List(f, g))
           val ff_prv = lowers(f)
           val gg_prv = lowers(g)
           val F_prv = uppers(f)
@@ -974,7 +972,7 @@ object IntervalArithmeticV2 {
       val nantes = sequent.ante.length
       val prec = 5
       val qe = ToolProvider.qeTool().get
-      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), SSAMap())(terms)
+      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(terms)
       val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
       (prvs, prvs.indices).zipped.foldLeft(provable) {
         (result, prvi) => prvi match {
@@ -1016,7 +1014,7 @@ object IntervalArithmeticV2 {
     val assms = IndexedSeq((l1, i1), (i1, u1), (l2, i2), (i2, u2)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1, i2)
     // @todo: could be more efficient in caching bounds for context
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), SSAMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), Map())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
@@ -1048,7 +1046,7 @@ object IntervalArithmeticV2 {
     val i1 = BaseVariable("i1_")
     val assms = IndexedSeq((l1, i1), (i1, u1)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1)
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), SSAMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), Map())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
