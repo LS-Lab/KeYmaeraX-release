@@ -134,21 +134,21 @@ object IntervalArithmeticV2 {
   }
 
   /** Map to construct static single assignment form */
-  class SSAMap(m: Map[Term, Variable], ts: List[(Term, Variable)], nextIndex: Int, prefix: String) {
-    def this(prefix: String) = {
-      this(HashMap(), Nil, 0, prefix)
-    }
-    lazy val termMap = ts.reverse.map{case(a, b)=>(b, a)}.toMap
+  class SSAMap(m: Map[Term, Variable], nextIndex: Int, prefix: String) {
+    def this(prefix: String) = this(Map(), 0, prefix)
+
+    lazy val termMap = m.toList.reverse.map{case(a, b)=>(b, a)}.toMap
+
     def get(v: Variable) = termMap.get(v)
 
     private def nextVar(i: Int) = Variable(prefix + i + "_")
 
     private def insert(t: Term) = {
       m.get(t) match {
-        case Some(v) => (v, new SSAMap(m, ts, nextIndex, prefix))
+        case Some(v) => (v, new SSAMap(m, nextIndex, prefix))
         case None =>
           val v = nextVar(nextIndex)
-          (v, new SSAMap(m.updated(t, v), (t, v)::ts, nextIndex+1, prefix))
+          (v, new SSAMap(m.updated(t, v), nextIndex+1, prefix))
       }
     }
 
