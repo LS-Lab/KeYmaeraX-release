@@ -9,25 +9,27 @@ import javax.swing.JOptionPane
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, core}
 import edu.cmu.cs.ls.keymaerax.hydra._
-import spray.json.JsArray
 
-import scala.collection.JavaConversions._
+//import scala.collection.JavaConverters._
+
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
 import scala.collection.immutable.List
 
 /**
-  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
+  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]],
+  * the aXiomatic Tactical Theorem Prover for Hybrid Systems and Hybrid Games.
+  *
   * Usage:
   * {{{
   *  java -jar keymaerax.jar
-  *  java -Xss20M -jar keymaerax.jar
+  *  java -Xss20M -jar keymaerax.jar -launch
   * }}}
-  * Created by nfulton on 4/17/15.
   * @todo move functionality directly into KeYmaeraX.scala?
   * @author Nathan Fulton
   * @author Stefan Mitsch
+  * @since 4/17/15
   * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
   */
 object Main {
@@ -373,7 +375,7 @@ object Main {
   private def runCmd(cmd: List[String]) = {
     launcherDebug("Running command:\n" + cmd.mkString(" "))
 
-    val pb = new ProcessBuilder(cmd)
+    val pb = new ProcessBuilder(cmd: _*)
     var pollOnStd = false
     try {
       if (logFile) {
