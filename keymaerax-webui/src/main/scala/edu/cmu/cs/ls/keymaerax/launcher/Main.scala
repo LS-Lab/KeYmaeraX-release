@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io._
 import javax.swing.JOptionPane
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, core}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import spray.json.JsArray
 
@@ -15,8 +15,10 @@ import scala.collection.JavaConversions._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
+import scala.collection.immutable.List
+
 /**
-  * Prelauncher that restarts a big stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
+  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
   * Usage:
   * {{{
   *  java -jar keymaerax.jar
@@ -29,6 +31,8 @@ import spray.json.DefaultJsonProtocol._
   * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
   */
 object Main {
+  import core.VERSION
+
   /** This flag is set to true iff this process odes nothing but re-launch */
   var IS_RELAUNCH_PROCESS = false
 
@@ -36,6 +40,14 @@ object Main {
   private var logFile = false
 
   def main(args : Array[String]) : Unit = {
+    // prelaunch help without launching an extra JVM
+    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
+      println("KeYmaera X Prover" + " " + VERSION)
+      println(KeYmaeraX.help)
+      exit(1)
+    }
+
+    // isFirstLaunch indicates that an extra big-stack JVM still has to be launched
     val isFirstLaunch = if (args.length >= 1) {
       !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
     } else true
@@ -86,6 +98,10 @@ object Main {
       KeYmaeraX.main(args)
     }
   }
+
+  /** Exit gracefully */
+  private def exit(status: Int): Nothing = {sys.exit(status)}
+
 
   def startServer(args: Array[String]) : Unit = {
     LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
