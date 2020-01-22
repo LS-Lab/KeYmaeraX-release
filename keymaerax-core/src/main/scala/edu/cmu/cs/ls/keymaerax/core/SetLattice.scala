@@ -69,7 +69,7 @@ sealed trait SetLattice[A] {
     case (_, FiniteSet(os)) => this ++ os  // ++(GenTraversableOnce[A])
     case (FiniteSet(ts), os: CoFiniteSet[A]) => os ++ ts   // commute to ++(GenTraversableOnce[A])
     case (ts: CoFiniteSet[A], os:CoFiniteSet[A]) => CoFiniteSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)  // union of cosets is intersection of exceptions
-  } } ensuring(r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
+  } } ensures(r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
 
   /** Set subtraction */
   //@note the core only uses finite other here because mustBoundVars are finite
@@ -77,7 +77,7 @@ sealed trait SetLattice[A] {
     case (_, FiniteSet(os)) => this -- os   // --(GenTraversableOnce[A])
     case (FiniteSet(ts), os: CoFiniteSet[A]) => FiniteSet(ts.intersect(os.excluded))  /* ts -- (all except os) == ts/\os, subtract everything but excluded, so retain excluded */
     case (ts: CoFiniteSet[A], os: CoFiniteSet[A]) => FiniteSet(os.excluded -- ts.excluded)      /* (all \ t) \ (all \ o) == o \ t, t was excluded and all except o were then removed */
-  } } ensuring(r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
+  } } ensures(r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
 
   /** Set intersection */
   def intersect(other: SetLattice[A]): SetLattice[A] = { (this, other) match {
@@ -85,7 +85,7 @@ sealed trait SetLattice[A] {
     //@note could do symmetric call as well: os.intersect(ts)
     case (FiniteSet(ts), os: CoFiniteSet[A]) => FiniteSet(ts -- os.excluded) /* ts /\ (all except os) == ts--os, only exclusions disappear upon intersection with infinite sets */
     case (ts: CoFiniteSet[A], os: CoFiniteSet[A]) => CoFiniteSet(ts.excluded ++ os.excluded, ts.symbols.intersect(os.symbols)) /* (top except ts) /\ (top except os) == (top except ts++os), intersection of cosetsd is union of exceptions */
-  } } ensuring( r=> r.subsetOf(this) && r.subsetOf(other), "intersections are subsets of both constituents")
+  } } ensures( r=> r.subsetOf(this) && r.subsetOf(other), "intersections are subsets of both constituents")
 }
 
 

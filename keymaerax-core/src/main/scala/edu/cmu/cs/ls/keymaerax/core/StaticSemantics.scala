@@ -241,7 +241,7 @@ object StaticSemantics {
       case DifferentialProduct(a, b) => val va = progVars(a); val vb = progVars(b)
         VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
     }
-  } ensuring(r => {
+  } ensures(r => {
     val VCP(_, bv, mbv) = r; mbv.subsetOf(bv)
   }, "MBV(" + program + ") are a subset of BV(" + program + ")")
 

@@ -102,7 +102,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /**
     * Apply uniform substitution everywhere in the sequent.
     */
-  //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
+  //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensures contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
 
@@ -112,7 +112,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /**
     * Apply uniform substitution everywhere in the sequent with [[SetLattice.allVars]] as taboos.
     */
-  //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
+  //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensures contracts checked.
   def applyAllTaboo(s: Sequent): Sequent = try { Sequent(s.ante.map(applyAllTaboo(_)), s.succ.map(applyAllTaboo(_))) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
 

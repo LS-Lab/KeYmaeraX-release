@@ -62,7 +62,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   /**
     * Apply uniform renaming everywhere in the sequent.
     */
-  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
+  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensures contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 

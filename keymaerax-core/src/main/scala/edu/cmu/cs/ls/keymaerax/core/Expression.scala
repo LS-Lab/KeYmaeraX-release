@@ -154,7 +154,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
       //@note .getCanonicalName would cause no collisions if same class name in different packages, but expressions are sealed in core.
       if (cmp2 != 0) cmp2 else getClass.getSimpleName.compareTo(other.getClass.getSimpleName)
     }
-  } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
+  } ensures(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
 
   /** Get name with index of this NamedSymbol. */
   def asString: String = index match {
@@ -735,8 +735,8 @@ object DifferentialProduct {
   def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
     insist(differentialSymbols(left).intersect(differentialSymbols(right)).isEmpty, "No duplicate differential equations when composing differential equations " + left + " and " + right)
     reassociate(left, right)
-  } ensuring(r => listify(r) == listify(left) ++ listify(right), "reassociating DifferentialProduct does not change the list of atomic ODEs"
-    ) ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
+  } ensures(r => listify(r) == listify(left) ++ listify(right), "reassociating DifferentialProduct does not change the list of atomic ODEs"
+    ) ensures(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
     "No undetected duplicate differential equations when composing differential equations " + left + " and " + right + " to form " + reassociate(left, right))
 
   def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
@@ -768,7 +768,7 @@ object DifferentialProduct {
     case p: DifferentialProduct => differentialSymbols(p.left) ++ differentialSymbols(p.right)
     case AtomicODE(xp, _) => xp :: Nil
     case a: DifferentialProgramConst => Nil
-  }} ensuring(r => r.toSet==StaticSemantics.symbols(ode).filter(x=>x.isInstanceOf[DifferentialSymbol]),
+  }} ensures(r => r.toSet==StaticSemantics.symbols(ode).filter(x=>x.isInstanceOf[DifferentialSymbol]),
     "StaticSemantics should agree since differential symbols only occur on the left-hand side of differential equations " + StaticSemantics.symbols(ode).toList.filter(x=>x.isInstanceOf[DifferentialSymbol]))
 
 }
