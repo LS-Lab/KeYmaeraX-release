@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import TacticComparator._
+import edu.cmu.cs.ls.keymaerax.core.Ensures
 
 sealed trait BelleContext extends (Map[BelleDot, BelleExpr] => BelleExpr) {
   /** Return the result of instantiating this context with argument `t`.
@@ -183,5 +184,5 @@ object TacticDiff {
         val d = diff(i1, i2)
         (ReplacementBelleContext(ApplyDefTactic(d._1.t.asInstanceOf[DefTactic])), d._2, d._3)
     }
-  }) ensuring(r => r._1(r._2)===t1 && r._1(r._3)===t2, "Reapplying context expected to produce original tactics")
+  }) ensures(r => r._1(r._2)===t1 && r._1(r._3)===t2, "Reapplying context expected to produce original tactics")
 }

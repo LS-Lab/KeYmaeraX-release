@@ -48,7 +48,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
       rena ++ (rena.map(sp => sp._2->sp._1))
     else
       rena
-  } ensuring( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
+  } ensures( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
 
   /** the ApplicationOf subset of subs with matching heads */
   private val matchHeads: immutable.Map[Function,(ApplicationOf,Expression)] =
@@ -107,7 +107,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
   /**
    * Apply uniform substitution renaming everywhere in the sequent.
    */
-  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
+  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensures contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
@@ -164,7 +164,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
       // unofficial
       case Pair(l, r) => Pair(usubst(l), usubst(r))
     }
-  } ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
+  } ensures(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   /** uniform substitution on formulas */
   private def usubst(formula: Formula): Formula = {
@@ -226,7 +226,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
       case Diamond(p, g) => requireAdmissible(StaticSemantics(usubst(p)).bv, g, formula)
         Diamond(usubst(p), usubst(g))
     }
-  } ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
+  } ensures(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   /** uniform substitution on programs */
   private def usubst(program: Program): Program = {
@@ -247,7 +247,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
         Loop(usubst(a))
       case Dual(a)           => Dual(usubst(a))
     }
-  } ensuring(r => r.kind==program.kind && r.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
+  } ensures(r => r.kind==program.kind && r.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
 
   /** uniform substitution on differential programs */
   private def usubst(ode: DifferentialProgram): DifferentialProgram = {
@@ -257,7 +257,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
     //@note the requires checking within usubstODE(ode, odeBV) will be redundant but locally the right thing to do.
     //@note usubstODE(ode, StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv) would be sound just more permissive
     usubstODE(ode, StaticSemantics(ode).bv)
-  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  } ensures(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   //@todo augment admissibility checks with vars before and after renaming. Enough to do in requireAdmissible?
 
@@ -273,7 +273,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(a, odeBV), usubstODE(b, odeBV))
     }
-  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  } ensures(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   // admissibility
   

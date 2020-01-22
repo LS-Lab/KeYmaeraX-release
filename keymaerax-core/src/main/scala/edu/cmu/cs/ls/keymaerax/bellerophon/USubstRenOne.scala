@@ -100,7 +100,7 @@ final case class USubstRenOne(private[bellerophon] val subsDefsInput: immutable.
       rena ++ (rena.map(sp => sp._2->sp._1))
     else
       rena
-  } ensuring( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
+  } ensures( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
 
   /** The ApplicationOf subset of substitutions represented as map matching head~>URenSubstitutionPair. */
   private val matchHeads: immutable.Map[Function,URenSubstitutionPair] =
@@ -158,7 +158,7 @@ final case class USubstRenOne(private[bellerophon] val subsDefsInput: immutable.
   /**
    * Apply uniform substitution renaming everywhere in the sequent.
    */
-  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
+  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensures contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 

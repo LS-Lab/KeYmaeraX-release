@@ -31,7 +31,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
       rena ++ (rena.map(sp => (sp._2,sp._1)))
     else
       rena
-  } ensuring( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
+  } ensures( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
 
   /** `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead. */
   private val semanticRenaming: Boolean = true
@@ -54,24 +54,24 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   /** apply this uniform renaming everywhere in a term */
   def apply(t: Term): Term = { try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
-  } ensuring (r => sameAsCore(t, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + t)
+  } ensures (r => sameAsCore(t, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + t)
 
   /** apply this uniform renaming everywhere in a formula */
   def apply(f: Formula): Formula = { try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
-  } ensuring (r => sameAsCore(f, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + f)
+  } ensures (r => sameAsCore(f, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + f)
 
   /** apply this uniform renaming everywhere in a program */
   def apply(p: DifferentialProgram): DifferentialProgram = { try renameODE(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensuring (r => sameAsCore(p, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p)
+  } ensures (r => sameAsCore(p, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p)
 
   /** apply this uniform renaming everywhere in a program */
   def apply(p: Program): Program = { try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-} ensuring (r => sameAsCore(p, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p)
+} ensures (r => sameAsCore(p, r), "fast tactical renaming has same result as slower core renaming, if defined: " + this + " on " + p)
 
   /**
    * Apply uniform renaming everywhere in the sequent.
    */
-  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
+  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensures contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
