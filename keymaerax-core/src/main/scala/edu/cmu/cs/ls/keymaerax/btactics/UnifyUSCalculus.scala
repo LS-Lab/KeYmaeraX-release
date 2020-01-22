@@ -563,7 +563,7 @@ trait UnifyUSCalculus {
                 // left branch   |- subst(prereq)
                 (prereqFact, 0)
                 )
-              remFact ensuring(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
+              remFact ensures(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
 
               val remKey: PosInExpr = key.child
               require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
@@ -1322,13 +1322,13 @@ trait UnifyUSCalculus {
 
           case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
         }
-        ) ensuring(r => {true || r.conclusion ==
-        //@todo ensuring is not correct yet (needs to keep track of when to switch polarity)
+        ) ensures(r => {true || r.conclusion ==
+        //@todo ensures is not correct yet (needs to keep track of when to switch polarity)
         (if (C.ctx == DotFormula && polarity < 0) Sequent(IndexedSeq(right), IndexedSeq(left))
         else if (C.ctx == DotFormula && polarity >= 0) Sequent(IndexedSeq(left), IndexedSeq(right))
         else if (polarity >= 0) Sequent(IndexedSeq(C(right)), IndexedSeq(C(left)))
         else Sequent(IndexedSeq(C(left)), IndexedSeq(C(right))))}, "Expected conclusion " + "\nin CMon.monStep(" + C + ",\nwhich is " + (if (polarity < 0) C(right) + "/" + C(left) else C(left) + "/" + C(right)) + ",\non " + mon + ")"
-        ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
+        ) ensures(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
     }
     monStep(C, impl)
   }
@@ -1439,16 +1439,16 @@ trait UnifyUSCalculus {
             ProvableSig.startProof(proof.conclusion.updated(p.top, C(subst(o))))(
             CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos]), 0
           ) (coside, 1)
-          } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
-            ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")
+          } ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+            ) ensures(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")
           //                           *
           //                        ------
           // G |- C{subst(k)}, D    coside
           // ------------------------------ CutRight
           // G |- C{subst(o)}, D
           proved(proof, 0)
-        } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
-          ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
+        } ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+          ) ensures(r=>r.subgoals==proof.subgoals, "expected original premises")
 
 
         // in which context of the fact does the key occur
@@ -1515,8 +1515,8 @@ trait UnifyUSCalculus {
               // C{subst(o)}, G |- D by CutLeft with coside
                 ProvableSig.startProof(proof.conclusion.updated(pos.top, kk))(
                   CutLeft(oo, pos.top.asInstanceOf[AntePos]), 0) (coside, 1)
-            } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
-                ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
+            } /*ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+                ) ensures(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
 
             if (polarity == 0 && pos.isSucc) {
               val equivified = proved(ProvableSig.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
@@ -1581,8 +1581,8 @@ trait UnifyUSCalculus {
               // G |- C{subst(o)}, D by CutRight with coside
                 ProvableSig.startProof(proof.conclusion.updated(pos.top, kk))(
                   CutLeft(oo, pos.top.asInstanceOf[AntePos]), 0) (coside, 1)
-            } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
-              ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
+            } /*ensures(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+              ) ensures(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
 
             if (polarity == 0 && pos.isSucc) {
               val equivified = proved(ProvableSig.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
@@ -1625,7 +1625,7 @@ trait UnifyUSCalculus {
               // left branch   |- subst(prereq)
               (prereqFact, 0)
               )
-            remFact ensuring(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
+            remFact ensures(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
 
             val remKey: PosInExpr = key.child
             require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
@@ -1779,7 +1779,7 @@ trait UnifyUSCalculus {
         val r = forward(SuccPosition(1, 0::Nil))(initial)
         logger.debug("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
-      } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
+      } ensures(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
     }
   }
 
@@ -1845,7 +1845,7 @@ trait UnifyUSCalculus {
               )
           }
       }
-    } ensuring(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
+    } ensures(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
     doChase(de,pos)
   }
 
@@ -1883,7 +1883,7 @@ trait UnifyUSCalculus {
               )
           }
       }
-    } ensuring(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
+    } ensures(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
     doChase(de,pos)
   }
 

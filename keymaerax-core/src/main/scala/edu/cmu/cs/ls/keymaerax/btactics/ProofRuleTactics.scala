@@ -149,7 +149,7 @@ private object ProofRuleTactics extends Logging {
         //@note the proof is the same for \forall x p(x) etc.
         val brenL = core.BoundRenaming(what, repl, AntePos(0))
         val brenR = core.BoundRenaming(what, repl, SuccPos(0))
-        val mod = brenR(fml) ensuring(r => r==brenL(fml), "bound renaming for formula is independent of position")
+        val mod = brenR(fml) ensures(r => r==brenL(fml), "bound renaming for formula is independent of position")
         // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
         val side: ProvableSig = (ProvableSig.startProof(Equiv(mod, fml))
           // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
