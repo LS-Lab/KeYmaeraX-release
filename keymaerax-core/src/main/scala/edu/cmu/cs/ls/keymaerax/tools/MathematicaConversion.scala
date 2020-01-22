@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 import KMComparator._
 import MKComparator._
 import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Expression, Function, Number, Quantified, Real, Tuple, UnaryCompositeFormula, UnaryCompositeTerm}
+import edu.cmu.cs.ls.keymaerax.core.Ensures
 
 /**
   * Mathematica conversion stuff.
@@ -42,7 +43,7 @@ object MathematicaConversion {
   */
 trait M2KConverter[T] extends (MExpr => T) {
   /** Convert mathematica expression `e` to `T` with rountrip contracts. */
-  def apply(e: MExpr): T = convert(e) ensuring(r => k2m.convert(r) === e,
+  def apply(e: MExpr): T = convert(e) ensures(r => k2m.convert(r) === e,
     "Roundtrip conversion is identity." +
       "\nMathematica expression:   " + e.toString + "\t@[" + e.args.map(_.head()).mkString(", ") + "]" +
       "\nConverted to KeYmaera X:  " + convert(e) + "\t@" + convert(e).getClass.getSimpleName +
@@ -66,7 +67,7 @@ trait M2KConverter[T] extends (MExpr => T) {
   */
 trait K2MConverter[T] extends (T => MExpr) {
   /** Convert expression `e` to Mathematica with rountrip contracts. */
-  def apply(e: T): MExpr = convert(e) ensuring(r => m2k.convert(r) === e,
+  def apply(e: T): MExpr = convert(e) ensures(r => m2k.convert(r) === e,
     "Roundtrip conversion is identity." +
     "\nKeYmaera X expression    " + e + "\t@" + e.getClass.getSimpleName +
     "\nConverted to Mathematica " + convert(e).toString +
