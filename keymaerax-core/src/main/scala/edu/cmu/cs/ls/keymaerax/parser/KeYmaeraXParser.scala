@@ -1096,7 +1096,7 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
   private def reduce(st: ParseState, consuming: Int, reduced: Item, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input) = st
     ParseState(s.drop(consuming) :+ reduced, input)
-  } ensuring(r => r.stack.tail == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
+  } ensures(r => r.stack.tail == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
 
   private def reduce(st: ParseState, consuming: Int, reduced: Expression, remainder: Stack[Item]): ParseState = reduce(st, consuming, Expr(reduced), remainder)
 
@@ -1108,7 +1108,7 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
   private def reduce(st: ParseState, consuming: Int, reduced: Stack[Item], remainder: Stack[Item]): ParseState = {
     val ParseState(s, input) = st
     ParseState(s.drop(consuming) ++ reduced, input)
-  } ensuring(r => r.stack.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
+  } ensures(r => r.stack.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
 
   /** Accept the given parser result. */
   private def accept(st: ParseState, result: Expression): ParseState = {
@@ -1264,7 +1264,7 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
       //case
       case sEOF.op => sEOF
     }
-  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER] || tok == ELSE, "OpSpec's opcode coincides with expected token " + tok)
+  } ensures(r => r.op == tok && r.opcode == tok.img || r==sNone || r==sNoneDone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER] || tok == ELSE, "OpSpec's opcode coincides with expected token " + tok)
 
 
 }

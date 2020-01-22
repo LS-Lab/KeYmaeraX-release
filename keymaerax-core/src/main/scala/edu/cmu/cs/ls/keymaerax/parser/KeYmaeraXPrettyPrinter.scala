@@ -50,7 +50,7 @@ object KeYmaeraXNoContractPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 trait BasePrettyPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string */
-  def apply(expr: Expression): String = stringify(expr) ensuring(
+  def apply(expr: Expression): String = stringify(expr) ensures(
     r => expr.kind == FunctionKind || reparse(expr, r) == expr,
     "Parse of print is identity." +
       "\nExpression: " + FullPrettyPrinter.stringify(expr) + "\t@ " + expr.getClass.getSimpleName +
@@ -436,7 +436,7 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
  * with explicit statement end ``;`` operator.
   *
   * @author Andre Platzer
- * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
+ * @todo Augment with ensures postconditions that check correct reparse non-recursively.
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {

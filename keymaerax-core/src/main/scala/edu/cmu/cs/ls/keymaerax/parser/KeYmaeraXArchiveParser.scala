@@ -795,7 +795,7 @@ object KeYmaeraXArchiveParser {
   private def reduce(st: ParseState, consuming: Int, reduced: Stack[Item], remainder: Stack[Item]): ParseState = {
     val ParseState(s, input) = st
     ParseState(s.drop(consuming) ++ reduced, input)
-  } ensuring(r => r.stack.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
+  } ensures(r => r.stack.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
 
   /** Accept the given parser result. */
   private def accept(st: ParseState, result: List[ArchiveEntry]): ParseState = {
