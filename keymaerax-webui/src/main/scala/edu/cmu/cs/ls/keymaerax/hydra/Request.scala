@@ -79,7 +79,7 @@ sealed trait Request extends Logging {
       } catch {
         //@note Avoids "Boxed Error" without error message by wrapping unchecked exceptions here.
         //      The web server translates exception into 500 response, the web UI picks them up in the error alert dialog
-        // assert, ensuring
+        // assert, ensures
         case a: AssertionError => throw new Exception(
           "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + a.getMessage, a)
         // require

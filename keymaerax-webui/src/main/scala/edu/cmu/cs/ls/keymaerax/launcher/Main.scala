@@ -8,6 +8,7 @@ import java.io._
 import javax.swing.JOptionPane
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, core}
+import edu.cmu.cs.ls.keymaerax.core.Ensures
 import edu.cmu.cs.ls.keymaerax.hydra._
 
 //import scala.collection.JavaConverters._
@@ -209,7 +210,7 @@ object Main {
       if(recSuccess) f.delete()
       else false
     }
-  } ensuring(r => !r || !f.exists())
+  } ensures(r => !r || !f.exists())
 
   /** Kills the current process and shows an error message if the current database is deprecated.
     * @todo similar behavior for the cache
@@ -493,7 +494,7 @@ object Main {
     println(prefix + s)
   }
 
-  /** A robust locking mechanism for ensuring that there's only ever one instance of KeYmaera X running.
+  /** A robust locking mechanism for ensures that there's only ever one instance of KeYmaera X running.
     * Also displays GUI messages when the lock cannot be obtained so that confused users don't have to wonder why KeYmaera X won't start.
     *
     * @todo decide if java.nio lock files are a better solution. Definitely keep port-based stale checking, though
@@ -546,19 +547,19 @@ object Main {
       //This file is later destroyed in the shutdown hook.
       launcherDebug("Obtaining lock.")
       obtainLock()
-    } ensuring(e => lockObtained == true && lockFile.exists())
+    } ensures(e => lockObtained == true && lockFile.exists())
 
     def obtainLock() = {
       require(!lockFile.exists(), "Cannot obtain a lock if the lock file exists.")
       lockObtained = true
       assert(lockFile.createNewFile(), "could not obtain lock file even though we just checked that the file does not exist.")
       lockFile.deleteOnExit()
-    } ensuring(e => lockObtained == true && lockFile.exists())
+    } ensures(e => lockObtained == true && lockFile.exists())
 
     /** Deletes the lock file regardless of whether this is the process that created the lock file. */
     private def forceDeleteLock() = {
       lockFile.delete()
-    } ensuring(!lockFile.exists())
+    } ensures(!lockFile.exists())
 
     /** Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
       * @note not strictly necessary as lont as File.deleteOnExit works properly. */
