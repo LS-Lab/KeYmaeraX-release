@@ -30,6 +30,12 @@ class StringConverter(val s: String) {
     case _ => throw new IllegalArgumentException("Input " + s + " is not a variable")
   }
 
+  def asFunction: Function = KeYmaeraXParser.termParser(s) match {
+    case v: Variable  => Function(v.name, v.index, Unit, Real, interpreted=false)
+    case FuncOf(f, _) => f
+    case _ => throw new IllegalArgumentException("Input " + s + " is not a function")
+  }
+
   def asFormula: Formula = KeYmaeraXParser.formulaParser(s)
 
   def asProgram: Program = KeYmaeraXParser.programParser(s)
