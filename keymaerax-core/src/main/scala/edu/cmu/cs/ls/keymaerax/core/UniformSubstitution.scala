@@ -45,8 +45,11 @@ object SubstitutionAdmissibility {
   *          - [[DotTerm]]
   *          - [[DotFormula]]
   * @param repl the expression to be used in place of `what`.
-  * @requires what.kind==repl.kind && what.sort==repl.sort && what has an acceptable shpe
+  * @requires what.kind==repl.kind && what.sort==repl.sort && what has an acceptable shape
+  * @see [[USubstOne]]
+  * @see [[USubstChurch]]
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
   */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
   insist(what.kind == repl.kind, "Substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs): " + this + " substitutes " + what.kind + " ~> " + repl.kind)
@@ -184,7 +187,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
 
 
 /**
-  * A Uniform Substitution with its application mechanism.
+  * A Uniform Substitution with its application mechanism (original version).
   * A Uniform Substitution uniformly replaces all occurrences of a given predicate p(.) by a formula in (.).
   * It can also replace all occurrences of a function symbol f(.) by a term in (.)
   * and all occurrences of a quantifier symbols C(-) by a formula in (-)
@@ -348,6 +351,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     subsDefs.exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
   // implementation of uniform substitution application
+  //@see Figure 1 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
 
   /** uniform substitution on terms */
   private def usubst(term: Term): Term = {

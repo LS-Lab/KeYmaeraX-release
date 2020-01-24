@@ -281,11 +281,9 @@ final case class USubstRenOne(private[bellerophon] val subsDefsInput: immutable.
         val r = subsDefs.getOrElse(a, URenSubstitutionPair(a,a)).repl.asInstanceOf[Program]
         (u++boundVars(r), r)
       //@todo optimizable: store boundVars(ProgramConst/SystemConst/DifferentialProgramConst) in substitution pair
-      //@todo improve: for ProgramConst(_,Taboo(except)) could return allVars-except
-      case a: SystemConst=>
+      case a: SystemConst =>
         val r = subsDefs.getOrElse(a, URenSubstitutionPair(a,a)).repl.asInstanceOf[Program]
         (u++boundVars(r), r)
-      //@todo improve: for SystemConst(_,Taboo(except)) could return allVars-except
       case Assign(x, e)      => val rx=renameVar(x); (u+rx, Assign(rx, usubst(u,e)))
       case AssignAny(x)      => val rx=renameVar(x); (u+rx, AssignAny(rx))
       case Test(f)           => (u, Test(usubst(u,f)))

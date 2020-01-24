@@ -595,19 +595,23 @@ sealed trait AtomicProgram extends Program with Atomic
   * The semantics of ProgramConst symbol is looked up by the state,
   * with the additional promise that taboo is neither free nor bound, so the run does
   * not depend on the value of taboo nor does the value of taboo change when space=Except(taboo).
-  * @param space The part of the state space that the interpretation/replacement of this symbol is limited to have free or bound.
-  *              `AnyArg is` the default allowing full read/write access to the state.
-  *              `Taboo(x)` means `x` can neither be free nor bound. */
+  * @param space The part of the state space that the interpretation/replacement of this symbol
+  *              is limited to have free or bound.
+  *              - `AnyArg` is the default allowing full read/write access to the state.
+  *              - `Taboo(x)` means `x` can neither be free nor bound.
+  */
 sealed case class ProgramConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
   namingConvention
 }
 
 /** Uninterpreted hybrid system program constant symbols that are NOT hybrid games, limited to the given state space.
-  * @param space The part of the state space that the interpretation/replacement of this symbol is limited to have free or bound.
-  *              `AnyArg is` the default allowing full read/write access to the state.
-  *              `Taboo(x)` means `x` can neither be free nor bound.
-  * @since 4.7.4 also SpaceDependent with `space` parameter. */
+  * @param space The part of the state space that the interpretation/replacement of this symbol
+  *              is limited to have free or bound.
+  *              - `AnyArg` is the default allowing full read/write access to the state.
+  *              - `Taboo(x)` means `x` can neither be free nor bound.
+  * @since 4.7.4 also SpaceDependent with `space` parameter.
+  */
 sealed case class SystemConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
   override def toString: String = name + (if (space == AnyArg) "{|^@|}" else "{^@" + space + "}")
   namingConvention
