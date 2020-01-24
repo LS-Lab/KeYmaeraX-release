@@ -142,6 +142,7 @@ object StaticSemantics {
     case t: Term     => freeVars(t)
     case f: Formula  => freeVars(f)
     case a: Program  => freeVars(a)
+    // An isolated Function that has not been applied a FuncOf is no Term and has no free variables
     case f: Function => bottom
   }
 
@@ -160,6 +161,7 @@ object StaticSemantics {
     case t: Term     => freeVars(t)
     case f: Formula  => freeVars(f) ++ boundVars(f)
     case a: Program  => freeVars(a) ++ boundVars(a)
+    // An isolated Function that has not been applied a FuncOf is no Term and has no variables
     case f: Function => bottom
   }
 
@@ -262,6 +264,7 @@ object StaticSemantics {
     case t: Term     => signature(t)
     case f: Formula  => signature(f)
     case a: Program  => signature(a)
+    // An isolated Function that has not been applied a FuncOf is no Term but itself still occurs
     case f: Function => Set(f)
   }
 
@@ -361,6 +364,7 @@ object StaticSemantics {
     case t: Term     => symbols(t)
     case f: Formula  => symbols(f)
     case a: Program  => symbols(a)
+    // An isolated Function that has not been applied a FuncOf is no Term and has no variables but itself still occurs
     case f: Function => Set(f)
   }
 
