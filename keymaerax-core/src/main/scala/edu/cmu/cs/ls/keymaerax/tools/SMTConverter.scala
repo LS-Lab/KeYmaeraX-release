@@ -124,6 +124,7 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
     case False => "false"
     case Forall(vs, ff) => convertForall(vs, ff)
     case Exists(vs, ff) => convertExists(vs, ff)
+    case m: Modal       => throw new SMTConversionException("There is no conversion from modalities with hybrid programs to SMT " + m)
   }
 
   /** Convert KeYmaera X term to string in SMT notation */

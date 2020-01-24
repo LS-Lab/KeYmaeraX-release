@@ -43,6 +43,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     e match {
       case t: Term => convertTerm(t)
       case f: Formula => convertFormula(f)
+      case p: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
     }
   }
 

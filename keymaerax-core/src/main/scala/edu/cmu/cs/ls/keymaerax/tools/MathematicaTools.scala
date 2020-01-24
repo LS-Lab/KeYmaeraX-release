@@ -71,6 +71,7 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
   private def convertRule(e: MExpr): Formula = convert(e.args()(0)) match {
     case t: Term => Equal(t, convert(e.args()(1)).asInstanceOf[Term])
     case f: Formula => Equiv(f, convert(e.args()(1)).asInstanceOf[Formula])
+    case p: Program => throw new IllegalArgumentException("There is no conversion from Mathematica to hybrid programs " + e)
   }
 
   private def convertRuleList(e: MExpr): Formula = {
@@ -120,6 +121,7 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
       e match {
         case t: Term => convertTerm(t)
         case f: Formula => convertFormula(f)
+        case p: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
       }
     }
 
