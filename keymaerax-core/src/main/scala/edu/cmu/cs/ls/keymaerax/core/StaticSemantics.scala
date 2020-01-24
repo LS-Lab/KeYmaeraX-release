@@ -139,9 +139,10 @@ object StaticSemantics {
     * The set FV(e) of free variables of expression e.
     */
   def freeVars(e: Expression): SetLattice[Variable] = e match {
-    case t: Term => freeVars(t)
-    case f: Formula => freeVars(f)
-    case a: Program => freeVars(a)
+    case t: Term     => freeVars(t)
+    case f: Formula  => freeVars(f)
+    case a: Program  => freeVars(a)
+    case f: Function => bottom
   }
 
   /**
@@ -156,9 +157,10 @@ object StaticSemantics {
 
   /** The set var(e) of variables of expression e, whether free or bound. */
   def vars(e: Expression): SetLattice[Variable] = e match {
-    case t: Term => freeVars(t)
-    case f: Formula => freeVars(f) ++ boundVars(f)
-    case a: Program => freeVars(a) ++ boundVars(a)
+    case t: Term     => freeVars(t)
+    case f: Formula  => freeVars(f) ++ boundVars(f)
+    case a: Program  => freeVars(a) ++ boundVars(a)
+    case f: Function => bottom
   }
 
 
@@ -257,9 +259,10 @@ object StaticSemantics {
     * }}}
     */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
-    case t: Term => signature(t)
-    case f: Formula => signature(f)
-    case a: Program => signature(a)
+    case t: Term     => signature(t)
+    case f: Formula  => signature(f)
+    case a: Program  => signature(a)
+    case f: Function => Set(f)
   }
 
   /**
@@ -355,9 +358,10 @@ object StaticSemantics {
     * Any (non-logical) symbols occurring verbatim in expression e, whether free or bound variable or function or predicate or program constant.
     */
   def symbols(e: Expression): immutable.Set[NamedSymbol] = e match {
-    case t: Term => symbols(t)
-    case f: Formula => symbols(f)
-    case a: Program => symbols(a)
+    case t: Term     => symbols(t)
+    case f: Formula  => symbols(f)
+    case a: Program  => symbols(a)
+    case f: Function => Set(f)
   }
 
   /**

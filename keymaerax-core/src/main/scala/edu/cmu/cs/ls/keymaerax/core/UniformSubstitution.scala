@@ -122,6 +122,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
+      case PredicationalOf(_, _) => throw new CoreException("Nonsubstitutable expression " + this + " already found in matchKey")
     }
     case _ => StaticSemantics.freeVars(repl)
   }
@@ -304,6 +305,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
+    case f: Function => throw new SubstitutionClashException(toString, "", e + "", "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
   }
 
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.

@@ -45,6 +45,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case f: Formula => apply(f)
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
+    case f: Function => throw new RenamingClashException("Renamings are not defined on an isolated Function that is not applied to arguments.", this.toString, f.asString)
   }
 
   /** apply this uniform renaming everywhere in a term */
