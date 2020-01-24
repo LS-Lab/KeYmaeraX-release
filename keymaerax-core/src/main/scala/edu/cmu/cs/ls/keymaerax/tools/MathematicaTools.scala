@@ -122,6 +122,7 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
         case t: Term => convertTerm(t)
         case f: Formula => convertFormula(f)
         case p: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
+        case f: Function => throw new IllegalArgumentException("There is no conversion from unapplied function symbols to Mathematica " + e)
       }
     }
 

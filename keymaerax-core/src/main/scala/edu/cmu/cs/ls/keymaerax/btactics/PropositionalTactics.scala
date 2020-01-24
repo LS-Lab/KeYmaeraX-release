@@ -294,6 +294,7 @@ private object PropositionalTactics extends Logging {
     val equivalence: Equiv = p.subgoals.head(equivPos.checkAnte) match {
       case e:Equiv => e
       case f:Formula => throw new Exception(s"Expected an Equiv but found ${f.prettyString}")
+      case e@_ => throw new Exception(s"Expected an Equiv formula but found ${e.prettyString}")
     }
     val targetValue : Formula = p.subgoals.head(targetPos.top)
     val otherValue : Formula = if(equivalence.left == targetValue) equivalence.right else equivalence.left

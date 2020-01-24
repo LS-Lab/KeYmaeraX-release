@@ -180,6 +180,8 @@ object StaticSemanticsTools {
   private def depend(program: Program): mutable.Map[Variable,immutable.Set[Variable]] = program match {
     // can't know so just say empty even if that's wrong
     case a: ProgramConst   => mutable.Map.empty
+    // can't know so just say empty even if that's wrong
+    case a: SystemConst    => mutable.Map.empty
     case Assign(x, e)      => mutable.Map(x->StaticSemantics.freeVars(e).symbols)
     case a: AssignAny      => mutable.Map.empty
       // empty only if ignoring control flow dependencies

@@ -245,6 +245,7 @@ private object ToolTactics {
     to match {
       case f: Formula => transformFormula(f, sequent, pos)
       case t: Term => transformTerm(t, sequent, pos)
+      case _ => assert(false, "Precondition already checked that other types cannot occur " + to); ???
     }
   })
 

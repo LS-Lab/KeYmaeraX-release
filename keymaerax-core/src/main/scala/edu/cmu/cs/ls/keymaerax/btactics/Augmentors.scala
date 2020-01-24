@@ -144,6 +144,7 @@ object Augmentors {
         }, fml) match {
           case Some(f) => f
         }
+
       }
     }
 
@@ -269,6 +270,8 @@ object Augmentors {
       case f: Formula => f.replaceFree(what, repl)
       case t: Term => t.replaceFree(what, repl)
       case p: Program => p.replaceFree(what, repl)
+      // Isolated unapplied Function without FuncOf is no term
+      case f: Function => f
     }
 
     /** The substitution pair `term~>other` after dottifying `other` to fit arguments of `term`. */
