@@ -124,6 +124,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
 
   // implementation of uniform substitution application
+  //@see Figure 2 in Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
 
   /** uniform substitution on terms */
   private def usubst(u: SetLattice[Variable], term: Term): Term = {
@@ -243,15 +244,13 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
           val r = subs.repl.asInstanceOf[Program]
           (u++boundVars(r), r)
         //@todo optimizable: store boundVars(ProgramConst/SystemConst/DifferentialProgramConst) in substitution pair
-        //@todo improve: for ProgramConst(_,Taboo(except)) could return allVars-except
-        case None => (allVars, a)
+        case None => (StaticSemantics.spaceVars(a.space), a)
       }
       case a: SystemConst => subsDefs.find(_.what == a) match {
         case Some(subs) =>
           val r = subs.repl.asInstanceOf[Program]
           (u++boundVars(r), r)
-        //@todo improve: for SystemConst(_,Taboo(except)) could return allVars-except
-        case None => (allVars, a)
+        case None => (StaticSemantics.spaceVars(a.space), a)
       }
       case Assign(x, e)      => (u+x, Assign(x, usubst(u,e)))
       case AssignAny(x)      => (u+x, program)
