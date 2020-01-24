@@ -113,6 +113,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
     * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
     * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see [[StaticSemantics.freeVars()]]
     */
   lazy val freeVars: SetLattice[Variable] = what match {
     //@note semantic state-dependent symbols have no free variables.
@@ -128,6 +129,21 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       case PredicationalOf(_, _) => throw new CoreException("Nonsubstitutable expression " + this + " already found in matchKey")
     }
     case _ => StaticSemantics.freeVars(repl)
+  }
+
+  /**
+    * The (new) bound variables that this substitution introduces.
+    * That is the (new) bound variables introduces by this substitution, i.e. all bound variables of `repl`.
+    * These are all the bound variables of the formula or program `repl` (and irrelevant bottom for terms).
+    * @see [[StaticSemantics.boundVars()]]
+    */
+  lazy val boundVars: SetLattice[Variable] = repl match {
+    case replf: Formula => StaticSemantics.boundVars(replf)
+    case replp: Program => StaticSemantics.boundVars(replp)
+    // terms have no bound variables
+    case replt: Term    => bottom
+    // An isolated Function that has not been applied a FuncOf is no Term and has no bound variables
+    case replf: Function => bottom
   }
 
   /**
