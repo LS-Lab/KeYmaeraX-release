@@ -756,6 +756,7 @@ object NonSubstUnificationMatch extends FreshUnificationMatch {
       case prg: Program => subs.foldLeft(prg)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })
       case fml: Formula => subs.foldLeft(fml)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })
       case trm: Term => subs.foldLeft(trm)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })
+      case f: Function => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
     }
   }
 

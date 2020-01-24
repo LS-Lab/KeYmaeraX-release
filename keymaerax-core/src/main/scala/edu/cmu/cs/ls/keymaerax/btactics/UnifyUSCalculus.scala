@@ -4,8 +4,6 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{cohide2, cohideR, commuteEqual, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutLR}

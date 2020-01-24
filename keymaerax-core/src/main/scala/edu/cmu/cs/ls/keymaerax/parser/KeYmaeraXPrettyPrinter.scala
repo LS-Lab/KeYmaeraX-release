@@ -78,6 +78,7 @@ trait BasePrettyPrinter extends PrettyPrinter {
     case FormulaKind => parser.formulaParser(print)
     case ProgramKind => parser.programParser(print)
     case DifferentialProgramKind => parser.differentialProgramParser(print)
+    case FunctionKind => assert(false, "No completed expressions of functionKind can be constructed"); ???
     case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
@@ -249,6 +250,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case _: PredOf => "(" + text + ")"
     case _: Pair => "(" + text + ")"
     case _: PredicationalOf => "{" + text + "}"
+    case _ => assert(false, "no parenthetical expression " + expr); ???
   }
 
   //@todo could add contract that TermAugmentor(original)(q) == term
@@ -512,6 +514,8 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
     case FormulaKind => sub.isInstanceOf[BinaryCompositeFormula]
     case ProgramKind => sub.isInstanceOf[BinaryCompositeProgram]
     case DifferentialProgramKind => sub.isInstanceOf[DifferentialProduct]
+    case FunctionKind => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
+    case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
   private def weight1(sub: Expression, par: BinaryComposite): Int = {
@@ -542,6 +546,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case _: PredOf => encloseText("(", doc,")")
     case _: Pair => encloseText("(", doc,")")
     case _: PredicationalOf => encloseText("{", doc,"}")
+    case _ => assert(false, "no parenthetical expression " + expr); ???
   }
 
   protected def wrapChildDoc(t: UnaryComposite, doc: Doc): Doc =

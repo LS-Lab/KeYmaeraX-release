@@ -90,6 +90,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
     case f: Formula => apply(f)
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
+    case f: Function => throw new SubstitutionClashException(toString, "", e + "", "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
   }
 
   /** apply this uniform substitution renaming everywhere in a term */

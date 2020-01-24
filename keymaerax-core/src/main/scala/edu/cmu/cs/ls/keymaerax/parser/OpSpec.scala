@@ -340,6 +340,9 @@ object OpSpec {
     case p: Choice       => sChoice
     case p: Dual         => sDual
     case _: SystemConst  => sSystemConst
+
+    case f: Function     => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
+
   }
 
 }

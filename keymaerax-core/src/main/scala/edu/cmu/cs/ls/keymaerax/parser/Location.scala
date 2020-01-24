@@ -24,6 +24,7 @@ sealed trait Location extends Serializable {
   def adjacentTo(other: Location): Boolean = end match {
     case Region(_,_,l,c) => other.begin match {
       case Region(ol,oc,_,_) => l==ol&&c+1==oc
+      case SuffixRegion(ol,oc) => l==ol&&c+1==oc
     }
   }
 

@@ -41,6 +41,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
+      case PredicationalOf(_, _) => throw new CoreException("Nonsubstitutable expression " + this)
     }
     case _ => StaticSemantics.freeVars(repl)
   }
@@ -141,6 +142,7 @@ final case class USubstRenOne(private[bellerophon] val subsDefsInput: immutable.
     case f: Formula => apply(f)
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
+    case f: Function => throw new SubstitutionClashException(toString, "", e + "", "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
   }
 
   /** apply this uniform substitution renaming everywhere in a term */
