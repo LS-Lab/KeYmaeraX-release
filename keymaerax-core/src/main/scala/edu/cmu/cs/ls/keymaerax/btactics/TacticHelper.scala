@@ -12,46 +12,49 @@ object TacticHelper {
 
   /** Returns a fresh index for `name` in formula `f`. */
   def freshIndexInFormula(name: String, f: Formula): Option[Int] = {
-    var nextIdx: Option[Int] = None
+    var maxIdx: Option[Int] = None
 
     def max(n: NamedSymbol, max: Option[Int]): Option[Int] = {
-      if (n.name == name) Some(Math.max(nextIdx.getOrElse(-1), n.index.getOrElse(-1)) + 1)
+      if (n.name == name) maxIdx match {
+        case Some(i) => Some(Math.max(maxIdx.getOrElse(-1), n.index.getOrElse(-1)))
+        case None => Some(n.index.getOrElse(-1))
+      }
       else max
     }
 
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        nextIdx = e match {
-          case PredOf(fn, _)          => max(fn, nextIdx)
-          case PredicationalOf(fn, _) => max(fn, nextIdx)
-          case p: UnitPredicational   => max(p, nextIdx)
-          case d@DotFormula           => max(d, nextIdx)
-          case _ => nextIdx
+        maxIdx = e match {
+          case PredOf(fn, _)          => max(fn, maxIdx)
+          case PredicationalOf(fn, _) => max(fn, maxIdx)
+          case p: UnitPredicational   => max(p, maxIdx)
+          case d@DotFormula           => max(d, maxIdx)
+          case _ => maxIdx
         }
         Left(None)
       }
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        nextIdx = e match {
-          case v: Variable       => max(v, nextIdx)
-          case FuncOf(fn, _)     => max(fn, nextIdx)
-          case d: DotTerm        => max(d, nextIdx)
-          case f: UnitFunctional => max(f, nextIdx)
-          case _ => nextIdx
+        maxIdx = e match {
+          case v: Variable       => max(v, maxIdx)
+          case FuncOf(fn, _)     => max(fn, maxIdx)
+          case d: DotTerm        => max(d, maxIdx)
+          case f: UnitFunctional => max(f, maxIdx)
+          case _ => maxIdx
         }
         Left(None)
       }
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-        nextIdx = e match {
-          case c: ProgramConst             => max(c, nextIdx)
-          case c: SystemConst              => max(c, nextIdx)
-          case c: DifferentialProgramConst => max(c, nextIdx)
-          case _ => nextIdx
+        maxIdx = e match {
+          case c: ProgramConst             => max(c, maxIdx)
+          case c: SystemConst              => max(c, maxIdx)
+          case c: DifferentialProgramConst => max(c, maxIdx)
+          case _ => maxIdx
         }
         Left(None)
       }
     }, f)
 
-    nextIdx
+    maxIdx.map(_ + 1)
   }
 
   /** Returns the symbols in `f`. */

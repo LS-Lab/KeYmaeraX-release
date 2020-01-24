@@ -312,6 +312,7 @@ class FreeVariablesTests extends FlatSpec with Matchers {
     TacticHelper.freshNamedSymbol(".".asNamedSymbol, "==> ._2 > 7".asSequent) shouldBe "._3".asNamedSymbol
     TacticHelper.freshNamedSymbol("x".asVariable, "==> [x;]y>4".asSequent) shouldBe "x_0".asVariable
     TacticHelper.freshNamedSymbol("p".asFunction, "==> p(x)".asSequent) shouldBe "p_0".asFunction
+    TacticHelper.freshNamedSymbol("x".asVariable, "==> [{y'=x, x'=4}]x>4".asSequent) shouldBe "x_0".asVariable
 
     the [IllegalArgumentException] thrownBy TacticHelper.freshNamedSymbol(UnitFunctional("x", AnyArg, Real), "==> x(||) > 0".asSequent) should have message "Cannot obtain fresh symbol, since class edu.cmu.cs.ls.keymaerax.core.UnitFunctional does not have index"
     the [IllegalArgumentException] thrownBy TacticHelper.freshNamedSymbol(UnitPredicational("x", AnyArg), "==> x(||)".asSequent) should have message "Cannot obtain fresh symbol, since class edu.cmu.cs.ls.keymaerax.core.UnitPredicational does not have index"
