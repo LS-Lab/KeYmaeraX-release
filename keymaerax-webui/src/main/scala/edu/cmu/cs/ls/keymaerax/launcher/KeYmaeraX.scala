@@ -64,6 +64,9 @@ object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
+  /**
+    * Names of actions that KeYmaera X command line interface supports.
+    */
   object Modes {
     val CODEGEN: String = "codegen"
     val MODELPLEX: String = "modelplex"
@@ -74,6 +77,9 @@ object KeYmaeraX {
     val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI)
   }
 
+  /**
+    * Names of tools that KeYmaera X command line interface supports in `-tool`.
+    */
   object Tools {
     val MATHEMATICA: String = "mathematica"
     val WOLFRAMENGINE: String = "wolframengine"
@@ -127,14 +133,17 @@ object KeYmaeraX {
       |Use option -license to show the license conditions.""".stripMargin
 
 
-  private def launched() {
+  private def launched(): Unit = {
     LAUNCH = true
     //println("Launching KeYmaera X")
   }
   var LAUNCH: Boolean = false
 
   def main(args: Array[String]): Unit = {
-    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {println(usage); exit(1)}
+    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
+      println(help)
+      exit(1)
+    }
     println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
     else {
@@ -173,6 +182,22 @@ object KeYmaeraX {
       }
     }
   }
+
+  /**
+    * Statistics about size of prover kernel.
+    */
+  def stats: String = {
+    "with " + Provable.axiom.size + " axioms and " + Provable.rules.size + " axiomatic rules"
+  }
+
+  /**
+    * KeYmaera X -help string.
+    */
+  def help: String = {
+    stats + "\n" + usage
+  }
+
+
 
   private def configFromFile(defaultTool: String): OptionMap = {
     Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {

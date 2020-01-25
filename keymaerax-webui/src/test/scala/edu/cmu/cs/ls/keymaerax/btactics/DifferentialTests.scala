@@ -253,6 +253,12 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x>=5 -> [{x'=2}]x>=5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
 
+  it should "auto-prove x>=5 -> [{x'=2}]!x<5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
+    proveBy("x>=5 -> [{x'=2}]!x<5".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 -> [{x'=2}](!x<5 | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+    proveBy("x>=5 -> [{x'=2}](!(x<5 & (x<2 & !x>3)) | !x<4)".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
+  }
+
   it should "disregard other modalities when auto-proving x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withQE { _ =>
     proveBy("x>=5, [y:=3;]y<=3 ==> [{x'=2}]x>=5".asSequent, dI()(1)) shouldBe 'proved
   }
@@ -667,6 +673,19 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy("y=1 ==> [x:=0;][{x'=1,y'=-1}]x>=0".asSequent, dC("x>=old(x) & y<=old(y)".asFormula)(1, 1::Nil))
     result.subgoals should have size 2
     result.subgoals.head shouldBe "y=1 ==> [x:=0;]\\forall y_0 (y_0=y -> \\forall x_0 (x_0=x -> [{x'=1,y'=-1 & true & (x>=x_0 & y<=y_0)}]x>=0))".asSequent
+  }
+
+  it should "FEATURE_REQUEST: keep positioning stable in succedent" taggedAs(TodoTest) in withQE { _ =>
+    //@todo useAt has unstable positioning (when fixing: some tactics - e.g., ODE - may change midway from using pos to 'Rlast as a workaround)
+    val result = proveBy("x=0 ==> [{x'=y}]x>=-1, !y<0".asSequent, dC("x>=0".asFormula)(2))
+    result.subgoals(0) shouldBe "x=0 ==> !y!=3, [{x'=y & true & x>=0}]x>=-1, !y<0".asSequent
+    result.subgoals(1) shouldBe "x=0 ==> !y!=3, [{x'=y}]x>=0, !y<0".asSequent
+  }
+
+  it should "keep positioning stable in antecedent" in withQE { _ =>
+    val result = proveBy("y=3, [{x'=y}]x>=-1, x=0 ==> !y<0".asSequent, dC("x>=0".asFormula)(-2))
+    result.subgoals(0) shouldBe "y=3, [{x'=y & true & x>=0}]x>=-1, x=0 ==> !y<0".asSequent
+    result.subgoals(1) shouldBe "y=3, x=0 ==> !y<0, [{x'=y}]x>=0".asSequent
   }
 
   "Diamond differential cut" should "cut in a simple formula" in withQE { _ =>
@@ -1671,13 +1690,16 @@ class DifferentialTests extends TacticTestBase {
     "a=1, b()=2 ==> x>=0, y>=0, [{x'=a,y'=b()&true&0-x>=0&0-y>=0}](0-x>0&0-y>0)".asSequent
   }
 
-  "dIClosure" should "assume closure of postcondition for proof of invariant interior" in withMathematica { qeTool =>
-    val result = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1}](x>0&x<=3)".asSequent,
-      DifferentialTactics.dIClosure(1))
-
-    result.subgoals should have size 2
-    result.subgoals.head shouldBe "t=0, x=1 ==> x>0&3-x>0".asSequent
-    result.subgoals(1) shouldBe "t=0, x=1, t<=1 ==> [{t'=1,x'=x&t<=1}](x>=0&3-x>=0->(x>0&3-x>0)')".asSequent
+  "dIClosed" should "assume closure of postcondition for proof of invariant interior" in withMathematica { qeTool =>
+    val ode = DifferentialTactics.ODESpecific("{t'=1, x'=x}".asDifferentialProgram)
+    val prv = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1/2}](x>=1&x<=1+3*t)".asSequent,
+      ode.dIClosed(1))
+    prv.subgoals should have size 2
+    // initial condition
+    prv.subgoals.head shouldBe "t=0, x=1 ==> x>=1 & x<=1+3*t".asSequent
+    // differential invariant
+    prv.subgoals(1).succ.loneElement shouldBe "t<=1/2&x>=1&x<=1+3*t->min((x,0+3*1-x))>0".asFormula
+    proveBy(prv, Idioms.<(QE, QE)) shouldBe 'proved
   }
 
   "Derive" should "correctly derive" taggedAs IgnoreInBuildTest in withMathematica { tool =>

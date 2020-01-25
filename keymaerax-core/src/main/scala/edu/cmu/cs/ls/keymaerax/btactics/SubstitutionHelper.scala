@@ -156,6 +156,7 @@ class SubstitutionHelper(replace: Term => Option[Term]) {
       USR(q.intersect(r), v++w, Choice(as, bs))
     case Loop(a) => val USR(_, v, _) = usubst(o, u, a); val USR(_, w, as) = usubst(o, v, a); USR(o, w, Loop(as))
     case Dual(a) => val USR(q, v, as) = usubst(o, u, a); USR(q, v, Dual(as))
+    case a: ProgramConst => USR(o, SetLattice.allVars, a)
     case _ => throw UnknownOperatorException("Not implemented yet", p)
   }
 

@@ -41,7 +41,7 @@ object Lemma {
     */
   def fromString(lemma: String): Lemma = {
     fromStringInternal(lemma)
-  } ensuring(r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
+  } ensures(r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
 
   /** This contract turns out to be a huge bottleneck when loading proofs on the UI, so it worth checking the contract
     * as quickly as possible. If converting the lemma back into a string already gives exactly the string we started with,
@@ -177,7 +177,7 @@ final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], na
   override def toString: String = {
     toStringInternal
     //@note soundness-critical check that reparse succeeds as expected
-  } ensuring(r =>  {
+  } ensures(r =>  {
     val reparsed = Lemma.fromStringInternal(r)
     reparsed.fact.underlyingProvable == fact.underlyingProvable &&
     reparsed.evidence == evidence &&
@@ -199,7 +199,7 @@ final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], na
   private def sequentToString(s: Sequent): String = {
     //@note Regarding side-conditions:
     //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
-    //@note It is enough to use contract-free stringify since toString will reparse the entire lemma in its ensuring contract again.
+    //@note It is enough to use contract-free stringify since toString will reparse the entire lemma in its ensures contract again.
     "Sequent.\n" +
       s.ante.map(x => "Formula: " + Lemma.printer.stringify(x)).mkString("\n") +
       "\n==>\n" +

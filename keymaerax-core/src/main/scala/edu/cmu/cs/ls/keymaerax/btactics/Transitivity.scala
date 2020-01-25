@@ -69,7 +69,7 @@ object Transitivity {
     val formula = Imply(inequalities, s"TRANS0 >= TRANS${formulas.length}".asFormula)
 
     Range(0, formulas.length + 1).foldRight[Formula](formula)((i, f) => Forall(immutable.Seq(s"TRANS$i".asVariable), f))
-  } ensuring(f => StaticSemantics.freeVars(f).isEmpty)
+  } ensures(f => StaticSemantics.freeVars(f).isEmpty)
 
   /** Translates a [[search]] result into an ordered list of positions of the formulas in the antecedent. */
   def searchResultToPositionList(s : Sequent, fs : List[Formula]) = fs.map(f => s.ante.zipWithIndex.find(_._1 == f).get._2).map(x => -x - 1)

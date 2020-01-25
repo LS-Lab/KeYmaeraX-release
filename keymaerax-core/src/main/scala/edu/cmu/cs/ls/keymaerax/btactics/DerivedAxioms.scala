@@ -131,6 +131,10 @@ object DerivedAxioms extends Logging {
         derivedAxiom(name, witness)
     }
 
+  /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
+  private[btactics] def derivedAxiom(name: String, derived: Formula, tactic: => BelleExpr): Lemma =
+    derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic)
+
   private val x = Variable("x_", None, Real)
   private val px = PredOf(Function("p_", None, Real, Bool), x)
   private val pany = UnitPredicational("p_", AnyArg)
@@ -332,6 +336,7 @@ object DerivedAxioms extends Logging {
     * }}}
     *
     * @Derived
+    * @see [[equalReflex]]
     */
   lazy val equivReflexiveAxiom = derivedAxiom("<-> reflexive",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
@@ -2567,6 +2572,25 @@ object DerivedAxioms extends Logging {
   //)
 
 
+  /**
+    * {{{Axiom "Uniq uniqueness 2"
+    *    <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c & q1(||)&q2(||)}>(p1(||) | p2 (||))
+    * End.
+    * }}}
+    */
+  lazy val uniqueness2 = derivedAxiom("Uniq uniqueness 2",
+    "<{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c & q1(||)&q2(||)}>(p1(||) | p2 (||))".asFormula,
+    cutR("<{c&q1(||)}>(p1(||)|p2(||)) & <{c&q2(||)}>p2(||) -> <{c&q1(||)&q2(||)}>(p1(||)|p2(||))".asFormula)(1) <(
+      cutR("<{c&q1(||)}>(p1(||)|p2(||)) & <{c&q2(||)}>(p1(||)|p2(||)) -> <{c&q1(||)&q2(||)}>(p1(||)|p2(||))".asFormula)(1) <(
+        byUS("Uniq uniqueness")
+        ,
+        CMon(PosInExpr(0::1::1::Nil)) & implyR(1) & orR(1) & close(-1,2)
+        )
+      ,
+      CMon(PosInExpr(0::0::1::Nil)) & implyR(1) & orR(1) & close(-1,1)
+      )
+  )
+
   // real arithmetic
 
   /**
@@ -2574,6 +2598,7 @@ object DerivedAxioms extends Logging {
    *    s() = s()
    * End.
    * }}}
+    * @see [[equivReflexiveAxiom]]
    */
   lazy val equalReflex = derivedAxiom("= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() = s_()".asFormula)),
     allInstantiateInverse(("s_()".asTerm, "x".asVariable))(1) &
@@ -3469,6 +3494,7 @@ object DerivedAxioms extends Logging {
   lazy val lessNotRefl      = mkDerivedAxiom("< irrefl",  None,"F_()<F_()","false")
   lazy val greaterNotRefl   = mkDerivedAxiom("> irrefl", None,"F_()>F_()","false")
   lazy val notEqualNotRefl  = mkDerivedAxiom("!= irrefl",None,"F_()!=F_()","false")
+  /** @see [[equivReflexiveAxiom]] */
   lazy val equalRefl        = mkDerivedAxiom("= refl",   None,"F_() = F_()","true")
   lazy val lessEqualRefl    = mkDerivedAxiom("<= refl",  None,"F_() <= F_()","true")
   lazy val greaterEqualRefl = mkDerivedAxiom(">= refl",  None,"F_() >= F_()","true")
@@ -3507,4 +3533,46 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(x_) <-> \\exists x_ p_(x_)".asFormula)),
     byUS(equivReflexiveAxiom)
   )
+
+  /**
+    * CONGRUENCE AXIOMS (for constant terms)
+    */
+
+
+  /**
+    * {{{Axiom "const congruence"
+    *      s() = t() -> ctxT_(s()) = ctxT_(t())
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val constCongruence: Lemma = derivedAxiom("const congruence",
+    "s() = t() -> ctxT_(s()) = ctxT_(t())".asFormula,
+    allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
+      by(proveBy("\\forall x_ (x_ = t() -> ctxT_(x_) = ctxT_(t()))".asFormula,
+        useAt("[:=] assign equality", PosInExpr(1::Nil))(1) &
+        useAt("[:=] assign")(1) &
+        byUS(equalReflex)
+      ))
+  )
+
+  /**
+    * {{{Axiom "const formula congruence"
+    *    s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val constFormulaCongruence: Lemma = derivedAxiom("const formula congruence",
+      "s() = t() -> (ctxF_(s()) <-> ctxF_(t()))".asFormula,
+      allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
+        by(proveBy("\\forall x_ (x_ = t() -> (ctxF_(x_) <-> ctxF_(t())))".asFormula,
+          useAt("[:=] assign equality", PosInExpr(1::Nil))(1) &
+            useAt("[:=] assign")(1) &
+            byUS(equivReflexiveAxiom)
+        ))
+    )
+
 }

@@ -79,22 +79,21 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
                          interpreter: Seq[IOListener] => Interpreter = ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false),
                          proofId: Option[Int] = None,
                          modelName: String = ""): (Int, ProvableSig) = {
-    val s: Sequent = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent) match {
-      case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
-      case _ => throw new Exception("Model content " + modelContent + " cannot be parsed")
-    }
+    val entry = KeYmaeraXArchiveParser.parse(modelContent).head
     val pId = proofId match {
       case Some(id) => id
       case None => createProof(modelContent, modelName)
     }
-    val globalProvable = ProvableSig.startProof(s)
+    val globalProvable = ProvableSig.startProof(entry.model.asInstanceOf[Formula])
+    val expectedSubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.expandedModel.asInstanceOf[Formula]))
+    val expectedUnsubstConclusion = Sequent(IndexedSeq(), IndexedSeq(entry.model.asInstanceOf[Formula]))
     val listener = new TraceRecordingListener(db, pId, None,
       globalProvable, 0 /* start from single provable */, recursive = false, "custom")
     val listeners = listener::Nil ++ additionalListeners
     BelleInterpreter.setInterpreter(interpreter(listeners))
-    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(s))) match {
+    BelleInterpreter(t, BelleProvable(ProvableSig.startProof(entry.model.asInstanceOf[Formula]))) match {
       case BelleProvable(provable, _) =>
-        assert(provable.conclusion == s, "The proved conclusion must match the input model")
+        assert(provable.conclusion == expectedSubstConclusion, "The proved conclusion must match the input model")
         //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
         if (provable.isProved) {
           // check that database thinks so too
@@ -102,9 +101,13 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
           finalTree.load()
           //finalTree.leaves shouldBe empty
           finalTree.nodes.foreach(n => n.parent match {
-            case None => assert(n.conclusion == s, "The proved conclusion of an intermediate node must match the input model")
+            case None =>
+              // delayed substitution: conclusion of input provable is not yet substituted, but conclusion of combined (proved) provable is
+              assert(n.conclusion == expectedUnsubstConclusion, "The input conclusion of the root node must match the input model, but conclusion\n" + n.conclusion.prettyString + "\ndoes not match\n" + expectedUnsubstConclusion.prettyString)
+              assert(n.provable.conclusion == expectedSubstConclusion, "The proved conclusion of the root node must match the expanded input model, but conclusion\n" + n.provable.conclusion.prettyString + "\ndoes not match\n" + expectedSubstConclusion.prettyString)
             case Some(parent) =>
             //@todo throughout tactic records goal index and parent provables wrong
+            //@todo delayed substitution
             //assert(n.conclusion == parent.localProvable.subgoals(n.goalIdx), "The proved conclusion of an intermediate node must match the parent's subgoal")
           })
         }

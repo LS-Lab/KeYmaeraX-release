@@ -45,9 +45,9 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
 
   /** Append child to obtain position of given subexpression. */
-  def ++(appendChild: Int): PosInExpr = new PosInExpr(pos :+ appendChild) ensuring(r => this.isPrefixOf(r))
+  def ++(appendChild: Int): PosInExpr = new PosInExpr(pos :+ appendChild) ensures(r => this.isPrefixOf(r))
   /** Append child to obtain position of given subexpression by concatenating `appendChild` to `this`. */
-  def ++(appendChild : PosInExpr): PosInExpr = PosInExpr(this.pos ++ appendChild.pos) ensuring(r => this.isPrefixOf(r))
+  def ++(appendChild : PosInExpr): PosInExpr = PosInExpr(this.pos ++ appendChild.pos) ensures(r => this.isPrefixOf(r))
 
   /** Head: The top-most position of this position */
   def head: Int = {require(pos!=Nil); pos.head}
@@ -130,7 +130,7 @@ sealed trait Position {
     */
   def topLevel: TopPosition
 
-    //ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
+    //ensures (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
 //
 //    /** Concatenate this with p2: Append p2 to this position */
 //    def append(p2 : PosInExpr): Position = subPos(p2)
@@ -140,7 +140,7 @@ sealed trait Position {
 //     * @return A subposition.
 //     */
 //    def subPos(p : PosInExpr): Position = {navigate(this.inExpr.append(p))
-//    } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr.pos.equals(this.inExpr.pos ++ p.pos) && this.inExpr.isPrefixOf(r.inExpr))
+//    } ensures (r => r.isAnte==isAnte && r.index==index && r.inExpr.pos.equals(this.inExpr.pos ++ p.pos) && this.inExpr.isPrefixOf(r.inExpr))
 //
   /** Return a position with inExpr replaced by p */
   @deprecated("Unsure whether this will be kept")
@@ -240,8 +240,7 @@ trait TopSuccPosition extends SuccPosition with TopPosition {
 
 // Pseudo-Constructors
 
-object
-AntePosition {
+object AntePosition {
   def apply(top: AntePos): TopAntePosition = new AntePositionImpl(top, HereP) with TopAntePosition
   def apply(top: AntePos, inExpr: PosInExpr): AntePosition = new AntePositionImpl(top, inExpr)
 
@@ -253,7 +252,7 @@ AntePosition {
   private def seqIdx2AntePos(base1: Int): AntePos = {
     require(base1>0, "positive indexing base 1: " + base1)
     AntePos(base1-1)
-  } ensuring(r => r==SeqPos(-base1), "signed int conversion identical to core but faster")
+  } ensures(r => r==SeqPos(-base1), "signed int conversion identical to core but faster")
 
 }
 
@@ -268,7 +267,7 @@ object SuccPosition {
   private def seqIdx2SuccPos(base1: Int): SuccPos = {
     require(base1>0, "positive indexing base 1: " + base1)
     SuccPos(base1-1)
-  } ensuring(r => r==SeqPos(base1), "signed int conversion identical to core but faster")
+  } ensures(r => r==SeqPos(base1), "signed int conversion identical to core but faster")
 }
 
 // Implementations

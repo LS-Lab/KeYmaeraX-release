@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.util.concurrent.{Callable, FutureTask, ExecutorService, Executors}
+import edu.cmu.cs.ls.keymaerax.core.Ensures
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.IOListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleValue, BelleExpr, Interpreter}
@@ -92,7 +93,7 @@ class BellerophonTacticExecutor(poolSize: Int) {
         throw new Exception("Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing.")
       }
     }
-  } ensuring(!scheduledTactics.contains(id))
+  } ensures(!scheduledTactics.contains(id))
 
   /**
     *

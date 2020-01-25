@@ -324,4 +324,9 @@ protected object FOQuantifierTactics {
     else sorted.map(t => universalGen(None, t)(pos)).reduce[BelleExpr](_ & _)
   })
   lazy val universalClosure: DependentPositionTactic = universalClosure()
+
+  /** repeated application of [[TactixLibrary.allL]] */
+  def allLs(vs: List[Term]) : DependentPositionTactic = "allLs" by { pos: Position =>
+    vs.map(allL(_)(pos): BelleExpr).reduceLeft(_ & _)
+  }
 }

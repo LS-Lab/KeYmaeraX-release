@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import java.util.concurrent._
 
 import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.core.Ensures
 
 import scala.collection.mutable
 
@@ -58,7 +59,7 @@ class ToolExecutor[T](poolSize: Int) extends Logging {
       //@note if you want to remove a tactic even if it's still running, then call remove(id, true).
       throw new Exception("Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing.")
     }
-  } ensuring(!scheduledTasks.contains(id))
+  } ensures(!scheduledTasks.contains(id))
 
   /**
    * Waits for task completion (polling).

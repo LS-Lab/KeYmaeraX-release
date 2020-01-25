@@ -7,8 +7,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{chase, skip}
 
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
 
 /**
   * Hilbert Calculus for differential dynamic logic.
@@ -72,11 +75,32 @@ trait HilbertCalculus extends UnifyUSCalculus {
     SequentCalculus.cohideR(pos) & DLBySubst.G
     )
 
-  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation.
+    * {{{
+    *      p(x) |- q(x)
+    *   ---------------------------------
+    *   \forall x p(x) |- \forall x q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
-  /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)` */
+  /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
+    * {{{
+    *      p(x) |- q(x)
+    *   ------------------- M[.]
+    *   [a]p(x) |- [a]q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
   lazy val monb               : BelleExpr         = byUS("[] monotone")
-  /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)` */
+  /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
+    * {{{
+    *      p(x) |- q(x)
+    *   ------------------- M
+    *   [a]p(x) |- [a]q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
   lazy val mond               : BelleExpr         = byUS("<> monotone")
 
   //
@@ -298,7 +322,23 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
     * @see [[UnifyUSCalculus.chase]]
     */
-  lazy val derive: DependentPositionTactic = "derive" by {(pos:Position) => chase(pos)}
+  lazy val derive: DependentPositionTactic = "derive" by {(pos:Position, seq: Sequent) =>
+    val chaseNegations = seq.sub(pos) match {
+      case Some(post: DifferentialFormula) =>
+        val notPositions = ListBuffer.empty[PosInExpr]
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+            case Not(_) if !notPositions.exists(_.isPrefixOf(p)) => notPositions.append(p); Left(None)
+            case _ => Left(None)
+          }
+        }, post)
+        notPositions.map(p => chase('Rlast, pos.inExpr ++ p)).
+          reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+      case _ => skip
+    }
+
+    chaseNegations & chase(pos)
+  }
 
   /**
     * Derive: provides individual differential axioms bundled as [[HilbertCalculus.derive]].

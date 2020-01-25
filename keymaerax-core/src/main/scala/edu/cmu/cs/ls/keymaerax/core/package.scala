@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax
 
+import scala.annotation.elidable
 import scala.collection.immutable
 import scala.io.Source
 
@@ -207,4 +208,43 @@ package object core {
     */
   @inline final def noException[T](e: => T): Boolean =
     try { e; true } catch { case _: Throwable => false }
+
+  /**
+    * Java-style assertions, disabled by default, enabled with `java -ea`, disable with `java -da`.
+    * Scala-style elidable at compile-time with `-Xdisable-assertions`
+    *
+    * Lazy evaluation of `condition` on `argument`, lazy evaluation of message.
+    * */
+  @elidable(elidable.ASSERTION) @inline
+  def assertion[A](condition: A => Boolean, argument: A, message: => Any): A =
+    Assertion.assertion((x: A) => condition(x) : java.lang.Boolean, argument, () => message.asInstanceOf[AnyRef])
+
+  /** see [[assertion]] */
+  @elidable(elidable.ASSERTION) @inline
+  def assertion[A](condition: A => Boolean, argument: A): A =
+    Assertion.assertion((x: A) => condition(x) : java.lang.Boolean, argument)
+
+  /** see [[assertion]] */
+  @elidable(elidable.ASSERTION) @inline
+  def assertion(condition: => Boolean): Unit =
+    Assertion.assertion(() => condition)
+
+  /** see [[assertion]] */
+  @elidable(elidable.ASSERTION) @inline
+  def assertion(condition: =>Boolean, message: => Any): Unit =
+    Assertion.assertion(() => condition : java.lang.Boolean, () => message.asInstanceOf[AnyRef])
+
+  /** Contracts (like [[Predef.Ensuring]]) implemented with Java-style assertions (see [[assertion]]) */
+  implicit final class Ensures[A](private val self: A) extends AnyVal {
+
+    def ensures(cond: =>Boolean): A = { assertion(cond); self }
+
+    def ensures(cond: =>Boolean, msg: => Any): A = { assertion(cond, msg);  self }
+
+    def ensures(cond: A => Boolean): A = { assertion(cond, self); self }
+
+    def ensures(cond: A => Boolean, msg: => Any): A = { assertion(cond, self, msg); self }
+
+  }
+
 }

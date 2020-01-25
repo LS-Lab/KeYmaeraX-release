@@ -45,6 +45,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case f: Formula => apply(f)
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
+    case f: Function => throw new RenamingClashException("Renamings are not defined on an isolated Function that is not applied to arguments.", this.toString, f.asString)
   }
 
   /** apply this uniform renaming everywhere in a term */
@@ -62,7 +63,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   /**
     * Apply uniform renaming everywhere in the sequent.
     */
-  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensuring contracts checked.
+  //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensures contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
   } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 

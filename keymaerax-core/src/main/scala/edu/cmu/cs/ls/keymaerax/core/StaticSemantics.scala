@@ -19,11 +19,10 @@ import scala.collection.immutable
   * The static semantics of differential dynamic logic.
   * This object defines the static semantics of differential dynamic logic
   * in terms of the free variables and bound variables that expressions have as well as their signatures.
-  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
   * @author Andre Platzer
   * @author smitsch
   * @note soundness-critical
-  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Section 2.3 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
   * @example
   * {{{
@@ -47,8 +46,8 @@ object StaticSemantics {
   import SetLattice.bottom
 
   /**
-    * Variable Categories for Formulas: Structure recording which names are free or bound
-    * in a formula.
+    * Variable Categories for Formulas:
+    * Structure recording which names are free or bound in a formula.
     *
     * @param fv Free names (maybe read)
     * @param bv Bound names (maybe written)
@@ -61,8 +60,8 @@ object StaticSemantics {
   }
 
   /**
-    * Variable Categories for Programs: Structure recording which names are free, bound, or must-bound
-    * in a program.
+    * Variable Categories for Programs:
+    * Structure recording which names are free, bound, or must-bound in a program.
     *
     * @param fv Free names (maybe read)
     * @param bv Bound names (maybe written on some paths)
@@ -89,7 +88,7 @@ object StaticSemantics {
 
 
   /**
-    * The set FV(t) of free variables of term t.
+    * The set FV(term) of free variables of `term`.
     */
   def freeVars(term: Term): SetLattice[Variable] = term match {
     // base cases
@@ -139,9 +138,11 @@ object StaticSemantics {
     * The set FV(e) of free variables of expression e.
     */
   def freeVars(e: Expression): SetLattice[Variable] = e match {
-    case t: Term => freeVars(t)
-    case f: Formula => freeVars(f)
-    case a: Program => freeVars(a)
+    case t: Term     => freeVars(t)
+    case f: Formula  => freeVars(f)
+    case a: Program  => freeVars(a)
+    // An isolated Function that has not been applied a FuncOf is no Term and has no free variables
+    case f: Function => bottom
   }
 
   /**
@@ -156,9 +157,11 @@ object StaticSemantics {
 
   /** The set var(e) of variables of expression e, whether free or bound. */
   def vars(e: Expression): SetLattice[Variable] = e match {
-    case t: Term => freeVars(t)
-    case f: Formula => freeVars(f) ++ boundVars(f)
-    case a: Program => freeVars(a) ++ boundVars(a)
+    case t: Term     => freeVars(t)
+    case f: Formula  => freeVars(f) ++ boundVars(f)
+    case a: Program  => freeVars(a) ++ boundVars(a)
+    // An isolated Function that has not been applied a FuncOf is no Term and has no variables
+    case f: Function => bottom
   }
 
 
@@ -218,7 +221,7 @@ object StaticSemantics {
     program match {
       // base cases
       case a: ProgramConst             => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
-      case a: SystemConst              => VCP(fv = allVars, bv = allVars, mbv = bottom)
+      case a: SystemConst              => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = spaceVars(a.space), bv = spaceVars(a.space), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
       case Test(f) => VCP(fv = StaticSemantics(f).fv, bv = bottom, mbv = bottom)
@@ -241,7 +244,7 @@ object StaticSemantics {
       case DifferentialProduct(a, b) => val va = progVars(a); val vb = progVars(b)
         VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
     }
-  } ensuring(r => {
+  } ensures(r => {
     val VCP(_, bv, mbv) = r; mbv.subsetOf(bv)
   }, "MBV(" + program + ") are a subset of BV(" + program + ")")
 
@@ -257,9 +260,11 @@ object StaticSemantics {
     * }}}
     */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
-    case t: Term => signature(t)
-    case f: Formula => signature(f)
-    case a: Program => signature(a)
+    case t: Term     => signature(t)
+    case f: Formula  => signature(f)
+    case a: Program  => signature(a)
+    // An isolated Function that has not been applied a FuncOf is no Term but itself still occurs
+    case f: Function => Set(f)
   }
 
   /**
@@ -355,9 +360,11 @@ object StaticSemantics {
     * Any (non-logical) symbols occurring verbatim in expression e, whether free or bound variable or function or predicate or program constant.
     */
   def symbols(e: Expression): immutable.Set[NamedSymbol] = e match {
-    case t: Term => symbols(t)
-    case f: Formula => symbols(f)
-    case a: Program => symbols(a)
+    case t: Term     => symbols(t)
+    case f: Formula  => symbols(f)
+    case a: Program  => symbols(a)
+    // An isolated Function that has not been applied a FuncOf is no Term and has no variables but itself still occurs
+    case f: Function => Set(f)
   }
 
   /**
@@ -411,7 +418,12 @@ object StaticSemantics {
 
   // helpers
 
-  /** The variables and differential symbols that are in the given state space. */
+  /** The variables and differential symbols that are in the given state space.
+    * @param space The state space whose set (lattice) of variables and differential variables to compute.
+    *              - `AnyArg` returns the [[SetLattice.allVars]].
+    *              - `Taboo(x)` returns [[SetLattice.except]](x) so all variables and differential variables
+    *              except the taboo x and x'.
+    */
   def spaceVars(space: Space): SetLattice[Variable] = space match {
     case AnyArg => SetLattice.allVars
     case Except(taboo) => SetLattice.except(taboo)

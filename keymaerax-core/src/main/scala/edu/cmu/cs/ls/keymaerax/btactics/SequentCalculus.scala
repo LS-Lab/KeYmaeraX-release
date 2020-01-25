@@ -114,11 +114,11 @@ trait SequentCalculus {
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]) */
   def cut(cut : Formula)      : InputTactic         = ProofRuleTactics.cut(cut)
-  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
+  /** cut a formula in in place of pos on the right to prove its implication on the second branch and assume it on the first. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
   def cutR(cut : Formula): DependentPositionWithAppliedInputTactic =  ProofRuleTactics.cutR(cut)
-  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]]) */
+  /** cut a formula in in place of pos on the left to prove its implication on the second branch and assume it on the first. ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]]) */
   def cutL(cut : Formula): DependentPositionWithAppliedInputTactic = ProofRuleTactics.cutL(cut)
-  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]] or [[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
+  /** cut a formula in in place of pos to prove its implication on the second branch and assume it on the first (whether pos is left or right). ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]] or [[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
   def cutLR(cut : Formula): DependentPositionWithAppliedInputTactic = ProofRuleTactics.cutLR(cut)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

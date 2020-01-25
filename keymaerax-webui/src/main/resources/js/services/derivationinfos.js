@@ -61,6 +61,23 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
         });
       return promise;
     },
+    sequentApplicableDefinitions: function(userId, proofId, nodeId) {
+      var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/listDefinitions')
+        .then(function(response) {
+          // return value gets picked up by 'then' in the controller using this service
+          return response.data;
+        });
+      return promise;
+    },
+    setDefinition: function(userId, proofId, what, repl) {
+      var data = { what: what, repl: repl };
+      var promise = $http.post('proofs/user/' + userId + '/' + proofId + '/definitions', data)
+        .then(function(response) {
+          // return value gets picked up by 'then' in the controller using this service
+          return response.data;
+        });
+      return promise;
+    },
 
     byName: function(userId, proofId, nodeId, name) {
       //@todo cache

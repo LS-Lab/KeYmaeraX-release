@@ -30,10 +30,10 @@ object StaticSemanticsTools {
     case PredicationalOf(p, arg) => boundVars(formula)
 
     // quantifier binding cases omit bound vars from fv and add bound variables to bf
-    case f: Quantified => SetLattice(f.vars) ensuring (r=> r==boundVars(Forall(f.vars,True)) && r==boundVars(Exists(f.vars,True)))
+    case f: Quantified => SetLattice(f.vars) ensures (r=> r==boundVars(Forall(f.vars,True)) && r==boundVars(Exists(f.vars,True)))
 
     // modality bounding cases omit must-bound vars from fv and add (may-)bound vars to bv
-    case f: Modal => boundVars(f.program) ensuring (r=> r==boundVars(Box(f.program,True)) && r==boundVars(Diamond(f.program,True)))
+    case f: Modal => boundVars(f.program) ensures (r=> r==boundVars(Box(f.program,True)) && r==boundVars(Diamond(f.program,True)))
 
     // special cases
     // NOTE DifferentialFormula in analogy to Differential
@@ -43,7 +43,7 @@ object StaticSemanticsTools {
     case _ => bottom
 
   }
-  //@todo ensuring(r => !formula.isInstanceOf[BinaryCompositeFormula] || r==boundVars(formula.class.apply(True,True)), "same bound variables as replacing left,right with True)
+  //@todo ensures(r => !formula.isInstanceOf[BinaryCompositeFormula] || r==boundVars(formula.class.apply(True,True)), "same bound variables as replacing left,right with True)
 
   /**
    * The set of variables that the top-level operator of this program is binding itself,
@@ -58,7 +58,7 @@ object StaticSemanticsTools {
     //@note acceptable but slightly dangerous catch-all but not soundness-critical
     case a: CompositeProgram => bottom
   }
-  //@todo ensuring(r => !formula.isInstanceOf[BinaryCompositeFormula] || r==boundVars(formula.class.apply(True,True)), "same bound variables as replacing left,right with True)
+  //@todo ensures(r => !formula.isInstanceOf[BinaryCompositeFormula] || r==boundVars(formula.class.apply(True,True)), "same bound variables as replacing left,right with True)
 
   /**
    * The set of variables that, if they occurred at formula(pos) would be bound occurrences,
@@ -160,19 +160,19 @@ object StaticSemanticsTools {
 //    else {
 //      // prepends new transitive dependencies so that they get sorted in before stuff that caused those dependencies
 //      val moreDeps = (proc.flatMap(y => dep.get(y) match {
-//        case Some(set) => (set--d).toList ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
+//        case Some(set) => (set--d).toList ensures(r => r.distinct==r && r.intersect(d).isEmpty)
 //        case None => List.empty
-//      }).distinct) ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
+//      }).distinct) ensures(r => r.distinct==r && r.intersect(d).isEmpty)
 //      moreDeps.flatMap(y => transitiveChase(moreDeps,moreDeps ++ d)).distinct ++ moreDeps ++ d
-//    } ensuring(r => r.distinct==r && d.forall(y=>r.contains(y)), "transitivize(" + proc + ", " + d + ")")
+//    } ensures(r => r.distinct==r && d.forall(y=>r.contains(y)), "transitivize(" + proc + ", " + d + ")")
     def transitiveChase(proc: immutable.List[Variable], d: immutable.List[Variable]): immutable.List[Variable] = {
       // prepends new transitive dependencies so that they get sorted in before stuff that caused those dependencies
       val moreDeps = (proc.flatMap(y => dep.get(y) match {
-        case Some(set) => (set--d).toList ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
+        case Some(set) => (set--d).toList ensures(r => r.distinct==r && r.intersect(d).isEmpty)
         case None => List.empty
-      }).distinct) ensuring(r => r.distinct==r && r.intersect(d).isEmpty)
+      }).distinct) ensures(r => r.distinct==r && r.intersect(d).isEmpty)
       (d ++ moreDeps ++ moreDeps.flatMap(y => transitiveChase(moreDeps,moreDeps ++ d)).distinct).distinct
-    } ensuring(r => r.distinct==r && d.forall(y=>r.contains(y)), "transitivize(" + proc + ", " + d + ")")
+    } ensures(r => r.distinct==r && d.forall(y=>r.contains(y)), "transitivize(" + proc + ", " + d + ")")
     dep.iterator.map(sp => sp._1->transitiveChase(sp._2.to, sp._2.to).reverse).toMap
   }
 
@@ -180,6 +180,8 @@ object StaticSemanticsTools {
   private def depend(program: Program): mutable.Map[Variable,immutable.Set[Variable]] = program match {
     // can't know so just say empty even if that's wrong
     case a: ProgramConst   => mutable.Map.empty
+    // can't know so just say empty even if that's wrong
+    case a: SystemConst    => mutable.Map.empty
     case Assign(x, e)      => mutable.Map(x->StaticSemantics.freeVars(e).symbols)
     case a: AssignAny      => mutable.Map.empty
       // empty only if ignoring control flow dependencies

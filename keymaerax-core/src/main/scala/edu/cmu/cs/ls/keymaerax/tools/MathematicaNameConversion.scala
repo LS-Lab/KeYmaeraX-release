@@ -40,7 +40,7 @@ private object MathematicaNameConversion {
       case _ => maskName(ns)
     }
     new MExpr(com.wolfram.jlink.Expr.SYMBOL, name)
-  } ensuring (r => r.symbolQ(), "symbol names expected as result")
+  } ensures (r => r.symbolQ(), "symbol names expected as result")
 
   /**
     * Converts a Mathematica name into its corresponding KeYmaera X named symbol (Variable or Function). Distinguishes
@@ -81,7 +81,7 @@ private object MathematicaNameConversion {
   }
 
   /** Masks a name, i.e., replaces _ with $u$, adds the namespace prefix kyx, and merges name and index (separated by $i$) */
-  private def maskName(ns: NamedSymbol): String = uncheckedMaskName(ns) ensuring(r => {
+  private def maskName(ns: NamedSymbol): String = uncheckedMaskName(ns) ensures(r => {
     val (name, idx) = uncheckedUnmaskName(r); name == ns.name && idx == ns.index
   }, "Unmasking a masked name should produce original unmasked name" +
     "\n Original unmasked name" + ns.prettyString +
@@ -113,7 +113,7 @@ private object MathematicaNameConversion {
   }
 
   /** Unmasks a name, i.e., adds _ for $u$, removes the namespace prefix kyx, and splits at $i$ into the name and its index. */
-  private def unmaskName(maskedName: String): (String, Option[Int]) = uncheckedUnmaskName(maskedName) ensuring(r => {
+  private def unmaskName(maskedName: String): (String, Option[Int]) = uncheckedUnmaskName(maskedName) ensures(r => {
     r._1 == "Apply" || maskName(Variable(r._1, r._2, Real)) == maskedName
   }, "Masking an unmasked name should produce original masked name" +
      "\n Original masked name " + maskedName +

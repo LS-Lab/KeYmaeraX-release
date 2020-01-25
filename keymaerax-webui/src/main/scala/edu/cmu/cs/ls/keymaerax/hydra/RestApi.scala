@@ -588,6 +588,23 @@ object RestApi extends Logging {
       }
     }}}
 
+    val definitionsList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment/ "listDefinitions") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new GetApplicableDefinitionsRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val setDefinition: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "definitions") { (userId, proofId) => { pathEnd {
+      post {
+        entity(as[String]) { params => {
+          val (what: JsString) :: (repl: JsString) :: Nil = JsonParser(params).asJsObject.getFields("what", "repl").toList
+          val request = new SetDefinitionsRequest(database, userId, proofId, what.value, repl.value)
+          completeRequest(request, t)
+        }}
+      }
+    }}}
+
     val sequentList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "listStepSuggestions") { (userId, proofId, nodeId) => { pathEnd {
       get {
         val request = new GetSequentStepSuggestionRequest(database, userId, proofId, nodeId)
@@ -829,10 +846,10 @@ object RestApi extends Logging {
 
     val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
       pathEnd {
-        get {
-          val request = new CounterExampleRequest(database, userId, proofId, nodeId)
+        get { parameters('assumptions.as[String]) { assumptions =>
+          val request = new CounterExampleRequest(database, userId, proofId, nodeId, assumptions)
           completeRequest(request, t)
-        }
+        }}
       }}
     }
 
@@ -1227,6 +1244,8 @@ object RestApi extends Logging {
     proofNodeSequent      ::
     axiomList             ::
     sequentList           ::
+    definitionsList       ::
+    setDefinition         ::
     twoPosList            ::
     derivationInfo        ::
     doAt                  ::

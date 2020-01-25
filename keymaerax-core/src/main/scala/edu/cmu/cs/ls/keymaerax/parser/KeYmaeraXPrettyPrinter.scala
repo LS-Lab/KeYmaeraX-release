@@ -17,8 +17,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
 
 import scala.collection.immutable._
 import org.typelevel.paiges._
-
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
@@ -48,7 +50,7 @@ object KeYmaeraXNoContractPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 trait BasePrettyPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string */
-  def apply(expr: Expression): String = stringify(expr) ensuring(
+  def apply(expr: Expression): String = stringify(expr) ensures(
     r => expr.kind == FunctionKind || reparse(expr, r) == expr,
     "Parse of print is identity." +
       "\nExpression: " + FullPrettyPrinter.stringify(expr) + "\t@ " + expr.getClass.getSimpleName +
@@ -76,6 +78,7 @@ trait BasePrettyPrinter extends PrettyPrinter {
     case FormulaKind => parser.formulaParser(print)
     case ProgramKind => parser.programParser(print)
     case DifferentialProgramKind => parser.differentialProgramParser(print)
+    case FunctionKind => assert(false, "No completed expressions of functionKind can be constructed"); ???
     case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
@@ -247,6 +250,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case _: PredOf => "(" + text + ")"
     case _: Pair => "(" + text + ")"
     case _: PredicationalOf => "{" + text + "}"
+    case _ => assert(false, "no parenthetical expression " + expr); ???
   }
 
   //@todo could add contract that TermAugmentor(original)(q) == term
@@ -265,7 +269,19 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     } else n.bigDecimal.toPlainString
     case FuncOf(f, c)           => f.asString + "(" + pp(q++0, c) + ")"
     // special notation
-    case Pair(l, r)             => wrap(pp(q++0, l) + ppOp(term) + pp(q++1, r), term)
+    case p: Pair                =>
+      def flattenPairs(e: Term): List[Term] = e match {
+        case Pair(l, r) => l +: flattenPairs(r)
+        case t => t :: Nil
+      }
+      val flattened = flattenPairs(p)
+      // PosInExpr for a list [a,b,c,d] ~> .0, .1.0, .1.1.0, .1.1.1, which are the binary digits of [0,2,6,7] computed as [2^1-2, 2^2-2, 2^3-2, 2^3-1]
+      val posInExpr = ListBuffer.empty[PosInExpr]
+      for (i <- flattened.indices.takeRight(flattened.size-1)) {
+        posInExpr.append(PosInExpr(((1<<i)-2).toBinaryString.toCharArray.map(_.asDigit).toList))
+      }
+      posInExpr.append(PosInExpr(((1<<posInExpr.size)-1).toBinaryString.toCharArray.map(_.asDigit).toList))
+      wrap(flattened.zipWithIndex.map({ case (p, i) => pp(q++posInExpr(i), p) }).mkString(ppOp(term)), term)
     case UnitFunctional(name,space,sort) => name + "(" + space + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => ppOp(t) + "(" + pp(q++0, Number(n)) + ")"
@@ -422,7 +438,7 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
  * with explicit statement end ``;`` operator.
   *
   * @author Andre Platzer
- * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
+ * @todo Augment with ensures postconditions that check correct reparse non-recursively.
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
@@ -498,6 +514,8 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
     case FormulaKind => sub.isInstanceOf[BinaryCompositeFormula]
     case ProgramKind => sub.isInstanceOf[BinaryCompositeProgram]
     case DifferentialProgramKind => sub.isInstanceOf[DifferentialProduct]
+    case FunctionKind => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
+    case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
   private def weight1(sub: Expression, par: BinaryComposite): Int = {
@@ -528,6 +546,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case _: PredOf => encloseText("(", doc,")")
     case _: Pair => encloseText("(", doc,")")
     case _: PredicationalOf => encloseText("{", doc,"}")
+    case _ => assert(false, "no parenthetical expression " + expr); ???
   }
 
   protected def wrapChildDoc(t: UnaryComposite, doc: Doc): Doc =
@@ -551,7 +570,12 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
     case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
-    case Pair(l, r)             => wrapDoc((Doc.lineBreak + docOf(l) + Doc.text(ppOp(term)) + Doc.lineBreak + docOf(r) + Doc.lineBreak).nested(2).grouped, term)
+    case p: Pair                =>
+      def flattenPairs(e: Term): List[Term] = e match {
+        case Pair(l, r) => l +: flattenPairs(r)
+        case t => t :: Nil
+      }
+      wrapDoc((Doc.lineBreak + flattenPairs(p).map(docOf).reduce[Doc]({ case (a, b) => a + Doc.text(ppOp(term)) + Doc.lineBreak + b + Doc.lineBreak })).nested(2).grouped, term)
     case Neg(Number(_))         => Doc.text(pp(HereP, term))
     case t: Neg if !negativeBrackets =>
       val c = pp(HereP, t.child)
@@ -611,12 +635,19 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     doc.render(margin)
   }
 
-  override def stringify(seq: Sequent): String = {
-    val doc = Doc.intercalate(Doc.line,(1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
+  def docOf(seq: Sequent) : Doc =
+    Doc.intercalate(Doc.line, (1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
       Doc.line + Doc.text(" ==> ") + Doc.line +
       Doc.intercalate(Doc.line, (1 to seq.succ.length).map(i => Doc.text(+i + ": ") + (Doc.line + docOf(seq.succ(i - 1))).nested(2)))
-    doc.render(margin)
-  }
 
+  override def stringify(seq: Sequent): String = docOf(seq).render(margin)
+
+  def docOf(prv: ProvableSig): Doc =
+    Doc.text("Conclusion:") + (Doc.line + docOf(prv.conclusion)).nested(2) +
+      Doc.line + Doc.text(prv.subgoals.length + " subgoals" + (if (prv.subgoals.length == 0) "." else ":")) + Doc.line +
+      Doc.intercalate(Doc.line, prv.subgoals.zipWithIndex.map{case (seq, i) =>
+        Doc.text("Subgoal " + i + ": ") + (Doc.line + docOf(seq).nested(2))})
+
+  def stringify(prv: ProvableSig): String = docOf(prv).render(margin)
 
 }

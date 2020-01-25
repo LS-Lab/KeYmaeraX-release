@@ -71,8 +71,8 @@ trait OpSpec extends Ordered[OpSpec] {
   /** Compare this operator specification to another one such that ``this<other`` says that ``this`` binds stronger than ``other``. */
   def compare(other: OpSpec): Int = {
     prec - other.prec
-  } /*ensuring(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
-  //@note violates this ensuring clause since two different operators can have same precedence.
+  } /*ensures(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
+  //@note violates this ensures clause since two different operators can have same precedence.
 }
 
 /** Nullary operator notation specification with a constructor. */
@@ -163,7 +163,7 @@ object OpSpec {
     Function("abs",None,Real,Real,true) ::
     Function("min",None,Tuple(Real,Real),Real,true) ::
     Function("max",None,Tuple(Real,Real),Real,true) :: Nil
-  } ensuring(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
+  } ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
   private val interpretation: Map[String,Function] = interpretedSymbols.map(f => (f.name -> f)).toMap
 
   /** Function(name,index,domain,sort) is created while filtering interpreted functions appropriately. */
@@ -283,7 +283,7 @@ object OpSpec {
   /** The operator notation of the top-level operator of ``expr`` with opcode, precedence and associativity  */
   def op(expr: Expression): OpSpec = expr match {
       //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
-      //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.
+      //@todo could add a contract ensures that constructor applied to expressions's children indeed produces expr.
     // terms
     case _: DotTerm      => sDotTerm
     case Nothing         => sNothing
@@ -340,6 +340,9 @@ object OpSpec {
     case p: Choice       => sChoice
     case p: Dual         => sDual
     case _: SystemConst  => sSystemConst
+
+    case f: Function     => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
+
   }
 
 }

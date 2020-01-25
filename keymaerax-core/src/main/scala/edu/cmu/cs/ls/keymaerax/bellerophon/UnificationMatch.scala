@@ -128,27 +128,27 @@ trait BaseMatcher extends Matcher {
   def apply(e1: Term, e2: Term): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Formula, e2: Formula): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Program, e2: Program): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = {try {
     unifier(e1, e2, unifyODE(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Sequent, e2: Sequent): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString     + "\n   with  " + e2.toString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   /** Create the unifier `us` for e1 and e2. */
   protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
@@ -601,7 +601,7 @@ private final object RenUnificationMatch extends UnificationMatchBase {
   // incomplete unification cannot succeed during REVERIFY
   override private[keymaerax] val REVERIFY = BelleExpr.RECHECK
   // Always skip unifiers except variables, which are handled by unifyVar
-  override protected def unifier(e1: Expression, e2: Expression): List[SubstRepl] = id ensuring (r => !e1.isInstanceOf[Variable])
+  override protected def unifier(e1: Expression, e2: Expression): List[SubstRepl] = id ensures (r => !e1.isInstanceOf[Variable])
   // Create unifiers for variables even if all others are skipped above
   override protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else e2 match { case _: Variable => List(SubstRepl(x1,e2.asInstanceOf[Variable])) case _ => List(SubstRepl(x1,e2))}
   override protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else e2 match { case _: DifferentialSymbol => List(SubstRepl(xp1.x,e2.asInstanceOf[DifferentialSymbol].x)) case _ => List(SubstRepl(xp1,e2))}
@@ -638,12 +638,12 @@ private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { out
   override def apply(e1: Expression, e2: Expression): Subst = { try {
     unify(e1, e2)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   override def apply(e1: Sequent, e2: Sequent): Subst = { try {
     unify(e1, e2)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   //@todo this should come from extends InsistentMatcher
   def apply(e1: Term, e2: Term): Subst       = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
@@ -721,12 +721,12 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
   override def apply(e1: Expression, e2: Expression): Subst = { try {
     unify(e1, e2)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   override def apply(e1: Sequent, e2: Sequent): Subst = { try {
     unify(e1, e2)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+  } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   //@todo this should come from extends InsistentMatcher
   def apply(e1: Term, e2: Term): Subst       = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
@@ -756,6 +756,7 @@ object NonSubstUnificationMatch extends FreshUnificationMatch {
       case prg: Program => subs.foldLeft(prg)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })
       case fml: Formula => subs.foldLeft(fml)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })
       case trm: Term => subs.foldLeft(trm)({ case (p, (what: Term, repl: Term)) => p.replaceFree(what, repl) })
+      case f: Function => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
     }
   }
 

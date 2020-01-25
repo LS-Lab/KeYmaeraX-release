@@ -44,9 +44,9 @@ object ODEInvariance {
 
   /* Stash of derived axioms */
   // Rewrite >=
-  private lazy val geq = remember("f_()>=0 <-> f_()>0 | f_()=0".asFormula, QE, namespace)
+  private[btactics] lazy val geq = remember("f_()>=0 <-> f_()>0 | f_()=0".asFormula, QE, namespace)
   // Cont with the domain constraint already refined to >= instead of >
-  private lazy val contAx =
+  private[btactics] lazy val contAx =
     remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
@@ -54,12 +54,12 @@ object ODEInvariance {
         DW(1) & G(1) & useAt("> flip")(1,0::Nil) & useAt(">= flip")(1,1::Nil) & useAt("<=")(1,1::Nil) & prop
       ), namespace)
   //iff version of uniqueness axiom
-  private lazy val uniqAx =
+  private[btactics] lazy val uniqAx =
     remember("<{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c&q(||) & r(||)}>p(||)".asFormula,
       prop <(
         cut("<{c&q(||) & r(||)}>(p(||)|p(||))".asFormula) <(
           cohide2(-3,1) & mond & prop,
-          hideR(1) & useAt("Uniq uniqueness",PosInExpr(1::Nil))(1) & prop),
+          hideR(1) & useAt("Uniq uniqueness 2",PosInExpr(1::Nil))(1) & prop),
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop),
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop)
       ),namespace)
@@ -591,7 +591,7 @@ object ODEInvariance {
       implyR(1) & implyR(1) &
         useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
         useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
-        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        andLi & useAt("Uniq uniqueness 2")(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
           implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
           cohideR(2) & implyR(1) & mond & prop), namespace)

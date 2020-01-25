@@ -28,8 +28,14 @@ import org.scalatest.time.SpanSugar._
 @UsualTest
 class ODETests extends TacticTestBase {
 
-  "ODE" should "prove x=0 -> [{x'=-x}]x=0" in withMathematica { _ =>
+  "ODE" should "prove x>0 -> [{x'=-x}]x>0" in withMathematica { _ =>
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove after unstable diffcut position" in withMathematica { _ =>
+    TactixLibrary.proveBy(
+      "(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2 ==> [{x'=v,y'=w,v'=-1*w,w'=--1*v&true}](!(x=ox&y=oy)), x=ox&y=oy".asSequent,
+      ODE(1)) shouldBe 'proved
   }
 
   it should "do a ghost with Z3" in withZ3 { _ =>

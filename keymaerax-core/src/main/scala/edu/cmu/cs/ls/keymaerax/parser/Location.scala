@@ -20,11 +20,16 @@ sealed trait Location extends Serializable {
   /** Returns the current location offset by `numLines` lines. */
   def addLines(numLines : Int) : Location
 
-  /** whether other location is adjacent to this location with no whitespace in between */
+  /** whether `other` location is adjacent right after this location with no whitespace in between */
   def adjacentTo(other: Location): Boolean = end match {
     case Region(_,_,l,c) => other.begin match {
       case Region(ol,oc,_,_) => l==ol&&c+1==oc
+      case SuffixRegion(ol,oc) => l==ol&&c+1==oc
+      case UnknownLocation => throw new IllegalArgumentException("Cannot compare adjacency with unknown regions: " + this + " compared to " + other)
     }
+    // Nothing is adjacent after a SuffixRegion that goes till the end of the file
+    case _: SuffixRegion => false
+    case UnknownLocation => throw new IllegalArgumentException("Cannot compare adjacency with unknown regions: " + this + " compared to " + other)
   }
 
   def spanTo(other: Location) = Region(this.begin.line, this.begin.column, other.begin.line, other.begin.column)

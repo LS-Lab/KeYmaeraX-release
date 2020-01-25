@@ -184,6 +184,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove x' derive var commuted" in withMathematica { qetool => check(DvariableCommuted)}
   it should "prove 'linear" in withMathematica { qetool => check(Dlinear)}
   it should "prove 'linear right" in withMathematica { qeTool => check(DlinearRight)}
+  it should "prove Uniq uniqueness 2" in {check(uniqueness2)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
   it should "prove DBX>" in withMathematica {qeTool => check(darbouxGt)}
@@ -272,6 +273,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove < & <" in withMathematica { qeTool => check(metricAndLt)}
   it should "prove <= | <=" in withMathematica { qeTool => check(metricOrLe)}
   it should "prove < | <" in withMathematica { qeTool => check(metricOrLt)}
+
+  it should "prove const congruence" in withMathematica { qeTool => check(constCongruence)}
+  it should "prove const formula congruence" in withMathematica { qeTool => check(constFormulaCongruence)}
 
   "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "tactically prove !!" in {check(doubleNegationAxiom)}

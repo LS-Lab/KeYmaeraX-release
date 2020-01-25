@@ -21,12 +21,13 @@ KeYmaera X Kernel Code Review Steps
 1. Expression.scala for correctness and compliance with section 2.1 [1]
 2. StaticSemantics.scala for correctness and compliance with section 2.4 [1]
 3. UniformSubstitution.scala for correctness and compliance with section 3.0 [1]
-4. UniformRenaming.scala for correctness
-5. Proof.scala for correctness and compliance with [1,2]
-6. AxiomBase.scala for correctness and compliance with Fig 2+3 [1] as well as [3] for sequent calculus
-7. SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala, QETool.scala, Lemma.scala
+4. USubstOne.scala for correctness and compliance with section 3.0 [4]
+5. UniformRenaming.scala for correctness
+6. Proof.scala for correctness and compliance with [1] as well as sequent calculus [2]
+7. AxiomBase.scala for correctness and compliance with Fig 2+3 [1] or hybrid games [3,4]
+8. SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala, QETool.scala, Lemma.scala
 
-If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
+If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret GPG key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
 Changes to the KeYmaera X Kernel need to be reviewed periodically in similar ways. Regular full core reviews are advised. Smaller changes will review only the differences formally (Delta Review) or informally (unmarked).
 
@@ -35,9 +36,9 @@ If there are any questions about the KeYmaera X Kernel code review or any sugges
 Extended Code Review:
 In addition to the above files, an extended code review also considers
 
-8. parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
-9. lemma package: LemmaDB.scala, LemmaDBFactory.scala, FileLemmaDB.scala for correctness
-10. critical parts of tools package: Tool*.scala, SMT*.scala, KeYmaera*.scala, Mathematica*.scala
+9. parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
+10. lemma package: LemmaDB.scala, LemmaDBFactory.scala, FileLemmaDB.scala for correctness
+11. critical parts of tools package: Tool*.scala, SMT*.scala, KeYmaera*.scala, Mathematica*.scala
 
 References
 ----------
@@ -45,21 +46,27 @@ References
 1. André Platzer. 
 A complete uniform substitution calculus for differential dynamic logic. 
 Journal of Automated Reasoning, 59(2), pp. 219-265, 2017.
-https://doi.org/10.1007/s10817-016-9385-1 http://arxiv.org/abs/1601.06183
+[DOI 10.1007/s10817-016-9385-1](https://doi.org/10.1007/s10817-016-9385-1)
 
 André Platzer. 
 A uniform substitution calculus for differential dynamic logic.
-In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.  Extended version arXiv http://arxiv.org/abs/1503.01981
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.
+[arXiv 1503.01981](http://arxiv.org/abs/1503.01981)
 
 2. André Platzer. 
 Differential dynamic logic for hybrid systems. 
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
-https://doi.org/10.1007/s10817-008-9103-8
+[DOI 10.1007/s10817-008-9103-8](https://doi.org/10.1007/s10817-008-9103-8)
 
 3. André Platzer. 
 Differential game logic. 
 ACM Trans. Comput. Log., 17(1), pages 1:1-1:52, 2015.
-https://doi.org/10.1145/2817824
+[DOI 10.1145/2817824](https://doi.org/10.1145/2817824)
+
+4. André Platzer. 
+Uniform substitution at one fell swoop. 
+In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+[DOI 10.1007/978-3-030-29436-6_25](https://doi.org/10.1007/978-3-030-29436-6_25)
 
 ------------------------------------------------------------------
 
@@ -68,12 +75,13 @@ A log of all major code reviews and the findings are reported here:
 
 Code Review Agenda Summary: Core agenda summarized in one place.
 
-  * con: program needs SpaceDependent(Except(v)). DONE
+  * DONE con: program needs SpaceDependent(Except(v)).
   * DI: system generalization can only have bound variables of the ODE free in postcondition (and no resulting '' by data structure invariant), just like DI itself has p(x). Vectorial DI systems.
   * DX skip: no ' in postcondition (no bound differential symbols). Vectors suffice to say [X'=f(X)&q(X)]p(X) -> (q(X)->p(X))
-  * VDG: vectorial DG with vectorial quantifier.
+  * DONE VDG: vectorial DG with vectorial quantifier. DONE indirectly by DG-based differential invariance tactic.
   * DG: singularities from division by zero disallowed, also via interpreted functions.
-
+  * DONE Barcan axiom: could add if SystemConst became SpaceDependent.
+  
 Code Review: KeYmaera X Core: 2016-08-17
 
   * Verdict: stable

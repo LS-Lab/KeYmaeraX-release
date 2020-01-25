@@ -57,7 +57,7 @@ object QELogger extends Logging {
       case b: BinaryCompositeFormula => 1 + measure(b.left) + measure(b.right)
       case q: Quantified => 1 + measure(q.child)
       // Not allowed in QE calls
-      // case m: Modal => 1 + measure(m.program) + measure(m.child)
+      case m: Modal => throw new IllegalArgumentException("Modalities cannot occur in real arithmetic quantifier elimination: " + f)
       // case p: PredOf => 1 + measure(p.child)
       // case p: PredicationalOf => 1 + measure(p.child)
     }

@@ -153,6 +153,7 @@ sealed trait RenUSubst extends (Expression => Expression) {
     case f: Formula => apply(f)
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
+    case f: Function => throw new SubstitutionClashException(toString, "", "" + e, "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
   }
 
   def apply(t: Term): Term
@@ -162,7 +163,7 @@ sealed trait RenUSubst extends (Expression => Expression) {
   /** Apply everywhere in the sequent. */
   def apply(s: Sequent): Sequent = {
     try {
-      //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
+      //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensures contracts checked.
       Sequent(s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
@@ -254,17 +255,17 @@ final class FastUSubstAboveURen(private[bellerophon] val subsDefsInput: immutabl
   // direct application mechanism literally via [[USubstRen.apply]]
 
   //@todo could optimize empty usubst or empty rens to be just identity application right away
-  override def apply(t: Term): Term = new Predef.Ensuring({ effective(t)
-  }) ensuring (r => sameAsCore(t, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t)
+  override def apply(t: Term): Term = new Ensures({ effective(t)
+  }) ensures (r => sameAsCore(t, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t)
 
-  override def apply(f: Formula): Formula = new Predef.Ensuring({ effective(f)
-  }) ensuring (r => sameAsCore(f, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f)
+  override def apply(f: Formula): Formula = new Ensures({ effective(f)
+  }) ensures (r => sameAsCore(f, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f)
 
-  override def apply(p: Program): Program = new Predef.Ensuring({ effective(p)
-  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+  override def apply(p: Program): Program = new Ensures({ effective(p)
+  }) ensures (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
 
-  override def apply(p: DifferentialProgram): DifferentialProgram = new Predef.Ensuring({ effective(p)
-  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+  override def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p)
+  }) ensures (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
 
   /** Check that same result as from core if both defined */
   private def sameAsCore(e: Expression, r: Expression): Boolean = {
@@ -476,17 +477,17 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
   override def toString: String = "DirectUSubstAboveRen{" + subsDefs.mkString(", ") + ";" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + "}"
 
   //@todo could optimize empty usubst or empty rens to be just identity application right away
-  def apply(t: Term): Term = new Predef.Ensuring({ effective(t)
-  }) ensuring (r => sameAsCore(t, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t)
+  def apply(t: Term): Term = new Ensures({ effective(t)
+  }) ensures (r => sameAsCore(t, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + t)
 
-  def apply(f: Formula): Formula = new Predef.Ensuring({ effective(f)
-  }) ensuring (r => sameAsCore(f, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f)
+  def apply(f: Formula): Formula = new Ensures({ effective(f)
+  }) ensures (r => sameAsCore(f, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + f)
 
-  def apply(p: Program): Program = new Predef.Ensuring({ effective(p)
-  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+  def apply(p: Program): Program = new Ensures({ effective(p)
+  }) ensures (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
 
-  def apply(p: DifferentialProgram): DifferentialProgram = new Predef.Ensuring({ effective(p)
-  }) ensuring (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
+  def apply(p: DifferentialProgram): DifferentialProgram = new Ensures({ effective(p)
+  }) ensures (r => sameAsCore(p, r), "fast tactical renaming substitution has same result as slower core, if defined: " + this + " on " + p)
 
   /** Check that same result as from core if both defined */
   private def sameAsCore(e: Expression, r: Expression): Boolean = {

@@ -16,10 +16,10 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -42,9 +42,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 /**
@@ -78,7 +79,7 @@ sealed trait Request extends Logging {
       } catch {
         //@note Avoids "Boxed Error" without error message by wrapping unchecked exceptions here.
         //      The web server translates exception into 500 response, the web UI picks them up in the error alert dialog
-        // assert, ensuring
+        // assert, ensures
         case a: AssertionError => throw new Exception(
           "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + a.getMessage, a)
         // require
@@ -221,7 +222,7 @@ class FailedRequest(userId: String, msg: String, cause: Throwable = null) extend
   def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
-class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, assumptions: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t => t match {
         case FuncOf(func, _) if fn.sort == Real => func == fn
@@ -244,6 +245,14 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
   }
 
   override protected def doResultingResponses(): List[Response] = {
+    val json = assumptions.parseJson.asJsObject.fields.get("additional")
+    val additionalAssumptions: Option[Formula] = try {
+      json.map(_.convertTo[String].asFormula)
+    } catch {
+      case ex: ParseException => return ParseErrorResponse("Expected assumptions as a formula, but got " + json.getOrElse("<empty>"),
+        ex.expect, ex.found, ex.getDetails, ex.loc, ex) :: Nil
+    }
+
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => new ErrorResponse("Unknown node " + nodeId)::Nil
@@ -255,24 +264,36 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
           new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
         }
 
-        def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): List[CounterExampleResponse] = {
+        @tailrec
+        def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): List[Response] = {
           val sequent = node.goal.get
-          val fml = sequent.toFormula
-          if (fml.isFOL) {
-            if (StaticSemantics.symbols(fml).isEmpty) {
+          if (sequent.isFOL) {
+            if (StaticSemantics.symbols(sequent).isEmpty) {
               //@note counterexample on false (e.g., after QE on invalid formula)
               node.parent match {
                 case Some(parent) => getCex(parent, cexTool)
                 case None => new CounterExampleResponse("cex.none") :: Nil
               }
             } else {
-              findCounterExample(fml, cexTool) match {
-                //@todo return actual sequent, use collapsiblesequentview to display counterexample
-                case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-                case None => new CounterExampleResponse("cex.none") :: Nil
+              val skolemized = TactixLibrary.proveBy(sequent,
+                SaturateTactic(TactixLibrary.alphaRule | TactixLibrary.allR('R) | TactixLibrary.existsL('L)))
+              val fml = skolemized.subgoals.map(_.toFormula).reduceRight(And)
+              val withAssumptions = additionalAssumptions match {
+                case Some(a) => Imply(a, fml)
+                case None => fml
+              }
+              try {
+                findCounterExample(withAssumptions, cexTool) match {
+                  //@todo return actual sequent, use collapsiblesequentview to display counterexample
+                  case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+                  case None => new CounterExampleResponse("cex.none") :: Nil
+                }
+              } catch {
+                case ex: ToolException => new ErrorResponse("Error executing counterexample tool", ex) :: Nil
               }
             }
           } else {
+            val fml = sequent.toFormula
             /* TODO: Case on this instead */
             val qeTool: QETool = ToolProvider.qeTool().get
             val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
@@ -1469,6 +1490,9 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
     // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
       AgendaItem(n.id.toString, AgendaItem.nameOf(n), proofId))
+    // add unexpanded functions, predicates, programs of the open goals of all leaves to the proof session
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    session(proofId) = leaves.flatMap(_.parent).foldLeft(proofSession)(RequestHelper.updateProofSessionDefinitions)
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed, marginLeft, marginRight) :: Nil
   }
 }
@@ -1674,15 +1698,14 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
   }
 }
 
-class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position)
+class GetApplicableAxiomsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
-
+    if (tree.isClosed) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
-      case Some((tactics, inputs)) => new ApplicableAxiomsResponse(tactics, inputs) :: Nil
-      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs) :: Nil
+      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     }
   }
 }
@@ -1707,6 +1730,80 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
       case None => DerivationInfo.allInfo.map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
     }
     ApplicableAxiomsResponse(infos, Map.empty) :: Nil
+  }
+}
+
+/** Gets the definitions that can be expanded at node `nodeId`. */
+class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+  extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    if (tree.isClosed) return ApplicableDefinitionsResponse(Nil) :: Nil
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
+      case Some(symbols) =>
+        val applicable: Map[NamedSymbol, (Signature, Option[InputSignature])] = symbols.
+          filter({ case _: Function => true case _: ProgramConst => true case _ => false }).
+          flatMap(s => {
+            val defs = proofSession.defs.find(s.name, s.index)
+            defs._1 match {
+              case Some(f) => Some(s -> (f, defs._2))
+              case None => None
+            }
+          }).toMap
+        // name, name expression (what), optional repl, optional plaintext definition from the model file
+        val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
+          // functions, predicates, and programs with definition
+          case (s: Function, ((domain, sort, repl, _), insig)) if repl.isDefined =>
+            val arg = insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
+            sort match {
+              case Real => (s, FuncOf(s, arg), repl, insig)
+              case Bool => (s, PredOf(s, arg), repl, insig)
+            }
+          case (s: ProgramConst, ((_, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
+          // functions, predicates, and programs without definition
+          case (s: Function, ((domain, sort, None, _), _)) =>
+            val arg = domain.map({ case edu.cmu.cs.ls.keymaerax.core.Unit => Nothing case d => d.toDots(0)._1}).getOrElse(Nothing)
+            sort match {
+              case Real => (s, FuncOf(s, arg), None, None)
+              case Bool => (s, PredOf(s, arg), None, None)
+            }
+          case (s: ProgramConst, ((_, _, None, _), _)) => (s, s, None, None)
+        })
+        ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
+      case None => ApplicableDefinitionsResponse(Nil) :: Nil
+    }
+  }
+}
+
+class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, what: String, repl: String)
+  extends UserProofRequest(db, userId, proofId) with WriteRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val proofSession = session(proofId).asInstanceOf[ProofSession]
+    Try(what.asExpr).toEither match {
+      case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'what': " + ex.getMessage)) :: Nil
+      case Right(e) =>
+        val (name: String, index: Option[Int], domain: Option[Sort], sort: Sort) = e match {
+          case FuncOf(Function(n, i, d, s, _), _) =>
+            // uninterpreted predicates parse as functions when parsed standalone
+            proofSession.defs.asNamedSymbols.find(ns => ns.name == n && ns.index == i) match {
+              case Some(ns: Function) if ns.domain == d => (n, i, Some(d), ns.sort)
+              case None => (n, i, Some(d), s)
+            }
+          case PredOf(Function(n, i, d, s, _), _) => (n, i, Some(d), s)
+          case ProgramConst(n, _) => (n, None, None, Trafo)
+        }
+
+        Try(repl.asExpr).toEither match {
+          case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage)) :: Nil
+          case Right(r) if r.sort == sort =>
+            session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
+              ((name, index) -> (domain, sort, Some(r), UnknownLocation))))
+            BooleanResponse(flag = true) :: Nil
+          case Right(r) if r.sort != sort =>
+            BooleanResponse(flag = false, Some("Expected a replacement of sort " + sort + ", but got " + r.sort)) :: Nil
+        }
+    }
   }
 }
 
@@ -1784,51 +1881,65 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
   private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXArchiveParser.Declaration): Response = {
     try {
-      val (arg, exprs) = input match {
-        case BelleTermInput(value, Some(arg: TermArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg: FormulaArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg: VariableArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg: ExpressionArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(OptionArg(arg))) => arg -> (KeYmaeraXParser(value) :: Nil)
-        case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => arg -> value.split(",").map(KeYmaeraXParser).toList
-      }
-
-      val sortMismatch = (arg, exprs) match {
-        case (_: TermArg, (t: Term) :: Nil) => arg.convert(t).right.toOption
-        case (_: FormulaArg, (f: Formula) :: Nil) => arg.convert(f).right.toOption
-        case (_: VariableArg, (v: Variable) :: Nil) => arg.convert(v).right.toOption
-        case (_: ExpressionArg, (e: Expression) :: Nil) => arg.convert(e).right.toOption
-        case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
-        case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
-      }
-
-      sortMismatch match {
-        case None =>
-          val symbols = StaticSemantics.symbols(sequent)
-          val paramFV: Set[NamedSymbol] =
-            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet -- defs.asFunctions - Function("old", None, Real, Real)
-
-          val (hintFresh, allowedFresh) = arg match {
-            case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
-            case _ => (paramFV -- symbols, arg.allowsFresh) //@todo would need other inputs to check
-          }
-
-          if (hintFresh.size > allowedFresh.size) {
-            val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
-              filter(_._2.isDefined)
-            if (fnVarMismatch.isEmpty) {
-              BooleanResponse(flag = false, Some("Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
-                (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
-                else ", is it a typo?")))
-            } else BooleanResponse(flag=true)
-          } else {
-            BooleanResponse(flag=true)
-          }
-        case Some(mismatch) => BooleanResponse(flag=false, Some(mismatch))
+      input match {
+        case BelleTermInput(value, Some(arg: TermArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: FormulaArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: VariableArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: ExpressionArg)) => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg: SubstitutionArg)) => checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(OptionArg(arg))) if  arg.isInstanceOf[SubstitutionArg] =>
+          checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
+        case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => checkExpressionInput(arg, value.split(",").map(KeYmaeraXParser).toList, sequent, defs)
       }
     } catch {
       case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
     }
+  }
+
+  /** Checks expression inputs. */
+  private def checkExpressionInput[E <: Expression](arg: ArgInfo, exprs: List[E], sequent: Sequent,
+                                                    defs: KeYmaeraXArchiveParser.Declaration) = {
+    val sortMismatch = (arg, exprs) match {
+      case (_: TermArg, (t: Term) :: Nil) => arg.convert(t).right.toOption
+      case (_: FormulaArg, (f: Formula) :: Nil) => arg.convert(f).right.toOption
+      case (_: VariableArg, (v: Variable) :: Nil) => arg.convert(v).right.toOption
+      case (_: ExpressionArg, (e: Expression) :: Nil) => arg.convert(e).right.toOption
+      case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
+      case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
+    }
+
+    sortMismatch match {
+      case None =>
+        val symbols = StaticSemantics.symbols(sequent) ++ defs.asNamedSymbols + Function("old", None, Real, Real)
+        val paramFV: Set[NamedSymbol] =
+          exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
+
+        val (hintFresh, allowedFresh) = arg match {
+          case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
+          case _ => (paramFV -- symbols, arg.allowsFresh) //@todo would need other inputs to check
+        }
+
+        if (hintFresh.size > allowedFresh.size) {
+          val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
+            filter(_._2.isDefined)
+          if (fnVarMismatch.isEmpty) {
+            BooleanResponse(flag = false, Some("Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
+              (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
+              else ", is it a typo?")))
+          } else BooleanResponse(flag=true)
+        } else {
+          BooleanResponse(flag=true)
+        }
+      case Some(mismatch) => BooleanResponse(flag=false, Some(mismatch))
+    }
+  }
+
+  /** Checks substitution inputs. */
+  private def checkSubstitutionInput(arg: ArgInfo, exprs: List[SubstitutionPair], sequent: Sequent,
+                                     defs: KeYmaeraXArchiveParser.Declaration) = {
+    //@note parsed as substitution pair is all we check for now
+    BooleanResponse(flag=true)
   }
 
   override protected def doResultingResponses(): List[Response] = {
@@ -1871,6 +1982,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(_:SubstitutionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
@@ -1890,6 +2002,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Right(t: InputPositionTacticInfo) => (t.codeName, pos, None)
         case Right(t: TwoPositionTacticInfo) => (t.codeName, pos, pos2)
         case Right(t: InputTwoPositionTacticInfo) => (t.codeName, pos, pos2)
+        case Right(t: BuiltinInfo) => (t.codeName, None, None)
         case Right(t) => (t.codeName, None, None)
       }
       else (belleTerm, pos, pos2)
@@ -1964,7 +2077,11 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
             try {
               val proofSession = session(proofId).asInstanceOf[ProofSession]
-              val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator), proofSession.defs)
+              val tacticString = fullExpr(sequent)
+              val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator),
+                // expand on demand, but do not auto-expand definitions
+                if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(tacticString).isDefined) proofSession.defs
+                else KeYmaeraXArchiveParser.Declaration(Map.empty))
 
               val appliedExpr: BelleExpr = (pos, pos2, expr) match {
                 case (None, None, _: AtPosition[BelleExpr]) =>
@@ -2047,9 +2164,12 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
     val proofInfo = db.getProofInfo(proofId)
     proofInfo.tactic match {
       case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
-      case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
+      case Some(_) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
-        val tactic = BelleParser(t)
+        val proofSession = session(proofId).asInstanceOf[ProofSession]
+        val tactic =
+          if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
+          else BelleParser.parseWithInvGen(t, None, proofSession.defs, expandAll = true) // backwards compatibility
 
         def atomic(name: String): String = {
           val tree: ProofTree = DbProofTree(db, proofId)
@@ -2127,6 +2247,8 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
             case Some(node) =>
               //@todo construct provable (expensive!)
               //assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
+              val proofSession = session(proofId).asInstanceOf[ProofSession]
+              session(proofId) = RequestHelper.updateProofSessionDefinitions(proofSession, node)
               TaskResultResponse(proofId, node, marginLeft, marginRight, progress=true)
           }
 //          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
@@ -2244,7 +2366,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
-    val conclusionFormula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
+    val entry = KeYmaeraXArchiveParser.parse(model.keyFile, parseTactics=false).head
+    val conclusionFormula = entry.defs.exhaustiveSubst[Formula](entry.model.asInstanceOf[Formula])
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val provable = tree.root.provable
     if (!provable.isProved) new ErrorResponse("Proof verification failed: proof " + proofId + " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString)::Nil
@@ -2647,6 +2770,18 @@ object RequestHelper {
       val codeName = tn.split("\\(").head
       Try(RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName)).getOrElse(tn)
     })(proofId)(tacticName, parentInTrace, branch)
+  }
+
+  /** Updates the definitions in `proofSession` to include the unexpanded symbols of the open goals in `node`. */
+  def updateProofSessionDefinitions(proofSession: ProofSession, node: ProofTreeNode): ProofSession = {
+    val signatures = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.signature)).toSet
+    val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s))
+    val newDefs: Map[KeYmaeraXArchiveParser.Name, KeYmaeraXArchiveParser.Signature] = undefined.map({
+      case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, UnknownLocation)
+      case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, UnknownLocation)
+      case u => (u.name, u.index) -> (None, u.sort, None, UnknownLocation) // should not happen
+    }).toMap
+    proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs))
   }
 
 }

@@ -30,9 +30,10 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case Times(a, b) => eval(a) * eval(b)
     case Power(a, b) =>
       (eval(a), eval(b)) match {
-        case (x, y) if y.isValidInt && y >= 0 => x pow y.toIntExact
+        case (x, y) if y.isValidInt && y >= 1 => x pow y.toIntExact
+        case (x, y) if x != 0 && y == 0 => BigDecimal(1)
         case (x, y) if x == BigDecimal(10) && y.isValidInt => BigDecimal(1).bigDecimal.scaleByPowerOfTen(y.toIntExact)
-        case _ => throw new IllegalArgumentException("Power neither of 10 nor by nonnegative integer")
+        case (x, y) => throw new IllegalArgumentException("Power " + x + " ^ " + y + " can not be computed exactly")
       }
     case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
     case FuncOf(m, Pair(a, b)) if m == minF => eval(a) min eval(b)

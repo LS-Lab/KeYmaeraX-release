@@ -10,54 +10,82 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 
 object TacticHelper {
 
-  def freshIndexInFormula(name: String, f: Formula): Option[Int] =
-    if (symbols(f).exists(_.name == name)) {
-      val vars = symbols(f).map(n => (n.name, n.index)).filter(_._1 == name)
-      require(vars.nonEmpty)
-      val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
-        acc match {
-          case Some(a) => i match {
-            case Some(b) => if (a < b) Some(b) else Some(a)
-            case None => Some(a)
-          }
-          case None => i
-        })
-      maxIdx match {
-        case None => Some(0)
-        case Some(a) => Some(a + 1)
-      }
-    } else None
+  /** Returns a fresh index for `name` in formula `f`. */
+  def freshIndexInFormula(name: String, f: Formula): Option[Int] = {
+    var maxIdx: Option[Int] = None
 
-  def symbols(f: Formula): Set[NamedSymbol] = {
-    var symbols = Set[NamedSymbol]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-        case v: Variable => symbols += v; Left(None)
-        case FuncOf(fn: Function, _) => symbols += fn; Left(None)
-        case _ => Left(None)
+    def max(n: NamedSymbol, max: Option[Int]): Option[Int] = {
+      if (n.name == name) maxIdx match {
+        case Some(i) => Some(Math.max(maxIdx.getOrElse(-1), n.index.getOrElse(-1)))
+        case None => Some(n.index.getOrElse(-1))
+      }
+      else max
+    }
+
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        maxIdx = e match {
+          case PredOf(fn, _)          => max(fn, maxIdx)
+          case PredicationalOf(fn, _) => max(fn, maxIdx)
+          case p: UnitPredicational   => max(p, maxIdx)
+          case d@DotFormula           => max(d, maxIdx)
+          case _ => maxIdx
+        }
+        Left(None)
+      }
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        maxIdx = e match {
+          case v: Variable       => max(v, maxIdx)
+          case FuncOf(fn, _)     => max(fn, maxIdx)
+          case d: DotTerm        => max(d, maxIdx)
+          case f: UnitFunctional => max(f, maxIdx)
+          case _ => maxIdx
+        }
+        Left(None)
+      }
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
+        maxIdx = e match {
+          case c: ProgramConst             => max(c, maxIdx)
+          case c: SystemConst              => max(c, maxIdx)
+          case c: DifferentialProgramConst => max(c, maxIdx)
+          case _ => maxIdx
+        }
+        Left(None)
       }
     }, f)
-    symbols
+
+    maxIdx.map(_ + 1)
   }
 
-  def names(s: Sequent): IndexedSeq[NamedSymbol] = s.ante.flatMap(symbols) ++ s.succ.flatMap(symbols)
+  /** Returns the symbols in `f`. */
+  @deprecated("Use StaticSemantics.symbols instead")
+  def symbols(f: Formula): Set[NamedSymbol] = StaticSemantics.symbols(f)
 
+  /** Returns the symbols in sequent `s`. */
+  @deprecated("Use StaticSemantics.symbols instead")
+  def names(s: Sequent): Set[NamedSymbol] = StaticSemantics.symbols(s)
+
+  /** Returns a fresh index for `name` in sequent `s`. */
   def freshIndexInSequent(name: String, s: Sequent): Option[Int] =
-    if (names(s).exists(_.name == name))
-      (s.ante.map(freshIndexInFormula(name, _)) ++ s.succ.map(freshIndexInFormula(name, _))).max
-    else None
+    if (s.ante.isEmpty && s.succ.isEmpty) None
+    // optimization with fold seems to not makes any difference, not even on huge sequents
+    else (s.ante ++ s.succ).map(freshIndexInFormula(name, _)).max
 
-  def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T =
-    if (symbols(f).exists(_.name == t.name)) t match {
-      case BaseVariable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
-      case Function(fName, _, fDomain, fSort, false) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
-    } else t
-
-  def freshNamedSymbol[T <: NamedSymbol](t: T, s: Sequent): T =
-    if (names(s).exists(_.name == t.name)) t match {
-      case BaseVariable(vName, _, vSort) => Variable(vName, freshIndexInSequent(vName, s), vSort).asInstanceOf[T]
-      case Function(fName, _, fDomain, fSort, false) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
-    } else t
+  /** Returns a named symbol with `t.name` and fresh index provided by `freshIndex`.  */
+  def freshNamedSymbol[T <: NamedSymbol](t: T, freshIndex: String => Option[Int]): T =
+    freshIndex(t.name) match {
+      case Some(i) => t match {
+        case BaseVariable(vName, _, vSort) => Variable(vName, Some(i), vSort).asInstanceOf[T]
+        case Function(fName, _, fDomain, fSort, false) => Function(fName, Some(i), fDomain, fSort).asInstanceOf[T]
+        case DotTerm(s, _) => DotTerm(s, Some(i)).asInstanceOf[T]
+        case _ => throw new IllegalArgumentException("Cannot obtain fresh symbol, since " + t.getClass + " does not have index")
+      }
+      case None => t
+    }
+  /** Returns a named symbol with name `t.name` and fresh index in formula `f`. */
+  def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T = freshNamedSymbol(t, freshIndexInFormula(_, f))
+  /** Returns a named symbol with name `t.name` and fresh index in sequent `s`. */
+  def freshNamedSymbol[T <: NamedSymbol](t: T, s: Sequent): T = freshNamedSymbol(t, freshIndexInSequent(_, s))
 
   /** Returns a list of formulas that are constants so should get as invariants for free by [[HilbertCalculus.V]]. */
   def propertiesOfConstants(s: Sequent, pos: SeqPos) : List[Formula] = {

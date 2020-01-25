@@ -115,6 +115,13 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     link.qeEvidence("f()>0 -> f>=0".asFormula)._1 shouldBe "f>=0|f()<=0".asFormula
   }
 
+  it should "prove functions with a decimal number argument correctly" in withMathematica { link =>
+    link.qeEvidence("f(0.1)>0 -> f(0.1)>=0".asFormula)._1 shouldBe True
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      link.qeEvidence("abs(0.1)=0.1".asFormula)._1 shouldBe True
+    }
+  }
+
   "Arithmetic" should "translate x--2 as subtraction of -2 (i.e. +2)" in withMathematica { link =>
     link.qeEvidence("5 < 5--2".asFormula)._1 shouldBe True
   }
