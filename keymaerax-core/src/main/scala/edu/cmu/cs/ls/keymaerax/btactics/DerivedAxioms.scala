@@ -1471,6 +1471,7 @@ object DerivedAxioms extends Logging {
       notR(1) &
       useAt("all eliminate", PosInExpr(0::Nil))(-2) &
       prop
+    // also derives from existsDualAxiom & converseImply & doubleNegation & useAt("all eliminate")
   )
 
   /**

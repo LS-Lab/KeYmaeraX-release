@@ -87,7 +87,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
   it should "prove all eliminate" taggedAs OptimisticTest ignore {check(allEliminateAxiom)}
-  it should "prove exists eliminate" taggedAs OptimisticTest ignore {check(existsEliminate)}
+  it should "prove exists eliminate" in {check(existsEliminate)}
   it should "prove !exists" in {check(notExists)}
   it should "prove !all" in {check(notAll)}
 //  it should "prove !all2" in {check(notAll2)}

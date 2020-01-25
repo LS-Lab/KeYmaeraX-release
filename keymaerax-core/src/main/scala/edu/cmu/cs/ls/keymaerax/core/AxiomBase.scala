@@ -531,10 +531,6 @@ Axiom "all eliminate y"
   (\forall y_ p(||)) -> p(||)
 End.
 
-Axiom "exists eliminate"
-  p(||) -> \exists x_ p(||)
-End.
-
 Axiom "exists eliminate y"
   p(||) -> \exists y_ p(||)
 End.
