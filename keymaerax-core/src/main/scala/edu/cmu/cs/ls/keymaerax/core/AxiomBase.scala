@@ -330,6 +330,7 @@ Axiom "DE differential effect (system) y"
    [{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)
 End.
 
+/* @todo soundness requires only vectorial x in p(||) */
 Axiom "DI differential invariance"
   ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
@@ -371,7 +372,7 @@ Axiom "DS& differential equation solution"
   [{x_'=c()&q(x_)}]p(|x_'|) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(|x_'|)))
 End.
 
-/** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
+/* @todo soundness requires no primes in p(||) */
 Axiom "DX differential skip"
   [{c&q(||)}]p(||) -> (q(||)->p(||))
 End.
