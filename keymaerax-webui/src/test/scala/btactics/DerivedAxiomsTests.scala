@@ -273,6 +273,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <= | <=" in withMathematica { qeTool => check(metricOrLe)}
   it should "prove < | <" in withMathematica { qeTool => check(metricOrLt)}
 
+  it should "prove const congruence" in withMathematica { qeTool => check(constCongruence)}
+  it should "prove const formula congruence" in withMathematica { qeTool => check(constFormulaCongruence)}
+
   "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "tactically prove !!" in {check(doubleNegationAxiom)}
   it should "tactically prove exists dual" in {check(existsDualAxiom)}

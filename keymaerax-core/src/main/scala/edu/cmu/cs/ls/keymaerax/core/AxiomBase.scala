@@ -552,18 +552,6 @@ Axiom "vacuous all quantifier"
 End.
 
 /**
- * CONGRUENCE AXIOMS (for constant terms)
- */
-
-Axiom "const congruence"
-  s() = t() -> ctxT_(s()) = ctxT_(t())
-End.
-
-Axiom "const formula congruence"
-  s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
-End.
-
-/**
  * Z3 compatibility axioms (derivable with Mathematica).
  */
 

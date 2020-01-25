@@ -530,8 +530,6 @@ object DerivationInfo {
 
   private lazy val miscInfos: List[DerivationInfo] = List(
     // more
-    new CoreAxiomInfo("const congruence", "CCE", "constCongruence", false, {case () => HilbertCalculus.useAt("const congruence") }),
-    new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", false, {case () => HilbertCalculus.useAt("const formula congruence") }),
     // Note: only used to implement Dskipd
     new CoreAxiomInfo("DX differential skip", "DX", "DX", true, {case () => throw new UnsupportedOperationException("DX differential skip is not available for general-purpose use") }),
 
@@ -794,7 +792,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("= sym", "equalSym", "equalSym", unsure, {case () => useAt(DerivedAxioms.equalSym)}),
     new DerivedAxiomInfo("!= sym", "notEqualSym", "notEqualSym", unsure, {case () => useAt(DerivedAxioms.notEqualSym)}),
     new DerivedAxiomInfo("> antisym", "greaterNotSym", "greaterNotSym", unsure, {case () => useAt(DerivedAxioms.greaterNotSym)}),
-    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)})
+    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)}),
+    new DerivedAxiomInfo("const congruence", "CCE", "constCongruence", false, {case () => HilbertCalculus.useAt(DerivedAxioms.constCongruence)}),
+    new DerivedAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", false, {case () => HilbertCalculus.useAt(DerivedAxioms.constFormulaCongruence)})
   )
 
   private lazy val sequentCalculusInfos: List[DerivationInfo] = List(
