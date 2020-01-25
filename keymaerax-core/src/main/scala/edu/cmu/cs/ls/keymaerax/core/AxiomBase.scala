@@ -531,10 +531,6 @@ Axiom "all eliminate y"
   (\forall y_ p(||)) -> p(||)
 End.
 
-Axiom "vacuous all quantifier"
-  (\forall x_ p()) <-> p()
-End.
-
 /**
  * Z3 compatibility axioms (derivable with Mathematica).
  */

@@ -518,7 +518,7 @@ object DerivationInfo {
   private lazy val foInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt("all instantiate")}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", unsure, {case () => HilbertCalculus.allDist}),
-    new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.allV}),
+    new DerivedAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.vacuousAllAxiom)}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", unsure, {case () => HilbertCalculus.existsV}),
     new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", unsure, {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", unsure, {case () => posnil}),
@@ -622,6 +622,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("exists stutter", "exists stutter", "existsStutter", unsure, {case () => useAt(DerivedAxioms.existsStutter)}),
     new DerivedAxiomInfo("[] post weaken", "[]PW", "postWeaken", unsure, {case () => useAt(DerivedAxioms.postconditionWeaken)}),
     new DerivedAxiomInfo("<-> reflexive", ("↔R","<->R"), "equivReflexive", false, {case () => useAt(DerivedAxioms.equivReflexiveAxiom)}),
+    new DerivedAxiomInfo("<-> expand", ("↔2→←","<->2-><-"), "equivExpand", false, {case () => useAt(DerivedAxioms.equivExpand)}),
     new DerivedAxiomInfo("-> distributes over &", ("→∧", "->&"), "implyDistAnd", unsure, {case () => useAt(DerivedAxioms.implyDistAndAxiom)}),
     new DerivedAxiomInfo("-> distributes over <->", ("→↔","-><->"), "implyDistEquiv", unsure, {case () => useAt(DerivedAxioms.implyDistEquivAxiom)}),
     new DerivedAxiomInfo("-> weaken", ("→W","->W"), "implyWeaken", unsure, {case () => useAt(DerivedAxioms.implWeaken)}),

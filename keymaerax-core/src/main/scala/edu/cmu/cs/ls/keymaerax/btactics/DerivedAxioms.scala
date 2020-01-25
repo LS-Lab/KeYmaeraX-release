@@ -236,6 +236,24 @@ object DerivedAxioms extends Logging {
     boxTrue(1)
   )
 
+  /**
+    * {{{
+    *   Axiom "vacuous all quantifier"
+    *     (\forall x_ p()) <-> p()
+    *   End.
+    * }}}
+    * @Note Half of this is a base axiom officially but already derives from [:*] and V
+    */
+  lazy val vacuousAllAxiom = derivedAxiom("vacuous all quantifier",
+    Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ p()) <-> p()".asFormula)),
+    useAt(equivExpand)(1) & andR(1) <(
+      byUS("all eliminate")
+      ,
+      useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, 1::Nil) &
+      byUS(vacuousAxiom)
+      )
+  )
+
 
   /**
     * Rule "CT term congruence".
@@ -345,6 +363,14 @@ object DerivedAxioms extends Logging {
       (Close(AntePos(0),SuccPos(0)), 1)
       // left branch
       (Close(AntePos(0),SuccPos(0)), 0)
+  )
+
+  /** Convert <-> to two implications:
+    * (p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())
+    */
+  lazy val equivExpand = derivedAxiom("<-> expand",
+    "(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())".asFormula,
+    prop
   )
 
   /**
