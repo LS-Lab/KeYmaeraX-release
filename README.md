@@ -20,11 +20,11 @@ The easiest way to run KeYmaera X is to download binaries
 
 First ensure that the following software is installed
 - [Java Development Kit JDK](https://java.com/download)
-  (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ is also compatible with Java 1.8)
+  (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended.)
 - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Previous versions may work.
+  (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
   The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
-  Without active Mathemetica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
+  Without active Mathematica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
 
 See [more details on installation, usage, FAQ](http://keymaeraX.org/download.html)
 
