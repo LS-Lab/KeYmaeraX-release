@@ -554,9 +554,8 @@ End.
 /**
  * Z3 compatibility axioms (derivable with Mathematica).
  */
-
- Axiom "dgZeroEquilibrium"
-   x=0 & n>0 -> [{x'=c*x^n}]x=0
- End.
+Axiom "dgZeroEquilibrium"
+  x=0 & n>0 -> [{x'=c*x^n}]x=0
+End.
 """
 }
