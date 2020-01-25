@@ -110,7 +110,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove := assign dual" in {check(assignDualAxiom)}
   it should "prove all substitute" in withMathematica { qeTool => check(allSubstitute)}
   it should "prove [:=] equational" in withMathematica { qeTool => check(assignbEquationalAxiom)}
-//  it should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
+  it should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
   it should "prove exists and" in {check(existsAndAxiom)}
   it should "prove [:=] assign exists" in {check(assignbImpliesExistsAxiom)}
   it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}

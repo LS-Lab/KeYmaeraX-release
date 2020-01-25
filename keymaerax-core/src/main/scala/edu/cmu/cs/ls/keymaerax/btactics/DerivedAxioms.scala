@@ -845,14 +845,15 @@ object DerivedAxioms extends Logging {
     * @Derived by ":= assign dual" from "<:=> assign equality".
     * @todo does not derive yet
     */
-//  lazy val assignbExistsAxiom =
-//    derivedAxiom("[:=] assign equality exists",
-//      Sequent(IndexedSeq(), IndexedSeq("[x_:=f_();]p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
+  lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
+      "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
+      useAt(assignDual2Axiom, PosInExpr(1::Nil))(1, 0::Nil) &
+      byUS(assigndEqualityAxiom)
 //      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
 //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
 //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
 //        useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
-//    )
+    )
 
   /**
     * {{{Axiom "[:=] assign exists".
@@ -984,7 +985,7 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     *
-    * @Derived
+    * @see [[assignDual2Axiom]]
     */
   lazy val assignDualAxiom = derivedAxiom(":= assign dual",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> [x_:=f();]p(x_)".asFormula)),
@@ -999,13 +1000,17 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     *
-    * @Derived
+    * @see [[assignDualAxiom]]
     */
   lazy val assignDual2Axiom = derivedAxiom(":= assign dual 2",
-    Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula)),
-    useAt("[:=] assign equality exists")(1, 1::Nil) &
-      useAt("<:=> assign equality")(1, 0::Nil) &
+    "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
+    useAt("[:=] self assign", PosInExpr(1::Nil))(1, 0::1::Nil) &
+      assignd(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
+// NOTE alternative proof:
+//    useAt("[:=] assign equality exists")(1, 1::Nil) &
+//      useAt("<:=> assign equality")(1, 0::Nil) &
+//      byUS(equivReflexiveAxiom)
   )
 
   /**
