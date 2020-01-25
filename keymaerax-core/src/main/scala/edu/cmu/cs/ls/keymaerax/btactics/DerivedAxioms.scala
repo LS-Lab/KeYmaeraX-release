@@ -552,6 +552,16 @@ object DerivedAxioms extends Logging {
     implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
 
   /**
+    * {{{Axiom "all distribute".
+    *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
+    * }}}
+    */
+  lazy val allDistributeElim = derivedAxiom("all distribute elim",
+    Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p(||)->q(||))) -> ((\\forall x_ p(||))->(\\forall x_ q(||)))".asFormula)),
+    //@todo direct instead of useAt or fix useAt to avoid stutter renaming
+    implyR(1) & implyR(1) & allR(1) & useAt("all eliminate")(-2) & useAt("all eliminate")(-1) & prop)
+
+  /**
     * {{{Axiom "all quantifier scope".
     *    (\forall x (p(x) & q())) <-> ((\forall x p(x)) & q())
     * End.
@@ -1522,6 +1532,21 @@ object DerivedAxioms extends Logging {
       useAt("all eliminate y", PosInExpr(0::Nil))(-2) &
       prop
     // also derives from existsDualAxiom & converseImply & doubleNegation & useAt("all eliminate y")
+  )
+
+  /**
+    * {{{Axiom "all then exists".
+    *    (\forall x p(||)) -> (\exists x p(||))
+    * End.
+    * }}}
+    *
+    * @see [[forallThenExistsAxiom]]
+    */
+  lazy val allThenExists = derivedAxiom("all then exists",
+    "(\\forall x_ p_(||)) -> (\\exists x_ p_(||))".asFormula,
+    useAt(existsEliminate, PosInExpr(1::Nil))(1, 1::Nil) &
+    useAt("all eliminate", PosInExpr(0::Nil))(1, 0::Nil) &
+    implyR(1) & close(-1,1)
   )
 
   /**

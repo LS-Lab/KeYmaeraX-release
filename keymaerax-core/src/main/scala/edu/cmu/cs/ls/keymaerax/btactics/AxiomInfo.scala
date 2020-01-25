@@ -518,9 +518,11 @@ object DerivationInfo {
   private lazy val foInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt("all instantiate")}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", unsure, {case () => HilbertCalculus.allDist}),
+    new DerivedAxiomInfo("all distribute elim", ("∀→","all->"), "allDistElim", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allDistributeElim)}),
     new DerivedAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.vacuousAllAxiom)}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", unsure, {case () => HilbertCalculus.existsV}),
     new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", unsure, {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
+    new DerivedAxiomInfo("all then exists", ("∀→∃","allThenExists"), "allThenExists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allThenExists)}),
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", unsure, {case () => posnil}),
     new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", unsure, {case () => posnil}),
     new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", unsure, {case () => posnil}),
