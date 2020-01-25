@@ -433,6 +433,14 @@ object DerivedAxioms extends Logging {
       byUS(equivReflexiveAxiom)
   )
 
+  lazy val existsDualAxiomy = derivedAxiom("exists dual y",
+    Sequent(IndexedSeq(), IndexedSeq("(!\\forall y_ (!p_(||))) <-> \\exists y_ p_(||)".asFormula)),
+    useAt("all dual y", PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      useAt(doubleNegationAxiom.fact)(1, 0::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
   /**
     * {{{Axiom "!exists".
     *   (!\exists x (p(x))) <-> \forall x (!p(x))
@@ -1472,6 +1480,22 @@ object DerivedAxioms extends Logging {
       useAt("all eliminate", PosInExpr(0::Nil))(-2) &
       prop
     // also derives from existsDualAxiom & converseImply & doubleNegation & useAt("all eliminate")
+  )
+
+  /**
+    * {{{Axiom "exists eliminate y"
+    *    p(||) -> \exists y_ p(||)
+    * End.
+    * }}}
+    */
+  lazy val existsEliminatey = derivedAxiom("exists eliminate y",
+    Sequent(IndexedSeq(), IndexedSeq("p_(||) -> (\\exists y_ p_(||))".asFormula)),
+    useAt(existsDualAxiomy.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+      implyR(1) &
+      notR(1) &
+      useAt("all eliminate y", PosInExpr(0::Nil))(-2) &
+      prop
+    // also derives from existsDualAxiom & converseImply & doubleNegation & useAt("all eliminate y")
   )
 
   /**

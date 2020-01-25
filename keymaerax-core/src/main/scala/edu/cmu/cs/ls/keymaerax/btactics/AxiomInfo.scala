@@ -533,7 +533,7 @@ object DerivationInfo {
     // Note: only used to implement Dskipd
     new CoreAxiomInfo("DX differential skip", "DX", "DX", true, {case () => throw new UnsupportedOperationException("DX differential skip is not available for general-purpose use") }),
 
-    new CoreAxiomInfo("exists eliminate y", ("∃ey","existsey"), "existsey", unsure, {case () => HilbertCalculus.useAt("exists eliminate y")}),
+    new DerivedAxiomInfo("exists eliminate y", ("∃ey","existsey"), "existsey", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.existsEliminatey)}),
 
     // compatibility axioms (derivable with Mathematica, but not with Z3)
     CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", unsure, _ => TactixLibrary.useAt("dgZeroEquilibrium"))
@@ -578,6 +578,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("\\exists& exists and", "∃∧", "existsAnd", unsure, {case () => useAt(DerivedAxioms.existsAndAxiom)}),
     new DerivedAxiomInfo("\\forall-> forall implies", "∀→", "forallImplies", unsure, {case () => useAt(DerivedAxioms.forallImpliesAxiom)}),
     new DerivedAxiomInfo("exists dual", ("∃d","existsd"), "existsDual", unsure, {case () => useAt(DerivedAxioms.existsDualAxiom)}),
+    new DerivedAxiomInfo("exists dual y", ("∃d","existsdy"), "existsDualy", unsure, {case () => useAt(DerivedAxioms.existsDualAxiomy)}),
     new DerivedAxiomInfo("' linear", ("l′","l'"), "Dlinear", true, {case () => useAt(DerivedAxioms.Dlinear)}),
     new DerivedAxiomInfo("' linear right", ("l′","l'"), "DlinearRight", true, {case () => useAt(DerivedAxioms.DlinearRight)}),
     new DerivedAxiomInfo("!& deMorgan"
