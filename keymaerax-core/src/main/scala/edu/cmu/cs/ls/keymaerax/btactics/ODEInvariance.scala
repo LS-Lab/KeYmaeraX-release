@@ -59,7 +59,7 @@ object ODEInvariance {
       prop <(
         cut("<{c&q(||) & r(||)}>(p(||)|p(||))".asFormula) <(
           cohide2(-3,1) & mond & prop,
-          hideR(1) & useAt("Uniq uniqueness",PosInExpr(1::Nil))(1) & prop),
+          hideR(1) & useAt("Uniq uniqueness 2",PosInExpr(1::Nil))(1) & prop),
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop),
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop)
       ),namespace)
@@ -591,7 +591,7 @@ object ODEInvariance {
       implyR(1) & implyR(1) &
         useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
         useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
-        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        andLi & useAt("Uniq uniqueness 2")(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
           implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
           cohideR(2) & implyR(1) & mond & prop), namespace)

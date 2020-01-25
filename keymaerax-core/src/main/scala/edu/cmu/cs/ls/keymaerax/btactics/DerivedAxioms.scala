@@ -2573,7 +2573,7 @@ object DerivedAxioms extends Logging {
 
 
   /**
-    * {{{Axiom "Uniq uniqueness"
+    * {{{Axiom "Uniq uniqueness 2"
     *    <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c & q1(||)&q2(||)}>(p1(||) | p2 (||))
     * End.
     * }}}
