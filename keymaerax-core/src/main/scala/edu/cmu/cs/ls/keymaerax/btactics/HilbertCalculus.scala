@@ -83,6 +83,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
+    //@todo use allDist & DerivedAxioms.allGeneralize
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{

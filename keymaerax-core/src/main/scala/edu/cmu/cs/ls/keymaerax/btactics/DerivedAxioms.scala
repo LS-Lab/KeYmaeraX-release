@@ -557,9 +557,8 @@ object DerivedAxioms extends Logging {
     * }}}
     */
   lazy val allDistributeElim = derivedAxiom("all distribute elim",
-    Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p(||)->q(||))) -> ((\\forall x_ p(||))->(\\forall x_ q(||)))".asFormula)),
-    //@todo direct instead of useAt or fix useAt to avoid stutter renaming
-    implyR(1) & implyR(1) & allR(1) & useAt("all eliminate")(-2) & useAt("all eliminate")(-1) & prop)
+    Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p_(||)->q_(||))) -> ((\\forall x_ p_(||))->(\\forall x_ q_(||)))".asFormula)),
+    implyR(1) & implyR(1) & ProofRuleTactics.skolemizeR(1) & useAt("all eliminate")(-1) & useAt("all eliminate")(-2) & prop)
 
   /**
     * {{{Axiom "all quantifier scope".
@@ -1841,7 +1840,7 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     *
-    * @Derived
+    * @see [[allThenExists]]
     */
   lazy val forallThenExistsAxiom = derivedAxiom("\\forall->\\exists",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ p_(x_)) -> (\\exists x_ p_(x_))".asFormula)),

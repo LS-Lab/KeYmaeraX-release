@@ -95,8 +95,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove ![]" in {check(notBox)}
   it should "prove !<>" in {check(notDiamond)}
   it should "prove all distribute" in {check(allDistributeAxiom)}
-  it should "prove all distribute elim" in {check(allDistributeElim)}
   it should "prove all then exists" in {check(allThenExists)}
+  it should "prove all distribute elim" in {check(allDistributeElim)}
   it should "prove equiv expand" in {check(equivExpand)}
   it should "prove box dual" in {check(boxAxiom)}
   it should "prove V vacuous" in {check(vacuousAxiom)}
