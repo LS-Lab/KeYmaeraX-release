@@ -75,11 +75,32 @@ trait HilbertCalculus extends UnifyUSCalculus {
     SequentCalculus.cohideR(pos) & DLBySubst.G
     )
 
-  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation.
+    * {{{
+    *      p(x) |- q(x)
+    *   ---------------------------------
+    *   \forall x p(x) |- \forall x q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
-  /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)` */
+  /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
+    * {{{
+    *      p(x) |- q(x)
+    *   ------------------- M[.]
+    *   [a]p(x) |- [a]q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
   lazy val monb               : BelleExpr         = byUS("[] monotone")
-  /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)` */
+  /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
+    * {{{
+    *      p(x) |- q(x)
+    *   ------------------- M
+    *   [a]p(x) |- [a]q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
   lazy val mond               : BelleExpr         = byUS("<> monotone")
 
   //

@@ -769,17 +769,25 @@ trait UnifyUSCalculus {
 
   /**
     * CMon(pos) at the indicated position within an implication reduces contextual implication `C{o}->C{k}` to argument implication `o->k` for positive C.
+    * Contextual monotonicity proof rule.
     * {{{
     *   |- o -> k
     *   ------------------------- for positive C{.}
     *   |- C{o} -> C{k}
     * }}}
+    * {{{
+    *   |- k -> o
+    *   ------------------------- for negative C{.}
+    *   |- C{o} -> C{k}
+    * }}}
     *
-    * @param inEqPos the position *within* the two sides of the implication at which the context DotFormula happens.
+    * @param inEqPos the position *within* the two sides C{.} of the implication at which the context DotFormula happens.
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(Context)]]
     * @see [[UnifyUSCalculus.CEat())]]
+    * @see [[HilbertCalculus.monb]]
+    * @see [[HilbertCalculus.mond]]
     */
   def CMon(inEqPos: PosInExpr): InputTactic = "CMonCongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -799,12 +807,24 @@ trait UnifyUSCalculus {
     }
   })
 
-  /** Convenience CMon with hiding. */
+  /** Convenience CMon first hiding other context.
+    * {{{
+    *     |- o -> k
+    *   ------------------------- for positive C{.}
+    *   G |- C{o} -> C{k}, D
+    * }}}
+    * {{{
+    *     |- k -> o
+    *   ------------------------- for negative C{.}
+    *   G |- C{o} -> C{k}, D
+    * }}}
+    * @see [[CMon()]]
+    */
   def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
-        require(pos.isSucc, "Expected CMon in succedent, but got " + pos.prettyString)
+        require(pos.isSucc, "Expected CMon in succedent, but got position " + pos.prettyString)
         cohideR(pos.top) & CMon(PosInExpr(pos.inExpr.pos.tail))
       }
     }
