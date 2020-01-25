@@ -38,7 +38,7 @@ parameters `-mathkernel` and `-jlink`. Example parameters that are appropriate w
 Mathematica is installed in the default location are provided below.
 
 #### Default Configuration Parameters per Operating System
-Mac OS, 64bit, Mathematica 10.4+
+macOS, 64bit, Mathematica 10.4+
 * `-mathkernel /Applications/Mathematica.app/Contents/MacOS/MathKernel`
 * `-jlink /Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64`
 
