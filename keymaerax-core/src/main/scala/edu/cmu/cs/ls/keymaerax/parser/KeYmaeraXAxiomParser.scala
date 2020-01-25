@@ -23,22 +23,19 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode)
     logger.debug("Tokens are: " + tokens)
     try {
-      val axioms = parseAxioms(tokens)
-      //@note axiom file does not declare symbols
-//      assert(KeYmaeraXParser.LAX || axioms.forall(ax => KeYmaeraXDeclarationsParser.typeAnalysis(decls, ax._2)), "type analysis of axioms")
-      axioms
-    } catch {case e: ParseException => throw e.inContext("axiom file"/*input*/)}
+      parseAxioms(tokens)
+    } catch {case e: ParseException => throw e.inContext("<AxiomBase>"/*input*/)}
   }
 
 
   /**
-   * Very simple -- just read until AXIOM_END.
+   * Parse all axioms from input stream till EOF.
    * @param input Token string for the axiom file.
    * @return A list of axiom names and the associated formulas.
    */
-  def parseAxioms(input: TokenStream): List[(String, Formula)] = {
+  private def parseAxioms(input: TokenStream): List[(String, Formula)] = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
-    require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axion block but found " + input.head)
+    require(input.head.tok.equals(AXIOM_BEGIN), "expected axiom file contents to begin with Axiom block.\nFound: " + input.head)
     val (nextAxiom, nextFormula, remainder) = parseNextAxiom(input)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
       List((nextAxiom, nextFormula))
@@ -46,9 +43,14 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
       (nextAxiom, nextFormula) +: parseAxioms(remainder)
   }
 
-  def parseNextAxiom(input: TokenStream): (String, Formula, TokenStream) = {
-    require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axiom block.")
-    require(input.tail.head.tok.isInstanceOf[DOUBLE_QUOTES_STRING], "expected ALP block to have a string as a name")
+  /**
+    * Parse one axiom till AXIOM_END from input stream
+    * @param input
+    * @return named axiom along with remaining token stream.
+    */
+  private def parseNextAxiom(input: TokenStream): (String, Formula, TokenStream) = {
+    require(input.head.tok.equals(AXIOM_BEGIN), "expected axiom file contents to begin with Axiom block.\nFound: " + input.head)
+    require(input.tail.head.tok.isInstanceOf[DOUBLE_QUOTES_STRING], "expected axiom file content block to have a string as a name.\nFound: " + input.tail.head)
 
     val name = input.tail.head match {
       case Token(DOUBLE_QUOTES_STRING(x),_) => x
@@ -59,16 +61,15 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
     val (axiomTokens, remainderTokens) =
       //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME, 3rd is optional .
       input.tail.tail.span(_.tok != END_BLOCK) match {
-        case (Token(PERIOD, _) :: a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
         case (a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
-        case (a, Token(END_BLOCK, _) :: r) => (a, r)
+        case e@_ => throw ParseException("Lexicographically incomplete axiom: " + name, e._1.head.loc)
       }
 
     try {
       val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
       (name, axiom, remainderTokens)
     } catch {
-      case e: ParseException => throw e.inContext(input.toString, " Error occurred while parsing formula associated with axiom named " + name)
+      case e: ParseException => throw e.inContext(input.toString, "Error occurred while parsing formula associated with axiom named " + name)
       case e: AssertionError => throw new AssertionError(e.getMessage + " Error occurred while parsing formula associated with axiom named " + name)
     }
   }

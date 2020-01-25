@@ -257,256 +257,256 @@ private[core] object AxiomBase extends Logging {
     */
   private[core] def loadAxiomString() : String =
 """
-Axiom "<> diamond".
+Axiom "<> diamond"
   ![a;]!p(||) <-> <a;>p(||)
 End.
 
-Axiom "[:=] assign".
+Axiom "[:=] assign"
   [x_:=f();]p(x_) <-> p(f())
 End.
 
-Axiom "[:=] assign equality".
+Axiom "[:=] assign equality"
   [x_:=f();]p(||) <-> \forall x_ (x_=f() -> p(||))
 End.
 
-Axiom "[:=] assign equality y".
+Axiom "[:=] assign equality y"
   [y_:=f();]p(||) <-> \forall y_ (y_=f() -> p(||))
 End.
 
-Axiom "[:=] assign equality exists".
+Axiom "[:=] assign equality exists"
   [x_:=f();]p(||) <-> \exists x_ (x_=f() & p(||))
 End.
 
-Axiom "[:=] self assign".
+Axiom "[:=] self assign"
   [x_:=x_;]p(||) <-> p(||)
 End.
 
-Axiom "[:=] self assign y".
+Axiom "[:=] self assign y"
   [y_:=y_;]p(||) <-> p(||)
 End.
 
-Axiom "[':=] differential assign".
+Axiom "[':=] differential assign"
   [x_':=f();]p(x_') <-> p(f())
 End.
 
-Axiom "[:*] assign nondet".
+Axiom "[:*] assign nondet"
   [x_:=*;]p(||) <-> \forall x_ p(||)
 End.
 
-Axiom "[?] test".
+Axiom "[?] test"
   [?q();]p() <-> (q() -> p())
 End.
 
-Axiom "[++] choice".
+Axiom "[++] choice"
   [a;++b;]p(||) <-> ([a;]p(||) & [b;]p(||))
 End.
 
-Axiom "[;] compose".
+Axiom "[;] compose"
   [a;b;]p(||) <-> [a;][b;]p(||)
 End.
 
-Axiom "[*] iterate".
+Axiom "[*] iterate"
   [{a;}*]p(||) <-> (p(||) & [a;][{a;}*]p(||))
 End.
 
 
-Axiom "DW base".
+Axiom "DW base"
   [{c&q(||)}]q(||)
 /* [x'=f(x)&q(x);]q(x) THEORY */
 End.
 
-Axiom "DE differential effect".
+Axiom "DE differential effect"
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   [{x_'=f(x_)&q(x_)}]p(||) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(||)
 End.
 
-Axiom "DE differential effect (system)".
+Axiom "DE differential effect (system)"
   /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
- Axiom "DE differential effect (system) y".
+Axiom "DE differential effect (system) y"
    /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
    [{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)
- End.
+End.
 
- Axiom "DI differential invariance".
+Axiom "DI differential invariance"
   ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */
-Axiom "DG differential ghost".
+Axiom "DG differential ghost"
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}]p(|y_|)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
 /* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
-Axiom "DG differential ghost constant".
+Axiom "DG differential ghost constant"
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
 End.
-Axiom "DG differential ghost constant all".
+Axiom "DG differential ghost constant all"
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
 End.
 
-Axiom "DG inverse differential ghost".
+Axiom "DG inverse differential ghost"
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
   /* [{x_'=f(x_)&q(x_)}]p(x_) <-> \forall y_ [{y_'=a(x_)*y+b(x_),x_'=f(x_)&q(x_)}]p(x_) */
 End.
 
-Axiom "DG inverse differential ghost implicational".
+Axiom "DG inverse differential ghost implicational"
   [{c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=a(||),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 
 /* @todo: , commute should be derivable from this + ghost */
-Axiom ", sort".
+Axiom ", sort"
   [{c,d,e&q(||)}]p(||) <-> [{c,e,d&q(||)}]p(||)
 End.
 
-Axiom ", commute".
+Axiom ", commute"
   [{c,d&q(||)}]p(||) <-> [{d,c&q(||)}]p(||)
 End.
 
-Axiom "DS& differential equation solution".
+Axiom "DS& differential equation solution"
   [{x_'=c()&q(x_)}]p(|x_'|) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(|x_'|)))
 End.
 
 /** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
-Axiom "DX differential skip".
+Axiom "DX differential skip"
   [{c&q(||)}]p(||) -> (q(||)->p(||))
 End.
 
-Axiom "DIo open differential invariance >".
+Axiom "DIo open differential invariance >"
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
 
-Axiom "DV differential variant >=".
+Axiom "DV differential variant >="
   <{c&true}>f(||)>=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
 End.
 
-Axiom "DMP differential modus ponens".
+Axiom "DMP differential modus ponens"
   ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
 End.
 
-Axiom "Uniq uniqueness".
+Axiom "Uniq uniqueness"
   <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c&q1(||) & q2(||)}>(p1(||) | p2 (||))
 End.
 
-Axiom "Cont continuous existence".
+Axiom "Cont continuous existence"
   f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=0
 End.
 
-Axiom "RI& closed real induction >=".
+Axiom "RI& closed real induction >="
   [{c{|t_|}&q(|t_|)}]f(|t_|)>=0 <->
   (q(|t_|) ->f(|t_|)>=0) &
   [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
 
-Axiom "c()' derive constant fn".
+Axiom "c()' derive constant fn"
   c()' = 0
 End.
 
-Axiom "x' derive var".
+Axiom "x' derive var"
   (x_)' = x_'
 End.
 
-Axiom "-' derive neg".
+Axiom "-' derive neg"
   (-f(||))' = -((f(||))')
 End.
 
-Axiom "+' derive sum".
+Axiom "+' derive sum"
   (f(||) + g(||))' = f(||)' + g(||)'
 End.
 
-Axiom "-' derive minus".
+Axiom "-' derive minus"
   (f(||) - g(||))' = f(||)' - g(||)'
 End.
 
-Axiom "*' derive product".
+Axiom "*' derive product"
   (f(||) * g(||))' = f(||)'*g(||) + f(||)*g(||)'
 End.
 
-Axiom "/' derive quotient".
+Axiom "/' derive quotient"
   (f(||) / g(||))' = (f(||)'*g(||) - f(||)*g(||)') / (g(||)^2)
 End.
 
-Axiom "chain rule".
+Axiom "chain rule"
 	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = f(y_)' * g(x_)' )
 End.
 
-Axiom "^' derive power".
+Axiom "^' derive power"
 	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*(f(||)')) <- c()!=0
 End.
 
-Axiom "=' derive =".
+Axiom "=' derive ="
   (f(||) = g(||))' <-> f(||)' = g(||)'
 End.
 
-Axiom ">=' derive >=".
+Axiom ">=' derive >="
   (f(||) >= g(||))' <-> f(||)' >= g(||)'
 End.
 
-Axiom ">' derive >".
+Axiom ">' derive >"
   (f(||) > g(||))' <-> f(||)' >= g(||)'
   /* sic! easier */
 End.
 
-Axiom "<=' derive <=".
+Axiom "<=' derive <="
   (f(||) <= g(||))' <-> f(||)' <= g(||)'
 End.
 
-Axiom "<' derive <".
+Axiom "<' derive <"
   (f(||) < g(||))' <-> f(||)' <= g(||)'
   /* sic! easier */
 End.
 
-Axiom "!=' derive !=".
+Axiom "!=' derive !="
   (f(||) != g(||))' <-> f(||)' = g(||)'
   /* sic! */
 End.
 
-Axiom "&' derive and".
+Axiom "&' derive and"
   (p(||) & q(||))' <-> p(||)' & q(||)'
 End.
 
-Axiom "|' derive or".
+Axiom "|' derive or"
   (p(||) | q(||))' <-> p(||)' & q(||)'
   /* sic! yet <- */
 End.
 
-Axiom "forall' derive forall".
+Axiom "forall' derive forall"
   (\forall x_ p(||))' <-> \forall x_ p(||)'
 End.
 
-Axiom "exists' derive exists".
+Axiom "exists' derive exists"
   (\exists x_ p(||))' <-> \forall x_ p(||)'
   /* sic! yet <- */
 End.
 
 /** HYBRID PROGRAMS NOT HYBRID GAMES. */
 
-Axiom "<d> dual".
+Axiom "<d> dual"
   <{a;}^@>p(||) <-> !<a;>!p(||)
 End.
 
-Axiom "VK vacuous".
+Axiom "VK vacuous"
   (p() -> [a;]p()) <- [a;]true
 End.
 
-Axiom "[]T system".
+Axiom "[]T system"
   [a{|^@|};]true
 End.
 
-Axiom "K modal modus ponens".
+Axiom "K modal modus ponens"
   [a{|^@|};](p(||)->q(||)) -> ([a{|^@|};]p(||) -> [a{|^@|};]q(||))
 End.
 
-Axiom "I induction".
+Axiom "I induction"
   /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(||) -> [a;] p(||))) -> (p(||) -> [{a;}*]p(||)) THEORY */
   (p(||) & [{a{|^@|};}*](p(||) -> [a{|^@|};] p(||))) -> [{a{|^@|};}*]p(||)
 End.
 
-/*Axiom "B Barcan".
+/*Axiom "B Barcan"
   [a{|^@x_|};]\forall x_ p(x_) <-> \forall x_ [a{|^@x_|};]p(x_)
 End.*/
 
@@ -514,40 +514,40 @@ End.*/
  * FIRST-ORDER QUANTIFIER AXIOMS
  */
 
-Axiom "all dual".
+Axiom "all dual"
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
 End.
 
-Axiom "all dual y".
+Axiom "all dual y"
   (!\exists y_ !p(||)) <-> \forall y_ p(||)
 End.
 
-Axiom "all dual time".
+Axiom "all dual time"
   (!\exists t_ !p(||)) <-> \forall t_ p(||)
 End.
 
-Axiom /*\\foralli */ "all instantiate".
+Axiom /*\\foralli */ "all instantiate"
   (\forall x_ p(x_)) -> p(f())
 End.
 
 /* consequence of "all instantiate" @note generalized "all instantiate" */
-Axiom "all eliminate".
+Axiom "all eliminate"
   (\forall x_ p(||)) -> p(||)
 End.
 
-Axiom "all eliminate y".
+Axiom "all eliminate y"
   (\forall y_ p(||)) -> p(||)
 End.
 
-Axiom "exists eliminate".
+Axiom "exists eliminate"
   p(||) -> \exists x_ p(||)
 End.
 
-Axiom "exists eliminate y".
+Axiom "exists eliminate y"
   p(||) -> \exists y_ p(||)
 End.
 
-Axiom "vacuous all quantifier".
+Axiom "vacuous all quantifier"
   (\forall x_ p()) <-> p()
 End.
 
@@ -555,11 +555,11 @@ End.
  * CONGRUENCE AXIOMS (for constant terms)
  */
 
-Axiom "const congruence".
+Axiom "const congruence"
   s() = t() -> ctxT_(s()) = ctxT_(t())
 End.
 
-Axiom "const formula congruence".
+Axiom "const formula congruence"
   s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
 End.
 
@@ -567,7 +567,7 @@ End.
  * Z3 compatibility axioms (derivable with Mathematica).
  */
 
- Axiom "dgZeroEquilibrium".
+ Axiom "dgZeroEquilibrium"
    x=0 & n>0 -> [{x'=c*x^n}]x=0
  End.
 """
