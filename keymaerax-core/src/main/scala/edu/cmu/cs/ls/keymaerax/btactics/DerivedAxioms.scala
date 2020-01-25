@@ -2572,6 +2572,25 @@ object DerivedAxioms extends Logging {
   //)
 
 
+  /**
+    * {{{Axiom "Uniq uniqueness"
+    *    <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c & q1(||)&q2(||)}>(p1(||) | p2 (||))
+    * End.
+    * }}}
+    */
+  lazy val uniqueness2 = derivedAxiom("Uniq uniqueness 2",
+    "<{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c & q1(||)&q2(||)}>(p1(||) | p2 (||))".asFormula,
+    cutR("<{c&q1(||)}>(p1(||)|p2(||)) & <{c&q2(||)}>p2(||) -> <{c&q1(||)&q2(||)}>(p1(||)|p2(||))".asFormula)(1) <(
+      cutR("<{c&q1(||)}>(p1(||)|p2(||)) & <{c&q2(||)}>(p1(||)|p2(||)) -> <{c&q1(||)&q2(||)}>(p1(||)|p2(||))".asFormula)(1) <(
+        byUS("Uniq uniqueness")
+        ,
+        CMon(PosInExpr(0::1::1::Nil)) & implyR(1) & orR(1) & close(-1,2)
+        )
+      ,
+      CMon(PosInExpr(0::0::1::Nil)) & implyR(1) & orR(1) & close(-1,1)
+      )
+  )
+
   // real arithmetic
 
   /**
