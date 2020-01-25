@@ -356,8 +356,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <= refl"  in {check{lessEqualRefl}}
   it should "prove >= refl"  in {check{greaterEqualRefl}}
 
-  it should "prove = sym"  in {check{equalSym}}
-  it should "prove != sym"  in {check{equalSym}}
+  it should "prove = sym"  in withMathematica { qeTool => check{equalSym}}
+  it should "prove != sym"  in withMathematica { qeTool => check{equalSym}}
   it should "prove > antisym"  in {check{greaterNotSym}}
   it should "prove < antisym"  in {check{lessNotSym}}
 }
