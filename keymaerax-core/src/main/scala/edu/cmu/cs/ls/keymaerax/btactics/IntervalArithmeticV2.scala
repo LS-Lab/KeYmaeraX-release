@@ -729,6 +729,7 @@ object IntervalArithmeticV2 {
     require(seq.succ.length == 1, who + " requires exactly one formula in the succedent.")
 
   private def intervalArithmeticComparison(precision: Int, qeTool: QETool) = new BuiltInTactic("ANON") {
+    val notSupportedMessage = "intervalArithmetic requires either of <=,<,>,=> in the succedent"
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "intervalArithmeticComparison")
       val sequent = provable.subgoals(0)
@@ -767,9 +768,11 @@ object IntervalArithmeticV2 {
               proveCompBoth(qeTool,
                 gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
                 provable, G_prv, ff_prv)
+            case _ =>
+              throw new BelleThrowable(notSupportedMessage)
           }
         case _ =>
-          throw new BelleThrowable("intervalArithmetic requires either of <=,<,>,=> in the succedent")
+          throw new BelleThrowable(notSupportedMessage)
       }
     }
   }
@@ -832,7 +835,6 @@ object IntervalArithmeticV2 {
                 useAt(DerivedAxioms.notGreaterEqual, PosInExpr(0 :: Nil))(pos)
               case _ => unsupportedError(fml)
             }
-          case Equal(f, g) => nil
           case Less(a, b) => nil
           case LessEqual(a, b) => nil
           case Greater(a, b) => nil
@@ -887,21 +889,26 @@ object IntervalArithmeticV2 {
     case fml: PredOf => List(fml.child)
     case fml: PredicationalOf => terms_of(fml.child)
     case fml: ComparisonFormula => List(fml.left, fml.right)
+    case _ => List()
   }
 
   val intervalCut : DependentPositionTactic = "intervalCut" by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
       case Some(t: Term) => intervalCutTerms(List(t))
-      case _ => throw new BelleThrowable("intervalCut needs to be called on a ComparisonFormula or a Term")
+      case _ => throw new BelleThrowable("intervalCut needs to be called on a Formula or a Term")
     }
   }
 
   /** Tactics appear to be a bit slow */
   object Slow {
 
-    def usubst_append(ts: List[(Term, Term)])(uso: Option[Subst]) = uso match {
-      case Some(us) => us ++ RenUSubst(USubst(ts.map(s => (SubstitutionPair(s._1, s._2)))))
+    def usubst_append(ts: List[(Term, Term)])(uso: Option[Subst]) = {
+      val renUsubst = RenUSubst(USubst(ts.map(s => (SubstitutionPair(s._1, s._2)))))
+      uso match {
+        case Some(us) => us ++ renUsubst
+        case None => renUsubst
+      }
     }
 
     def negDown(bound: Term) =
