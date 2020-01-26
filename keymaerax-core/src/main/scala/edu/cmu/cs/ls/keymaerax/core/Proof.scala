@@ -493,8 +493,8 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
   final def apply(subst: USubst): Provable =
     try {
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
-      //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 27."
-      //@note case isProved is covered by "Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 26." and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
+      //@note case subst.freeVars.isEmpty is covered by Theorem 27 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017
+      //@note case isProved is covered by Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26 and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
       if (usubstChurch) {
         insist(subst.freeVars.isEmpty || isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
         new Provable(subst(conclusion), subgoals.map(s => subst(s)))
@@ -505,6 +505,30 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
           new Provable(subst.applyAllTaboo(conclusion), subgoals.map(s => subst.applyAllTaboo(s)))
       }
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
+
+  /**
+    * Apply a (possibly semantic) uniform renaming to a (locally sound!) Provable.
+    * Uniformly renames by transposition both subgoals and conclusion with the same uniform renaming `ren`.
+    * {{{
+    *    G1 |- D1 ... Gn |- Dn              r(G1) |- r(D1) ... r(Gn) |- r(Dn)
+    *   -----------------------     =>     -----------------------------------   (URen)
+    *            G |- D                                r(G) |- r(D)
+    * }}}
+    *
+    * @param ren The uniform renaming to be used on the premises and conclusion of this Provable.
+    * @return The Provable resulting from applying `ren` to our subgoals and conclusion.
+    * @requires !ren.semantic || isProved
+    * @author Andre Platzer
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
+    * @note soundness-critical: For uniform renaming purposes semantic renaming is sound but not locally sound. The kernel is easier when keeping everything locally sound.
+    * @see [[UniformRenaming]]
+    */
+  final def apply(ren: URename): Provable =
+    try {
+      //@note case ren.semantic&&isProved uses that there is no difference between locally sound and globally sound if isProved so no subgoals: after theorem 27 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+      insist(/*!ren.semantic ||*/ isProved, "Unless proved, uniform renaming cannot be semantic\nin " + ren + " on\n" + this)
+      new Provable(ren(conclusion), subgoals.map(s => ren(s)))
+    } catch { case exc: RenamingClashException => throw exc.inContext(ren + " on\n" + this) }
 
   // forward proofs (convenience)
 
@@ -1108,7 +1132,7 @@ object UniformRenaming {
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
-  private[this] val renaming: URename = URename(what, repl)
+  private[this] val renaming: URename = URename(what, repl, semantic=false)
 
   override def toString: String = renaming.toString
 
@@ -1132,7 +1156,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   //@note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
-  private[this] val renaming = URename(what, repl)
+  private[this] val renaming = URename(what, repl, semantic=false)
 
   override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 
