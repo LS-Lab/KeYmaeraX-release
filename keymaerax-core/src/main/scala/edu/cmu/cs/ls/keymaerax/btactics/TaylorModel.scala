@@ -131,7 +131,7 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  // Generic TaylormModel functions
+  // Generic Taylor Model functions
 
   // names
   case class TMNames(precond_prefix: String,
@@ -198,22 +198,20 @@ object TaylorModelTactics extends Logging {
             case None => throw new IllegalArgumentException("could not find matching nonnegativity assumption")
             case Some(nonneg) => {
               toc(" found nonnegative ")
-              seq.ante.find { case (LessEqual(s, _)) if s == t => true case _ => false } match {
+              seq.ante.collectFirst{ case fml @ LessEqual(s, _) if s == t => fml } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
-                case Some(ub_fml@(LessEqual(_, ub))) =>
-                  {
-                    toc(" found upper bound")
-                    cutL(LessEqual(l, FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g)))))(pos) &
-                      Idioms.<(skip,
-                        cohideOnlyR('Rlast) &
-                          cutR(And(nonneg, ub_fml))(1) & Idioms.<(
-                          andR(1) & Idioms.<(closeId, closeId),
-                          cohideR(1) &
-                            useAt(leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
-                            done
-                        )
+                case Some(ub_fml @ LessEqual(_, ub)) =>
+                  toc(" found upper bound")
+                  cutL(LessEqual(l, FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g)))))(pos) &
+                    Idioms.<(skip,
+                      cohideOnlyR('Rlast) &
+                        cutR(And(nonneg, ub_fml))(1) & Idioms.<(
+                        andR(1) & Idioms.<(closeId, closeId),
+                        cohideR(1) &
+                          useAt(leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
+                          done
                       )
-                  }
+                    )
               }
             }
           }
@@ -228,9 +226,9 @@ object TaylorModelTactics extends Logging {
           seq.ante.find{ case (LessEqual(Number(n), s)) if n==0 && s==t => true case _ => false } match {
             case None => throw new IllegalArgumentException("could not find matching nonnegativity assumption")
             case Some(nonneg) =>
-              seq.ante.find{ case (LessEqual(s, _)) if s==t => true case _ => false } match {
+              seq.ante.collectFirst{ case fml @ LessEqual(s, _) if s==t => fml } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
-                case Some(ub_fml @ (LessEqual(_, ub))) =>
+                case Some(ub_fml @ LessEqual(_, ub)) =>
                   cutL(LessEqual(FuncOf(BigDecimalQETool.minF, Pair(Number(0), Times(ub, g))), u))(pos) &
                     Idioms.<( skip,
                       cohideOnlyR('Rlast) &
