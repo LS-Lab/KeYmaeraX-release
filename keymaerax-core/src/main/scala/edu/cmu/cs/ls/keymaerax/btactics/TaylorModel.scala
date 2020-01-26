@@ -76,149 +76,10 @@ object TaylorModelTactics extends Logging {
 
   // Formulas
 
-  def stripForall(fml: Formula) = fml match {
-    case Forall(_, t) => this
-    case _ => throw new IllegalArgumentException("stripForall not on Forall")
-  }
   def stripForalls(fml: Formula) : Formula = fml match {
     case Forall(_, t) => stripForalls(t)
     case _ => fml
   }
-  def rconjuncts(formula: Formula): List[Formula] = formula match {
-    case And(p,q) => p :: rconjuncts(q)
-    case f => List(f)
-  }
-
-  // Substitution
-
-  def replaceFreeList(t: Term)(whats: List[Term], repls: List[Term]) =
-    (whats, repls).zipped.foldLeft(t)((t, wr) => SubstitutionHelper.replaceFree(t)(wr._1, wr._2))
-
-  def replaceFreeList(t: Formula)(whats: List[Term], repls: List[Term]) =
-    (whats, repls).zipped.foldLeft(t)((t, wr) => SubstitutionHelper.replaceFree(t)(wr._1, wr._2))
-
-  def replaceFreeList(t: Program)(whats: List[Term], repls: List[Term]) =
-    (whats, repls).zipped.foldLeft(t)((t, wr) => SubstitutionHelper.replaceFree(t)(wr._1, wr._2))
-
-  def replaceList(what: List[Term], witH: List[Term])(ts: List[Term]) = ts map (replaceFreeList(_)(what, witH))
-
-
-  // Polynomials
-  // TODO:
-  //  - use own representation of multivariate polynomials or a
-  //  - dedicated library
-  //    libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
-  //  - RingsAlgebraTool?
-
-  /* A more efficient data structure for polynomial arithmetic */
-
-  def normalise(p: Term) = {
-    PolynomialArith.normalise(p, true)._1
-  }
-
-  def factors(t: Term): List[Term] = t match {
-    case t: Times => factors(t.right) ++ factors(t.left)
-    case x: Term => List(x)
-  }
-
-  def degree_gen(t: Term, isVar: Term=>Boolean) : BigDecimal = t match {
-    case Power(l, Number(n)) if isVar(l) => n
-    case t if PolynomialArith.isVar(t) => 1
-    case _ => 0
-  }
-  def degree(t: Term) : BigDecimal = degree_gen(t,  PolynomialArith.isVar(_))
-
-  def degree_wrt(w: Variable)(t: Term): BigDecimal = t match {
-    case t: Power => t.left match {
-      case v if v == w => t.right match {
-        case n: Number => n.value
-      }
-      case _ => 0
-    }
-    case v if v == w => 1
-    case _ => 0
-  }
-
-  /* of a monomial */
-  def order_wrt(v: Variable)(t: Term): BigDecimal = t match {
-    case t: Times => (factors(t) map degree_wrt(v)) sum
-    case _ => 0
-  }
-
-  /* of a monomial */
-  def order_gen(t: Term, isVar: Term=>Boolean): BigDecimal = t match {
-    case t: Times =>
-      val r = ((factors(t) map (v => degree_gen(v, isVar))) sum)
-      r
-    case _ => 0
-  }
-
-  // For normalized polynomials
-  def integrate_monom(t: Variable)(p: Term): Term = {
-    val n = order_wrt(t)(p)
-    normalise(Divide(Times(p, t), Number(n + 1)))
-  }
-
-  def normaliseStripZero(p: Term) = {
-    DifferentialHelper.stripPowZero(PolynomialArith.normalise(p, true)._1)
-  }
-
-  def sum_terms(ts: List[Term]) = if (ts isEmpty) Number(0) else ts.reduce(Plus(_, _))
-
-  def summands(t: Term): List[Term] = t match {
-    case t: Plus => summands(t.right) ++ summands(t.left)
-    case x: Term => List(x)
-  }
-
-  def integrate(t: Variable)(p: Term): Term = sum_terms(summands(p) map (integrate_monom(t)))
-
-  def split_poly(tm: Term, keepP: Term=>Boolean, ivl_terms: List[Term]): (Term, Term) = {
-    val (throw_away, keep) = summands(tm).partition(t =>
-      // contains ivl_terms
-      ivl_terms.exists(ivlterm => PolynomialArith.divPoly(normalise(t),normalise(ivlterm)).isDefined)
-        ||
-        (!keepP(t))
-    )
-    (normalise(keep.reduceLeft(Plus)), if (throw_away.isEmpty) Number(0) else normalise(throw_away.reduceLeft(Plus)))
-  }
-
-  def divPoly(a: Term, b: Term): Option[(Term, Term)] =
-  // TODO: this is too much normalisation
-  {
-    (PolynomialArith.divPoly(normalise(a), normalise(Neg(b))) /* TODO: for some reason, PolynomialArith.divPoly switches signs?? */) match {
-      case Some(qr) =>
-        divPoly(qr._2, b) match {
-          case Some(qsrs) =>
-            val (qs, rs) = qsrs
-            Some (PolynomialArith.addPoly(normalise(qr._1),qs,true)._1,
-              normalise(rs))
-          case None => Some (normalise(qr._1), normalise(qr._2))
-        }
-      case None => None
-    }
-  }
-
-  // rewrite t to Horner Form (w.r.t. "Variables" xs)
-  def horner(t: Term, xs: List[Term]) : Term = xs match {
-    case Nil => SimplifierV3.termSimp(t, SimplifierV3.emptyCtx, SimplifierV3.defaultTaxs)._1
-    case x::xs => {
-      divPoly(t, x) match {
-        case None => horner(t, xs)
-        case Some((q, r)) => {
-          val hq = horner(q, x :: xs)
-          val hr = horner(r, xs)
-          val prod = if (hq == Number(0)) Number(0)
-          else if (hq == Number(1)) x
-          else if (hq == Number(-1)) Neg(x)
-          else Times(x, hq)
-          if (hr == Number(0)) prod
-          else if (prod == Number(0)) hr
-          else Plus(hr, prod)
-        }
-      }
-    }
-  }
-
 
   // Equality
 
@@ -238,15 +99,6 @@ object TaylorModelTactics extends Logging {
       case None => throw new IllegalArgumentException("getTime: no time variable in ode")
     }
   }
-
-  def applyODE(ode: DifferentialProgram, state: List[Term], time: Term)(ps: List[Term]) =
-    DifferentialHelper.atomicOdes(ode).filter(_.xp.x != time).map(dx => replaceFreeList(dx.e)(state, ps))
-
-  private def normalizingLieDerivative(p: DifferentialProgram, t: Term): Term = {
-    val ld = normalise(DifferentialHelper.simplifiedLieDerivative(p, normaliseStripZero(t), None))
-    ld
-  }
-
 
   // TODO: sort in somewhere
   private lazy val partialVacuousExistsAxiom2 = remember(
