@@ -172,7 +172,7 @@ object DerivedAxioms extends Logging {
           logger.warn("WARNING: Failed to add derived lemma.", e)
       }
     })
-    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
+    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
   }
 
   // derived rules
@@ -411,6 +411,48 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(p_() -> (q_()<->r_())) <-> ((p_()->q_()) <-> (p_()->r_()))".asFormula)),
     prop
   )
+
+  /**
+    * CONGRUENCE AXIOMS (for constant terms)
+    */
+
+
+  /**
+    * {{{Axiom "const congruence"
+    *      s() = t() -> ctxT_(s()) = ctxT_(t())
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val constCongruence: Lemma = derivedAxiom("const congruence",
+    "s() = t() -> ctxT_(s()) = ctxT_(t())".asFormula,
+    allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
+      by(proveBy("\\forall x_ (x_ = t() -> ctxT_(x_) = ctxT_(t()))".asFormula,
+        useAt("[:=] assign equality", PosInExpr(1::Nil))(1) &
+          useAt("[:=] assign")(1) &
+          byUS(equalReflex)
+      ))
+  )
+
+  /**
+    * {{{Axiom "const formula congruence"
+    *    s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val constFormulaCongruence: Lemma = derivedAxiom("const formula congruence",
+    "s() = t() -> (ctxF_(s()) <-> ctxF_(t()))".asFormula,
+    allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
+      by(proveBy("\\forall x_ (x_ = t() -> (ctxF_(x_) <-> ctxF_(t())))".asFormula,
+        useAt("[:=] assign equality", PosInExpr(1::Nil))(1) &
+          useAt("[:=] assign")(1) &
+          byUS(equivReflexiveAxiom)
+      ))
+  )
+
 
   /**
     * {{{Axiom "!! double negation".
@@ -880,6 +922,44 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom ":= assign dual 2".
+    *    <x:=f();>p(||) <-> [x:=f();]p(||)
+    * End.
+    * }}}
+    *
+    * @see [[assignDualAxiom]]
+    */
+  lazy val assignDual2Axiom = derivedAxiom(":= assign dual 2",
+    "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
+    useAt("[:=] self assign", PosInExpr(1::Nil))(1, 0::1::Nil) &
+      useAt(assigndAxiom)(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+    // NOTE alternative proof:
+    //    useAt("[:=] assign equality exists")(1, 1::Nil) &
+    //      useAt("<:=> assign equality")(1, 0::Nil) &
+    //      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "<:=> assign equality".
+    *    <x:=f();>p(||) <-> \exists x (x=f() & p(||))
+    * End.
+    * }}}
+    *
+    * @Derived from [:=] assign equality, quantifier dualities
+    * @Derived by ":= assign dual" from "[:=] assign equality exists".
+    */
+  lazy val assigndEqualityAxiom = derivedAxiom("<:=> assign equality",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
+    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(notAnd)(1, 1::0::0::Nil) &
+      useAt(implyExpand.fact, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
+      CE(PosInExpr(0::Nil)) &
+      byUS("[:=] assign equality")
+  )
+
+  /**
     * {{{Axiom "[:=] assign equality exists".
     *   [x:=f();]p(||) <-> \exists x (x=f() & p(||))
     * End.
@@ -889,14 +969,14 @@ object DerivedAxioms extends Logging {
     * @todo does not derive yet
     */
   lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
-      "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
-      useAt(assignDual2Axiom, PosInExpr(1::Nil))(1, 0::Nil) &
+    "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
+    useAt(assignDual2Axiom, PosInExpr(1::Nil))(1, 0::Nil) &
       byUS(assigndEqualityAxiom)
-//      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
-//        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
-//        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
-//        useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
-    )
+    //      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
+    //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
+    //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
+    //        useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
+  )
 
   /**
     * {{{Axiom "[:=] assign exists".
@@ -910,7 +990,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("[x_:=f_();]p_(||) -> \\exists x_ p_(||)".asFormula)),
 //    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)
 //      & byUS("[:=] assign equality exists")
-    useAt("[:=] assign equality exists", PosInExpr(0::Nil))(1, 0::Nil) &
+    useAt(assignbExistsAxiom, PosInExpr(0::Nil))(1, 0::Nil) &
     byUS(existsAndAxiom)
   )
 
@@ -958,25 +1038,6 @@ object DerivedAxioms extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(||) -> \\forall x_ (q_(||) -> p_(||))".asFormula)),
       /*implyR(1) &*/ CMon(PosInExpr(0::Nil)) & prop // & andL(-1) & closeId//(-2,1)
     )}
-
-  /**
-    * {{{Axiom "<:=> assign equality".
-    *    <x:=f();>p(||) <-> \exists x (x=f() & p(||))
-    * End.
-    * }}}
-    *
-    * @Derived from [:=] assign equality, quantifier dualities
-    * @Derived by ":= assign dual" from "[:=] assign equality exists".
-    */
-  lazy val assigndEqualityAxiom = derivedAxiom("<:=> assign equality",
-    Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
-    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
-      useAt("exists dual", PosInExpr(1::Nil))(1, 1::Nil) &
-      useAt("!& deMorgan")(1, 1::0::0::Nil) &
-      useAt(implyExpand.fact, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
-      CE(PosInExpr(0::Nil)) &
-      byUS("[:=] assign equality")
-  )
 
   /**
     * {{{Axiom "<:=> assign equality all".
@@ -1035,25 +1096,6 @@ object DerivedAxioms extends Logging {
     useAt(assigndAxiom.fact)(1, 0::Nil) &
       useAt("[:=] assign")(1, 1::Nil) &
       byUS(equivReflexiveAxiom)
-  )
-
-  /**
-    * {{{Axiom ":= assign dual 2".
-    *    <x:=f();>p(||) <-> [x:=f();]p(||)
-    * End.
-    * }}}
-    *
-    * @see [[assignDualAxiom]]
-    */
-  lazy val assignDual2Axiom = derivedAxiom(":= assign dual 2",
-    "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
-    useAt("[:=] self assign", PosInExpr(1::Nil))(1, 0::1::Nil) &
-      assignd(1, 0::Nil) &
-      byUS(equivReflexiveAxiom)
-// NOTE alternative proof:
-//    useAt("[:=] assign equality exists")(1, 1::Nil) &
-//      useAt("<:=> assign equality")(1, 0::Nil) &
-//      byUS(equivReflexiveAxiom)
   )
 
   /**
@@ -3613,46 +3655,5 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(x_) <-> \\exists x_ p_(x_)".asFormula)),
     byUS(equivReflexiveAxiom)
   )
-
-  /**
-    * CONGRUENCE AXIOMS (for constant terms)
-    */
-
-
-  /**
-    * {{{Axiom "const congruence"
-    *      s() = t() -> ctxT_(s()) = ctxT_(t())
-    * End.
-    * }}}
-    *
-    * @Derived
-    */
-  lazy val constCongruence: Lemma = derivedAxiom("const congruence",
-    "s() = t() -> ctxT_(s()) = ctxT_(t())".asFormula,
-    allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
-      by(proveBy("\\forall x_ (x_ = t() -> ctxT_(x_) = ctxT_(t()))".asFormula,
-        useAt("[:=] assign equality", PosInExpr(1::Nil))(1) &
-        useAt("[:=] assign")(1) &
-        byUS(equalReflex)
-      ))
-  )
-
-  /**
-    * {{{Axiom "const formula congruence"
-    *    s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
-    * End.
-    * }}}
-    *
-    * @Derived
-    */
-  lazy val constFormulaCongruence: Lemma = derivedAxiom("const formula congruence",
-      "s() = t() -> (ctxF_(s()) <-> ctxF_(t()))".asFormula,
-      allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
-        by(proveBy("\\forall x_ (x_ = t() -> (ctxF_(x_) <-> ctxF_(t())))".asFormula,
-          useAt("[:=] assign equality", PosInExpr(1::Nil))(1) &
-            useAt("[:=] assign")(1) &
-            byUS(equivReflexiveAxiom)
-        ))
-    )
 
 }

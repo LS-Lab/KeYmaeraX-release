@@ -44,16 +44,19 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val writeEffect = true
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
-      val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
-      val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
-      if (!versionFile.exists()) {
-        if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+      if (writeEffect) {
+        val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
+        val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
+        if (!versionFile.exists()) {
+          if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+        }
+        assert(versionFile.exists())
+        val fw = new FileWriter(versionFile)
+        fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+        fw.close()
       }
-      assert(versionFile.exists())
-      val fw = new FileWriter(versionFile)
-      fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
-      fw.close()
     }
   }
 
@@ -114,10 +117,10 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 //  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove := assign dual" in {check(assignDualAxiom)}
   it should "prove all substitute" in withMathematica { qeTool => check(allSubstitute)}
-  it should "prove [:=] equational" in withMathematica { qeTool => check(assignbEquationalAxiom)}
+  it should "prove [:=] equational" in {check(assignbEquationalAxiom)}
   it should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
   it should "prove exists and" in {check(existsAndAxiom)}
-  it should "prove [:=] assign exists" in {check(assignbImpliesExistsAxiom)}
+  it should "prove [:=] assign implies exists" in {check(assignbImpliesExistsAxiom)}
   it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
   it should "prove <:=> assign dual 2" in {check(assignDual2Axiom)}
   it should "prove <:=> assign equality all" in {check(assigndEqualityAllAxiom)}
