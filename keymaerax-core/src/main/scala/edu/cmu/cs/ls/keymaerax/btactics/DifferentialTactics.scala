@@ -2052,7 +2052,7 @@ private object DifferentialTactics extends Logging {
                 orL('Llast) < (
                   useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & prop & done,
                   dR(And(r(vars), nonneg(q(vars))), false)(1) & Idioms.<(
-                    useAt(ODEInvariance.uniqAx, PosInExpr(1 :: Nil))(1) &
+                    useAt("Uniq uniqueness iff", PosInExpr(1 :: Nil))(1) &
                       andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId),
                     andL('L) &
                       TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
