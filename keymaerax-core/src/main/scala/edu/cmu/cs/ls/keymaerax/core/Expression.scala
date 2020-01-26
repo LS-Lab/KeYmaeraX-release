@@ -239,7 +239,8 @@ case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) 
 }
 
 /** Differential symbol x' for variable x.
-  * Differential symbols are also called differential variables. */
+  * Differential symbols are also called differential variables, because they are symbolic
+  * but are also variables. */
 case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   insist(x.sort == Real, "differential symbols expect real sort")
   //@see SetLattice.except(x) which cannot currently represent the exclusion of all x''

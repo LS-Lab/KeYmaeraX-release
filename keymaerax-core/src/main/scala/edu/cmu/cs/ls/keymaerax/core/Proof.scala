@@ -1096,9 +1096,10 @@ object UniformRenaming {
 /**
   * Uniformly rename all occurrences of what and what' to repl and repl' and vice versa.
   * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
+  * Uniform renaming, thus, is a transposition.
   *
-  * @param what What variable to replace (along with its associated DifferentialSymbol).
-  * @param repl The target variable to replace what with.
+  * @param what What variable to replace (along with its associated [[DifferentialSymbol]]).
+  * @param repl The target variable to replace `what` with (and vice versa).
   * @requires repl is fresh in the sequent.
   * @author Andre Platzer
   * @see [[URename]]
@@ -1117,6 +1118,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
 /**
   * Performs bound renaming renaming all occurrences of variable what
   * (and its associated DifferentialSymbol) to repl.
+  * Proper bound renaming requires the replacement to be a fresh variable that does not occur previously.
   *
   * @param what What variable (and its associated DifferentialSymbol) to replace.
   * @param repl The target variable to replace what with.

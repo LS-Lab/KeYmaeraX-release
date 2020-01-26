@@ -20,6 +20,7 @@ import scala.collection.immutable
   * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
   * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
   * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
+  * Uniform renaming, thus, is a transposition.
   * @param what What variable to replace (along with its associated DifferentialSymbol).
   * @param repl The target variable to replace `what` with and vice versa.
   * @author Andre Platzer
