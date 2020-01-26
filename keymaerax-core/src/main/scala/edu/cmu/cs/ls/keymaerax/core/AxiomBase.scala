@@ -274,16 +274,8 @@ Axiom "[:=] assign equality"
   [x_:=f();]p(||) <-> \forall x_ (x_=f() -> p(||))
 End.
 
-Axiom "[:=] assign equality y"
-  [y_:=f();]p(||) <-> \forall y_ (y_=f() -> p(||))
-End.
-
 Axiom "[:=] self assign"
   [x_:=x_;]p(||) <-> p(||)
-End.
-
-Axiom "[:=] self assign y"
-  [y_:=y_;]p(||) <-> p(||)
 End.
 
 Axiom "[':=] differential assign"
@@ -317,18 +309,13 @@ Axiom "DW base"
 End.
 
 Axiom "DE differential effect"
-  /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   [{x_'=f(x_)&q(x_)}]p(||) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(||)
+  /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
 End.
 
 Axiom "DE differential effect (system)"
   /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
-End.
-
-Axiom "DE differential effect (system) y"
-   /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
-   [{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)
 End.
 
 /* @todo soundness requires only vectorial x in p(||) */
@@ -519,21 +506,9 @@ Axiom "all dual"
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
 End.
 
-Axiom "all dual y"
-  (!\exists y_ !p(||)) <-> \forall y_ p(||)
-End.
-
-Axiom "all dual time"
-  (!\exists t_ !p(||)) <-> \forall t_ p(||)
-End.
-
 /* generalized "all instantiate" */
 Axiom "all eliminate"
   (\forall x_ p(||)) -> p(||)
-End.
-
-Axiom "all eliminate y"
-  (\forall y_ p(||)) -> p(||)
 End.
 
 /**
