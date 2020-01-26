@@ -249,7 +249,7 @@ object TaylorModelTactics extends Logging {
 
 
   // TODO: sort in somewhere
-  lazy val partialVacuousExistsAxiom2 = remember(
+  private lazy val partialVacuousExistsAxiom2 = remember(
     "\\exists x_ (p_() & q_(x_)) <-> p_() & \\exists x_ q_(x_)".asFormula,
     equivR(1) <(
       existsL(-1) & andR(1) <(prop & done, existsR("x_".asVariable)(1) & prop & done),
@@ -257,7 +257,7 @@ object TaylorModelTactics extends Logging {
     )
   )
 
-  def rewriteFormula(prv: ProvableSig) = "rewriteFormula" by { (pos: Position, seq: Sequent) =>
+  private def rewriteFormula(prv: ProvableSig) = "rewriteFormula" by { (pos: Position, seq: Sequent) =>
     val failFast = new BuiltInTactic("ANON") with NoOpTactic {
       override def result(provable: ProvableSig): ProvableSig = throw BelleUserGeneratedError("Fail")
     }
@@ -308,20 +308,20 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  def templateTmCompose(names: TMNames, dim: Int): Seq[Term] = {
+  private def templateTmCompose(names: TMNames, dim: Int): Seq[Term] = {
     (0 until dim).map(i => Plus((0 until dim).map(j => Times(names.precond(i, j), names.right(j))).reduceLeft(Plus), names.precondC(i)))
   }
 
   // Specialized Tactics
   private val namespace = "taylormodel"
-  def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
-  lazy val unfoldExistsLemma = remember("\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
+  private def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
+  private lazy val unfoldExistsLemma = remember("\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
     existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms.<(QE & done, implyR(1) & eqL2R(-3)(1) & closeId),
     existsR("r_() - s_()".asTerm)(1) & prop & QE & done))
 
   private lazy val foldAndLessEqExistsLemma = remember(("(a() <= x_ - b() & x_ - b() <= c()) <->" +
     "(\\exists xr_ (x_ = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula, QE & done)
-  def foldAndLessEqExists(but: Seq[Variable] = Nil) = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
+  private def foldAndLessEqExists(but: Seq[Variable] = Nil) = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
     Idioms.mapSubpositions(pos, seq, {
       case (And(LessEqual(_, Minus(v1: Variable, _)), LessEqual(Minus(v2: Variable, _), _)), pos)
         if v1 == v2 && !but.contains(v1)
@@ -332,9 +332,9 @@ object TaylorModelTactics extends Logging {
     }).reduceLeft(_ & _)
   }
 
-  lazy val leTimesMonoLemma =
+  private lazy val leTimesMonoLemma =
     remember("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() -> R_() <= max((0,h_() * U_()))".asFormula, QE & done)
-  lazy val timesLeMonoLemma =
+  private lazy val timesLeMonoLemma =
     remember("0 <= t_() & t_() <= h_() -> t_() * L_() <= U_() -> min((0,h_() * L_())) <= U_()".asFormula, QE & done)
   private[btactics] def coarsenTimesBounds(t: Term) = "coarsenTimesBounds" by { (seq: Sequent) =>
     val leTimesMono = "leTimesMono" by { (pos: Position, seq: Sequent) =>
@@ -415,8 +415,8 @@ object TaylorModelTactics extends Logging {
     case _ => Nil
   })
 
-  lazy val trivialInequality = remember("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
-  def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
+  private lazy val trivialInequality = remember("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
+  private def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     val ssp = seq.sub(pos)
@@ -431,9 +431,9 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  lazy val refineConjunction = remember("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
-  lazy val trivialRefineLtGt = remember("(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
-  lazy val trivialRefineGeLe = remember("(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula, QE & done)
+  private lazy val refineConjunction = remember("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
+  private lazy val trivialRefineLtGt = remember("(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
+  private lazy val trivialRefineGeLe = remember("(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula, QE & done)
 
   private [btactics] def refineTrivialInequalities : DependentPositionTactic = "refineTrivialStrictInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
@@ -570,7 +570,7 @@ object TaylorModelTactics extends Logging {
       }
     }
 
-    val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
+    private val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
       And(LessEqual(Number(0), Minus(time, time0)), LessEqual(Minus(time, time0), timestep))), QE & done)
 
     val lemma: ProvableSig = proveBy(
