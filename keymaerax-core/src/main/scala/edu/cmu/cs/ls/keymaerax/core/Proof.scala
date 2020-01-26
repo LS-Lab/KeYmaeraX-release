@@ -20,7 +20,6 @@ package edu.cmu.cs.ls.keymaerax.core
 // require favoring immutable Seqs for soundness
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.pt._
 
 import scala.collection.immutable
 
@@ -673,6 +672,7 @@ object Provable {
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
+    import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
     insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, evidence) = t.qeEvidence(f)
@@ -1089,7 +1089,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
   */
 object UniformRenaming {
   /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
-  def UniformRenamingForward(provable: ProvableSig, what: Variable, repl: Variable): ProvableSig =
+  def UniformRenamingForward(provable: Provable, what: Variable, repl: Variable): Provable =
     provable(URename(what,repl)(provable.conclusion), UniformRenaming(what, repl))
 }
 

@@ -36,6 +36,11 @@ object RenUSubst {
   /** Create a renaming (non-)substitution corresponding to the given ordinary uniform renaming. */
   def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
+  /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
+  def UniformRenamingForward(provable: ProvableSig, what: Variable, repl: Variable): ProvableSig =
+  provable(URename(what,repl)(provable.conclusion), UniformRenaming(what, repl))
+
+
   //@todo .distinct ? might depend on the use case
   private[bellerophon] def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
       subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
@@ -239,7 +244,7 @@ final class FastUSubstAboveURen(private[bellerophon] val subsDefsInput: immutabl
     val replaced = fact(usubst)
     Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
-    rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
+    rens.foldLeft(replaced)((pr,sp)=>RenUSubst.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
   override lazy val toCore: Expression => Expression = e => {
@@ -384,7 +389,7 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
   def toForward: ProvableSig => ProvableSig = fact => {
     val replaced = fact(usubst)  //UniformSubstitutionRule.UniformSubstitutionRuleForward(fact, usubst)
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
-    rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
+    rens.foldLeft(replaced)((pr,sp)=>RenUSubst.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
   val toCore = (e:Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
@@ -461,7 +466,7 @@ final class DirectUSubstAboveURen(private[bellerophon] override val subsDefsInpu
     val replaced = fact(usubst)
     Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
-    rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
+    rens.foldLeft(replaced)((pr,sp)=>RenUSubst.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
   val toCore: Expression => Expression = e => {
@@ -538,7 +543,7 @@ private final class URenAboveUSubst(private[bellerophon] override val subsDefsIn
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: ProvableSig => ProvableSig = fact => {
     /*UniformSubstitutionRule.UniformSubstitutionRuleForward*/
-      (rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
+      (rens.foldLeft(fact)((pr,sp)=>RenUSubst.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
   }
 
   val toCore = (e:Expression) => throw new UnsupportedOperationException("not yet implemented. @todo")
