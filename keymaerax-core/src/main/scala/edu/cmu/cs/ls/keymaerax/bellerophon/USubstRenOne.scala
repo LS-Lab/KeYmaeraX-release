@@ -27,7 +27,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
     * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
     * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
     * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
-    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see [[SubstitutionPair.freeVars]]
     */
   lazy val freeVars: SetLattice[Variable] = what match {

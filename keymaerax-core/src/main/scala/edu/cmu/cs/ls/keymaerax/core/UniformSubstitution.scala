@@ -115,7 +115,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
     * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
     * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
-    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see [[StaticSemantics.freeVars()]]
     */
   lazy val freeVars: SetLattice[Variable] = what match {
@@ -556,7 +556,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
     * @param U taboo list of variables
     * @param occurrences the function and predicate symbols occurring in the expression of interest.
-    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see arXiv:1503.01981 Definition 12.
     */
   @inline private def admissible(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): Boolean =
@@ -570,7 +570,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     * @param U taboo list of variables
     * @param e the expression of interest.
     * @return FV(restrict this to occurrences) /\ U
-    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see arXiv:1503.01981 Definition 12.
     * @note not used often
     */
@@ -583,7 +583,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     * @param U taboo list of variables
     * @param occurrences the function and predicate symbols occurring in the expression of interest.
     * @return FV(restrict this to occurrences) /\ U
-    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see arXiv:1503.01981 Definition 12.
     */
   @inline private def clashSet(U: SetLattice[Variable], occurrences: immutable.Set[NamedSymbol]): SetLattice[Variable] =
@@ -591,7 +591,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
 
   /**
     * Projects / restricts a substitution to only those that affect the symbols listed in occurrences.
-    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see arXiv:1503.01981 Definition 12.
     */
   @inline private def projection(affected: immutable.Set[NamedSymbol]): USubstChurch = new USubstChurch(

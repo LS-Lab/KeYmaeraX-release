@@ -46,7 +46,7 @@ object Kaisar {
   *
   * - Note also that there are far more cases in the grammar of dL as it appears in KeYmaera X than you see in the paper.
   *  This is because the KeYmaera X core is based on the calculus of:
-  *  "André Platzer.  A complete uniform substitution calculus for differential dynamic logic.  Journal of Automated Reasoning, 2016."
+  *  "Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017."
   *  And even then has a number of constructs needed in practice but not mentioned there.
   *
   *
