@@ -319,13 +319,13 @@ object DerivationInfo {
       , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", false, {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
-    new CoreAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
+    new DerivedAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.selfAssign_y)}),
     new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assignd", false, {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", unsure, {case () => HilbertCalculus.useAt("<:=> self assign")}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
-    new CoreAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality y")}),
+    new DerivedAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbEquality_y)}),
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
@@ -605,9 +605,9 @@ object DerivationInfo {
     new CoreAxiomInfo("DE differential effect (system)"
       , AxiomDisplayInfo("DE", "<span class=\"k4-axiom-key\">[{x′=F,c&Q}]P</span>↔[{c,x′=F&Q}][x′:=f(x)]P")
       , "DEs", unsure, {case () => HilbertCalculus.DE}),
-    new CoreAxiomInfo("DE differential effect (system) y"
+    new DerivedAxiomInfo("DE differential effect (system) y"
       , AxiomDisplayInfo("DEsysy", "<span class=\"k4-axiom-key\">[{y′=F,c&Q}]P</span>↔[{c,y′=F&Q}][y′:=f(x)]P")
-      , "DEsysy", unsure, {case () => HilbertCalculus.useAt("DE differential effect (system) y")}),
+      , "DEsysy", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.DEdifferentialEffectSystem_y)}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
       , "DIequiv", true, {case () => HilbertCalculus.useAt("DI differential invariance")}),
@@ -730,10 +730,10 @@ object DerivationInfo {
     new DerivedAxiomInfo("all then exists", ("∀→∃","allThenExists"), "allThenExists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allThenExists)}),
     new DerivedAxiomInfo("exists eliminate y", ("∃ey","existsey"), "existsey", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.existsEliminatey)}),
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", unsure, {case () => posnil}),
-    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", unsure, {case () => posnil}),
-    new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", unsure, {case () => posnil}),
+    new DerivedAxiomInfo("all dual time", ("∀d","alldt"), "alldt", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allDual_time)}),
+    new DerivedAxiomInfo("all dual y", ("∀d","alldy"), "alldy", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allDual_y)}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", unsure, {case () => posnil}),
-    new CoreAxiomInfo("all eliminate y", ("∀y","ally"), "ally", unsure, {case () => posnil})
+    new DerivedAxiomInfo("all eliminate y", ("∀y","ally"), "ally", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allEliminate_y)})
   )
 
   /** Miscellaneous cases of [[allInfo]] that don't really fit anywhere else.   */

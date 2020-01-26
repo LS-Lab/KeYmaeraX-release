@@ -130,6 +130,8 @@ trait ProvableSig {
     */
   def apply(subst: USubst): ProvableSig
 
+  def apply(ren: URename): ProvableSig
+
   // forward proofs (convenience)
 
   /**
@@ -351,9 +353,11 @@ case class ElidingProvable(provable: Provable) extends ProvableSig {
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig =
     ElidingProvable(provable(subderivation.underlyingProvable, subgoal), steps+subderivation.steps)
 
-  override def apply(subst: USubst): ProvableSig =  {
+  override def apply(subst: USubst): ProvableSig =
     ElidingProvable(provable(subst), steps+1)
-  }
+
+  override def apply(ren: URename): ProvableSig =
+    ElidingProvable(provable(ren), steps+1)
 
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = ElidingProvable(provable(newConsequence, rule), steps+1)
 
@@ -530,6 +534,9 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
   override def apply(subst: USubst): ProvableSig = {
     TermProvable(provable(subst), UsubstProvableTerm(pt, subst))
   }
+
+  //@todo implement
+  override def apply(ren: URename): ProvableSig = ???
 
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig =
     TermProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))

@@ -121,6 +121,12 @@ object DerivedAxioms extends Logging {
         derivedRule(name, witness)
     }
 
+  /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
+  private[btactics] def derivedAxiom(name: String, derived: Formula, fact: ProvableSig): Lemma = {
+    derivedAxiom(name, fact) ensuring(lem => lem.fact.conclusion == Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)),
+      "derivedAxioms's fact indeed proved the expected formula.\n" + derived + "\nproved by\n" + fact)
+  }
+
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private[btactics] def derivedAxiom(name: String, derived: => Sequent, tactic: => BelleExpr): Lemma =
     derivedAxiomDB.get(DerivedAxiomInfo(name).storedName) match {
@@ -174,6 +180,82 @@ object DerivedAxioms extends Logging {
     })
     if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
   }
+
+  // semantic renaming cases
+
+  /** Semantically renamed
+    * {{{Axiom "[:=] assign equality y"
+    *    [y_:=f();]p(||) <-> \forall y_ (y_=f() -> p(||))
+    * End.
+    * }}}
+    * @note needs semantic renaming
+    */
+  lazy val assignbEquality_y = derivedAxiom("[:=] assign equality y",
+    "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
+    ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+  )
+
+  /** Semantically renamed
+    * {{{Axiom "[:=] self assign y"
+    *   [y_:=y_;]p(||) <-> p(||)
+    * End.
+    * }}}
+    * @note needs semantic renaming
+    */
+  lazy val selfAssign_y = derivedAxiom("[:=] self assign y",
+    "[y_:=y_;]p(||) <-> p(||)".asFormula,
+    ProvableSig.axioms("[:=] self assign")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+  )
+
+  /** Semantically renamed
+    * {{{Axiom "DE differential effect (system) y"
+    *    // @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols
+    *    [{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)
+    * End.
+    * }}}
+    * @note needs semantic renaming
+    */
+  lazy val DEdifferentialEffectSystem_y = derivedAxiom("DE differential effect (system) y",
+    "[{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)".asFormula,
+    ProvableSig.axioms("DE differential effect (system)")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+  )
+
+  /** Semantically renamed
+    * {{{Axiom "all dual y"
+    *    (!\exists y_ !p(||)) <-> \forall y_ p(||)
+    * End.
+    * }}}
+    * @note needs semantic renaming
+    */
+  lazy val allDual_y = derivedAxiom("all dual y",
+    "(!\\exists y_ !p(||)) <-> \\forall y_ p(||)".asFormula,
+    ProvableSig.axioms("all dual")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+  )
+
+  /** Semantically renamed
+    * {{{Axiom "all dual time"
+    *    (!\exists t_ !p(||)) <-> \forall t_ p(||)
+    * End.
+    * }}}
+    * @note needs semantic renaming
+    */
+  lazy val allDual_time = derivedAxiom("all dual time",
+    "(!\\exists t_ !p(||)) <-> \\forall t_ p(||)".asFormula,
+    ProvableSig.axioms("all dual")(URename("x_".asVariable,"t_".asVariable,semantic=true))
+  )
+
+  /** Semantically renamed
+    * {{{Axiom "all eliminate y"
+    *   (\forall y_ p(||)) -> p(||)
+    * End.
+    * }}}
+    * @note needs semantic renaming
+    */
+  lazy val allEliminate_y = derivedAxiom("all eliminate y",
+    "(\\forall y_ p(||)) -> p(||)".asFormula,
+    ProvableSig.axioms("all eliminate")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+  )
+
 
   // derived rules
 
@@ -2519,7 +2601,7 @@ object DerivedAxioms extends Logging {
       cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
         cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1) <(
           //2) assignb
-          useAt("[:=] assign equality y")(1) &
+          useAt(assignbEquality_y)(1) &
           ProofRuleTactics.skolemizeR(1) & implyR(1),
           //3) finish up
           cohide(1) & CMon(PosInExpr(Nil)) &
@@ -2528,13 +2610,13 @@ object DerivedAxioms extends Logging {
         ,
         cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS("[:=] self assign y") & done
         ) &
-      useAt(CoreAxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+      useAt(AxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
       useAt(", commute")(-1) & //@note since DG inverse differential ghost has flipped order
       cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
         useAt("DI differential invariant")(1) & implyR(1) & andR(1) <(
           hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>0".asFormula,"y()=1".asFormula), IndexedSeq("e()*y()^2>0".asFormula)), QE & done)),
           derive(1, PosInExpr(1::Nil)) &
-          useAt(", commute")(1) & useAt("DE differential effect (system) y")(1) &
+          useAt(", commute")(1) & useAt(DEdifferentialEffectSystem_y)(1) &
           useAt(assignDAxiomby, PosInExpr(0::Nil))(1, PosInExpr(1::Nil)) &
           cohide2(-1,1) & monb &
           // DebuggingTactics.print("DI finished") &
@@ -2568,7 +2650,7 @@ object DerivedAxioms extends Logging {
       cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
         cutLR("[y_:=1;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1) <(
           //2) assignb
-          useAt("[:=] assign equality y")(1) &
+          useAt(assignbEquality_y)(1) &
             ProofRuleTactics.skolemizeR(1) & implyR(1),
           //3) finish up
           cohide(1) & CMon(PosInExpr(Nil)) &
@@ -2577,14 +2659,14 @@ object DerivedAxioms extends Logging {
         ,
         cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS("[:=] self assign y") & done
         ) &
-      useAt(CoreAxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+      useAt(AxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
       useAt(", commute")(-1) & //@note since DG inverse differential ghost has flipped order
       cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
         useAt("DIo open differential invariance >")(1) <(
           testb(1) & implyR(1) & hideL(-4) & hideL(-1) &  byUS(TactixLibrary.proveBy(Sequent(IndexedSeq("e()>0".asFormula,"y()=1".asFormula), IndexedSeq("e()*y()^2>0".asFormula)), QE & done)),
           implyR(1) & hideL(-4) &
           derive(1, PosInExpr(1::1::Nil)) &
-          useAt(", commute")(1) & useAt("DE differential effect (system) y")(1) &
+          useAt(", commute")(1) & useAt(DEdifferentialEffectSystem_y)(1) &
           useAt(assignDAxiomby, PosInExpr(0::Nil))(1, PosInExpr(1::Nil)) &
           cohide2(-1,1) & monb &
           // DebuggingTactics.print("DI finished") &

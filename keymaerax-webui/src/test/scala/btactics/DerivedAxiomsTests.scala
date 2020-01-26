@@ -86,6 +86,15 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     Sequent(immutable.IndexedSeq("x_>0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("<a_{|x_|};><x_:=x_-1;>J(||)".asFormula))
   ) }
 
+
+  "Semantically-renamed Derived Axioms" should "prove [:=] assign equality y" in {check(assignbEquality_y)}
+  it should "prove [:=] self assign y" in {check(selfAssign_y)}
+  it should "prove DE differential effect (system) y" in {check(DEdifferentialEffectSystem_y)}
+  it should "prove all dual y" in {check(allDual_y)}
+  it should "prove all dual time" in {check(allDual_time)}
+  it should "prove all eliminate y" in {check(allEliminate_y)}
+
+
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
