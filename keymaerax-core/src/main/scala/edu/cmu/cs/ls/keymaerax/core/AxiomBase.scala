@@ -10,6 +10,7 @@
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see Andre Platzer and Yong Kiam Tan. [[https://arxiv.org/abs/1905.13429 Differential equation invariance axiomatization]]. J. ACM. To appear.
   * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]]. In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015.
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
@@ -29,6 +30,7 @@ import org.apache.logging.log4j.scala.Logging
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see Andre Platzer and Yong Kiam Tan. [[https://arxiv.org/abs/1905.13429 Differential equation invariance axiomatization]]. J. ACM. To appear.
   * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]]. In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015.
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
@@ -43,6 +45,7 @@ private[core] object AxiomBase extends Logging {
     * @note Soundness-critical: Only return locally sound proof rules.
     * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]]. In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015.
     * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
     * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
@@ -57,7 +60,6 @@ private[core] object AxiomBase extends Logging {
     // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
-    val sys = SystemConst("a_")
     val x = Variable("x_", None, Real)
     val Jany = UnitPredicational("J", AnyArg)
     Map(
@@ -71,6 +73,7 @@ private[core] object AxiomBase extends Logging {
         *   --------------------- CQ
         *    c(f(x)) <-> c(g(x))
         * }}}
+        * @see Figure 2 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
         */
       ("CQ equation congruence",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
@@ -85,6 +88,7 @@ private[core] object AxiomBase extends Logging {
         *   --------------------- CE
         *    C{p(x)} <-> C{q(x)}
         * }}}
+        * @see Figure 2 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
         */
       ("CE congruence",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
@@ -94,7 +98,7 @@ private[core] object AxiomBase extends Logging {
         * Premise p(||) ==> q(||)
         * Conclusion <a;>p(||) ==> <a;>q(||)
         * End.
-        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
+        * @see Figure 5 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
         */
       ("<> monotone",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
@@ -108,7 +112,7 @@ private[core] object AxiomBase extends Logging {
         *   --------------------- ind
         *     p(x) |- [{a}*]p(x)
         * }}}
-        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 17(1), 2015.  Lemma 4.1"
+        * @see Lemma 4.1 of Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
         */
       ("ind induction",
         (immutable.IndexedSeq(Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
@@ -123,6 +127,7 @@ private[core] object AxiomBase extends Logging {
         *     J(x) |- <a{|x|}*>\exists x (x<=0 & J(x))
         * }}}
         * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+        * @see Section 17.4 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
         */
       ("con convergence",
         (immutable.IndexedSeq(
@@ -132,21 +137,21 @@ private[core] object AxiomBase extends Logging {
   }
 
   /**
-    * Look up an axiom of KeYmaera X,
-    * i.e. sound axioms are valid formulas of differential dynamic logic.
-    * parse the axiom file and add all loaded knowledge to the axioms map.
+    * Look up the axioms of KeYmaera X,
+    * i.e. sound axioms are valid formulas of differential dynamic logic / differential game logic.
+    * Parse the axiom file and add all loaded knowledge to the axioms map.
     * @note Result of axiom parse is asserted for a decent set of axioms to remove from soundness-critical core.
-    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see [[loadAxiomString()]]
     */
   private[core] def loadAxioms: immutable.Map[String, Formula] = {
     try {
       val res = KeYmaeraXAxiomParser(loadAxiomString())
-      assert(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse")
+      insist(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse of AxiomBase")
       res.map(k => (k._1 -> k._2)).toMap
     } catch { case e: Exception => logger.fatal("Cannot read axioms", e); println("Cannot read axioms " + e); sys.exit(10) }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
-  /** Redundant code checking expected form of axioms */
+  /** Redundant code checking expected form of axioms after parsing */
   private def assertCheckAxiomFile(axs : Map[String, Formula]): Boolean = {
     val x = Variable("x_", None, Real)
     val y = Variable("y_", None, Real)
@@ -169,52 +174,52 @@ private[core] object AxiomBase extends Logging {
     /**
       * HYBRID PROGRAM MODALITY AXIOMS
       */
-    // Figure 2
-    assert(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
-    assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0)), "[:=] assign")
-    assert(axs("[:=] assign equality") == Equiv(Box(Assign(x,f0), pany), Forall(Seq(x), Imply(Equal(x,f0), pany))), "[:=] assign equality")
-    assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0)), "[?] test")
-    assert(axs("[++] choice") == Equiv(Box(Choice(a,b), pany), And(Box(a, pany), Box(b, pany))), "[++] choice")
-    assert(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
-    assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
+    // @see Figure 2 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    insist(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
+    insist(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0)), "[:=] assign")
+    insist(axs("[:=] assign equality") == Equiv(Box(Assign(x,f0), pany), Forall(Seq(x), Imply(Equal(x,f0), pany))), "[:=] assign equality")
+    insist(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0)), "[?] test")
+    insist(axs("[++] choice") == Equiv(Box(Choice(a,b), pany), And(Box(a, pany), Box(b, pany))), "[++] choice")
+    insist(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
+    insist(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
     //@note only sound for hybrid systems not for hybrid games
-    assert(axs("K modal modus ponens") == Imply(Box(sys, Imply(pany,qany)), Imply(Box(sys, pany), Box(sys, qany))), "K modal modus ponens")
+    insist(axs("K modal modus ponens") == Imply(Box(sys, Imply(pany,qany)), Imply(Box(sys, pany), Box(sys, qany))), "K modal modus ponens")
     //@note could also have accepted axiom I for hybrid systems but not for hybrid games
-    assert(axs("VK vacuous") == Imply(Box(a, True), Imply(p0, Box(a, p0))), "VK vacuous")
+    insist(axs("VK vacuous") == Imply(Box(a, True), Imply(p0, Box(a, p0))), "VK vacuous")
 
     /**
       * DIFFERENTIAL EQUATION AXIOMS
       */
-    // Figure 3
-    assert(axs("DW base") == Box(ODESystem(ode, qany), qany), "DW base")
-    assert(axs("DMP differential modus ponens") == Imply(Box(ODESystem(ode, qany), Imply(qany,UnitPredicational("r",AnyArg))),
+    // @see Figure 3 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    insist(axs("DW base") == Box(ODESystem(ode, qany), qany), "DW base")
+    insist(axs("DMP differential modus ponens") == Imply(Box(ODESystem(ode, qany), Imply(qany,UnitPredicational("r",AnyArg))),
       Imply(
         Box(ODESystem(ode, UnitPredicational("r",AnyArg)), pany),
         Box(ODESystem(ode, qany), pany))), "DMP differential modus ponens")
     /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
-    assert(axs("DE differential effect") == Equiv(
+    insist(axs("DE differential effect") == Equiv(
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), pany),
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), Box(Assign(DifferentialSymbol(x), FuncOf(Function("f",None,Real,Real),x)), pany))), "DE differential effect")
     //@note in analogy to DE
     /* @note Completeness: reassociate needed in DifferentialProduct data structures */
-    assert(axs("DE differential effect (system)") == Equiv(
+    insist(axs("DE differential effect (system)") == Equiv(
       Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),fany),ode), qany), pany),
       Box(ODESystem(DifferentialProduct(ode,AtomicODE(DifferentialSymbol(x),fany)), qany), Box(Assign(DifferentialSymbol(x), fany), pany))), "DE differential effect (system)")
-    assert(axs("DI differential invariance") == Imply(Imply(qany, Box(ODESystem(ode,qany), DifferentialFormula(pany))),
+    insist(axs("DI differential invariance") == Imply(Imply(qany, Box(ODESystem(ode,qany), DifferentialFormula(pany))),
       Equiv(Box(ODESystem(ode,qany),pany), Box(Test(qany),pany))), "DI differential invariance")
-    assert(axs("DG differential ghost") == Equiv(
+    insist(axs("DG differential ghost") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
         AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real)))
       ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost")
     //@note in analogy to DG
-    assert(axs("DG differential ghost constant") == Equiv(
+    insist(axs("DG differential ghost constant") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
         AtomicODE(DifferentialSymbol(y), UnitFunctional("b",Except(y),Real))
       ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost constant")
     //@note in analogy to remark in proof of soundness of DG
-    assert(axs("DG inverse differential ghost") == Equiv(
+    insist(axs("DG inverse differential ghost") == Equiv(
       Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
       Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real))),
         DifferentialProgramConst("c",Except(y))),
@@ -222,26 +227,26 @@ private[core] object AxiomBase extends Logging {
 
     /* DIFFERENTIAL AXIOMS FOR TERMS */
 
-    assert(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
-    assert(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
-    assert(axs("-' derive minus") == Equal(Differential(Minus(fany, gany)), Minus(Differential(fany), Differential(gany))), "-' derive minus")
-    assert(axs("*' derive product") == Equal(Differential(Times(fany, gany)), Plus(Times(Differential(fany), gany), Times(fany, Differential(gany)))), "*' derive product")
+    insist(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
+    insist(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
+    insist(axs("-' derive minus") == Equal(Differential(Minus(fany, gany)), Minus(Differential(fany), Differential(gany))), "-' derive minus")
+    insist(axs("*' derive product") == Equal(Differential(Times(fany, gany)), Plus(Times(Differential(fany), gany), Times(fany, Differential(gany)))), "*' derive product")
     /** DIFFERENTIAL FOR FORMULAS */
-    assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
-    assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
-    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
-    assert(axs("x' derive var") == Equal(Differential(x), DifferentialSymbol(x)), "x' derive var")
+    insist(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
+    insist(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
+    insist(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
+    insist(axs("x' derive var") == Equal(Differential(x), DifferentialSymbol(x)), "x' derive var")
 
-    //assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,f0)), "all instantiate")
+    //insist(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,f0)), "all instantiate")
     // soundness-critical that these are for p() not for p(x) or p(||)
-    //assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
+    //insist(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
 
     true
   }
 
   /**
     * KeYmaera X axioms,
-    * i.e. sound axioms are valid formulas of differential dynamic logic.
+    * i.e. sound axioms are valid formulas of differential dynamic logic / differential game logic.
     *
     * @note Soundness-critical: Only adopt valid formulas as axioms.
     *
@@ -249,8 +254,13 @@ private[core] object AxiomBase extends Logging {
     * @author Stefan Mitsch
     * @author Jan-David Quesel
     * @author Andre Platzer
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer and Yong Kiam Tan. [[https://arxiv.org/abs/1905.13429 Differential equation invariance axiomatization]]. J. ACM. To appear.
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]]. In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
+    * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
     */
-  private[core] def loadAxiomString() : String =
+  private[this] def loadAxiomString() : String =
 """
 Axiom "<> diamond"
   ![a;]!p(||) <-> <a;>p(||)
@@ -343,11 +353,11 @@ End.
 
 Axiom "DG inverse differential ghost"
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
-  /* [{x_'=f(x_)&q(x_)}]p(x_) <-> \forall y_ [{y_'=a(x_)*y+b(x_),x_'=f(x_)&q(x_)}]p(x_) */
+  /* [{x_'=f(x_)&q(x_)}]p(x_) <-> \forall y_ [{y_'=a(x_)*y+b(x_),x_'=f(x_)&q(x_)}]p(x_) THEORY */
 End.
 
 Axiom "DG inverse differential ghost implicational"
-  [{c{|y_|}&q(|y_|)}]p(|y_|)  ->  \forall y_ [{y_'=a(||),c{|y_|}&q(|y_|)}]p(|y_|)
+  [{c{|y_|}&q(|y_|)}]p(|y_|) -> \forall y_ [{y_'=a(||),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 
 /* @todo: , commute should be derivable from this + ghost */
