@@ -92,7 +92,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
 
   /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game. */
   private def dualFree(program: Program): Boolean = program match {
+    // ProgramConst could be replaced by a hybrid game
     case a: ProgramConst => false
+    // SystemConst can only be replaced by a hybrid program, never a hybrid game
     case a: SystemConst  => true
     case Assign(x, e)    => true
     case AssignAny(x)    => true
