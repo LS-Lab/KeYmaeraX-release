@@ -22,11 +22,6 @@ class TaylorModelTests extends TacticTestBase {
       subgoals.loneElement shouldBe ("0<=t, t<=h(), min((0,h()*f()))<=xRem, xRem<=max((0,h()*g())), p() ==>  q()".asSequent)
   }
 
-  "horner" should "form" in withMathematica { _ =>
-    horner("a^2 + 2*a*b + d*b^2 + c + d^3*a*4 + 4".asTerm, "a,b,c".split(",").toList.map(_.asTerm)) shouldBe
-      "4+c+b*(b*d)+a*(4*d^3+b*2+a)".asTerm
-  }
-
   "TaylorModel" should "prove the lemma in order 2" in withMathematica { _ =>
     val ode = "{x' = 1 + y, y' = -x^2, t'=1}".asDifferentialProgram
     val tm = TaylorModel(ode, 2).lemma

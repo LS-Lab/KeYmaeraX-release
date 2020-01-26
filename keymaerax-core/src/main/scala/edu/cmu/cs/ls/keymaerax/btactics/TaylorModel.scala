@@ -76,149 +76,10 @@ object TaylorModelTactics extends Logging {
 
   // Formulas
 
-  def stripForall(fml: Formula) = fml match {
-    case Forall(_, t) => this
-    case _ => throw new IllegalArgumentException("stripForall not on Forall")
-  }
   def stripForalls(fml: Formula) : Formula = fml match {
     case Forall(_, t) => stripForalls(t)
     case _ => fml
   }
-  def rconjuncts(formula: Formula): List[Formula] = formula match {
-    case And(p,q) => p :: rconjuncts(q)
-    case f => List(f)
-  }
-
-  // Substitution
-
-  def replaceFreeList(t: Term)(whats: List[Term], repls: List[Term]) =
-    (whats, repls).zipped.foldLeft(t)((t, wr) => SubstitutionHelper.replaceFree(t)(wr._1, wr._2))
-
-  def replaceFreeList(t: Formula)(whats: List[Term], repls: List[Term]) =
-    (whats, repls).zipped.foldLeft(t)((t, wr) => SubstitutionHelper.replaceFree(t)(wr._1, wr._2))
-
-  def replaceFreeList(t: Program)(whats: List[Term], repls: List[Term]) =
-    (whats, repls).zipped.foldLeft(t)((t, wr) => SubstitutionHelper.replaceFree(t)(wr._1, wr._2))
-
-  def replaceList(what: List[Term], witH: List[Term])(ts: List[Term]) = ts map (replaceFreeList(_)(what, witH))
-
-
-  // Polynomials
-  // TODO:
-  //  - use own representation of multivariate polynomials or a
-  //  - dedicated library
-  //    libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
-  //  - RingsAlgebraTool?
-
-  /* A more efficient data structure for polynomial arithmetic */
-
-  def normalise(p: Term) = {
-    PolynomialArith.normalise(p, true)._1
-  }
-
-  def factors(t: Term): List[Term] = t match {
-    case t: Times => factors(t.right) ++ factors(t.left)
-    case x: Term => List(x)
-  }
-
-  def degree_gen(t: Term, isVar: Term=>Boolean) : BigDecimal = t match {
-    case Power(l, Number(n)) if isVar(l) => n
-    case t if PolynomialArith.isVar(t) => 1
-    case _ => 0
-  }
-  def degree(t: Term) : BigDecimal = degree_gen(t,  PolynomialArith.isVar(_))
-
-  def degree_wrt(w: Variable)(t: Term): BigDecimal = t match {
-    case t: Power => t.left match {
-      case v if v == w => t.right match {
-        case n: Number => n.value
-      }
-      case _ => 0
-    }
-    case v if v == w => 1
-    case _ => 0
-  }
-
-  /* of a monomial */
-  def order_wrt(v: Variable)(t: Term): BigDecimal = t match {
-    case t: Times => (factors(t) map degree_wrt(v)) sum
-    case _ => 0
-  }
-
-  /* of a monomial */
-  def order_gen(t: Term, isVar: Term=>Boolean): BigDecimal = t match {
-    case t: Times =>
-      val r = ((factors(t) map (v => degree_gen(v, isVar))) sum)
-      r
-    case _ => 0
-  }
-
-  // For normalized polynomials
-  def integrate_monom(t: Variable)(p: Term): Term = {
-    val n = order_wrt(t)(p)
-    normalise(Divide(Times(p, t), Number(n + 1)))
-  }
-
-  def normaliseStripZero(p: Term) = {
-    DifferentialHelper.stripPowZero(PolynomialArith.normalise(p, true)._1)
-  }
-
-  def sum_terms(ts: List[Term]) = if (ts isEmpty) Number(0) else ts.reduce(Plus(_, _))
-
-  def summands(t: Term): List[Term] = t match {
-    case t: Plus => summands(t.right) ++ summands(t.left)
-    case x: Term => List(x)
-  }
-
-  def integrate(t: Variable)(p: Term): Term = sum_terms(summands(p) map (integrate_monom(t)))
-
-  def split_poly(tm: Term, keepP: Term=>Boolean, ivl_terms: List[Term]): (Term, Term) = {
-    val (throw_away, keep) = summands(tm).partition(t =>
-      // contains ivl_terms
-      ivl_terms.exists(ivlterm => PolynomialArith.divPoly(normalise(t),normalise(ivlterm)).isDefined)
-        ||
-        (!keepP(t))
-    )
-    (normalise(keep.reduceLeft(Plus)), if (throw_away.isEmpty) Number(0) else normalise(throw_away.reduceLeft(Plus)))
-  }
-
-  def divPoly(a: Term, b: Term): Option[(Term, Term)] =
-  // TODO: this is too much normalisation
-  {
-    (PolynomialArith.divPoly(normalise(a), normalise(Neg(b))) /* TODO: for some reason, PolynomialArith.divPoly switches signs?? */) match {
-      case Some(qr) =>
-        divPoly(qr._2, b) match {
-          case Some(qsrs) =>
-            val (qs, rs) = qsrs
-            Some (PolynomialArith.addPoly(normalise(qr._1),qs,true)._1,
-              normalise(rs))
-          case None => Some (normalise(qr._1), normalise(qr._2))
-        }
-      case None => None
-    }
-  }
-
-  // rewrite t to Horner Form (w.r.t. "Variables" xs)
-  def horner(t: Term, xs: List[Term]) : Term = xs match {
-    case Nil => SimplifierV3.termSimp(t, SimplifierV3.emptyCtx, SimplifierV3.defaultTaxs)._1
-    case x::xs => {
-      divPoly(t, x) match {
-        case None => horner(t, xs)
-        case Some((q, r)) => {
-          val hq = horner(q, x :: xs)
-          val hr = horner(r, xs)
-          val prod = if (hq == Number(0)) Number(0)
-          else if (hq == Number(1)) x
-          else if (hq == Number(-1)) Neg(x)
-          else Times(x, hq)
-          if (hr == Number(0)) prod
-          else if (prod == Number(0)) hr
-          else Plus(hr, prod)
-        }
-      }
-    }
-  }
-
 
   // Equality
 
@@ -239,17 +100,8 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  def applyODE(ode: DifferentialProgram, state: List[Term], time: Term)(ps: List[Term]) =
-    DifferentialHelper.atomicOdes(ode).filter(_.xp.x != time).map(dx => replaceFreeList(dx.e)(state, ps))
-
-  private def normalizingLieDerivative(p: DifferentialProgram, t: Term): Term = {
-    val ld = normalise(DifferentialHelper.simplifiedLieDerivative(p, normaliseStripZero(t), None))
-    ld
-  }
-
-
   // TODO: sort in somewhere
-  lazy val partialVacuousExistsAxiom2 = remember(
+  private lazy val partialVacuousExistsAxiom2 = remember(
     "\\exists x_ (p_() & q_(x_)) <-> p_() & \\exists x_ q_(x_)".asFormula,
     equivR(1) <(
       existsL(-1) & andR(1) <(prop & done, existsR("x_".asVariable)(1) & prop & done),
@@ -257,7 +109,7 @@ object TaylorModelTactics extends Logging {
     )
   )
 
-  def rewriteFormula(prv: ProvableSig) = "rewriteFormula" by { (pos: Position, seq: Sequent) =>
+  private def rewriteFormula(prv: ProvableSig) = "rewriteFormula" by { (pos: Position, seq: Sequent) =>
     val failFast = new BuiltInTactic("ANON") with NoOpTactic {
       override def result(provable: ProvableSig): ProvableSig = throw BelleUserGeneratedError("Fail")
     }
@@ -279,7 +131,7 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  // Generic TaylormModel functions
+  // Generic Taylor Model functions
 
   // names
   case class TMNames(precond_prefix: String,
@@ -308,20 +160,20 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  def templateTmCompose(names: TMNames, dim: Int): Seq[Term] = {
+  private def templateTmCompose(names: TMNames, dim: Int): Seq[Term] = {
     (0 until dim).map(i => Plus((0 until dim).map(j => Times(names.precond(i, j), names.right(j))).reduceLeft(Plus), names.precondC(i)))
   }
 
   // Specialized Tactics
   private val namespace = "taylormodel"
-  def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
-  lazy val unfoldExistsLemma = remember("\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
+  private def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
+  private lazy val unfoldExistsLemma = remember("\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
     existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms.<(QE & done, implyR(1) & eqL2R(-3)(1) & closeId),
     existsR("r_() - s_()".asTerm)(1) & prop & QE & done))
 
   private lazy val foldAndLessEqExistsLemma = remember(("(a() <= x_ - b() & x_ - b() <= c()) <->" +
     "(\\exists xr_ (x_ = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula, QE & done)
-  def foldAndLessEqExists(but: Seq[Variable] = Nil) = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
+  private def foldAndLessEqExists(but: Seq[Variable] = Nil) = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
     Idioms.mapSubpositions(pos, seq, {
       case (And(LessEqual(_, Minus(v1: Variable, _)), LessEqual(Minus(v2: Variable, _), _)), pos)
         if v1 == v2 && !but.contains(v1)
@@ -332,9 +184,9 @@ object TaylorModelTactics extends Logging {
     }).reduceLeft(_ & _)
   }
 
-  lazy val leTimesMonoLemma =
+  private lazy val leTimesMonoLemma =
     remember("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() -> R_() <= max((0,h_() * U_()))".asFormula, QE & done)
-  lazy val timesLeMonoLemma =
+  private lazy val timesLeMonoLemma =
     remember("0 <= t_() & t_() <= h_() -> t_() * L_() <= U_() -> min((0,h_() * L_())) <= U_()".asFormula, QE & done)
   private[btactics] def coarsenTimesBounds(t: Term) = "coarsenTimesBounds" by { (seq: Sequent) =>
     val leTimesMono = "leTimesMono" by { (pos: Position, seq: Sequent) =>
@@ -346,22 +198,20 @@ object TaylorModelTactics extends Logging {
             case None => throw new IllegalArgumentException("could not find matching nonnegativity assumption")
             case Some(nonneg) => {
               toc(" found nonnegative ")
-              seq.ante.find { case (LessEqual(s, _)) if s == t => true case _ => false } match {
+              seq.ante.collectFirst{ case fml @ LessEqual(s, _) if s == t => fml } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
-                case Some(ub_fml@(LessEqual(_, ub))) =>
-                  {
-                    toc(" found upper bound")
-                    cutL(LessEqual(l, FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g)))))(pos) &
-                      Idioms.<(skip,
-                        cohideOnlyR('Rlast) &
-                          cutR(And(nonneg, ub_fml))(1) & Idioms.<(
-                          andR(1) & Idioms.<(closeId, closeId),
-                          cohideR(1) &
-                            useAt(leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
-                            done
-                        )
+                case Some(ub_fml @ LessEqual(_, ub)) =>
+                  toc(" found upper bound")
+                  cutL(LessEqual(l, FuncOf(BigDecimalQETool.maxF, Pair(Number(0), Times(ub, g)))))(pos) &
+                    Idioms.<(skip,
+                      cohideOnlyR('Rlast) &
+                        cutR(And(nonneg, ub_fml))(1) & Idioms.<(
+                        andR(1) & Idioms.<(closeId, closeId),
+                        cohideR(1) &
+                          useAt(leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
+                          done
                       )
-                  }
+                    )
               }
             }
           }
@@ -376,9 +226,9 @@ object TaylorModelTactics extends Logging {
           seq.ante.find{ case (LessEqual(Number(n), s)) if n==0 && s==t => true case _ => false } match {
             case None => throw new IllegalArgumentException("could not find matching nonnegativity assumption")
             case Some(nonneg) =>
-              seq.ante.find{ case (LessEqual(s, _)) if s==t => true case _ => false } match {
+              seq.ante.collectFirst{ case fml @ LessEqual(s, _) if s==t => fml } match {
                 case None => throw new IllegalArgumentException("could not find matching upper bound assumption")
-                case Some(ub_fml @ (LessEqual(_, ub))) =>
+                case Some(ub_fml @ LessEqual(_, ub)) =>
                   cutL(LessEqual(FuncOf(BigDecimalQETool.minF, Pair(Number(0), Times(ub, g))), u))(pos) &
                     Idioms.<( skip,
                       cohideOnlyR('Rlast) &
@@ -415,8 +265,8 @@ object TaylorModelTactics extends Logging {
     case _ => Nil
   })
 
-  lazy val trivialInequality = remember("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
-  def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
+  private lazy val trivialInequality = remember("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
+  private def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     val ssp = seq.sub(pos)
@@ -431,9 +281,9 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  lazy val refineConjunction = remember("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
-  lazy val trivialRefineLtGt = remember("(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
-  lazy val trivialRefineGeLe = remember("(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula, QE & done)
+  private lazy val refineConjunction = remember("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
+  private lazy val trivialRefineLtGt = remember("(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
+  private lazy val trivialRefineGeLe = remember("(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula, QE & done)
 
   private [btactics] def refineTrivialInequalities : DependentPositionTactic = "refineTrivialStrictInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
@@ -570,7 +420,7 @@ object TaylorModelTactics extends Logging {
       }
     }
 
-    val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
+    private val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
       And(LessEqual(Number(0), Minus(time, time0)), LessEqual(Minus(time, time0), timestep))), QE & done)
 
     val lemma: ProvableSig = proveBy(

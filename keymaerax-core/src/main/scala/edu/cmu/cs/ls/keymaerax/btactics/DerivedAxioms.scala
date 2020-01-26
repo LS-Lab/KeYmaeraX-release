@@ -2693,23 +2693,21 @@ object DerivedAxioms extends Logging {
   //    by(Dlinear)
   //)
 
-
   /**
-    * {{{Axiom "Uniq uniqueness 2"
-    *    <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c & q1(||)&q2(||)}>(p1(||) | p2 (||))
+    * {{{Axiom "Uniq uniqueness iff"
+    *    <{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c & q(||)&q(||)}>(p(||))
     * End.
     * }}}
     */
-  lazy val uniqueness2 = derivedAxiom("Uniq uniqueness 2",
-    "<{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c & q1(||)&q2(||)}>(p1(||) | p2 (||))".asFormula,
-    cutR("<{c&q1(||)}>(p1(||)|p2(||)) & <{c&q2(||)}>p2(||) -> <{c&q1(||)&q2(||)}>(p1(||)|p2(||))".asFormula)(1) <(
-      cutR("<{c&q1(||)}>(p1(||)|p2(||)) & <{c&q2(||)}>(p1(||)|p2(||)) -> <{c&q1(||)&q2(||)}>(p1(||)|p2(||))".asFormula)(1) <(
-        byUS("Uniq uniqueness")
-        ,
-        CMon(PosInExpr(0::1::1::Nil)) & implyR(1) & orR(1) & close(-1,2)
+  lazy val uniquenessIff = derivedAxiom("Uniq uniqueness iff",
+    "<{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c&q(||) & r(||)}>p(||)".asFormula,
+    equivR(1) <(
+      implyRi & byUS("Uniq uniqueness"),
+      andR(1) <(
+        dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop),
+        dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop)
         )
-      ,
-      CMon(PosInExpr(0::0::1::Nil)) & implyR(1) & orR(1) & close(-1,1)
+
       )
   )
 
