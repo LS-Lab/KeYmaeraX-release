@@ -516,7 +516,7 @@ object DerivationInfo {
   )
 
   private lazy val foInfos: List[DerivationInfo] = List(
-    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt("all instantiate")}),
+    new DerivedAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allInstantiate)}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", unsure, {case () => HilbertCalculus.allDist}),
     new DerivedAxiomInfo("all distribute elim", ("∀→","all->"), "allDistElim", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allDistributeElim)}),
     new DerivedAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.vacuousAllAxiom)}),

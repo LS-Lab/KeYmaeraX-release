@@ -494,7 +494,6 @@ Axiom "K modal modus ponens"
 End.
 
 Axiom "I induction"
-  /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(||) -> [a;] p(||))) -> (p(||) -> [{a;}*]p(||)) THEORY */
   (p(||) & [{a{|^@|};}*](p(||) -> [a{|^@|};] p(||))) -> [{a{|^@|};}*]p(||)
 End.
 
@@ -518,11 +517,7 @@ Axiom "all dual time"
   (!\exists t_ !p(||)) <-> \forall t_ p(||)
 End.
 
-Axiom /*\\foralli */ "all instantiate"
-  (\forall x_ p(x_)) -> p(f())
-End.
-
-/* consequence of "all instantiate" @note generalized "all instantiate" */
+/* generalized "all instantiate" */
 Axiom "all eliminate"
   (\forall x_ p(||)) -> p(||)
 End.

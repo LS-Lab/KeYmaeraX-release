@@ -237,6 +237,33 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom /*\\foralli */ "all instantiate"
+    *    (\forall x_ p(x_)) -> p(f())
+    * End.
+    * }}}
+    * @note Core axiom derivable thanks to [:=]= and [:=]
+    */
+  lazy val allInstantiate = derivedAxiom("all instantiate",
+    "(\\forall x_ p(x_)) -> p(f())".asFormula,
+    cutR("(\\forall x_ (x_=f()->p(x_))) -> p(f())".asFormula)(1) <(
+      useAt("[:=] assign equality", PosInExpr(1::Nil))(1, 0::Nil) &
+        useAt("[:=] assign")(1, 0::Nil) &
+        implyR(1) & close(-1,1)
+      ,
+      CMon(PosInExpr(0::0::Nil)) &
+        implyR(1) & implyR(1) & close(-1,1)
+      )
+    //      ------------refl
+    //      p(f) -> p(f)
+    //      ------------------ [:=]
+    //    [x:=f]p(x) -> p(f)
+    //   --------------------------------[:=]=
+    //    \forall x (x=f -> p(x)) -> p(f)
+    //   -------------------------------- CMon(p(x) -> (x=f->p(x)))
+    //   \forall x p(x) -> p(f)
+  )
+
+  /**
     * {{{
     *   Axiom "vacuous all quantifier"
     *     (\forall x_ p()) <-> p()
@@ -411,6 +438,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(p_() -> (q_()<->r_())) <-> ((p_()->q_()) <-> (p_()->r_()))".asFormula)),
     prop
   )
+
 
   /**
     * CONGRUENCE AXIOMS (for constant terms)
@@ -1528,7 +1556,7 @@ object DerivedAxioms extends Logging {
     useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
       implyR(SuccPos(0)) &
       notR(SuccPos(0)) &
-      useAt("all instantiate", PosInExpr(0::Nil))(-2) &
+      useAt(allInstantiate, PosInExpr(0::Nil))(-2) &
       prop
   )
 
@@ -1537,7 +1565,7 @@ object DerivedAxioms extends Logging {
     useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
       implyR(SuccPos(0)) &
       notR(SuccPos(0)) &
-      useAt("all instantiate", PosInExpr(0::Nil))(-2) &
+      useAt(allInstantiate, PosInExpr(0::Nil))(-2) &
       prop
   )
 
@@ -1888,7 +1916,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ p_(x_)) -> (\\exists x_ p_(x_))".asFormula)),
     implyR(1) &
       useAt(existsGeneralize.fact, PosInExpr(1::Nil))(1) &
-      useAt("all instantiate")(-1) &
+      useAt(allInstantiate)(-1) &
       closeId
   )
 
