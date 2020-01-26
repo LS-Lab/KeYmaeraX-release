@@ -11,12 +11,15 @@ import org.apache.logging.log4j.scala.Logging
 import scala.annotation.switch
 
 /**
-  * Axiom Indexing data structures for canonical proof strategies and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
+  * Central Axiom Indexing data structures for canonical proof strategies, including
+  * [[UnifyUSCalculus.chase]], [[UnifyUSCalculus.chaseFor()]]  and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
   * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
   * @see [[TactixLibrary.step]]
   * @see [[TactixLibrary.sequentStepIndex]]
  */

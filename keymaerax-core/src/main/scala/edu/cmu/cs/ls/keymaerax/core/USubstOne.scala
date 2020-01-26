@@ -31,6 +31,7 @@ import SetLattice.bottom
   * @note soundness-critical
   * @author Andre Platzer
   * Created by aplatzer on 2019-2-12.
+  * @since 4.7
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubstOne)]]
   * @see [[USubstChurch]]
