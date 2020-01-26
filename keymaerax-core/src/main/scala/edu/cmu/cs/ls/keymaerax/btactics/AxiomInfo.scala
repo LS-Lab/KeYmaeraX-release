@@ -31,28 +31,6 @@ import scala.util.Try
   * Created by bbohrer on 12/28/15.
   */
 
-/** UI display information on how to show an axiom, rule, or tactic application */
-sealed trait DisplayInfo {
-  /** how to render an axiom/rule/tactic name in the UI */
-  def name: String
-  /** how to render an axiom/rule/tactic name in ASCII plain text */
-  def asciiName: String
-}
-case class SimpleDisplayInfo(override val name: String, override val asciiName: String) extends DisplayInfo
-case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay]) extends DisplayInfo {
-  override def name = names.name
-  override def asciiName = names.asciiName
-}
-case class SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean = false)
-case class AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) extends DisplayInfo {
-  override def name = names.name
-  override def asciiName = names.asciiName
-}
-case class InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) extends DisplayInfo {
-  override def name = names.name
-  override def asciiName = names.asciiName
-}
-
 /** Typed functions to circumvent type erasure of arguments and return types. */
 abstract class TypedFunc[-A: TypeTag, +R: TypeTag] extends (A => R) {
   val retType: TypeTag[_] = scala.reflect.runtime.universe.typeTag[R]
@@ -71,15 +49,20 @@ object TypedFunc {
   * with meta information of relevant names and display names and visualizations for the user interface.
   */
 object DerivationInfo {
+  /** Locally embed single string names into SimpleDisplayInfo. */
   implicit def displayInfo(name: String): SimpleDisplayInfo = {SimpleDisplayInfo(name, name)}
+  /** Locally embed pair string names into SimpleDisplayInfo distinguishing UI name from plain ASCII name. */
   implicit def displayInfo(pair: (String, String)): SimpleDisplayInfo = SimpleDisplayInfo(pair._1, pair._2)
+  /** Locally embed pair of list of strings into SequentDisplayInfo. */
   implicit def sequentDisplay(succAcc:(List[String], List[String])): SequentDisplay = {
     SequentDisplay(succAcc._1, succAcc._2)
   }
+  /** Locally embed pair of list of strings with boolean into SequentDisplayInfo with info on whether closing. */
   implicit def sequentDisplay(succAccClosed:(List[String], List[String], Boolean)): SequentDisplay = {
     SequentDisplay(succAccClosed._1, succAccClosed._2, succAccClosed._3)
   }
 
+  /** Indicates that the axiom/rule/tactic of the given name could not be found. */
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
 
   //@todo
@@ -93,11 +76,14 @@ object DerivationInfo {
   private def useAt(l:Lemma):DependentPositionTactic = HilbertCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
-  private def convert(rules: Map[String,ProvableSig]): List[DerivationInfo] =
+  /** Convert axiomatic proof rules to derivation infos. */
+  private def convertAxiomaticRules(rules: Map[String,ProvableSig]): List[DerivationInfo] =
   //@todo display info is rather impoverished
     rules.keys.map(name => AxiomaticRuleInfo(name, SimpleDisplayInfo(name, name), canonicalize(name))).toList
+  /** Alphanumeric letter or digit parts of a name, skipping all other characters or spaces. */
   private def canonicalize(name: String): String = name.filter(c => c.isLetterOrDigit)
 
+  /** Modality cases of [[allInfo]] */
   private lazy val modalityInfos: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
@@ -186,6 +172,7 @@ object DerivationInfo {
       , "boxTrue", true, {case () => HilbertCalculus.boxTrue})
   )
 
+  /** Differential equation cases of [[allInfo]] */
   private lazy val odeInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("DW base", "DWbase", "DWbase", true, {case () => HilbertCalculus.DW}),
     PositionTacticInfo("dW"
@@ -440,6 +427,7 @@ object DerivationInfo {
       , "DVleq", unsure, {case () => HilbertCalculus.useAt("DV differential variant <=")})
   )
 
+  /** Differential cases of [[allInfo]] */
   private lazy val differentialInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("c()' derive constant fn"
       , AxiomDisplayInfo(("c()'", "c()′"), "<span class=\"k4-axiom-key\">(c)′</span>=0")
@@ -515,6 +503,7 @@ object DerivationInfo {
     PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
   )
 
+  /** First-order logic quantifier cases of [[allInfo]] */
   private lazy val foInfos: List[DerivationInfo] = List(
     new DerivedAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allInstantiate)}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", unsure, {case () => HilbertCalculus.allDist}),
@@ -530,6 +519,7 @@ object DerivationInfo {
     new CoreAxiomInfo("all eliminate y", ("∀y","ally"), "ally", unsure, {case () => posnil})
   )
 
+  /** Miscellaneous cases of [[allInfo]] that don't really fit anywhere else.   */
   private lazy val miscInfos: List[DerivationInfo] = List(
     // more
     // Note: only used to implement Dskipd
@@ -541,6 +531,7 @@ object DerivationInfo {
     CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", unsure, _ => TactixLibrary.useAt("dgZeroEquilibrium"))
   )
 
+  /** Derived axiom cases of [[allInfo]] */
   private lazy val derivedAxiomsInfos: List[DerivationInfo] = List(
     new DerivedAxiomInfo("const congruence", "CCE", "constCongruence", false, {case () => HilbertCalculus.useAt(DerivedAxioms.constCongruence)}),
     new DerivedAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", false, {case () => HilbertCalculus.useAt(DerivedAxioms.constFormulaCongruence)}),
@@ -802,6 +793,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)})
   )
 
+  /** Sequent calculus cases of [[allInfo]] */
   private lazy val sequentCalculusInfos: List[DerivationInfo] = List(
     new PositionTacticInfo("notL"
       , RuleDisplayInfo(("¬L", "!L"), (List("¬P", "&Gamma;"),List("&Delta;")), List((List("&Gamma;"),List("&Delta;","P"))))
@@ -1302,10 +1294,11 @@ object DerivationInfo {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  val allInfo: List[DerivationInfo] = (convert(ProvableSig.rules) ++ modalityInfos ++ odeInfos ++
+  val allInfo: List[DerivationInfo] = (convertAxiomaticRules(ProvableSig.rules) ++ modalityInfos ++ odeInfos ++
     differentialInfos ++ foInfos ++ miscInfos ++ derivedAxiomsInfos ++ sequentCalculusInfos) ensures (
     consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
+  /** Check that the names of the given list of DerivationInfo are declared consistently. */
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
     val canonicals = list.map(_.canonicalName)
     val codeNames = list.map(_.codeName).filter(_ != needsCodeName)
@@ -1370,6 +1363,7 @@ object DerivationInfo {
     case _ => None
   }
 
+  /** Check whether the given `codeName` is a code name of any of the listed DerivationInfos. */
   def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName)
 }
 
@@ -1399,49 +1393,18 @@ object TacticInfo {
     }
 }
 
-sealed trait ArgInfo {
-  /** Argument sort. */
-  val sort: String
-  /** Argument name. */
-  val name: String
-  /** A list of allowed fresh symbols. */
-  val allowsFresh: List[String]
-  /** Converts an expression into the required format of the tactic (default: no-op). Returns either the converted
-    * expression or an error message. */
-  def convert(e: Expression): Either[Expression, String] = Left(e)
-}
-case class FormulaArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
-  val sort = "formula"
-}
-case class VariableArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
-  val sort = "variable"
-}
-case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil,
-                          converter: Expression => Either[Expression, String] = e => Left(e)) extends ArgInfo {
-  val sort = "expression"
-  override def convert(e: Expression): Either[Expression, String] = converter(e)
-}
-case class TermArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
-  val sort = "term"
-}
-case class StringArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
-  val sort = "string"
-}
-case class SubstitutionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
-  val sort = "subst"
-}
-case class OptionArg(arg: ArgInfo) extends ArgInfo {
-  val name: String = arg.name
-  val sort: String = "option[" + arg.sort + "]"
-  val allowsFresh: List[String] = arg.allowsFresh
-}
-@deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
-case class ListArg (override val name: String, elementSort: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
-  val sort = "list"
-}
-
 /** Central meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic.
   * Provides information such as unique canonical names, internal code names, display information, etc.
+  *
+  * Each DerivationInfo is either
+  *   - [[AxiomInfo]] consisting of builtin [[CoreAxiomInfo]] and derived axioms [[DerivedAxiomInfo]].
+  *   - [[AxiomaticRuleInfo]] for builtin axiomatic proof rules.
+  *   - [[DerivedRuleInfo]] for derived axiomatic proof rules.
+  *   - [[TacticInfo]] for tactics and its various subtypes.
+  *
+  * Thereby, everything consisting of a proved axiom is an [[AxiomInfo]] namely [[CoreAxiomInfo]] and [[DerivedAxiomInfo]].
+  * Everything consisting of a Provable is a [[ProvableInfo]], namely [[AxiomInfo]] and [[AxiomaticRuleInfo]] and [[DerivedRuleInfo]].
+  *
   * @see [[CoreAxiomInfo]]
   * @see [[DerivedAxiomInfo]]
   * @see [[AxiomaticRuleInfo]]
@@ -1449,21 +1412,23 @@ case class ListArg (override val name: String, elementSort: String, override val
   * @see [[TacticInfo]]
   */
 sealed trait DerivationInfo {
-  /** Canonical name unique across all derivations (axioms or tactics). For axioms or axiomatic rules this is as declared in
+  /** Canonical full name unique across all derivations (axioms or tactics).
+    * For axioms or axiomatic rules this is as declared in
     * [[AxiomBase]], for derived axioms or derived axiomatic rules as in [[DerivedAxioms]],
     * and for [[BelleExpr]] tactics it is identical to their codeName.
     * Canonical names can and will contain spaces and special chars. */
   val canonicalName: String
-  /** How to display this inference step in a UI */
+  /** How to render this inference step for display in a UI */
   val display: DisplayInfo
-  /** The unique alphanumeric identifier for this inference step, cannot contain spaces. */
+  /** The unique alphanumeric identifier for this inference step. Cannot contain spaces or special characters. */
   val codeName: String
+
   /** Specification of inputs (other than positions) to the derivation, along with names to use when displaying in the UI. */
   val inputs: List[ArgInfo] = Nil
+
   /** Bellerophon tactic implementing the derivation. For non-input tactics this is simply a BelleExpr. For input tactics
     * it is (curried) function which accepts the inputs and produces a BelleExpr. */
   def belleExpr: Any
-  //@todo add formattedName/unicodeName: String
   /** Number of positional arguments to the derivation. Can be 0, 1 or 2. */
   val numPositionArgs: Int = 0
   /** Whether the derivation expects the caller to provide it with a way to generate invariants */
@@ -1530,7 +1495,7 @@ trait AxiomInfo extends ProvableInfo {
 }
 
 /** Meta-Information for an axiom from the prover core
-  * @see [[AxiomBase]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[DerivedAxiomInfo]]
   */
 case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, override val linear: Boolean, expr: Unit => DependentPositionTactic)
@@ -1566,8 +1531,8 @@ object CoreAxiomInfo {
   val allInfo:List[CoreAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[CoreAxiomInfo]).map(_.asInstanceOf[CoreAxiomInfo])
 }
 
-/** Information for a derived axiom proved from the core
-  * @see [[DerivedAxioms]]
+/** Information for a derived axiom proved from the core.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
   * @see [[CoreAxiomInfo]] */
 case class DerivedAxiomInfo(override val canonicalName: String, override val display: DisplayInfo, override val codeName: String, override val linear: Boolean, expr: Unit => DependentPositionTactic)
   extends AxiomInfo with StorableInfo {
@@ -1650,8 +1615,8 @@ case class InputTwoPositionTacticInfo(override val codeName: String, override va
   override val numPositionArgs = 2
 }
 
-/** Information for an axiomatic rule
-  * @see [[AxiomBase]]
+/** Information for an axiomatic proof rule
+  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[DerivedRuleInfo]] */
 case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String)
   extends ProvableInfo {
@@ -1667,6 +1632,7 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
 
 
 /** Information for a derived rule proved from the core
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
   * @see [[AxiomaticRuleInfo]] */
 case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any)
   extends ProvableInfo with StorableInfo {
