@@ -329,15 +329,6 @@ Axiom "DG differential ghost"
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}]p(|y_|)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
-
-/* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
-Axiom "DG differential ghost constant"
-  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
-End.
-Axiom "DG differential ghost constant all"
-  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
-End.
-
 Axiom "DG inverse differential ghost"
   [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{y_'=(a(|y_|)*y_)+b(|y_|),c{|y_|}&q(|y_|)}]p(|y_|)
   /* [{x_'=f(x_)&q(x_)}]p(x_) <-> \forall y_ [{y_'=a(x_)*y+b(x_),x_'=f(x_)&q(x_)}]p(x_) THEORY */
@@ -347,6 +338,18 @@ Axiom "DG inverse differential ghost implicational"
   [{c{|y_|}&q(|y_|)}]p(|y_|) -> \forall y_ [{y_'=a(||),c{|y_|}&q(|y_|)}]p(|y_|)
 End.
 
+/* Special case of DG differential ghost that ghosts in constants which DS can remove without additional rewriting. */
+Axiom "DG differential ghost constant"
+  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \exists y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
+End.
+Axiom "DG differential ghost constant all"
+  [{c{|y_|}&q(|y_|)}]p(|y_|) <-> \forall y_ [{c{|y_|},y_'=b(|y_|)&q(|y_|)}]p(|y_|)
+End.
+
+Axiom "DS& differential equation solution"
+  [{x_'=c()&q(x_)}]p(|x_'|) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(|x_'|)))
+End.
+
 /* @todo: , commute should be derivable from this + ghost */
 Axiom ", sort"
   [{c,d,e&q(||)}]p(||) <-> [{c,e,d&q(||)}]p(||)
@@ -354,10 +357,6 @@ End.
 
 Axiom ", commute"
   [{c,d&q(||)}]p(||) <-> [{d,c&q(||)}]p(||)
-End.
-
-Axiom "DS& differential equation solution"
-  [{x_'=c()&q(x_)}]p(|x_'|) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(|x_'|)))
 End.
 
 /* @todo soundness requires no primes in p(||) */
@@ -390,6 +389,8 @@ Axiom "RI& closed real induction >="
   (q(|t_|) ->f(|t_|)>=0) &
   [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
+
+/** DIFFERENTIAL AXIOMS */
 
 Axiom "c()' derive constant fn"
   c()' = 0
@@ -472,7 +473,7 @@ Axiom "exists' derive exists"
   /* sic! yet <- */
 End.
 
-/** HYBRID PROGRAMS NOT HYBRID GAMES. */
+/** HYBRID PROGRAMS / GAMES */
 
 Axiom "<d> dual"
   <{a;}^@>p(||) <-> !<a;>!p(||)
@@ -498,9 +499,7 @@ End.
   [a{|^@x_|};]\forall x_ p(x_) <-> \forall x_ [a{|^@x_|};]p(x_)
 End.*/
 
-/**
- * FIRST-ORDER QUANTIFIER AXIOMS
- */
+/** FIRST-ORDER QUANTIFIER AXIOMS */
 
 Axiom "all dual"
   (!\exists x_ !p(||)) <-> \forall x_ p(||)
@@ -511,9 +510,7 @@ Axiom "all eliminate"
   (\forall x_ p(||)) -> p(||)
 End.
 
-/**
- * Z3 compatibility axioms (derivable with Mathematica).
- */
+/** Z3 compatibility axioms (derivable with Mathematica) */
 Axiom "dgZeroEquilibrium"
   x=0 & n>0 -> [{x'=c*x^n}]x=0
 End.
