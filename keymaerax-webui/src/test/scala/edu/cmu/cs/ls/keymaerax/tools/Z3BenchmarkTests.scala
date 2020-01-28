@@ -25,8 +25,10 @@ class Z3BenchmarkTests extends TacticTestBase {
     val logEntries = QELogger.parseLog(haveQeLogPath).map({case (name, sequents) => name -> sequents.head._2}).toList
     val examples = Table(("Name", "Sequent"), logEntries:_*)
     forEvery(examples) { (name, seq) =>
-      println(s"Proving $name with Z3 ${seq.prettyString}")
-      proveBy(seq, TactixLibrary.QE(Nil, None, qeTimeout)) shouldBe 'proved
+      whenever(!Thread.currentThread().isInterrupted) {
+        println(s"Proving $name with Z3 ${seq.prettyString}")
+        proveBy(seq, TactixLibrary.QE(Nil, None, qeTimeout)) shouldBe 'proved
+      }
     }
   }
 

@@ -58,14 +58,18 @@ class SMTQETests extends TacticTestBase {
 
   "Z3" should "prove every basic example" in {
     forEvery (basicExamples) {
-      (name, input, expected) => withClue(name) { z3.qeEvidence(input)._1 shouldBe expected }
+      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
+        z3.qeEvidence(input)._1 shouldBe expected
+      }}
     }
   }
 
   "Polya" should "prove every basic example" ignore {
     //@todo Polya proves not every example
     forEvery (basicExamples) {
-      (name, input, expected) => withClue(name) { polya.qeEvidence(input)._1 shouldBe expected }
+      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
+        polya.qeEvidence(input)._1 shouldBe expected
+      }}
     }
   }
 
@@ -83,7 +87,9 @@ class SMTQETests extends TacticTestBase {
 
   "Z3" should "prove every complicated example" in {
     forEvery (complicatedExamples) {
-      (name, input, expected) => withClue(name) { z3.qeEvidence(input)._1 shouldBe expected }
+      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
+        z3.qeEvidence(input)._1 shouldBe expected
+      }}
     }
   }
 
@@ -117,7 +123,9 @@ class SMTQETests extends TacticTestBase {
   "Z3" should "prove every regression example" in {
     z3.setOperationTimeout(30)
     forEvery (regressionExamples) {
-      (name, input, expected) => withClue(name) { z3.qeEvidence(input)._1 shouldBe expected }
+      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
+        z3.qeEvidence(input)._1 shouldBe expected
+      }}
     }
   }
 

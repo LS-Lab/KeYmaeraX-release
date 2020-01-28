@@ -367,9 +367,11 @@ class ODETests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "60")) {
       forEvery(list) {
         (formula, requiredTool) =>
-          println("Proving " + formula)
-          if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
-            TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+          whenever(!Thread.currentThread().isInterrupted) {
+            println("Proving " + formula)
+            if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
+              TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+            }
           }
       }
     }
@@ -379,14 +381,16 @@ class ODETests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "60")) {
       forEvery(list) {
         (formula, requiredTool) =>
-          if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
-            println("Works now with " + qeTool.asInstanceOf[Tool].name + "? " + formula)
-            try {
-              cancelAfter(2 minutes) {
-                a[BelleThrowable] should be thrownBy TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE) & done)
+          whenever(!Thread.currentThread().isInterrupted) {
+            if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
+              println("Works now with " + qeTool.asInstanceOf[Tool].name + "? " + formula)
+              try {
+                cancelAfter(2 minutes) {
+                  a[BelleThrowable] should be thrownBy TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE) & done)
+                }
+              } catch {
+                case _: TestCanceledException => // cancelled by timeout, not yet solved fast enough
               }
-            } catch {
-              case _: TestCanceledException => // cancelled by timeout, not yet solved fast enough
             }
           }
       }
@@ -403,7 +407,9 @@ class ODETests extends TacticTestBase {
   it should "prove a list of ODEs with cuts after improving tactics" taggedAs TodoTest ignore withQE { _ =>
     forEvery (nops) {
       formula =>
-        TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+        whenever(!Thread.currentThread().isInterrupted) {
+          TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+        }
     }
   }
 
