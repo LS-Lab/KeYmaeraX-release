@@ -149,11 +149,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
+
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
       implicit val signaler: Signaler = (t: Thread) => {
         theInterpreter.kill()
         tool.cancel()
         t.interrupt()
+        mathematicaProvider().doShutdown() //@note see [[afterAll]]
         provider.shutdown()
         mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
       }
