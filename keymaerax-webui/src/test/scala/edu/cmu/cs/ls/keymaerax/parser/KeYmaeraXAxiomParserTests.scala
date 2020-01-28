@@ -15,11 +15,11 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
   "Axiom parser" should "parse a formula inside an axiom box" in {
     val input =
       """
-        |Axiom "This is an axiom".
+        |Axiom "This is an axiom"
         | 1 = 1
         |End.
         |
-        |Axiom "This is another = axiom".
+        |Axiom "This is another = axiom"
         | x=x
         |End.
       """.stripMargin
