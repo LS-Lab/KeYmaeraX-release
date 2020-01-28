@@ -78,12 +78,14 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
 
     tool.setOperationTimeout(30) // avoid getting stuck
     forEvery (mathematicaEntries) { (_, name, model, _, _, _, tactic, kind) =>
-      whenever(!Thread.currentThread().isInterrupted) try {
-        runEntry(name, model, kind, tactic.head, db)
-        fail("Now works with Z3: " + tutorialName + "/" + name + "/" + tactic.head._1)
-      } catch {
-        case _: BelleThrowable => // test "succeeds" (Z3 still fails), so QE("Mathematica") is still required
-        case e: TestFailedException if e.getMessage.contains("was not proved") => // master/ODE etc. stopped before proof was done
+      whenever(!Thread.currentThread().isInterrupted) {
+        try {
+          runEntry(name, model, kind, tactic.head, db)
+          fail("Now works with Z3: " + tutorialName + "/" + name + "/" + tactic.head._1)
+        } catch {
+          case _: BelleThrowable => // test "succeeds" (Z3 still fails), so QE("Mathematica") is still required
+          case e: TestFailedException if e.getMessage.contains("was not proved") => // master/ODE etc. stopped before proof was done
+        }
       }
     }
   }}
