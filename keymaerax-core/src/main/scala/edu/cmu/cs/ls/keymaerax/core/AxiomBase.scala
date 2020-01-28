@@ -394,6 +394,7 @@ Axiom "Uniq uniqueness"
   <{c&q1(||)}>p(||) & <{c&q2(||)}>p(||) -> <{c & q1(||)&q2(||)}>p(||)
 End.
 
+/* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
 Axiom "Cont continuous existence"
   f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=0
 End.
