@@ -2809,10 +2809,7 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     */
-  lazy val timesCommute = derivedAxiom("* commute", Sequent(IndexedSeq(), IndexedSeq("(f_()*g_()) = (g_()*f_())".asFormula)),
-    allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
-    byUS(proveBy("\\forall y \\forall x (x*y = y*x)".asFormula, TactixLibrary.RCF & done))
-  )
+  lazy val timesCommute = timesCommutative
 
   /**
     * {{{Axiom "<=".
