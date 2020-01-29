@@ -44,25 +44,6 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     }
   }
 
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
-    LemmaDBFactory.lemmaDB.deleteDatabase()
-    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      val writeEffect = true
-      DerivedAxioms.prepopulateDerivedLemmaDatabase()
-      if (writeEffect) {
-        val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
-        val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
-        if (!versionFile.exists()) {
-          if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
-        }
-        assert(versionFile.exists())
-        val fw = new FileWriter(versionFile)
-        fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
-        fw.close()
-      }
-    }
-  }
-
   "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
@@ -405,4 +386,24 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove != sym"  in withMathematica { _ => check{equalSym}}
   it should "prove > antisym"  in withMathematica { _ => check{greaterNotSym}}
   it should "prove < antisym"  in withMathematica { _ => check{lessNotSym}}
+
+  //@note must be last to populate the lemma database during build
+  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
+    LemmaDBFactory.lemmaDB.deleteDatabase()
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val writeEffect = true
+      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+      if (writeEffect) {
+        val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
+        val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
+        if (!versionFile.exists()) {
+          if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+        }
+        assert(versionFile.exists())
+        val fw = new FileWriter(versionFile)
+        fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+        fw.close()
+      }
+    }
+  }
 }
