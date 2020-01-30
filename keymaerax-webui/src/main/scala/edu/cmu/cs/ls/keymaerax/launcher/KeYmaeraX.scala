@@ -187,7 +187,7 @@ object KeYmaeraX {
     * Statistics about size of prover kernel.
     */
   def stats: String = {
-    "with " + Provable.axiom.size + " axioms and " + Provable.rules.size + " axiomatic rules"
+    "    with " + Provable.rules.size + " axiomatic rules and " + Provable.axiom.size + " axioms"
   }
 
   /**
