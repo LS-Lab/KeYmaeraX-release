@@ -93,7 +93,8 @@ object KeYmaeraX {
   val usage: String =
     """Usage: java -jar keymaerax.jar
       |  -ui [web server options] |
-      |  -prove file.kyx [-out file.kyp] [-timeout seconds] [-verbose] |
+      |  -prove file.kyx [-conjecture file2.kyx] [-out file.kyp]
+      |     [-timeout seconds] [-verbose] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
@@ -261,6 +262,9 @@ object KeYmaeraX {
       case "-out" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
         else optionErrorReporter("-out")
+      case "-conjecture" :: value :: tail =>
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('conjecture -> value), tail)
+        else optionErrorReporter("-conjecture")
       case "-fallback" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
         else optionErrorReporter("-fallback")
@@ -347,6 +351,7 @@ object KeYmaeraX {
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
+      case "-conjecture" => println(noValueMessage + "Please use: -conjecture FILENAME.kyx\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
@@ -624,6 +629,21 @@ object KeYmaeraX {
     val archiveContent = inFiles.map(p => p -> KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
     println("Proving entries from " + archiveContent.size + " files")
 
+    val conjectureFileName = options.get('conjecture).map(_.toString)
+    val conjectureFiles = conjectureFileName.map(findFiles).getOrElse(List.empty)
+    val conjectureContent = conjectureFiles.flatMap(p => KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).
+      filterNot(_.isExercise).map(_ -> p).groupBy(_._1.name)).toMap
+    val duplicateConjectures = conjectureContent.filter(_._2.size > 1)
+    // conjectures must have unique names across files
+    assert(duplicateConjectures.isEmpty, "Duplicate entry names in conjecture files:\n" + duplicateConjectures.map(c => c._1 + " in " + c._2.map(_._2).mkString(",")))
+    // if exactly one conjecture and one solution: replace regardless of names; otherwise: insist on same entry names and replace by entry name
+    val entryNamesDiff = archiveContent.flatMap(_._2.map(_.name)).toSet.diff(conjectureContent.keySet)
+    assert(
+      conjectureContent.isEmpty
+        || (conjectureContent.map(_._2.size).sum == 1 && archiveContent.map(_._2.size).sum == 1)
+        || entryNamesDiff.isEmpty, "Conjectures and archives must agree on names, but got diff " + entryNamesDiff.mkString(","))
+    assert(conjectureContent.values.flatMap(_.flatMap(_._1.tactics)).isEmpty, "Conjectures must not list tactics")
+
     val outputFilePrefix = options.getOrElse('out, inputFileName).toString.stripSuffix(".kyp")
     val outputFileSuffix = ".kyp"
     //@note same archive entry name might be present in several .kyx files
@@ -635,8 +655,18 @@ object KeYmaeraX {
           + e.name.replaceAll("\\W", "_") + outputFileSuffix)).toMap
       }).toMap
 
+    /** Replaces the conjecture of `entry` with the `conjecture`. */
+    def replace(entry: ParsedArchiveEntry, conjecture: ParsedArchiveEntry): ParsedArchiveEntry = {
+      conjecture.copy(tactics = entry.tactics)
+    }
+
     val statistics = archiveContent.flatMap({case (path: Path, entries) =>
-      entries.flatMap(entry => proveEntry(path, entry, outputFileNames(path)(entry), options))
+      entries.flatMap(entry => proveEntry(
+        path,
+        replace(entry, conjectureContent.getOrElse(entry.name,
+          conjectureContent.headOption.map(_._2).getOrElse((entry -> path) :: Nil)).head._1),
+        outputFileNames(path)(entry),
+        options))
     })
 
     statistics.foreach(println)
@@ -651,9 +681,9 @@ object KeYmaeraX {
 
   private def proveEntry(path: Path, entry: ParsedArchiveEntry, outputFileName: String,
                          options: OptionMap): List[ProofStatistics] = {
-    def savePt(pt:ProvableSig):Unit = {
+    def savePt(pt: ProvableSig): Unit = {
       (pt, options.get('ptOut)) match {
-        case (ptp: TermProvable, Some(path:String)) =>
+        case (ptp: TermProvable, Some(path: String)) =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp
           val writer = new PrintWriter(path)
