@@ -253,6 +253,9 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   * Invariant: All Provables ever produced are locally sound,
   * because only the prover kernel can create Provable objects and chooses not to use the globally sound uniform substitution rule.
   *
+  * Provables are stateless and do not themselves remember other provables that they resulted from.
+  * The ProofTree data structure outside the kernel provides such proof tree navigation information.
+  *
   * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
   * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
   * @note soundness-critical logical framework.
