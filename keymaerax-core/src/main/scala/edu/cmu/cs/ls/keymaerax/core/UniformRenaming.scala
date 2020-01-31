@@ -140,7 +140,7 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
     case Diamond(p, g)   => Diamond(rename(p), rename(g))
 
     case PredicationalOf(c, fml) => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
-    case DotFormula              => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DotFormula " + formula, this.toString, formula.toString)
+    case DotFormula              => if (semantic) DotFormula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DotFormula " + formula, this.toString, formula.toString)
     case UnitPredicational(p,sp) => if (semantic) UnitPredicational(p,renSpace(sp)) else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitPredicational " + formula, this.toString, formula.toString)
   }
 
