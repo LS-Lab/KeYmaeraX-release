@@ -517,16 +517,13 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     *
     * @param ren The uniform renaming to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `ren` to our subgoals and conclusion.
-    * @requires !ren.semantic || isProved
     * @author Andre Platzer
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
-    * @note soundness-critical: For uniform renaming purposes semantic renaming is sound but not locally sound. The kernel is easier when keeping everything locally sound.
+    * @note soundness-critical: Semantic uniform renaming requires locally sound input provables. The kernel is easier when keeping everything locally sound.
     * @see [[UniformRenaming]]
     */
   final def apply(ren: URename): Provable =
     try {
-      //@note case ren.semantic&&isProved uses that there is no difference between locally sound and globally sound if isProved so no subgoals: after theorem 27 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-      insist(/*!ren.semantic ||*/ isProved, "Unless proved, uniform renaming cannot be semantic\nin " + ren + " on\n" + this)
       new Provable(ren(conclusion), subgoals.map(s => ren(s)))
     } catch { case exc: RenamingClashException => throw exc.inContext(ren + " on\n" + this) }
 
