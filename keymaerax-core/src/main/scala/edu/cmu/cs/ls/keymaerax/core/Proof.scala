@@ -12,7 +12,7 @@
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
-  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @note Code Review: 2016-08-17
   */
 package edu.cmu.cs.ls.keymaerax.core
@@ -183,7 +183,9 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     case sp: SuccPos => updated(sp, f)
     case ap: AntePos => updated(ap, f)
   }
+/** A copy of this sequent with the indicated antecedent position replaced by the formula f, same as [[updated()]]. */
   def updated(p: AntePos, f: Formula): Sequent = Sequent(ante.updated(p.getIndex, f), succ)
+  /** A copy of this sequent with the indicated succedent position replaced by the formula f, same as [[updated()]]. */
   def updated(p: SuccPos, f: Formula): Sequent = Sequent(ante, succ.updated(p.getIndex, f))
 
   /**
@@ -199,10 +201,12 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     case sp: SuccPos => updated(sp, s)
     case ap: AntePos => updated(ap, s)
   }
+  /** A copy of this sequent with the indicated antecedent position replaced by gluing the sequent s, same as [[updated()]] */
   def updated(p: AntePos, s: Sequent): Sequent = {
     Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
   } ensures(r=> r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s)),
     "result after re-including updated formula is equivalent to " + this + " glue " + s)
+  /** A copy of this sequent with the indicated succedent position replaced by gluing the sequent s, same as [[updated()]] */
   def updated(p: SuccPos, s: Sequent): Sequent = {
     Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
   } ensures(r=> r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
@@ -210,14 +214,12 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
 
   /**
     * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
-    *
     * @note Used for contracts in the core.
     */
   def subsequentOf(r: Sequent): Boolean = ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
     * Check whether this sequent is the same as the given sequent r (considered as sets)
-    *
     * @note Used for contracts in the core.
     */
   def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
@@ -522,6 +524,8 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @return The Provable resulting from applying `ren` to our subgoals and conclusion.
     * @author Andre Platzer
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
+    * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+    * @since 4.7.5
     * @note soundness-critical: Semantic uniform renaming requires locally sound input provables. The kernel is easier when keeping everything locally sound.
     * @see [[UniformRenaming]]
     */
@@ -614,7 +618,11 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
 }
 
 
-/** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules. */
+/** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules.
+  * @see [[Provable.axioms]]
+  * @see [[Provable.rules]]
+  * @see [[Provable.startProof()]]
+  */
 object Provable {
   //@todo Code Review: it would be nice if LAX_MODE were false
   private val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
@@ -668,7 +676,7 @@ object Provable {
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note soundness-critical
     */
-  def startProof(goal : Sequent): Provable = {
+  final def startProof(goal : Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq(goal))
   } ensures(
     r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
@@ -695,7 +703,7 @@ object Provable {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
-  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+  final def proveArithmetic(t: QETool, f: Formula): Lemma = {
     import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
     insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
     // Quantifier elimination determines (quantifier-free) equivalent of f.
@@ -714,7 +722,7 @@ object Provable {
     * @return a Provable of given conclusion and given subgoals.
     * @note soundness-critical magic/trustme, only call from RCF/Lemma within core with true facts.
     */
-  private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
+  private[core] final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
     Provable(conclusion, subgoals)
 }
 
@@ -1127,7 +1135,7 @@ object UniformRenaming {
   * @requires repl is fresh in the sequent.
   * @author Andre Platzer
   * @see [[URename]]
-  * @note soundness-critical: For uniform renaming purposes semantic renaming would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
+  * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")

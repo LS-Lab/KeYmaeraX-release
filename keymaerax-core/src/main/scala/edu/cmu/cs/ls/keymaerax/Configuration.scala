@@ -12,7 +12,9 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 
 import scala.collection.JavaConverters._
 
-/** The KeYmaera X configuration. */
+/** The KeYmaera X configuration.
+  * The purpose of this object is to have a central place for system configuration options of KeYmaera X.
+  * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]] */
 object Configuration {
   /** Configuration keys */
   object Keys {
@@ -61,6 +63,7 @@ object Configuration {
   }
 
   private val KEYMAERAX_HOME: String = System.getProperty("KEYMAERAX_HOME", ".keymaerax")
+  /** The user's home directory for the storage of KeYmaera X configuration and model and proof database files */
   val KEYMAERAX_HOME_PATH: String = System.getProperty("user.home") + File.separator + KEYMAERAX_HOME
 
   private val CONFIG_PATH: String = System.getProperty("CONFIG_PATH",
