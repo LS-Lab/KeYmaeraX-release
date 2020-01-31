@@ -1,9 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
-import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
@@ -13,9 +14,7 @@ import scala.collection.immutable.IndexedSeq
 /**
   * @author Nathan Fulton
   */
-class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethodTester {
-  private val md5Generator = PrivateMethod[String]('md5)
-  private val sequentsToString = PrivateMethod[String]('sequentsToString)
+class ExtendedLemmaParserTests extends TacticTestBase {
 
   "Extended Lemma Parser" should "work" in {
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq("2=2".asFormula, "5=5".asFormula))
@@ -40,13 +39,13 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
           |Formula: 5=5
           |End.
           |Tool.
-          |${tool}
+          |$tool
           |End.
           |Hash.
-          |  hash ${hash}
+          |  hash $hash
           |End.
           |Tool.
-          |${kyxversion}
+          |$kyxversion
           |End.
       """.stripMargin
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
@@ -73,13 +72,13 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
           |Formula: p()
           |End.
           |Tool.
-          |${tool}
+          |$tool
           |End.
           |Hash.
-          |  hash ${hash}
+          |  hash $hash
           |End.
           |Tool.
-          |${kyxversion}
+          |$kyxversion
           |End.
       """.stripMargin
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
@@ -110,13 +109,13 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
           |Formula: 5=5
           |End.
           |Tool.
-          |${tool}
+          |$tool
           |End.
           |Hash.
-          |  hash ${hash}
+          |  hash $hash
           |End.
           |Tool.
-          |${kyxversion}
+          |$kyxversion
           |End.
       """.stripMargin
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
@@ -147,13 +146,13 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
           |==>
           |End.
           |Tool.
-          |${tool}
+          |$tool
           |End.
           |Hash.
-          |  hash ${hash}
+          |  hash $hash
           |End.
           |Tool.
-          |${kyxversion}
+          |$kyxversion
           |End.
       """.stripMargin
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
@@ -184,10 +183,10 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
           |==>
           |End.
           |Tool.
-          |${tool}
+          |$tool
           |End.
           |Tool.
-          |${tool}
+          |$tool
           |End.
       """.stripMargin
 
@@ -198,7 +197,30 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
     parseResult._3.length shouldBe 2
   }
 
-  it should "automatically add a version to all lemmas." in {
+  it should "parse lemma without evidence correctly in compatibility mode" in {
+    withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "true")) {
+      // reinitialize [[Lemma.LEMMA_COMPAT_MODE]] from changed configuration
+      val c = Lemma.getClass.getDeclaredConstructor()
+      c.setAccessible(true)
+      c.newInstance()
+
+      val lemmaFile =
+        s"""Lemma "MyLemma".
+           |Sequent.
+           |==>
+           |Formula: 1=1
+           |End.
+        """.stripMargin
+
+      val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
+
+      parseResult._1 shouldBe Some("MyLemma")
+      parseResult._2.length shouldBe 1
+      parseResult._3 shouldBe empty
+    }
+  }
+
+  it should "automatically add a version to all lemmas" in {
     val tool: String = "input \"\"\"\"" + "output" + "\"\"\"\"\n"
     val lemmaFile =
       s"""Lemma "MyLemma".
@@ -217,33 +239,40 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
           |==>
           |End.
           |Tool.
-          |${tool}
+          |$tool
           |End.
       """.stripMargin
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
     parseResult._3.filter(x => x.isInstanceOf[ToolEvidence]).exists(x => x.asInstanceOf[ToolEvidence].info.exists(p => p._1 == "kyxversion"))
   }
 
-  ignore should "add to sql db" in {
-    addTo(SQLite.SQLiteLemmaDB(SQLite.TestDB), true)
+  it should "add to sql db" ignore {
+    addTo(SQLite.SQLiteLemmaDB(SQLite.TestDB), remove=true)
   }
 
-  it should "add to file db." in {
-    (addTo(LemmaDBFactory.lemmaDB, true))
+  it should "add to file db" in {
+    (addTo(LemmaDBFactory.lemmaDB, remove=true))
   }
 
-  ignore should "not create a lemma with no evidence." in {
+  it should "not create a lemma without evidence in strict mode" in {
     val name ="blah"
     val p = ProvableSig.startProof("1=1".asFormula)
-    a [java.lang.AssertionError] shouldBe thrownBy (new Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name)))
+    val c = Lemma.getClass.getDeclaredConstructor()
+    c.setAccessible(true)
+    withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "false")) {
+      c.newInstance() // reinitialize [[Lemma.LEMMA_COMPAT_MODE]] from the changed configuration
+      (the [AssertionError] thrownBy Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name))).getMessage should
+        include ("assertion failed: Lemma should have kyxversion and checksum stamps (unless compatibility mode)")
+    }
+    withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "true")) {
+      c.newInstance() // reinitialize [[Lemma.LEMMA_COMPAT_MODE]] from the changed configuration
+      Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name))
+    }
   }
 
-
-  private def addTo(db:LemmaDB, remove:Boolean=true) = {
+  private def addTo(db: LemmaDB, remove: Boolean=true): Unit = {
     var name = "1111112"
-    while(db.contains(name)) {
-      name = name + "1"
-    }
+    while (db.contains(name)) name = name + "1"
 
     val p = ProvableSig.startProof("1=1".asFormula)
 
@@ -255,13 +284,11 @@ class ExtendedLemmaParserTests extends FlatSpec with Matchers with PrivateMethod
           //h == (reloadedLemma.get invokePrivate md5Generator(reloadedLemma.get invokePrivate sequentsToString(p.conclusion :: Nil)))
         case None => throw new Exception(s"Expected some hash evidence in ${db.get(name).get.toString}")
       }
-      if(remove) db.remove(name)
-    }
-    catch {
-      case e: Throwable => {
-        if(remove) db.remove(name)
+      if (remove) db.remove(name)
+    } catch {
+      case e: Throwable =>
+        if (remove) db.remove(name)
         throw e //stil fail but don't leave clutter around.
-      }
     }
   }
 
