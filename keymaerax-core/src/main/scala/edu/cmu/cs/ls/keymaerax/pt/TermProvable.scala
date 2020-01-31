@@ -51,6 +51,7 @@ trait ProvableSig {
     *
     * @return true if conclusion is proved by this Provable,
     *         false if subgoals are missing that need to be proved first.
+    * @see [[Provable.isProved]]
     */
   final def isProved: Boolean = underlyingProvable.isProved
 

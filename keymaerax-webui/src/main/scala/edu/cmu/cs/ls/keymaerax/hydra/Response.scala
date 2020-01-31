@@ -835,7 +835,7 @@ case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTr
       "id" -> proofIdJson(proofId),
       "nodes" -> JsObject(theNodes.toMap),
       "root" -> JsString(root.id.toString),
-      "isProved" -> JsBoolean(root.done)
+      "isProved" -> JsBoolean(root.isProved)
     )
   }
 

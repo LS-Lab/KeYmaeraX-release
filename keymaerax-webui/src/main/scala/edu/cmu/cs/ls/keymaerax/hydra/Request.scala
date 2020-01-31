@@ -1483,7 +1483,7 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
     val leaves = tree.openGoals
-    val closed = tree.openGoals.isEmpty && tree.verifyClosed
+    val closed = tree.openGoals.isEmpty && tree.isProved
 
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
 
@@ -1702,7 +1702,7 @@ class GetApplicableAxiomsRequest(db: DBAbstraction, userId: String, proofId: Str
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
       case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs) :: Nil
       case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
@@ -1714,7 +1714,7 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
                                         pos1: Position, pos2: Position) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     tree.locate(nodeId).map(n => n.applicableTacticsAt(pos1, Some(pos2))) match {
       case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
       case Some(tactics) => new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
@@ -1738,7 +1738,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return ApplicableDefinitionsResponse(Nil) :: Nil
+    if (tree.done) return ApplicableDefinitionsResponse(Nil) :: Nil
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
       case Some(symbols) =>
