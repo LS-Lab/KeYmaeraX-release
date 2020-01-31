@@ -24,7 +24,7 @@ import scala.collection.immutable
   * @param what What variable to replace (along with its associated DifferentialSymbol).
   * @param repl The target variable to replace `what` with and vice versa.
   * @param semantic `true` to allow semantic renaming of SpaceDependent symbols,
-  *                 which is only sound for uniform renaming of proved facts and then locally sound.
+  *                 which preserves local soundness when applied to inferences.
   * @author Andre Platzer
   * @author smitsch
   * @note soundness-critical
@@ -89,10 +89,10 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
   }
 
   private def rename(term: Term): Term = term match {
-    case x: Variable                      => renVar(x, term)
-    case n: Number                        => n
-    case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
-    case Nothing | DotTerm(_, _)          => term
+    case x: Variable               => renVar(x, term)
+    case n: Number                 => n
+    case FuncOf(f:Function, theta) => FuncOf(f, rename(theta))
+    case Nothing | DotTerm(_, _)   => term
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => f.reapply(rename(f.left), rename(f.right))
@@ -102,7 +102,7 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
     case Times(l, r)  => Times(rename(l),  rename(r))
     case Divide(l, r) => Divide(rename(l), rename(r))
     case Power(l, r)  => Power(rename(l),  rename(r))
-    case Differential(e) =>  Differential(rename(e))
+    case Differential(e) => Differential(rename(e))
     // unofficial
     case Pair(l, r)   => Pair(rename(l),   rename(r))
     case UnitFunctional(f,sp,s) => if (semantic) UnitFunctional(f,renSpace(sp),s) else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
