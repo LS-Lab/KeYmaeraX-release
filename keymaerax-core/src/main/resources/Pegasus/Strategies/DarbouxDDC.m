@@ -10,6 +10,8 @@ Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolyn
 BeginPackage[ "DarbouxDDC`"]
 
 
+DarbouxPolynomialsM::usage="DarbouxPolynomialsM[problem,time,maxdeg] finds Darboux
+   polynomials for the problem with a given timeout and maxdegree";
 DarbouxDDCWeakIn::usage="DarbouxDDCWeakIn[problem_List]";
 DarbouxDDCStrongIn::usage="DarbouxDDCStrongIn[problem_List]";
 

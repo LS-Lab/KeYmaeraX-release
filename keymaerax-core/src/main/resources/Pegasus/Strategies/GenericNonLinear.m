@@ -1,13 +1,18 @@
 (* ::Package:: *)
 
-(* Description: Generic strategies for non-linear vector fields. *)
+(*
+	Description: Generic strategies for non-linear vector fields.
+	This file summarizes all the basic strategies that generate invariants from a problem.
+	This will be used by DiffSat
+*)
 
 
-Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] 
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m"}]] 
+Needs["DarbouxDDC`",FileNameJoin[{Directory[],"Strategies","DarbouxDDC.m"}]]
+Needs["InvariantExtractor`",FileNameJoin[{Directory[],"Strategies","InvariantExtractor.m"}]]
 (*Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]] 
-Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolynomials.m"}]] 
-Needs["QualAbsPolynomials`",FileNameJoin[{Directory[],"Primitives","QualAbsPolynomials.m"}]]*)
+ *)
 
 
 BeginPackage[ "GenericNonLinear`"];
@@ -16,8 +21,11 @@ BeginPackage[ "GenericNonLinear`"];
 (*BarrierCert::usage="BarrierCertificates[problem_List]";
 SummandFacts::usage="SummandFactors[problem_List]";
 *)
+
+(* Returns invariants generated using first integrals *)
 FirstIntegrals::usage="FirstIntegrals[problem_List,degree]";
-(*DbxPoly::usage="FirstIntegrals[problem_List,degree]";*)
+(* Returns invariants generated using Darboux polynomials *)
+DbxPoly::usage="DbxPoly[problem_List,degree]";
 
 
 Begin["`Private`"];
@@ -57,10 +65,11 @@ Union[maxVs,minVs]
 (*SummandFacts[problem_List]:=DeleteDuplicates[Join[QualitativeAbstraction`SummandFactors[problem], Flatten[QualitativeAbstraction`SFactorList[problem]]]]*)
 
 
-(*DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat},
+DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys},
 {pre, { vf, vars, Q }, post} = problem;
-QualitativeAbstraction`DarbouxPolynomials[problem, 10, Max[10-Length[vars],1]]
-]*)
+polys = DarbouxDDC`DarbouxPolynomialsM[problem, 10, Max[10-Length[vars],1]];
+InvariantExtractor`DWC[problem,polys,{}]
+]
 
 
 (*(* Round to precisions 2,4,6,8 *)
