@@ -9,9 +9,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType,
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import BelleLabels._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer

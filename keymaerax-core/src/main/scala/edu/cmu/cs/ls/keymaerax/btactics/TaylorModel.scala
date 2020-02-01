@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{StringInputTactic, _}
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -16,6 +16,7 @@ import org.apache.logging.log4j.scala.Logging
 import java.util.UUID
 
 import cc.redberry.rings
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import rings.poly.PolynomialMethods._
 import rings.scaladsl._
 import syntax._

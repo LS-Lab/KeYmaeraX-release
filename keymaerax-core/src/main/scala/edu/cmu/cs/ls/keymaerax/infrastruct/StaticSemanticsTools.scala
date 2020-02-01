@@ -2,17 +2,15 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.core.SetLattice.bottom
+import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.core.{StaticSemantics, _}
 
-import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
-import PosInExpr.HereP
-
+import scala.collection.{immutable, mutable}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 /**
  * Additional tools read off from the static semantics for the tactics.
  * @author Andre Platzer

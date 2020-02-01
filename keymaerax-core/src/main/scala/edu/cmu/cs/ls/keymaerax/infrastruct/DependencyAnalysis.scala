@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
 

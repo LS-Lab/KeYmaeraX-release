@@ -5,10 +5,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import Augmentors._
-import StaticSemanticsTools._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable._
 

@@ -1,8 +1,7 @@
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
 
-import scala.collection.immutable.SortedSet
 import scala.collection.mutable
 
 /**

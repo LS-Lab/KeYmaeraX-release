@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax
 
 import edu.cmu.cs.ls.keymaerax.core.Expression
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, USubstRenOne}
 
 import scala.collection.immutable
 
@@ -28,7 +29,7 @@ import scala.collection.immutable
   *
   *   - `t(1)` applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] formula.
   *   - `t(-1)` applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] formula.
-  *   - `t(-4, 0::1::1::Nil)` applied at [[edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr subexpression positioned at]] `.0.1.1` of the fourth antecedent formula,
+  *   - `t(-4, 0::1::1::Nil)` applied at [[PosInExpr subexpression positioned at]] `.0.1.1` of the fourth antecedent formula,
   *     that is at the second child of the second child of the first child of the fourth antecedent formula in the sequent.
   *   - `t('L)` applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] (left side of the sequent).
   *   - `t('R)` applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] (right side of the sequent).
@@ -45,7 +46,7 @@ import scala.collection.immutable
   *     ensuring that the formula `fml` is at that position.
   *   - `t(-2, fml)` applied at the second [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] formula,
   *     ensuring that the formula `fml` is at that position.
-  *   - `t(5, 0::1::1::Nil, ex)` applied at [[edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr subexpression positioned at]] `.0.1.1` of the fifth succedent formula,
+  *   - `t(5, 0::1::1::Nil, ex)` applied at [[infrastruct.PosInExpr subexpression positioned at]] `.0.1.1` of the fifth succedent formula,
   *     that is at the second child of the second child of the first child of the fifth succedent formula in the sequent,
   *     ensuring that the expression `ex` is at that position.
   *   - `t('L, fml)` applied at the antecedent position (left side of the sequent)
@@ -62,9 +63,4 @@ import scala.collection.immutable
   * [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]].
   * In Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017.
   */
-package object bellerophon {
-  /** Choice of standalone Renaming Uniform Substitution operation implementation */
-  type USubstRen = USubstRenOne
-  /** USubstRen factory method for standalone Renaming Uniform Substitution operation implementation, forwards to constructor. */
-  def USubstRen(subsDefsInput: immutable.Seq[(Expression,Expression)]): USubstRen = USubstRenOne(subsDefsInput)
-}
+package object bellerophon {}

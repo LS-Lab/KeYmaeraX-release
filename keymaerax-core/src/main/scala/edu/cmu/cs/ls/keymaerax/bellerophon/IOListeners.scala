@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import java.io.PrintStream
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig

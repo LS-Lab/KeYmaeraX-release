@@ -2,11 +2,11 @@ package edu.cmu.cs.ls.keymaerax.pt
 
 import java.io.{BufferedWriter, FileWriter, Writer}
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedRuleInfo, ExpressionTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedRuleInfo}
 import edu.cmu.cs.ls.keymaerax.core.{DotFormula, _}
-import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter.{ID,ISABELLE_IDS,IDEnum,IDLeft,IDRight,IDUnit,Irule,Isequent}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter.{ID, IDEnum, IDLeft, IDRight, IDUnit, ISABELLE_IDS, Irule, Isequent}
 import org.apache.logging.log4j.scala.Logging
 
 /**

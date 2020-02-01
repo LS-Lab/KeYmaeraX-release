@@ -2,13 +2,11 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.bellerophon
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable
-import scala.collection.immutable._
 
 /**
   * Uniformly rename multiple variables at once.
@@ -78,7 +76,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   /** Check that same result as from core if both defined */
   private def sameAsCore(e: Expression, r: Expression): Boolean = {
-    if (BelleExpr.RECHECK) try {
+    if (Matcher.REVERIFY) try {
       if (r == toCore(e))
         true
       else {

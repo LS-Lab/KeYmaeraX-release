@@ -2,15 +2,14 @@
   * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
   * See LICENSE.txt for the conditions of this license.
   */
-package edu.cmu.cs.ls.keymaerax.bellerophon
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, FormulaTools, SubstitutionHelper}
-import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper.replaceFree
+import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
+import SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.core._
 import org.apache.logging.log4j.scala.Logging
 
-import scala.collection.immutable
 import scala.collection.immutable.{List, Nil}
 import scala.util.Try
 
@@ -18,7 +17,7 @@ import scala.util.Try
   * Unification/matching algorithm for tactics.
   * `Unify(shape, input)` matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
   * Matcher leaves `input` alone and only substitutes into `shape`, i.e., gives a single-sided matcher.
-  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.Matcher]]
+  * @see [[Matcher]]
   * @author Andre Platzer
   */
 // 1 pass for semanticRenaming
@@ -59,8 +58,7 @@ object UnificationMatch extends FreshUnificationMatch
   */
 trait Matcher extends ((Expression,Expression) => RenUSubst) with Logging {
   /** Check result of unification for being a valid unifier/matcher */
-  private[bellerophon] val REVERIFY = BelleExpr.RECHECK
-
+  private[infrastruct] val REVERIFY = Matcher.REVERIFY
   /** The (generalized) substitutions used for unification purposes
     * @see [[RenUSubst]]
     */
@@ -98,6 +96,11 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) with Logging {
 
   /** apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that `\result(shape)==input`. */
   def apply(shape: Sequent, input: Sequent): Subst
+}
+
+object Matcher {
+  /** Check result of unification for being a valid unifier/matcher */
+  private[infrastruct] val REVERIFY = Configuration(Configuration.Keys.DEBUG) == "true"
 }
 
 /**
@@ -599,7 +602,7 @@ private class FreshPostUnificationMatch extends SchematicComposedUnificationMatc
   */
 private final object RenUnificationMatch extends UnificationMatchBase {
   // incomplete unification cannot succeed during REVERIFY
-  override private[keymaerax] val REVERIFY = BelleExpr.RECHECK
+  override private[infrastruct] val REVERIFY = Matcher.REVERIFY
   // Always skip unifiers except variables, which are handled by unifyVar
   override protected def unifier(e1: Expression, e2: Expression): List[SubstRepl] = id ensures (r => !e1.isInstanceOf[Variable])
   // Create unifiers for variables even if all others are skipped above
@@ -619,11 +622,11 @@ private final object RenUnificationMatch extends UnificationMatchBase {
   */
 private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
   require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")
-  override private[bellerophon] val REVERIFY = BelleExpr.RECHECK
+  override private[infrastruct] val REVERIFY = Matcher.REVERIFY
   // pass 1
   private val renUMatcher = RenUnificationMatch
   // pass 2
-  private val usubstUMatcher = new UnificationMatchBase { override private[keymaerax] val REVERIFY = false }
+  private val usubstUMatcher = new UnificationMatchBase { override private[infrastruct] val REVERIFY = false }
 
   private def unify(e1: Expression, e2: Expression): Subst = {
     val ren = renUMatcher(e1, e2)
@@ -654,11 +657,11 @@ private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { out
 
 class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
   require(!RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming NO semantic renaming")
-  override private[bellerophon] val REVERIFY = BelleExpr.RECHECK
+  override private[infrastruct] val REVERIFY = Matcher.REVERIFY
   // pass 1
   private val usubstUMatcher = new UnificationMatchBase {
     // partial so can't REVERIFY
-    override private[keymaerax] val REVERIFY = false
+    override private[infrastruct] val REVERIFY = false
     // Skip unifiers for variables in this pass
     override protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = e2 match { case _: Variable => id case _ => ununifiable(x1,e2)}
     override protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = e2 match { case _: DifferentialSymbol => id case _ => ununifiable(xp1,e2)}

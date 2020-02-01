@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
@@ -411,7 +412,7 @@ case class AppliedDependentTwoPositionTactic(t: DependentTwoPositionTactic, p1: 
   * Useful for storing execution traces.
   */
 case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: PositionLocator) extends BelleExpr {
-  import Augmentors._
+  import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
   final def computeResult(provable: ProvableSig) : ProvableSig = try { locator match {
       //@note interprets PositionLocator
       case Fixed(pos, shape, exact) => shape match {
@@ -587,7 +588,7 @@ class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAp
   }
 }
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
-  import Augmentors._
+  import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
   override def prettyString: String = pt.name + "(" + locator.prettyString + ")"
   final override def computeExpr(v: BelleValue): BelleExpr = try {
     locator match {

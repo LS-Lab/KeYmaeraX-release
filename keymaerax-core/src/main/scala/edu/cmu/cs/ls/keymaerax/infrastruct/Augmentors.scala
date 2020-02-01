@@ -2,11 +2,10 @@
   * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
   * See LICENSE.txt for the conditions of this license.
   */
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 
 /**
  * If imported, automatically augments core data structures with convenience wrappers for tactic purposes
@@ -14,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
   *
  * @example To use this implicit augmentation automatically, import it via
   * {{{
-  *   import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+  *   import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
   * }}}
   * Then use it as if its methods were part of the data structures
   * {{{

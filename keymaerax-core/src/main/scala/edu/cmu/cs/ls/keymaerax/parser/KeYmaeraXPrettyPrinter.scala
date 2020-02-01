@@ -12,12 +12,12 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 
 import scala.collection.immutable._
 import org.typelevel.paiges._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.mutable.ListBuffer

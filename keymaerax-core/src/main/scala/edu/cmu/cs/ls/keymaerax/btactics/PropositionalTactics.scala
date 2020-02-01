@@ -5,8 +5,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatchUSubstAboveURen}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -287,7 +288,7 @@ private object PropositionalTactics extends Logging {
     * }}}
     */
   private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position) = {
-    import Augmentors._
+    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
 
     //@note equivalence == target <-> other.

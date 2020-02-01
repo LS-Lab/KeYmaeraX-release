@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.{Configuration, core}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -143,7 +144,7 @@ private object ProofRuleTactics extends Logging {
     else {
       //@note contextualize
         // [x:=f(x)]P(x)
-        import Augmentors.SequentAugmentor
+        import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
         val fml = sequent.apply(pos).asInstanceOf[Formula]
         // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
         //@note the proof is the same for \forall x p(x) etc.
@@ -187,7 +188,7 @@ private object ProofRuleTactics extends Logging {
       tactic(pos)
     else {
       //@note contextualize
-      import Augmentors.SequentAugmentor
+      import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
       val fml: Formula = sequent.apply(pos).asInstanceOf[Formula]
       val mod: Formula = predictor(fml)
       // |- mod <-> fml

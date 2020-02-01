@@ -2,12 +2,11 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.apache.logging.log4j.scala.Logging
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.List

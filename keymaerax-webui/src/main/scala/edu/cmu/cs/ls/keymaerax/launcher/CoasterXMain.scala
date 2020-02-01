@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.launcher._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{DefaultConfiguration, Mathematica}
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.hydra.HyDRAInitializer._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInitializer, StringToVersion}

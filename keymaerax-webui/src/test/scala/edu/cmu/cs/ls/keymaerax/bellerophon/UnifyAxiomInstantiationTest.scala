@@ -1,11 +1,12 @@
-package edu.cmu.cs.ls.keymaerax.bellerophon
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.{AnyArg, CoreException, Formula, UnitPredicational}
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import org.scalatest.BeforeAndAfterAll
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{LinearMatcher, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}

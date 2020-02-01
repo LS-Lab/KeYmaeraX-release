@@ -6,12 +6,13 @@
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
