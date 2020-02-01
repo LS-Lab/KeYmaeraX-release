@@ -57,6 +57,10 @@ In a nutshell, install the right software and run the following to build `keymae
 
     sbt clean assembly
 
+[ScalaDoc API documentation for KeYmaera X](http://keymaerax.org/scaladoc) can be generated locally with:
+
+    sbt unidoc
+
 Publications
 ============
 
