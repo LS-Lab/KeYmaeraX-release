@@ -16,34 +16,43 @@ object BelleExpr {
 }
 
 /**
- * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
- * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
- *
- * @todo Consolidate the members of BelleExpr and finalize an abstract syntax.
- * @author Nathan Fulton
- * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]
- * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
- */
-abstract class BelleExpr(private var location: Location = UnknownLocation) {
+  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
+  * All Bellerophon tactic expressions are of type [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]],
+  * which provides the following tactic combinators
+  *
+  *   - `s & t` alias `s ; t` [[edu.cmu.cs.ls.keymaerax.bellerophon.SeqTactic sequential composition]] executes t` on the output of `s`, failing if either fail.
+  *   - `s | t` [[edu.cmu.cs.ls.keymaerax.bellerophon.EitherTactic alternative composition]] executes `t` if applying `s` fails, failing if both fail.
+  *   - `t*` [[edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic saturating repetition]] executes tactic `t` repeatedly to a fixpoint, casting result to type annotation,
+  *     diverging if no fixpoint.
+  *   - `t*n` [[edu.cmu.cs.ls.keymaerax.bellerophon.RepeatTactic bounded repetition]] executes `t` tactic `n` number of times, failing if any of those repetitions fail.
+  *   - `t+` saturating repetition executes tactic `t` to a fixpoint, requires at least one successful application.
+  *   - `<(e1,...,en)` [[edu.cmu.cs.ls.keymaerax.bellerophon.BranchTactic branching]] to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
+  *
+  * @todo Consolidate the members of BelleExpr and finalize an abstract syntax.
+  * @see Table 1 of [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus]]. In Mauricio Ayala-Rincón and César A. Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS, pp. 207-224. Springer, 2017.
+  * @author Nathan Fulton
+  * @author Stefan Mitsch
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.Interpreter]]
+  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]
+  */
+sealed abstract class BelleExpr(private var location: Location = UnknownLocation) {
   // tactic combinators
 
   /** this & other: sequential composition this ; other executes other on the output of this, failing if either fail. */
-  def &(other: BelleExpr)             = SeqTactic(this, other)
+  def &(other: BelleExpr)     = SeqTactic(this, other)
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
-  def |(other: BelleExpr)             = EitherTactic(this, other)
+  def |(other: BelleExpr)     = EitherTactic(this, other)
   /** this > other: followup composition executes other on the output or error of this, failing if other fails. */
-  def >(other: BelleExpr)             = AfterTactic(this, other)
+  def >(other: BelleExpr)     = AfterTactic(this, other)
   /** this*n: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
-  def *(n: Int) = RepeatTactic(this, n)
+  def *(n: Int)               = RepeatTactic(this, n)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
     * @note Equivalent to {{{a & Idioms.<(b,c)}}} */
   //@deprecated("Use & with explicit Idioms.< instead; import Idioms.<, so a & <(b,c)", since="4.2")
-  def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
+  def <(children: BelleExpr*) = SeqTactic(this, BranchTactic(children))
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
-  /** partial: marks a tactic that is allowed to not close all its goals. */
-  @deprecated("Only useful in unit tests")
-  def partial                         = PartialTactic(this)
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 
   override def toString: String = prettyString
@@ -52,8 +61,10 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
 
   /** @note location is private so that it's not something that effects case class quality, and mutable so that it can be ignored when building up custom tactics. */
   def setLocation(newLocation: Location): Unit = location = newLocation
+  /** Get the location where this tactic stems from. */
   def getLocation: Location = location
 }
+
 
 /** A BelleExpr that has a proper code name, so is not just used internally during application. */
 trait NamedBelleExpr extends BelleExpr {
@@ -63,8 +74,38 @@ trait NamedBelleExpr extends BelleExpr {
   override def prettyString: String = name
 }
 
+
+// basic tactic combinators
+
+/** `left ; right` sequential composition executes right` on the output of `left`, failing if either fail. */
+case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "&" + right.prettyString + ")" }
+/** `left | right` alternative composition executes `right` if applying `left` fails, failing if both fail. */
+case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
+//@note saturate and repeat tactic fully parenthesize for parser
+/** `child*` saturating repetition executes tactic `child` repeatedly to a fixpoint, casting result to type annotation,
+  * diverging if no fixpoint. */
+case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*)" }
+/** `child*times` bounded repetition executes `child` tactic `times` number of times, failing if any of those repetitions fail. */
+case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*" + times + ")" }
+/** `<(e1,...,en)` branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
+case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString: String = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
+/** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
+  * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
+  *
+  * In other words:
+  * `case _ of {fi => ei}` uniform substitution case pattern applies the first `ei` such that
+  *     `fi` uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.`
+  */
+case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString: String = "case { " + options.mkString(", ") + " }"}
+
+@deprecated("Use SeqTactic(right, left) instead")
+case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ">" + right.prettyString + ")" }
+
+
+
 /** Marker for no-op tactics. */
 trait NoOpTactic {}
+
 /** Mixing in NoOpTactic with existing tactic instances (e.g., obtained through TacticFactory methods)
   * @see https://stackoverflow.com/a/3896244
   */
@@ -81,17 +122,11 @@ case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
   assert(name == "ANON" || DerivationInfo.hasCodeName(name), s"WARNING: NamedTactic was named $name but this name does not appear in DerivationInfo's list of codeNames.")
 }
 
-/* Common base class for built-in tactics coming from the base layer of the tactic library directly manipulate core Provables. */
-abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
-  private[bellerophon] final def execute(provable: ProvableSig): ProvableSig =
-    result(provable)
-  private[bellerophon] def result(provable : ProvableSig): ProvableSig
-}
-case class LabelBranch(label: BelleLabel) extends BelleExpr with NoOpTactic { override def prettyString: String = "label(\"" + label.prettyString + "\")" }
-
 /** ⎵: Placeholder for tactics in tactic contexts. Reserved tactic expression that cannot be executed. */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }
 object BelleDot extends BelleDot()
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positional tactics
@@ -308,6 +343,14 @@ trait RightTactic extends PositionalTactic {
 }
 
 
+/* Common base class for built-in tactics coming from the base layer of the tactic library directly manipulate core Provables. */
+abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
+  private[bellerophon] final def execute(provable: ProvableSig): ProvableSig =
+    result(provable)
+  private[bellerophon] def result(provable : ProvableSig): ProvableSig
+}
+
+
 /** Built-in position tactics such as assertAt */
 abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic with NamedBelleExpr
 
@@ -493,19 +536,6 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
     computeExpr(provable.subgoals.head)
   }
 }
-abstract class LabelledGoalsDependentTactic(override val name: String) extends DependentTactic(name) with Logging {
-  def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = throw new BelleThrowable("Not implemented")
-  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
-  override def computeExpr(v : BelleValue): BelleExpr = try { v match {
-    case BelleProvable(provable, Some(labels)) => computeExpr(provable, labels)
-    case BelleProvable(provable, None) => computeExpr(provable)
-    case e: BelleThrowable => super.computeExpr(e)
-  }
-  } catch {
-    case be: BelleThrowable => throw be
-    case t: Throwable => logger.debug("Unable to create dependent labelled tactic", t); throw new BelleThrowable(t.getMessage, t)
-  }
-}
 
 /** DependentPositionTactics are tactics that can be [[AtPosition applied at positions]] giving dependent tactics.
   *
@@ -667,19 +697,8 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
   }
 }
 
-// combinators
+// advanced combinators
 
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "&" + right.prettyString + ")" }
-case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
-case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ">" + right.prettyString + ")" }
-//@note saturate and repeat tactic fully parenthesize for parser
-case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*)" }
-case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*" + times + ")" }
-case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString: String = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
-/** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
-  * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
-  */
-case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString: String = "case { " + options.mkString(", ") + " }"}
 /** Advance through `alternatives` until the first succeeds or hits the timeout (tries each for at most `timeout` time,
   * fails when first tactic exceeds the timeout or all alternatives are exhausted). */
 case class TimeoutAlternatives(alternatives: Seq[BelleExpr], timeout: Long) extends BelleExpr { override def prettyString: String = "timeout(" + alternatives.map(_.prettyString).mkString(",") + ", " + timeout + ")" }
@@ -771,28 +790,27 @@ case class ApplyDefTactic(t: DefTactic) extends BelleExpr {
   override def prettyString: String = t.name
 }
 
-/** Expands symbol `name` per substitution `s`. */
+/** Expands symbol `name` per uniform substitution `s`.
+  * @see [[USubstOne]] */
 case class Expand(name: NamedSymbol, s: SubstitutionPair) extends BelleExpr {
   //@note serialize `s` for database since required in the proof tree when assembling provables
   override def prettyString: String = s"""US("${s.what.prettyString}~>${s.repl.prettyString}")"""
 }
-/** Expands all definitions from the model provided in topologically sorted `defs`. */
+/** Expands all definitions from the model provided in topologically sorted `defs`.
+  * @see [[USubstOne]] */
 case class ExpandAll(defs: List[SubstitutionPair]) extends BelleExpr {
   //@note serialize `defs` for database since required in the proof tree when assembling provables
   override def prettyString: String = defs.map(s => s"""US("${s.what.prettyString}~>${s.repl.prettyString}")""").mkString(";")
 }
 
-@deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
-case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
-  override def prettyString: String = s"proveAs($lemmaName)"
-}
 
 /**
- * Bellerophon expressions that are values.
+ * Bellerophon expressions that are values, so should not be evaluated any further since irreducible.
  */
 trait BelleValue {
   def prettyString: String = toString
 }
+
 /** A Provable during a Bellerophon interpreter run, readily paired with an optional list of BelleLabels */
 case class BelleProvable(p: ProvableSig, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
   if (label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
@@ -809,6 +827,28 @@ class BelleDelayedSubstProvable(override val p: ProvableSig, override val label:
 /** Internal: To communicate proof IDs of subproofs opened in the spoon-feeding interpreter in Let between requests.
   * NOT TO BE USED FOR ANYTHING ELSE */
 case class BelleSubProof(id: Int) extends BelleValue
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Bellerophon Labeling
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/** Assign the given label `label` to the present BelleProvable. */
+case class LabelBranch(label: BelleLabel) extends BelleExpr with NoOpTactic { override def prettyString: String = "label(\"" + label.prettyString + "\")" }
+
+abstract class LabelledGoalsDependentTactic(override val name: String) extends DependentTactic(name) with Logging {
+  def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = throw new BelleThrowable("Not implemented")
+  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
+  override def computeExpr(v : BelleValue): BelleExpr = try { v match {
+    case BelleProvable(provable, Some(labels)) => computeExpr(provable, labels)
+    case BelleProvable(provable, None) => computeExpr(provable)
+    case e: BelleThrowable => super.computeExpr(e)
+  }
+  } catch {
+    case be: BelleThrowable => throw be
+    case t: Throwable => logger.debug("Unable to create dependent labelled tactic", t); throw new BelleThrowable(t.getMessage, t)
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bellerophon Labels

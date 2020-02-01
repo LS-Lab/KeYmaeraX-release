@@ -376,34 +376,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
     case named: NamedTactic => apply(named.tactic, v)
 
-    case ProveAs(lemmaName, f, e) =>
-      val BelleProvable(provable, labels) = v
-      assert(provable.subgoals.length == 1)
-
-      val lemma = ProvableSig.startProof(f)
-
-      //Prove the lemma iff it's not already proven.
-      if(LemmaDBFactory.lemmaDB.contains(lemmaName)) {
-        assert(LemmaDBFactory.lemmaDB.get(lemmaName).head.fact.conclusion == lemma.conclusion)
-      }
-      else {
-        val BelleProvable(result, _) = apply(e, BelleProvable(lemma, labels))
-        assert(result.isProved, "Result of proveAs should always be proven.")
-
-        val tacticText: String = try { BellePrettyPrinter(e) } catch { case _: Throwable => "nil" }
-
-        val evidence = ToolEvidence(List(
-          "tool" -> "KeYmaera X",
-          "model" -> lemma.prettyString,
-          "tactic" -> tacticText,
-          "proof" -> "" //@todo serialize proof
-        )) :: Nil
-
-        //Save the lemma.
-        LemmaDBFactory.lemmaDB.add(Lemma(result, Lemma.requiredEvidence(result, evidence), Some(lemmaName)))
-      }
-      v //nop on the original goal.
-
     case Let(abbr, value, inner) =>
       val (provable, lbl) = v match {
         case BelleProvable(p, l) => (p, l)

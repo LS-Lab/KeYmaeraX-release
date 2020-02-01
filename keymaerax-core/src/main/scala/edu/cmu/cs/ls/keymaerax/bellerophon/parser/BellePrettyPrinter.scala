@@ -85,7 +85,6 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case it : InputTactic =>
           val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
           it.name + "(" + eargs + ")"
-        case ProveAs(_, _, _) => "proveAs"
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
         case NamedTactic(name, _) if name != "ANON" => name
         case dot: BelleDot => "_@" + dot.hashCode()

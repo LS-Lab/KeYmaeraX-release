@@ -368,7 +368,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
       //Suffix case.
       case r :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(PARTIAL, partialLoc) =>
-        val parsedExpr = expr.partial
+        val parsedExpr = PartialTactic(expr)
         parsedExpr.setLocation(partialLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, exprLoc.spanTo(partialLoc)), st.input)
 
@@ -379,7 +379,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
       }
 
       case r :+ BelleToken(PARTIAL, partialLoc) :+ ParsedBelleExpr(expr, exprLoc) =>
-        val parsedExpr = expr.partial
+        val parsedExpr = PartialTactic(expr)
         parsedExpr.setLocation(partialLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, partialLoc.spanTo(exprLoc)), st.input)
 
