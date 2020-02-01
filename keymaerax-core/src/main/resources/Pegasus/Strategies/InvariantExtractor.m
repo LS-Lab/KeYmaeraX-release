@@ -1,17 +1,17 @@
 (* ::Package:: *)
 
 Needs["LZZ`",FileNameJoin[{Directory[],"Primitives","LZZ.m"}]] 
-Needs["DiscreteAbstraction`",FileNameJoin[{Directory[],"Primitives","DiscreteAbstraction.m"}]] 
+(*Needs["DiscreteAbstraction`",FileNameJoin[{Directory[],"Primitives","DiscreteAbstraction.m"}]] *)
 
 
 BeginPackage["InvariantExtractor`"];
 
-DWC::usage="DWC[precond_, postcond_, system_List, H0_List, A0_List] 
+DWC::usage="DWC[precond_, postcond_, system_List, H0_List, A0_List]
     Iteratively refine evolution constraint using differential cuts before computing the abstraction."
-
+(*
 DWCLZR::usage="DCLoop[precond_, postcond_, system_List, H0_List, A0_List] 
     Iteratively refine evolution constraint using differential cuts before computing the abstraction."
-
+*)
 
 
 Begin["`Private`"]
@@ -24,9 +24,10 @@ formula
 
 Options[DWC]={TransitionRemovalMethod->"LZZ-vanilla", Parallel->False, SimplifyInvariant->DoNotSimplify, Smallest->False, WorkingPrecision -> \[Infinity]};
 
-DWC[precond_, postcond_, system_List, A0_List, cuts_List, opts:OptionsPattern[]]:=DWC[precond, postcond, system, A0, cuts]=Catch[
-Module[{GT,EQ,LT,p,f=system[[1]],vars=system[[2]],H0=system[[3]]},
+DWC[problem_List, A0_List, cuts_List, opts:OptionsPattern[]]:=DWC[precond, postcond, system, A0, cuts]=Catch[
+Module[{pre,post,GT,EQ,LT,p,f,vars,H0},
 
+{pre,{f,vars,H0},post} = problem;
 SetOptions[Reduce,WorkingPrecision-> OptionValue[WorkingPrecision]];
 
 SetOptions[DWC, 
@@ -38,42 +39,43 @@ SIMPLIFY=OptionValue[SimplifyInvariant]/.{FullSimplify-> FullSimplify, Simplify 
 USEDW=Not[TrueQ[OptionValue[Smallest]/.{True->True, _->False}]];
 
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
-If[TrueQ[Reduce[ForAll[vars,Not[H0 && precond]],vars,Reals]], Throw[{False, cuts}] ]; 
+If[TrueQ[Reduce[ForAll[vars,Not[H0 && pre]],vars,Reals]], Throw[{False, cuts}] ]; 
 
 (* DW check *)
-If[USEDW && TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Print["DW"]; Throw[{H0, cuts}] ]; 
+If[USEDW && TrueQ[Reduce[ForAll[vars,Implies[H0, post]],vars,Reals]], Print["DW"]; Throw[{H0, cuts}] ]; 
 
 (* Main loop *)
 Do[p=SIMPLIFY[A0[[i]],H0]; 
 
+Print["Trying: ",p];
 (* DC check 0 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p==0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p==0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p==0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p==0, f, vars, H0]]),
 Print["DC on ", p==0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p==0), Reals]}, Delete[A0,i], Join[cuts,{p==0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p==0), Reals]},post}, Delete[A0,i], Join[cuts,{p==0}]]]
 ];
 
 (* DC strict check 1 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p>0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>0, f, vars, H0]]),
 Print["DC on ", p>0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p>0), Reals]}, Delete[A0,i], Join[cuts,{p>0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>0), Reals]},post}, Delete[A0,i], Join[cuts,{p>0}]]]
 ];
 
 (* DC strict check 2 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<0, f, vars, H0]]),
 Print["DC on ", p<0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<0), Reals]}, Delete[A0,i], Join[cuts,{p<0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<0), Reals]},post}, Delete[A0,i], Join[cuts,{p<0}]]]
 ];
 
 (* DC nonstrict check 1 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]}, Delete[A0,i], Join[cuts,{p>=0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]},post}, Delete[A0,i], Join[cuts,{p>=0}]]]
 ];
 
 (* DC nonstrict check 2 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p<=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]}, Delete[A0,i], Join[cuts,{p<=0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]},post}, Delete[A0,i], Join[cuts,{p<=0}]]]
 ];
 
  (*DDC check  *)
