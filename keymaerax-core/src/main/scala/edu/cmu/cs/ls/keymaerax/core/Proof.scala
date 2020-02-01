@@ -527,12 +527,14 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
     * @since 4.7.5
     * @note soundness-critical: Semantic uniform renaming requires locally sound input provables. The kernel is easier when keeping everything locally sound.
+    * @see [[URename]]
     * @see [[UniformRenaming]]
     */
   final def apply(ren: URename): Provable =
     try {
       new Provable(ren(conclusion), subgoals.map(s => ren(s)))
     } catch { case exc: RenamingClashException => throw exc.inContext(ren + " on\n" + this) }
+
 
   // forward proofs (convenience)
 
@@ -733,12 +735,13 @@ object Provable {
  */
 
 /**
-  * Subclasses represent all proof rules.
+  * Subclasses represent all built-in proof rules.
   * A proof rule is ultimately a named mapping from sequents to lists of sequents.
-  * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
+  * The resulting list of sequents represent the subgoals/premises all of which need to be proved
   * to prove the current sequent (desired conclusion).
   *
   * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
+  * @see [[Provable.rules]]
   */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   //@note If there were inherited contracts in Scala, we could augment apply with contract "ensures instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
@@ -755,22 +758,27 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   *********************************************************************************
   */
 
-/** A rule applied to a position */
+/** A rule applied to a position in a sequent.
+  * @see [[SeqPos]] */
 trait PositionRule extends Rule {
-  /** The position where this rule will be applied at */
+  /** The position where this rule will be applied at. */
   val pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
-/** A rule applied to a position in the antecedent on the left */
+/** A rule applied to a position in the antecedent on the left of a sequent.
+  * LeftRules can only be applied to antecedent positions.
+  * @see [[AntePos]] */
 trait LeftRule extends PositionRule {
-  /** The position (on the left) where this rule will be applied at */
+  /** The position (on the left) where this rule will be applied at. */
   val pos: AntePos
 }
 
-/** A rule applied to a position in the succedent on the right */
+/** A rule applied to a position in the succedent on the right of a sequent.
+  * RightRules can only be applied to succedent positions.
+  * @see [[SuccPos]] */
 trait RightRule extends PositionRule {
-  /** The position (on the right) where this rule will be applied at */
+  /** The position (on the right) where this rule will be applied at. */
   val pos: SuccPos
 }
 
@@ -852,7 +860,7 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
   */
 
 /**
-  * Close / Identity rule
+  * Close / Identity rule proving an assumption available in the antecedent.
   * {{{
   *        *
   * ------------------ (Id)
@@ -869,7 +877,7 @@ case class Close(assume: AntePos, pos: SuccPos) extends Rule {
 }
 
 /**
-  * Close by true
+  * Close by true among the succedent desiderata.
   * {{{
   *       *
   * ------------------ (close true)
@@ -886,7 +894,7 @@ case class CloseTrue(pos: SuccPos) extends RightRule {
 }
 
 /**
-  * Close by false.
+  * Close by false among the antecedent assumptions.
   * {{{
   *        *
   * ------------------ (close false)
@@ -904,13 +912,13 @@ case class CloseFalse(pos: AntePos) extends LeftRule {
 
 
 /**
-  * Cut in the given formula c.
+  * Cut in the given formula `c` to use `c` on the first branch and proving `c` on the second branch.
   * {{{
   * G, c |- D     G |- D, c
   * ----------------------- (cut)
   *         G |- D
   * }}}
-  *
+  * The ordering of premises is optimistic, i.e., the premise using the cut-in formula `c` comes before the one proving `c`.
   * @note c will be added at the end on the subgoals
   */
 case class Cut(c: Formula) extends Rule {
@@ -1130,11 +1138,19 @@ object UniformRenaming {
   * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
   * Uniform renaming, thus, is a transposition.
   *
+  * {{{
+  *    r(G) |- r(D)
+  *   --------------- UR
+  *       G |- D
+  * }}}
+  *
   * @param what What variable to replace (along with its associated [[DifferentialSymbol]]).
   * @param repl The target variable to replace `what` with (and vice versa).
   * @requires repl is fresh in the sequent.
   * @author Andre Platzer
   * @see [[URename]]
+  * @see [[Provable.apply()]]
+  * @see [[BoundRenaming]]
   * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
@@ -1152,6 +1168,35 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   * (and its associated DifferentialSymbol) to repl.
   * Proper bound renaming requires the replacement to be a fresh variable that does not occur previously.
   *
+  * {{{
+  *    G |- [repl:=e]r(P), D
+  *   ------------------------ BR (where what',repl,repl' do not occur in P)
+  *    G |- [what:=e]P,    D
+  * }}}
+  * where `r(P)` is the result of uniformly renaming `what` to the (fresh) `repl` in `P`.
+  * The proof rule works accordingly for diamond modalities, nondeterministic assignments, or quantifiers,
+  * or in the antecedent.
+  * {{{
+  *    G |- <repl:=e>r(P), D
+  *   ------------------------ BR (where what',repl,repl' do not occur in P)
+  *    G |- <what:=e>P,    D
+  * }}}
+  * {{{
+  *    G |- \forall repl r(P), D
+  *   --------------------------- BR (where what',repl,repl' do not occur in P)
+  *    G |- \forall what P,    D
+  * }}}
+  * {{{
+  *    G |- \exists repl r(P), D
+  *   --------------------------- BR (where what',repl,repl' do not occur in P)
+  *    G |- \exists what P,    D
+  * }}}
+  * {{{
+  *    G, [repl:=e]r(P) |- D
+  *   ------------------------ BR (where what',repl,repl' do not occur in P)
+  *    G, [what:=e]P    |- D
+  * }}}
+  *
   * @param what What variable (and its associated DifferentialSymbol) to replace.
   * @param repl The target variable to replace what with.
   * @param pos The position at which to perform a bound renaming.
@@ -1159,6 +1204,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   * @author Andre Platzer
   * @author Stefan Mitsch
   * @note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
+  * @see [[UniformRenaming]]
   */
 final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   //@note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
@@ -1214,7 +1260,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   * ----------------------- (Skolemize) provided x not in G,D
   * G |- \forall x p(x), D
   * }}}
-  * Skolemize also handles '''existential''' quantifiers on the left.
+  * Skolemization also handles '''existential''' quantifiers on the left:
   * {{{
   *           p(x), G |- D
   * ------------------------ (Skolemize) provided x not in G,D
