@@ -111,8 +111,8 @@ object AxiomaticODESolver {
   private def boxAxiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
     val (ode, q, post) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), pp)) => (o, qq, pp)
-      case Some(f) => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
-      case None => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation")
+      case Some(f) => throw new BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
+      case None => throw new BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation")
     }
 
     val osize = odeSize(ode)
@@ -405,7 +405,7 @@ object AxiomaticODESolver {
   val odeSolverPreconds: DependentPositionTactic =  TacticFactory.anon ((pos: Position, s: Sequent) => {
     val (ode: DifferentialProgram, dom:Formula, post:Formula) = s.sub(pos) match {
       case Some(Box(ODESystem(o, q), p)) => (o, q, p)
-      case sub => throw BelleTacticFailure("Expected [] or <> modality at position " + pos + ", but got " + sub)
+      case sub => throw new BelleTacticFailure("Expected [] or <> modality at position " + pos + ", but got " + sub)
     }
 
     DebuggingTactics.debug("Before Canonicalization") &

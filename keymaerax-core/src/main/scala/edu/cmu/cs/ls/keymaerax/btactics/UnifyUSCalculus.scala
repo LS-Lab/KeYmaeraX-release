@@ -292,7 +292,7 @@ trait UnifyUSCalculus {
       //@note Probably not worth it, because all axiomatic rules in AxiomBase are nonlinear
       val subst = matcher(fact.conclusion, sequent)
       logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
-      if (sequent != subst(fact.conclusion)) throw BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
+      if (sequent != subst(fact.conclusion)) throw new BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
       by(subst.toForward(fact))
     }
   }

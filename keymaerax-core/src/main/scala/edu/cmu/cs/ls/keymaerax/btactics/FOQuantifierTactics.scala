@@ -265,7 +265,7 @@ protected object FOQuantifierTactics {
               val fresh = TacticHelper.freshNamedSymbol(fn, sequent)
               Variable(fresh.name, fresh.index, fresh.sort)
             } else funcVar
-          case _ => throw BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
+          case _ => throw new BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
         }
     }
 

@@ -202,7 +202,7 @@ trait SequentCalculus {
     pos.top match {
       case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
       case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)
-      case _ => throw BelleTacticFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
+      case _ => throw new BelleTacticFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
     }
   })
   //@note do not forward to closeIdWith (performance)

@@ -87,7 +87,7 @@ abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
     result(provable)
   } catch {
     case be: BelleThrowable => throw be
-    case e: MatchError => throw BelleTacticFailure(s"Formula did not have the shape expected by $name: " + e.getMessage, e)
+    case e: MatchError => throw new BelleTacticFailure(s"Formula did not have the shape expected by $name: " + e.getMessage, e)
   }
   private[bellerophon] def result(provable : ProvableSig): ProvableSig
 }
@@ -288,7 +288,7 @@ abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic
 abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
     case p: AntePosition => computeAnteResult(provable, p)
-    case _ => throw BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
+    case _ => throw new BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
   }
 
   def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig
@@ -298,7 +298,7 @@ abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic wit
 abstract case class BuiltInRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
     case p: SuccPosition => computeSuccResult(provable, p)
-    case _ => throw BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
+    case _ => throw new BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
   }
 
   def computeSuccResult(provable: ProvableSig, pos: SuccPosition) : ProvableSig
@@ -334,7 +334,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
               (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
-            throw BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos).getOrElse("") + " at position " + pos +
+            throw new BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos).getOrElse("") + " at position " + pos +
               " is not of expected shape " + f + " in sequent \n" + provable.subgoals.head.prettyString)
           }
         case None => positionTactic.computeResult(provable, pos)
@@ -342,7 +342,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       case l@Find(goal, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
-        tryAllAfter(provable, l, BelleTacticFailure("Position tactic " + prettyString +
+        tryAllAfter(provable, l, new BelleTacticFailure("Position tactic " + prettyString +
           " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
       case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
       case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
@@ -530,7 +530,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       }
       case l@Find(goal, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
-        tryAllAfter(l, BelleTacticFailure("Position tactic " + prettyString +
+        tryAllAfter(l, new BelleTacticFailure("Position tactic " + prettyString +
           " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
       case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
       case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })

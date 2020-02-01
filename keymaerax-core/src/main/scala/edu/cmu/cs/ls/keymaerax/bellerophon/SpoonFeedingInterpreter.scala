@@ -388,7 +388,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                     (goal, ctx)
                   case _ =>
                     //@note tactic operating on multiple subgoals without OnAll
-                    throw BelleIllFormedError("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                    throw new BelleIllFormedError("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
                 } else {
                   runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                   runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {

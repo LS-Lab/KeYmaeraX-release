@@ -15,7 +15,7 @@ import org.apache.logging.log4j.scala.Logging
  * and other proof rules that are implemented by KeYmaera X.
   *
   * @author Nathan Fulton
- * @see [[SequentCalculi]]
+ * @see [[SequentCalculus]]
  */
 private object ProofRuleTactics extends Logging {
   //@note Rule.LAX_MODE not accessible outside core

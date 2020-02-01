@@ -377,7 +377,7 @@ object Idioms {
       else {
         val succ = seq.succ.indexOf(f)
         if (succ >= 0) SuccPosition.base0(succ, in)
-        else throw BelleTacticFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
+        else throw new BelleTacticFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
       }
     }
     t(subPos)
