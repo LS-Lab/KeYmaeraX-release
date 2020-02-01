@@ -466,7 +466,7 @@ object TacticFactory {
       *         }}}
       */
     def by(t: (ProvableSig, SuccPosition) => ProvableSig): BuiltInRightTactic = new BuiltInRightTactic(name) {
-      override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+      @inline override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
       }
@@ -480,7 +480,7 @@ object TacticFactory {
       * @see [[Rule]]
       */
     def coreby(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = new CoreRightTactic(name) {
-      override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+      @inline override def computeCoreResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
       }
@@ -492,7 +492,7 @@ object TacticFactory {
       *         }}}
       */
     def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = new BuiltInLeftTactic(name) {
-      override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+      @inline override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
       }
@@ -506,7 +506,7 @@ object TacticFactory {
       * @see [[Rule]]
       */
     def coreby(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = new CoreLeftTactic(name) {
-      override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+      @inline override def computeCoreResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
       }
@@ -518,7 +518,7 @@ object TacticFactory {
       *         }}}
       */
     def by(t: (ProvableSig, Position, Position) => ProvableSig): BuiltInTwoPositionTactic = new BuiltInTwoPositionTactic(name) {
-      override def computeResult(provable: ProvableSig, pos1: Position, pos2: Position): ProvableSig = {
+      @inline override def computeResult(provable: ProvableSig, pos1: Position, pos2: Position): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos1, pos2)
       }

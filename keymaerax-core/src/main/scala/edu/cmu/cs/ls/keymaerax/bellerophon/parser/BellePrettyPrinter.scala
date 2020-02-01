@@ -59,6 +59,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case BuiltInTactic(name) if name == "ANON" => ""
         case BuiltInPositionTactic(name) if name != "ANON" => name
         case BuiltInPositionTactic(name) if name == "ANON" => ""
+        case b: CoreLeftTactic => b.name
+        case b: CoreRightTactic => b.name
         case b: BuiltInLeftTactic => b.name
         case b: BuiltInRightTactic => b.name
         case e: PartialTactic => wrapLeft(e, e.child, indent) + " " + op(e).terminal.img

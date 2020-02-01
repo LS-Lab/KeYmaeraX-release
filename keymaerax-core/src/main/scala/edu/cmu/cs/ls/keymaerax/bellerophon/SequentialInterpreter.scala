@@ -227,7 +227,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       }
       result
 
-    case _: BuiltInPositionTactic | _:BuiltInLeftTactic | _:BuiltInRightTactic | _:BuiltInTwoPositionTactic | _:DependentPositionTactic =>
+    case _: BuiltInPositionTactic | _:BuiltInLeftTactic | _:BuiltInRightTactic | _:CoreLeftTactic | _:CoreRightTactic | _:BuiltInTwoPositionTactic | _:DependentPositionTactic =>
       throw new BelleThrowable(s"Need to apply position tactic at a position before executing it: $expr(???)").inContext(expr, "")
 
     case AppliedPositionTactic(positionTactic, pos) => v match {

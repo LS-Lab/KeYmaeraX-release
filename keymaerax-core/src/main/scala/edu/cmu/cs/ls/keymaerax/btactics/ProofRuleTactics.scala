@@ -25,7 +25,7 @@ private object ProofRuleTactics extends Logging {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
-    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {
@@ -221,7 +221,7 @@ private object ProofRuleTactics extends Logging {
     })
 
   def skolemizeR = new BuiltInRightTactic("skolemizeR") {
-    override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
@@ -230,7 +230,7 @@ private object ProofRuleTactics extends Logging {
 
   @deprecated("Use SequentCalculus.closeT instead")
   private[btactics] def closeTrue = new BuiltInRightTactic("CloseTrue") {
-    override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseTrue(pos.top), 0)
     }
@@ -238,7 +238,7 @@ private object ProofRuleTactics extends Logging {
 
   @deprecated("Use SequentCalculus.closeF instead")
   private[btactics] def closeFalse = new BuiltInLeftTactic("CloseFalse") {
-    override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+    override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseFalse(pos.top), 0)
     }

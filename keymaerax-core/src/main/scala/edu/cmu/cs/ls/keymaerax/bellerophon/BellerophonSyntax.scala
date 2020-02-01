@@ -229,8 +229,8 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
     case '_ => this match {
-      case _: BuiltInLeftTactic => apply(FindL(0, None))
-      case _: BuiltInRightTactic => apply(FindR(0, None))
+      case _: LeftTactic => apply(FindL(0, None))
+      case _: RightTactic => apply(FindR(0, None))
       case _ => throw new BelleThrowable(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     case 'Llast => apply(LastAnte(0, inExpr))
@@ -257,8 +257,8 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     case 'R => apply(FindR(0, Some(expected)))
     case 'Rlike => apply(FindR(0, Some(expected), exact=false))
     case '_ => this match {
-      case _: BuiltInLeftTactic => apply(FindL(0, Some(expected)))
-      case _: BuiltInRightTactic => apply(FindR(0, Some(expected)))
+      case _: LeftTactic => apply(FindL(0, Some(expected)))
+      case _: RightTactic => apply(FindR(0, Some(expected)))
       case _ => throw new BelleThrowable(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
@@ -277,64 +277,77 @@ trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] 
   final override def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
 
+/**
+  * Tactics that can only be applied in the antecedent on the left.
+  * @see [[LeftRule]]
+  */
+trait LeftTactic extends PositionalTactic {
+  /** @note this should be called from within interpreters, but not by end-users */
+  def computeResult(provable: ProvableSig, position: AntePosition): ProvableSig
+
+  @throws[BelleIllFormedError]("if rule applied on the (incorrect) right side")
+  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
+    case p: AntePosition => computeResult(provable, p)
+    case _ => throw new BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
+  }
+}
+
+/**
+  * Tactics that can only be applied in the succedent on the right.
+  * @see [[RightRule]]
+  */
+trait RightTactic extends PositionalTactic {
+  /** @note this should be called from within interpreters, but not by end-users */
+  def computeResult(provable: ProvableSig, position: SuccPosition): ProvableSig
+
+  @throws[BelleIllFormedError]("if rule applied on the (incorrect) left side")
+  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
+    case p: SuccPosition => computeResult(provable, p)
+    case _ => throw new BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
+  }
+}
+
+
 /** Built-in position tactics such as assertAt */
 abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic with NamedBelleExpr
 
 /** Built-in position tactics coming from the core that are to be applied on the left.
   * Unlike [[BuiltInLeftTactic]], wraps [[MatchError]] from the core in readable errors.
   * @see [[InapplicableTactic]] */
-abstract case class CoreLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
+abstract case class CoreLeftTactic(name: String) extends LeftTactic with NamedBelleExpr {
   @throws[InapplicableTactic]("if formula has the wrong shape for this rule")
-  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
-    case p: AntePosition => try {
-      computeAnteResult(provable, p)
+  final override def computeResult(provable: ProvableSig, position: AntePosition): ProvableSig =
+    try {
+      computeCoreResult(provable, position)
     } catch {
       case ex: MatchError => throw new InapplicableTactic("Tactic " + name +
         " applied at " + position + " on a non-matching expression in " + provable.prettyString, ex)
     }
-    case _ => throw new BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
-  }
 
-  def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig
+  def computeCoreResult(provable: ProvableSig, pos: AntePosition): ProvableSig
 }
 
 /** Built-in position tactics coming from the core that are to be applied on the right
   * Unlike [[BuiltInRightTactic]], wraps [[MatchError]] from the core in readable errors.
   * @see [[InapplicableTactic]] */
-abstract case class CoreRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
+abstract case class CoreRightTactic(name: String) extends RightTactic with NamedBelleExpr {
   @throws[InapplicableTactic]("if formula has the wrong shape for this rule")
-  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
-    case p: SuccPosition => try {
-      computeSuccResult(provable, p)
+  final override def computeResult(provable: ProvableSig, position: SuccPosition): ProvableSig =
+    try {
+      computeCoreResult(provable, position)
     } catch {
       case ex: MatchError => throw new InapplicableTactic("Tactic " + name +
         " applied at " + position + " on a non-matching expression in " + provable.prettyString, ex)
     }
-    case _ => throw new BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
-  }
 
-  def computeSuccResult(provable: ProvableSig, pos: SuccPosition) : ProvableSig
+  def computeCoreResult(provable: ProvableSig, pos: SuccPosition) : ProvableSig
 }
 
 /** Built-in position tactics that are to be applied on the left */
-abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
-  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
-    case p: AntePosition => computeAnteResult(provable, p)
-    case _ => throw new BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
-  }
-
-  def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig
-}
+abstract case class BuiltInLeftTactic(name: String) extends LeftTactic with NamedBelleExpr
 
 /** Built-in position tactics that are to be applied on the right */
-abstract case class BuiltInRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
-  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
-    case p: SuccPosition => computeSuccResult(provable, p)
-    case _ => throw new BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
-  }
-
-  def computeSuccResult(provable: ProvableSig, pos: SuccPosition) : ProvableSig
-}
+abstract case class BuiltInRightTactic(name: String) extends RightTactic with NamedBelleExpr
 
 @deprecated
 abstract case class DependentTwoPositionTactic(name: String) extends NamedBelleExpr {
@@ -653,6 +666,8 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
     case None => s"partial(${child.prettyString})"
   }
 }
+
+// combinators
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "&" + right.prettyString + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }

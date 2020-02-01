@@ -162,6 +162,8 @@ class DefaultTacticIndex extends TacticIndex {
 
   def isApplicable(expr: Expression, tactic: BelleExpr): Boolean = {
     val name = tactic match {
+      case AppliedPositionTactic(CoreRightTactic(n), _) => n
+      case AppliedPositionTactic(CoreLeftTactic(n), _) => n
       case AppliedPositionTactic(BuiltInRightTactic(n), _) => n
       case AppliedPositionTactic(BuiltInLeftTactic(n), _) => n
       case DependentTactic(n) => n
