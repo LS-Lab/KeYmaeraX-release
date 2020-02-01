@@ -83,12 +83,8 @@ case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
 
 /* Common base class for built-in tactics coming from the base layer of the tactic library directly manipulate core Provables. */
 abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
-  private[bellerophon] final def execute(provable: ProvableSig): ProvableSig = try {
+  private[bellerophon] final def execute(provable: ProvableSig): ProvableSig =
     result(provable)
-  } catch {
-    case be: BelleThrowable => throw be
-    case e: MatchError => throw new BelleTacticFailure(s"Formula did not have the shape expected by $name: " + e.getMessage, e)
-  }
   private[bellerophon] def result(provable : ProvableSig): ProvableSig
 }
 case class LabelBranch(label: BelleLabel) extends BelleExpr with NoOpTactic { override def prettyString: String = "label(\"" + label.prettyString + "\")" }
@@ -284,6 +280,42 @@ trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] 
 /** Built-in position tactics such as assertAt */
 abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic with NamedBelleExpr
 
+/** Built-in position tactics coming from the core that are to be applied on the left.
+  * Unlike [[BuiltInLeftTactic]], wraps [[MatchError]] from the core in readable errors.
+  * @see [[InapplicableTactic]] */
+abstract case class CoreLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
+  @throws[InapplicableTactic]("if formula has the wrong shape for this rule")
+  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
+    case p: AntePosition => try {
+      computeAnteResult(provable, p)
+    } catch {
+      case ex: MatchError => throw new InapplicableTactic("Tactic " + name +
+        " applied at " + position + " on a non-matching expression in " + provable.prettyString, ex)
+    }
+    case _ => throw new BelleIllFormedError("LeftTactics can only be applied at a left position not at " + position)
+  }
+
+  def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig
+}
+
+/** Built-in position tactics coming from the core that are to be applied on the right
+  * Unlike [[BuiltInRightTactic]], wraps [[MatchError]] from the core in readable errors.
+  * @see [[InapplicableTactic]] */
+abstract case class CoreRightTactic(name: String) extends PositionalTactic with NamedBelleExpr {
+  @throws[InapplicableTactic]("if formula has the wrong shape for this rule")
+  final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
+    case p: SuccPosition => try {
+      computeSuccResult(provable, p)
+    } catch {
+      case ex: MatchError => throw new InapplicableTactic("Tactic " + name +
+        " applied at " + position + " on a non-matching expression in " + provable.prettyString, ex)
+    }
+    case _ => throw new BelleIllFormedError("RightTactics can only be applied at a right position not at " + position)
+  }
+
+  def computeSuccResult(provable: ProvableSig, pos: SuccPosition) : ProvableSig
+}
+
 /** Built-in position tactics that are to be applied on the left */
 abstract case class BuiltInLeftTactic(name: String) extends PositionalTactic with NamedBelleExpr {
   final override def computeResult(provable: ProvableSig, position:Position): ProvableSig = position match {
@@ -350,10 +382,10 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   } catch {
     case be: BelleThrowable => throw be
     //note the following exceptions are likely caused by wrong positioning
-    case ex: IndexOutOfBoundsException => throw new BelleThrowable("Position " + locator +
+    case ex: IndexOutOfBoundsException => throw new BelleIllFormedError("Position " + locator +
       " may point outside the positions of the goal " + provable.prettyString, ex)
-    case ex: MatchError => throw new BelleThrowable("Tactic " + positionTactic.prettyString +
-      " applied at " + locator + " on a non-matching expression in " + provable.prettyString, ex)
+//    case ex: MatchError => throw new BelleThrowable("Tactic " + positionTactic.prettyString +
+//      " applied at " + locator + " on a non-matching expression in " + provable.prettyString, ex)
     //@note wrap failing assertions etc. so that searchy tactic combinators follow up on the tactic failure
     case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }
@@ -377,9 +409,13 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
           try {
             positionTactic.computeResult(provable, pos)
           } catch {
-            case _: MatchError =>
+            case _: InapplicableTactic =>
               // trial-and-error fallback for default case in TacticIndex.isApplicable
               tryAllAfter(provable, locator.copy(start = locator.start.advanceIndex(1)), cause)
+            //@todo unlike InapplicableTactic, the MatchError should not be swallowed?
+            //case _: MatchError =>
+            //  // trial-and-error fallback for default case in TacticIndex.isApplicable
+            //  tryAllAfter(provable, locator.copy(start = locator.start.advanceIndex(1)), cause)
           }
 
         case _ => throw cause

@@ -472,12 +472,40 @@ object TacticFactory {
       }
     }
 
+    /** Creates a CoreRightTactic from a function turning provables and succedent positions into new provables.
+      * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
+      * @example {{{
+      *         "andR" coreby((pr,pos)=> pr(AndRight(pos.top),0))
+      *         }}}
+      * @see [[Rule]]
+      */
+    def coreby(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = new CoreRightTactic(name) {
+      override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+        requireOneSubgoal(provable, name)
+        t(provable, pos)
+      }
+    }
+
     /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
       * @example {{{
       *         "andL" by((pr,pos)=> pr(AndLeft(pos.top),0))
       *         }}}
       */
     def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = new BuiltInLeftTactic(name) {
+      override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+        requireOneSubgoal(provable, name)
+        t(provable, pos)
+      }
+    }
+
+    /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
+      * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
+      * @example {{{
+      *         "andL" coreby((pr,pos)=> pr(AndLeft(pos.top),0))
+      *         }}}
+      * @see [[Rule]]
+      */
+    def coreby(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = new CoreLeftTactic(name) {
       override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
