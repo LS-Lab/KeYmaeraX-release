@@ -120,8 +120,8 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
         "Expected printed entry and stored problem content to reparse to same model")
 
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
-        case Some(_) =>
-          s"""${entry.problemContent.stripSuffix(END_BLOCK).trim()}
+        case Some(header) =>
+          s"""${entry.problemContent.replaceAllLiterally(header, head + "\"" + entry.name + "\"").stripSuffix(END_BLOCK).trim()}
              #
              #$printedTactics
              #

@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.collection.immutable
 
 /**
@@ -139,11 +140,15 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
     * @param input Token string for the lemma file.
     * @return A list of evidence (tool input/output).
     */
+  @tailrec
   def parseAllEvidence(input: TokenStream, prevEvidence: List[Evidence] = Nil): (List[Evidence], TokenStream) = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
-    val (evidence, remainder) = parseNextEvidence(input)
-    if (remainder.length == 1 && remainder.head.tok.equals(EOF)) (prevEvidence :+ evidence, remainder)
-    else parseAllEvidence(remainder, prevEvidence :+ evidence)
+    if (input.head.tok == EOF) (prevEvidence, input)
+    else {
+      val (evidence, remainder) = parseNextEvidence(input)
+      if (remainder.length == 1 && remainder.head.tok.equals(EOF)) (prevEvidence :+ evidence, remainder)
+      else parseAllEvidence(remainder, prevEvidence :+ evidence)
+    }
   }
 
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {

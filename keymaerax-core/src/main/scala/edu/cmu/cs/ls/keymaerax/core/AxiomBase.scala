@@ -380,10 +380,15 @@ Axiom "Uniq uniqueness"
   <{c&q1(||)}>p(||) & <{c&q2(||)}>p(||) -> <{c & q1(||)&q2(||)}>p(||)
 End.
 
+/* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */
 Axiom "Cont continuous existence"
   f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=0
 End.
 
+/* @note compared to J. ACM, the following axiom
+  1) is specialized to closed postconditions with f(|t_|) >= 0
+  2) uses a time variable t_ instead of vectorial quantification
+  @todo soundness requires no primes in f(|t_|) */
 Axiom "RI& closed real induction >="
   [{c{|t_|}&q(|t_|)}]f(|t_|)>=0 <->
   (q(|t_|) ->f(|t_|)>=0) &
