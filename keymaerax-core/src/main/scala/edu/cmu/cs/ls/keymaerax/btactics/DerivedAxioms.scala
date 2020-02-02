@@ -616,7 +616,7 @@ object DerivedAxioms extends Logging {
 
   lazy val existsDualAxiomy = derivedAxiom("exists dual y",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall y_ (!p_(||))) <-> \\exists y_ p_(||)".asFormula)),
-    useAt("all dual y", PosInExpr(1::Nil))(1, 0::0::Nil) &
+    useAt(allDual_y, PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
       useAt(doubleNegationAxiom.fact)(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
@@ -1694,9 +1694,9 @@ object DerivedAxioms extends Logging {
     useAt(existsDualAxiomy.fact, PosInExpr(1::Nil))(1, 1::Nil) &
       implyR(1) &
       notR(1) &
-      useAt("all eliminate y", PosInExpr(0::Nil))(-2) &
+      useAt(allEliminate_y, PosInExpr(0::Nil))(-2) &
       prop
-    // also derives from existsDualAxiom & converseImply & doubleNegation & useAt("all eliminate y")
+    // also derives from existsDualAxiom & converseImply & doubleNegation & useAt(allEliminate_y)
   )
 
   /**
@@ -2349,7 +2349,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<{x_'=c()&q(x_)}>p(|x_'|) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) & <x_:=x_+(c()*t_);>p(|x_'|)))".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DS& differential equation solution")(1, 0::0::Nil) &
-      useAt("all dual time", PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(allDual_time, PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt("!! double negation")(1, 0::Nil) &
       useAt(notImply.fact)(1, 0::0::Nil) &
       useAt(notImply.fact)(1, 0::0::1::Nil) &
@@ -2403,7 +2403,7 @@ object DerivedAxioms extends Logging {
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DG differential ghost")(1, 0::0::Nil) &
       useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
-      useAt("all dual y", PosInExpr(0::Nil))(1, 0::Nil) &
+      useAt(allDual_y, PosInExpr(0::Nil))(1, 0::Nil) &
       useAt("<> diamond", PosInExpr(0::Nil))(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -2421,7 +2421,7 @@ object DerivedAxioms extends Logging {
       useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::Nil) &
-      useAt("all dual y")(1, 0::0::Nil) &
+      useAt(allDual_y)(1, 0::0::Nil) &
       useAt(boxAxiom)(1, 0::0::0::Nil) &
       useAt(converseImply, PosInExpr(1::Nil))(1) &
       byUS("DG inverse differential ghost implicational")
@@ -2438,7 +2438,7 @@ object DerivedAxioms extends Logging {
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DG differential ghost constant")(1, 0::0::Nil) &
       useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
-      useAt("all dual y", PosInExpr(0::Nil))(1, 0::Nil) &
+      useAt(allDual_y, PosInExpr(0::Nil))(1, 0::Nil) &
       useAt("<> diamond", PosInExpr(0::Nil))(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -2452,7 +2452,7 @@ object DerivedAxioms extends Logging {
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DG differential ghost constant")(1, 0::0::Nil) &
       useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
-      useAt("all dual y", PosInExpr(0::Nil))(1, 0::Nil) &
+      useAt(allDual_y, PosInExpr(0::Nil))(1, 0::Nil) &
       useAt("<> diamond", PosInExpr(0::Nil))(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -2463,7 +2463,7 @@ object DerivedAxioms extends Logging {
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt("DG differential ghost constant all")(1, 0::0::Nil) &
       useAt("!! double negation", PosInExpr(1::Nil))(1, 1::Nil) &
-      useAt("all dual y", PosInExpr(0::Nil))(1, 1::0::Nil) &
+      useAt(allDual_y, PosInExpr(0::Nil))(1, 1::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -2635,9 +2635,9 @@ object DerivedAxioms extends Logging {
           byUS("exists generalize y",(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
           )
           ,
-          cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS("[:=] self assign y") & done
+          cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfAssign_y) & done
         ) &
-      useAt(AxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+      useAt(allEliminate_y, PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
       useAt(", commute")(-1) & //@note since DG inverse differential ghost has flipped order
       cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
         useAt("DI differential invariant")(1) & implyR(1) & andR(1) <(
@@ -2685,9 +2685,9 @@ object DerivedAxioms extends Logging {
             byUS("exists generalize y",(us: Subst) => RenUSubst(("f()".asTerm, Number(1)) :: ("p_(.)".asFormula, Box(Assign("y_".asVariable, DotTerm()), "[{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)) :: Nil))
           )
         ,
-        cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS("[:=] self assign y") & done
+        cohide(1) & equivifyR(1) & CE(PosInExpr(0::Nil)) & byUS(selfAssign_y) & done
         ) &
-      useAt(AxiomInfo("all eliminate y"), PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
+      useAt(allEliminate_y, PosInExpr(0::Nil))(-1) & //allL/*(dbx_internal)*/(-1) &
       useAt(", commute")(-1) & //@note since DG inverse differential ghost has flipped order
       cutR("[{c{|y_|},y_'=(-(g(|y_|)/2))*y_+0&q(|y_|)}]e(|y_|)*y_^2>0".asFormula)(1) <(
         useAt("DIo open differential invariance >")(1) <(
