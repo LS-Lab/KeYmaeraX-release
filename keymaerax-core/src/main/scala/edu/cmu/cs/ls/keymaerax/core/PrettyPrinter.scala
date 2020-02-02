@@ -30,10 +30,12 @@ object PrettyPrinter extends (Expression => String) {
   /* @note mutable state for switching out default pretty printers, which defaults to just printing class names as does super.toString */
   private[this] var pp: PrettyPrinter = (e => e.getClass.getName)
 
+  /** The pretty printer that is presently used per default by all [[Expression]] subtypes.
+    * @see [[Expression.prettyString]] */
   def printer: PrettyPrinter = pp
 
   /**
-    * Set a new pretty printer to be used from now on.
+    * Set a new pretty printer to be used by all [[Expression]] types from now on.
     * @param printer the pretty-printer to use in KeYmaera X from now on.
     */
   def setPrinter(printer: PrettyPrinter) = {pp = printer}

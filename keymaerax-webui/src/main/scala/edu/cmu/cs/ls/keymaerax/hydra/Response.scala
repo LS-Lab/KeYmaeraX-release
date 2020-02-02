@@ -11,7 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -24,6 +24,7 @@ import java.io.{PrintWriter, StringWriter}
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
@@ -835,7 +836,7 @@ case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTr
       "id" -> proofIdJson(proofId),
       "nodes" -> JsObject(theNodes.toMap),
       "root" -> JsString(root.id.toString),
-      "isProved" -> JsBoolean(root.done)
+      "isProved" -> JsBoolean(root.isProved)
     )
   }
 

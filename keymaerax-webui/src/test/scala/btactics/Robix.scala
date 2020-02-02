@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 
 import scala.language.postfixOps

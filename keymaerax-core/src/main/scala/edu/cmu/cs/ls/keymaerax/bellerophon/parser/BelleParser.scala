@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
@@ -368,7 +369,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
       //Suffix case.
       case r :+ ParsedBelleExpr(expr, exprLoc) :+ BelleToken(PARTIAL, partialLoc) =>
-        val parsedExpr = expr.partial
+        val parsedExpr = PartialTactic(expr)
         parsedExpr.setLocation(partialLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, exprLoc.spanTo(partialLoc)), st.input)
 
@@ -379,7 +380,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
       }
 
       case r :+ BelleToken(PARTIAL, partialLoc) :+ ParsedBelleExpr(expr, exprLoc) =>
-        val parsedExpr = expr.partial
+        val parsedExpr = PartialTactic(expr)
         parsedExpr.setLocation(partialLoc)
         ParserState(r :+ ParsedBelleExpr(parsedExpr, partialLoc.spanTo(exprLoc)), st.input)
 

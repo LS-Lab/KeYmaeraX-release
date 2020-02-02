@@ -1,11 +1,13 @@
-package edu.cmu.cs.ls.keymaerax.bellerophon
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 /**
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationException
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{LinearMatcher, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -24,7 +26,7 @@ import scala.collection.immutable._
 @SummaryTest
 @UsualTest
 class LinearMatcherTest extends SystemTestBase {
-  import UnificationMatch.Subst
+  import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch.Subst
 
   val matcher = LinearMatcher
 

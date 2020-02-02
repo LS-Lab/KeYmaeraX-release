@@ -16,10 +16,10 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.tools._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -41,6 +41,7 @@ import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode, SearchNode}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
 import org.apache.logging.log4j.scala.Logging
@@ -1483,7 +1484,7 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
     val leaves = tree.openGoals
-    val closed = tree.openGoals.isEmpty && tree.verifyClosed
+    val closed = tree.openGoals.isEmpty && tree.isProved
 
     val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
 
@@ -1702,7 +1703,7 @@ class GetApplicableAxiomsRequest(db: DBAbstraction, userId: String, proofId: Str
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
       case Some((tactics, inputs)) => ApplicableAxiomsResponse(tactics, inputs) :: Nil
       case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
@@ -1714,7 +1715,7 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
                                         pos1: Position, pos2: Position) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    if (tree.done) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     tree.locate(nodeId).map(n => n.applicableTacticsAt(pos1, Some(pos2))) match {
       case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
       case Some(tactics) => new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
@@ -1738,7 +1739,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    if (tree.isClosed) return ApplicableDefinitionsResponse(Nil) :: Nil
+    if (tree.done) return ApplicableDefinitionsResponse(Nil) :: Nil
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
       case Some(symbols) =>
@@ -2110,7 +2111,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                       //@note display progress of inner (Let) proof, works only in stepwise execution (step details dialog)
                       val innerTrace = db.getExecutionTrace(innerId)
                       if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
-                      else throw BelleTacticFailure("No progress", ex)
+                      else throw new BelleTacticFailure("No progress", ex)
                     case None => throw ex
                   }
                 }

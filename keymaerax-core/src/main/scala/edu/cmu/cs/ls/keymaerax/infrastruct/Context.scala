@@ -2,12 +2,11 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import PosInExpr.HereP
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 
 import scala.collection.immutable._
 
@@ -28,12 +27,12 @@ import scala.collection.immutable._
   *   println(f + " is the same as " + ctx(g))
   *  }}}
   * @author Andre Platzer
-  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]
+  * @see [[PosInExpr]]
+  * @see [[Augmentors]]
   */
 object Context {
   /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives theoretically fast unguarded replacement contexts that are slow in practice. */
-  private[btactics] val GUARDED = false
+  private[keymaerax] val GUARDED = false
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
@@ -172,7 +171,7 @@ object Context {
 
   // elegant reapply-based context splitting
 
-  /** @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools.boundAt()]] for same positions */
+  /** @see [[StaticSemanticsTools.boundAt()]] for same positions */
   private def context(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm(term.sort),term) else {term match {
     case FuncOf(f,t)     if pos.head==0 => val sp = context(t, pos.child); (FuncOf(f, sp._1), sp._2)
     // homomorphic cases

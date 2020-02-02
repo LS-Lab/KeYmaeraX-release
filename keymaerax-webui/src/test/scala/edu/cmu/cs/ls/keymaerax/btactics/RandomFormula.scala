@@ -10,8 +10,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
 import scala.collection.immutable
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.mutable.ListBuffer
@@ -85,7 +86,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** randomly generate a formula context C{_} of the given expected size */
   def nextFormulaContext(size : Int): Context[Formula] = {
-    import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     val fml = nextF(nextNames("z", size / 3 + 1), 2*size, modals=true, dotTs=false, dotFs=false, diffs=false, funcs=false, duals=isGame)
     for (j <- 1 to randomReps) {
       //@todo min(size, fml.size)

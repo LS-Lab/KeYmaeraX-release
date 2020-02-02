@@ -9,9 +9,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType,
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import BelleLabels._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
@@ -99,7 +100,7 @@ private object DLBySubst {
         }, prg)
         if (fmls.isEmpty) abstractionb(pos)
         else throw new BelleFriendlyUserMessage("Abstraction would lose information from tests and/or evolution domain constraints")
-      case e => throw BelleTacticFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
+      case e => throw new BelleTacticFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
         e.map(_.prettyString) + " at position " + pos.prettyString + " in sequent " + seq.prettyString)
     }
   })
@@ -538,7 +539,7 @@ private object DLBySubst {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
   })
 
@@ -557,7 +558,7 @@ private object DLBySubst {
     case Some(Forall(vars, p)) =>
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
   })
 }

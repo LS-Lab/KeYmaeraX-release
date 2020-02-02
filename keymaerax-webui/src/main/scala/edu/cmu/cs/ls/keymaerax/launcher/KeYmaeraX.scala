@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.{DefaultConfiguration, ToolConfiguration, ToolEvidence}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
@@ -979,7 +980,7 @@ object KeYmaeraX {
 
   def codegenQuantitative(entry: ParsedArchiveEntry, outputFileName: String, head: String,
                           vars: Option[Set[BaseVariable]], kind: String): Unit = {
-    import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     val (monitorFml: Formula, monitorStateVars: Set[BaseVariable]) =
       if (entry.model.asInstanceOf[Formula].isFOL) {
         val stateVars = vars match {

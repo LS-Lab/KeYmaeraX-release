@@ -12,7 +12,7 @@
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
-  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @note Code Review: 2016-08-17
   */
 package edu.cmu.cs.ls.keymaerax.core
@@ -183,7 +183,9 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     case sp: SuccPos => updated(sp, f)
     case ap: AntePos => updated(ap, f)
   }
+/** A copy of this sequent with the indicated antecedent position replaced by the formula f, same as [[updated()]]. */
   def updated(p: AntePos, f: Formula): Sequent = Sequent(ante.updated(p.getIndex, f), succ)
+  /** A copy of this sequent with the indicated succedent position replaced by the formula f, same as [[updated()]]. */
   def updated(p: SuccPos, f: Formula): Sequent = Sequent(ante, succ.updated(p.getIndex, f))
 
   /**
@@ -199,10 +201,12 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     case sp: SuccPos => updated(sp, s)
     case ap: AntePos => updated(ap, s)
   }
+  /** A copy of this sequent with the indicated antecedent position replaced by gluing the sequent s, same as [[updated()]] */
   def updated(p: AntePos, s: Sequent): Sequent = {
     Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
   } ensures(r=> r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s)),
     "result after re-including updated formula is equivalent to " + this + " glue " + s)
+  /** A copy of this sequent with the indicated succedent position replaced by gluing the sequent s, same as [[updated()]] */
   def updated(p: SuccPos, s: Sequent): Sequent = {
     Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
   } ensures(r=> r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
@@ -210,14 +214,12 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
 
   /**
     * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
-    *
     * @note Used for contracts in the core.
     */
   def subsequentOf(r: Sequent): Boolean = ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
     * Check whether this sequent is the same as the given sequent r (considered as sets)
-    *
     * @note Used for contracts in the core.
     */
   def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
@@ -252,6 +254,9 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   *
   * Invariant: All Provables ever produced are locally sound,
   * because only the prover kernel can create Provable objects and chooses not to use the globally sound uniform substitution rule.
+  *
+  * Provables are stateless and do not themselves remember other provables that they resulted from.
+  * The ProofTree data structure outside the kernel provides such proof tree navigation information.
   *
   * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
   * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
@@ -517,18 +522,19 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     *
     * @param ren The uniform renaming to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `ren` to our subgoals and conclusion.
-    * @requires !ren.semantic || isProved
     * @author Andre Platzer
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
-    * @note soundness-critical: For uniform renaming purposes semantic renaming is sound but not locally sound. The kernel is easier when keeping everything locally sound.
+    * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
+    * @since 4.7.5
+    * @note soundness-critical: Semantic uniform renaming requires locally sound input provables. The kernel is easier when keeping everything locally sound.
+    * @see [[URename]]
     * @see [[UniformRenaming]]
     */
   final def apply(ren: URename): Provable =
     try {
-      //@note case ren.semantic&&isProved uses that there is no difference between locally sound and globally sound if isProved so no subgoals: after theorem 27 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-      insist(/*!ren.semantic ||*/ isProved, "Unless proved, uniform renaming cannot be semantic\nin " + ren + " on\n" + this)
       new Provable(ren(conclusion), subgoals.map(s => ren(s)))
     } catch { case exc: RenamingClashException => throw exc.inContext(ren + " on\n" + this) }
+
 
   // forward proofs (convenience)
 
@@ -614,7 +620,11 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
 }
 
 
-/** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules. */
+/** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules.
+  * @see [[Provable.axioms]]
+  * @see [[Provable.rules]]
+  * @see [[Provable.startProof()]]
+  */
 object Provable {
   //@todo Code Review: it would be nice if LAX_MODE were false
   private val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
@@ -668,7 +678,7 @@ object Provable {
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note soundness-critical
     */
-  def startProof(goal : Sequent): Provable = {
+  final def startProof(goal : Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq(goal))
   } ensures(
     r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
@@ -695,7 +705,7 @@ object Provable {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
-  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+  final def proveArithmetic(t: QETool, f: Formula): Lemma = {
     import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
     insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
     // Quantifier elimination determines (quantifier-free) equivalent of f.
@@ -714,7 +724,7 @@ object Provable {
     * @return a Provable of given conclusion and given subgoals.
     * @note soundness-critical magic/trustme, only call from RCF/Lemma within core with true facts.
     */
-  private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
+  private[core] final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
     Provable(conclusion, subgoals)
 }
 
@@ -725,12 +735,13 @@ object Provable {
  */
 
 /**
-  * Subclasses represent all proof rules.
+  * Subclasses represent all built-in proof rules.
   * A proof rule is ultimately a named mapping from sequents to lists of sequents.
-  * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
+  * The resulting list of sequents represent the subgoals/premises all of which need to be proved
   * to prove the current sequent (desired conclusion).
   *
   * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
+  * @see [[Provable.rules]]
   */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   //@note If there were inherited contracts in Scala, we could augment apply with contract "ensures instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
@@ -747,22 +758,27 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   *********************************************************************************
   */
 
-/** A rule applied to a position */
+/** A rule applied to a position in a sequent.
+  * @see [[SeqPos]] */
 trait PositionRule extends Rule {
-  /** The position where this rule will be applied at */
+  /** The position where this rule will be applied at. */
   val pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
-/** A rule applied to a position in the antecedent on the left */
+/** A rule applied to a position in the antecedent on the left of a sequent.
+  * LeftRules can only be applied to antecedent positions.
+  * @see [[AntePos]] */
 trait LeftRule extends PositionRule {
-  /** The position (on the left) where this rule will be applied at */
+  /** The position (on the left) where this rule will be applied at. */
   val pos: AntePos
 }
 
-/** A rule applied to a position in the succedent on the right */
+/** A rule applied to a position in the succedent on the right of a sequent.
+  * RightRules can only be applied to succedent positions.
+  * @see [[SuccPos]] */
 trait RightRule extends PositionRule {
-  /** The position (on the right) where this rule will be applied at */
+  /** The position (on the right) where this rule will be applied at. */
   val pos: SuccPos
 }
 
@@ -844,7 +860,7 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
   */
 
 /**
-  * Close / Identity rule
+  * Close / Identity rule proving an assumption available in the antecedent.
   * {{{
   *        *
   * ------------------ (Id)
@@ -861,7 +877,7 @@ case class Close(assume: AntePos, pos: SuccPos) extends Rule {
 }
 
 /**
-  * Close by true
+  * Close by true among the succedent desiderata.
   * {{{
   *       *
   * ------------------ (close true)
@@ -878,7 +894,7 @@ case class CloseTrue(pos: SuccPos) extends RightRule {
 }
 
 /**
-  * Close by false.
+  * Close by false among the antecedent assumptions.
   * {{{
   *        *
   * ------------------ (close false)
@@ -896,13 +912,13 @@ case class CloseFalse(pos: AntePos) extends LeftRule {
 
 
 /**
-  * Cut in the given formula c.
+  * Cut in the given formula `c` to use `c` on the first branch and proving `c` on the second branch.
   * {{{
   * G, c |- D     G |- D, c
   * ----------------------- (cut)
   *         G |- D
   * }}}
-  *
+  * The ordering of premises is optimistic, i.e., the premise using the cut-in formula `c` comes before the one proving `c`.
   * @note c will be added at the end on the subgoals
   */
 case class Cut(c: Formula) extends Rule {
@@ -1122,12 +1138,20 @@ object UniformRenaming {
   * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
   * Uniform renaming, thus, is a transposition.
   *
+  * {{{
+  *    r(G) |- r(D)
+  *   --------------- UR
+  *       G |- D
+  * }}}
+  *
   * @param what What variable to replace (along with its associated [[DifferentialSymbol]]).
   * @param repl The target variable to replace `what` with (and vice versa).
   * @requires repl is fresh in the sequent.
   * @author Andre Platzer
   * @see [[URename]]
-  * @note soundness-critical: For uniform renaming purposes semantic renaming would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
+  * @see [[Provable.apply()]]
+  * @see [[BoundRenaming]]
+  * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   //@note implied: insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
@@ -1144,6 +1168,35 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   * (and its associated DifferentialSymbol) to repl.
   * Proper bound renaming requires the replacement to be a fresh variable that does not occur previously.
   *
+  * {{{
+  *    G |- [repl:=e]r(P), D
+  *   ------------------------ BR (where what',repl,repl' do not occur in P)
+  *    G |- [what:=e]P,    D
+  * }}}
+  * where `r(P)` is the result of uniformly renaming `what` to the (fresh) `repl` in `P`.
+  * The proof rule works accordingly for diamond modalities, nondeterministic assignments, or quantifiers,
+  * or in the antecedent.
+  * {{{
+  *    G |- <repl:=e>r(P), D
+  *   ------------------------ BR (where what',repl,repl' do not occur in P)
+  *    G |- <what:=e>P,    D
+  * }}}
+  * {{{
+  *    G |- \forall repl r(P), D
+  *   --------------------------- BR (where what',repl,repl' do not occur in P)
+  *    G |- \forall what P,    D
+  * }}}
+  * {{{
+  *    G |- \exists repl r(P), D
+  *   --------------------------- BR (where what',repl,repl' do not occur in P)
+  *    G |- \exists what P,    D
+  * }}}
+  * {{{
+  *    G, [repl:=e]r(P) |- D
+  *   ------------------------ BR (where what',repl,repl' do not occur in P)
+  *    G, [what:=e]P    |- D
+  * }}}
+  *
   * @param what What variable (and its associated DifferentialSymbol) to replace.
   * @param repl The target variable to replace what with.
   * @param pos The position at which to perform a bound renaming.
@@ -1151,6 +1204,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   * @author Andre Platzer
   * @author Stefan Mitsch
   * @note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
+  * @see [[UniformRenaming]]
   */
 final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   //@note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
@@ -1206,7 +1260,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   * ----------------------- (Skolemize) provided x not in G,D
   * G |- \forall x p(x), D
   * }}}
-  * Skolemize also handles '''existential''' quantifiers on the left.
+  * Skolemization also handles '''existential''' quantifiers on the left:
   * {{{
   *           p(x), G |- D
   * ------------------------ (Skolemize) provided x not in G,D

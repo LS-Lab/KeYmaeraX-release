@@ -18,12 +18,17 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import scala.math._
 
+/*********************************************************************************
+  * Kinds, Sorts, Spaces giving typing information
+  *********************************************************************************
+  */
+
 /**
   * Kinds of expressions (term, formula, program, differential program).
   * @see [[Expression]]
   */
 sealed trait Kind
-/** All expressions that are neither terms nor formulas nor programs nor functions are of kind ExpressionKind */
+/** Expressions that are neither terms nor formulas nor programs nor functions would be of kind ExpressionKind */
 object ExpressionKind extends Kind { override def toString = "Expression" }
 /** All terms are of kind TermKind */
 object TermKind extends Kind { override def toString = "Term" }
@@ -33,8 +38,9 @@ object FormulaKind extends Kind { override def toString = "Formula" }
 object ProgramKind extends Kind { override def toString = "Program" }
 /** All differential programs are of kind DifferentialProgramKind */
 object DifferentialProgramKind extends Kind/*ProgramKind.type*/ { override def toString = "DifferentialProgram" }
-/** Function/predicate symbols that are not themselves terms or formulas are of kind FunctionKind */
+/** Function/predicate symbols that are not themselves terms or formulas are of kind FunctionKind, so degenerate. */
 object FunctionKind extends Kind { override def toString = "Function" }
+
 
 /**
   * Sorts of expressions (real, bool, etc).
@@ -54,13 +60,20 @@ case class Tuple(left: Sort, right: Sort) extends Sort { override def toString =
 /** User-defined object sort */
 case class ObjectSort(name : String) extends Sort { override def toString = name }
 
-/** Sorts of state spaces for state-dependent operators */
+
+/** Sorts of state spaces for state-dependent operators
+  * @see [[SpaceDependent]] */
 sealed trait Space
 /** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
 object AnyArg extends Space { override def toString: String = "||" }
 /** The sort denoting a slice of the state space that does not include/depend on/affect variable `taboo`. */
 case class Except(taboo: Variable) extends Space { override def toString: String = "|" + taboo.asString + "|" }
 
+
+/*********************************************************************************
+  * Expressions of differential dynamic logic and differential game logic
+  *********************************************************************************
+  */
 
 /**
   * Expressions of differential dynamic logic.
@@ -98,6 +111,8 @@ sealed trait Expression {
   def prettyString : String = PrettyPrinter.printer(this)
 }
 
+// partitioning into types of expressions in terms of atomicity, compositeness
+
 /** Atomic expressions that do not have any proper subexpressions. */
 sealed trait Atomic extends Expression
 /** Composite expressions that are composed of subexpressions */
@@ -129,6 +144,7 @@ sealed trait ApplicationOf extends Composite {
   /** The child argument that this function/predicate/predicational application is applied to. */
   val child : Expression
 }
+
 
 /**
   * A named symbol such as a variable or function symbol or predicate symbol.

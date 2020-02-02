@@ -6,10 +6,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 
@@ -65,11 +66,11 @@ trait SequentCalculus {
   }
 
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
-  val notL    : BuiltInLeftTactic = "notL" by { (pr:ProvableSig, pos:AntePosition) => pr(NotLeft(pos.checkTop), 0) }
+  val notL    : CoreLeftTactic = "notL" coreby { (pr:ProvableSig, pos:AntePosition) => pr(NotLeft(pos.checkTop), 0) }
   /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
-  val notR    : BuiltInRightTactic = "notR" by { (pr:ProvableSig, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
+  val notR    : CoreRightTactic = "notR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(NotRight(pos.checkTop), 0) }
   /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
-  val andL    : BuiltInLeftTactic = "andL" by { (pr:ProvableSig, pos:AntePosition) => pr(AndLeft(pos.checkTop), 0) }
+  val andL    : CoreLeftTactic = "andL" coreby { (pr:ProvableSig, pos:AntePosition) => pr(AndLeft(pos.checkTop), 0) }
   /** Inverse of [[andL]].
     * {{{
     *   G, G', G'', a&b  |- D
@@ -80,9 +81,9 @@ trait SequentCalculus {
   def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = PropositionalTactics.andLi(pos1, pos2)
   val andLi: DependentTactic = andLi()
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
-  val andR    : BuiltInRightTactic = "andR" by { (pr:ProvableSig, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
+  val andR    : CoreRightTactic = "andR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(AndRight(pos.checkTop), 0) }
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
-  val orL     : BuiltInLeftTactic = "orL" by { (pr:ProvableSig, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
+  val orL     : CoreLeftTactic = "orL" coreby { (pr:ProvableSig, pos:AntePosition) => pr(OrLeft(pos.checkTop), 0) }
   /** Inverse of [[orR]].
     * {{{
     *   G |- D, D', D'', a | b
@@ -93,11 +94,11 @@ trait SequentCalculus {
   def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = PropositionalTactics.orRi(pos1, pos2)
   val orRi: DependentTactic = orRi()
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
-  val orR     : BuiltInRightTactic = "orR" by { (pr:ProvableSig, pos:SuccPosition) => pr(OrRight(pos.checkTop), 0) }
+  val orR     : CoreRightTactic = "orR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(OrRight(pos.checkTop), 0) }
   /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
-  val implyL  : BuiltInLeftTactic = "implyL" by { (pr:ProvableSig, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
+  val implyL  : CoreLeftTactic = "implyL" coreby { (pr:ProvableSig, pos:AntePosition) => pr(ImplyLeft(pos.checkTop), 0) }
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
-  val implyR  : BuiltInRightTactic = "implyR" by { (pr:ProvableSig, pos:SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
+  val implyR  : CoreRightTactic = "implyR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(ImplyRight(pos.checkTop), 0) }
   /** Inverse of [[implyR]].
     * {{{
     *   G, G' |- D, D', a -> b
@@ -108,9 +109,9 @@ trait SequentCalculus {
   def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = PropositionalTactics.implyRi(keep)
   val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
-  val equivL  : BuiltInLeftTactic = "equivL" by { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
+  val equivL  : CoreLeftTactic = "equivL" coreby { (pr:ProvableSig, pos:AntePosition) => pr(EquivLeft(pos.checkTop), 0) }
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
-  val equivR  : BuiltInRightTactic = "equivR" by { (pr:ProvableSig, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
+  val equivR  : CoreRightTactic = "equivR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(EquivRight(pos.checkTop), 0) }
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]) */
   def cut(cut : Formula)      : InputTactic         = ProofRuleTactics.cut(cut)
@@ -169,6 +170,7 @@ trait SequentCalculus {
   // closing tactics
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
+    //@todo optimizable seems like complicated and possibly slow code???
   lazy val close: BelleExpr = "close" by ((seq: Sequent) => {
     seq.succ.zipWithIndex.find({
       case (True, _) => true
@@ -202,7 +204,7 @@ trait SequentCalculus {
     pos.top match {
       case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
       case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)
-      case _ => throw BelleTacticFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
+      case _ => throw new BelleTacticFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
     }
   })
   //@note do not forward to closeIdWith (performance)
@@ -226,7 +228,7 @@ trait SequentCalculus {
   // derived propositional
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
-  val equivifyR: BuiltInRightTactic = "equivifyR" by { (pr:ProvableSig, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
+  val equivifyR: CoreRightTactic = "equivifyR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
   /** Modus Ponens: p&(p->q) -> q.
     * @example{{{
     *      p, q, G |- D
@@ -238,9 +240,9 @@ trait SequentCalculus {
     */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = PropositionalTactics.modusPonens(assumption, implication)
   /** Commute equivalence on the left [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivLeft CommuteEquivLeft]] */
-  val commuteEquivL: BuiltInLeftTactic = "commuteEquivL" by { (pr:ProvableSig, pos:AntePosition) => pr(CommuteEquivLeft(pos.checkTop), 0) }
+  val commuteEquivL: CoreLeftTactic = "commuteEquivL" coreby { (pr:ProvableSig, pos:AntePosition) => pr(CommuteEquivLeft(pos.checkTop), 0) }
   /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]] */
-  val commuteEquivR: BuiltInRightTactic = "commuteEquivR" by { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
+  val commuteEquivR: CoreRightTactic = "commuteEquivR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
   lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
 

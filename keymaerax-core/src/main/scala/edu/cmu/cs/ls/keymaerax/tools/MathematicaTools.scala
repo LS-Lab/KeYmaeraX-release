@@ -6,11 +6,11 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, FormulaTools}
-import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tools.KMComparator.hasHead
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}

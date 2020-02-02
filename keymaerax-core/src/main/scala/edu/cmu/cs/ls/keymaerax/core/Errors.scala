@@ -37,27 +37,55 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
   override def toString: String = super.getMessage + getContext
 
 }
-/** Critical exceptions from the KeYmaera X Prover Core. */
+
+
+/** Reasoning exceptions directly from the KeYmaera X Prover Kernel.
+  * The most important distinction of prover kernel exceptions are
+  * [[CriticalCoreException]] for unsound logical mistakes versus
+  * [[NoncriticalCoreException]] for plausible but inappropriate reasoning attempts. */
 class CoreException(msg: String) extends ProverException(msg)
 
-/** Substitution clash */
+// critical prover kernel exceptions
+
+/** Critical reasoning exceptions directly from the KeYmaera X Prover Core that indicate a proof step was
+  * attempted that would be unsound, and was consequently denied. */
+class CriticalCoreException(msg: String) extends CoreException(msg)
+
+/** Substitution clashes are raised for unsound substitution reasoning attempts. */
 case class SubstitutionClashException(subst: String/*USubst*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
-  extends CoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info)
+  extends CriticalCoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info)
 
-/** Uniform or bound renaming clash exception */
-case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "") extends CoreException(msg + "\nRenaming " + e + " via " + ren + "\nin " + info)
+/** Uniform or bound renaming clashes are unsound renaming reasoning attempts. */
+case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "")
+  extends CriticalCoreException(msg + "\nRenaming " + e + " via " + ren + "\nin " + info)
 
-/** Skolem symbol clash */
+/** Skolem symbol clashes are unsound Skolemization reasoning attempts. */
 case class SkolemClashException(msg: String, clashedNames:SetLattice[Variable], vars:String/*Seq[Variable]*/, s:String/*Sequent*/)
-  extends CoreException(msg + " " + clashedNames + "\nwhen skolemizing variables " + vars + "\nin " + s)
+  extends CriticalCoreException(msg + " " + clashedNames + "\nwhen skolemizing variables " + vars + "\nin " + s)
 
-/** Rule is not applicable as indicated */
-case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends CoreException(msg + "\n" +
+
+// noncritical prover kernel exceptions
+
+/** Noncritical reasoning exceptions directly from the KeYmaera X Prover Core that indicate a proof step was
+  * perfectly plausible to try, just did not fit the expected pattern, and consequently turned out impossible. */
+class NoncriticalCoreException(msg: String) extends CoreException(msg)
+
+/** Rule is not applicable as indicated.
+  * For example, InapplicableRuleException can be raised when trying to apply [[AndRight]]
+  * at the correct position 2 in bounds on the right-hand side where it turns out there is an Or formula not an And formula.
+  * For readability and code performance reasons, the prover kernel may also raise [[scala.MatchError]]
+  * if the shape of a formula is not as expected.
+  */
+case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null)
+  extends NoncriticalCoreException(msg + "\n" +
   "Rule " + r + (if (r.isInstanceOf[PositionRule]) s(r.asInstanceOf[PositionRule].pos) else "") +
   (if (s != null) " applied to " + s else "")) {
 }
 
-/** Assertions that fail in the prover */
+
+// internal prover kernel exceptions
+
+/** Internal core assertions that fail in the prover */
 case class ProverAssertionError(msg: String) extends ProverException("Assertion failed " + msg)
 
 /** Thrown to indicate when an unknown operator occurs */

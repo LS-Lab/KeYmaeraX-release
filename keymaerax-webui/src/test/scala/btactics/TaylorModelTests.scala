@@ -9,7 +9,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 import TactixLibrary._
 import TacticFactory._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool
 

@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleTacticFailure}
+import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.tools.{ODESolverTool, Tool, ToolBase}
 import org.apache.logging.log4j.scala.Logging
 

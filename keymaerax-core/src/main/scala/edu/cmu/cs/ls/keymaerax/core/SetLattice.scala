@@ -24,10 +24,13 @@ import scala.collection.GenTraversableOnce
   * @author Andre Platzer
   */
 sealed trait SetLattice[A] {
+  /** True indicates that this lattice represents an infinite set of elements. */
   def isInfinite: Boolean
+  /** True indicates that this lattice is the empty lattice bottom. */
   def isEmpty: Boolean
 
   // element operations
+  /** True when this lattice contains the element `elem`. */
   def contains(elem: A): Boolean
 
   /** Return the set lattice including the extra element `elem` */
@@ -57,21 +60,22 @@ sealed trait SetLattice[A] {
 
   // binary operations with mixed cases
 
-  /* Subset of */
+  /* Check whether this lattice is a lattice subset of `other`. */
   def subsetOf(other: SetLattice[A]): Boolean = (this, other) match {
     case (FiniteSet(ts), FiniteSet(os)) => ts.subsetOf(os)
     case (FiniteSet(ts), os: CoFiniteSet[A]) => ts.intersect(os.excluded).isEmpty /* this is a subset of that top if that doesn't exclude any of this */
     case (ts: CoFiniteSet[A], FiniteSet(_)) => false           /* infinite sets are not a subset of any finite set */
     case (ts: CoFiniteSet[A], os: CoFiniteSet[A]) => os.excluded.subsetOf(ts.excluded) /* this coset is a subset of that coset if that excluded at most this's excluded */
   }
-  /** Set union */
+
+  /** Set union `this union other`. */
   def ++(other: SetLattice[A]): SetLattice[A] = { (this, other) match {
     case (_, FiniteSet(os)) => this ++ os  // ++(GenTraversableOnce[A])
     case (FiniteSet(ts), os: CoFiniteSet[A]) => os ++ ts   // commute to ++(GenTraversableOnce[A])
     case (ts: CoFiniteSet[A], os:CoFiniteSet[A]) => CoFiniteSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)  // union of cosets is intersection of exceptions
   } } ensures(r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
 
-  /** Set subtraction */
+  /** Set subtraction `this minus other`. */
   //@note the core only uses finite other here because mustBoundVars are finite
   def --(other: SetLattice[A]): SetLattice[A] = {(this, other) match {
     case (_, FiniteSet(os)) => this -- os   // --(GenTraversableOnce[A])
@@ -79,7 +83,7 @@ sealed trait SetLattice[A] {
     case (ts: CoFiniteSet[A], os: CoFiniteSet[A]) => FiniteSet(os.excluded -- ts.excluded)      /* (all \ t) \ (all \ o) == o \ t, t was excluded and all except o were then removed */
   } } ensures(r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
 
-  /** Set intersection */
+  /** Set intersection `this intersected other`. */
   def intersect(other: SetLattice[A]): SetLattice[A] = { (this, other) match {
     case (_, FiniteSet(os)) => intersect(os)
     //@note could do symmetric call as well: os.intersect(ts)
@@ -90,14 +94,20 @@ sealed trait SetLattice[A] {
 
 
 object SetLattice {
+  /** The finite SetLattice containing only a single element: `e`. */
   def apply[A](e: A): SetLattice[A] = FiniteSet(Set(e))
   //def apply[A](e: A*): SetLattice[A] = new FiniteSet(e.toSet)
+  /** The finite SetLattice containing only the given finite set of concrete elements. */
   def apply[A](s: immutable.Set[A]): SetLattice[A] = FiniteSet(s)
+  /** The finite SetLattice containing only the given finite sequence of concrete elements. */
   def apply[A](s: immutable.Seq[A]): SetLattice[A] = FiniteSet(s.toSet)
+
   /** The empty lattice containing nothing */
   def bottom[A]: SetLattice[A] = FiniteSet(Set.empty[A])
+
   /** The set of all variables including differential symbols. */
   val allVars: SetLattice[Variable] = CoFiniteSet(Set.empty, Set.empty)
+
   /** The set of all variables including differential symbols, except x and x'. */
   //@note Cannot remove all x'' from the CoFiniteSet so assume no higher-order differential symbol
   def except(taboo: Variable): SetLattice[Variable] = CoFiniteSet(
@@ -131,7 +141,7 @@ object SetLattice {
     * Symbols and differential symbols of set.
     *
     * @param set A Set of NamedSymbols.
-    * @return set ++ set' where set' is the set containing the primes of the variables in set.
+    * @return set ++ set' where set' is the set containing the primes of the variables in `set`.
     */
   def extendToDifferentialSymbols(set : Set[Variable]) : Set[Variable] =
     //@note assumes that only real variables occur

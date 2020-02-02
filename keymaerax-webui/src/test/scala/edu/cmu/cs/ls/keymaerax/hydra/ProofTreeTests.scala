@@ -1,9 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, ExhaustiveSequentialInterpreter, LazySequentialInterpreter, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{ExhaustiveSequentialInterpreter, LazySequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.{FormulaArg, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 

@@ -279,6 +279,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   *   println(next)
   * }}}
   */
+@deprecated("Use faster USubstOne instead")
 final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)

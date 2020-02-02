@@ -7,10 +7,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import java.util.concurrent.ExecutionException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -227,7 +228,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       }
       result
 
-    case _: BuiltInPositionTactic | _:BuiltInLeftTactic | _:BuiltInRightTactic | _:BuiltInTwoPositionTactic | _:DependentPositionTactic =>
+    case _: BuiltInPositionTactic | _:BuiltInLeftTactic | _:BuiltInRightTactic | _:CoreLeftTactic | _:CoreRightTactic | _:BuiltInTwoPositionTactic | _:DependentPositionTactic =>
       throw new BelleThrowable(s"Need to apply position tactic at a position before executing it: $expr(???)").inContext(expr, "")
 
     case AppliedPositionTactic(positionTactic, pos) => v match {
@@ -375,34 +376,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
     case named: NamedTactic => apply(named.tactic, v)
-
-    case ProveAs(lemmaName, f, e) =>
-      val BelleProvable(provable, labels) = v
-      assert(provable.subgoals.length == 1)
-
-      val lemma = ProvableSig.startProof(f)
-
-      //Prove the lemma iff it's not already proven.
-      if(LemmaDBFactory.lemmaDB.contains(lemmaName)) {
-        assert(LemmaDBFactory.lemmaDB.get(lemmaName).head.fact.conclusion == lemma.conclusion)
-      }
-      else {
-        val BelleProvable(result, _) = apply(e, BelleProvable(lemma, labels))
-        assert(result.isProved, "Result of proveAs should always be proven.")
-
-        val tacticText: String = try { BellePrettyPrinter(e) } catch { case _: Throwable => "nil" }
-
-        val evidence = ToolEvidence(List(
-          "tool" -> "KeYmaera X",
-          "model" -> lemma.prettyString,
-          "tactic" -> tacticText,
-          "proof" -> "" //@todo serialize proof
-        )) :: Nil
-
-        //Save the lemma.
-        LemmaDBFactory.lemmaDB.add(Lemma(result, Lemma.requiredEvidence(result, evidence), Some(lemmaName)))
-      }
-      v //nop on the original goal.
 
     case Let(abbr, value, inner) =>
       val (provable, lbl) = v match {

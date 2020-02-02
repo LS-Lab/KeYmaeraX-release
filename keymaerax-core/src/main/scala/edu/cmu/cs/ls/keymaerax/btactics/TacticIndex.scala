@@ -5,9 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{Branches, TacticRecursors}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.annotation.switch
 
@@ -162,6 +163,8 @@ class DefaultTacticIndex extends TacticIndex {
 
   def isApplicable(expr: Expression, tactic: BelleExpr): Boolean = {
     val name = tactic match {
+      case AppliedPositionTactic(CoreRightTactic(n), _) => n
+      case AppliedPositionTactic(CoreLeftTactic(n), _) => n
       case AppliedPositionTactic(BuiltInRightTactic(n), _) => n
       case AppliedPositionTactic(BuiltInLeftTactic(n), _) => n
       case DependentTactic(n) => n

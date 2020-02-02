@@ -2,28 +2,31 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.bellerophon
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
+
 import scala.language.implicitConversions
-import PosInExpr.HereP
 
 /**
  * Positions identify subexpressions of an expression.
  * A position is a finite sequence of binary numbers where
  * 0 identifies the left or only subexpression of an expression and
  * 1 identifies the right subexpression of an expression.
+ *
  * @example
  * {{{
  *   import StringConverter._
  *   val fml = "(x>2 & x+1<9) -> [x:=2*x+1; y:=0;] x^2>=2".asFormula
  *   // explicitly use FormulaAugmentor
  *   print(FormulaAugmentor(fml).sub(PosInExpr(0::0::Nil)))        // x>2
-
+ *
  *   // implicitly use FormulaAugmentor functions on formulas
  *   import Augmentors._
  *   print(fml.sub(PosInExpr(0::0::Nil)))        // x>2;
-
+ *
  *   print(fml.sub(PosInExpr(0::1::Nil)))        // x+1<9
  *   print(fml.sub(PosInExpr(0::1::0::Nil)))     // x+1
  *   print(fml.sub(PosInExpr(0::1::0::0::Nil)))  // x
@@ -36,10 +39,10 @@ import PosInExpr.HereP
  *   print(fml.sub(PosInExpr(1::0::0::1::Nil)))  // 2*x+1
  * }}}
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.positionOf()]]
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.at()]]
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.replaceAt()]]
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.splitPos()]]
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]
+ * @see [[Context.at()]]
+ * @see [[Context.replaceAt()]]
+ * @see [[Context.splitPos()]]
+ * @see [[Augmentors]]
  */
 sealed case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
@@ -170,17 +173,24 @@ object Position {
   /** Converts signed positions to position data structures.
     * -1 is the first antecedent position,
     * 1 the first succedent position
-    * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr]]
+    * @see [[infrastruct.PosInExpr]]
     */
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): Position = SeqPos(seqIdx) match {
     case pos: AntePos => AntePosition(pos, PosInExpr(inExpr))
     case pos: SuccPos => SuccPosition(pos, PosInExpr(inExpr))
   }
 
-  private[bellerophon] def apply(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = p match {
+  /** Quick conversion from kernel positions to prover/tactic positions */
+  private[keymaerax] def apply(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = p match {
     case pos: AntePos => AntePosition(pos)
     case pos: SuccPos => SuccPosition(pos)
   }
+
+  /** Quick conversion from kernel positions to prover/tactic positions */
+  private[keymaerax] def apply(p: edu.cmu.cs.ls.keymaerax.core.AntePos) : AntePosition = AntePosition(p)
+
+  /** Quick conversion from kernel positions to prover/tactic positions */
+  private[keymaerax] def apply(p: edu.cmu.cs.ls.keymaerax.core.SuccPos) : SuccPosition = SuccPosition(p)
 
   /** Embedding SeqPos into Position at top level */
   implicit def seqPos2Position(p: SeqPos) : Position = apply(p)

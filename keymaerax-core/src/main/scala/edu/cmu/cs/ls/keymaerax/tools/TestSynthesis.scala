@@ -5,8 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaerax.btactics.{FormulaTools, ModelPlex}
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 /**

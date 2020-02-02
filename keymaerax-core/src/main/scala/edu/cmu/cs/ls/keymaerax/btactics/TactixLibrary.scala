@@ -10,9 +10,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
@@ -171,8 +172,8 @@ object TactixLibrary extends HilbertCalculus
       case Some(fml: Formula) if expected.isEmpty || expected.contains(fml) => onAll(atPos(None)(pos, fml))
       case Some(fml: Formula) if !expected.contains(fml) => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
       case None if expected.isDefined => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-      case None if expected.isEmpty => throw BelleTacticFailure("Position " + pos + " points outside sequent")
-      case _ => throw BelleTacticFailure("TacticChase is only applicable at formulas")
+      case None if expected.isEmpty => throw new BelleTacticFailure("Position " + pos + " points outside sequent")
+      case _ => throw new BelleTacticFailure("TacticChase is only applicable at formulas")
     }
   })
 
@@ -201,10 +202,10 @@ object TactixLibrary extends HilbertCalculus
           if (pos.isAnte && tactics._1.isDefined || pos.isSucc && tactics._2.isDefined) {
             tacticChase(tacticIndex)(restrictTo:_*)(None)(pos)
           } else {
-            throw BelleTacticFailure("Inapplicable chase at position " + pos.prettyString + " in " + seq.prettyString)
+            throw new BelleTacticFailure("Inapplicable chase at position " + pos.prettyString + " in " + seq.prettyString)
           }
         }
-      case None => throw BelleTacticFailure("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
+      case None => throw new BelleTacticFailure("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
     }
   })
 
@@ -314,7 +315,7 @@ object TactixLibrary extends HilbertCalculus
         },
         (inv: Formula) => loop(inv)(pos) & onAll(explore(gen))
       )
-    case _ => throw BelleIllFormedError("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
+    case _ => throw new BelleIllFormedError("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
   }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
 
   //  meta-tactics for proof structuring information but no effect
@@ -438,7 +439,7 @@ object TactixLibrary extends HilbertCalculus
               (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
             )
       }
-    case _ => throw BelleTacticFailure("Loopauto is applicable to nondeterministic repetition only")
+    case _ => throw new BelleTacticFailure("Loopauto is applicable to nondeterministic repetition only")
   })
 
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
@@ -586,7 +587,7 @@ object TactixLibrary extends HilbertCalculus
               }
             }
           } else (e: BelleExpr) => e
-        case _ => throw BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
+        case _ => throw new BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
       }
       case None => (e: BelleExpr) => e
     }
@@ -595,7 +596,7 @@ object TactixLibrary extends HilbertCalculus
         case tom: ToolOperationManagement =>
           tom.setOperationTimeout(t)
           tool
-        case _ => throw BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
+        case _ => throw new BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
       }
       case None => tool
     }

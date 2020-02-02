@@ -3,12 +3,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
@@ -35,7 +36,7 @@ private object ToolTactics {
         Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
         ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
       case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
-      case _ => throw BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
+      case _ => throw new BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
     }
     nil
   })
@@ -273,14 +274,14 @@ private object ToolTactics {
           case ex: UnificationException =>
             //@note looks for specific transform position until we have better formula diff
             //@note Exception reports variable unifications and function symbol unifications swapped
-            if (ex.e2.asExpr.isInstanceOf[FuncOf] && !ex.e1.asExpr.isInstanceOf[FuncOf]) {
-              FormulaTools.posOf(e, ex.e1.asExpr) match {
-                case Some(pp) => transform(ex.e2.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
+            if (ex.input.asExpr.isInstanceOf[FuncOf] && !ex.shape.asExpr.isInstanceOf[FuncOf]) {
+              FormulaTools.posOf(e, ex.shape.asExpr) match {
+                case Some(pp) => transform(ex.input.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
                 case _ => transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
               }
             } else {
-              FormulaTools.posOf(e, ex.e2.asExpr) match {
-                case Some(pp) => transform(ex.e1.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
+              FormulaTools.posOf(e, ex.input.asExpr) match {
+                case Some(pp) => transform(ex.shape.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
                 case _ => transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
               }
             }
@@ -430,7 +431,7 @@ private object ToolTactics {
         pushIn(pos.inExpr)(pos.top)
       )
       )
-    else throw BelleTacticFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
+    else throw new BelleTacticFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
   }
 
   /** Transforms the term at position `pos` into the term `to`. */

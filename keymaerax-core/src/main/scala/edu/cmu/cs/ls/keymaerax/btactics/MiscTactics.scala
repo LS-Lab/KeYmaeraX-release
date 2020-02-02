@@ -2,10 +2,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import ProofRuleTactics.requireOneSubgoal
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -377,7 +378,7 @@ object Idioms {
       else {
         val succ = seq.succ.indexOf(f)
         if (succ >= 0) SuccPosition.base0(succ, in)
-        else throw BelleTacticFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
+        else throw new BelleTacticFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
       }
     }
     t(subPos)
@@ -466,7 +467,21 @@ object TacticFactory {
       *         }}}
       */
     def by(t: (ProvableSig, SuccPosition) => ProvableSig): BuiltInRightTactic = new BuiltInRightTactic(name) {
-      override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+      @inline override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+        requireOneSubgoal(provable, name)
+        t(provable, pos)
+      }
+    }
+
+    /** Creates a CoreRightTactic from a function turning provables and succedent positions into new provables.
+      * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
+      * @example {{{
+      *         "andR" coreby((pr,pos)=> pr(AndRight(pos.top),0))
+      *         }}}
+      * @see [[Rule]]
+      */
+    def coreby(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = new CoreRightTactic(name) {
+      @inline override def computeCoreResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
       }
@@ -478,7 +493,21 @@ object TacticFactory {
       *         }}}
       */
     def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = new BuiltInLeftTactic(name) {
-      override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+      @inline override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+        requireOneSubgoal(provable, name)
+        t(provable, pos)
+      }
+    }
+
+    /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
+      * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
+      * @example {{{
+      *         "andL" coreby((pr,pos)=> pr(AndLeft(pos.top),0))
+      *         }}}
+      * @see [[Rule]]
+      */
+    def coreby(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = new CoreLeftTactic(name) {
+      @inline override def computeCoreResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
       }
@@ -490,7 +519,7 @@ object TacticFactory {
       *         }}}
       */
     def by(t: (ProvableSig, Position, Position) => ProvableSig): BuiltInTwoPositionTactic = new BuiltInTwoPositionTactic(name) {
-      override def computeResult(provable: ProvableSig, pos1: Position, pos2: Position): ProvableSig = {
+      @inline override def computeResult(provable: ProvableSig, pos1: Position, pos2: Position): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos1, pos2)
       }

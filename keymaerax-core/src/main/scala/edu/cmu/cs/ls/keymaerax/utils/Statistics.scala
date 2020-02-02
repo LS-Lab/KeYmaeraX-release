@@ -4,10 +4,10 @@
   */
 package edu.cmu.cs.ls.keymaerax.utils
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, TacticStatistics}
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, FTPG, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, FTPG, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
 
 /** Formula, term, and tactic statistics.
   * @author Stefan Mitsch

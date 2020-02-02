@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaerax.btactics.TreeForm._
+import edu.cmu.cs.ls.keymaerax.infrastruct.TreeForm._
 import org.scalatest.{Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 

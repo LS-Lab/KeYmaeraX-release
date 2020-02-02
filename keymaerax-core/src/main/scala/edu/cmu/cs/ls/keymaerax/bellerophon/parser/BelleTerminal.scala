@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core.{Expression, FormulaKind, ProgramKind, TermKind, USubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 
 import scala.util.matching.Regex

@@ -2,7 +2,7 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.bellerophon
+package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.SetLattice._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -12,7 +12,7 @@ import scala.collection.immutable._
 
 object USubstRenChurch {
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
-  private[bellerophon] val TRANSPOSITION: Boolean = URename(Variable("dummy"),Variable("ymmud"))(Variable("ymmud"))==Variable("dummy")
+  private[infrastruct] val TRANSPOSITION: Boolean = URename(Variable("dummy"),Variable("ymmud"))(Variable("ymmud"))==Variable("dummy")
 }
 
 /**
@@ -31,7 +31,7 @@ object USubstRenChurch {
   */
 //@todo admissibility needs to be augmented with renamed variables too for soundness.
 //@todo does not check soundness-critical occurrence constraints for Taboos, but the core ultimately will.
-final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
+final case class USubstRenChurch(private[infrastruct] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   insist(subsDefsInput.forall(sp => sp._1.kind == sp._2.kind), "Substitution renaming only to expressions of the same kind: " + this)
   insist(subsDefsInput.forall(sp => sp._1.sort == sp._2.sort), "Substitution renaming only to expressions of the same sort: " + this)
   insist({val repls = subsDefsInput.map(sp=>sp._1).toList; repls.length == repls.distinct.length}, "No contradictory or duplicate substitutions/renamings: " + this)
