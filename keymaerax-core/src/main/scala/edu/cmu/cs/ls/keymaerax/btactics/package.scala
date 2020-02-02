@@ -1,6 +1,9 @@
-package edu.cmu.cs.ls.keymaerax
+/**
+ * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+ * See LICENSE.txt for the conditions of this license.
+ */
 
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
+package edu.cmu.cs.ls.keymaerax
 
 /**
   * Tactic library in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon]] tactic language.

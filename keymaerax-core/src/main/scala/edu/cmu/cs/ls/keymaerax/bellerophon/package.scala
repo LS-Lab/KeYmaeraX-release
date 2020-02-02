@@ -1,14 +1,13 @@
-package edu.cmu.cs.ls.keymaerax
-
-import edu.cmu.cs.ls.keymaerax.core.Expression
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, USubstRenOne}
-
-import scala.collection.immutable
+/**
+ * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+ * See LICENSE.txt for the conditions of this license.
+ */
+package edu.cmu.cs.ls.keymaerax.bellerophon
 
 /**
   * Bellerophon tactics language framework. This package includes
   *    - [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr tactic language expressions]]
-  *    - [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter sequential tactic interpreter]] for BelleEpxr
+  *    - [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter sequential tactic interpreter]] for BelleExpr
   *
   * All Bellerophon tactic expressions are of type [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]],
   * which provides the following tactic combinators
@@ -56,11 +55,16 @@ import scala.collection.immutable
   *   - `t('_, fml)` applied at the suitable position (uniquely determined by type of tactic)
   *     where the expected formula `fml` can be found (on the top level).
   *
+  * Which of the available tactics is actually shown on the User Interface is determined by [[UIIndex]].
+  *
   * @author Nathan Fulton
   * @author Stefan Mitsch
   * @author Andre Platzer
   * @see Nathan Fulton, Stefan Mitsch, Brandon Bohrer and Andre Platzer. 
   * [[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]].
   * In Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017.
+  * @see [[BelleExpr]]
+  * @see [[SequentialInterpreter]]
+  * @see [[UIIndex]]
   */
 package object bellerophon {}
