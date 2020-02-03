@@ -74,14 +74,14 @@ class ProofTreeTests extends TacticTestBase {
     tree.root.children.head.localProvable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     tree.root.children.head.localProvable.subgoals shouldBe empty
     tree.root.children.head.makerShortName shouldBe Some("QE")
-    tree.root.children.head shouldBe 'done
+    tree.root.children.head shouldBe 'proved
     tree.locate("(1,0)").get.goal shouldBe tree.root.children.head.goal
 
     tree.root.provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>0 -> x>0".asFormula))
     tree.root.provable.subgoals shouldBe empty
     tree.root.provable shouldBe 'proved
 
-    tree shouldBe 'verifyClosed
+    tree shouldBe 'proved
 
     tree.tactic shouldBe QE
   }}
@@ -134,7 +134,7 @@ class ProofTreeTests extends TacticTestBase {
     rt.root.provable.subgoals shouldBe empty
     rt.root.provable shouldBe 'proved
 
-    rt shouldBe 'verifyClosed
+    rt shouldBe 'proved
 
     rt.tactic shouldBe implyR(1) & QE
   }}
