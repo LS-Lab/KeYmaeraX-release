@@ -62,8 +62,7 @@ object KeYmaeraXArchiveParser {
   /** A parsed declaration, which assigns a signature to names, with `inputDecls` as literally listed in the file */
   case class Declaration(decls: Map[Name, Signature], inputDecls: Map[Name, InputSignature] = Map.empty) {
     /** The declarations as topologically sorted substitution pairs. */
-    lazy val substs: List[SubstitutionPair] = topSortDefs(decls.filter(_._2._3.isDefined).
-      map((declAsSubstitutionPair _).tupled).toList)
+    lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2._3.isDefined)).map((declAsSubstitutionPair _).tupled)
 
     /** Declared names and signatures as [[NamedSymbol]]. */
     lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, _)) => sort match {
@@ -72,11 +71,11 @@ object KeYmaeraXArchiveParser {
       case Trafo => assert(idx.isEmpty, "Program constants are not allowed to have an index, but got " + name + "_" + idx); ProgramConst(name)
     }}).toList
 
-    /** Topologically sorts the substitution pairs in `defs`. */
-    def topSortDefs(defs: List[SubstitutionPair]): List[SubstitutionPair] = {
-      def symbol(s: SubstitutionPair): NamedSymbol = s.what match { case FuncOf(fn, _) => fn case PredOf(fn, _) => fn case p: ProgramConst => p }
-      val sortedNames = DependencyAnalysis.dfs[NamedSymbol](defs.map(s => symbol(s) -> StaticSemantics.signature(s.repl)).toMap)
-      defs.sortBy(s => sortedNames.indexOf(symbol(s)))
+    /** Topologically sorts the names in `decls`. */
+    private def topSort(decls: Map[Name, Signature]): List[(Name, Signature)] = {
+      val sortedNames = DependencyAnalysis.dfs[Name](decls.map({ case (name, (_, _, repl, _)) =>
+        name -> repl.map(StaticSemantics.signature).map(_.map(ns => (ns.name, ns.index))).getOrElse(Set.empty) }))
+      decls.toList.sortBy(s => sortedNames.indexOf(s._1))
     }
 
     /** Joins two declarations. */
@@ -87,41 +86,19 @@ object KeYmaeraXArchiveParser {
       (decls.get(name -> idx), inputDecls.get(name -> idx))
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
-    def exhaustiveSubst[T <: Expression](arg: T): T = elaborateToFunctions(arg) match {
-      case e: Expression =>
-        @tailrec
-        def exhaustiveSubst(f: Expression): Expression = {
-          val fs = try {
-            USubst(substs)(f)
-          } catch {
-            case ex: SubstitutionClashException =>
-              throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
-          }
-          if (fs != f) exhaustiveSubst(fs) else fs
-        }
-        exhaustiveSubst(e).asInstanceOf[T]
-      case e => e
+    def exhaustiveSubst[T <: Expression](arg: T): T = try {
+      arg.exhaustiveSubst(USubst(substs)).asInstanceOf[T]
+    } catch {
+      case ex: SubstitutionClashException =>
+        throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
     }
 
     /** Elaborates variable uses of declared functions. */
-    def elaborateToFunctions[T <: Expression](expr: T): T = {
-      val freeVars = StaticSemantics.freeVars(expr)
-      if (freeVars.isInfinite) {
-        //@note program constant occurs
-        expr
-      } else {
-        val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
-          case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1.contains(Unit)
-          case _ => false
-        })
-        elaboratables.foldLeft(expr)((e, v) =>
-          SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
-      }
-    }
+    def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
 
     /** Turns a function declaration (with defined body) into a substitution pair. */
     private def declAsSubstitutionPair(name: Name, signature: Signature): SubstitutionPair = {
-      assert(signature._3.isDefined, "Substitution only for defined functions")
+      require(signature._3.isDefined, "Substitution only for defined functions")
 
       /** Returns the dots used in expression `e`. */
       def dotsOf(e: Expression): Set[DotTerm] = {

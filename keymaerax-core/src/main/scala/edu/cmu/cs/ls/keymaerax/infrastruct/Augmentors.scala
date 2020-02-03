@@ -7,6 +7,8 @@ package edu.cmu.cs.ls.keymaerax.infrastruct
 import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.annotation.tailrec
+
 /**
  * If imported, automatically augments core data structures with convenience wrappers for tactic purposes
  * such as subexpression positioning, context splitting, and replacements.
@@ -332,6 +334,35 @@ object Augmentors {
         what.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","))
 
       SubstitutionPair(what, repl)
+    }
+
+    /** Elaborates variable uses of functions in `signature`. */
+    def elaborateToFunctions(signature: Set[NamedSymbol]): Expression = {
+      val freeVars = StaticSemantics.freeVars(e)
+      if (freeVars.isInfinite) {
+        //@note program constant occurs
+        e
+      } else {
+        val elaboratables = StaticSemantics.freeVars(e).toSet[Variable].filter({
+          case BaseVariable(name, i, _) => signature.exists({
+            case Function(fn, fi, Unit, _, _) => fn == name && fi == i
+            case _ => false
+          })
+          case _ => false
+        })
+        elaboratables.foldLeft(e)((e, v) =>
+          e.replaceFree(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+      }
+    }
+
+    /** Applies substitutions per `substs` exhaustively. */
+    def exhaustiveSubst(subst: USubst): Expression = {
+      @tailrec
+      def exhaustiveSubst(f: Expression): Expression = {
+        val fs = subst.apply(f)
+        if (fs != f) exhaustiveSubst(fs) else fs
+      }
+      exhaustiveSubst(e.elaborateToFunctions(subst.subsDefsInput.flatMap(s => StaticSemantics.signature(s.what)).toSet))
     }
   }
 
