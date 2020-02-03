@@ -14,6 +14,12 @@ PolyProductFactors::usage="PolyProductFactors[polynomials_List] multiplies all p
 ProblemFactors::usage="ProblemFactors[problem] Generate irreducible factors using all polynomials appearing anywhere in the problem.";
 ProblemFactorsWithLie::usage="ProblemFactorsWithLie[problem] Generate irreducible factors using all polynomials appearing anywhere in the problem, and then takes all their Lie derivatives.";
 
+(* Needs more careful look as to whether these are useful *)
+SummandFactors::usage="SummandFactors[problem] squarefree factors of RHS";
+SFactorList::usage="SFactorList[problem] returns factors of RHS (computed slightly differently)";
+
+PhysicalQuantities::usage="PhysicalQuantities[problem]";
+
 (* TODO Deprecate these?? *)
 QualitativePolys::usage="QualitativePolys[problem]";
 PostRHSFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition.";
@@ -21,9 +27,6 @@ PostRHSLieDFactors::usage="PostRHSLieDFactors[problem] Generate irreducible fact
 PostRHSLieDProductFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition.";
 PostRHSLieNFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition.";
 PostRHSProductFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives.";
-SummandFactors::usage="SummandFactors[problem]";
-SFactorList::usage="SFactorList[problem] returns factors of RHS (1 list per RHS)";
-PhysicalQuantities::usage="PhysicalQuantities[problem]";
 
 
 Begin["`Private`"];
@@ -120,7 +123,7 @@ PolyProductFactors[PostRHSFactors[problem]]
 SummandFactors[problem_List]:=Module[{pre,f,vars,Q,post},
 {pre,{f,vars,Q},post}=problem;
 Select[Map[FactorSquareFreeList,
-If[Head[#]===Plus, Apply[List,#],#]&/@f//Flatten//Expand]//Flatten, 
+If[Head[#]===Plus, Apply[List,#],#]&/@f//Flatten//Expand]//Flatten//DeleteDuplicates, 
 Not[NumericQ[#]]&]
 ]
 
@@ -132,7 +135,7 @@ NOTE: The RHS should NOT contain real algebraic numbers after postprocessing.
 SFactorList[problem_List,postprocess_:True] := Module[{pre,f,vars,Q,post,a,b,factorMap},
 
 {pre,{f,vars,Q},post}=problem;
-Map[
+DeleteDuplicates[Flatten[Map[
 Block[{factorList},
   factorList = {};
   For[j = 1, j <= Length[vars], j++,
@@ -141,7 +144,7 @@ Block[{factorList},
   If[postprocess,factorList=Select[factorList/.{ConditionalExpression[a_,_]-> a},PolynomialQ[#,vars]&]];
   DeleteDuplicates[factorList]]
     &,f
-]
+]]]
 (* Possibly need to get rid of factors multiplied by different coefficients as well *)
 ];
 

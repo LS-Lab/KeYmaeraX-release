@@ -6,6 +6,8 @@
 
 
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
+Needs["Dependency`",FileNameJoin[{Directory[],"Primitives","Dependency.m"}]]
+Needs["GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
 
 
 BeginPackage["DiffSaturation`"];
@@ -65,6 +67,68 @@ pre = Primitives`DNFNormalizeGtGeq[pre1];
 post=Primitives`DNFNormalizeGtGeq[post1];
 
 Print["Augmented Problem: ", {pre, {f,vars,evoConst}, post}];
+
+strategies = {
+{GenericNonLinear`HeuInvariants, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]},
+{GenericNonLinear`FirstIntegrals, Symbol["kyx`ProofHint"]==Symbol["kyx`FirstIntegral"]},
+{GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"]}
+};
+
+Print[strategies];
+invlist=True;
+cutlist={};
+
+deps=Join[Dependency`VariableDependencies[problem],{vars}];
+
+(* For each depednency *)
+Do[
+(* For each strategy *)
+Print["Using dependencies: ",curdep];
+Do[
+{strat,hint}=strathint;
+Print["Trying strategy: ",ToString[strat]," ",hint];
+
+curproblem = {pre,{f,vars,evoConst},post};
+subproblem=Dependency`FilterVars[curproblem,curdep];
+
+(* Time constrain the cut *)
+(* Compute polynomials for the algebraic decomposition of the state space *)
+(*Print[subproblem];*)
+inv=TimeConstrained[
+	strat[subproblem]//DeleteDuplicates,
+	OptionValue[StrategyTimeout],
+	Print["Strategy timed out after: ",OptionValue[StrategyTimeout]];
+	{True,{True}}];
+	
+(* Simplify invariant w.r.t. the domain constraint *)
+cuts=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
+
+inv=cuts//.{List->And};
+
+Print["Extracted (simplified) invariant(s): ",inv]
+
+(* Needs something like this?
+ ecvoConst=And[evoConst,inv[[1]]]; *)
+(* Implementation sanity check *)
+If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
+
+If[TrueQ[inv], (*Print["Skipped"]*),
+	invlist=And[invlist,inv];
+	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
+	evoConst=And[evoConst,inv]];
+
+post=Assuming[evoConst, FullSimplify[post, Reals]];
+Print["Cuts: ",cutlist];
+Print["Evo: ",evoConst," Post: ",post];
+invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
+If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
+(*Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]*)]
+,{strathint, strategies}(* End Do loop *)]
+,{curdep,deps}(* End Do loop *)];
+
+(* Throw whatever invariant was last computed *)
+Throw[{{invlist,cutlist}, False}]
+]]
 (*
 (* Sanity check with timeout *)
 If[OptionValue[SanityTimeout] > 0,
@@ -107,61 +171,7 @@ strategies = class/.{
 }
 };
 
-invlist=True;
-cutlist={};
-
-deps=Join[Dependency`VariableDependencies[problem],{vars}];
-(* For each depednency *)
-Do[
-(* For each strategy *)
-Print["Using dependencies: ",curdep];
-Do[
-{strat,hint,timeoutmultiplier}=strathint;
-Print["Trying strategy: ",ToString[strat]," ",hint];
-
-curproblem = {pre,{f,vars,evoConst},post};
-subproblem=Dependency`FilterVars[curproblem,curdep];
-
-(* Time constrain the cut *)
-(* Compute polynomials for the algebraic decomposition of the state space *)
-(*Print[subproblem];*)
-inv=TimeConstrained[
-	polyList=strat[subproblem]//DeleteDuplicates;
-	InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}],
-	OptionValue[StrategyTimeoutFactor]*timeoutmultiplier,
-	Print["Strategy timed out after: ",OptionValue[StrategyTimeoutFactor]*timeoutmultiplier];
-	{True,{True}}];
-
-(* Simplify invariant w.r.t. the domain constraint *)
-{inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
-
-Print["Extracted (simplified) invariants: ",inv," ",cuts];
-
-(* Needs something like this?
- ecvoConst=And[evoConst,inv[[1]]]; *)
-(* Implementation sanity check *)
-If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
-
-If[TrueQ[inv], (*Print["Skipped"]*),
-	invlist=And[invlist,inv];
-	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
-	evoConst=And[evoConst,inv]];
-
-post=Assuming[evoConst, FullSimplify[post, Reals]];
-(*Print["Inv: ",inv];
-Print["Invs: ",invlist];*)
-Print["Cuts: ",cutlist];
-Print["Evo: ",evoConst," Post: ",post];
-invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
-If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
-(*Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]*)]
-,{strathint, strategies}(* End Do loop *)]
-,{curdep,deps}(* End Do loop *)];
-
-(* Throw whatever invariant was last computed *)
-Throw[{{invlist,cutlist}, False}]*)
-
-]]
+]]*)
 
 
 End[]

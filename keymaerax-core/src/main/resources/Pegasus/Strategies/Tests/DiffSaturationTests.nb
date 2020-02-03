@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      3952,        105]
-NotebookOptionsPosition[      3454,         89]
-NotebookOutlinePosition[      3787,        104]
-CellTagsIndexPosition[      3744,        101]
+NotebookDataLength[      3976,        105]
+NotebookOptionsPosition[      3478,         89]
+NotebookOutlinePosition[      3811,        104]
+CellTagsIndexPosition[      3768,        101]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -51,7 +51,7 @@ Cell[BoxData[
    3.763392456492168*^9, 3.7633924566490173`*^9}, 3.763392512350732*^9, 
    3.763393514580377*^9, {3.789530827656342*^9, 3.7895308682909613`*^9}, {
    3.789531527374798*^9, 3.789531528942685*^9}},
- CellLabel->"In[5]:=",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8"],
+ CellLabel->"In[3]:=",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8"],
 
 Cell[BoxData[
  RowBox[{"(*", " ", 
@@ -84,10 +84,10 @@ Cell[BoxData[{
  RowBox[{"res", "=", 
   RowBox[{"DiffSat", "[", "prob", "]"}]}]}], "Input",
  CellChangeTimes->{{3.7895315540901003`*^9, 3.789531563655895*^9}, {
-  3.789531627554302*^9, 3.7895316612905283`*^9}},
- CellLabel->"In[30]:=",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"]
+   3.789531627554302*^9, 3.7895316612905283`*^9}, 3.7897185485614557`*^9},
+ CellLabel->"In[5]:=",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"]
 },
-WindowSize->{960, 1023},
+WindowSize->{960, 1025},
 WindowMargins->{{Automatic, 0}, {0, Automatic}},
 FrontEndVersion->"11.3 for Linux x86 (64-bit) (March 6, 2018)",
 StyleDefinitions->"Default.nb"
@@ -106,7 +106,7 @@ Notebook[{
 Cell[558, 20, 1670, 33, 94, "Input",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8",
  InitializationCell->True],
 Cell[2231, 55, 322, 7, 31, "Input",ExpressionUUID->"a7d5b96c-a2fb-45b5-acf4-6fdb184e9f3d"],
-Cell[2556, 64, 894, 23, 147, "Input",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"]
+Cell[2556, 64, 918, 23, 147, "Input",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"]
 }
 ]
 *)
