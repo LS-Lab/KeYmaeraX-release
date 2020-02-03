@@ -34,6 +34,8 @@ ConjugatePolynomial::usage="ConjugatePolynomial[poly] Returns the conjugate of a
 IsRealPolynomial::usage="IsRealPolynomial[poly] Returns true if poly is in R[x] and false if poly is not a real polynomial"
 IsConcretePolynomial::usage="IsConcretePolynomial[poly, vars] returns true if the variables of poly are a subset of vars and false otherwise";
 
+CheckSemiAlgInclusion::usage="CheckSemiAlgInclusion[s_,t_,vars_List] checks if t implies s universally on vars"
+
 
 Begin["`Private`"]
 
@@ -191,6 +193,11 @@ pool=Rest[pool],
 pool=Rest[pool]
 ]];
 span, polys]
+]
+
+
+CheckSemiAlgInclusion[subset_,set_,vars_List]:=Module[{},
+TrueQ[Reduce[ForAll[vars, Implies[subset,set]],Reals]]
 ]
 
 

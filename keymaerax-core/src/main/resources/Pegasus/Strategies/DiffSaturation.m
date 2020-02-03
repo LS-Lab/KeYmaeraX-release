@@ -17,7 +17,7 @@ BeginPackage["DiffSaturation`"];
 SanityTimeout controls how long internal sanity check QE calls take.
 StrategyTimeout controls how each sub-strategy call takes *)
 DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem"
-Options[DiffSat]= {SanityTimeout -> 0,StrategyTimeout -> Infinity};
+Options[DiffSat]= {StrategyTimeout -> Infinity};
 
 
 Begin["`Private`"]
@@ -74,7 +74,6 @@ strategies = {
 {GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"]}
 };
 
-Print[strategies];
 invlist=True;
 cutlist={};
 
@@ -129,49 +128,6 @@ If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Retu
 (* Throw whatever invariant was last computed *)
 Throw[{{invlist,cutlist}, False}]
 ]]
-(*
-(* Sanity check with timeout *)
-If[OptionValue[SanityTimeout] > 0,
-  TimeConstrained[Block[{},
-  preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
-  If[ Not[TrueQ[preImpliesPost]], 
-  Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{}, False}], 
-  Print["Precondition implies postcondition. Proceeding."]];
-
-  postInvariant=LZZ`InvSFast[post, f, vars, evoConst];
-  If[ TrueQ[postInvariant], 
-  Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{{post,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}},True}], 
-  Print["Postcondition is (probably) not an invariant. Proceeding."]];
-
-  preInvariant=LZZ`InvSFast[pre, f, vars, evoConst];
-  If[ TrueQ[preInvariant], 
-  Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{{pre,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}}, True}], 
-  Print["Precondition is (probably) not an invariant. Proceeding."]];
-],OptionValue[SanityTimeout]]];
-
-(* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
-class=Classifier`ClassifyProblem[problem];
-Print[class];
-strategies={};
-strategies = class/.{
- {1,CLASSES_List}-> {
- {Strategies`OneDimensional`OneDimPotential, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1}, 
- {Strategies`OneDimensional`OneDimReach, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1}
- }, 
-(* {dim_,{"Constant"}}-> ConstantStrat, *)
-(* {2,{"Linear"}}-> PlanarLinearStrat, *)
-(* {dim_,{"Linear"}}-> GeneralLinearStrat, *)
-(* {dim_,{"Multi-affine"}}-> MultiLinearStrat, *)
-{dim_, CLASSES_List}-> {
-{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1},
-{Strategies`GenericNonLinear`FirstIntegrals, Symbol["kyx`ProofHint"]==Symbol["kyx`FirstIntegral"],2},
-{Strategies`GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"],2},
-{Strategies`GenericNonLinear`BarrierCert, Symbol["kyx`ProofHint"]==Symbol["kyx`Barrier"],3},
-{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1}
-}
-};
-
-]]*)
 
 
 End[]
