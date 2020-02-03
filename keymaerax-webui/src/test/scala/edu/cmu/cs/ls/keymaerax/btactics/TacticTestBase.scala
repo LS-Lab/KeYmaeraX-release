@@ -137,7 +137,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    *    }
    * }}}
    * */
-  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
+  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) = mathematicaProvider.synchronized {
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
     withTemporaryConfig(Map(
         Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
@@ -155,9 +155,11 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         theInterpreter.kill()
         tool.cancel()
         t.interrupt()
-        mathematicaProvider().doShutdown() //@note see [[afterAll]]
-        provider.shutdown()
-        mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+        mathematicaProvider.synchronized {
+          mathematicaProvider().doShutdown() //@note see [[afterAll]]
+          provider.shutdown()
+          mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+        }
       }
       failAfter(to) { testcode(tool) }
     }
