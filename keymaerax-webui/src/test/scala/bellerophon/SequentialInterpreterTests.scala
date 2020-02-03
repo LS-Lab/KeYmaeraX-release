@@ -109,7 +109,10 @@ class SequentialInterpreterTests extends TacticTestBase {
       }
     }
     the [BelleThrowable] thrownBy theInterpreter.apply(andR(1) > right, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula))) should
-      have message "[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in ElidingProvable(Provable{\n==> 1:  1=2->1=2\tImply\n  from\n==> 1:  1=2->1=2\tImply})"
+      have message """[Bellerophon Runtime] Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
+                     |==> 1:  1=2->1=2	Imply
+                     |  from
+                     |==> 1:  1=2->1=2	Imply})""".stripMargin
   }
 
   "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
@@ -150,7 +153,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "fail inapplicable builtin-rules with legible error messages" in {
     the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should have message
-      """[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in ElidingProvable(Provable{
+      """[Bellerophon Runtime] Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
         |==> 1:  x=5	Equal
         |  from
         |==> 1:  x=5	Equal})""".stripMargin
