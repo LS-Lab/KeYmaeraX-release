@@ -81,7 +81,7 @@ class ProofTreeTests extends TacticTestBase {
     tree.root.provable.subgoals shouldBe empty
     tree.root.provable shouldBe 'proved
 
-    tree shouldBe 'verifyClosed
+    tree shouldBe 'isProved
 
     tree.tactic shouldBe QE
   }}
@@ -134,7 +134,7 @@ class ProofTreeTests extends TacticTestBase {
     rt.root.provable.subgoals shouldBe empty
     rt.root.provable shouldBe 'proved
 
-    rt shouldBe 'verifyClosed
+    rt shouldBe 'isProved
 
     rt.tactic shouldBe implyR(1) & QE
   }}
