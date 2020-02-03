@@ -628,6 +628,7 @@ trait UnifyUSCalculus {
   }
 
   /* Specialized congruence reasoning for the questions arising in the axiomatic ODE solver DC step */
+  //@todo optimizable move reproved proveBy facts to DerivedAxioms
   private def condEquivCongruence(context: Formula, towards: PosInExpr, subPos: PosInExpr, commute: Boolean, op: (Formula, Formula) => Formula): BelleExpr = context match {
     case Box(_, p) if towards.head == 1 =>
       useAt("[] split", PosInExpr(1::Nil))(1, subPos ++ 0) &
