@@ -314,6 +314,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, defs: Declaration = Declaration(Map.empty)): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(fml))
     theInterpreter(tactic, v) match {
+      case dsp: BelleDelayedSubstProvable =>
+        dsp.p.conclusion shouldBe Sequent(
+          IndexedSeq(),
+          IndexedSeq(fml.exhaustiveSubst(dsp.subst ++ USubst(defs.substs)).asInstanceOf[Formula])
+        )
+        labelCheck(dsp.label)
+        dsp.p
       case BelleProvable(provable, labels) =>
         provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(defs.exhaustiveSubst(fml)))
         labelCheck(labels)
