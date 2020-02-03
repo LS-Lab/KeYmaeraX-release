@@ -162,13 +162,14 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
                                                     case None => BelleTopLevelLabel(s"$i") }).toList
 
         //@todo preserve labels from parent p (turn new labels into sublabels)
-        val combinedEffect =
-          results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]])]((p, 0, None))({
-            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]]), subderivation: BelleProvable) =>
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p, subderivation match {
+        val (combinedResult, _, combinedLabels, combinedSubsts) =
+          results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
+            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts), subderivation: BelleProvable) =>
+              val substs = subderivation match {
                 case p: BelleDelayedSubstProvable => Some(p.subst)
                 case _ => None
-              })
+              }
+              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p, substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
@@ -178,9 +179,10 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
                   Some(createLabels(None, 0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels)
+              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
             })
-        BelleProvable(combinedEffect._1, if (combinedEffect._3.isEmpty) None else combinedEffect._3)
+        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
+        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
       case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.") //.inContext(expr, "")
     }
 
@@ -367,8 +369,10 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       val substs = defs.map(s => USubst(s :: Nil))
       TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, substs)
       TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, substs)
+      val foo =
       apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
-        reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v) match {
+        reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v);
+      foo match {
         case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ substs.reduceRight(_++_))
         case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, substs.reduceRight(_++_))
         case v => v
@@ -573,13 +577,14 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
         def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
 
         //@todo preserve labels from parent p (turn new labels into sublabels)
-        val combinedEffect =
-          results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]])]((p, 0, None))({
-            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]]), subderivation: BelleProvable) =>
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p, subderivation match {
+        val (combinedResult, _, combinedLabels, combinedSubsts) =
+          results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
+            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
+              val substs = subderivation match {
                 case p: BelleDelayedSubstProvable => Some(p.subst)
                 case _ => None
-              })
+              }
+              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p, substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
@@ -589,9 +594,10 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                   Some(createLabels(0, cidx) ++ newLabels)
                 case (None, None) => None
               }
-              (combinedProvable, nextIdx, combinedLabels)
+              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
             })
-        BelleProvable(combinedEffect._1, if (combinedEffect._3.isEmpty) None else combinedEffect._3)
+        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
+        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
       case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
     }
     case _ => super.runExpr(expr, v)

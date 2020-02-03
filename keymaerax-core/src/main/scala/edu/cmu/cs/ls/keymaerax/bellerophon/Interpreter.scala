@@ -46,7 +46,7 @@ trait Interpreter {
       if (original.subgoals(n) == subderivation.conclusion) original
       else subst.map(exhaustiveSubst(original, _)).getOrElse(original)
     if (substituted.subgoals(n) != subderivation.conclusion)
-      throw new BelleThrowable(s"Subgoal #$n of the original provable (${substituted.subgoals(n)}}) should be equal to the conclusion of the subderivation (${subderivation.conclusion}})")
+      throw new BelleThrowable(s"Subgoal #$n of the original provable (${substituted.subgoals(n)}})\nshould be equal to the conclusion of the subderivation\n(${subderivation.conclusion}}),\nbut is not despite substitution $subst")
     val newProvable = substituted(subderivation, n)
     val nextIdx = if (subderivation.isProved) n else n + 1
     (newProvable, nextIdx)
