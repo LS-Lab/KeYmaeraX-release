@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import java.security.MessageDigest
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivationInfo, DerivedAxiomInfo, DerivedRuleInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxiomInfo, DerivedRuleInfo}
 import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
@@ -66,28 +66,25 @@ object Lemma {
         assert(hash == checksum(sequents.to),
           "Expected hashed evidence to match hash of conclusion + subgoals: " + name + "\n" + lemma)
       case None =>
-        if(!LEMMA_COMPAT_MODE) throw new CoreException("Cannot reload a lemma without Hash evidence: " + name)
+        if (!LEMMA_COMPAT_MODE) throw new CoreException("Cannot reload a lemma without Hash evidence: " + name)
     }
     //@note soundness-critical
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
 
-    val ptProvable =
+    val provable =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
         TermProvable(ElidingProvable(fact), name match { case Some(n) =>
-          DerivedAxiomInfo.allInfo.find(info => info.storedName == n) match {
-            case Some(info) =>
-            AxiomTerm(info.canonicalName)
+          DerivedAxiomInfo.allInfo.find(_.storedName == n) match {
+            case Some(info) => AxiomTerm(info.canonicalName)
             case None =>
-              if(DerivedRuleInfo.allInfo.exists(info => info.storedName == n))
-                RuleTerm(n)
-              else
-                NoProof()
+              if (DerivedRuleInfo.allInfo.exists(_.storedName == n)) RuleTerm(n)
+              else NoProof()
           }
         case None => FOLRConstant(sequents.head.succ.head) })
       } else {
         ElidingProvable(fact)
       }
-    Lemma(ptProvable, evidence, name) //@todo also load proof terms.
+    Lemma(provable, evidence, name) //@todo also load proof terms.
   }
 
   /** Compute the checksum for the given Provable, which provides some protection against accidental changes. */
@@ -103,30 +100,33 @@ object Lemma {
     digest.digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
   }
 
+  /** Returns true if `evidence` contains version evidence, false otherwise. */
+  private def containsVersionEvidence(evidence: List[Evidence]): Boolean = evidence.exists({
+    case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
+    case _ => false
+  })
+
+  /** Returns true if `evidence` contains hash evidence, false otherwise. */
+  private def containsHashEvidence(evidence: List[Evidence]) = evidence.exists(_.isInstanceOf[HashEvidence])
+
   /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: ProvableSig, evidence: List[Evidence] = Nil): List[Evidence] = {
     val versionEvidence = {
-      val hasVersionEvidence = evidence.exists(x => x match {
-        case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
-        case _ => false
-      })
-      if(!hasVersionEvidence) Some(ToolEvidence(("kyxversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
+      if (!containsVersionEvidence(evidence)) Some(ToolEvidence(("kyxversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
       else None
     }
 
     val hashEvidence = {
-      if (!evidence.exists(_.isInstanceOf[HashEvidence])) Some(HashEvidence(checksum(fact)))
+      if (!containsHashEvidence(evidence)) Some(HashEvidence(checksum(fact)))
       else None
     }
 
-    val newEvidence = (versionEvidence, hashEvidence) match {
+    (versionEvidence, hashEvidence) match {
       case (Some(l), Some(r)) => evidence :+ l :+ r
       case (Some(l), None) => evidence :+ l
       case (None, Some(r)) => evidence :+ r
       case _ => evidence
     }
-
-    newEvidence
   }
 }
 
@@ -157,19 +157,14 @@ object Lemma {
   * @author Stefan Mitsch
   * @see [[ProvableSig.proveArithmetic]]
   * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
-  * @see [[Lemma.fromString]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma.fromString]]
   * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
   */
 final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], name: Option[String] = None) {
   insist(name.getOrElse("").forall(c => c!='\"'), "no escape characters in names: " + name)
   assert(hasStamp, "Lemma should have kyxversion and checksum stamps (unless compatibility mode) " + this)
   private def hasStamp: Boolean = Lemma.LEMMA_COMPAT_MODE || {
-    val hasVersionEvidence = evidence.exists(x => x match {
-      case ToolEvidence(infos) => infos.exists(_._1 == "kyxversion")
-      case _ => false
-    })
-    val hasHashEvidence = evidence.exists(_.isInstanceOf[HashEvidence])
-    hasVersionEvidence && hasHashEvidence
+    Lemma.containsVersionEvidence(evidence) && Lemma.containsHashEvidence(evidence)
   }
 
   /** A string representation of this lemma that will reparse as this lemma.
@@ -196,7 +191,7 @@ final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], na
   }
 
   /** Produces a sequent block in Lemma file format */
-  private def sequentToString(s: Sequent): String = {
+  private[this] def sequentToString(s: Sequent): String = {
     //@note Regarding side-conditions:
     //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
     //@note It is enough to use contract-free stringify since toString will reparse the entire lemma in its ensures contract again.
