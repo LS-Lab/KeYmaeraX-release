@@ -251,7 +251,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
   }
 
   it should "add to file db" in {
-    (addTo(LemmaDBFactory.lemmaDB, remove=true))
+    addTo(LemmaDBFactory.lemmaDB, remove=true)
   }
 
   it should "not create a lemma without evidence in strict mode" in {
@@ -262,7 +262,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "false")) {
       c.newInstance() // reinitialize [[Lemma.LEMMA_COMPAT_MODE]] from the changed configuration
       (the [AssertionError] thrownBy Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name))).getMessage should
-        include ("assertion failed: Lemma should have kyxversion and checksum stamps (unless compatibility mode)")
+        include ("assertion failed: Lemma should have kyxversion and checksum stamps (unless compatibility mode, which is false)")
     }
     withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "true")) {
       c.newInstance() // reinitialize [[Lemma.LEMMA_COMPAT_MODE]] from the changed configuration

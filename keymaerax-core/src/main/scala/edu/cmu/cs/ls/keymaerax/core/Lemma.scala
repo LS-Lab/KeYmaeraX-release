@@ -162,7 +162,7 @@ object Lemma {
   */
 final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], name: Option[String] = None) {
   insist(name.getOrElse("").forall(c => c!='\"'), "no escape characters in names: " + name)
-  assert(hasStamp, "Lemma should have kyxversion and checksum stamps (unless compatibility mode) " + this)
+  assert(hasStamp, "Lemma should have kyxversion and checksum stamps (unless compatibility mode, which is " + Lemma.LEMMA_COMPAT_MODE + ")\nbut got\n" + this.toStringInternal)
   private def hasStamp: Boolean = Lemma.LEMMA_COMPAT_MODE || {
     Lemma.containsVersionEvidence(evidence) && Lemma.containsHashEvidence(evidence)
   }
