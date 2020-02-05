@@ -19,8 +19,8 @@ DarbouxDDCStrongIn::usage="DarbouxDDCStrongIn[problem_List]";
 Begin["`Private`"];
 
 
-DarbouxPolynomialsM[problem_List,time_Integer,maxdeg_Integer]:=Catch[Module[{pre,f,vars,Q,post,deg,dbx,realdbx,i},
-{pre,{f,vars,Q},post}=problem;
+DarbouxPolynomialsM[ode_List,time_Integer,maxdeg_Integer]:=Catch[Module[{f,vars,Q,deg,dbx,realdbx,i},
+{f,vars,Q}=ode;
 
 dbx={};
 (* Print[DarbouxPolynomials`ManPS2[{f,vars,Q}, 2]]; *)
@@ -42,7 +42,7 @@ Return[Resolve[Exists[vars, pre && post], Reals]];
 
 DarbouxDDCWeakIn[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat,DPList,DPIneqList,item,prob, i,j, returnList, returnListRefined},
 {pre, { vf, vars, Q }, post} = problem;
-DPList = DarbouxPolynomialsM[problem, 10, Max[10-Length[vars],1]];
+DPList = DarbouxPolynomialsM[{vf,vars,Q}, 10, Max[10-Length[vars],1]];
 
 (* Note that if there are no Darboux polynomials, a list containing the original problem will be returned *)
 returnList = {};
@@ -65,7 +65,7 @@ Return[returnList];
 
 DarbouxDDCStrongIn[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat,DPList,DPIneqList,item,prob, i,j, returnList, returnListRefined},
 {pre, { vf, vars, Q }, post} = problem;
-DPList = DarbouxPolynomialsM[problem, 10, Max[10-Length[vars],1]];
+DPList = DarbouxPolynomialsM[{vf,vars,Q}, 10, Max[10-Length[vars],1]];
 
 (* Note that if there are no Darboux polynomials, a list containing the original problem will be returned *)
 returnList = {};

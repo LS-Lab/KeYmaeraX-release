@@ -44,8 +44,9 @@ InjectOld[problem,vars]
 SplitProblem[{ pre_, ode_List, post_}]:=Module[
 {prenorm,postnorm,prei,posti},
 
-prenorm=Primitives`DNFNormalizeGtGeq[pre]//.{Or -> List};
-postnorm=Primitives`CNFNormalizeGtGeq[post]//.{And -> List};
+prenorm={Primitives`DNFNormalizeGtGeq[pre]//.{Or -> List}}//Flatten;
+postnorm={Primitives`CNFNormalizeGtGeq[post]//.{And -> List}}//Flatten;
+Print[prenorm,postnorm];
 Map[Function[{prev},Map[{prev,ode,#}&,postnorm]],prenorm]
 ];
 

@@ -7,6 +7,7 @@ BeginPackage["Dependency`"];
 
 
 FilterVars::usage="FilterVar[problem,fvars] filters problem to keep only pre/post/ODEs about fvars";
+VariableDependenciesHelper::usage="VariableDependencies[vf,vars] finds the dependency clusters in vf,vars";
 VariableDependencies::usage="VariableDependencies[problem] finds the dependency clusters in a problem";
 
 

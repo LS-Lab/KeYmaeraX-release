@@ -80,7 +80,7 @@ Union[maxVs,minVs]
 
 DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys},
 {pre, { vf, vars, Q }, post} = problem;
-polys = DarbouxDDC`DarbouxPolynomialsM[problem, 10, Max[10-Length[vars],1]];
+polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, 10, Max[10-Length[vars],1]];
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ]
 
