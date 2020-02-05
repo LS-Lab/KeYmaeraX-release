@@ -247,7 +247,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
   }
 
   it should "add to sql db" ignore {
-    addTo(SQLite.SQLiteLemmaDB(SQLite.TestDB), remove=true)
+    addTo(SQLite.cachedSQLiteLemmaDB(SQLite.TestDB), remove=true)
   }
 
   it should "add to file db" in {
