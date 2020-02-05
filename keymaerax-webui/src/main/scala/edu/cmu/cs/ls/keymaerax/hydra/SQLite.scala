@@ -42,20 +42,12 @@ object SQLite {
 
   /** Stores lemmas in the Lemma table of the given database. */
   class UncachedSQLiteLemmaDB(db: SQLiteDB) extends LemmaDBBase {
+    /** @inheritdoc */
+    final override def contains(lemmaID: LemmaID): Boolean = db.containsLemma(lemmaID.toInt)
+
     def readLemmas(ids: List[LemmaID]): Option[List[String]] = {
       db.getLemmas(ids.map(_.toInt))
     }
-
-    override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
-      readLemmas(ids).map(_.map(Lemma.fromString)).map(_.map((lemma:Lemma) =>
-        if (ProvableSig.PROOF_TERMS_ENABLED) {
-          Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
-        } else {
-          lemma
-        }
-      ))
-    }
-
 
     def writeLemma(id: LemmaID, lemma:String): Unit = {
       if(db.getLemma(id.toInt).nonEmpty)
@@ -132,6 +124,12 @@ object SQLite {
           .insert(None)
       })
     }
+
+    private[this] lazy val containsLemmaQuery = Compiled((lemmaId: Column[Int]) =>
+      Lemmas.filter(_._Id === lemmaId).exists)
+
+    /** Returns true if the database contains the lemma identified by `lemmaId`, false otherwise. */
+    private[SQLite] def containsLemma(lemmaId: Int): Boolean = synchronizedTransaction(containsLemmaQuery(lemmaId).run)
 
     private[SQLite] def updateLemma(lemmaId: Int, lemma:String): Unit = {
       synchronizedTransaction({

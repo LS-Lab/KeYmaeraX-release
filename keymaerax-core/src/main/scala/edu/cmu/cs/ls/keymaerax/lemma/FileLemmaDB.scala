@@ -26,36 +26,44 @@ import scala.reflect.io.Directory
  * @author Stefan Mitsch
  * @author Brandon Bohrer
  */
-
 class FileLemmaDB extends LemmaDBBase with Logging {
+  /** The configured cache path (@todo needs to by lazy? or could be made class val?) */
   private lazy val cachePath = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
 
+  /** File handle to lemma database (creates parent directories if non-existent). */
   private lazy val lemmadbpath: File = {
     val file = new File(cachePath + File.separator + "lemmadb")
     if (!file.exists() && !file.mkdirs()) logger.warn("WARNING: FileLemmaDB cache did not get created: " + file.getAbsolutePath)
     file
   }
 
-  def escapeSeparator(str:String):String = if(str == "\\") {"\\\\"} else str
-
+  /** Escapes Windows-style file separators for use in regular expressions. */
+  private def escapeSeparator(str: String): String = if (str == "\\") "\\\\" else str
   /** Replaces special file characters with _. */
   private def sanitize(id: LemmaID): LemmaID = id.replaceAll(s"[^\\w\\-${escapeSeparator(File.separator)}]", "_")
-
   /** Returns the File representing lemma `id`. */
   private def file(id: LemmaID): File = new File(lemmadbpath, sanitize(id) + ".alp")
   /** Returns the File representing the folder `id`. */
   private def folder(id: LemmaID): Directory = new Directory(new File(lemmadbpath, sanitize(id)))
 
-  /** Reads the lemma content of the lemmas `ids`. None if any of the `ids` does not exist. */
-  def readLemmas(ids: List[LemmaID]): Option[List[String]] = {
-    flatOpt(ids.map{lemmaID =>
-      val f = file(lemmaID)
-      if (f.exists()) {
-        Some(scala.io.Source.fromFile(f).mkString)
-      } else None})
+  /** @inheritdoc */
+  final override def contains(lemmaID: LemmaID): Boolean = file(lemmaID).exists
+
+  /** @inheritdoc */
+  final override def createLemma(): LemmaID = {
+    val f = File.createTempFile("lemma",".alp", lemmadbpath)
+    f.getName.substring(0, f.getName.length-".alp".length)
   }
 
-  def writeLemma(id: LemmaID, lemma:String): Unit = {
+  /** @inheritdoc */
+  final override def readLemmas(ids: List[LemmaID]): Option[List[String]] = flatOpt(ids.map({ lemmaID =>
+    val f = file(lemmaID)
+    if (f.exists()) Some(scala.io.Source.fromFile(f).mkString)
+    else None
+  }))
+
+  /** @inheritdoc */
+  final override def writeLemma(id: LemmaID, lemma: String): Unit = {
     val f = file(id)
     if (!f.getParentFile.exists() && !f.getParentFile.mkdirs()) throw new IllegalStateException("Unable to create lemma " + id)
     val pw = new PrintWriter(f)
@@ -63,29 +71,28 @@ class FileLemmaDB extends LemmaDBBase with Logging {
     pw.close()
   }
 
-  def createLemma(): LemmaID = {
-    val f = File.createTempFile("lemma",".alp",lemmadbpath)
-    f.getName.substring(0, f.getName.length-".alp".length)
-  }
-
-  override def remove(id: String): Unit = {
+  /** @inheritdoc */
+  final override def remove(id: String): Unit = {
     val f = file(id)
     if (f.exists && !f.delete()) throw new IOException("File deletion for " + file(id) + " was not successful")
   }
 
-  override def removeAll(folderName: String): Unit = {
+  /** @inheritdoc */
+  final override def removeAll(folderName: String): Unit = {
     val f = folder(folderName)
     if (f.exists && !f.deleteRecursively()) throw new IOException("File deletion for " + file(folderName) + " was not successful")
   }
 
-  override def deleteDatabase(): Unit = {
+  /** @inheritdoc */
+  final override def deleteDatabase(): Unit = {
     lemmadbpath.listFiles().foreach(_.delete())
     lemmadbpath.delete()
     //@note make paths again to make sure subsequent additions to database work
     lemmadbpath.mkdirs()
   }
 
-  override def version(): String = {
+  /** @inheritdoc */
+  final override def version(): String = {
     val file = new File(cachePath + File.separator + "VERSION")
     if (!file.exists()) {
       "0.0"

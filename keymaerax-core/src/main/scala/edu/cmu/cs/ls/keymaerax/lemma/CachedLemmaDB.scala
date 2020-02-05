@@ -20,21 +20,26 @@ import scala.collection.mutable
   * Created by bbohrer on 8/3/16.
   */
 class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
+  /** The lemma cache, updated lazily on access of a lemma. */
   private var cachedLemmas: mutable.Map[LemmaID, Lemma] = mutable.Map()
 
-  override def get(lemmaIDs: List[LemmaID]): Option[List[Lemma]] = {
+  /** @inheritdoc */
+  final override def contains(lemmaID: LemmaID): Boolean = cachedLemmas.keySet.contains(lemmaID) || db.contains(lemmaID)
+
+  /** @inheritdoc */
+  final override def get(lemmaIDs: List[LemmaID]): Option[List[Lemma]] = {
     /* Get as many lemmas as possible from the cache */
     val (cached, uncached) = lemmaIDs.zipWithIndex.partition{case (x,_) => cachedLemmas.contains(x)}
-    val fromCache = cached.map{case (x,i) => (cachedLemmas(x), i)}
+    val fromCache = cached.map({ case (x, i) => (cachedLemmas(x), i) })
     val (uncachedIDs, uncachedIdxs) = uncached.unzip
     /* Use a single get() call for performance when getting uncached lemmas */
     try {
       val fromDB = db.get(uncachedIDs).map(_.zip(uncachedIdxs))
-      fromDB.map{ list =>
-        cachedLemmas ++= fromCache.map{case (lemma, idx) => (lemmaIDs(idx), lemma)}
+      fromDB.map(list => {
+        cachedLemmas ++= fromCache.map({ case (lemma, idx) => (lemmaIDs(idx), lemma) })
         /* Preserve original order when combining cached vs. uncached lemmas*/
-        (list ::: fromCache).sortWith{case ((_,i), (_,j)) => i < j}.map(_._1)
-      }
+        (list ::: fromCache).sortWith({ case ((_, i), (_, j)) => i < j }).map(_._1)
+      })
     } catch {
       case e: Throwable =>
         logger.error("Error while trying to retrieve lemma", e)
@@ -42,27 +47,32 @@ class CachedLemmaDB(db: LemmaDB) extends LemmaDB with Logging {
     }
   }
 
-  override def add(lemma: Lemma): LemmaID = {
+  /** @inheritdoc */
+  final override def add(lemma: Lemma): LemmaID = {
     val id = db.add(lemma)
     cachedLemmas += ((id,lemma))
     id
   }
 
-  override def deleteDatabase(): Unit = {
+  /** @inheritdoc */
+  final override def deleteDatabase(): Unit = {
     cachedLemmas.clear()
     db.deleteDatabase()
   }
 
-  override def remove(id: LemmaID): Unit = {
+  /** @inheritdoc */
+  final override def remove(id: LemmaID): Unit = {
     cachedLemmas -= id
     db.remove(id)
   }
 
-  override def removeAll(folderName: LemmaID): Unit = {
+  /** @inheritdoc */
+  final override def removeAll(folderName: LemmaID): Unit = {
     val remove = cachedLemmas.filter(_._1.startsWith(folderName)).keys
     cachedLemmas --= remove
     db.removeAll(folderName)
   }
 
-  override def version(): String = db.version()
+  /** @inheritdoc */
+  final override def version(): String = db.version()
 }
