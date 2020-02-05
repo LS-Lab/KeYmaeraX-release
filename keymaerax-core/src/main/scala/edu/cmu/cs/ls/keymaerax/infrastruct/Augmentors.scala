@@ -264,6 +264,11 @@ object Augmentors {
     def without(pos: SeqPos): Sequent =
       if (pos.isAnte) Sequent(seq.ante.patch(pos.getIndex, Nil, 1), seq.succ)
       else Sequent(seq.ante, seq.succ.patch(pos.getIndex, Nil, 1))
+
+    def exhaustiveSubst(subst: USubst): Sequent = Sequent(
+      seq.ante.map(_.exhaustiveSubst(subst).asInstanceOf[Formula]),
+      seq.succ.map(_.exhaustiveSubst(subst).asInstanceOf[Formula])
+    )
   }
 
   implicit class ExpressionAugmentor(val e: Expression) {
