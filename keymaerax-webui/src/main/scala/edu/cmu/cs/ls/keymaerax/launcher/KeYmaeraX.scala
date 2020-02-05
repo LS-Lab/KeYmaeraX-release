@@ -24,6 +24,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{DefaultConfiguration, ToolConfiguration, T
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
@@ -40,6 +41,9 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.concurrent.duration.Duration
 import scala.reflect.io.File
+import resource._
+
+import scala.annotation.tailrec
 
 /**
   * Command-line interface launcher for [[http://keymaeraX.org/ KeYmaera X]],
@@ -219,7 +223,7 @@ object KeYmaeraX {
     })
   }
 
-
+  @tailrec
   private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
       case Nil => map
@@ -331,7 +335,7 @@ object KeYmaeraX {
   private def parseBelleTactic(fileName: String) = {
     try {
       initializeProver(Map('tool -> "z3")) //@note parsing a tactic requires prover (AxiomInfo)
-      val fileContents: String = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
+      val fileContents: String = managed(scala.io.Source.fromFile(fileName)).apply(_.getLines().mkString("\n"))
       BelleParser(fileContents)
       println("Parsed file successfully")
       sys.exit(0)
@@ -474,7 +478,7 @@ object KeYmaeraX {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
-        val source = scala.io.Source.fromFile(fileName).mkString
+        val source = managed(scala.io.Source.fromFile(fileName)).apply(_.mkString)
         if (fileName.endsWith(".scala")) {
           val tacticGenClasses = new ScalaTacticCompiler().compile(source)
           assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
@@ -503,7 +507,7 @@ object KeYmaeraX {
   }
 
   /** Proves a single entry */
-  private def prove(name: String, input: Formula, fileContent: String,
+  private def prove(name: String, input: Formula, fileContent: String, defs: Declaration,
                     tacticName: String, tactic: BelleExpr, timeout: Long,
                     outputFileName: Option[String], options: OptionMap): ProofStatistics = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
@@ -542,9 +546,13 @@ object KeYmaeraX {
 
       if (witness.isProved) {
         assert(witness.subgoals.isEmpty)
-        val proved = witness.proved
+        val expected = inputSequent.exhaustiveSubst(USubst(defs.substs))
+        //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
+        insist(KeYmaeraXParser(KeYmaeraXPrettyPrinter(input)) == input, "parse of print is identity")
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
-        assert(inputSequent == proved, "Proved the original problem and not something else")
+        insist(witness.proved == expected, "Expected to have proved the original problem and not something else, but proved witness deviates from input")
+        //@note check that proved conclusion is what we actually wanted to prove
+        insist(witness.conclusion == expected, "Expected proved conclusion to be original problem, but proved conclusion deviates from input")
 
         //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
         val evidence = ToolEvidence(List(
@@ -554,11 +562,7 @@ object KeYmaeraX {
           "proof" -> "" //@todo serialize proof
         )) :: Nil
 
-        //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
-        assert(KeYmaeraXParser(KeYmaeraXPrettyPrinter(input)) == input, "parse of print is identity")
-        //@note check that proved conclusion is what we actually wanted to prove
-        assert(witness.conclusion == inputSequent && witness.proved == inputSequent,
-          "proved conclusion deviates from input")
+
 
         val lemma = outputFileName match {
           case Some(_) =>
@@ -728,7 +732,7 @@ object KeYmaeraX {
           else qeDurationListener :: Nil
         BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
 
-        val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, tacticName, tactic,
+        val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, entry.defs, tacticName, tactic,
           timeout, if (i == 0) Some(outputFileName) else None, options)
 
         proofStat.witness match {
@@ -899,9 +903,9 @@ object KeYmaeraX {
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
-    val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
-    val tacticInput = tacticFileNameDotKyt.map(scala.io.Source.fromFile(_).mkString)
-    val defsInput = scaladefsFilename.map(scala.io.Source.fromFile(_).mkString)
+    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx)).apply(_.mkString)
+    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
+    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
     val inputFormula: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
