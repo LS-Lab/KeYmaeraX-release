@@ -54,7 +54,7 @@ trait Interpreter {
 
   /** Applies substitutions `s` to provable `p` exhaustively. */
   @tailrec
-  private def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
+  protected final def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
     val substituted = p(s)
     if (substituted != p) exhaustiveSubst(substituted, s)
     else substituted

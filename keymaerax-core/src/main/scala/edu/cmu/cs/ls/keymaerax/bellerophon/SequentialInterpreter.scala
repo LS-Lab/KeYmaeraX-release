@@ -169,7 +169,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
                 case p: BelleDelayedSubstProvable => Some(p.subst)
                 case _ => None
               }
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p, substs)
+              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
@@ -584,7 +584,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
                 case p: BelleDelayedSubstProvable => Some(p.subst)
                 case _ => None
               }
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p, substs)
+              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
               val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
                 case (Some(origLabels), Some(newLabels)) =>
                   Some(origLabels.patch(cidx, newLabels, 0))
