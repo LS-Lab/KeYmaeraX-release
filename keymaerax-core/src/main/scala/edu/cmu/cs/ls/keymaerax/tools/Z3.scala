@@ -12,38 +12,40 @@ import edu.cmu.cs.ls.keymaerax.core._
 import scala.collection.immutable.Map
 
 /**
- * Z3 quantifier elimination tool.
+ * Z3 trusted quantifier elimination tool.
  *
  * Created by smitsch on 4/27/15.
  * @author Ran Ji
  * @author Stefan Mitsch
  */
-class Z3 extends ToolBase("Z3") with QETool with AlgebraTool with ToolOperationManagement {
+final class Z3 extends ToolBase("Z3") with QETool with ToolOperationManagement {
+  // Z3 is a trusted tool. Do not extend this class with other tool interfaces.
   private val z3 = new Z3Solver
-  private val zAlgebra = new RingsAlgebraTool()
 
-  override def init(config: Map[String,String]): Unit = {
-    initialized = true
-  }
+  /** @inheritdoc */
+  override def init(config: Map[String,String]): Unit = { initialized = true }
 
+  /** @inheritdoc */
+  override def restart(): Unit = { initialized = true }
+
+  /** @inheritdoc */
+  override def shutdown(): Unit = { initialized = false }
+
+  /** @inheritdoc */
+  override def cancel(): Boolean = z3.cancel()
+
+  /** @inheritdoc */
   override def qeEvidence(formula: Formula): (Formula, Evidence) = {
     require(isInitialized, "Z3 needs to be initialized before use")
     z3.qeEvidence(formula)
   }
 
-  override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = zAlgebra.quotientRemainder(term,div,x)
-  override def groebnerBasis(polynomials: List[Term]): List[Term] = zAlgebra.groebnerBasis(polynomials)
-  override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = zAlgebra.polynomialReduce(polynomial, GB)
-
-  override def restart(): Unit = { initialized = true }
-  override def shutdown(): Unit = { initialized = false }
-  override def cancel(): Boolean = z3.cancel()
-
-  /** Sets a maximum duration of this tool's operations (e.g., QE). */
+  /** @inheritdoc */
   override def setOperationTimeout(timeout: Int): Unit = z3.setOperationTimeout(timeout)
 
-  /** Returns the timeout duration. */
+  /** @inheritdoc */
   override def getOperationTimeout: Int = z3.getOperationTimeout
 
+  /** @inheritdoc */
   override def getAvailableWorkers: Int = 1
 }
