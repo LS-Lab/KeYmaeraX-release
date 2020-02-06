@@ -16,6 +16,9 @@ import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.language.postfixOps
 
+import org.scalatest.Inside._
+import org.scalatest.LoneElement._
+
 /**
  * Very fine-grained tests of the sequential interpreter.
  * These tests are all I/O tests, so it should be possible to switch out
@@ -25,81 +28,48 @@ import scala.language.postfixOps
 class SequentialInterpreterTests extends TacticTestBase {
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {
-    val tactic = andR(1)
-    val v = {
-      val f = "1=1 & 2=2".asFormula
-      BelleProvable(ProvableSig.startProof(f))
+    inside (theInterpreter(andR(1), BelleProvable(ProvableSig.startProof("1=1 & 2=2".asFormula)))) {
+      case BelleProvable(p, _) =>
+        p.subgoals should contain theSameElementsInOrderAs "==> 1=1".asSequent :: "==> 2=2".asSequent :: Nil
     }
-    val result = theInterpreter.apply(tactic, v)
-
-    val expectedResult = Seq(
-      Sequent(IndexedSeq(), IndexedSeq("1=1".asFormula)),
-      Sequent(IndexedSeq(), IndexedSeq("2=2".asFormula))
-    )
-
-    result shouldBe a[BelleProvable]
-    result.asInstanceOf[BelleProvable].p.subgoals shouldBe expectedResult
   }
 
   "Sequential Combinator" should "prove |- 1=2 -> 1=2" in {
-    val tactic = implyR(1) & close
-    val v = {
-      val f = "1=2 -> 1=2".asFormula
-      BelleProvable(ProvableSig.startProof(f))
+    inside (theInterpreter(implyR(1) & close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
-    val result = theInterpreter.apply(tactic, v)
-
-    result shouldBe a[BelleProvable]
-    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   "Either combinator" should "prove |- 1=2 -> 1=2 by AndR | (ImplyR & Close)" in {
-    val tactic = andR(1) | (implyR(1) & close)
-    val v = {
-      val f = "1=2 -> 1=2".asFormula
-      BelleProvable(ProvableSig.startProof(f))
+    inside (theInterpreter(andR(1) | (implyR(1) & close), BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
-    val result = theInterpreter.apply(tactic, v)
-
-    result shouldBe a[BelleProvable]
-    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   it should "prove |- 1=2 -> 1=2 by (ImplyR & Close) | AndR" in {
-    val tactic = (implyR(1) & close) | andR(1)
-    val v = {
-      val f = "1=2 -> 1=2".asFormula
-      BelleProvable(ProvableSig.startProof(f))
+    inside (theInterpreter((implyR(1) & close) | andR(1), BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
-    val result = theInterpreter.apply(tactic, v)
-
-    result shouldBe a[BelleProvable]
-    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   it should "failover to right whenever a non-closing and non-partial tactic is provided on the left" in {
-    val tactic = implyR(1)& DebuggingTactics.done  | skip& DebuggingTactics.done
-    
-    a[Throwable] shouldBe thrownBy(
-      shouldResultIn(
-        tactic,
-        "1=2 -> 1=2".asFormula,
-        Seq(Sequent(IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
-      )
-    )
+    val tactic = implyR(1) & DebuggingTactics.done | skip
+    inside (theInterpreter(tactic, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _) => p.subgoals.loneElement shouldBe "==> 1=2 -> 1=2".asSequent
+    }
   }
 
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
     val tactic = implyR(1) & DebuggingTactics.done | (skip & skip) & DebuggingTactics.done
     val f = "1=2 -> 1=2".asFormula
-    a[BelleThrowable] should be thrownBy theInterpreter(tactic, BelleProvable(ProvableSig.startProof(f))
+    a [BelleThrowable] should be thrownBy theInterpreter(tactic, BelleProvable(ProvableSig.startProof(f))
     )
   }
 
   "After combinator" should "prove a simple property" in {
-    val result = theInterpreter.apply(implyR(1) > close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))
-    result shouldBe a[BelleProvable]
-    result.asInstanceOf[BelleProvable].p shouldBe 'proved
+    inside (theInterpreter.apply(implyR(1) > close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
+      case BelleProvable(p, _) => p shouldBe 'proved
+    }
   }
 
   it should "run right tactic on left failure" in {
@@ -119,22 +89,19 @@ class SequentialInterpreterTests extends TacticTestBase {
   "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & OnAll (implyR(SuccPos(0)) & close)
-    shouldClose(expr, f)
+    proveBy(f, expr) shouldBe 'proved
   }
 
   it should "move inside Eithers correctly" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & OnAll (andR(SuccPos(0)) | (implyR(SuccPos(0)) & close))
-    shouldClose(expr, f)
+    proveBy(f, expr) shouldBe 'proved
   }
 
   it should "support 'Rlike' unification matching" in {
     val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
-      SaturateTactic(orR('R)) & SaturateTactic(onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula)))
-    )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula)
-    result.subgoals.head.succ should contain only ("c=2".asFormula, "d=3->e=4".asFormula, "h=7".asFormula)
+      SaturateTactic(orR('R)) & SaturateTactic(onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))))
+    result.subgoals.loneElement shouldBe "a=0&b=1, f=5&g=6 ==> d=3->e=4, c=2, h=7".asSequent
   }
 
   it should "support 'Llike' unification matching" in {
@@ -142,14 +109,10 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR('R) & SaturateTactic(andL('L)) & SaturateTactic(onAll(implyL('Llike, "p_()&q_()->r_()".asFormula)))
     )
     result.subgoals should have size 4
-    result.subgoals(0).ante should contain only "d=3->e=4".asFormula
-    result.subgoals(0).succ should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula, "i=8".asFormula)
-    result.subgoals(1).ante should contain only ("d=3->e=4".asFormula, "c=2".asFormula)
-    result.subgoals(1).succ should contain only ("f=5&g=6".asFormula, "i=8".asFormula)
-    result.subgoals(2).ante should contain only ("d=3->e=4".asFormula, "h=7".asFormula)
-    result.subgoals(2).succ should contain only ("a=0&b=1".asFormula, "i=8".asFormula)
-    result.subgoals(3).ante should contain only ("d=3->e=4".asFormula, "c=2".asFormula, "h=7".asFormula)
-    result.subgoals(3).succ should contain only "i=8".asFormula
+    result.subgoals(0) shouldBe "d=3->e=4 ==> i=8, a=0&b=1, f=5&g=6".asSequent
+    result.subgoals(1) shouldBe "c=2, d=3->e=4 ==> i=8, f=5&g=6".asSequent
+    result.subgoals(2) shouldBe "d=3->e=4, h=7 ==> i=8, a=0&b=1".asSequent
+    result.subgoals(3) shouldBe "c=2, d=3->e=4, h=7 ==> i=8".asSequent
   }
 
   it should "fail inapplicable builtin-rules with legible error messages" in {
@@ -170,39 +133,32 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "prove x=2&y=3&z=4 |- z=4" in {
-    shouldClose(SaturateTactic(andL('_)) &
+    proveBy("x=2&y=3&z=4 ==> z=4".asSequent, SaturateTactic(andL('_)) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
-      assertE("z=4".asFormula, "z=4 not at -3")(-3) & close,
-      Sequent(IndexedSeq("x=2&y=3&z=4".asFormula), IndexedSeq("z=4".asFormula)))
+      assertE("z=4".asFormula, "z=4 not at -3")(-3) & close) shouldBe 'proved
   }
 
   it should "repeat 0 times if not applicable" in {
-    shouldClose(SaturateTactic(andL('_)) & close,
-      Sequent(IndexedSeq("x=2".asFormula), IndexedSeq("x=2".asFormula)))
+    proveBy("x=2 ==> x=2".asSequent, SaturateTactic(andL('_)) & close) shouldBe 'proved
   }
 
   it should "saturate until no longer applicable" in {
-    shouldClose(SaturateTactic(andL('Llast)) &
+    proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, SaturateTactic(andL('Llast)) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
-      assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close,
-      Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
+      assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close) shouldBe 'proved
   }
 
   it should "not try right branch when used in combination with either combinator" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
       SaturateTactic(SaturateTactic(andL('Llast)) | close))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
-    result.subgoals.head.succ should contain only "x=2".asFormula
+    result.subgoals.loneElement shouldBe "x=2, y=3, z=4 | z=5 ==> x=2".asSequent
   }
 
   it should "saturate 'Rlike' unification matching" in {
     val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
       SaturateTactic(orR('R)) & SaturateTactic(implyR('Rlike, "p_()&q_()->r_()".asFormula))
       )
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula)
-    result.subgoals.head.succ should contain only ("c=2".asFormula, "d=3->e=4".asFormula, "h=7".asFormula)
+    result.subgoals.loneElement shouldBe "a=0&b=1, f=5&g=6 ==> d=3->e=4, c=2, h=7".asSequent
   }
 
   it should "trace in the database" in withDatabase { db => withMathematica { _ =>
@@ -213,20 +169,17 @@ class SequentialInterpreterTests extends TacticTestBase {
   }}
 
   "+ combinator" should "saturate with at least 1 repetition" in {
-    val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      andL('Llast) & SaturateTactic(andL('Llast)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
-    result.subgoals.head.succ should contain only "x=2".asFormula
+    val result = proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, andL('Llast) & SaturateTactic(andL('Llast)))
+    result.subgoals.loneElement shouldBe "x=2, y=3, z=4 | z=5 ==> x=2".asSequent
   }
 
   it should "fail when not at least 1 repetition is possible" in {
-    a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
+    a [BelleThrowable] should be thrownBy proveBy("z=4|z=5 ==> x=2".asSequent,
       andL('Llast) & SaturateTactic(andL('Llast)))
   }
 
   it should "saturate with at least 1 repetition and try right branch in combination with either combinator" in {
-    proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
+    proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent,
       SaturateTactic((andL('Llast) & SaturateTactic(andL('Llast))) | close)) shouldBe 'proved
   }
 
@@ -236,9 +189,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "do nothing when change occurred" in {
     val result = proveBy("x=2|x=3".asFormula, Idioms.must(orR(1)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only ("x=2".asFormula, "x=3".asFormula)
+    result.subgoals.loneElement shouldBe " ==> x=2, x=3".asSequent
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
@@ -246,14 +197,9 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(SuccPos(0)) & close,
       implyR(SuccPos(0)) & close
     )
-    val v = {
-      val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-      BelleProvable(ProvableSig.startProof(f))
+    inside (theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
-    val result = theInterpreter.apply(tactic, v)
-
-    result.isInstanceOf[BelleProvable] shouldBe true
-    result.asInstanceOf[BelleProvable].p.isProved shouldBe true
   }
 
   it should "prove |- (1=1->1=1) & (2=2->2=2) with new < combinator" in {
@@ -262,14 +208,9 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(SuccPos(0)) & close,
       implyR(SuccPos(0)) & close
       )
-    val v = {
-      val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-      BelleProvable(ProvableSig.startProof(f))
+    inside (theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof("(1=1->1=1) & (2=2->2=2)".asFormula)))) {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
-    val result = theInterpreter.apply(tactic, v)
-
-    result.isInstanceOf[BelleProvable] shouldBe true
-    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   it should "handle cases were subgoals are added." in {
@@ -277,12 +218,8 @@ class SequentialInterpreterTests extends TacticTestBase {
       andR(SuccPos(0)),
       implyR(SuccPos(0)) & close
     )
-    val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
-    shouldResultIn(
-      tactic,
-      f,
-      Seq("==> 2=2".asSequent, "==> 3=3".asSequent)
-    )
+    proveBy("(2=2 & 3=3) & (1=1->1=1)".asFormula, tactic).subgoals should contain
+      theSameElementsInOrderAs("==> 2=2".asSequent :: "==> 3=3".asSequent :: Nil)
   }
 
   it should "fail whenever there's a non-partial tactic that doesn't close its goal." in {
@@ -291,22 +228,18 @@ class SequentialInterpreterTests extends TacticTestBase {
       implyR(SuccPos(0)) & close & DebuggingTactics.done
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
-    a[BelleThrowable] shouldBe thrownBy(
+    a [BelleThrowable] shouldBe thrownBy(
       theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof(f)))
     )
   }
 
   it should "handle cases were subgoals are added -- switch order" in {
-    val tactic = andR(SuccPos(0)) < (
+    val tactic = andR(SuccPos(0)) <(
       implyR(SuccPos(0)) & close,
       andR(SuccPos(0))
       )
-    val f = "(1=1->1=1) & (2=2 & 3=3)".asFormula
-    shouldResultIn(
-      tactic,
-      f,
-      Seq("==> 2=2".asSequent, "==> 3=3".asSequent)
-    )
+    proveBy("(1=1->1=1) & (2=2 & 3=3)".asFormula, tactic).subgoals should contain
+      theSameElementsInOrderAs("==> 2=2".asSequent :: "==> 3=3".asSequent :: Nil)
   }
 
   it should "prove |- (1=1->1=1) & (!2=2  | 2=2) with labels out of order" in {
@@ -314,25 +247,19 @@ class SequentialInterpreterTests extends TacticTestBase {
       (BelleTopLevelLabel("bar"), orR(1) & notR(1) & close),
       (BelleTopLevelLabel("foo"), implyR(1) & close)
     )
-    val v = {
-      val f = "(1=1->1=1) & (!2=2 | 2=2)".asFormula
-      BelleProvable(ProvableSig.startProof(f))
+    inside (theInterpreter.apply(tactic, BelleProvable(ProvableSig.startProof("(1=1->1=1) & (!2=2 | 2=2)".asFormula)))) {
+      case BelleProvable(p, _) => p shouldBe 'proved
     }
-    val result = theInterpreter.apply(tactic, v)
-
-    result.isInstanceOf[BelleProvable] shouldBe true
-    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   it should "work with loop labels" in {
     val tactic = implyR(1) & loop("x>1".asFormula)(1)
     val v = BelleProvable(ProvableSig.startProof("x>2 -> [{x:=x+1;}*]x>0".asFormula))
-    val result = theInterpreter.apply(tactic, v)
-
-    result.isInstanceOf[BelleProvable] shouldBe true
-    val presult = result.asInstanceOf[BelleProvable]
-    presult.p.subgoals should have size 3
-    presult.label shouldBe Some(BelleLabels.initCase :: BelleLabels.useCase :: BelleLabels.indStep :: Nil)
+    inside (theInterpreter.apply(tactic, v)) {
+      case BelleProvable(p, Some(l)) =>
+        p.subgoals should have size 3
+        l should contain theSameElementsInOrderAs(BelleLabels.initCase :: BelleLabels.useCase :: BelleLabels.indStep :: Nil)
+    }
   }
 
   it should "not screw up empty labels" in {
@@ -414,62 +341,60 @@ class SequentialInterpreterTests extends TacticTestBase {
     the [BelleThrowable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
       "[Bellerophon Runtime] Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
     val result = proveBy(fml, BelleParser("let ({`f()=f`}) in (nil) | nil"))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only fml
+    result.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
   }
 
   "Unification" should "work on 1=1->1=1" in {
     val pattern = SequentType("==> p() -> p()".asSequent)
     val e = USubstPatternTactic(Seq((pattern, (x:RenUSubst) => implyR(SuccPos(0)) & close)))
-    shouldClose(e, "1=1->1=1".asFormula)
+    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
   }
 
   it should "work when there are non-working patterns" in {
     val pattern1 = SequentType("==> p() -> p()".asSequent)
     val pattern2 = SequentType("==> p() & q()".asSequent)
     val e = USubstPatternTactic(Seq(
-      (pattern2, (x:RenUSubst) => error("Should never get here.")),
-      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & close)
+      (pattern2, (_: RenUSubst) => error("Should never get here.")),
+      (pattern1, (_: RenUSubst) => implyR(SuccPos(0)) & close)
     ))
-    shouldClose(e, "1=1->1=1".asFormula)
+    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
   }
 
   it should "work when there are non-working patterns -- flipped order." in {
     val pattern1 = SequentType("==> p() -> p()".asSequent)
     val pattern2 = SequentType("==> p() & q()".asSequent)
     val e = USubstPatternTactic(Seq(
-      (pattern1, (x:RenUSubst) => implyR(1) & close),
-      (pattern2, (x:RenUSubst) => error("Should never get here."))
+      (pattern1, (_: RenUSubst) => implyR(1) & close),
+      (pattern2, (_: RenUSubst) => error("Should never get here."))
     ))
-    shouldClose(e, "1=1->1=1".asFormula)
+    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
   }
 
   it should "choose the first applicable unification when there are many options" in {
     val pattern1 = SequentType("==> p() -> p()".asSequent)
     val pattern2 = SequentType("==> p() -> q()".asSequent)
     val e = USubstPatternTactic(Seq(
-      (pattern1, (x:RenUSubst) => implyR(1) & close),
-      (pattern2, (x:RenUSubst) => error("Should never get here."))
+      (pattern1, (_: RenUSubst) => implyR(1) & close),
+      (pattern2, (_: RenUSubst) => error("Should never get here."))
     ))
-    shouldClose(e, "1=1->1=1".asFormula)
+    proveBy("1=1->1=1".asFormula, e) shouldBe 'proved
   }
 
   it should "choose the first applicable unification when there are many options -- flipped order" in {
     val pattern1 = SequentType("==> p() -> p()".asSequent)
     val pattern2 = SequentType("==> p() -> q()".asSequent)
     val e = USubstPatternTactic(Seq(
-      (pattern2, (x:RenUSubst) => error("Should never get here.")),
-      (pattern1, (x:RenUSubst) => implyR(1) & close)
+      (pattern2, (_: RenUSubst) => error("Should never get here.")),
+      (pattern1, (_: RenUSubst) => implyR(1) & close)
     ))
-    a[BelleUserGeneratedError] shouldBe thrownBy (shouldClose(e, "1=1->1=1".asFormula))
+    a [BelleUserGeneratedError] shouldBe thrownBy (proveBy("1=1->1=1".asFormula, e))
   }
 
   "AtSubgoal" should "work" in {
     val t = andR(1) &
       Idioms.atSubgoal(0, implyR(1) & close) &
       Idioms.atSubgoal(0, implyR(1) & close)
-    shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
+    proveBy("(1=1->1=1) & (2=2->2=2)".asFormula, t) shouldBe 'proved
   }
 
   //@todo would need DerivationInfo entry
@@ -549,10 +474,8 @@ class SequentialInterpreterTests extends TacticTestBase {
     val tactic = tDef & implyR(1) & choiceb(1) & andR(1) & OnAll(ApplyDefTactic(tDef))
     val result = proveBy(fml, tactic)
     result.subgoals should have size 2
-    result.subgoals.head.ante should contain only "x>0".asFormula
-    result.subgoals.head.succ should contain only "2>0".asFormula
-    result.subgoals.last.ante should contain only "x>0".asFormula
-    result.subgoals.last.succ should contain only "x+1>0".asFormula
+    result.subgoals.head shouldBe "x>0 ==> 2>0".asSequent
+    result.subgoals.last shouldBe "x>0 ==> x+1>0".asSequent
   }
 
 //  "Scheduled tactics" should "work" in {
@@ -579,7 +502,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   /*"A failing tactic"*/
   it should "print nice errors and provide a stack trace" ignore {
-    val itFails = new BuiltInTactic("fails") {
+    val itFails: BelleExpr = new BuiltInTactic("fails") {
       override def result(provable: ProvableSig) = throw new ProverException("Fails...")
     }
 
@@ -785,25 +708,5 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
         closeId)
     ) shouldBe 'proved
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Helper methods
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-
-  private def shouldClose(expr: BelleExpr, f: Formula): Unit = shouldClose(expr, Sequent(IndexedSeq(), IndexedSeq(f)))
-
-  private def shouldClose(expr: BelleExpr, sequent: Sequent): Unit = {
-    val v = BelleProvable(ProvableSig.startProof(sequent))
-    val result = theInterpreter.apply(expr, v)
-    result shouldBe a[BelleProvable]
-    result.asInstanceOf[BelleProvable].p shouldBe 'proved
-  }
-
-  private def shouldResultIn(expr: BelleExpr, f: Formula, expectedResult : Seq[Sequent]) = {
-    val v = BelleProvable(ProvableSig.startProof(f))
-    val result = theInterpreter.apply(expr, v)
-    result shouldBe a[BelleProvable]
-    result.asInstanceOf[BelleProvable].p.subgoals shouldBe expectedResult
   }
 }
