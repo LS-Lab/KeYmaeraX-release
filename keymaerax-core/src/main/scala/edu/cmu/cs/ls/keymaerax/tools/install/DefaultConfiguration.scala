@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.install
 
 import java.util.Locale
 

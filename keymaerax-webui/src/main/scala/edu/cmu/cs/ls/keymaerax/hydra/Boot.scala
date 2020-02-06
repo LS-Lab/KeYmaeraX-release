@@ -21,7 +21,7 @@ import org.apache.logging.log4j.scala.Logging
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.tools.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.language.postfixOps

@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer

@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
