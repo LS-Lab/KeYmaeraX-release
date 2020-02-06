@@ -79,7 +79,7 @@ object ToolProvider extends ToolProvider with Logging {
             """.stripMargin
         logger.info(msg)
         new Z3ToolProvider
-      } else new MultiToolProvider(tp :: new Z3ToolProvider() :: Nil)
+      } else new MultiToolProvider(tp :: new Z3ToolProvider :: Nil)
     } catch {
       case ex: Throwable =>
         val msg =
@@ -253,21 +253,9 @@ class WolframScriptToolProvider extends WolframToolProvider({ val m = new Mathem
   * @author Stefan Mitsch
   */
 class Z3ToolProvider extends PreferredToolProvider[Tool]({
-    val z = new Z3; z.init(Map())
-    val algebra = new RingsAlgebraTool(); algebra.init(Map())
-    val ode = new IntegratorODESolverTool; ode.init(Map())
+    val z = new Z3; z.init(Map.empty)
+    val algebra = new RingsAlgebraTool(); algebra.init(Map.empty)
+    val ode = new IntegratorODESolverTool; ode.init(Map.empty)
     z :: algebra :: ode :: Nil}) {
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
 }
-
-/** A tool provider that favors Mathematica tools, but supplies Z3 when specifically asked.
-  * @author Stefan Mitsch
-  */
-class MathematicaZ3ToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); m :: z :: m :: Nil }) { }
-
-/** A tool provider that provides all Mathematica tools, but favors Z3 for QE unless specifically asked to provide Mathematica.
-  * @author Stefan Mitsch
-  */
-class Z3MathematicaToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); z :: m :: Nil }) { }
