@@ -42,6 +42,9 @@ strategies = {
 (* TODO: explicitly use the constvars and constasms below!! *)
 { pre, { f, vars, evoConst }, post, {constvars,constasms}}=problem;
 
+
+post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
+
 deps=Join[Dependency`VariableDependencies[{pre, { f, vars, evoConst }, post}],{vars}];
 
 invlist=True;
@@ -68,7 +71,7 @@ inv=TimeConstrained[
 	{True,{True}}];
 	
 (* Simplify invariant w.r.t. the domain constraint *)
-cuts=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
+cuts=Map[Assuming[And[evoConst,constasms], FullSimplify[#, Reals]]&, inv];
 
 inv=cuts//.{List->And};
 
@@ -84,10 +87,10 @@ If[TrueQ[inv], (*Print["Skipped"]*),
 	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
 	evoConst=And[evoConst,inv]];
 
-post=Assuming[evoConst, FullSimplify[post, Reals]];
+post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
-invImpliesPost=Primitives`CheckSemiAlgInclusion[evoConst, post, vars];
+invImpliesPost=Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
 (*Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]*)]
 ,{strathint, strategies}(* End Do loop *)]

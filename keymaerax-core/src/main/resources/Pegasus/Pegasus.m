@@ -30,13 +30,6 @@ If[Length[repr]==1,{var -> First[repr]},{}]
 ]
 
 
-SplitAssums[ff_,vars_]:=Module[{ls},
-ls = {ff//.And -> List}//Flatten;
-{Select[ls,Complement[DeleteDuplicates@Cases[#, _Symbol, Infinity],vars]!={}&]//.List->And,
-Select[ls,Complement[DeleteDuplicates@Cases[#, _Symbol, Infinity],vars]=={}&]//.List->And}
-]
-
-
 AugmentWithParameters[problem_List]:=Module[{pre,post,f,vars,evoConst,symbols,parameters,newvars,newf,
 paramrep,paramfixed,paramfree,prefree,evofree,asmsfree},
 { pre, { f, vars, evoConst }, post } = problem;
