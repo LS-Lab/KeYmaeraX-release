@@ -13,17 +13,21 @@ import scala.collection.immutable.Map
 
 /**
  * Z3 trusted quantifier elimination tool.
- *
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.Z3ToolProvider]] to obtain instances of Z3 that are properly initialized
+  *     and installed/updated.
  * Created by smitsch on 4/27/15.
  * @author Ran Ji
  * @author Stefan Mitsch
  */
 final class Z3 extends ToolBase("Z3") with QETool with ToolOperationManagement {
   // Z3 is a trusted tool. Do not extend this class with other tool interfaces.
-  private val z3 = new Z3Solver
+  private var z3: Z3Solver = _
 
   /** @inheritdoc */
-  override def init(config: Map[String,String]): Unit = { initialized = true }
+  override def init(config: Map[String,String]): Unit = {
+    z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter)
+    initialized = true
+  }
 
   /** @inheritdoc */
   override def restart(): Unit = { initialized = true }

@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Power, Term}
+import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
@@ -22,7 +23,7 @@ class SMTQETests extends TacticTestBase {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    z3 = new Z3Solver
+    z3 = new Z3Solver(Z3Installer.z3Path, DefaultSMTConverter)
     polya = new PolyaSolver
   }
 
@@ -145,11 +146,11 @@ class SMTQETests extends TacticTestBase {
   it should "detect when x^n is no longer less powerful than x*x*..." in {
     val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
 
-    val z3Default = new Z3Solver()
+    val z3Default = new Z3Solver(Z3Installer.z3Path, DefaultSMTConverter)
     z3Default.qeEvidence(f)._1 shouldBe "true".asFormula
 
     // converter that always translates to ^
-    val z3Power = new Z3Solver(new SMTConverter() {
+    val z3Power = new Z3Solver(Z3Installer.z3Path, new SMTConverter() {
       override protected def convertTerm(t: Term): String = t match {
         case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
         case _ => super.convertTerm(t)

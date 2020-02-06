@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
 import edu.cmu.cs.ls.keymaerax.core.QETool
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
 import org.apache.logging.log4j.scala.Logging
 
 
@@ -249,13 +250,16 @@ class WolframScriptToolProvider extends WolframToolProvider({ val m = new Mathem
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
-/** A tool provider that provides Z3 as QE tool and KeYmaera's own bundled algebra tool and diff. solution tool, everything else is None.
+/** A tool provider that provides Z3 as QE tool and our own bundled algebra tool and diff. solution tool, everything else is None.
+  * Initializes the Z3 installation and updates the Z3 binary on version updates.
   * @author Stefan Mitsch
   */
 class Z3ToolProvider extends PreferredToolProvider[Tool]({
-    val z = new Z3; z.init(Map.empty)
+    val z = new Z3; z.init(Map("z3Path" -> Z3Installer.z3Path))
     val algebra = new RingsAlgebraTool(); algebra.init(Map.empty)
     val ode = new IntegratorODESolverTool; ode.init(Map.empty)
     z :: algebra :: ode :: Nil}) {
+
+  /** Returns the main Z3 tool. */
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
 }
