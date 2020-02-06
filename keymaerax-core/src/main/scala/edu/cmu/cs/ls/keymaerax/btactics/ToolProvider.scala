@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core.QETool
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsAlgebraTool
 import edu.cmu.cs.ls.keymaerax.tools.install.{PolyaInstaller, Z3Installer}
-import edu.cmu.cs.ls.keymaerax.tools.qe.Z3
+import edu.cmu.cs.ls.keymaerax.tools.qe.{Polya, Z3}
 import org.apache.logging.log4j.scala.Logging
 
 

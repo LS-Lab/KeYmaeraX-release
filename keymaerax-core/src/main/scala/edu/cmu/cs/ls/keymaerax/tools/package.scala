@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaerax
  *
  *    - `[[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]` - Mathematica interface for real arithmetic and ODE solver etc.
  *    - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Z3]]` - Z3 interface for real arithmetic.
- *    - `[[edu.cmu.cs.ls.keymaerax.tools.Polya]]` - Polya interface for real arithmetic.
+ *    - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Polya]]` - Polya interface for real arithmetic.
  *    - `[[edu.cmu.cs.ls.keymaerax.tools.SMTConverter]]` - SMT converter for real arithmetic.
  *
  * @todo Stub. Describe for real.

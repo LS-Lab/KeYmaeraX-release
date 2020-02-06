@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, 
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
-import edu.cmu.cs.ls.keymaerax.tools.qe.Z3
+import edu.cmu.cs.ls.keymaerax.tools.qe.{Polya, Z3}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
 import org.scalatest.concurrent.{Signaler, TimeLimitedTests, TimeLimits}

@@ -5,13 +5,13 @@
 /**
   * @note Code Review: 2016-08-02 postponed since Polya output processing needs to be made more robust
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.io.{File, FileWriter}
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, ParseException}
-
+import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
