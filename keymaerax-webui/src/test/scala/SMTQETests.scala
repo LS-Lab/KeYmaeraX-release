@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Power, Term}
 import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
+import edu.cmu.cs.ls.keymaerax.tools.qe.Z3Solver
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**

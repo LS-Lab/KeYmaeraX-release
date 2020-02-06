@@ -5,18 +5,19 @@
 /**
   * @note Code Review: 2016-08-02
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.io._
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
+import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.sys.process._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Starts a Z3 process with the binary at `z3Path`, converting KeYmaera X datastructures to SMT-Lib format
