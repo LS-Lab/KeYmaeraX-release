@@ -511,12 +511,13 @@ trait UnifyUSCalculus {
         }
 
         K.ctx match {
-          case DotFormula if p.isTopLevel => by(subst.toForward(fact))
-
-          case DotFormula if !p.isTopLevel =>
+          case DotFormula => if (p.isTopLevel)
+            by(subst.toForward(fact))
+          else {
             val provedFact = TactixLibrary.proveBy(Equiv(fact.conclusion.succ.head, True),
               equivR(1) < (closeTrue(1), cohideR(1) & by(fact)))
             equivStep(True, if (p.isSucc) commuteFact(provedFact) else provedFact)
+          }
 
           case Equiv(DotFormula, other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
 
@@ -617,7 +618,8 @@ trait UnifyUSCalculus {
                   /* leave open: show prereq (@todo stripped down master might show) */ if (p.isSucc) hideR(p.top) else hideL(p.top)
                 )
             }
-          case Forall(vars, remainder) if vars.length == 1 => ???
+          case Forall(vars, remainder) =>
+            ???
           //useAt(subst, new Context(remainder), k, p, C, c, /*@todo instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0))*/ ident, sequent)
 
           //@todo unfold box by step*
@@ -628,36 +630,35 @@ trait UnifyUSCalculus {
   }
 
   /* Specialized congruence reasoning for the questions arising in the axiomatic ODE solver DC step */
-  //@todo optimizable move reproved proveBy facts to DerivedAxioms
   private def condEquivCongruence(context: Formula, towards: PosInExpr, subPos: PosInExpr, commute: Boolean, op: (Formula, Formula) => Formula): BelleExpr = context match {
     case Box(_, p) if towards.head == 1 =>
       useAt("[] split", PosInExpr(1::Nil))(1, subPos ++ 0) &
       useAt("K modal modus ponens", PosInExpr(1::Nil))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
-      useAt(TactixLibrary.proveBy("[a{|^@|};]true <-> true".asFormula, equivR(1) <(closeTrue(1), cohideR(1) & byUS("[]T system"))))(1, subPos)
+      useAt(DerivedAxioms.boxTrueTrue)(1, subPos)
     case Imply(_, p) if towards.head == 1 =>
-      useAt(TactixLibrary.proveBy("(p_()->q_()) & (p_()->r_()) <-> (p_() -> q_()&r_())".asFormula, TactixLibrary.prop))(1, subPos ++ 0) &
-      useAt(TactixLibrary.proveBy("(p_()->q_()) -> (p_()->r_()) <-> (p_() -> (q_()->r_()))".asFormula, TactixLibrary.prop))(1, subPos) &
+      useAt(DerivedAxioms.impliesRightAnd)(1, subPos ++ 0) &
+      useAt(DerivedAxioms.sameImpliesImplies)(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
       useAt(DerivedAxioms.impliesTrue)(1, subPos)
     case And(p, _) if towards.head == 0 =>
-      useAt(TactixLibrary.proveBy("(q_()&p_()) & (r_()&p_()) <-> ((q_()&r_()) & p_())".asFormula, TactixLibrary.prop))(1, subPos ++ 0) &
-      useAt(TactixLibrary.proveBy("(q_()->r_()) -> (q_()&p_() -> r_()&p_())".asFormula, TactixLibrary.prop), PosInExpr(1::Nil))(1, subPos) &
+      useAt(DerivedAxioms.factorAndRight)(1, subPos ++ 0) &
+      useAt(DerivedAxioms.impliesMonAndLeft, PosInExpr(1::Nil))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos, commute, op)
     case And(_, p) if towards.head == 1 =>
-      useAt(TactixLibrary.proveBy("(p_()&q_()) & (p_()&r_()) <-> (p_() & (q_()&r_()))".asFormula, TactixLibrary.prop))(1, subPos ++ 0) &
-      useAt(TactixLibrary.proveBy("(q_()->r_()) -> (p_()&q_() -> p_()&r_())".asFormula, TactixLibrary.prop), PosInExpr(1::Nil))(1, subPos) &
+      useAt(DerivedAxioms.factorAndLeft)(1, subPos ++ 0) &
+      useAt(DerivedAxioms.impliesMonAndRight, PosInExpr(1::Nil))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos, commute, op)
     case Or(p, _) if towards.head == 0 =>
-      useAt(TactixLibrary.proveBy("(q_()|p_()) & (r_()|p_()) <-> ((q_()&r_()) | p_())".asFormula, TactixLibrary.prop))(1, subPos ++ 0) &
-      useAt(TactixLibrary.proveBy("(q_()|p_()) -> (r_()|p_()) <-> ((q_()->r_()) | p_())".asFormula, TactixLibrary.prop))(1, subPos) &
+      useAt(DerivedAxioms.factorOrRight)(1, subPos ++ 0) &
+      useAt(DerivedAxioms.factorImpliesOrRight)(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 0, commute, op) &
-      useAt(TactixLibrary.proveBy("true | p_() <-> true".asFormula, TactixLibrary.prop))(1, subPos)
+      useAt(DerivedAxioms.trueOr)(1, subPos)
     case Or(_, p) if towards.head == 1 =>
-      useAt(TactixLibrary.proveBy("(p_()|q_()) & (p_()|r_()) <-> (p_() | (q_()&r_()))".asFormula, TactixLibrary.prop))(1, subPos ++ 0) &
-      useAt(TactixLibrary.proveBy("(p_()|q_()) -> (p_()|r_()) <-> (p_() | (q_()->r_()))".asFormula, TactixLibrary.prop))(1, subPos) &
+      useAt(DerivedAxioms.factorOrLeft)(1, subPos ++ 0) &
+      useAt(DerivedAxioms.factorImpliesOrLeft)(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
-      useAt(TactixLibrary.proveBy("p_() | true <-> true".asFormula, TactixLibrary.prop))(1, subPos)
+      useAt(DerivedAxioms.orTrue)(1, subPos)
     case Forall(x, p) if towards.head == 0 =>
       useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 0 ++ 0) &
       useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 0 ++ 1) &
@@ -669,6 +670,7 @@ trait UnifyUSCalculus {
       val fact =
         if (commute) Equiv(Imply(And(op(p, q), q), p), True)
         else Equiv(Imply(And(op(p, q), p), q), True)
+      //@todo optimizable proveBy facts by table lookup from op to DerivedAxioms.ponensAndPassthrough_*
       useAt(TactixLibrary.proveBy(fact, TactixLibrary.prop))(1, subPos)
   }
 

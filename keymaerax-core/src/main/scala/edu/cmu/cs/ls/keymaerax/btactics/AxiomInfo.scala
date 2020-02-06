@@ -300,6 +300,8 @@ object DerivationInfo {
   // Structure registry [[allInfo]] as modalities, ODEs, differentials, quantifiers, misc, derived axioms, sequent rules.
   ////////////////////////////////////////////////////////
 
+  //<editor-fold desc="modalities">
+
   /** Modality cases of [[allInfo]] */
   private[this] lazy val modalityInfos: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
@@ -388,7 +390,9 @@ object DerivationInfo {
       , AxiomDisplayInfo("[]T", "[a]true")
       , "boxTrue", true, {case () => HilbertCalculus.boxTrue})
   )
+  //</editor-fold>
 
+  //<editor-fold desc="ODEs">
   /** Differential equation cases of [[allInfo]] */
   private[this] lazy val odeInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("DW base", "DWbase", "DWbase", true, {case () => HilbertCalculus.DW}),
@@ -643,7 +647,9 @@ object DerivationInfo {
       , AxiomDisplayInfo("DVleq", "todo DVleq")
       , "DVleq", unsure, {case () => HilbertCalculus.useAt("DV differential variant <=")})
   )
+  //</editor-fold>
 
+  //<editor-fold desc="Differentials">
   /** Differential cases of [[allInfo]] */
   private[this] lazy val differentialInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("c()' derive constant fn"
@@ -719,7 +725,9 @@ object DerivationInfo {
 
     PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
   )
+  //</editor-fold>
 
+  //<editor-fold desc="First-order quantifiers">
   /** First-order logic quantifier cases of [[allInfo]] */
   private[this] lazy val foInfos: List[DerivationInfo] = List(
     new DerivedAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allInstantiate)}),
@@ -1008,7 +1016,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("> antisym", "greaterNotSym", "greaterNotSym", unsure, {case () => useAt(DerivedAxioms.greaterNotSym)}),
     new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)})
   )
+  //</editor-fold>
 
+  //<editor-fold desc="Sequent Calculus">
   /** Sequent calculus cases of [[allInfo]] */
   private[this] lazy val sequentCalculusInfos: List[DerivationInfo] = List(
     new PositionTacticInfo("notL"
@@ -1505,6 +1515,7 @@ object DerivationInfo {
       , _ => ((expr: Expression) => ((msg: String) => DebuggingTactics.assertE(expr, msg)): TypedFunc[String, BelleExpr]): TypedFunc[Expression, TypedFunc[String, BelleExpr]]
     )
   )
+  //</editor-fold>
 
   ////////////////////////////////////////////////////////
   // Assemble above derivation infos in [[allInfo]] registry
