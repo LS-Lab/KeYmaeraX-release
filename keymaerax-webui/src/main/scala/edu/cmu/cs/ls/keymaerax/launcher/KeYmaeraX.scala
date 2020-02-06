@@ -562,8 +562,6 @@ object KeYmaeraX {
           "proof" -> "" //@todo serialize proof
         )) :: Nil
 
-
-
         val lemma = outputFileName match {
           case Some(_) =>
             val lemma = Lemma(witness, evidence, Some(name))
@@ -600,9 +598,9 @@ object KeYmaeraX {
         }
 
         if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
-          ProofStatistics(name, tacticName, "disproved", Some(witness), timeout, -1, -1, -1, -1)
+          ProofStatistics(name, tacticName, "disproved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
         } else {
-          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, -1, -1, -1, -1)
+          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
         }
       }
     } catch {
@@ -1189,7 +1187,8 @@ object KeYmaeraX {
 
   /** Finds files matching the pattern in fileName (specific file or using glob wildcards). */
   private def findFiles(fileName: String): List[Path] = {
-    if (new java.io.File(fileName).exists) Paths.get(fileName).toAbsolutePath :: Nil
+    // specific file, no wildcard support when referring to a specific entry
+    if (new java.io.File(fileName).exists || fileName.contains("#")) Paths.get(fileName).toAbsolutePath :: Nil
     else {
       val path = Paths.get(fileName).toAbsolutePath
       val dir = path.getParent
