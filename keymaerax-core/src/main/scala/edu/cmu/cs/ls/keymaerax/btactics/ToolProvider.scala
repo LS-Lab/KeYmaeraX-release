@@ -249,10 +249,14 @@ class WolframScriptToolProvider extends WolframToolProvider({ val m = new Mathem
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
-/** A tool provider that provides Z3 as QE tool and KeYmaera's own bundled diff. solution tool, everything else is None.
+/** A tool provider that provides Z3 as QE tool and KeYmaera's own bundled algebra tool and diff. solution tool, everything else is None.
   * @author Stefan Mitsch
   */
-class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); val ode = new IntegratorODESolverTool; ode.init(Map()); z :: ode :: Nil }) {
+class Z3ToolProvider extends PreferredToolProvider[Tool]({
+    val z = new Z3; z.init(Map())
+    val algebra = new RingsAlgebraTool(); algebra.init(Map())
+    val ode = new IntegratorODESolverTool; ode.init(Map())
+    z :: algebra :: ode :: Nil}) {
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
 }
 

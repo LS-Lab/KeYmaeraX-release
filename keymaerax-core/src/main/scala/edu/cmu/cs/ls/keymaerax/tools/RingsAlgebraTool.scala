@@ -312,18 +312,30 @@ class RingsLibrary(terms: Traversable[Term]) {
   }
 }
 
-class RingsAlgebraTool() extends AlgebraTool{
+class RingsAlgebraTool() extends ToolBase("RingsAlgebra") with AlgebraTool {
 
-  override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {
+  /** @inheritdoc */
+  final override def init(config: Map[String, String]): Unit = { initialized = true }
+
+  /** @inheritdoc */
+  final override def shutdown(): Unit = {}
+
+  /** @inheritdoc */
+  final override def restart(): Unit = {}
+
+  /** @inheritdoc */
+  final override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {
     new RingsLibrary(x::List(term,div)).quotientRemainder(term, div, x)
   }
 
-  override def groebnerBasis(polynomials: List[Term]): List[Term] = {
+  /** @inheritdoc */
+  final override def groebnerBasis(polynomials: List[Term]): List[Term] = {
     if(polynomials.isEmpty) return List()
     new RingsLibrary(polynomials).groebnerBasis(polynomials)
   }
 
-  override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
+  /** @inheritdoc */
+  final override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
     new RingsLibrary(polynomial::GB).polynomialReduce(polynomial, GB)
   }
 
