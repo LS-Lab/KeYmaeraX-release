@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{RingsAlgebraTool, RingsLibrary}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{RingsAlgebraTool, RingsLibrary}
 
 /** Tests for RingsAlgebraTool
   */
@@ -53,14 +53,13 @@ class RingsAlgebraToolTests extends TacticTestBase  {
   it should "return a custom distributive representation" in withMathematica { _ =>
     val R = new RingsLibrary("t,x,y,z,a(),b(),i,j,r0(),r1(),r2()".split(',').map(_.asTerm))
     val mv = R.toRing("4.2*x*t*r1()*r2()^2 + 1.3*t*a()*r1()*r2()^2 + r1() + x*r1() + t*r1()".asTerm)
-    R.distributive(mv, ("t,r1(),r2()".split(',').map(_.asTerm)).toList) shouldBe
+    R.distributive(mv, "t,r1(),r2()".split(',').map(_.asTerm).toList) shouldBe
       Map(List(0, 1, 0) -> "1+x".asTerm, List(1, 1, 0) -> "1".asTerm, List(1, 1, 2) -> "13/10*a()+21/5*x".asTerm)
   }
 
   it should "compute the Lie derivative" in withMathematica { _ =>
     val R = new RingsLibrary("t,x,y,z,i,j".split(',').map(_.asTerm))
     val t = "x*y*(x + z*x - 13)/4 + 4*z*z*(x + x^5)".asTerm
-    val tR = R.toRing(t)
     val odemap = Map("x".asVariable -> "-y".asTerm, "y".asVariable -> "-x^2".asTerm, "z".asVariable -> "14*x*y*z".asTerm)
     val ringsLieDerivative = R.lieDerivative(odemap.mapValues(R.toRing).get)(t)
     val lieDerivative = DifferentialHelper.lieDerivative("{x'=-y,y'=-x^2,z'=14*x*y*z}".asDifferentialProgram, t)

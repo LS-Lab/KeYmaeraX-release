@@ -1,12 +1,11 @@
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import edu.cmu.cs.ls.keymaerax.core._
-import cc.redberry.rings
 import cc.redberry.rings.bigint.BigInteger
-import cc.redberry.rings.poly.multivar.MultivariateDivision
+import cc.redberry.rings.scaladsl._
+import cc.redberry.rings.scaladsl.syntax._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith
-import rings.scaladsl._
-import syntax._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.{AlgebraTool, ToolBase}
 
 import scala.collection.JavaConverters._
 
