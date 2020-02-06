@@ -514,6 +514,7 @@ trait UnifyUSCalculus {
           case DotFormula => if (p.isTopLevel)
             by(subst.toForward(fact))
           else {
+            //@todo optimizable by proving this once and using it, although maybe the inline proof is fast anyhow
             val provedFact = TactixLibrary.proveBy(Equiv(fact.conclusion.succ.head, True),
               equivR(1) < (closeTrue(1), cohideR(1) & by(fact)))
             equivStep(True, if (p.isSucc) commuteFact(provedFact) else provedFact)
