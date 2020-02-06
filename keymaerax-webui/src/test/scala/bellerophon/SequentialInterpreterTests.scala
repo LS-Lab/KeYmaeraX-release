@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.time.SpanSugar._
@@ -165,6 +166,7 @@ class SequentialInterpreterTests extends TacticTestBase {
           OnAll(andR(SuccPos(0))) |
           OnAll(implyR(SuccPos(0)) & close)
         )
+    proveBy(f, expr) shouldBe 'proved
   }
 
   it should "prove x=2&y=3&z=4 |- z=4" in {
@@ -701,6 +703,88 @@ class SequentialInterpreterTests extends TacticTestBase {
       case BelleProvable(pr, _) => pr shouldBe 'proved
     }
     listener.calls should have size 1
+  }
+
+  "Tactics with delayed substitution" should "replay expandAll" in {
+    val entry = KeYmaeraXArchiveParser(
+      """ArchiveEntry "Delayed Substitution"
+        |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
+        |ProgramVariables Real x; Real y; End.
+        |Problem p(x) -> [y:=x;]q(y) End.
+        |End.""".stripMargin).head
+
+    proveBy(entry.model.asInstanceOf[Formula],
+      ExpandAll(entry.defs.substs) &
+        DebuggingTactics.assert(_ == "==> x>0 -> [y:=x;]y>0".asSequent, "Unexpected expand result") &
+        implyR(1) & assignb(1) & closeId) shouldBe 'proved
+
+    proveBy(entry.model.asInstanceOf[Formula],
+      implyR(1) & assignb(1) &
+        DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
+        ExpandAll(entry.defs.substs) &
+        DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
+        closeId) shouldBe 'proved
+  }
+
+  it should "replay when expanded on branches" in {
+    val entry = KeYmaeraXArchiveParser(
+      """ArchiveEntry "Delayed Substitution"
+        |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
+        |ProgramVariables Real x; Real y; End.
+        |Problem p(x) -> [y:=x; ++ ?q(y);]q(y) End.
+        |End.""".stripMargin).head
+
+    proveBy(entry.model.asInstanceOf[Formula],
+      ExpandAll(entry.defs.substs) &
+        DebuggingTactics.assert(_ == "==> x>0 -> [y:=x; ++ ?y>0;]y>0".asSequent, "Unexpected expand result") &
+        implyR(1) & choiceb(1) & andR(1) <(assignb(1) & closeId, testb(1) & implyR(1) & closeId)) shouldBe 'proved
+
+    proveBy(entry.model.asInstanceOf[Formula],
+      implyR(1) & choiceb(1) & andR(1) <(
+        assignb(1) &
+        DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
+        ExpandAll(entry.defs.substs) &
+        DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
+        closeId
+        ,
+        testb(1) & implyR(1) &
+        DebuggingTactics.assert(_ == "p(x),q(y) ==> q(y)".asSequent, "Unexpected result prior to expand") &
+        ExpandAll(entry.defs.substs) &
+        DebuggingTactics.assert(_ == "x>0,y>0 ==> y>0".asSequent, "Unexpected expand result") &
+        closeId)
+        ) shouldBe 'proved
+  }
+
+  it should "replay when expanded only on some branches" in {
+    val entry = KeYmaeraXArchiveParser(
+      """ArchiveEntry "Delayed Substitution"
+        |Definitions Bool p(Real x) <-> x>0; Bool q(Real y) <-> y>0; End.
+        |ProgramVariables Real x; Real y; End.
+        |Problem p(x) -> [y:=x; ++ ?q(y);]q(y) End.
+        |End.""".stripMargin).head
+
+    proveBy(entry.model.asInstanceOf[Formula],
+      implyR(1) & choiceb(1) & andR(1) <(
+        assignb(1) &
+          DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
+          ExpandAll(entry.defs.substs) &
+          DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
+          closeId
+        ,
+        testb(1) & implyR(1) & closeId)
+    ) shouldBe 'proved
+
+    // branches in reverse order
+    proveBy(entry.model.asInstanceOf[Formula],
+      implyR(1) & choiceb(1) & useAt(DerivedAxioms.andCommute.fact)(1) & andR(1) <(
+        testb(1) & implyR(1) & closeId
+        ,
+        assignb(1) &
+        DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
+        ExpandAll(entry.defs.substs) &
+        DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
+        closeId)
+    ) shouldBe 'proved
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
