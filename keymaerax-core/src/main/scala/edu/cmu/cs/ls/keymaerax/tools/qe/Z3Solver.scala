@@ -28,7 +28,7 @@ import scala.sys.process._
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOperationManagementBase with SMTSolver with Logging {
+class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOperationManagementBase with Logging {
   /** The currently running Z3 process. */
   private var z3Process: Option[Process] = None
 
@@ -43,7 +43,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   }, "Z3 not of the expected version and build hash")
 
   /** Return Z3 QE result and the proof evidence */
-  def qeEvidence(f: Formula) : (Formula, Evidence) = {
+  def qe(f: Formula): (Formula, Evidence) = {
     val smtCode = converter(f)
     val z3Output = runZ3Smt(smtCode, "z3sat", getOperationTimeout) //@note (check-sat) gives unsat, sat or unknown
     logger.debug(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
@@ -61,7 +61,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
    * @param t  KeYmaera X term to be simplified
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
-  def simplify(t: Term) : Term = {
+  def simplify(t: Term): Term = {
     val smtCode = converter.generateSimplify(t)
     logger.debug("[Simplifying with Z3 ...] \n" + smtCode)
     val z3Output = runZ3Smt(smtCode, "z3simplify", getOperationTimeout)
@@ -128,5 +128,6 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
     case None => true
   }
 
+  /** @inheritdoc */
   override def getAvailableWorkers: Int = 1
 }

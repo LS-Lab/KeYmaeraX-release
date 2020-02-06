@@ -61,7 +61,7 @@ class SMTQETests extends TacticTestBase {
   "Z3" should "prove every basic example" in {
     forEvery (basicExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qeEvidence(input)._1 shouldBe expected
+        z3.qe(input)._1 shouldBe expected
       }}
     }
   }
@@ -70,7 +70,7 @@ class SMTQETests extends TacticTestBase {
     //@todo Polya proves not every example
     forEvery (basicExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        polya.qeEvidence(input)._1 shouldBe expected
+        polya.qe(input)._1 shouldBe expected
       }}
     }
   }
@@ -90,13 +90,13 @@ class SMTQETests extends TacticTestBase {
   "Z3" should "prove every complicated example" in {
     forEvery (complicatedExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qeEvidence(input)._1 shouldBe expected
+        z3.qe(input)._1 shouldBe expected
       }}
     }
   }
 
   it should "prove complex 1" in {
-    a [SMTQeException] should be thrownBy z3.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula)
+    a [SMTQeException] should be thrownBy z3.qe("x > 0 -> !x^2-2*x+1=0".asFormula)
     //@todo update Polya to latest version
     //polya.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula) //@todo check expected result
   }
@@ -126,7 +126,7 @@ class SMTQETests extends TacticTestBase {
     z3.setOperationTimeout(30)
     forEvery (regressionExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qeEvidence(input)._1 shouldBe expected
+        z3.qe(input)._1 shouldBe expected
       }}
     }
   }
@@ -141,14 +141,14 @@ class SMTQETests extends TacticTestBase {
     //@note takes >60s with v4.5.0, unknown with 4.4.1
     val f = "\\forall x_0 \\forall v_0 \\forall t__0 \\forall ep_0 \\forall S_0 \\forall B_0 \\forall A_0 (A_0>0&B_0>0&ep_0>0&x_0+v_0^2/(2*B_0)+(A_0/B_0+1)*(A_0/2*ep_0^2+ep_0*v_0)<=S_0&t__0>=0&\\forall s_ (0<=s_&s_<=t__0->A_0*s_+v_0>=0&s_+0<=ep_0)&v_0>=0&x_0+v_0^2/(2*B_0)<=S_0->A_0/2*t__0^2+v_0*t__0+x_0+(A_0*t__0+v_0)^2/(2*B_0)<=S_0)".asFormula
     z3.setOperationTimeout(5)
-    the [ToolException] thrownBy z3.qeEvidence(f) should have message "Z3 timeout of 5s exceeded"
+    the [ToolException] thrownBy z3.qe(f) should have message "Z3 timeout of 5s exceeded"
   }
 
   it should "detect when x^n is no longer less powerful than x*x*..." in {
     val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
 
     val z3Default = new Z3Solver(Z3Installer.z3Path, DefaultSMTConverter)
-    z3Default.qeEvidence(f)._1 shouldBe "true".asFormula
+    z3Default.qe(f)._1 shouldBe "true".asFormula
 
     // converter that always translates to ^
     val z3Power = new Z3Solver(Z3Installer.z3Path, new SMTConverter() {
@@ -157,14 +157,14 @@ class SMTQETests extends TacticTestBase {
         case _ => super.convertTerm(t)
       }
     })
-    z3Power.qeEvidence(f)._1 shouldBe "true".asFormula
+    z3Power.qe(f)._1 shouldBe "true".asFormula
   }
 
   "Z3Reports" should "prove intervalUpDivide" ignore {
     val intervalUpDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))"
     val intervalUpDivide = intervalUpDivideStr.asFormula
     println(intervalUpDivideStr)
-    z3.qeEvidence(intervalUpDivide)._1 shouldBe "true".asFormula
+    z3.qe(intervalUpDivide)._1 shouldBe "true".asFormula
   }
 
   it should "prove intervalDownDivide" ignore {
@@ -172,7 +172,7 @@ class SMTQETests extends TacticTestBase {
 //    val intervalDownDivideStr = "h_() <= f_()/g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | 0 < gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))"
     val intervalDownDivide = intervalDownDivideStr.asFormula
     println(intervalDownDivideStr)
-    z3.qeEvidence(intervalDownDivide)._1 shouldBe "true".asFormula
+    z3.qe(intervalDownDivide)._1 shouldBe "true".asFormula
 
   }
 }

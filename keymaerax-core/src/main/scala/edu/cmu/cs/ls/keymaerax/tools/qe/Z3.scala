@@ -42,7 +42,7 @@ final class Z3 extends ToolBase("Z3") with QETool with ToolOperationManagement {
   /** @inheritdoc */
   override def qeEvidence(formula: Formula): (Formula, Evidence) = {
     require(isInitialized, "Z3 needs to be initialized before use")
-    z3.qeEvidence(formula)
+    z3.qe(formula)
   }
 
   /** @inheritdoc */

@@ -25,7 +25,7 @@ import scala.sys.process._
   * Created by ran on 4/24/15.
   * @author Ran Ji
  */
-class PolyaSolver(val polyaPath: String, val converter: SMTConverter) extends SMTSolver with Logging {
+class PolyaSolver(val polyaPath: String, val converter: SMTConverter) extends Logging {
 
   /**
    * Get result from Polya output
@@ -57,7 +57,7 @@ class PolyaSolver(val polyaPath: String, val converter: SMTConverter) extends SM
   }
 
   /** Return Polya QE result and the proof evidence */
-  def qeEvidence(f: Formula) : (Formula, Evidence) = {
+  def qe(f: Formula): (Formula, Evidence) = {
     val smtCode = converter(f)
     logger.debug("[Solving with Polya...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaQe", ".smt2")
@@ -86,7 +86,7 @@ class PolyaSolver(val polyaPath: String, val converter: SMTConverter) extends SM
    * @param t  KeYmaera X term to be simplified
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
-  def simplify(t: Term) : Term = {
+  def simplify(t: Term): Term = {
     val smtCode = converter.generateSimplify(t)
     logger.debug("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaSimplify", ".smt2")

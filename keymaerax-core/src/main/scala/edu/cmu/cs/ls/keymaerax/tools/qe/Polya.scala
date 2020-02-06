@@ -31,7 +31,7 @@ class Polya extends ToolBase("Polya") with QETool {
   /** @inheritdoc */
   override def qeEvidence(formula: Formula): (Formula, Evidence) = {
     require(isInitialized, "Polya needs to be initialized before use")
-    polya.qeEvidence(formula)
+    polya.qe(formula)
   }
 
   /** @inheritdoc */
