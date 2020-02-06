@@ -55,7 +55,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
         c.setAccessible(true)
         withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of DerivedAxioms.scala for hints where to add missing dependency\n") {
           try {
+            println("Deriving " + fm.symbol + "...")
             fm.bind(c.newInstance())()
+            println("...done")
           } catch {
             case ex: InvocationTargetException =>
               val missingDependency = "Lemma ([^\\s]*) should".r.findFirstMatchIn(ex.getCause.getMessage).
