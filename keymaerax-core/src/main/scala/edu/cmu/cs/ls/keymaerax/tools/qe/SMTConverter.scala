@@ -5,9 +5,10 @@
 /**
   * @note Code Review: 2016-08-02
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.SMTConversionException
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._

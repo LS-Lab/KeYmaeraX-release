@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.DefaultSMTConverter
+import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec

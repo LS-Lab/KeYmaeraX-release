@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.{DefaultSMTConverter, ToolBase, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolBase, ToolOperationManagement}
 
 import scala.collection.immutable.Map
 

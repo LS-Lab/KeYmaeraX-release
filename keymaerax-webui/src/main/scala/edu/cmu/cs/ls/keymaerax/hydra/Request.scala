@@ -44,7 +44,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonit
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
-import edu.cmu.cs.ls.keymaerax.tools.qe.Z3
+import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec

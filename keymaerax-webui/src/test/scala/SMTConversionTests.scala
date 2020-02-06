@@ -4,6 +4,7 @@
 */
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
