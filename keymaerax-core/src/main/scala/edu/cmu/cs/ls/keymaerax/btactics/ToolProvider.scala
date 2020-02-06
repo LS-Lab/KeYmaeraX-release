@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
 import edu.cmu.cs.ls.keymaerax.core.QETool
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsAlgebraTool
-import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
+import edu.cmu.cs.ls.keymaerax.tools.install.{PolyaInstaller, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.Z3
 import org.apache.logging.log4j.scala.Logging
 
@@ -209,10 +209,11 @@ class MultiToolProvider(providers: List[ToolProvider]) extends PreferredToolProv
   override def invGenTool(name: Option[String]): Option[InvGenTool] = providers.flatMap(_.invGenTool(name)).headOption
 }
 
-/** A tool provider that provides Polya as a QE tools, everything else is None.
+/** A tool provider that provides Polya as a QE tool, everything else is None.
   * @author Stefan Mitsch
   */
-class PolyaToolProvider extends PreferredToolProvider({ val p = new Polya; p.init(Map()); p :: Nil }) {
+class PolyaToolProvider extends PreferredToolProvider({
+    val p = new Polya; p.init(Map("polyaPath" -> PolyaInstaller.polyaPath)); p :: Nil}) {
   def tool(): Polya = tools().head.asInstanceOf[Polya]
 }
 

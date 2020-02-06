@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Power, Term}
-import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
+import edu.cmu.cs.ls.keymaerax.tools.install.{PolyaInstaller, Z3Installer}
 import edu.cmu.cs.ls.keymaerax.tools.qe.Z3Solver
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
@@ -25,7 +25,7 @@ class SMTQETests extends TacticTestBase {
   override def beforeEach(): Unit = {
     super.beforeEach()
     z3 = new Z3Solver(Z3Installer.z3Path, DefaultSMTConverter)
-    polya = new PolyaSolver
+    polya = new PolyaSolver(PolyaInstaller.polyaPath, DefaultSMTConverter)
   }
 
   override def afterEach(): Unit = {

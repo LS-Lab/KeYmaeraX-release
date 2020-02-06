@@ -7,32 +7,37 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Term, _}
+import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.Map
 
 /**
- * Polya quantifier elimination tool.
- *
- * Created by smitsch on 4/27/15.
- * @author Ran Ji
- * @author Stefan Mitsch
- */
+  * Polya quantifier elimination tool.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.PolyaToolProvider]] to obtain instances of Polya that are properly
+  *     initialized and installed/updated.
+  * @author Ran Ji
+  * @author Stefan Mitsch
+  */
 class Polya extends ToolBase("Polya") with QETool {
-  private val polya = new PolyaSolver
+  private var polya: PolyaSolver = _
 
-  override def init(config: Map[String,String]) = {
+  /** @inheritdoc */
+  override def init(config: Map[String,String]): Unit = {
+    polya = new PolyaSolver(config("polyaPath"), DefaultSMTConverter)
     initialized = true
   }
 
+  /** @inheritdoc */
   override def qeEvidence(formula: Formula): (Formula, Evidence) = {
     require(isInitialized, "Polya needs to be initialized before use")
     polya.qeEvidence(formula)
   }
 
-  override def restart() = ???
+  /** @inheritdoc */
+  override def restart(): Unit = {}
 
-  override def shutdown() = {
+  /** @inheritdoc */
+  override def shutdown(): Unit = {
     initialized = false
   }
 }
