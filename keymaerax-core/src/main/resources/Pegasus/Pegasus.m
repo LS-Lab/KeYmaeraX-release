@@ -23,6 +23,7 @@ Begin["`Private`"]
 
 FindConst[ff_,var_,symbols_]:=Module[{ls,repr},
 ls = {ff//.And -> List}//Flatten;
+(* TODO: This line doesn't seem correct... *)
 repr = Select[Cases[ls,Equal[var,rhs_]->rhs],Not[MemberQ[symbols,#]]&]//DeleteDuplicates;
 If[Length[repr]>1,Print["Detected multiple values for ",var,repr]];
 If[Length[repr]==1,{var -> First[repr]},{}]
@@ -60,14 +61,33 @@ Print["Parameters: ", paramfree, " Const assumptions: ", asmsfree];
 
 
 InvGen[prob_List, opts:OptionsPattern[]]:=Catch[Module[
-{pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,constvars,constasms},
+{pre,f,vars,evoConst,post,
+preImpliesPost,postInvariant,preInvariant,class,constvars,constQ,eprob,
+ERRSTR},
 
-{pre,{f,vars,evoConst},post,{constvars,constasms}} = AugmentWithParameters[prob];
+ERRSTR="Incorrect Pegasus problem format.\n
+Requires either {pre,{vf,vars,Q},post} or {pre,{vf,vars,Q},post,{constvars,constQ}}.\n
+pre,post are the pre/postconditions respectively,\n
+vf,vars are lists of equal length representing an ODE vars'=vf\n
+Q is the domain constraint\n
+constvars lists parameters for the problem and constQ are assumptions about parameters\n
+constvars and constQ are automatically generated if not present";
+
+If[Length[prob]!=3 && Length[prob]!=4, Print[ERRSTR]; Throw[{}]];
+
+If[Length[prob[[2]]]!=3, Print[ERRSTR]; Throw[{}]];
+
+If[Length[prob[[2]][[1]]]!=Length[prob[[2]][[2]]]||Length[prob[[2]]]==0, Print[ERRSTR]; Throw[{}]];
+
+If[Length[prob]==3, Print["Extending"];eprob=AugmentWithParameters[prob]];
+
+Print[eprob];
+{pre,{f,vars,evoConst},post,{constvars,constQ}}=eprob;
 
 (* Sanity check with timeout *)
 If[OptionValue[SanityTimeout] > 0,
   TimeConstrained[Block[{},
-  preImpliesPost=Primitives`CheckSemiAlgInclusion[And[pre,constasms,evoConst], post, Join[constvars,vars]];
+  preImpliesPost=Primitives`CheckSemiAlgInclusion[And[pre,constQ,evoConst], post, Join[constvars,vars]];
   If[ Not[TrueQ[preImpliesPost]], 
   Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{}, False}], 
   Print["Precondition implies postcondition. Proceeding."]];
@@ -90,7 +110,7 @@ If[OptionValue[SanityTimeout] > 0,
 class=Classifier`ClassifyProblem[prob];
 Print["Classification: ", class];
 
-DiffSaturation`DiffSat[prob]
+DiffSaturation`DiffSat[eprob]
 ]]
 
 
