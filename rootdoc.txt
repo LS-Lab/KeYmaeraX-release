@@ -48,8 +48,8 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB LemmaDB]]` - Lemma database stored in files or database etc.
 
   - `[[edu.cmu.cs.ls.keymaerax.tools]]` - Arithmetic back-ends
-      - `[[edu.cmu.cs.ls.keymaerax.tools.Mathematica Mathematica]]` - Mathematica interface for real arithmetic and ODE solver etc.
-      - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Z3 Z3]]` - Z3 interface for real arithmetic.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica Mathematica]]` - Mathematica interface for real arithmetic and ODE solver etc.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Z3 Z3]]` - Z3 interface for real arithmetic.
     
 Additional entry points and usage points for KeYmaera X API:
 

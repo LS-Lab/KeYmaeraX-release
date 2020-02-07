@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest

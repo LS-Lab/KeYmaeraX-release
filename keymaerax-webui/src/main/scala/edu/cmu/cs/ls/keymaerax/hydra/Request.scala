@@ -44,7 +44,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonit
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
-import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, TestSynthesis, Z3}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, QETacticTool, TestSynthesis, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
 import org.apache.logging.log4j.scala.Logging

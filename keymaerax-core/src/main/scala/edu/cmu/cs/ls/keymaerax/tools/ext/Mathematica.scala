@@ -5,15 +5,15 @@
 /**
   * @note Code Review: 2016-08-02
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.ext.{MathematicaAlgebraTool, MathematicaCEXTool, MathematicaEquationSolverTool, MathematicaInvGenTool, MathematicaODESolverTool, MathematicaPDESolverTool, MathematicaSimplificationTool, MathematicaSimulationTool, QETacticTool}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool
+import edu.cmu.cs.ls.keymaerax.tools._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{Map, Seq}
