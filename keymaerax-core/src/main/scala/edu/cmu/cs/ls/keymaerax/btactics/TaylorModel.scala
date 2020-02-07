@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
-import edu.cmu.cs.ls.keymaerax.tools.{BigDecimalQETool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.scala.Logging
 import java.util.UUID

@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.tools.{BigDecimalQETool, ToolBase, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolBase, ToolOperationManagement}
 
 import scala.collection.immutable.Map
 
