@@ -258,6 +258,77 @@ object DerivedAxioms extends Logging {
   )
 
 
+  // derived axioms used in useAt itself, thus given as Provables not lemmas, just in case to avoid dependencies
+
+  lazy val boxTrueTrue = TactixLibrary.proveBy(
+    "[a{|^@|};]true <-> true".asFormula,
+    equivR(1) <(closeT, cohideR(1) & byUS("[]T system")))
+
+  lazy val impliesRightAnd = TactixLibrary.proveBy(
+    "(p_()->q_()) & (p_()->r_()) <-> (p_() -> q_()&r_())".asFormula,
+    TactixLibrary.prop)
+
+  lazy val sameImpliesImplies = TactixLibrary.proveBy(
+    "(p_()->q_()) -> (p_()->r_()) <-> (p_() -> (q_()->r_()))".asFormula,
+    TactixLibrary.prop)
+
+  lazy val factorAndRight = TactixLibrary.proveBy(
+    "(q_()&p_()) & (r_()&p_()) <-> ((q_()&r_()) & p_())".asFormula,
+    TactixLibrary.prop)
+
+  lazy val factorAndLeft = TactixLibrary.proveBy(
+    "(p_()&q_()) & (p_()&r_()) <-> (p_() & (q_()&r_()))".asFormula,
+    TactixLibrary.prop)
+
+  lazy val factorOrRight = TactixLibrary.proveBy(
+    "(q_()|p_()) & (r_()|p_()) <-> ((q_()&r_()) | p_())".asFormula,
+    TactixLibrary.prop)
+
+  lazy val factorOrLeft = TactixLibrary.proveBy(
+    "(p_()|q_()) & (p_()|r_()) <-> (p_() | (q_()&r_()))".asFormula,
+    TactixLibrary.prop)
+
+  lazy val factorImpliesOrRight = TactixLibrary.proveBy(
+    "(q_()|p_()) -> (r_()|p_()) <-> ((q_()->r_()) | p_())".asFormula,
+    TactixLibrary.prop)
+
+  lazy val factorImpliesOrLeft = TactixLibrary.proveBy(
+    "(p_()|q_()) -> (p_()|r_()) <-> (p_() | (q_()->r_()))".asFormula,
+    TactixLibrary.prop)
+
+  lazy val impliesMonAndLeft = TactixLibrary.proveBy(
+    "(q_()->r_()) -> (q_()&p_() -> r_()&p_())".asFormula,
+    TactixLibrary.prop)
+
+  lazy val impliesMonAndRight = TactixLibrary.proveBy(
+    "(q_()->r_()) -> (p_()&q_() -> p_()&r_())".asFormula,
+    TactixLibrary.prop)
+
+  lazy val trueOr = TactixLibrary.proveBy(
+    "true | p_() <-> true".asFormula,
+    TactixLibrary.prop)
+
+  lazy val orTrue = TactixLibrary.proveBy(
+    "p_() | true <-> true".asFormula,
+    TactixLibrary.prop)
+
+
+  lazy val ponensAndPassthrough_Imply = TactixLibrary.proveBy(
+    "((p_() ->q_())&p_() -> q_()) <-> true".asFormula,
+    TactixLibrary.prop)
+
+  lazy val ponensAndPassthrough_Equiv = TactixLibrary.proveBy(
+    "((p_()<->q_())&p_() -> q_()) <-> true".asFormula,
+    TactixLibrary.prop)
+
+  lazy val ponensAndPassthrough_coImply = TactixLibrary.proveBy(
+    "((q_() ->p_())&q_() -> p_()) <-> true".asFormula,
+    TactixLibrary.prop)
+
+  lazy val ponensAndPassthrough_coEquiv = TactixLibrary.proveBy(
+    "((p_()<->q_())&q_() -> p_()) <-> true".asFormula,
+    TactixLibrary.prop)
+
   // derived rules
 
   /**
