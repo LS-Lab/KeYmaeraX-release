@@ -38,5 +38,5 @@ object PrettyPrinter extends (Expression => String) {
     * Set a new pretty printer to be used by all [[Expression]] types from now on.
     * @param printer the pretty-printer to use in KeYmaera X from now on.
     */
-  def setPrinter(printer: PrettyPrinter) = {pp = printer}
+  def setPrinter(printer: PrettyPrinter): Unit = {pp = printer}
 }
