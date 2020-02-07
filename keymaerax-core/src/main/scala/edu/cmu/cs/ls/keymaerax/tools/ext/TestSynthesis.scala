@@ -2,13 +2,14 @@
   * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
   * See LICENSE.txt for the conditions of this license.
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools._
 
 /**
   * Synthesize test case configurations from ModelPlex formulas.
