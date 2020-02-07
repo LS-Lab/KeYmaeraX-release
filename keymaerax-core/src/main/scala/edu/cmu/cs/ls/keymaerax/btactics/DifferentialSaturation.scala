@@ -21,9 +21,9 @@ import scala.collection.mutable.ListBuffer
 
 object DifferentialSaturation extends Logging {
 
-  def pQE(f:Formula) : Formula = {
+  def pQE(f: Formula): Formula = {
     val qe = ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None"))
-    qe.qeEvidence(f)._1
+    qe.qe(f).fact.conclusion.succ.head
   }
 
   //Generate a polynomial parametric candidates up to degree deg

@@ -20,8 +20,8 @@ import scala.collection.immutable.Map
  * @author Ran Ji
  * @author Stefan Mitsch
  */
-final class Z3 extends ToolBase("Z3") with QETool with ToolOperationManagement {
-  // Z3 is a trusted tool. Do not extend this class with other tool interfaces.
+final class Z3QETool extends ToolBase("Z3") with QETool with ToolOperationManagement {
+  // Z3 is a trusted tool. Do not extend this class with other tool interfaces. Extend ext.Z3 instead.
   private var z3: Z3Solver = _
 
   /** @inheritdoc */

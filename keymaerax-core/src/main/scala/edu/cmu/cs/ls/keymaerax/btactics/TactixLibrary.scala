@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, S
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.{List, _}
@@ -591,7 +592,7 @@ object TactixLibrary extends HilbertCalculus
       }
       case None => (e: BelleExpr) => e
     }
-    lazy val timeoutTool: QETool = timeout match {
+    lazy val timeoutTool: QETacticTool = timeout match {
       case Some(t) => tool match {
         case tom: ToolOperationManagement =>
           tom.setOperationTimeout(t)

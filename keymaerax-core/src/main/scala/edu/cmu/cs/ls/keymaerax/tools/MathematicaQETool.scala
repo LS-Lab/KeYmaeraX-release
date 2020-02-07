@@ -9,7 +9,6 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
@@ -19,10 +18,11 @@ import org.apache.logging.log4j.scala.Logging
 import scala.collection.immutable
 
 /**
- * A QE tool implementation using Mathematica over the JLink interface.
- * @author Nathan Fulton
- * @author Stefan Mitsch
- */
+  * A QE tool implementation using the provided JLink link to Mathematica/Wolfram Engine.
+  * @param link The link to Mathematica/Wolfram Engine
+  * @author Nathan Fulton
+  * @author Stefan Mitsch
+  */
 class MathematicaQETool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool with Logging {
 

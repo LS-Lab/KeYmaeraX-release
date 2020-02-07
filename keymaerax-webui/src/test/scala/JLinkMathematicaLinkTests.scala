@@ -4,7 +4,6 @@
 */
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -14,6 +13,8 @@ import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Map
+
+import org.scalatest.LoneElement._
 
 /**
  * Tests the JLink Mathematica implementation.
@@ -54,26 +55,27 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   }
 
   "abs(-5) > 4" should "be provable with QE" in withMathematica { link =>
-    the [CoreException] thrownBy link.qeEvidence("abs(-5) > 4".asFormula) should have message
+    the [CoreException] thrownBy link.qe("abs(-5) > 4".asFormula) should have message
       "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      link.qeEvidence("abs(-5) > 4".asFormula)._1 shouldBe True
+      val foo = link.qe("abs(-5) > 4".asFormula).fact
+      link.qe("abs(-5) > 4".asFormula).fact.conclusion shouldBe "==> abs(-5) > 4 <-> true".asSequent
     }
   }
 
   "min(1,3) = 1" should "be provable with QE" in withMathematica { link =>
-    the [CoreException] thrownBy link.qeEvidence("min(1,3) = 1".asFormula) should have message
+    the [CoreException] thrownBy link.qe("min(1,3) = 1".asFormula) should have message
       "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      link.qeEvidence("min(1,3) = 1".asFormula)._1 shouldBe True
+      link.qe("min(1,3) = 1".asFormula).fact.conclusion shouldBe "==> min(1,3) = 1 <-> true".asSequent
     }
   }
 
   "max(1,3) = 3" should "be provable with QE" in withMathematica { link =>
-    the [CoreException] thrownBy link.qeEvidence("max(1,3) = 3".asFormula) should have message
+    the [CoreException] thrownBy link.qe("max(1,3) = 3".asFormula) should have message
       "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      link.qeEvidence("max(1,3) = 3".asFormula)._1 shouldBe True
+      link.qe("max(1,3) = 3".asFormula).fact.conclusion shouldBe "==> max(1,3) = 3 <-> true".asSequent
     }
   }
 
@@ -94,47 +96,45 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   }
 
   "Function conversion" should "prove no-argument functions correctly" in withMathematica { link =>
-    link.qeEvidence("f()>0 -> f()>=0".asFormula)._1 shouldBe True
+    link.qe("f()>0 -> f()>=0".asFormula).fact.conclusion shouldBe "==> f()>0 -> f()>=0 <-> true".asSequent
   }
 
   it should "prove one-argument functions correctly" in withMathematica { link =>
-    link.qeEvidence("f(x)>0 -> f(x)>=0".asFormula)._1 shouldBe True
+    link.qe("f(x)>0 -> f(x)>=0".asFormula).fact.conclusion shouldBe "==> f(x)>0 -> f(x)>=0 <-> true".asSequent
   }
 
   it should "prove binary functions correctly" in withMathematica { link =>
-    link.qeEvidence("f(x,y)>0 -> f(x,y)>=0".asFormula)._1 shouldBe True
+    link.qe("f(x,y)>0 -> f(x,y)>=0".asFormula).fact.conclusion shouldBe "==> f(x,y)>0 -> f(x,y)>=0 <-> true".asSequent
   }
 
   it should "prove multi-argument functions correctly" in withMathematica { link =>
-    link.qeEvidence("f(x,y,z)>0 -> f(x,y,z)>=0".asFormula)._1 shouldBe True
-    link.qeEvidence("f(x,(y,z))>0 -> f(x,(y,z))>=0".asFormula)._1 shouldBe True
-    link.qeEvidence("f((x,y),z)>0 -> f((x,y),z)>=0".asFormula)._1 shouldBe True
+    link.qe("f(x,y,z)>0 -> f(x,y,z)>=0".asFormula).fact.conclusion shouldBe "==> f(x,y,z)>0 -> f(x,y,z)>=0 <-> true".asSequent
+    link.qe("f(x,(y,z))>0 -> f(x,(y,z))>=0".asFormula).fact.conclusion shouldBe "==> f(x,(y,z))>0 -> f(x,(y,z))>=0 <-> true".asSequent
+    link.qe("f((x,y),z)>0 -> f((x,y),z)>=0".asFormula).fact.conclusion shouldBe "==> f((x,y),z)>0 -> f((x,y),z)>=0 <-> true".asSequent
   }
 
   it should "not confuse no-arg functions with variables" in withMathematica { link =>
-    link.qeEvidence("f()>0 -> f>=0".asFormula)._1 shouldBe "f>=0|f()<=0".asFormula
+    link.qe("f()>0 -> f>=0".asFormula).fact.conclusion shouldBe "==> f()>0 -> f>=0 <-> f>=0|f()<=0".asSequent
   }
 
   it should "prove functions with a decimal number argument correctly" in withMathematica { link =>
-    link.qeEvidence("f(0.1)>0 -> f(0.1)>=0".asFormula)._1 shouldBe True
+    link.qe("f(0.1)>0 -> f(0.1)>=0".asFormula).fact.conclusion shouldBe "==> f(0.1)>0 -> f(0.1)>=0 <-> true".asSequent
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      link.qeEvidence("abs(0.1)=0.1".asFormula)._1 shouldBe True
+      link.qe("abs(0.1)=0.1".asFormula).fact.conclusion shouldBe "==> abs(0.1)=0.1 <-> true".asSequent
     }
   }
 
   "Arithmetic" should "translate x--2 as subtraction of -2 (i.e. +2)" in withMathematica { link =>
-    link.qeEvidence("5 < 5--2".asFormula)._1 shouldBe True
+    link.qe("5 < 5--2".asFormula).fact.conclusion shouldBe "==> 5 < 5--2 <-> true".asSequent
   }
 
   "QE" should "label branch on invalid formula" in withMathematica { link =>
-    link.qeEvidence("5<3".asFormula)._1 shouldBe False
+    link.qe("5<3".asFormula).fact.conclusion shouldBe "==> 5<3 <-> false".asSequent
     val result = proveBy("5<3".asFormula, TactixLibrary.QE, {
       case Some(labels) => labels should contain theSameElementsAs BelleLabels.cutShow.append(BelleLabels.QECEX)::Nil
       case None => fail("Expected QE CEX label")
     })
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain theSameElementsAs False::Nil
+    result.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
   "Blocking kernels" should "be detected" in withMathematica { link =>

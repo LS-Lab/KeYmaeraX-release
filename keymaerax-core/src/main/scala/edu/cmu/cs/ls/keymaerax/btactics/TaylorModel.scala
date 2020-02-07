@@ -17,7 +17,7 @@ import java.util.UUID
 
 import cc.redberry.rings
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
+import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
 import rings.poly.PolynomialMethods._
 import rings.scaladsl._
 import syntax._
@@ -562,7 +562,7 @@ object TaylorModelTactics extends Logging {
     }
 
     def cutTM(prec: Integer, antepos: AntePosition,
-              qeTool: QETool,
+              qeTool: QETacticTool,
               remainder_estimation : IndexedSeq[(BigDecimal, BigDecimal)] = (0 until dim).map(_ => (BigDecimal(-0.001),BigDecimal(0.001))))
     : DependentPositionTactic = "cutTM" by { (pos: Position, seq: Sequent) =>
       pos.checkSucc

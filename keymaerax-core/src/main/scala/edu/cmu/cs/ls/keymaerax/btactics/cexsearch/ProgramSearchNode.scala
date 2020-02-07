@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 
 import scala.collection.immutable
 
@@ -13,7 +14,7 @@ import scala.collection.immutable
   * Created by bbohrer on 4/24/16.
   */
 object ProgramSearchNode {
-  def apply(fml:Formula)(implicit qeTool:QETool):ProgramSearchNode = {
+  def apply(fml:Formula)(implicit qeTool: QETacticTool):ProgramSearchNode = {
     fml match {
       case (Imply(pre, Box(prog, post))) => ProgramSearchNode(pre,prog,post)
       case (Imply(a, Imply(b, c))) => apply(Imply(And(a,b), c))
@@ -22,7 +23,7 @@ object ProgramSearchNode {
   }
 }
 
-case class ProgramSearchNode (pre: Formula, prog: Program, post: Formula)(implicit qeTool: QETool) extends SearchNode {
+case class ProgramSearchNode (pre: Formula, prog: Program, post: Formula)(implicit qeTool: QETacticTool) extends SearchNode {
 
   /* We are at a goal state if there is a counterexample to pre -> [prog] post that we can find without any more
   * search, which is to say there are no programs left. Since our representation requires that we always have some "program",

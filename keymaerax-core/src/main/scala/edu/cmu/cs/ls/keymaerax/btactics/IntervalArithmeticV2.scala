@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 
 import scala.collection.immutable._
 
@@ -271,7 +272,7 @@ object IntervalArithmeticV2 {
   def BoundMap(): BoundMap = HashMap[Term, ProvableSig]()
 
   private def recurse(prec: Int)
-             (qeTool: QETool)
+             (qeTool: QETacticTool)
              (assms: IndexedSeq[Formula])
              (lowers: BoundMap, uppers: BoundMap)
              (t: Term): (BoundMap, BoundMap)
@@ -308,8 +309,8 @@ object IntervalArithmeticV2 {
             SubstitutionPair(t_f, f) ::
             SubstitutionPair(t_ff, ff) :: Nil))
 
-        val h_le = ProvableSig.proveArithmetic(qeTool, negDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-        val H_le = ProvableSig.proveArithmetic(qeTool, negUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+        val h_le = qeTool.qe(negDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+        val H_le = qeTool.qe(negUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
         val h_prv = (CutHide(negDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
           apply(negDown, 0).
@@ -358,8 +359,8 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
 
-            val h_le = ProvableSig.proveArithmetic(qeTool, plusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val H_le = ProvableSig.proveArithmetic(qeTool, plusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(plusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(plusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
             val h_prv = (CutHide(plusDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(plusDown, 0).
@@ -394,8 +395,8 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_gg, gg) :: Nil))
 
-            val h_le = ProvableSig.proveArithmetic(qeTool, minusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val H_le = ProvableSig.proveArithmetic(qeTool, minusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(minusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(minusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
             val h_prv = (CutHide(minusDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(minusDown, 0).
@@ -427,7 +428,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val h_le = ProvableSig.proveArithmetic(qeTool, multDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(multDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val ante = multDown.conclusion.ante(0)
             val ff_f_F_gg_g_G = ProvableSig.startProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
               apply(AndRight(SuccPos(0)), 0).
@@ -452,7 +453,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val H_le = ProvableSig.proveArithmetic(qeTool, multUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(multUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_prv = (CutHide(multUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(multUp, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -473,7 +474,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val h_le = ProvableSig.proveArithmetic(qeTool, divideDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(divideDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val ante = divideDown.conclusion.ante(0)
             val ff_f_F_gg_g_G = ProvableSig.startProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
               apply(AndRight(SuccPos(0)), 0).
@@ -498,7 +499,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val H_le = ProvableSig.proveArithmetic(qeTool, divideUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(divideUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_prv = (CutHide(divideUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(divideUp, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -517,7 +518,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_ff, ff) ::
                 SubstitutionPair(t_f, f) ::
                 SubstitutionPair(t_F, F) :: Nil))
-            val h_le = ProvableSig.proveArithmetic(qeTool, powerDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(powerDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val h_prv = (CutHide(powerDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(powerDown, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -533,7 +534,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_ff, ff) ::
                 SubstitutionPair(t_f, f) ::
                 SubstitutionPair(t_F, F) :: Nil))
-            val H_le = ProvableSig.proveArithmetic(qeTool, powerUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(powerUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_prv = (CutHide(powerUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(powerUp, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -579,8 +580,8 @@ object IntervalArithmeticV2 {
               SubstitutionPair(t_F, F) ::
               SubstitutionPair(t_G, G) :: Nil))
 
-          val h_le = ProvableSig.proveArithmetic(qeTool, minDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-          val H_le = ProvableSig.proveArithmetic(qeTool, minUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val h_le = qeTool.qe(minDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val H_le = qeTool.qe(minUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
           val h_prv = (CutHide(minDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
             apply(minDown, 0).
@@ -613,8 +614,8 @@ object IntervalArithmeticV2 {
               SubstitutionPair(t_F, F) ::
               SubstitutionPair(t_G, G) :: Nil))
 
-          val h_le = ProvableSig.proveArithmetic(qeTool, maxDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-          val H_le = ProvableSig.proveArithmetic(qeTool, maxUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val h_le = qeTool.qe(maxDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val H_le = qeTool.qe(maxUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
           val h_prv = (CutHide(maxDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
             apply(maxDown, 0).
@@ -692,7 +693,7 @@ object IntervalArithmeticV2 {
     *
     * */
   def proveBounds(prec: Int)
-                 (qeTool: QETool)
+                 (qeTool: QETacticTool)
                  (assms: IndexedSeq[Formula])
                  (include_assms: Boolean)
                  (lowers0: BoundMap, uppers0: BoundMap)
@@ -705,8 +706,8 @@ object IntervalArithmeticV2 {
     terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2)(t))
   }
 
-  private def proveCompBoth(qeTool: QETool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
-    val le_prv = ProvableSig.proveArithmetic(qeTool, leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+  private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
+    val le_prv = qeTool.qe(leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
     le_prv.conclusion.succ(0) match {
       case Equiv(a, True) =>
       case _ =>
@@ -729,7 +730,7 @@ object IntervalArithmeticV2 {
   private def requireOneSucc(seq: Sequent, who: String) : Unit =
     require(seq.succ.length == 1, who + " requires exactly one formula in the succedent.")
 
-  private def intervalArithmeticComparison(precision: Int, qeTool: QETool) = new BuiltInTactic("ANON") {
+  private def intervalArithmeticComparison(precision: Int, qeTool: QETacticTool) = new BuiltInTactic("ANON") {
     val notSupportedMessage = "intervalArithmetic requires either of <=,<,>,=> in the succedent"
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "intervalArithmeticComparison")
@@ -845,7 +846,7 @@ object IntervalArithmeticV2 {
     }
   }
 
-  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
     requireOneSucc(seq, "intervalArithmeticBool")
     seq.succ(0) match {
       case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))

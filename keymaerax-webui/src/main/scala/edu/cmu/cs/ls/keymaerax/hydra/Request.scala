@@ -44,9 +44,9 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonit
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
-import edu.cmu.cs.ls.keymaerax.tools.ext.TestSynthesis
+import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, TestSynthesis, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
-import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, Z3}
+import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -299,7 +299,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
           } else {
             val fml = sequent.toFormula
             /* TODO: Case on this instead */
-            val qeTool: QETool = ToolProvider.qeTool().get
+            val qeTool: QETacticTool = ToolProvider.qeTool().get
             val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
             val search = new BoundedDFS(10)
             try {

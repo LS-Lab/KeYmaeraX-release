@@ -16,8 +16,9 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, 
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
-import edu.cmu.cs.ls.keymaerax.tools.qe.{Polya, Z3}
+import edu.cmu.cs.ls.keymaerax.tools.qe.Polya
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
 import org.scalatest.concurrent.{Signaler, TimeLimitedTests, TimeLimits}
@@ -139,7 +140,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    *    }
    * }}}
    * */
-  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) = mathematicaProvider.synchronized {
+  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1): Unit = mathematicaProvider.synchronized {
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
     withTemporaryConfig(Map(
         Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
@@ -195,7 +196,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: QETool => Any, timeout: Int = -1): Unit = {
+  def withQE(testcode: QETacticTool => Any, timeout: Int = -1): Unit = {
     withClue("Mathematica") { withMathematica(testcode, timeout) }
     afterEach()
     beforeEach()

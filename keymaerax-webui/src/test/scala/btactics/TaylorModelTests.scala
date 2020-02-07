@@ -1,18 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 import org.scalatest.LoneElement._
 import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
-import TactixLibrary._
-import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool
+import edu.cmu.cs.ls.keymaerax.tools.ext.BigDecimalTool
 
 import scala.collection.immutable._
 
@@ -211,7 +205,9 @@ class TaylorModelTests extends TacticTestBase {
         "z = 0*r0() + 0*r1() + 0.01*r2() + 0) & " +
         "(-1 <= r0() & r0() <= 1) & (-1 <= r1() & r1() <= 1) & (-1 <= r2() & r2() <= 1)").asFormula
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
-      val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), BigDecimalQETool)(1)))
+      val bgtool = new BigDecimalTool()
+      bgtool.init(Map.empty)
+      val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1)))
       val res2 = IntervalArithmeticV2Tests.timing("Mathematica     ")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1)))
       res1 shouldEqual res2
       val res = proveBy(res1, SimplifierV3.simpTac()(1, 0 :: 1 :: Nil))
@@ -287,7 +283,9 @@ class TaylorModelTests extends TacticTestBase {
         "y = 0*r0() + 0.01*r1() + 0.5) &" +
         "(-1 <= r0() & r0() <= 1) & (-1 <= r1() & r1() <= 1)").asFormula
       val seq = Sequent(IndexedSeq(assms), IndexedSeq(box))
-      val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), BigDecimalQETool)(1)))
+      val bgtool = new BigDecimalTool()
+      bgtool.init(Map.empty)
+      val res1 = IntervalArithmeticV2Tests.timing("BigDecimalQETool")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), bgtool)(1)))
       val res2 = IntervalArithmeticV2Tests.timing("Mathematica     ")(() => proveBy(seq, tm.cutTM(10, AntePosition(1), qeTool)(1)))
       res1 shouldEqual res2
       val res = res1

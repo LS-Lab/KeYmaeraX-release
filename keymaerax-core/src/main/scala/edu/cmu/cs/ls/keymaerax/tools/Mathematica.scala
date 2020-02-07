@@ -10,9 +10,11 @@ package edu.cmu.cs.ls.keymaerax.tools
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.ext.{MathematicaAlgebraTool, MathematicaCEXTool, MathematicaEquationSolverTool, MathematicaInvGenTool, MathematicaODESolverTool, MathematicaPDESolverTool, MathematicaSimplificationTool, MathematicaSimulationTool}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{MathematicaAlgebraTool, MathematicaCEXTool, MathematicaEquationSolverTool, MathematicaInvGenTool, MathematicaODESolverTool, MathematicaPDESolverTool, MathematicaSimplificationTool, MathematicaSimulationTool, QETacticTool}
 
+import scala.annotation.tailrec
 import scala.collection.immutable.{Map, Seq}
 
 /**
@@ -23,7 +25,8 @@ import scala.collection.immutable.{Map, Seq}
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends ToolBase(name) with QETool with InvGenTool with ODESolverTool with CounterExampleTool
+class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends ToolBase(name)
+    with QETacticTool with InvGenTool with ODESolverTool with CounterExampleTool
     with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
     with PDESolverTool with ToolOperationManagement {
 
@@ -91,10 +94,10 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   }
 
   /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+  override def qe(formula: Formula): Lemma = {
     mQE.timeout = qeInitialTimeout
     try {
-      mQE.qeEvidence(formula)
+      ProvableSig.proveArithmetic(mQE, formula)
     } catch {
       case _: MathematicaComputationAbortedException =>
         mCEX.timeout = qeCexTimeout
@@ -111,14 +114,17 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
         cex match {
           case None =>
             mQE.timeout = qeMaxTimeout
-            mQE.qeEvidence(formula)
-          case Some(cexFml) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(","))))
+            ProvableSig.proveArithmetic(mQE, formula)
+          case Some(cexFml) => Lemma(
+            ProvableSig.startProof(False),
+            ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)
         }
       case ex: MathematicaComputationExternalAbortException => throw ex
     }
   }
 
   /** Strips the universal quantifiers from a formula. Assumes shape \forall x (p(x) -> q(x)) */
+  @tailrec
   private def stripUniversalClosure(fml: Formula): Formula = fml match {
     case f: Imply => f
     case Forall(_, f) => stripUniversalClosure(f)
