@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.KExpr
+import edu.cmu.cs.ls.keymaerax.tools.ext.{CEXM2KConverter, PegasusM2KConverter, UncheckedBaseK2MConverter}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
