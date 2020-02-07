@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
@@ -378,7 +378,7 @@ object KeYmaeraX {
     }
 
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    KeYmaeraXTool.init(Map.empty)
 
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
@@ -460,6 +460,7 @@ object KeYmaeraX {
     Await.ready(Future { ToolProvider.shutdown() }, Duration(5, TimeUnit.SECONDS))
     ToolProvider.setProvider(new NoneToolProvider())
     TactixLibrary.invGenerator = FixedGenerator(Nil)
+    KeYmaeraXTool.shutdown()
     //@note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
   }
 

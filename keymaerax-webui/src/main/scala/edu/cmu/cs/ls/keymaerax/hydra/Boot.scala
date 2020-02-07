@@ -21,8 +21,10 @@ import org.apache.logging.log4j.scala.Logging
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContextExecutor
 import scala.language.postfixOps
 
@@ -152,7 +154,7 @@ object HyDRAInitializer extends Logging {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    KeYmaeraXTool.init(Map.empty)
 
 //    val axioms = Provable.axioms
 //    LoadingDialogFactory().addToStatus(5, Some("Starting with " + axioms.size + " axioms ..."))
@@ -208,6 +210,7 @@ object HyDRAInitializer extends Logging {
     }
   }
 
+  @tailrec
   def nextOption(map: OptionMap, list: List[String]): OptionMap = list match {
     case Nil => map
     case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
