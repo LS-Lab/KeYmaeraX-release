@@ -18,6 +18,7 @@ import java.util.UUID
 import cc.redberry.rings
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import rings.poly.PolynomialMethods._
 import rings.scaladsl._
 import syntax._

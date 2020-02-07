@@ -5,6 +5,7 @@ import java.math.{MathContext, RoundingMode}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 /** Tests for (hopefully) trustworthy BigDecimal computationss
   * @author Fabian Immler

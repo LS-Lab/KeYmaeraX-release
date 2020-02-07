@@ -8,10 +8,10 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.collection.immutable._
 

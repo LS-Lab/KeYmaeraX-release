@@ -1,12 +1,15 @@
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.math.{MathContext, RoundingMode}
-import edu.cmu.cs.ls.keymaerax.core._
+
+import edu.cmu.cs.ls.keymaerax.core.{And, BinaryCompositeTerm, Divide, Equal, Evidence, False, Formula, FuncOf, Function, Greater, GreaterEqual, Less, LessEqual, Minus, Neg, NotEqual, Number, Or, Pair, Plus, Power, QETool, Real, Term, Times, True, Tuple, UnaryCompositeTerm}
+import edu.cmu.cs.ls.keymaerax.tools.ToolBase
 
 import scala.collection.immutable.Map
 
 /** (Hopefully) trustworthy and fast tool to help speed up IntervalArithmeticV2
   * 'proves' quantifier- and variable-free arithmetic formulas by evaluation with BigDecimals
+ *
   * @author Fabian Immler
   */
 object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
