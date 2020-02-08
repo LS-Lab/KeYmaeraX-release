@@ -7,10 +7,12 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import com.wolfram.jlink.Expr
+
 // favoring immutable Seqs
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
 
 /**
  * Name conversion to/from Mathematica. Prefixes all names with a namespace prefix. Refuses to convert interpreted symbols.
@@ -22,6 +24,9 @@ private object MathematicaNameConversion {
   private val PREFIX = "kyx`"
   private val SEP    = "$i$"
   private val UNDERSCORE = "$u$"
+
+  /** Creates a Mathematica symbol `s`. */
+  def symbol(s: String): MExpr = new MExpr(Expr.SYMBOL, s)
 
   /**
     * Converts a KeYmaera name into a Mathematica symbol. Masks names as follows:
@@ -39,7 +44,7 @@ private object MathematicaNameConversion {
       case DifferentialSymbol(_) => throw new ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ => maskName(ns)
     }
-    new MExpr(com.wolfram.jlink.Expr.SYMBOL, name)
+    symbol(name)
   } ensures (r => r.symbolQ(), "symbol names expected as result")
 
   /**
@@ -61,7 +66,7 @@ private object MathematicaNameConversion {
     } else {
       val (name, index) = unmaskName(e.head().asString())
       val fnDomain = convertFunctionDomain(e.args())
-      Function(name, index, fnDomain, Real, false)
+      Function(name, index, fnDomain, Real, interpreted = false)
     }
   }
 

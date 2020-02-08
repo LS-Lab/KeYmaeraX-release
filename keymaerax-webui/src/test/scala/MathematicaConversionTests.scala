@@ -254,6 +254,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     localMl.run(math)._2 shouldBe e
   }
 
+  it should "convert nested quantifiers" in {
+    round trip "\\forall a \\forall b \\exists c \\forall d (a<=b -> c>=a+d)".asFormula
+  }
+
   "KeYmaera -> Mathematica" should "convert Apply" in {
     val in = FuncOf(Function("y", None, Real, Real), Variable("x"))
     val expected = new MExpr(new MExpr(Expr.SYMBOL, "kyx`y"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))

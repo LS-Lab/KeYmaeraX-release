@@ -11,11 +11,11 @@ package edu.cmu.cs.ls.keymaerax.tools
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion.symbol
 import edu.cmu.cs.ls.keymaerax.tools.KMComparator.hasHead
 
 /**
- * Converts com.wolfram.jlink.Expr -> edu.cmu...keymaerax.core.Expr
- *
+ * Converts [[com.wolfram.jlink.Expr]] to [[Expression]].
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
@@ -38,91 +38,87 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       else throw new ConversionException("Cannot convert number " + e + " (neither double, long, nor big decimal)") //@note complexQ
     }
     //@note self-created MExpr with head RATIONAL are not rationalQ (type identifiers do not match)
-    else if (e.rationalQ() || hasHead(e,MathematicaSymbols.RATIONAL)) {
-      assert(hasHead(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
+    else if (MathematicaOpSpec.rational.applies(e)) convertBinary(e, Divide.apply)
 
     // Arith expressions
-    else if (hasHead(e,MathematicaSymbols.PLUS))  convertNary(e, Plus.apply)
-    else if (hasHead(e,MathematicaSymbols.MINUS)) convertBinary(e, Minus.apply)
-    else if (hasHead(e,MathematicaSymbols.MULT))  convertNary(e, Times.apply)
-    else if (hasHead(e,MathematicaSymbols.DIV))   convertBinary(e, Divide.apply)
-    else if (hasHead(e,MathematicaSymbols.EXP))   convertBinary(e, Power.apply)
-    else if (hasHead(e,MathematicaSymbols.MINUSSIGN)) convertUnary(e, Neg.apply)
+    else if (MathematicaOpSpec.plus.applies(e))   convertNary  (e, Plus.apply)
+    else if (MathematicaOpSpec.minus.applies(e))  convertBinary(e, Minus.apply)
+    else if (MathematicaOpSpec.times.applies(e))  convertNary  (e, Times.apply)
+    else if (MathematicaOpSpec.divide.applies(e)) convertBinary(e, Divide.apply)
+    else if (MathematicaOpSpec.power.applies(e))  convertBinary(e, Power.apply)
+    else if (MathematicaOpSpec.neg.applies(e))    convertUnary (e, Neg.apply)
 
     // Comparisons
-    else if (hasHead(e, MathematicaSymbols.EQUALS))         convertComparison(e, Equal.apply)
-    else if (hasHead(e, MathematicaSymbols.UNEQUAL))        convertComparison(e, NotEqual.apply)
-    else if (hasHead(e, MathematicaSymbols.GREATER))        convertComparison(e, Greater.apply)
-    else if (hasHead(e, MathematicaSymbols.GREATER_EQUALS)) convertComparison(e, GreaterEqual.apply)
-    else if (hasHead(e, MathematicaSymbols.LESS))           convertComparison(e, Less.apply)
-    else if (hasHead(e, MathematicaSymbols.LESS_EQUALS))    convertComparison(e, LessEqual.apply)
-    else if (hasHead(e, MathematicaSymbols.INEQUALITY))     convertInequality(e)
+    else if (MathematicaOpSpec.equal.applies(e))        convertComparison(e, Equal.apply)
+    else if (MathematicaOpSpec.unequal.applies(e))      convertComparison(e, NotEqual.apply)
+    else if (MathematicaOpSpec.greater.applies(e))      convertComparison(e, Greater.apply)
+    else if (MathematicaOpSpec.greaterEqual.applies(e)) convertComparison(e, GreaterEqual.apply)
+    else if (MathematicaOpSpec.less.applies(e))         convertComparison(e, Less.apply)
+    else if (MathematicaOpSpec.lessEqual.applies(e))    convertComparison(e, LessEqual.apply)
+    else if (MathematicaOpSpec.inequality.applies(e))   convertInequality(e)
 
     // Formulas
-    else if (hasHead(e, MathematicaSymbols.TRUE))   True
-    else if (hasHead(e, MathematicaSymbols.FALSE))  False
-    else if (hasHead(e, MathematicaSymbols.NOT))    convertUnary(e, Not.apply)
-    else if (hasHead(e, MathematicaSymbols.AND))    convertNary(e, And.apply)
-    else if (hasHead(e, MathematicaSymbols.OR))     convertNary(e, Or.apply)
-    else if (hasHead(e, MathematicaSymbols.IMPL))   convertBinary(e, Imply.apply)
-    else if (hasHead(e, MathematicaSymbols.BIIMPL)) convertBinary(e, Equiv.apply)
+    else if (MathematicaOpSpec.ltrue.applies(e))      True
+    else if (MathematicaOpSpec.lfalse.applies(e))     False
+    else if (MathematicaOpSpec.not.applies(e))        convertUnary(e, Not.apply)
+    else if (MathematicaOpSpec.and.applies(e))        convertNary(e, And.apply)
+    else if (MathematicaOpSpec.or.applies(e))         convertNary(e, Or.apply)
+    else if (MathematicaOpSpec.implies.applies(e))    convertBinary(e, Imply.apply)
+    else if (MathematicaOpSpec.equivalent.applies(e)) convertBinary(e, Equiv.apply)
 
     //Quantifiers
-    else if (hasHead(e,MathematicaSymbols.FORALL)) convertQuantifier(e, Forall.apply)
-    else if (hasHead(e,MathematicaSymbols.EXISTS)) convertQuantifier(e, Exists.apply)
+    else if (MathematicaOpSpec.forall.applies(e)) convertQuantifier(e, Forall.apply)
+    else if (MathematicaOpSpec.exists.applies(e)) convertQuantifier(e, Exists.apply)
 
     // Rules and List of rules not supported -> override if needed
-    else if (hasHead(e, MathematicaSymbols.RULE)) throw new ConversionException("Unsupported conversion RULE " + e)
+    else if (hasHead(e, symbol("Rule"))) throw new ConversionException("Unsupported conversion RULE " + e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      hasHead(_, MathematicaSymbols.RULE)))) throw new ConversionException("Unsupported conversion List[RULE] " + e)
+      hasHead(_, symbol("Rule"))))) throw new ConversionException("Unsupported conversion List[RULE] " + e)
 
     // Pairs
-    else if (e.listQ()) convertList(e)
+    else if (MathematicaOpSpec.pair.applies(e)) convertList(e)
 
-    // Functions
-    else if (e.head().symbolQ() && !MathematicaSymbols.keywords.contains(e.head().toString)) convertAtomicTerm(e)
-
-    //Variables. This case intentionally comes last, so that it doesn't gobble up
-    //and keywords that were not declared correctly in MathematicaSymbols (should be none)
-    else if (e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString())) convertAtomicTerm(e)
+    // Functions and Variables. This case intentionally comes last, so that it doesn't match
+    // keywords that were not declared correctly in MathematicaOpSpec (should be none)
+    else if (MathematicaOpSpec.isNonKeywordSymbol(e)) convertAtomicTerm(e)
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
-    else throw mathExn(e)
+    else throw new ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   } ensures(r => StaticSemantics.symbols(r).forall({case fn@Function(_, _, _, _, true) => MathematicaConversion.interpretedSymbols.contains(fn) case _ => true}), "Interpreted functions must have expected domain and sort for conversion of " + e)
 
 
-  private def convertUnary[T<:Expression](e : MExpr, op: T=>T): T = {
+  private def convertUnary[T<:Expression](e: MExpr, op: T=>T): T = {
     require(e.args().length == 1, "unary operator expects 1 argument")
     val subformula = convert(e.args().head).asInstanceOf[T]
     op(subformula)
   }
 
-  private def convertBinary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
+  private def convertBinary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
     require(e.args().length == 2, "binary operator expects 2 arguments")
     convertNary(e, op)
   }
 
-  private def convertNary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
+  private def convertNary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args().map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[T])
     asTerms.reduce((l,r) => op(l,r))
   }
 
-  private def convertComparison[S<:Expression,T<:Expression](e : MExpr, op: (S,S) => T): T = {
+  private def convertComparison[S<:Expression,T<:Expression](e: MExpr, op: (S,S) => T): T = {
     val subexpressions = e.args().map(convert)
     require(subexpressions.length == 2, "binary operator expects 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[S])
     op(asTerms(0), asTerms(1))
   }
 
-  private def convertQuantifier(e: MExpr, op:(Seq[Variable], Formula)=>Formula) = {
+  private def convertQuantifier(e: MExpr, op:(Seq[Variable], Formula)=>Formula): Formula = {
     require(e.args().length == 2, "Expected args size 2.")
 
     val variableBlock = e.args().headOption.getOrElse(
       throw new ConversionException("Found unexpected empty variable list after quantifier."))
 
-    val quantifiedVars: List[Variable] = if (variableBlock.head().equals(MathematicaSymbols.LIST)) {
+    val quantifiedVars: List[Variable] = if (variableBlock.head() == symbol("List")) {
       //Convert the list of quantified variables
       variableBlock.args().toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
     } else {
@@ -143,7 +139,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     } else throw new ConversionException("Expected a list, but got " + e)
   }
 
-  protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.get(e.head) match {
+  protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
     case Some(fn) => convertFunction(fn, e.args())
     case None =>
       MathematicaNameConversion.toKeYmaera(e) match {
@@ -168,7 +164,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       require(exprs.length % 2 == 1, "Expected pairs of expressions separated by operators")
       if (exprs.length == 1) Nil
       //@note Instead of importing from a newly created Mathematica expression, could also copy the comparison conversion again
-      else importResult(new MExpr(exprs(1), Array[MExpr](exprs(0), exprs(2))), convert).asInstanceOf[ComparisonFormula] ::
+      else importResult(MathematicaOpSpec(exprs(1))(exprs(0), exprs(2)), convert).asInstanceOf[ComparisonFormula] ::
         // keep right-child exprs(2) around because that's the left-child for the subsequent inequality if any
         extractInequalities(exprs.tail.tail)
     }
@@ -177,15 +173,8 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     extractInequalities(e.args()).reduceRight(And)
   }
 
-  // error catching and reporting
+  // reporting
 
-  //@todo MathematicaSymbols.ABORTED
-  protected def isAborted(e: MExpr): Boolean = e.toString.equalsIgnoreCase("$Aborted") || e.toString.equalsIgnoreCase("Abort[]")
-  protected def isFailed(e: MExpr): Boolean = e.toString.equalsIgnoreCase("$Failed")
-
-  private def mathExn(e: MExpr) : Exception =
-    new ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
-  
   private def mathInfo(e: MExpr) : String = {
     "args:\t" + {if (e.args().length == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
     "\n" +

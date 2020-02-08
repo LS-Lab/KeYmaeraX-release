@@ -308,9 +308,9 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
       val qidx: Long = ml.synchronized {
         queryIndex += 1; queryIndex
       }
-      val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
+      val indexedCmd = MathematicaOpSpec.list(new MExpr(qidx), cmd)
       // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-      val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
+      val checkErrorMsgCmd = MathematicaOpSpec.check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/)
       try {
         logger.debug("Sending to " + engineName + ": " + checkErrorMsgCmd)
 
@@ -384,10 +384,9 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     ml.waitForAnswer()
     importResult(ml.getExpr,
       res => {
-        //@todo check with MathematicaToKeYmaera.isAborted
-        if (res == MathematicaSymbols.ABORTED) {
+        if (isAborted(res)) {
           throw new MathematicaComputationAbortedException(ctx)
-        } else if (res == MathematicaSymbols.EXCEPTION) {
+        } else if (res == MathematicaOpSpec.exception.op) {
           // an exception occurred, rerun to get the messages
           ml.evaluate(ctx + ";" + fetchMessagesCmd)
           ml.waitForAnswer()
@@ -395,12 +394,12 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
           throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
         } else {
           val head = res.head
-          if (head.equals(MathematicaSymbols.CHECK)) {
+          if (head == MathematicaOpSpec.check.op) {
             throw new IllegalStateException(engineName + " returned input as answer: " + res.toString)
           } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
             val theResult = res.args.last
             //@todo check with MathematicaToKeYmaera.isAborted
-            if (theResult == MathematicaSymbols.ABORTED) throw new MathematicaComputationAbortedException(ctx)
+            if (theResult == MathematicaOpSpec.aborted.op) throw new MathematicaComputationAbortedException(ctx)
             else (theResult.toString, converter(theResult))
           } else {
             throw new IllegalStateException(engineName + " returned a stale answer for " + res.toString)
@@ -416,7 +415,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
 
   /** Returns the version. */
   private def getVersion: Version = {
-    ml.evaluate(MathematicaSymbols.VERSIONNUMBER)
+    ml.evaluate(MathematicaOpSpec.versionNumber.op)
     ml.waitForAnswer()
     val (major, minor) = importResult(
       ml.getExpr,
@@ -426,7 +425,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         if (versionParts.length >= 2) (versionParts(0), versionParts(1))
         else ("Unknown", "Unknown")
       })
-    ml.evaluate(MathematicaSymbols.RELEASENUMBER)
+    ml.evaluate(MathematicaOpSpec.releaseNumber.op)
     ml.waitForAnswer()
     val release = importResult(ml.getExpr, _.toString)
     Version(major, minor, release)
@@ -469,7 +468,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         case e: ExprFormatException => logger.warn("WARNING: Unable to determine " + engineName + " expiration date\n cause: " + e, e); None
       }
 
-      ml.evaluate(MathematicaSymbols.LICENSEEXPIRATIONDATE)
+      ml.evaluate(MathematicaOpSpec.licenseExpirationDate.op)
       ml.waitForAnswer()
       importResult(ml.getExpr, licenseExpiredConverter)
     } finally {
@@ -590,9 +589,9 @@ class WolframScript extends MathematicaLink with Logging {
       val qidx: Long = wolframProcess.synchronized {
         queryIndex += 1; queryIndex
       }
-      val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
+      val indexedCmd = MathematicaOpSpec.list(new MExpr(qidx), cmd)
       // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-      val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
+      val checkErrorMsgCmd = MathematicaOpSpec.check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/)
       try {
         logger.debug("Sending to Wolfram Engine " + checkErrorMsgCmd)
 
@@ -660,21 +659,20 @@ class WolframScript extends MathematicaLink with Logging {
     importResult(result,
       res => {
         //@todo check with MathematicaToKeYmaera.isAborted
-        if (res == MathematicaSymbols.ABORTED) {
+        if (isAborted(res)) {
           throw new MathematicaComputationAbortedException(ctx)
-        } else if (res == MathematicaSymbols.EXCEPTION) {
+        } else if (res == MathematicaOpSpec.exception.op) {
           // an exception occurred, rerun to get the messages
           val msgResult = evaluate(ctx + ";" + fetchMessagesCmd)
           val txtMsg = importResult(msgResult, _.toString)
           throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
         } else {
           val head = res.head
-          if (head.equals(MathematicaSymbols.CHECK)) {
+          if (head == MathematicaOpSpec.check.op) {
             throw new IllegalStateException("Wolfram Engine returned input as answer: " + res.toString)
           } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asBigDecimal().intValueExact() == cmdIdx) {
             val theResult = res.args.last
-            //@todo check with MathematicaToKeYmaera.isAborted
-            if (theResult == MathematicaSymbols.ABORTED) throw new MathematicaComputationAbortedException(ctx)
+            if (isAborted(theResult)) throw new MathematicaComputationAbortedException(ctx)
             else (theResult.toString, converter(theResult))
           } else {
             throw new IllegalStateException("Wolfram Engine returned a stale answer for " + res.toString)
@@ -693,7 +691,7 @@ class WolframScript extends MathematicaLink with Logging {
 
   /** Returns the version. */
   def getVersion: Version = {
-    val mmResult = evaluate(MathematicaSymbols.VERSIONNUMBER)
+    val mmResult = evaluate(MathematicaOpSpec.versionNumber.op.toString)
     val (major, minor) = importResult(
       mmResult,
       version => {
@@ -703,7 +701,7 @@ class WolframScript extends MathematicaLink with Logging {
         else if (versionParts.nonEmpty) (versionParts(0), "0")
         else ("Unknown", "Unknown")
       })
-    val rResult = evaluate(MathematicaSymbols.RELEASENUMBER)
+    val rResult = evaluate(MathematicaOpSpec.releaseNumber.op.toString)
     val release = importResult(rResult, _.toString)
     Version(major, minor, release)
   }
@@ -742,7 +740,7 @@ class WolframScript extends MathematicaLink with Logging {
         case e: ExprFormatException => logger.warn("WARNING: Unable to determine Wolfram Engine expiration date\n cause: " + e, e); None
       }
 
-      val result = evaluate(MathematicaSymbols.LICENSEEXPIRATIONDATE)
+      val result = evaluate(MathematicaOpSpec.licenseExpirationDate.op.toString)
       importResult(result, licenseExpiredConverter)
     } finally {
       infinity.dispose()
@@ -799,8 +797,8 @@ class WolframScript extends MathematicaLink with Logging {
       case JsNumber(n) if  n.isWhole() => new MExpr(n.toBigIntExact().getOrElse(
         throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
       case JsNumber(n) if !n.isWhole() => new MExpr(n.bigDecimal)
-      case JsTrue => MathematicaSymbols.TRUE
-      case JsFalse => MathematicaSymbols.FALSE
+      case JsTrue => MathematicaOpSpec.ltrue.op
+      case JsFalse => MathematicaOpSpec.lfalse.op
       case JsNull => new MExpr(Expr.SYMBOL, "null")
       case JsArray(elems) =>
         val converted = elems.map(convertJSON)

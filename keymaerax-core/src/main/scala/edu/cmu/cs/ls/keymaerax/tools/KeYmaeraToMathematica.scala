@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion._
 
+import scala.annotation.tailrec
 import scala.math.BigDecimal
 
 /**
@@ -43,8 +44,8 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     e match {
       case t: Term => convertTerm(t)
       case f: Formula => convertFormula(f)
-      case p: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
-      case f: Function => throw new IllegalArgumentException("There is no conversion from unapplied function symbols to Mathematica " + e)
+      case _: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
+      case _: Function => throw new IllegalArgumentException("There is no conversion from unapplied function symbols to Mathematica " + e)
     }
   }
 
@@ -62,34 +63,36 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
       //@todo Code Review: clean up FuncOf conversion into two cases here
       //@solution: inlined and simplified the FuncOf cases, moved uniform name conversion into MathematicaNameConversion
       //@solution: distinguish between interpreted and uninterpreted function symbols
-      case FuncOf(fn, child) if fn.interpreted => convertFunction(interpretedSymbols(fn), child)
       //@note Uninterpreted functions are mapped to namespace kyx` to avoid clashes with any interpreted names
-      case FuncOf(fn, child) if !fn.interpreted => convertFunction(toMathematica(fn), child)
-      case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
-      case Plus(l, r) => new MExpr(MathematicaSymbols.PLUS, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Minus(l, r) => new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Times(l, r) => new MExpr(MathematicaSymbols.MULT, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Divide(l: Number, r: Number) if l.value.isValidLong && r.value.isValidLong =>
-        new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Divide(l, r) => new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Power(l, r) => new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Number(n) if n.isWhole => new MExpr(n.toBigIntExact().getOrElse(
-        throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
-      case Number(n) if !n.isWhole && n.scale > 0 =>
-        val num = BigDecimal(n.bigDecimal.unscaledValue())
-        val denom = BigDecimal(BigDecimal(1).bigDecimal.movePointRight(n.scale))
-        assert(n == num/denom, "Expected double to rational conversion to have value " + n + ", but got numerator " + num + " and denominator " + denom)
-        new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convert(Number(num)), convert(Number(denom))))
-      case Number(n) if !n.isWhole && n.scale < 0 =>
-        //@note negative scale means: unscaled*10^(-scale)
-        val num = BigDecimal(n.bigDecimal.unscaledValue()).bigDecimal.movePointLeft(n.scale)
-        assert(n == BigDecimal(num), "Expected double conversion to have value " + n + ", but got " + num)
-        convert(Number(num))
-      case Number(n) => throw new ConversionException("Number is neither BigInteger nor encodable as rational of BigInteger: " + n)
+      case FuncOf(fn, child) =>
+        if (fn.interpreted) interpretedSymbols(fn)(convertFunctionArgs(child))
+        else MathematicaOpSpec.func.k2m(fn, convertFunctionArgs(child))
+      case Neg(c) => MathematicaOpSpec.neg(convertTerm(c))
+      case Plus(l, r) => MathematicaOpSpec.plus(convertTerm(l), convertTerm(r))
+      case Minus(l, r) => MathematicaOpSpec.minus(convertTerm(l), convertTerm(r))
+      case Times(l, r) => MathematicaOpSpec.times(convertTerm(l), convertTerm(r))
+      case Divide(l: Number, r: Number) =>
+        if (l.value.isValidLong && r.value.isValidLong) MathematicaOpSpec.rational(convertTerm(l), convertTerm(r))
+        else MathematicaOpSpec.divide(convertTerm(l), convertTerm(r))
+      case Divide(l, r) => MathematicaOpSpec.divide(convertTerm(l), convertTerm(r))
+      case Power(l, r) => MathematicaOpSpec.power(convertTerm(l), convertTerm(r))
+      case Number(n) =>
+        if (n.isWhole) {
+          new MExpr(n.toBigIntExact().getOrElse(
+            throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
+        } else if (n.scale > 0) {
+          val num = BigDecimal(n.bigDecimal.unscaledValue())
+          val denom = BigDecimal(BigDecimal(1).bigDecimal.movePointRight(n.scale))
+          assert(n == num/denom, "Expected double to rational conversion to have value " + n + ", but got numerator " + num + " and denominator " + denom)
+          new MExpr(symbol("Rational"), Array[MExpr](convert(Number(num)), convert(Number(denom))))
+        } else if (n.scale < 0) {
+          //@note negative scale means: unscaled*10^(-scale)
+          val num = BigDecimal(n.bigDecimal.unscaledValue()).bigDecimal.movePointLeft(n.scale)
+          assert(n == BigDecimal(num), "Expected double conversion to have value " + n + ", but got " + num)
+          convert(Number(num))
+        } else throw new ConversionException("Number is neither BigInteger nor encodable as rational of BigInteger: " + n)
       case t: Variable => toMathematica(t)
-      case Pair(l, r) =>
-        //@note converts nested pairs into nested lists of length 2 each
-        new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Pair(l, r) => MathematicaOpSpec.pair(convertTerm(l), convertTerm(r))
     }
   }
 
@@ -97,60 +100,46 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
    * Converts KeYmaera formulas into Mathematica objects
    */
   protected def convertFormula(f : Formula): MExpr = f match {
-    case And(l, r)  => new MExpr(MathematicaSymbols.AND, Array[MExpr](convertFormula(l), convertFormula(r)))
-    case Equiv(l,r) => new MExpr(MathematicaSymbols.BIIMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
-    case Imply(l,r) => new MExpr(MathematicaSymbols.IMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
-    case Or(l, r)   => new MExpr(MathematicaSymbols.OR, Array[MExpr](convertFormula(l), convertFormula(r)))
-    case Equal(l,r) => new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
-    case NotEqual(l,r) => new MExpr(MathematicaSymbols.UNEQUAL, Array[MExpr](convertTerm(l), convertTerm(r)))
-    case LessEqual(l,r) => new MExpr(MathematicaSymbols.LESS_EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
-    case Less(l,r)   => new MExpr(MathematicaSymbols.LESS, Array[MExpr](convertTerm(l), convertTerm(r)))
-    case GreaterEqual(l,r) => new MExpr(MathematicaSymbols.GREATER_EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
-    case Greater(l,r) => new MExpr(MathematicaSymbols.GREATER, Array[MExpr](convertTerm(l), convertTerm(r)))
-    case False => MathematicaSymbols.FALSE
-    case True => MathematicaSymbols.TRUE
-    case Not(phi) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(phi)))
-    case exists: Exists => convertExists(exists)
-    case forall: Forall => convertForall(forall)
+    case And(l, r)  => MathematicaOpSpec.and(convertFormula(l), convertFormula(r))
+    case Equiv(l,r) => MathematicaOpSpec.equivalent(convertFormula(l), convertFormula(r))
+    case Imply(l,r) => MathematicaOpSpec.implies(convertFormula(l), convertFormula(r))
+    case Or(l, r)   => MathematicaOpSpec.or(convertFormula(l), convertFormula(r))
+    case Equal(l,r) => MathematicaOpSpec.equal(convertTerm(l), convertTerm(r))
+    case NotEqual(l,r) => MathematicaOpSpec.unequal(convertTerm(l), convertTerm(r))
+    case LessEqual(l,r) => MathematicaOpSpec.lessEqual(convertTerm(l), convertTerm(r))
+    case Less(l,r)   => MathematicaOpSpec.less(convertTerm(l), convertTerm(r))
+    case GreaterEqual(l,r) => MathematicaOpSpec.greaterEqual(convertTerm(l), convertTerm(r))
+    case Greater(l,r) => MathematicaOpSpec.greater(convertTerm(l), convertTerm(r))
+    case False => MathematicaOpSpec.lfalse.op
+    case True => MathematicaOpSpec.ltrue.op
+    case Not(phi) => MathematicaOpSpec.not(convertFormula(phi))
+    case exists: Exists => convertQuantified(exists, MathematicaOpSpec.exists)
+    case forall: Forall => convertQuantified(forall, MathematicaOpSpec.forall)
     case _ => throw new ConversionException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
-  /** Converts a universally quantified formula. */
-  protected def convertForall(f: Quantified): MExpr = {
-    /** Recursively collect universally quantified variables, return variables+child formula */
-    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
-      candidate match {
-        case Forall(nextVs, nextf) => collectVars(vsSoFar ++ nextVs, nextf)
-        case _ => (vsSoFar, candidate)
-      }
+  /** Converts a quantified formula. */
+  protected def convertQuantified(f: Quantified, op: QuantifiedMathOpSpec): MExpr = {
+    /** Recursively collect quantified variables, return variables+child formula */
+    @tailrec
+    def collectVars(vsSoFar: Array[NamedSymbol], candidate: Formula): (Array[NamedSymbol], Formula) = (f, candidate) match {
+      // collect only from quantifiers that are the same as the root `f` quantifier
+      case (_: Exists, Exists(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
+      case (_: Forall, Forall(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
+      case _ =>(vsSoFar, candidate)
     }
 
-    val (vars, formula) = collectVars(f.vars, f.child)
-    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
-    new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
+    val (vars, formula) = collectVars(f.vars.toArray, f.child)
+    op(vars.map(toMathematica), convertFormula(formula))
   }
 
-  /** Converts an existentially quantified formula. */
-  protected def convertExists(f: Quantified): MExpr = {
-    /** Recursively collect existentially quantified variables, return variables+child formula */
-    def collectVars(vsSoFar: Seq[NamedSymbol], candidate: Formula): (Seq[NamedSymbol], Formula) = {
-      candidate match {
-        case Exists(nextVs, nextf) => collectVars(vsSoFar ++ nextVs, nextf)
-        case _ => (vsSoFar, candidate)
-      }
-    }
-
-    val (vars, formula) = collectVars(f.vars, f.child)
-    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(toMathematica).toArray)
-    new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
-  }
-
-  /** Convert a function. */
-  private def convertFunction(head: MExpr, child: Term): MExpr = child match {
+  /** Convert function arguments. */
+  private[this] def convertFunctionArgs(args: Term): Array[Expr] = args match {
     case _: Pair =>
-      assert(convertTerm(child).listQ(), "Converted pair expected to be a list, but was " + convertTerm(child))
-      new MExpr(head, convertTerm(child).args())
-    case Nothing => new MExpr(head, Array[MExpr]())
-    case _ => new MExpr(head, Array[MExpr](convertTerm(child)))
+      val converted = convertTerm(args)
+      assert(converted.listQ(), "Converted pair expected to be a list, but was " + converted)
+      converted.args()
+    case Nothing => Array.empty[MExpr]
+    case _ => Array[MExpr](convertTerm(args))
   }
 }

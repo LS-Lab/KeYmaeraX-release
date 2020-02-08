@@ -9,10 +9,13 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion.symbol
 import KMComparator._
 import MKComparator._
 import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Expression, Function, Number, Quantified, Real, Tuple, UnaryCompositeFormula, UnaryCompositeTerm}
 import edu.cmu.cs.ls.keymaerax.core.Ensures
+
+import scala.annotation.tailrec
 
 /**
   * Mathematica conversion stuff.
@@ -30,11 +33,16 @@ object MathematicaConversion {
   def importResult[T](e: MExpr, conversion: MExpr => T): T = try { conversion(e) } finally { e.dispose() }
 
   /** Interpreted symbols. */
-  val interpretedSymbols: Map[Function, MExpr] = Map(
-    Function("abs", None, Real, Real, interpreted=true) -> new MExpr(com.wolfram.jlink.Expr.SYMBOL, "Abs"),
-    Function("max", None, Tuple(Real, Real), Real, interpreted=true) -> new MExpr(com.wolfram.jlink.Expr.SYMBOL, "Max"),
-    Function("min", None, Tuple(Real, Real), Real, interpreted=true) -> new MExpr(com.wolfram.jlink.Expr.SYMBOL, "Min")
+  val interpretedSymbols: Map[Function, InterpretedMathOpSpec] = Map(
+    MathematicaOpSpec.abs.fn -> MathematicaOpSpec.abs,
+    MathematicaOpSpec.max.fn -> MathematicaOpSpec.max,
+    MathematicaOpSpec.min.fn -> MathematicaOpSpec.min
   )
+
+  /** Returns true if `e` is aborted, false otherwise. */
+  def isAborted(e: MExpr): Boolean = e == MathematicaOpSpec.aborted.op || e == MathematicaOpSpec.abort.op
+  /** Returns true if `e` failed, false otherwise. */
+  def isFailed(e: MExpr): Boolean = e == MathematicaOpSpec.failed.op
 }
 
 /**
@@ -58,7 +66,10 @@ trait M2KConverter[T] extends (MExpr => T) {
   private[tools] def convert(e: MExpr): T
 
   /** Interpreted symbols. */
-  def interpretedSymbols: Map[MExpr, Function] = MathematicaConversion.interpretedSymbols.map(_.swap)
+  def interpretedSymbols: Map[InterpretedMathOpSpec, Function] = MathematicaConversion.interpretedSymbols.map(_.swap)
+
+  /** Looks up an interpreted symbol by its Mathematica expression. */
+  def interpretedSymbols(e: MExpr): Option[Function] = interpretedSymbols.keys.find(_.applies(e)).map(interpretedSymbols)
 }
 
 /**
@@ -82,7 +93,7 @@ trait K2MConverter[T] extends (T => MExpr) {
   private[tools] def convert(e: T): MExpr
 
   /** Interpreted symbols. */
-  def interpretedSymbols: Map[Function, MExpr] = MathematicaConversion.interpretedSymbols
+  def interpretedSymbols: Map[Function, InterpretedMathOpSpec] = MathematicaConversion.interpretedSymbols
 }
 
 /** Implicit conversion from Mathematica expressions to comparator. */
@@ -91,7 +102,7 @@ object KMComparator {
     * Whether e is thing or starts with head thing.
     * @return true if ``e" and ``thing" are .equals-related.
     */
-  def hasHead(e: MExpr, thing: MExpr): Boolean = e.equals(thing) || e.head().equals(thing)
+  def hasHead(e: MExpr, thing: MExpr): Boolean = e == thing || e.head == thing
 
   import scala.language.implicitConversions
   implicit def MExprToKMComparator(e: MExpr): KMComparator = new KMComparator(e)
@@ -109,30 +120,31 @@ class KMComparator(val l: MExpr) {
     // traverse MExpr and forward to MExpr.== for atomic MExpr, use === for arguments
     (l.head() == r.head() && l.args().length == r.args().length && l.args().zip(r.args()).forall({ case (la, ra) => la === ra })) ||
     // or special comparison
-    (if (hasHead(l, MathematicaSymbols.INEQUALITY)) inequalityEquals(l, r)
-    else if (hasHead(r, MathematicaSymbols.INEQUALITY)) inequalityEquals(r, l)
-    else if (hasHead(l, MathematicaSymbols.RATIONAL)) rationalEquals(l, r)
-    else if (hasHead(r, MathematicaSymbols.RATIONAL)) rationalEquals(r, l)
-    else if (hasHead(l, MathematicaSymbols.PLUS)) naryEquals(l, r, MathematicaSymbols.PLUS)
-    else if (hasHead(l, MathematicaSymbols.MULT)) naryEquals(l, r, MathematicaSymbols.MULT)
-    else if (hasHead(l, MathematicaSymbols.AND)) naryEquals(l, r, MathematicaSymbols.AND)
-    else if (hasHead(l, MathematicaSymbols.OR)) naryEquals(l, r, MathematicaSymbols.OR)
+    (if (MathematicaOpSpec.inequality.applies(l)) inequalityEquals(l, r)
+    else if (MathematicaOpSpec.inequality.applies(r)) inequalityEquals(r, l)
+    else if (MathematicaOpSpec.rational.applies(l)) rationalEquals(l, r)
+    else if (MathematicaOpSpec.rational.applies(r)) rationalEquals(r, l)
+    else if (MathematicaOpSpec.plus.applies(l)) naryEquals(l, r, MathematicaOpSpec.plus.op)
+    else if (MathematicaOpSpec.times.applies(l)) naryEquals(l, r, MathematicaOpSpec.times.op)
+    else if (MathematicaOpSpec.and.applies(l)) naryEquals(l, r, MathematicaOpSpec.and.op)
+    else if (MathematicaOpSpec.or.applies(l)) naryEquals(l, r, MathematicaOpSpec.or.op)
     else false)
 
   private def inequalityEquals(l: MExpr, r: MExpr): Boolean = {
     def checkInequality(l: Array[MExpr], r: MExpr): Boolean = hasHead(r, l(1)) && r.args.length == 2 && r.args().head === l(0) && r.args().last === l(2)
+    @tailrec
     def checkInequalities(l: Array[MExpr], r: MExpr): Boolean = {
       require(l.length % 2 == 1 && r.args().length % 2 == 0, "Expected pairs of expressions separated by operators")
       if (l.length <= 3) checkInequality(l, r)
       // And[c[a,b], ...] == {a c b ... }
-      else hasHead(r, MathematicaSymbols.AND) && checkInequality(l, r.args().head) && checkInequalities(l.tail.tail, r.args().last)
+      else hasHead(r, symbol("And")) && checkInequality(l, r.args().head) && checkInequalities(l.tail.tail, r.args().last)
     }
     checkInequalities(l.args(), r)
   }
 
   private def rationalEquals(l: MExpr, r: MExpr): Boolean = {
-    assert(hasHead(l, MathematicaSymbols.RATIONAL), "already checked for rational head")
-    (hasHead(r, MathematicaSymbols.RATIONAL) && l.args().length == 2 && r.args().length == 2 &&
+    assert(hasHead(l, symbol("Rational")), "already checked for rational head")
+    (hasHead(r, symbol("Rational")) && l.args().length == 2 && r.args().length == 2 &&
       l.args().head === r.args().head && l.args().last === r.args().last) ||
     //@note may happen with runUnchecked, but not if KeYmaeraToMathematica conversion is used
     (r.realQ() &&

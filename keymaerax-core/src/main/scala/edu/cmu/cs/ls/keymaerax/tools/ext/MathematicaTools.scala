@@ -5,34 +5,16 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.tools.KMComparator.hasHead
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
-
-@deprecated
-object ToolConversions {
-
-  //@todo duplicate with [[FormulaTools.conjuncts]]
-  def flattenConjunctions(f: Formula): List[Formula] = {
-    var result: List[Formula] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
-        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
-        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
-      }
-    }, f)
-    result
-  }
-}
 
 object UncheckedBaseConverter {
   val CONST_FN_SUFFIX = "cnstfn_"
@@ -49,17 +31,17 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
   override def convert(e: MExpr): KExpr = {
     if (isAborted(e)) throw new MathematicaComputationAbortedException(e.toString)
     else if (isFailed(e)) throw new MathematicaComputationFailedException(e.toString)
-    else if (KMComparator.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
+    else if (ExtMathematicaOpSpec.rule.applies(e)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      KMComparator.hasHead(_, MathematicaSymbols.RULE)))) convertRuleList(e)
+      ExtMathematicaOpSpec.rule.applies))) convertRuleList(e)
     // Derivatives are of the form Derivative[1][x]
     //@todo Code Review: check e.head
     //@solution: additional checks for head + moved into non-soundness-critical converter
     //@note e.head() by itself is not meaningful -- it combines e.head.head == Derivative and e.head.args == degree
     else if (e.head.args().length == 1 && e.head().args.head.integerQ() && e.head().args.head.asInt() == 1 &&
-      e.head.head.symbolQ() && e.head.head == MathematicaSymbols.DERIVATIVE) convertDerivative(e)
-    else if (e.symbolQ() && hasHead(e, MathematicaSymbols.FALSE)) False
-    else if (e.symbolQ() && hasHead(e, MathematicaSymbols.TRUE)) True
+      e.head.head.symbolQ() && ExtMathematicaOpSpec.derivative.applies(e.head)) convertDerivative(e)
+    else if (MathematicaOpSpec.lfalse.applies(e)) False
+    else if (MathematicaOpSpec.ltrue.applies(e)) True
     else if (e.symbolQ() && MathematicaNameConversion.uncheckedUnmaskName(e.asString())._1.endsWith(UncheckedBaseConverter.CONST_FN_SUFFIX))
       MathematicaNameConversion.toKeYmaera(e) match {
         case BaseVariable(name, index, sort) => FuncOf(Function(name.substring(0, name.length - UncheckedBaseConverter.CONST_FN_SUFFIX.length), index, Unit, sort), Nothing)
@@ -71,7 +53,7 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
   private def convertRule(e: MExpr): Formula = convert(e.args()(0)) match {
     case t: Term => Equal(t, convert(e.args()(1)).asInstanceOf[Term])
     case f: Formula => Equiv(f, convert(e.args()(1)).asInstanceOf[Formula])
-    case p: Program => throw new IllegalArgumentException("There is no conversion from Mathematica to hybrid programs " + e)
+    case _: Program => throw new IllegalArgumentException("There is no conversion from Mathematica to hybrid programs " + e)
   }
 
   private def convertRuleList(e: MExpr): Formula = {
@@ -121,17 +103,15 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
       e match {
         case t: Term => convertTerm(t)
         case f: Formula => convertFormula(f)
-        case p: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
-        case f: Function => throw new IllegalArgumentException("There is no conversion from unapplied function symbols to Mathematica " + e)
+        case _: Program => throw new IllegalArgumentException("There is no conversion from hybrid programs to Mathematica " + e)
+        case _: Function => throw new IllegalArgumentException("There is no conversion from unapplied function symbols to Mathematica " + e)
       }
     }
 
     override protected[tools] def convertTerm(t: Term): MExpr = t match {
       //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
-      case Differential(c) =>
-        new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
-      case DifferentialSymbol(c) =>
-        new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convert(c)))
+      case Differential(c) => ExtMathematicaOpSpec.primed(convert(c))
+      case DifferentialSymbol(c) => ExtMathematicaOpSpec.primed(convert(c))
       case FuncOf(fn@Function(_, _, Unit, Real, false), Nothing) => CEXK2MConverter.this.convert(Right(fn))
       case _ => super.convertTerm(t)
     }
@@ -176,8 +156,8 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
   override def apply(e: MExpr): KExpr = convert(e)
 
   override def convert(e: MExpr): KExpr = {
-    if (hasHead(e, MathematicaSymbols.TRUE))   True
-    else if (hasHead(e, MathematicaSymbols.FALSE))  False
+    if (MathematicaOpSpec.ltrue.applies(e))   True
+    else if (MathematicaOpSpec.lfalse.applies(e))  False
     else if (e.listQ()) convertFormulaTermList(e)
     else super.convert(e)
   }
@@ -252,13 +232,11 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
     val cexVars = StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true})
 
     if (cexVars.nonEmpty) {
-      val input = new MExpr(new MExpr(Expr.SYMBOL, "FindInstance"),
-        Array(k2m.convert(Left(fml match { case Imply(a, b) => And(a, Not(b)) case _ => Not(fml) })),
-          new MExpr(
-            MathematicaSymbols.LIST,
-            cexVars.toList.sorted.map(s => k2m.convert(Right(s))).toArray),
-          new MExpr(Expr.SYMBOL, "Reals")))
-
+      val input = ExtMathematicaOpSpec.findInstance(
+        k2m.convert(Left(fml match { case Imply(a, b) => And(a, Not(b)) case _ => Not(fml) })),
+        MathematicaOpSpec.list(cexVars.toList.sorted.map(s => k2m.convert(Right(s))):_*),
+        MathematicaOpSpec.reals.op
+      )
       run(input) match {
         case (_, Left(cex: Formula)) => cex match {
           case False =>
@@ -306,7 +284,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseK
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
         case AtomicODE(DifferentialSymbol(x), theta) if x != diffArg => result = result :+ (x, theta); Left(None)
-        case AtomicODE(DifferentialSymbol(x), theta) if x == diffArg => Left(None)
+        case AtomicODE(DifferentialSymbol(x), _) if x == diffArg => Left(None)
         case ODESystem(_, _) => Left(None)
         case DifferentialProduct(_, _) => Left(None)
       }
@@ -324,22 +302,21 @@ class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseK
   private def diffSol(diffArg: Variable, iv: Map[Variable, Variable], diffSys: (Variable, Term)*): Option[Formula] = {
     val primedVars = diffSys.map(_._1)
     val functionalizedTerms = diffSys.map{ case (x, theta) => ( x, functionalizeVars(theta, diffArg, primedVars:_*)) }
-    val mathTerms = functionalizedTerms.map{case (x, theta) =>
-      val diffSymbol = new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](k2m(x)))
-      (new MExpr(diffSymbol, Array[MExpr](k2m(diffArg))), k2m(theta))}
-    val convertedDiffSys = mathTerms.map{case (x, theta) =>
-      new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](x, theta))}
+    val mathTerms = functionalizedTerms.map({case (x, theta) =>
+      (ExtMathematicaOpSpec.dx(ExtMathematicaOpSpec.primed(k2m(x)))(k2m(diffArg)), k2m(theta))})
+    val convertedDiffSys = mathTerms.map({case (x, theta) => MathematicaOpSpec.equal(x, theta)})
 
     val functions = diffSys.map(t => k2m(functionalizeVars(t._1, diffArg)))
 
     val initialValues = diffSys.map(t => k2m(
       Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*), iv(t._1))))
 
-    val input = new MExpr(MathematicaSymbols.DSOLVE,
-      Array[MExpr](
-        new MExpr(Expr.SYM_LIST, (convertedDiffSys ++ initialValues).toArray),
-        new MExpr(Expr.SYM_LIST, functions.toArray),
-        k2m(diffArg)))
+    val input = ExtMathematicaOpSpec.dsolve(
+      MathematicaOpSpec.list(convertedDiffSys ++ initialValues:_*),
+      MathematicaOpSpec.list(functions:_*),
+      k2m(diffArg)
+    )
+
     val (_, result) = run(input)
     result match {
       case f: Formula => Some(defunctionalize(f, diffArg, primedVars.map(_.name):_*))
@@ -389,7 +366,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseK
   def deriveBy(term: Term, v: Variable): Term = {
     val mathTerm = k2m(term)
     val mathVar = k2m(v)
-    val input = new MExpr(MathematicaSymbols.D, Array[MExpr](mathTerm, mathVar))
+    val input = ExtMathematicaOpSpec.d(mathTerm, mathVar)
     val (_, result) = run(input)
     result match {
       case t: Term => t
@@ -406,31 +383,19 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
 
   def pdeSolve(diffSys: DifferentialProgram): Iterator[Term] = {
     val vars = DifferentialHelper.getPrimedVariables(diffSys).map(k2m).toArray
-    val f = new MExpr(Expr.SYMBOL, DiffUncheckedM2KConverter.PREFIX + "f")
+    val f = MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "f")
     val fall = new MExpr(f, vars)
     val characteristics:List[MExpr] = DifferentialHelper.atomicOdes(diffSys).map({
       case AtomicODE(DifferentialSymbol(x),t) =>
-        new MExpr(MathematicaSymbols.MULT, Array[MExpr](
-          k2m(t),
-          new MExpr(MathematicaSymbols.D, Array[MExpr](fall, k2m(x)))
-        ))
+        MathematicaOpSpec.times(k2m(t), ExtMathematicaOpSpec.d(fall, k2m(x)))
     })
-    val pde = new MExpr(MathematicaSymbols.EQUALS,
-      Array[MExpr](
-        new MExpr(MathematicaSymbols.PLUS, characteristics.toArray),
-        k2m(Number(0))
+    val pde = MathematicaOpSpec.equal(MathematicaOpSpec.plus(characteristics:_*), k2m(Number(0)))
+    val input = ExtMathematicaOpSpec.dsolve(
+      pde, fall, MathematicaOpSpec.list(vars:_*), ExtMathematicaOpSpec.rule(
+        ExtMathematicaOpSpec.generatedParameters.op,
+        ExtMathematicaOpSpec.function(MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "C"))
       )
     )
-    val input = new MExpr(MathematicaSymbols.DSOLVE,
-      Array[MExpr](
-        pde,
-        fall,
-        new MExpr(Expr.SYM_LIST, vars),
-        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
-          MathematicaSymbols.GENERATEDPARAMETERS,
-          new MExpr(MathematicaSymbols.FUNCTION, Array[MExpr](new MExpr(Expr.SYMBOL, DiffUncheckedM2KConverter.PREFIX + "C")))
-        ))
-      ))
     val (_, result) = run(input)
     result match {
         //@note List[List[Rule]] are converted to Or of And of Equal where only the right side matters.
@@ -458,7 +423,7 @@ private class DiffUncheckedM2KConverter extends UncheckedBaseM2KConverter {
     } else super.convert(e)
   }
 
-  protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols.get(e.head) match {
+  protected override def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
     case Some(fn) => convertFunction(fn, e.args())
     case None =>
       toKeYmaera(e) match {
@@ -482,7 +447,7 @@ private class DiffUncheckedM2KConverter extends UncheckedBaseM2KConverter {
 
 
   protected def convertFunctionDomain(args: Array[MExpr]): Sort = {
-    Range(1,args.length).foldRight[Sort](Real)((i,t)=>Tuple(Real,t))
+    Range(1,args.length).foldRight[Sort](Real)((_, t) => Tuple(Real,t))
   }
   protected override def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
     val arguments = args.map(convert).map(_.asInstanceOf[Term])
@@ -501,11 +466,7 @@ class MathematicaEquationSolverTool(override val link: MathematicaLink) extends 
     val eqs = k2m(equations)
     val v = vars.map(k2m)
 
-    val input = new MExpr(MathematicaSymbols.SOLVE,
-      Array[MExpr](
-        eqs,
-        new MExpr(Expr.SYM_LIST, v.toArray)
-        ))
+    val input = ExtMathematicaOpSpec.solve(eqs, MathematicaOpSpec.list(v:_*))
     val (_, result) = run(input)
     result match {
       case f: Formula => Some(f)
@@ -526,12 +487,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     val d = k2m(div)
     val v = k2m(x)
 
-    val input = new MExpr(MathematicaSymbols.POLYNOMIALQUOTIENTREMAINDER,
-      Array[MExpr](
-        t,
-        d,
-        v
-      ))
+    val input = ExtMathematicaOpSpec.polynomialQuotientRemainder(t, d, v)
     val (_, result) = run(input)
     result match {
       case Pair(quot,Pair(rem,Nothing)) => (quot, rem)
@@ -542,17 +498,12 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
   override def groebnerBasis(polynomials: List[Term]): List[Term] = {
     //@note sort for stable results
     val vars = polynomials.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol]).distinct.sorted
-    val input = new MExpr(MathematicaSymbols.GROEBNERBASIS,
-      Array[MExpr](
-        new MExpr(Expr.SYM_LIST, polynomials.map(k2m).toArray),
-        new MExpr(Expr.SYM_LIST, vars.map(k2m).toArray),
-        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
-          MathematicaSymbols.MONOMIALORDER, MathematicaSymbols.DEGREEREVERSELEXICOGRAPHIC
-        )),
-        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
-          MathematicaSymbols.COEFFICIENTDOMAIN, MathematicaSymbols.RATIONALS
-        ))
-      ))
+    val input = ExtMathematicaOpSpec.groebnerBasis(
+      MathematicaOpSpec.list(polynomials.map(k2m):_*),
+      MathematicaOpSpec.list(vars.map(k2m):_*),
+      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
+      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op)
+    )
     val (_, result) = run(input)
     result match {
       // turn nested back into list of terms
@@ -564,18 +515,13 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
   override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
     //@note sort for stable results
     val vars = (polynomial::GB).flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol]).distinct.sorted
-    val input = new MExpr(MathematicaSymbols.POLYNOMIALREDUCE,
-      Array[MExpr](
-        k2m(polynomial),
-        new MExpr(Expr.SYM_LIST, GB.map(k2m).toArray),
-        new MExpr(Expr.SYM_LIST, vars.map(k2m).toArray),
-        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
-          MathematicaSymbols.MONOMIALORDER, MathematicaSymbols.DEGREEREVERSELEXICOGRAPHIC
-        )),
-        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
-          MathematicaSymbols.COEFFICIENTDOMAIN, MathematicaSymbols.RATIONALS
-        ))
-      ))
+    val input = ExtMathematicaOpSpec.polynomialReduce(
+      k2m(polynomial),
+      MathematicaOpSpec.list(GB.map(k2m):_*),
+      MathematicaOpSpec.list(vars.map(k2m):_*),
+      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
+      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op)
+    )
     val (_, result) = run(input)
     result match {
       //Mathematica returns [l,r] where l is a list, r is a singleton
@@ -604,11 +550,7 @@ class MathematicaSimplificationTool(override val link: MathematicaLink) extends 
       val ex = k2m(expr)
       val assuming = assumptions.map(k2m)
 
-      val input = new MExpr(MathematicaSymbols.FULLSIMPLIFY,
-        Array[MExpr](
-          ex,
-          new MExpr(Expr.SYM_LIST, assuming.toArray)
-        ))
+      val input = ExtMathematicaOpSpec.fullSimplify(ex, MathematicaOpSpec.list(assuming:_*))
       val (_, result) = run(input)
       result match {
         case r: Expression => r
@@ -631,7 +573,7 @@ object SimulationM2KConverter extends M2KConverter[Simulation] {
       states.map(state => {
         val endOfWorld = if (state.contains(False)) state.indexOf(False) else state.length
         state.slice(0, endOfWorld).map({
-          case fml: Formula => ToolConversions.flattenConjunctions(fml).map({
+          case fml: Formula => FormulaTools.conjuncts(fml).map({
             case Equal(name: NamedSymbol, value: Number) => name -> value
             case Equal(FuncOf(fn, _), value: Number) => fn -> value
             case s => throw new IllegalArgumentException("Expected state description Equal(...), but got " + s)
@@ -651,9 +593,11 @@ object SimulationK2MConverter extends K2MConverter[Simulation] {
   private val k2m: K2MConverter[KExpr] = new UncheckedBaseK2MConverter
 
   override def convert(e: Simulation): MExpr = {
-    new MExpr(MathematicaSymbols.LIST,
-      e.map(r => new MExpr(MathematicaSymbols.LIST,
-        r.map(s => k2m(s.map{ case (n: Term, v) => Equal(n, v) }.reduceLeft(And))).toArray)).toArray)
+    MathematicaOpSpec.list(
+      e.map(r => MathematicaOpSpec.list(
+        r.map(s => k2m(s.map{ case (n: Term, v) => Equal(n, v) }.reduceLeft(And))):_*
+      )):_*
+    )
   }
 }
 
@@ -668,50 +612,66 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
 
   def simulate(initial: Formula, stateRelation: Formula, steps: Int = 10, n: Int = 1): Simulation = {
     // init[n_] := Map[List[#]&, FindInstance[a>=..., {a, ...}, Reals, n]] as pure function
-    val init = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
-      new MExpr(Expr.SYMBOL, "init"),
-      new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(
-        new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
-          new MExpr(new MExpr(Expr.SYMBOL, "Function"), Array(new MExpr(MathematicaSymbols.LIST, Array(new MExpr(Expr.SYMBOL, "#"))))),
-          new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-            Array(basek2m(initial),
-              new MExpr(
-                MathematicaSymbols.LIST,
-                StaticSemantics.symbols(initial).toList.sorted.map(basek2m).toArray),
-              new MExpr(Expr.SYMBOL, "Reals"),
-              new MExpr(Expr.SYMBOL, "#")))))))))
+    val init =
+      ExtMathematicaOpSpec.setDelayed(
+        MathematicaOpSpec.symbol("init"),
+        ExtMathematicaOpSpec.function(
+          ExtMathematicaOpSpec.map(
+            ExtMathematicaOpSpec.function(MathematicaOpSpec.list(ExtMathematicaOpSpec.placeholder.op)),
+            ExtMathematicaOpSpec.findInstance(
+              basek2m(initial),
+              MathematicaOpSpec.list(StaticSemantics.symbols(initial).toList.sorted.map(basek2m):_*),
+              MathematicaOpSpec.reals.op,
+              ExtMathematicaOpSpec.placeholder.op)
+          )
+        )
+      )
     // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
     val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).partition(_.name.startsWith("pre"))
     val pre2post = stepPostVars.filter(_.name != "t_").map(v => Variable("pre" + v.name, v.index, v.sort) -> v).toMap[NamedSymbol, NamedSymbol]
     val stepModuleInit = stepPreVars.toList.sorted.map(s =>
-      new MExpr(new MExpr(Expr.SYMBOL, "Set"), Array(
+      ExtMathematicaOpSpec.set(
         basek2m(s),
-        new MExpr(new MExpr(Expr.SYMBOL, "ReplaceAll"), Array(
+        ExtMathematicaOpSpec.replaceAll(
           basek2m(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
-          new MExpr(Expr.SYMBOL, "#")))))).toArray
-    val step = new MExpr(new MExpr(Expr.SYMBOL, "SetDelayed"), Array(
-      new MExpr(Expr.SYMBOL, "step"),
-      new MExpr(new MExpr(Expr.SYMBOL, "Function"),
-        Array(new MExpr(new MExpr(Expr.SYMBOL, "Module"),
-          Array(new MExpr(MathematicaSymbols.LIST, stepModuleInit),
-            new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-              Array(basek2m(stateRelation),
-                new MExpr(
-                  MathematicaSymbols.LIST,
-                  stepPostVars.toList.sorted.map(basek2m).toArray),
-                new MExpr(Expr.SYMBOL, "Reals")))))))))
+          ExtMathematicaOpSpec.placeholder.op
+        )
+      )).toArray
+    val step = ExtMathematicaOpSpec.setDelayed(
+        MathematicaOpSpec.symbol( "step"),
+        ExtMathematicaOpSpec.function(
+          ExtMathematicaOpSpec.module(
+            MathematicaOpSpec.list(stepModuleInit:_*),
+            ExtMathematicaOpSpec.findInstance(
+              MathematicaOpSpec.list(stepPostVars.toList.sorted.map(basek2m):_*),
+              MathematicaOpSpec.reals.op
+            )
+          )
+        )
+      )
     // Map[N[NestList[step,#,steps]]&, init[n]]
-    val exec = new MExpr(new MExpr(Expr.SYMBOL, "Map"), Array(
-      new MExpr(new MExpr(Expr.SYMBOL, "Function"),
-        Array(new MExpr(new MExpr(Expr.SYMBOL, "N"), Array(new MExpr(new MExpr(Expr.SYMBOL, "NestList"),
-          Array(new MExpr(Expr.SYMBOL, "step"), new MExpr(Expr.SYMBOL, "#"), new MExpr(steps))))))),
-      new MExpr(new MExpr(Expr.SYMBOL, "Apply"), Array(new MExpr(Expr.SYMBOL, "init"),
-        new MExpr(MathematicaSymbols.LIST, Array(new MExpr(n)))))))
+    val exec =
+      ExtMathematicaOpSpec.map(
+        ExtMathematicaOpSpec.function(
+          ExtMathematicaOpSpec.n(
+            ExtMathematicaOpSpec.nestList(
+              MathematicaOpSpec.symbol( "step"),
+              ExtMathematicaOpSpec.placeholder.op,
+              MathematicaOpSpec.int(steps)
+            )
+          )
+        ),
+        ExtMathematicaOpSpec.apply(
+          MathematicaOpSpec.symbol( "init"),
+          MathematicaOpSpec.list(MathematicaOpSpec.int(n))
+        )
+      )
     // initial;step;simulate
-    val simulate = new MExpr(new MExpr(Expr.SYMBOL, "CompoundExpression"), Array(init, step, exec))
+    val simulate = ExtMathematicaOpSpec.compoundExpression(init, step, exec)
 
     run(simulate)._2
   }
 
-  def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = ???
+  /** @inheritdoc */
+  override def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun = Nil
 }
