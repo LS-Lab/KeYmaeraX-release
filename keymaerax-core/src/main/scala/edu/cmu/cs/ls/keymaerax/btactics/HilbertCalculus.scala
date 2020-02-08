@@ -94,7 +94,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-  lazy val monb               : BelleExpr         = byUS("[] monotone")
+  lazy val monb               : BelleExpr         = byUS(DerivedAxioms.boxMonotone)
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
