@@ -411,9 +411,9 @@ trait UnifyUSCalculus {
     * {{{
     * useAt(fact)(p)(F) = let (C,c)=F(p) in
     *   case c of {
-    *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) & <(
+    *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) ; <(
     *       "use cut": skip
-    *       "show cut": EquivifyRight(p.top) & CoHide(p.top) & CE(C(_)) & factTactic
+    *       "show cut": EquivifyRight(p.top) ; CoHide(p.top) ; CE(C(_)) ; fact
     *     )
     *     s=unify(fact.right,_) => accordingly with an extra commuteEquivRightT
     *   }
@@ -467,9 +467,9 @@ trait UnifyUSCalculus {
     * {{{
     * useAt(fact)(p)(F) = let (C,c)=F(p) in
     *   case c of {
-    *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) & <(
+    *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) ; <(
     *       "use cut": skip
-    *       "show cut": EquivifyRight(p.top) & CoHide(p.top) & CE(C(_)) & factTactic
+    *       "show cut": EquivifyRight(p.top) ; CoHide(p.top) ; CE(C(_)) ; fact
     *     )
     *     s=unify(fact.right,_) => accordingly with an extra commuteEquivRightT
     *   }
