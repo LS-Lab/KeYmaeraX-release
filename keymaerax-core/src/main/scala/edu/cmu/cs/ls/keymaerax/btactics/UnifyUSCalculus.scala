@@ -639,7 +639,7 @@ trait UnifyUSCalculus {
           //@note all DotTerms are equal
           case Imply(prereq, remainder) =>
             if (!StaticSemantics.signature(prereq).intersect(Set(DotFormula, DotTerm())).isEmpty)
-              throw new MatchError("Unimplemented case which works at a negative polarity position: " + K.ctx)
+              throw new IllegalArgumentException("Unimplemented case which works at a negative polarity position: " + K.ctx)
             // try to prove prereq globally
             /* {{{
            *                                         fact
@@ -1372,7 +1372,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (ProvableSig.startProof(Sequent(ante, succ))
-            (DerivedRuleInfo("[] monotone").provable(USubst(
+            (DerivedAxioms.boxMonotone.fact(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
                 :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))
@@ -1468,6 +1468,8 @@ trait UnifyUSCalculus {
     }
     monStep(C, impl)
   }
+
+  // Forward axiom usage implementation
 
   /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable
     * Forward Hilbert-style proof analogue of [[useAt()]].
@@ -1728,7 +1730,9 @@ trait UnifyUSCalculus {
             } else proved(proof, 0)
 
 
-          case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty =>
+          case Imply(prereq, remainder) =>
+            if (!StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty)
+              throw new IllegalArgumentException("Unimplemented case which works at a negative polarity position: " + K.ctx)
             // try to prove prereq globally
             //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
             /* {{{
@@ -1812,9 +1816,11 @@ trait UnifyUSCalculus {
       ) (pr, 0)*/
   }
 
+
   /*******************************************************************
     * Computation-based auto-tactics
     *******************************************************************/
+
 
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
     * Unlike [[TactixLibrary.tacticChase]] will not branch or use propositional rules, merely transform the chosen formula in place. */
@@ -1886,6 +1892,7 @@ trait UnifyUSCalculus {
             inst: String=>(Subst=>Subst) = ax=>us=>us,
             index: String=>(PosInExpr, List[PosInExpr]) = AxiomIndex.axiomIndex): DependentPositionTactic = chaseFor2Back("chase", chaseFor(keys, modifier, inst, index))
 
+
   /** Converts a forward chase tactic into a backwards chase by CEat. */
   private def chaseFor2Back(name: String, forward: ForwardPositionTactic): DependentPositionTactic = new DependentPositionTactic(name) {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -1914,6 +1921,8 @@ trait UnifyUSCalculus {
       } ensures(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
     }
   }
+
+  // implementation
 
   /** chaseFor: Chases the expression of Provables at given positions forward until it is chased away or can't be chased further without critical choices.
     *
@@ -1980,6 +1989,7 @@ trait UnifyUSCalculus {
     } ensures(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
     doChase(de,pos)
   }
+
 
   /** chaseCustom: Unrestricted form of chaseFor, where AxiomIndex is not built in,
     * i.e. it takes keys of the form Expression => List[(Provable,PosInExpr, List[PosInExpr])]
