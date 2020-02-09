@@ -29,8 +29,6 @@ object ExtMathematicaOpSpec {
 
   //<editor-fold desc="Basic datastructures and operations">
 
-  val rule = BinaryMathOpSpec(symbol("Rule"))
-
   val function = NaryMathOpSpec(symbol("Function"))
 
   val map = NaryMathOpSpec(symbol("Map"))

@@ -11,8 +11,6 @@ package edu.cmu.cs.ls.keymaerax.tools
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion.symbol
-import edu.cmu.cs.ls.keymaerax.tools.KMComparator.hasHead
 
 /**
  * Converts [[com.wolfram.jlink.Expr]] to [[Expression]].
@@ -71,9 +69,9 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.exists.applies(e)) convertQuantifier(e, Exists.apply)
 
     // Rules and List of rules not supported -> override if needed
-    else if (hasHead(e, symbol("Rule"))) throw new ConversionException("Unsupported conversion RULE " + e)
+    else if (MathematicaOpSpec.rule.applies(e)) throw new ConversionException("Unsupported conversion RULE " + e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      hasHead(_, symbol("Rule"))))) throw new ConversionException("Unsupported conversion List[RULE] " + e)
+      MathematicaOpSpec.rule.applies))) throw new ConversionException("Unsupported conversion List[RULE] " + e)
 
     // Pairs
     else if (MathematicaOpSpec.pair.applies(e)) convertList(e)
@@ -118,7 +116,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     val variableBlock = e.args().headOption.getOrElse(
       throw new ConversionException("Found unexpected empty variable list after quantifier."))
 
-    val quantifiedVars: List[Variable] = if (variableBlock.head() == symbol("List")) {
+    val quantifiedVars: List[Variable] = if (MathematicaOpSpec.list.applies(variableBlock)) {
       //Convert the list of quantified variables
       variableBlock.args().toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
     } else {

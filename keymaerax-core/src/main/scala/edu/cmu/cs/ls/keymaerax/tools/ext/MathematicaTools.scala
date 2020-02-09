@@ -32,9 +32,9 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
   override def convert(e: MExpr): KExpr = {
     if (isAborted(e)) throw new MathematicaComputationAbortedException(e.toString)
     else if (isFailed(e)) throw new MathematicaComputationFailedException(e.toString)
-    else if (ExtMathematicaOpSpec.rule.applies(e)) convertRule(e)
+    else if (MathematicaOpSpec.rule.applies(e)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      ExtMathematicaOpSpec.rule.applies))) convertRuleList(e)
+      MathematicaOpSpec.rule.applies))) convertRuleList(e)
     // Derivatives are of the form Derivative[1][x]
     //@todo Code Review: check e.head
     //@solution: additional checks for head + moved into non-soundness-critical converter
@@ -392,7 +392,7 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
     })
     val pde = MathematicaOpSpec.equal(MathematicaOpSpec.plus(characteristics:_*), k2m(Number(0)))
     val input = ExtMathematicaOpSpec.dsolve(
-      pde, fall, MathematicaOpSpec.list(vars:_*), ExtMathematicaOpSpec.rule(
+      pde, fall, MathematicaOpSpec.list(vars:_*), MathematicaOpSpec.rule(
         ExtMathematicaOpSpec.generatedParameters.op,
         ExtMathematicaOpSpec.function(MathematicaOpSpec.symbol(DiffUncheckedM2KConverter.PREFIX + "C"))
       )
@@ -502,8 +502,8 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     val input = ExtMathematicaOpSpec.groebnerBasis(
       MathematicaOpSpec.list(polynomials.map(k2m):_*),
       MathematicaOpSpec.list(vars.map(k2m):_*),
-      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
-      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op)
+      MathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
+      MathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op)
     )
     val (_, result) = run(input)
     result match {
@@ -520,8 +520,8 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
       k2m(polynomial),
       MathematicaOpSpec.list(GB.map(k2m):_*),
       MathematicaOpSpec.list(vars.map(k2m):_*),
-      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
-      ExtMathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op)
+      MathematicaOpSpec.rule(ExtMathematicaOpSpec.monomialOrder.op, ExtMathematicaOpSpec.degreeReverseLexicographic.op),
+      MathematicaOpSpec.rule(ExtMathematicaOpSpec.coefficientDomain.op, ExtMathematicaOpSpec.rationals.op)
     )
     val (_, result) = run(input)
     result match {

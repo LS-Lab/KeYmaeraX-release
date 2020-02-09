@@ -9,7 +9,6 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion.symbol
 import KMComparator._
 import MKComparator._
 import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Expression, Function, Number, Quantified, Real, Tuple, UnaryCompositeFormula, UnaryCompositeTerm}
@@ -110,7 +109,6 @@ object KMComparator {
 
 /** Compares Mathematica expressions for equality (handles conversion differences). */
 class KMComparator(val l: MExpr) {
-  import KMComparator.hasHead
 
   /** Non-commutative comparison of Mathematica expressions for equality modulo Mathematica's implicit conversions.
     * Triple equality === is a new recursive definition based on double equality == of heads and recursing on arguments
@@ -131,20 +129,21 @@ class KMComparator(val l: MExpr) {
     else false)
 
   private def inequalityEquals(l: MExpr, r: MExpr): Boolean = {
-    def checkInequality(l: Array[MExpr], r: MExpr): Boolean = hasHead(r, l(1)) && r.args.length == 2 && r.args().head === l(0) && r.args().last === l(2)
+    def checkInequality(l: Array[MExpr], r: MExpr): Boolean =
+      hasHead(r, l(1)) && r.args.length == 2 && r.args().head === l(0) && r.args().last === l(2)
     @tailrec
     def checkInequalities(l: Array[MExpr], r: MExpr): Boolean = {
       require(l.length % 2 == 1 && r.args().length % 2 == 0, "Expected pairs of expressions separated by operators")
       if (l.length <= 3) checkInequality(l, r)
       // And[c[a,b], ...] == {a c b ... }
-      else hasHead(r, symbol("And")) && checkInequality(l, r.args().head) && checkInequalities(l.tail.tail, r.args().last)
+      else MathematicaOpSpec.and.applies(r) && checkInequality(l, r.args().head) && checkInequalities(l.tail.tail, r.args().last)
     }
     checkInequalities(l.args(), r)
   }
 
   private def rationalEquals(l: MExpr, r: MExpr): Boolean = {
-    assert(hasHead(l, symbol("Rational")), "already checked for rational head")
-    (hasHead(r, symbol("Rational")) && l.args().length == 2 && r.args().length == 2 &&
+    assert(MathematicaOpSpec.rational.applies(l), "already checked for rational head")
+    (MathematicaOpSpec.rational.applies(r) && l.args().length == 2 && r.args().length == 2 &&
       l.args().head === r.args().head && l.args().last === r.args().last) ||
     //@note may happen with runUnchecked, but not if KeYmaeraToMathematica conversion is used
     (r.realQ() &&

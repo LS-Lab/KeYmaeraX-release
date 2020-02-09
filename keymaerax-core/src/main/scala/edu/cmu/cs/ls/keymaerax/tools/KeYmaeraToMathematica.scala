@@ -78,13 +78,13 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
       case Power(l, r) => MathematicaOpSpec.power(convertTerm(l), convertTerm(r))
       case Number(n) =>
         if (n.isWhole) {
-          new MExpr(n.toBigIntExact().getOrElse(
-            throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
+          MathematicaOpSpec.bigInt(n.toBigIntExact().getOrElse(
+            throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")))
         } else if (n.scale > 0) {
           val num = BigDecimal(n.bigDecimal.unscaledValue())
           val denom = BigDecimal(BigDecimal(1).bigDecimal.movePointRight(n.scale))
           assert(n == num/denom, "Expected double to rational conversion to have value " + n + ", but got numerator " + num + " and denominator " + denom)
-          new MExpr(symbol("Rational"), Array[MExpr](convert(Number(num)), convert(Number(denom))))
+          MathematicaOpSpec.rational(convert(Number(num)), convert(Number(denom)))
         } else if (n.scale < 0) {
           //@note negative scale means: unscaled*10^(-scale)
           val num = BigDecimal(n.bigDecimal.unscaledValue()).bigDecimal.movePointLeft(n.scale)

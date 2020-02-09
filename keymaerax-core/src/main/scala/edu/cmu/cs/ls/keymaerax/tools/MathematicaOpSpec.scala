@@ -102,6 +102,9 @@ object MathematicaOpSpec {
   /** Creates a Mathematica Double. */
   def double(n: Double): Expr = new Expr(n)
 
+  /** Creates a Mathematica big integer. */
+  def bigInt(n: BigInt): Expr = new Expr(n.bigInteger)
+
   /** Creates a Mathematica String. */
   def string(s: String): Expr = new Expr(s)
 
@@ -198,6 +201,8 @@ object MathematicaOpSpec {
   //</editor-fold>
 
   //<editor-fold desc="Arithmetic">
+
+  val rule = BinaryMathOpSpec(symbol("Rule"))
 
   val reduce = NaryMathOpSpec(symbol("Reduce"))
 
