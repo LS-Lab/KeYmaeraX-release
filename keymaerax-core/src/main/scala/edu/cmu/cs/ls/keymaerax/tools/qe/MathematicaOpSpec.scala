@@ -2,7 +2,7 @@
   * Copyright (c) Carnegie Mellon University.
   * See LICENSE.txt for the conditions of this license.
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.core.{Function, NamedSymbol, Real, Tuple}

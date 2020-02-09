@@ -12,7 +12,8 @@ import java.time.LocalDate
 
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
+import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, M2KConverter, MathematicaOpSpec}
 import org.apache.logging.log4j.scala.Logging
 import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 

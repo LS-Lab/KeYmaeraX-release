@@ -4,9 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import edu.cmu.cs.ls.keymaerax.tools.{BinaryMathOpSpec, LiteralMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaOpSpec._
 import com.wolfram.jlink.Expr
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.symbol
 
 /** Extended Mathematica operator specifications for non-soundness critical tools. */
 object ExtMathematicaOpSpec {

@@ -1,24 +1,17 @@
+package edu.cmu.cs.ls.keymaerax.tools.qe
+
+import edu.cmu.cs.ls.keymaerax.core.{DifferentialSymbol, Function, NamedSymbol, Real, Sort, Tuple, Unit, Variable, insist, Ensures}
+import MathematicaConversion.MExpr
+import edu.cmu.cs.ls.keymaerax.tools.ConversionException
+
 /**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
- * See LICENSE.txt for the conditions of this license.
- */
-/**
-  * @note Code Review: 2016-08-02
+  * Name conversion to/from Mathematica. Prefixes all names with a namespace prefix. Refuses to convert
+  * interpreted symbols.
+  *
+  * @author Nathan Fulton
+  * @author Stefan Mitsch
   */
-package edu.cmu.cs.ls.keymaerax.tools
-
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
-
-// favoring immutable Seqs
-import scala.collection.immutable._
-
-/**
- * Name conversion to/from Mathematica. Prefixes all names with a namespace prefix. Refuses to convert interpreted symbols.
- * @author Nathan Fulton
- * @author Stefan Mitsch
- */
-private object MathematicaNameConversion {
+private[tools] object MathematicaNameConversion {
   // a prefix that Mathematica accepts but NamedSymbol would refuse to make disjoint by construction
   private val PREFIX = "kyx`"
   private val SEP    = "$i$"
@@ -53,7 +46,7 @@ private object MathematicaNameConversion {
     * }}}
     * @param e The Mathematica 'name'
     * @return The named symbol.
-    * @note Refuses to convert interpreted function symbols (i.e., any name not prefixed with kyx`)
+    * @note Refuses to convert interpreted function symbols (i.e., any name not prefixed with kyx)
     */
   def toKeYmaera(e: MExpr): NamedSymbol = {
     if (e.symbolQ()) {

@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
 
 /**
  * This is a symbol table used to check for matches using .equals()

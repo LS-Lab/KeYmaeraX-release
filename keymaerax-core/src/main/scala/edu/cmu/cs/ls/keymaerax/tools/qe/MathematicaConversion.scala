@@ -6,22 +6,23 @@
   * @note Code Review: 2016-08-02
   */
 
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
-import KMComparator._
-import MKComparator._
-import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Expression, Function, Number, Quantified, Real, Tuple, UnaryCompositeFormula, UnaryCompositeTerm}
-import edu.cmu.cs.ls.keymaerax.core.Ensures
+import edu.cmu.cs.ls.keymaerax.core.{ApplicationOf, BinaryCompositeFormula, BinaryCompositeTerm, ComparisonFormula, Divide, Ensures, Function, Number, Quantified, UnaryCompositeFormula, UnaryCompositeTerm}
+import edu.cmu.cs.ls.keymaerax.tools.qe.KMComparator._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MKComparator._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
 
 import scala.annotation.tailrec
 
 /**
-  * Mathematica conversion stuff.
+  * Mathematica conversion support to check results for having failed/being aborted, and safely importing
+  * Mathematica expressions into KeYmaera X.
+  * @see [[M2KConverter]] for converting Mathematica -> KeYmaera X
+  * @see [[K2MConverter]] for converting KeYmaera X  -> Mathematica
   *
   * @author Stefan Mitsch
   */
-
 object MathematicaConversion {
   type MExpr = com.wolfram.jlink.Expr
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
@@ -45,7 +46,7 @@ object MathematicaConversion {
 }
 
 /**
-  * Converts Mathematica -> KeYmaera
+  * Converts Mathematica -> KeYmaera X.
   * @tparam T usually Expression, but also other target types for non-soundness-critical conversions.
   */
 trait M2KConverter[T] extends (MExpr => T) {
@@ -72,7 +73,7 @@ trait M2KConverter[T] extends (MExpr => T) {
 }
 
 /**
-  * Converts KeYmaera -> Mathematica
+  * Converts KeYmaera X -> Mathematica.
   * @tparam T usually Expression, but also other source types for non-soundness-critical conversions.
   */
 trait K2MConverter[T] extends (T => MExpr) {
@@ -107,7 +108,8 @@ object KMComparator {
   implicit def MExprToKMComparator(e: MExpr): KMComparator = new KMComparator(e)
 }
 
-/** Compares Mathematica expressions for equality (handles conversion differences). */
+/** Compares Mathematica expressions for equality (handles conversion differences, since Mathematica silently
+  * converts some expressions, e.g. division 2/5 into rational 2/5). */
 class KMComparator(val l: MExpr) {
 
   /** Non-commutative comparison of Mathematica expressions for equality modulo Mathematica's implicit conversions.

@@ -10,8 +10,9 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{UncheckedBaseK2MConverter, UncheckedBaseM2KConverter}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, MathematicaToKeYmaera}
 
 import scala.collection.immutable._
 

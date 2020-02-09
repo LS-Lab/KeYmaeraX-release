@@ -5,18 +5,19 @@
 /**
   * @note Code Review: 2016-08-02
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
 // favoring immutable Seqs
-import scala.collection.immutable._
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaNameConversion._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaNameConversion._
+import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
 import scala.annotation.tailrec
+import scala.collection.immutable._
 import scala.math.BigDecimal
 
 /**

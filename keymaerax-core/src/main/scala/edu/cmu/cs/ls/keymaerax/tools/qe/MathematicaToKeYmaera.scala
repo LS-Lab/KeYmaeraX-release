@@ -5,12 +5,14 @@
 /**
   * @note Code Review: 2016-06-01
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.qe
 
 // favoring immutable Seqs
-import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaComputationFailedException}
+
+import scala.collection.immutable._
 
 /**
  * Converts [[com.wolfram.jlink.Expr]] to [[Expression]].

@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.KExpr
 import edu.cmu.cs.ls.keymaerax.tools.{BaseKeYmaeraMathematicaBridge, ConversionException, MathematicaLink, ToolException}
 import org.apache.logging.log4j.scala.Logging
 
@@ -21,7 +20,7 @@ import scala.util.Try
  * @author Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaInvGenTool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
+  extends BaseKeYmaeraMathematicaBridge[Expression](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
     with InvGenTool with Logging {
 
   init()
@@ -101,7 +100,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     }
   }
 
-  override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, KExpr]] = {
+  override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = {
     require(postCond.isFOL, "Unable to refute ODE, expected FOL post conditions but got " + postCond.prettyString)
     require(assumptions.forall(_.isFOL), "Unable to refute ODE, expected FOL assumptions but got " + assumptions)
 
