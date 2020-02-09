@@ -21,8 +21,7 @@ import org.scalatest.LoneElement._
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.codegen._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.utils.Statistics
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr, Statistics}
 
 /**
   * Created by smitsch on 3/8/15.
