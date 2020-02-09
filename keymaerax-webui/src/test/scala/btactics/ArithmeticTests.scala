@@ -3,27 +3,33 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence}
 
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
+import org.scalatest.Inside._
 
 class ArithmeticTests extends TacticTestBase {
 
-  private class MockTool(expected: Formula) extends ToolBase("MockTool") with QETool with CounterExampleTool {
-    initialized = true
-    //@todo should we keep hacking ourselves into the trusted tools of the core, or should we add a TestMode where MockTool is trusted?
-    //@note ProvableSig forwards to Provable -> Provable has to trust our tool
-    private val rcf = Class.forName(Provable.getClass.getCanonicalName).getField("MODULE$").get(null)
-    private val trustedToolsField = rcf.getClass.getDeclaredField("trustedTools")
-    trustedToolsField.setAccessible(true)
-    private val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]
-    trustedToolsField.set(rcf, trustedTools :+ MockTool.this.getClass.getCanonicalName)
+  private class MockTool(expected: Formula) extends ToolBase("MockTool") with QETacticTool with CounterExampleTool {
+    private class MockQETool extends QETool {
+      //@note ProvableSig forwards to Provable -> Provable has to trust our tool
+      private val rcf = Class.forName(Provable.getClass.getCanonicalName).getField("MODULE$").get(null)
+      private val trustedToolsField = rcf.getClass.getDeclaredField("trustedTools")
+      trustedToolsField.setAccessible(true)
+      private val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]
+      trustedToolsField.set(rcf, trustedTools :+ MockQETool.this.getClass.getCanonicalName)
 
-    override def qeEvidence(formula: Formula): (Formula, Evidence) = {
-      formula shouldBe expected
-      (False, ToolEvidence(List("tool" -> "mock")))
+      override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+        formula shouldBe expected
+        (False, ToolEvidence(List("tool" -> "mock")))
+      }
     }
+
+    initialized = true
+
+    override def qe(formula: Formula): Lemma = Provable.proveArithmetic(new MockQETool(), formula)
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
       formula shouldBe expected
@@ -94,46 +100,56 @@ class ArithmeticTests extends TacticTestBase {
   }
 
   "counterExample" should "not choke on differential symbols" in withMathematica { tool =>
-    tool.findCounterExample("v'>=0".asFormula) match {
-      //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time
-      case Some(m) =>
-        m.size shouldBe 1
-        m.keySet should contain only "v'".asTerm
+    //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time
+    inside (tool.findCounterExample("v'>=0".asFormula)) {
+      case Some(m) => m.loneElement._1 shouldBe "v'".asVariable
     }
   }
 
   it should "not choke on function symbols" in withMathematica { tool =>
-    tool.findCounterExample("v>=A()".asFormula) match {
-      //@note less elegant expected test result, because Mathematica may return different counter examples, not -18 every the time
+    inside (tool.findCounterExample("v>=A()".asFormula)) {
       case Some(m) =>
         m.size shouldBe 2
-        m.keySet should contain only (Variable("v"), Function("A", None, Unit, Real))
+        m.keySet should contain theSameElementsAs  List("v".asVariable, "A()".asFunction)
+        (m("v".asVariable), m("A()".asFunction)) match {
+          case (v: Term, a: Term) => proveBy(Less(v, a), TactixLibrary.QE) shouldBe 'proved
+          case (v, a) => fail("Unexpected counterexample result, expected terms but got: " +
+            v.prettyString + ", " + a.prettyString)
+        }
     }
   }
 
   it should "avoid name clashes between variables and parameterless functions" in withMathematica { tool =>
-    tool.findCounterExample("a>=a()".asFormula) match {
-      //@note less elegant expected test result, because Mathematica may return different counter examples
+    inside (tool.findCounterExample("a>=a()".asFormula)) {
       case Some(m) =>
         m.size shouldBe 2
-        m.keySet should contain only (Variable("a"), Function("a", None, Unit, Real))
+        m.keySet should contain theSameElementsAs  List("a".asVariable, "a()".asFunction)
+        (m("a".asVariable), m("a()".asFunction)) match {
+          case (v: Term, a: Term) => proveBy(Less(v, a), TactixLibrary.QE) shouldBe 'proved
+          case (v, a) => fail("Unexpected counterexample result, expected terms but got: " +
+            v.prettyString + ", " + a.prettyString)
+        }
     }
 
-    tool.findCounterExample("a=1&a()=2 -> a=a()".asFormula) match {
-      //@note less elegant expected test result, because Mathematica may return different counter examples
+    inside (tool.findCounterExample("a=1&a()=2 -> a=a()".asFormula)) {
       case Some(m) =>
         m.size shouldBe 2
-        m.keySet should contain only (Variable("a"), Function("a", None, Unit, Real))
+        m.keySet should contain theSameElementsAs  List("a".asVariable, "a()".asFunction)
+        (m("a".asVariable), m("a()".asFunction)) match {
+          case (v: Term, a: Term) => proveBy(NotEqual(v, a), TactixLibrary.QE) shouldBe 'proved
+          case (v, a) => fail("Unexpected counterexample result, expected terms but got: " +
+            v.prettyString + ", " + a.prettyString)
+        }
     }
 
     tool.findCounterExample("a=1&a()=2 -> a<a()".asFormula) shouldBe None
   }
 
   it should "support interpreted function symbols" in withMathematica { tool =>
-    tool.findCounterExample("abs(x) < 0".asFormula) match {
+    inside (tool.findCounterExample("abs(x) < 0".asFormula)) {
       case Some(m) =>
         m.size shouldBe 1
-        m.keySet should contain only Variable("x")
+        m.keySet should contain theSameElementsAs  List("x".asVariable)
     }
   }
 
@@ -170,7 +186,7 @@ class ArithmeticTests extends TacticTestBase {
   "simulate" should "simulate a simple example" in withMathematica { tool =>
     val simulation = tool.simulate("x>0".asFormula, "x>xpre".asFormula, 3, 2)
     simulation should have size 2
-    simulation.forall(_.size == 1+3) // initial state + 3 steps
+    simulation.foreach(_.size shouldBe 1+3) // initial state + 3 steps
     simulation.forall(_.forall(state => state.keySet.contains(Variable("x")))) shouldBe true
   }
 }
