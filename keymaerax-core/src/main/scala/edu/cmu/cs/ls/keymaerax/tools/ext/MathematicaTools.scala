@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
+import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -629,6 +630,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
     // step[pre_] := Module[{apre=a/.pre, ...}, FindInstance[apre>=..., {a, ...}, Reals]] as pure function
     val (stepPreVars, stepPostVars) = StaticSemantics.symbols(stateRelation).partition(_.name.startsWith("pre"))
     val pre2post = stepPostVars.filter(_.name != "t_").map(v => Variable("pre" + v.name, v.index, v.sort) -> v).toMap[NamedSymbol, NamedSymbol]
+
     val stepModuleInit = stepPreVars.toList.sorted.map(s =>
       ExtMathematicaOpSpec.set(
         basek2m(s),
@@ -637,12 +639,14 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
           ExtMathematicaOpSpec.placeholder.op
         )
       )).toArray
+
     val step = ExtMathematicaOpSpec.setDelayed(
-        MathematicaOpSpec.symbol( "step"),
+        MathematicaOpSpec.symbol("step"),
         ExtMathematicaOpSpec.function(
           ExtMathematicaOpSpec.module(
             MathematicaOpSpec.list(stepModuleInit:_*),
             ExtMathematicaOpSpec.findInstance(
+              basek2m(stateRelation),
               MathematicaOpSpec.list(stepPostVars.toList.sorted.map(basek2m):_*),
               MathematicaOpSpec.reals.op
             )
@@ -655,14 +659,14 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         ExtMathematicaOpSpec.function(
           ExtMathematicaOpSpec.n(
             ExtMathematicaOpSpec.nestList(
-              MathematicaOpSpec.symbol( "step"),
+              MathematicaOpSpec.symbol("step"),
               ExtMathematicaOpSpec.placeholder.op,
               MathematicaOpSpec.int(steps)
             )
           )
         ),
         ExtMathematicaOpSpec.apply(
-          MathematicaOpSpec.symbol( "init"),
+          MathematicaOpSpec.symbol("init"),
           MathematicaOpSpec.list(MathematicaOpSpec.int(n))
         )
       )
