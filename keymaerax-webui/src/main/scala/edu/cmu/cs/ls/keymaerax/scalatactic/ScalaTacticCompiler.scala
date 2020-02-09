@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.api
+package edu.cmu.cs.ls.keymaerax.scalatactic
 
 import scala.reflect.internal.util.{AbstractFileClassLoader, BatchSourceFile}
 import scala.tools.nsc.{Global, Settings}

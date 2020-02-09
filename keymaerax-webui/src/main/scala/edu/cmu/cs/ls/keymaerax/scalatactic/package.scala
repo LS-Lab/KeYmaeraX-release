@@ -9,6 +9,6 @@ package edu.cmu.cs.ls.keymaerax
  * @author Andre Platzer
  * @todo Stub. Describe for real.
  */
-package object api {
+package object scalatactic {
 
 }
