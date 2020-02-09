@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, RenUSubst}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -36,7 +36,7 @@ object DerivedAxioms extends Logging {
 
   val DerivedAxiomProvableSig = ProvableSig//NoProofTermProvable
   /** Database for derived axioms */
-  val derivedAxiomDB = LemmaDBFactory.lemmaDB
+  val derivedAxiomDB: LemmaDB = LemmaDBFactory.lemmaDB
 
   type LemmaID = String
 
@@ -51,7 +51,7 @@ object DerivedAxioms extends Logging {
     derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
   }
 
-  private val AUTO_INSERT = true
+  private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
   private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
