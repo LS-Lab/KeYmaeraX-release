@@ -5,22 +5,22 @@
 /**
   * @note Code Review: 2016-08-02
   */
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import java.io.{File, FileWriter, IOException}
 import java.time.LocalDate
 
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
-import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, M2KConverter, MathematicaOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, K2MConverter, M2KConverter, MathematicaOpSpec}
 import org.apache.logging.log4j.scala.Logging
 import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 
-import scala.collection.immutable
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.sys.process._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * An abstract interface to Mathematica link implementations.
@@ -34,10 +34,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 trait MathematicaLink {
   /** Runs Mathematica command `cmd` without safeguarding by exception checking for Mathematica results. */
   def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T)
-  /** Runs Mathematica command `cmd` converting back with `m2k` using tool `executor`, with Mathematica exception checking.
+
+  /** Runs command `cmd` converting back with `m2k` using tool `executor`, with Mathematica exception checking.
     * @ensures cmd is freed and should not ever be used again.
     */
-  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T)
+  def run[T](cmd: () => T, executor: ToolExecutor[T]): T
 
   /** Cancels the current request.
     *
@@ -77,10 +78,18 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   var memoryLimit: Long = MEMORY_LIMIT_OFF
 
   protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
-  protected val mathematicaExecutor: ToolExecutor[(String, T)] = new ToolExecutor(1)
+  protected val mathematicaExecutor: ToolExecutor[T] = new ToolExecutor(1)
 
   override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(memoryConstrained(timeConstrained(cmd)), m2k)
-  override def run(cmd: MExpr): (String, T) = link.run(memoryConstrained(timeConstrained(cmd)), m2k, mathematicaExecutor)
+
+  override def run(cmd: MExpr): (String, T) = {
+    val commandRunner = link match {
+      case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.ml)
+    }
+    (cmd.toString, link.run(() => {
+      commandRunner.run(memoryConstrained(timeConstrained(cmd)), m2k)._2
+    }, mathematicaExecutor))
+  }
 
   def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
     link.runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
@@ -282,131 +291,52 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
   }
 
   /**
-    * Runs a Mathematica command.
-    *
-    * @param cmd The Mathematica command to run. Disposed as a result of this method.
-    * @param m2k The converter Mathematica->KeYmaera X
-    * @tparam T The exact KeYmaera X expression type expected as result.
-    * @return The result, as string and as KeYmaera X expression.
-    * @note Disposes cmd, do not use afterwards.
-    * @see [[run()]]
-    */
-  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T) = run(cmd, executor, m2k)
-
-  /**
     * Runs a Mathematica command on the specified executor, converts the result back with converter.
     *
     * @param cmd The command to run. Disposed as a result of this method.
     * @param executor Executes commands (scheduled).
-    * @param converter Converts Mathematica expressions to KeYmaera X expressions.
     * @tparam T The exact KeYmaera X expression type expected as result.
     * @return The result, as string and as KeYmaera X expression.
     * @ensures cmd is freed and should not ever be used again.
     */
-  protected def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
-    try {
-      if (ml == null) throw new IllegalStateException("No MathKernel set")
-      val qidx: Long = ml.synchronized {
-        queryIndex += 1; queryIndex
-      }
-      val indexedCmd = MathematicaOpSpec.list(new MExpr(qidx), cmd)
-      // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-      val checkErrorMsgCmd = MathematicaOpSpec.check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/)
-      try {
-        logger.debug("Sending to " + engineName + ": " + checkErrorMsgCmd)
-
-        val taskId = executor.schedule(_ => {
-          ml.synchronized {
-            dispatch(checkErrorMsgCmd.toString)
-            getAnswer(qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
-          }
-        })
-
-        executor.wait(taskId) match {
-          case Some(Left(result)) =>
-            executor.remove(taskId)
-            result
-          case Some(Right(throwable)) => throwable match {
-            case ex: MathematicaComputationAbortedException =>
-              executor.remove(taskId)
-              throw ex
-            case ex: ConversionException =>
-              executor.remove(taskId)
-              // conversion error, but Mathematica still functional
-              throw ToolException("Error converting " + engineName + " result from " + checkErrorMsgCmd, ex)
-            case ex: IllegalArgumentException =>
-              executor.remove(taskId)
-              // computation error, but Mathematica still functional
-              throw ToolException("Error executing " + engineName + " command " + checkErrorMsgCmd, ex)
-            case ex: Throwable =>
-              logger.warn(ex)
-              executor.remove(taskId, force = true)
-              try {
-                restart()
-              } catch {
-                case restartEx: Throwable =>
-                  throw ToolException("Restarting " + engineName + " failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of " + engineName + " (KeYmaera X->Preferences). " + engineName + " error that triggered the restart:\n" + ex.getMessage, restartEx)
-              }
-              throw ToolException("Restarted " + engineName + ", please rerun the failed command (error details below)", throwable)
-          }
-          case None =>
-            //@note Thread is interrupted by another thread (e.g., UI button 'stop')
-            cancel()
-            executor.remove(taskId, force = true)
-            logger.debug("Initiated aborting "  + engineName + " " + checkErrorMsgCmd)
-            throw new MathematicaComputationExternalAbortException(checkErrorMsgCmd.toString)
-        }
-      } finally {
-        //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
-        //@note nested cmd is disposed automatically
-        checkErrorMsgCmd.dispose()
-      }
-      //@note during normal execution, this disposes cmd twice (once via checkErrorMsgCmd) but J/Link ensures us this would be acceptable.
-    } finally { cmd.dispose() }
-  }
-
-  /** Send command `cmd` for evaluation to Mathematica kernel straight away */
-  private def dispatch(cmd: String): Unit = {
+  override def run[T](cmd: () => T, executor: ToolExecutor[T]): T = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.evaluate(cmd)
-  }
+    val taskId = executor.schedule(_ => { ml.synchronized { cmd() } })
 
-  /**
-    * Blocks and returns the answer (as string and as KeYmaera X expression).
-    *
-    * @param cmdIdx The expected command index to avoid returning stale answers.
-    * @param converter Converts Mathematica expressions back to KeYmaera X expressions.
-    * @param ctx The context for error messages in exceptions.
-    * @tparam T The exact KeYmaera X expression type expected as result.
-    * @return The result as string and converted to the expected result type.
-    */
-  private def getAnswer[T](cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
-    if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.waitForAnswer()
-    importResult(ml.getExpr,
-      res => {
-        if (isAborted(res)) {
-          throw new MathematicaComputationAbortedException(ctx)
-        } else if (res == MathematicaOpSpec.exception.op) {
-          // an exception occurred, rerun to get the messages
-          ml.evaluate(ctx + ";" + fetchMessagesCmd)
-          ml.waitForAnswer()
-          val txtMsg = importResult(ml.getExpr, _.toString)
-          throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
-        } else {
-          val head = res.head
-          if (head == MathematicaOpSpec.check.op) {
-            throw new IllegalStateException(engineName + " returned input as answer: " + res.toString)
-          } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
-            val theResult = res.args.last
-            //@todo check with MathematicaToKeYmaera.isAborted
-            if (theResult == MathematicaOpSpec.aborted.op) throw new MathematicaComputationAbortedException(ctx)
-            else (theResult.toString, converter(theResult))
-          } else {
-            throw new IllegalStateException(engineName + " returned a stale answer for " + res.toString)
+    executor.wait(taskId) match {
+      case Some(Left(result)) =>
+        executor.remove(taskId)
+        result
+      case Some(Right(throwable)) => throwable match {
+        case ex: MathematicaComputationAbortedException =>
+          executor.remove(taskId)
+          throw ex
+        case ex: ConversionException =>
+          executor.remove(taskId)
+          // conversion error, but Mathematica still functional
+          throw ToolException("Error converting " + engineName + " result", ex)
+        case ex: IllegalArgumentException =>
+          executor.remove(taskId)
+          // computation error, but Mathematica still functional
+          throw ToolException("Error executing " + engineName + " command", ex)
+        case ex: Throwable =>
+          logger.warn(ex)
+          executor.remove(taskId, force = true)
+          try {
+            restart()
+          } catch {
+            case restartEx: Throwable =>
+              throw ToolException("Restarting " + engineName + " failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of " + engineName + " (KeYmaera X->Preferences). " + engineName + " error that triggered the restart:\n" + ex.getMessage, restartEx)
           }
-        }
-      })
+          throw ToolException("Restarted " + engineName + ", please rerun the failed command (error details below)", throwable)
+      }
+      case None =>
+        //@note Thread is interrupted by another thread (e.g., UI button 'stop')
+        cancel()
+        executor.remove(taskId, force = true)
+        logger.debug("Initiated aborting "  + engineName)
+        throw new MathematicaComputationExternalAbortException("Mathematica task aborted")
+    }
   }
 
   def cancel(): Boolean = {
@@ -564,122 +494,51 @@ class WolframScript extends MathematicaLink with Logging {
   }
 
   /**
-    * Runs a Mathematica command.
-    *
-    * @param cmd The Mathematica command to run. Disposed as a result of this method.
-    * @param m2k The converter Mathematica->KeYmaera X
-    * @tparam T The exact KeYmaera X expression type expected as result.
-    * @return The result, as string and as KeYmaera X expression.
-    * @note Disposes cmd, do not use afterwards.
-    * @see [[run()]]
-    */
-  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T) = run(cmd, executor, m2k)
-
-  /**
-    * Runs a Mathematica command on the specified executor, converts the result back with converter.
+    * Runs a Mathematica command on the specified executor.
     *
     * @param cmd The command to run. Disposed as a result of this method.
     * @param executor Executes commands (scheduled).
-    * @param converter Converts Mathematica expressions to KeYmaera X expressions.
     * @tparam T The exact KeYmaera X expression type expected as result.
     * @return The result, as string and as KeYmaera X expression.
     * @ensures cmd is freed and should not ever be used again.
     */
-  protected def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
-    try {
-      val qidx: Long = wolframProcess.synchronized {
-        queryIndex += 1; queryIndex
+  override def run[T](cmd: () => T, executor: ToolExecutor[T]): T = {
+    val taskId = executor.schedule(_ => { wolframProcess.synchronized { cmd() } })
+
+    executor.wait(taskId) match {
+      case Some(Left(result)) =>
+        executor.remove(taskId)
+        result
+      case Some(Right(throwable)) => throwable match {
+        case ex: MathematicaComputationAbortedException =>
+          executor.remove(taskId)
+          throw ex
+        case ex: ConversionException =>
+          executor.remove(taskId)
+          // conversion error, but Wolfram Engine still functional
+          throw ToolException("Error converting Wolfram Engine result", ex)
+        case ex: IllegalArgumentException =>
+          executor.remove(taskId)
+          // computation error, but Wolfram Engine still functional
+          throw ToolException("Error executing Wolfram Engine command", ex)
+        case ex: Throwable =>
+          logger.warn(ex)
+          executor.remove(taskId, force = true)
+          try {
+            restart()
+          } catch {
+            case restartEx: Throwable =>
+              throw ToolException("Restarting Wolfram Engine failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of Wolfram Engine (Help->Tools). Wolfram Engine error that triggered the restart:\n" + ex.getMessage, restartEx)
+          }
+          throw ToolException("Restarted Wolfram Engine, please rerun the failed command (error details below)", throwable)
       }
-      val indexedCmd = MathematicaOpSpec.list(new MExpr(qidx), cmd)
-      // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-      val checkErrorMsgCmd = MathematicaOpSpec.check(indexedCmd, MathematicaOpSpec.exception.op /*, checkedMessagesExpr*/)
-      try {
-        logger.debug("Sending to Wolfram Engine " + checkErrorMsgCmd)
-
-        val taskId = executor.schedule(_ => {
-          wolframProcess.synchronized {
-            getAnswer(checkErrorMsgCmd.toString, qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
-          }
-        })
-
-        executor.wait(taskId) match {
-          case Some(Left(result)) =>
-            executor.remove(taskId)
-            result
-          case Some(Right(throwable)) => throwable match {
-            case ex: MathematicaComputationAbortedException =>
-              executor.remove(taskId)
-              throw ex
-            case ex: ConversionException =>
-              executor.remove(taskId)
-              // conversion error, but Wolfram Engine still functional
-              throw ToolException("Error converting Wolfram Engine result from " + checkErrorMsgCmd, ex)
-            case ex: IllegalArgumentException =>
-              executor.remove(taskId)
-              // computation error, but Wolfram Engine still functional
-              throw ToolException("Error executing Wolfram Engine command " + checkErrorMsgCmd, ex)
-            case ex: Throwable =>
-              logger.warn(ex)
-              executor.remove(taskId, force = true)
-              try {
-                restart()
-              } catch {
-                case restartEx: Throwable =>
-                  throw ToolException("Restarting Wolfram Engine failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of Wolfram Engine (Help->Tools). Wolfram Engine error that triggered the restart:\n" + ex.getMessage, restartEx)
-              }
-              throw ToolException("Restarted Wolfram Engine, please rerun the failed command (error details below)", throwable)
-          }
-          case None =>
-            //@note Thread is interrupted by another thread (e.g., UI button 'stop')
-            cancel()
-            executor.remove(taskId, force = true)
-            logger.debug("Initiated aborting Wolfram Engine " + checkErrorMsgCmd)
-            throw new MathematicaComputationExternalAbortException(checkErrorMsgCmd.toString)
-        }
-      } finally {
-        //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
-        //@note nested cmd is disposed automatically
-        checkErrorMsgCmd.dispose()
-      }
-      //@note during normal execution, this disposes cmd twice (once via checkErrorMsgCmd) but J/Link ensures us this would be acceptable.
-    } finally { cmd.dispose() }
-  }
-
-  /**
-    * Blocks and returns the answer (as string and as KeYmaera X expression).
-    *
-    * @param cmd The command to execute.
-    * @param cmdIdx The command index.
-    * @param converter Converts Mathematica expressions back to KeYmaera X expressions.
-    * @param ctx The context for error messages in exceptions.
-    * @tparam T The exact KeYmaera X expression type expected as result.
-    * @return The result as string and converted to the expected result type.
-    */
-  private def getAnswer[T](cmd: String, cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
-    val result = evaluate(cmd)
-    importResult(result,
-      res => {
-        //@todo check with MathematicaToKeYmaera.isAborted
-        if (isAborted(res)) {
-          throw new MathematicaComputationAbortedException(ctx)
-        } else if (res == MathematicaOpSpec.exception.op) {
-          // an exception occurred, rerun to get the messages
-          val msgResult = evaluate(ctx + ";" + fetchMessagesCmd)
-          val txtMsg = importResult(msgResult, _.toString)
-          throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
-        } else {
-          val head = res.head
-          if (head == MathematicaOpSpec.check.op) {
-            throw new IllegalStateException("Wolfram Engine returned input as answer: " + res.toString)
-          } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asBigDecimal().intValueExact() == cmdIdx) {
-            val theResult = res.args.last
-            if (isAborted(theResult)) throw new MathematicaComputationAbortedException(ctx)
-            else (theResult.toString, converter(theResult))
-          } else {
-            throw new IllegalStateException("Wolfram Engine returned a stale answer for " + res.toString)
-          }
-        }
-      })
+      case None =>
+        //@note Thread is interrupted by another thread (e.g., UI button 'stop')
+        cancel()
+        executor.remove(taskId, force = true)
+        logger.debug("Initiated aborting Wolfram Engine")
+        throw new MathematicaComputationExternalAbortException("Computation aborted")
+    }
   }
 
   def cancel(): Boolean = wolframProcess match {

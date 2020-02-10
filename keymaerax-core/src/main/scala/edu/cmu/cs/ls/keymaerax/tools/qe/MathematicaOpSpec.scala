@@ -230,5 +230,9 @@ object MathematicaOpSpec {
 
   val check = NaryMathOpSpec(symbol("Check"))
 
+  val timeConstrained = BinaryMathOpSpec(symbol("TimeConstrained"))
+
+  val memoryConstrained = BinaryMathOpSpec(symbol("MemoryConstrained"))
+
   //</editor-fold>
 }

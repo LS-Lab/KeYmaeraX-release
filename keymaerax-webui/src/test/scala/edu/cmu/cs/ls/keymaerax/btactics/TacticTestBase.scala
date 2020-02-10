@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, 
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
-import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, QETacticTool, Z3}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{JLinkMathematicaLink, Mathematica, QETacticTool, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, M2KConverter, Polya}
 import org.scalactic.{AbstractStringUniformity, Uniformity}

@@ -99,7 +99,7 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
         k2m(Left(Number(amount)))
       )
     timeout match {
-      case Some(to) => ExtMathematicaOpSpec.timeConstrainted(fi, k2m(Left(Number(to))))
+      case Some(to) => MathematicaOpSpec.timeConstrained(fi, k2m(Left(Number(to))))
       case None => fi
     }
   }

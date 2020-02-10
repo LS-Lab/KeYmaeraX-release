@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.tools.{BaseKeYmaeraMathematicaBridge, ConversionException, MathematicaLink, ToolException}
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, ToolException}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq

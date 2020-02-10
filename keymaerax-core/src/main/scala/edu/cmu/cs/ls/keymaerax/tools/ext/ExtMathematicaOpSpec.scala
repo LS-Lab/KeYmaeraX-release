@@ -49,8 +49,6 @@ object ExtMathematicaOpSpec {
 
   val first = NaryMathOpSpec(symbol("First"))
 
-  val timeConstrainted = BinaryMathOpSpec(symbol("TimeConstrained"))
-
   //</editor-fold>
 
   //<editor-fold desc="Arithmetic">

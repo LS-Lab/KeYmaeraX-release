@@ -7,24 +7,22 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
-import MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 
 /**
-  * A QE tool implementation using the provided JLink link to Mathematica/Wolfram Engine.
-  * @param link The link to Mathematica/Wolfram Engine
+  * A QE tool implementation using the provided link to Mathematica/Wolfram Engine.
+  * @param link The link to Mathematica/Wolfram Engine.
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaQETool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool with Logging {
+class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool with Logging {
 
+  /** @inheritdoc */
   def qeEvidence(originalFormula: Formula): (Formula, Evidence) = {
 //    val f = {
 //      val mustBeReals = FormulaTools.unnaturalPowers(originalFormula)
@@ -34,7 +32,7 @@ class MathematicaQETool(override val link: MathematicaLink)
 //      })
 //      new EnsureRealsK2M(originalFormula, mustBeRealsInParentFml.toMap)(originalFormula)
 //    }
-    val f = k2m(originalFormula)
+    val f = KeYmaeraToMathematica(originalFormula)
     val method = Configuration.getOption(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
       case "Reduce" => MathematicaOpSpec.reduce
       case "Resolve" => MathematicaOpSpec.resolve
@@ -42,7 +40,7 @@ class MathematicaQETool(override val link: MathematicaLink)
     }
     val input = method(f, MathematicaOpSpec.list(), MathematicaOpSpec.reals.op)
     try {
-      val (output, result) = run(input)
+      val (output, result) = link.run(input, MathematicaToKeYmaera)
       result match {
         case resultingQeFormula: Formula =>
           logger.debug(s"Mathematica QE result from input ${originalFormula.prettyString}: " + resultingQeFormula.prettyString)

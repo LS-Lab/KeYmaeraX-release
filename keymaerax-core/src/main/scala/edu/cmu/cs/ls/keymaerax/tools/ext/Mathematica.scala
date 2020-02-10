@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool
 import edu.cmu.cs.ls.keymaerax.tools._
 
 import scala.annotation.tailrec
@@ -31,8 +30,8 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
     with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
     with PDESolverTool with ToolOperationManagement {
 
-  private val mQE = new MathematicaQETool(link)
-  private val mPegasus = new MathematicaInvGenTool(link)  
+  private val mQE: MathematicaQEToolBridge[Lemma] = new MathematicaQEToolBridge[Lemma](link)
+  private val mPegasus = new MathematicaInvGenTool(link)
   private val mCEX = new MathematicaCEXTool(link)
   private val mODE = new MathematicaODESolverTool(link)
   private val mPDE = new MathematicaPDESolverTool(link)
@@ -78,7 +77,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   /** Closes the connection to Mathematica */
   override def shutdown(): Unit = {
     mQE.shutdown()
-    mPegasus.shutdown()    
+    mPegasus.shutdown()
     mCEX.shutdown()
     mODE.shutdown()
     mPDE.shutdown()
@@ -98,7 +97,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def qe(formula: Formula): Lemma = {
     mQE.timeout = qeInitialTimeout
     try {
-      ProvableSig.proveArithmetic(mQE, formula)
+      mQE.run(ProvableSig.proveArithmetic(_, formula))
     } catch {
       case _: MathematicaComputationAbortedException =>
         mCEX.timeout = qeCexTimeout
@@ -115,7 +114,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
         cex match {
           case None =>
             mQE.timeout = qeMaxTimeout
-            ProvableSig.proveArithmetic(mQE, formula)
+            mQE.run(ProvableSig.proveArithmetic(_, formula))
           case Some(cexFml) => Lemma(
             ProvableSig.startProof(False),
             ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)
@@ -129,6 +128,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private def stripUniversalClosure(fml: Formula): Formula = fml match {
     case f: Imply => f
     case Forall(_, f) => stripUniversalClosure(f)
+    case f => throw new IllegalArgumentException("Expected shape \\forall x (p(x) -> q(x)), but got " + f.prettyString)
   }
 
   /** Returns a formula describing the symbolic solution of the specified differential equation system.
@@ -193,12 +193,12 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   /** Restarts the MathKernel with the current configuration */
   override def restart(): Unit = link match {
     case l: JLinkMathematicaLink => l.restart()
-    case l: WolframScript => l.restart()
+//    case l: WolframScript => l.restart()
   }
 
   override def cancel(): Boolean = link.cancel()
 
   override def setOperationTimeout(timeout: Int): Unit = qeMaxTimeout = timeout
   override def getOperationTimeout: Int = qeMaxTimeout
-  override def getAvailableWorkers: Int = mQE.availableWorkers
+  override def getAvailableWorkers: Int = 1
 }

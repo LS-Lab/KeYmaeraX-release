@@ -2,15 +2,15 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-import com.wolfram.jlink.Expr
+import com.wolfram.jlink.{Expr, KernelLink}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.KExpr
 import edu.cmu.cs.ls.keymaerax.tools._
-import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
-import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaQETool}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{ExtMathematicaOpSpec, JLinkMathematicaLink, Mathematica, MathematicaLink}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
@@ -59,7 +59,6 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     the [CoreException] thrownBy link.qe("abs(-5) > 4".asFormula) should have message
       "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      val foo = link.qe("abs(-5) > 4".asFormula).fact
       link.qe("abs(-5) > 4".asFormula).fact.conclusion shouldBe "==> abs(-5) > 4 <-> true".asSequent
     }
   }
@@ -140,21 +139,25 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
   "Blocking kernels" should "be detected" in withMathematica { link =>
     val lnk = PrivateMethod[MathematicaLink]('link)
+    val ml = PrivateMethod[KernelLink]('ml)
     val theLink = link invokePrivate lnk()
-    val executor: ToolExecutor[(String, KExpr)] = new ToolExecutor(1)
-
-    val trueConverter = new M2KConverter[KExpr] {
-      override def k2m: K2MConverter[KExpr] = ???
-      override def apply(e: MExpr): KExpr = True
-      def convert(e: MExpr): KExpr = ???
+    val commandRunner = theLink match {
+      case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.invokePrivate(ml()))
     }
+    val executor: ToolExecutor[KExpr] = new ToolExecutor(1)
 
     val workers = executor.availableWorkers()
     workers should be >= 1
     println("Start with available workers: " + workers)
     val start = System.currentTimeMillis()
+    val request = () => {
+      val expr: Expr = ExtMathematicaOpSpec.compoundExpression(
+        MathematicaOpSpec(MathematicaOpSpec.symbol("Pause"))(MathematicaOpSpec.int(5)),
+        MathematicaOpSpec.int(7))
+      commandRunner.run(expr, MathematicaToKeYmaera)._2
+    }
     new Thread(
-      () => theLink.run(new MExpr(new MExpr(Expr.SYMBOL,  "Pause"), Array(new MExpr(5))), trueConverter, executor)
+      () => theLink.run(request, executor)
     ).start()
     println("Started first task")
     (System.currentTimeMillis() - start) should be <= 200L
@@ -162,7 +165,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     executor.availableWorkers() shouldBe (workers - 1)
     val intermediate = System.currentTimeMillis()
     println("Second task")
-    theLink.run(new MExpr(new MExpr(Expr.SYMBOL,  "Pause"), Array(new MExpr(5))), trueConverter, executor)
+    theLink.run(request, executor) shouldBe Number(7)
     //@note we wait about 1s of the 5s of the first worker (so if only 1 worker we still wait about 4s)
     // and then another 5s in the second worker (check with a little slack time around 9s for <= 1 worker or 5s for > 1 worker)
     if (workers <= 1) (System.currentTimeMillis() - intermediate) should (be >= 8500L and be <= 9500L)
@@ -173,16 +176,25 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   "Restarting Mathematica" should "work from a killed kernel" taggedAs IgnoreInBuildTest in withMathematica { link =>
     //@note Kills all WolframKernel!
     val lnk = PrivateMethod[MathematicaLink]('link)
+    val ml = PrivateMethod[KernelLink]('ml)
     val theLink = link invokePrivate lnk()
-    val bridge = new MathematicaQETool(theLink)
+    val executor: ToolExecutor[KExpr] = new ToolExecutor(1)
 
     var compAfterRestart: Option[Expression] = None
 
     val t = new Thread(() => {
-      the [ToolException] thrownBy bridge.run(
-        new MExpr(new MExpr(Expr.SYMBOL, "Pause"), Array[MExpr](new MExpr(30)))
-      ) should have message "Restarted Mathematica, please rerun the failed command (error details below)"
-      compAfterRestart = Some(bridge.run(KeYmaeraToMathematica("2+3".asTerm))._2)
+      the [ToolException] thrownBy theLink.run(() => theLink match {
+        case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.invokePrivate(ml())).
+          run(ExtMathematicaOpSpec.compoundExpression(
+            MathematicaOpSpec(MathematicaOpSpec.symbol("Pause"))(MathematicaOpSpec.int(30)),
+            MathematicaOpSpec.int(7)
+          ), MathematicaToKeYmaera)._2
+      } , executor) should
+        have message "Restarted Mathematica, please rerun the failed command (error details below)"
+      compAfterRestart = Some(theLink.run(() => theLink match {
+          case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.invokePrivate(ml())).
+            run(KeYmaeraToMathematica("2+3".asTerm), MathematicaToKeYmaera)._2
+        }, executor))
     })
     t.start()
     println("Sleeping for 5s...")
