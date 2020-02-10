@@ -4,7 +4,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
-import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, Tool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 
 import scala.collection.immutable._
 import org.scalatest.LoneElement._

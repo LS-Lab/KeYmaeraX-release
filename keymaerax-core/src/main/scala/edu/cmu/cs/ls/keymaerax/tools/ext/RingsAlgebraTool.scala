@@ -5,7 +5,7 @@ import cc.redberry.rings.scaladsl._
 import cc.redberry.rings.scaladsl.syntax._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.{AlgebraTool, Tool}
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.JavaConverters._
 

@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Term, Variable}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
