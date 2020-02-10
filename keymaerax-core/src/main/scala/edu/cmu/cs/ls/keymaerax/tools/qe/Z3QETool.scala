@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.{ToolBase, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
 
 import scala.collection.immutable.Map
 
@@ -20,21 +20,27 @@ import scala.collection.immutable.Map
  * @author Ran Ji
  * @author Stefan Mitsch
  */
-final class Z3QETool extends ToolBase("Z3") with QETool with ToolOperationManagement {
+final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   // Z3 is a trusted tool. Do not extend this class with other tool interfaces. Extend ext.Z3 instead.
+
+  /** @inheritdoc */
+  override val name: String = "Z3QETool"
+
   private var z3: Z3Solver = _
 
   /** @inheritdoc */
   override def init(config: Map[String,String]): Unit = {
     z3 = new Z3Solver(config("z3Path"), DefaultSMTConverter)
-    initialized = true
   }
 
   /** @inheritdoc */
-  override def restart(): Unit = { initialized = true }
+  override def restart(): Unit = { }
 
   /** @inheritdoc */
-  override def shutdown(): Unit = { initialized = false }
+  override def shutdown(): Unit = z3 = null
+
+  /** @inheritdoc */
+  override def isInitialized: Boolean = z3 != null
 
   /** @inheritdoc */
   override def cancel(): Boolean = z3.cancel()

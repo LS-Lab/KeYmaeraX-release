@@ -2,8 +2,8 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import java.math.{MathContext, RoundingMode}
 
-import edu.cmu.cs.ls.keymaerax.core.{And, BinaryCompositeTerm, Divide, Equal, Evidence, False, Formula, FuncOf, Function, Greater, GreaterEqual, Less, LessEqual, Minus, Neg, NotEqual, Number, Or, Pair, Plus, Power, QETool, Real, Term, Times, True, Tuple, UnaryCompositeTerm}
-import edu.cmu.cs.ls.keymaerax.tools.ToolBase
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
 
 import scala.collection.immutable.Map
 
@@ -12,8 +12,9 @@ import scala.collection.immutable.Map
  *
   * @author Fabian Immler
   */
-object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
-  initialized = true
+object BigDecimalQETool extends Tool with QETool {
+  /** @inheritdoc */
+  override val name: String = "BigDecimalQETool"
 
   // TODO: taken from DifferentialTactics, should perhaps be in a more central place?
   val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
@@ -22,7 +23,7 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
   def isNumeric(t: Term) : Boolean = t match {
     case t: BinaryCompositeTerm => isNumeric(t.left) && isNumeric(t.right)
     case t: UnaryCompositeTerm => isNumeric(t.child)
-    case Number(a) => true
+    case Number(_) => true
     case FuncOf(m, Pair(a, b)) if m == minF || m == maxF => isNumeric(a) && isNumeric(b)
     case _ => false
   }
@@ -41,7 +42,7 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
     case FuncOf(m, Pair(a, b)) if m == minF => eval(a) min eval(b)
     case FuncOf(m, Pair(a, b)) if m == maxF => eval(a) max eval(b)
-    case Divide(a, b) => throw new IllegalArgumentException("Division is not guaranteed to be representable without error: " + t)
+    case Divide(_, _) => throw new IllegalArgumentException("Division is not guaranteed to be representable without error: " + t)
   }
   def eval(fml: Formula) : Boolean = fml match {
     case LessEqual(s, t) => eval(s) <= eval(t)
@@ -56,10 +57,22 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case False => false
   }
 
-  def qeEvidence(formula: Formula) = (if (eval(formula)) True else formula, new Evidence {
-    val message = "evaluated BigDecimal numerics"
-  })
-  def init(config: Map[String,String]) = ()
-  def restart() = ()
-  def shutdown() = ()
+  /** @inheritdoc */
+  override def qeEvidence(formula: Formula): (Formula, Evidence) =
+    (if (eval(formula)) True else formula, ToolEvidence(("message", "evaluated BigDecimal numerics") :: Nil))
+
+  /** @inheritdoc */
+  final override def init(config: Map[String,String]): Unit = {}
+
+  /** @inheritdoc */
+  final override def restart(): Unit = {}
+
+  /** @inheritdoc */
+  final override def shutdown(): Unit = {}
+
+  /** @inheritdoc */
+  override def cancel(): Boolean = true
+
+  /** @inheritdoc */
+  override def isInitialized: Boolean = true
 }

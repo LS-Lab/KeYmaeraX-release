@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.tools.{ToolBase, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
 
 import scala.collection.immutable.Map
 
@@ -15,16 +15,21 @@ import scala.collection.immutable.Map
   * Big decimal quantifier elimination tool for tactics, forwards to [[BigDecimalQETool]].
   * @author Stefan Mitsch
   */
-final class BigDecimalTool extends ToolBase("BigDecimalTool") with QETacticTool with ToolOperationManagement {
+final class BigDecimalTool extends Tool with QETacticTool with ToolOperationManagement {
+  /** @inheritdoc */
+  override val name: String = "BigDecimalTool"
 
   /** @inheritdoc */
-  override def init(config: Map[String,String]): Unit = { initialized=true }
+  override def init(config: Map[String,String]): Unit = {}
 
   /** @inheritdoc */
   override def restart(): Unit = {}
 
   /** @inheritdoc */
   override def shutdown(): Unit = {}
+
+  /** @inheritdoc */
+  override def isInitialized: Boolean = true
 
   /** @inheritdoc */
   override def cancel(): Boolean = true

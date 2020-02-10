@@ -18,7 +18,13 @@ import scala.collection.immutable.Map
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  */
-object KeYmaeraXTool extends ToolBase("KeYmaera") {
+object KeYmaeraXTool extends Tool {
+  /** @inheritdoc */
+  override val name: String = "KeYmaera"
+
+  /** Indicates whether the tool is initialized. */
+  private var initialized = false
+
   /** @inheritdoc */
   override def init(config: Map[String,String]): Unit = {
     if (KeYmaeraXParser.LAX_MODE)
@@ -31,11 +37,17 @@ object KeYmaeraXTool extends ToolBase("KeYmaera") {
   }
 
   /** @inheritdoc */
-  override def restart(): Unit = {}
+  override def restart(): Unit = { }
 
   /** @inheritdoc */
   override def shutdown(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
     initialized = false
   }
+
+  /** @inheritdoc */
+  override def isInitialized: Boolean = initialized
+
+  /** @inheritdoc */
+  override def cancel(): Boolean = true
 }

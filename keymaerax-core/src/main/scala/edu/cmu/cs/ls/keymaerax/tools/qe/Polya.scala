@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.ToolBase
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable.Map
 
@@ -19,13 +19,15 @@ import scala.collection.immutable.Map
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-class Polya extends ToolBase("Polya") with QETool {
+class Polya extends Tool with QETool {
+  /** @inheritdoc */
+  override val name: String = "Polya"
+
   private var polya: PolyaSolver = _
 
   /** @inheritdoc */
   override def init(config: Map[String,String]): Unit = {
     polya = new PolyaSolver(config("polyaPath"), DefaultSMTConverter)
-    initialized = true
   }
 
   /** @inheritdoc */
@@ -38,7 +40,11 @@ class Polya extends ToolBase("Polya") with QETool {
   override def restart(): Unit = {}
 
   /** @inheritdoc */
-  override def shutdown(): Unit = {
-    initialized = false
-  }
+  override def shutdown(): Unit = polya = null
+
+  /** @inheritdoc */
+  override def isInitialized: Boolean = polya != null
+
+  /** @inheritdoc */
+  override def cancel(): Boolean = true
 }

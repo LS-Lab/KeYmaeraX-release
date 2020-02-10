@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool
-import edu.cmu.cs.ls.keymaerax.tools.{ToolBase, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
 
 import scala.collection.immutable.Map
 
@@ -18,7 +18,11 @@ import scala.collection.immutable.Map
   *      and installed/updated.
   * @author Stefan Mitsch
   */
-final class Z3 extends ToolBase("Z3") with QETacticTool with ToolOperationManagement {
+final class Z3 extends Tool with QETacticTool with ToolOperationManagement {
+  /** @inheritdoc */
+  override val name: String = "Z3"
+
+  /** The Z3 QE tool. */
   private val z3: Z3QETool = new Z3QETool()
 
   /** @inheritdoc */

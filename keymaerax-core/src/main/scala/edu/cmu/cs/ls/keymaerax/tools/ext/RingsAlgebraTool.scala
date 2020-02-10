@@ -5,7 +5,7 @@ import cc.redberry.rings.scaladsl._
 import cc.redberry.rings.scaladsl.syntax._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.{AlgebraTool, ToolBase}
+import edu.cmu.cs.ls.keymaerax.tools.{AlgebraTool, Tool}
 
 import scala.collection.JavaConverters._
 
@@ -311,16 +311,24 @@ class RingsLibrary(terms: Traversable[Term]) {
   }
 }
 
-class RingsAlgebraTool() extends ToolBase("RingsAlgebra") with AlgebraTool {
+class RingsAlgebraTool extends Tool with AlgebraTool {
+  /** @inheritdoc */
+  override val name: String = "RingsAlgebra"
 
   /** @inheritdoc */
-  final override def init(config: Map[String, String]): Unit = { initialized = true }
+  final override def init(config: Map[String, String]): Unit = {}
 
   /** @inheritdoc */
   final override def shutdown(): Unit = {}
 
   /** @inheritdoc */
   final override def restart(): Unit = {}
+
+  /** @inheritdoc */
+  final override def isInitialized: Boolean = true
+
+  /** @inheritdoc */
+  final override def cancel(): Boolean = true
 
   /** @inheritdoc */
   final override def quotientRemainder(term: Term, div: Term, x:Variable): (Term,Term) = {

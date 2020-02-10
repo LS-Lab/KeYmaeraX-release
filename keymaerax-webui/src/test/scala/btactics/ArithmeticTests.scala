@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
-import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, Tool, ToolEvidence}
 
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
@@ -12,7 +12,9 @@ import org.scalatest.Inside._
 
 class ArithmeticTests extends TacticTestBase {
 
-  private class MockTool(expected: Formula) extends ToolBase("MockTool") with QETacticTool with CounterExampleTool {
+  private class MockTool(expected: Formula) extends Tool with QETacticTool with CounterExampleTool {
+    override val name: String = "MockTool"
+
     private class MockQETool extends QETool {
       //@note ProvableSig forwards to Provable -> Provable has to trust our tool
       private val rcf = Class.forName(Provable.getClass.getCanonicalName).getField("MODULE$").get(null)
@@ -27,8 +29,6 @@ class ArithmeticTests extends TacticTestBase {
       }
     }
 
-    initialized = true
-
     override def qe(formula: Formula): Lemma = Provable.proveArithmetic(new MockQETool(), formula)
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
@@ -39,6 +39,8 @@ class ArithmeticTests extends TacticTestBase {
     override def shutdown(): Unit = {}
     override def init(config: Map[String, String]): Unit = {}
     override def restart(): Unit = {}
+    override def isInitialized: Boolean = true
+    override def cancel(): Boolean = true
   }
 
   //@todo AdvocatusTest that inserts a broken tool by reflection.

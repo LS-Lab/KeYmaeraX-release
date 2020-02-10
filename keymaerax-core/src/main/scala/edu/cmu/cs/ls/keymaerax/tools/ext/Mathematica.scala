@@ -25,10 +25,13 @@ import scala.collection.immutable.{Map, Seq}
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends ToolBase(name)
+class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends Tool
     with QETacticTool with InvGenTool with ODESolverTool with CounterExampleTool
     with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
     with PDESolverTool with ToolOperationManagement {
+
+  /** Indicates whether the tool is initialized. */
+  private var initialized = false
 
   private val mQE: MathematicaQEToolBridge[Lemma] = new MathematicaQEToolBridge[Lemma](link)
   private val mPegasus = new MathematicaInvGenTool(link)
@@ -193,12 +196,21 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   /** Restarts the MathKernel with the current configuration */
   override def restart(): Unit = link match {
     case l: JLinkMathematicaLink => l.restart()
-//    case l: WolframScript => l.restart()
+    case l: WolframScript => l.restart()
   }
 
+  /** @inheritdoc */
   override def cancel(): Boolean = link.cancel()
 
+  /** @inheritdoc */
+  override def isInitialized: Boolean = initialized
+
+  /** @inheritdoc */
   override def setOperationTimeout(timeout: Int): Unit = qeMaxTimeout = timeout
+
+  /** @inheritdoc */
   override def getOperationTimeout: Int = qeMaxTimeout
+
+  /** @inheritdoc */
   override def getAvailableWorkers: Int = 1
 }
