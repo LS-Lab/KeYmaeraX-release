@@ -7,11 +7,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-// favoring immutable Seqs
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaComputationFailedException}
 
+// favoring immutable Seqs
 import scala.collection.immutable._
 
 /**
@@ -22,6 +22,7 @@ import scala.collection.immutable._
 object MathematicaToKeYmaera extends MathematicaToKeYmaera
 class MathematicaToKeYmaera extends M2KConverter[KExpr] {
 
+  /** Backconversion for contracts. */
   def k2m: K2MConverter[KExpr] = KeYmaeraToMathematica
 
   /** Converts a Mathematica expression to a KeYmaera expression. */
@@ -86,18 +87,20 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else throw new ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   } ensures(r => StaticSemantics.symbols(r).forall({case fn@Function(_, _, _, _, true) => MathematicaConversion.interpretedSymbols.contains(fn) case _ => true}), "Interpreted functions must have expected domain and sort for conversion of " + e)
 
-
+  /** Converts an unary expression. */
   private def convertUnary[T<:Expression](e: MExpr, op: T=>T): T = {
     require(e.args().length == 1, "unary operator expects 1 argument")
     val subformula = convert(e.args().head).asInstanceOf[T]
     op(subformula)
   }
 
+  /** Converts a binary expression. */
   private def convertBinary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
     require(e.args().length == 2, "binary operator expects 2 arguments")
     convertNary(e, op)
   }
 
+  /** Converts an n-ary expression. */
   private def convertNary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args().map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
@@ -105,14 +108,16 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     asTerms.reduce((l,r) => op(l,r))
   }
 
-  private def convertComparison[S<:Expression,T<:Expression](e: MExpr, op: (S,S) => T): T = {
+  /** Converts a comparison. */
+  private def convertComparison[S<:Expression, T<:Expression](e: MExpr, op: (S,S) => T): T = {
     val subexpressions = e.args().map(convert)
     require(subexpressions.length == 2, "binary operator expects 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[S])
     op(asTerms(0), asTerms(1))
   }
 
-  private def convertQuantifier(e: MExpr, op:(Seq[Variable], Formula)=>Formula): Formula = {
+  /** Converts a sequence of quantified variables into nested quantifiers. */
+  private def convertQuantifier(e: MExpr, op:(Seq[Variable],Formula)=>Formula): Formula = {
     require(e.args().length == 2, "Expected args size 2.")
 
     val variableBlock = e.args().headOption.getOrElse(
@@ -132,6 +137,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
   }
 
+  /** Converts (nested) lists of length 2 into pairs. */
   protected def convertList(e: MExpr): Pair = {
     if (e.listQ) {
       assert(e.args.length == 2, "pairs are represented as lists of length 2 in Mathematica")
@@ -139,6 +145,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     } else throw new ConversionException("Expected a list, but got " + e)
   }
 
+  /** Converts an atomic term (either interpreted/uninterpreted function symbol or variable). */
   protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
     case Some(fn) => convertFunction(fn, e.args())
     case None =>
@@ -175,7 +182,8 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
 
   // reporting
 
-  private def mathInfo(e: MExpr) : String = {
+  /** Prints debug information. */
+  private def mathInfo(e: MExpr): String = {
     "args:\t" + {if (e.args().length == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
     "\n" +
     "toString:\t" + e.toString

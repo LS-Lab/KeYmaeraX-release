@@ -7,7 +7,6 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-// favoring immutable Seqs
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
@@ -20,6 +19,9 @@ import scala.annotation.tailrec
 import scala.collection.immutable._
 import scala.math.BigDecimal
 
+// favoring immutable Seqs
+import scala.collection.immutable._
+
 /**
   * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
   * to Mathematica Expr objects.
@@ -29,6 +31,7 @@ import scala.math.BigDecimal
 object KeYmaeraToMathematica extends KeYmaeraToMathematica
 class KeYmaeraToMathematica extends K2MConverter[KExpr] {
 
+  /** Backconversion for contracts. */
   def m2k: M2KConverter[KExpr] = MathematicaToKeYmaera
 
   /**
@@ -50,15 +53,16 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     }
   }
 
+  /** Checks that the `symbols` are all disjoint names (disallow variable and function of same name).  */
   private[tools] def disjointNames(symbols: Set[NamedSymbol]): Boolean = {
-    val names = symbols.map(x=>(x.name,x.index)).toList
+    val names = symbols.map(x => (x.name, x.index)).toList
     names.distinct.length == names.length
   }
 
   /**
-   * Converts a KeYmaera terms to a Mathematica expression.
+   * Converts a KeYmaera term to a Mathematica expression.
    */
-  protected[tools] def convertTerm(t : Term): MExpr = {
+  protected[tools] def convertTerm(t: Term): MExpr = {
     require(t.sort == Real || t.sort == Unit || FormulaTools.sortsList(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       //@todo Code Review: clean up FuncOf conversion into two cases here
@@ -97,10 +101,8 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     }
   }
 
-  /**
-   * Converts KeYmaera formulas into Mathematica objects
-   */
-  protected def convertFormula(f : Formula): MExpr = f match {
+  /** Converts KeYmaera formulas into Mathematica expressions. */
+  protected def convertFormula(f: Formula): MExpr = f match {
     case And(l, r)  => MathematicaOpSpec.and(convertFormula(l), convertFormula(r))
     case Equiv(l,r) => MathematicaOpSpec.equivalent(convertFormula(l), convertFormula(r))
     case Imply(l,r) => MathematicaOpSpec.implies(convertFormula(l), convertFormula(r))
@@ -127,7 +129,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
       // collect only from quantifiers that are the same as the root `f` quantifier
       case (_: Exists, Exists(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
       case (_: Forall, Forall(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
-      case _ =>(vsSoFar, candidate)
+      case _ => (vsSoFar, candidate)
     }
 
     val (vars, formula) = collectVars(f.vars.toArray, f.child)
