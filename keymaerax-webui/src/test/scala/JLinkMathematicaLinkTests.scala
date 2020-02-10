@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.KExpr
 import edu.cmu.cs.ls.keymaerax.tools._
-import edu.cmu.cs.ls.keymaerax.tools.ext.{ExtMathematicaOpSpec, JLinkMathematicaLink, Mathematica, MathematicaLink}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{ExtMathematicaOpSpec, JLinkMathematicaLink, Mathematica, MathematicaLink, ToolExecutor}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest

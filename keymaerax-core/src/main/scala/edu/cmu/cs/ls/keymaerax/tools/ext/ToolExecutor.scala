@@ -1,9 +1,9 @@
-package edu.cmu.cs.ls.keymaerax.tools
+package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import java.util.concurrent._
 
-import org.apache.logging.log4j.scala.Logging
 import edu.cmu.cs.ls.keymaerax.core.Ensures
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable
 
