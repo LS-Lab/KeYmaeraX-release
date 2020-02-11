@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
 (* Description: Basic functionality used by other packages.
-   Comments: Tested in Mathematica 10.0   *)
+   Comments: Tested in Mathematica 12.0   *)
 
 
 BeginPackage["Primitives`"];
@@ -36,6 +36,9 @@ IsConcretePolynomial::usage="IsConcretePolynomial[poly, vars] returns true if th
 
 CheckSemiAlgInclusion::usage="CheckSemiAlgInclusion[s_,t_,vars_List] checks if t implies s universally on vars"
 
+InstantiateParameters::usage="InstantiateParameters[poly,vars,val] instantiates any symbolic parameter in a polynomial (not in vars) to val"
+
+
 
 Begin["`Private`"]
 
@@ -50,9 +53,13 @@ AllTrue[Flatten[CoefficientList[poly,vars]], PossibleZeroQ[Im[#]]&]
 ]
 
 
-IsConcretePolynomial[poly_,vars_]:=Module[{pvars=Variables[poly]},
+IsConcretePolynomial[poly_,vars_List]:=Module[{pvars=Variables[poly]},
   SubsetQ[vars,pvars]
 ]
+
+
+(* Instantiating symbolic parameters in polynomials *)
+InstantiateParameters[poly_,vars_List,val_]:=poly/.Map[Rule[#, val]&,Complement[Variables[poly],vars] ]
 
 
 (* Computing the maximal total polynomial degree of a given polynomial P *)
