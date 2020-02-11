@@ -25,7 +25,7 @@ KeYmaera X Kernel Code Review Steps
 5. UniformRenaming.scala for correctness
 6. Proof.scala for correctness and compliance with [1] as well as sequent calculus [2]
 7. AxiomBase.scala for correctness and compliance with Fig 2+3 [1] or hybrid games [3,4]
-8. SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala, QETool.scala, Lemma.scala
+8. SetLattice.scala for correctness, and Errors.scala, core.PrettyPrinter.scala, QETool.scala, Lemma.scala, Assertion.java, package.scala
 
 If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by verbal agreement and by signing the same commit with your secret GPG key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
 
@@ -36,9 +36,9 @@ If there are any questions about the KeYmaera X Kernel code review or any sugges
 Extended Code Review:
 In addition to the above files, an extended code review also considers
 
-9. parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
-10. lemma package: LemmaDB.scala, LemmaDBFactory.scala, FileLemmaDB.scala for correctness
-11. critical parts of tools package: Tool*.scala, SMT*.scala, KeYmaera*.scala, Mathematica*.scala
+9.  parser package: PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
+10. lemma package: LemmaDB.scala, LemmaDBFactory.scala, LemmaDBBase.scala, FileLemmaDB.scala, CachedLemmaDB.scala
+11. tools.qe package: SMTConverter.scala, Z3*.scala, KeYmaeraToMathematica.scala, Mathematica*.scala, BigDecimalQETool.scala
 
 References
 ----------
