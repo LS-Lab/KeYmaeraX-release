@@ -304,7 +304,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   // optimization
 
   /** Predict bound variables of this(program), whether substitution clashes or not.
-    * @note Not soundness-critical as result checked by inclusion for other usubst round */
+    * @note Not soundness-critical as result checked by inclusion for other usubst round
+    * @note Like [[StaticSemantics.boundVars()]] except with replaced program constant symbols etc computed from their bound variables.*/
   private def substBoundVars(program: Program): SetLattice[Variable] = {
     program match {
       // base cases

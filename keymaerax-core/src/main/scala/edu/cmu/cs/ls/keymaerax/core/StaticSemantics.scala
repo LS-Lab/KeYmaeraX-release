@@ -106,7 +106,7 @@ object StaticSemantics {
     case Times(l, r)  => freeVars(l) ++ freeVars(r)
     case Divide(l, r) => freeVars(l) ++ freeVars(r)
     case Power(l, r)  => freeVars(l) ++ freeVars(r)
-    // special cases
+    // special cases FV((e)') = FV(e) ++ FV(e)'
     case Differential(e) => SetLattice.extendToDifferentialSymbols(freeVars(e))
     // unofficial
     case Pair(l, r)   => freeVars(l) ++ freeVars(r)
@@ -119,7 +119,8 @@ object StaticSemantics {
     *
     * @note Only verbatim mentions are counted, so not via indirect Space dependency.
     * @note (5)' and (c())' will be considered as non-differential terms on account of not mentioning variables, but (x+y)' is differential.
-    * @note AtomicODE uses isDifferential to ensure explicit form of differential equations.
+    * @note [[AtomicODE]] uses isDifferential to ensure explicit differential equation x'=e has no primes in e.
+    * @note [[ODESystem]] uses isDifferential to ensure explicit differential equation x'=e&Q has no primes in Q.
     * @note For proper terms (not using Anything), freeVars is finite so .symbols==.toSet, so checks for literally free DifferentialSymbols.
     */
   def isDifferential(e: Expression): Boolean = freeVars(e).symbols.exists(x => x.isInstanceOf[DifferentialSymbol])
@@ -212,6 +213,7 @@ object StaticSemantics {
     //@note DifferentialFormula in analogy to Differential
     case DifferentialFormula(df) =>
       val vdf = fmlVars(df)
+      //@todo comment
       VCF(fv = SetLattice.extendToDifferentialSymbols(vdf.fv), bv = vdf.bv)
 
     case True | False => VCF(fv = bottom, bv = bottom)
@@ -258,6 +260,7 @@ object StaticSemantics {
     *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
     *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
     * }}}
+    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
     */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term     => signature(t)
@@ -270,6 +273,7 @@ object StaticSemantics {
   /**
     * The signature of a term, i.e., set of (non-logical) function/functional symbols occurring in it.
     * Disregarding number literals.
+    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
     */
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
     // base cases
@@ -297,6 +301,7 @@ object StaticSemantics {
   /**
     * The signature of a formula, i.e., set of (non-logical) function, predicate, predicational, and atomic program
     * symbols occurring in it.
+    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
     */
   def signature(formula: Formula): immutable.Set[NamedSymbol] = formula match {
     // base cases
@@ -335,6 +340,7 @@ object StaticSemantics {
   /**
     * The signature of a program, i.e., set of function, predicate, and atomic program
     * symbols occurring in it.
+    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
     */
   def signature(program: Program): immutable.Set[NamedSymbol] = program match {
     // base cases
