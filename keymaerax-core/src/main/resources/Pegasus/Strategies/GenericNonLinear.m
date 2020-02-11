@@ -8,12 +8,11 @@
 
 
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
-Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m"}]] 
-Needs["QualAbsPolynomials`",FileNameJoin[{Directory[],"Primitives","QualAbsPolynomials.m"}]] 
+Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m"}]]
+Needs["QualAbsPolynomials`",FileNameJoin[{Directory[],"Primitives","QualAbsPolynomials.m"}]]
 Needs["DarbouxDDC`",FileNameJoin[{Directory[],"Strategies","DarbouxDDC.m"}]]
 Needs["InvariantExtractor`",FileNameJoin[{Directory[],"Strategies","InvariantExtractor.m"}]]
-(*Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]] 
- *)
+Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]] 
 
 
 BeginPackage[ "GenericNonLinear`"];
@@ -29,6 +28,8 @@ FirstIntegrals::usage="FirstIntegrals[problem_List,degree]";
 DbxPoly::usage="DbxPoly[problem_List,degree]";
 (* Returns invariants generated from heuristics *)
 HeuInvariants::usage="Heuristics[problem_List,degree]";
+(* Returns invariants generated from barrier certificate *)
+BarrierCert::usage="BarrierCert[problem_List]";
 
 
 Begin["`Private`"];
@@ -41,7 +42,7 @@ polys = DeleteDuplicates[Join[
 	QualAbsPolynomials`PhysicalQuantities[problem],
 	QualAbsPolynomials`SummandFactors[problem],
 	QualAbsPolynomials`SFactorList[problem]]];
-	
+
 (*res=Map[InvariantExtractor`DWC[problem,{#},{}]&,polys];*)
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ]
@@ -85,20 +86,21 @@ InvariantExtractor`DWC[problem,polys,{}][[2]]
 ]
 
 
-(*(* Round to precisions 2,4,6,8 *)
+(* Round to precisions 2,4,6,8 *)
 RoundPolys[p_,vars_]:=Module[{cr},
 cr = CoefficientRules[p,vars];
 If[Length[cr] > 0,Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]~FromCoefficientRules~vars&,{2,4,6,8}]//DeleteDuplicates
-,{}]]*)
+,{}]]
 
 
-(*BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS},
+BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS,polys},
   {pre, { vf, vars, Q }, post} = problem;
   If[pre===True,Return[{}]];
   If[post===False,Return[{}]];
   polySOS=BarrierCertificates`SOSBarrierMATLAB[problem];
-  Flatten[Map[RoundPolys[#,vars]&,polySOS]]
-]]*)
+  polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
+  InvariantExtractor`DWC[problem,polys,{}][[2]]
+]]
 
 
 End[]

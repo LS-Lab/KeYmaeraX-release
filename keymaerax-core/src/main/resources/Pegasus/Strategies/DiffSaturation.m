@@ -36,7 +36,8 @@ Print["Input Problem: ", problem];
 strategies = {
 {GenericNonLinear`HeuInvariants, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]},
 {GenericNonLinear`FirstIntegrals, Symbol["kyx`ProofHint"]==Symbol["kyx`FirstIntegral"]},
-{GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"]}
+{GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"]},
+{GenericNonLinear`BarrierCert, Symbol["kyx`ProofHint"]==Symbol["kyx`Barrier"]}
 };
 
 (* TODO: explicitly use the constvars and constasms below!! *)
