@@ -156,6 +156,7 @@ inits = "<>MmaToMatlab[init]<>";
 unsafes = "<>MmaToMatlab[unsafe]<>" ;
 % Conj. Polynomials characterizing the ev. domain
 dom = "<>MmaToMatlab[Qc]<>" ;
+g = "<>MmaToMatlab[1+Total[rvars^2]]<>";
 
 % Configurable options from Mathematica
 % Configurable lambda in B' >= lambda B
@@ -223,9 +224,15 @@ for deg = mindeg : maxdeg
               dB = dB+diff(B,vars(i))*field(i);
             end
 
-            % Constrain the Lie derivative
-            expr = lambda * B - dB;
+            dg = 0*vars(1);
+            for i = 1:length(vars)
+              dg = dg+diff(g,vars(i))*field(i);
+            end
 
+            % Constrain the Lie derivative
+            expr = lambda * B * g - dB*g+ B*dg;
+
+			% expr = lambda * B - dB;
             if dom_dim > 0
                 % SOSes for each barrier in domain
                 for i=1:dom_dim
