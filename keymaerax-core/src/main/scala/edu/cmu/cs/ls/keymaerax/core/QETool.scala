@@ -9,14 +9,12 @@ package edu.cmu.cs.ls.keymaerax.core
 
 /**
   * Quantifier elimination tool.
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
   */
 trait QETool {
   /**
-    * Returns a quantifier-free formula that is equivalent to the specified formula, together with the actual input
-    * sent to this tool and the actual output it produced.
+    * Returns a quantifier-free formula that is equivalent to the specified formula.
     * @param formula The formula whose quantifier-free equivalent is sought.
-    * @return An equivalent quantifier-free formula, with tool evidence.
+    * @return An equivalent quantifier-free formula.
     */
-  def qeEvidence(formula: Formula): (Formula, Evidence)
+  def quantifierElimination(formula: Formula): Formula
 }

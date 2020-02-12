@@ -703,19 +703,17 @@ object Provable {
   /**
     * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
     *
-    * @param t The quantifier-elimination tool.
+    * @param tool The quantifier-elimination tool.
     * @param f The formula.
-    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
+    * @return a Provable with a quantifier-free formula equivalent to f, justified by tool.
     */
-  final def proveArithmetic(t: QETool, f: Formula): Lemma = {
-    import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
-    insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
+  final def proveArithmetic(tool: QETool, f: Formula): Provable = {
+    insist(trustedTools.contains(tool.getClass.getCanonicalName), "Trusted tool required: " + tool.getClass.getCanonicalName)
     // Quantifier elimination determines (quantifier-free) equivalent of f.
-    val (equivalent, evidence) = t.qeEvidence(f)
+    val equivalent = tool.quantifierElimination(f)
     //@note soundness-critical
-    val fact = Provable.oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
+    oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-    Lemma(ElidingProvable(fact), Lemma.requiredEvidence(ElidingProvable(fact), evidence :: Nil), None)
   }
 
   /**
@@ -786,6 +784,7 @@ object Provable {
     val storedChksum = storedProvable.substring(0, separat)
     val remainder = storedProvable.substring(separat+2)
     val (conc :: subs) = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser(remainder)._2
+    //@note soundness-critical
     val reconstructed = oracle(conc, subs.to)
     if (checksum(toExternalString(reconstructed)) != storedChksum)
       throw new ProvableStorageException("Stored Provable checksum should not be tampered with", storedProvable)
