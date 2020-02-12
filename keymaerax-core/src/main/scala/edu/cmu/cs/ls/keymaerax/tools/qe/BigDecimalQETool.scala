@@ -33,8 +33,10 @@ object BigDecimalQETool extends Tool with QETool {
         case (x, y) => throw new IllegalArgumentException("Power " + x + " ^ " + y + " can not be computed exactly")
       }
     case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
-    case FuncOf(m, Pair(a, b)) if m == minF => eval(a) min eval(b)
-    case FuncOf(m, Pair(a, b)) if m == maxF => eval(a) max eval(b)
+    case FuncOf(f, Pair(a, b)) =>
+      if (f == minF) eval(a) min eval(b)
+      else if (f == maxF) eval(a) max eval(b)
+      else throw new IllegalArgumentException(name + " can not evaluate " + t)
     case Divide(_, _) => throw new IllegalArgumentException("Division is not guaranteed to be representable without error: " + t)
   }
   def eval(fml: Formula) : Boolean = fml match {
