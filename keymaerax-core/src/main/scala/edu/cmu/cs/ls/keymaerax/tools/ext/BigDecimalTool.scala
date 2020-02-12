@@ -37,7 +37,7 @@ final class BigDecimalTool extends Tool with QETacticTool with ToolOperationMana
   /** @inheritdoc */
   override def qe(formula: Formula): Lemma = {
     require(isInitialized, "BigDecimalTool needs to be initialized before use")
-    ProvableSig.proveArithmetic(BigDecimalQETool, formula)
+    ProvableSig.proveArithmeticLemma(BigDecimalQETool, formula)
   }
 
   /** @inheritdoc */

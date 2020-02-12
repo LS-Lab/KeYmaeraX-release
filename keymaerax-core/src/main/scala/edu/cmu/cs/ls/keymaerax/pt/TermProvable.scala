@@ -254,7 +254,10 @@ trait ProvableSig {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
-  def proveArithmetic(t: QETool, f: Formula): Lemma
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma
+
+  def proveArithmetic(t: QETool, f: Formula): ProvableSig
+
 
   def prettyString: String
 }
@@ -325,6 +328,9 @@ object ProvableSig {
   def startProof(goal : Formula): ProvableSig =
     if(PROOF_TERMS_ENABLED) TermProvable.startProof(goal) else ElidingProvable.startProof(goal)
 
+  def proveArithmetic(t: QETool, f: Formula): ProvableSig =
+    if(PROOF_TERMS_ENABLED) TermProvable.proveArithmetic(t,f) else ElidingProvable.proveArithmetic(t,f)
+
   /**
     * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
     *
@@ -332,8 +338,9 @@ object ProvableSig {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
-  def proveArithmetic(t: QETool, f: Formula): Lemma =
-    if(PROOF_TERMS_ENABLED) TermProvable.proveArithmetic(t,f) else Provable.proveArithmetic(t,f)
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma =
+    if(PROOF_TERMS_ENABLED) TermProvable.proveArithmeticLemma(t,f) else ElidingProvable.proveArithmeticLemma(t,f)
+
 }
 
 /**
@@ -371,7 +378,9 @@ case class ElidingProvable(provable: Provable) extends ProvableSig {
 
   override def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
 
-  override def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
+  override def proveArithmetic(t: QETool, f: Formula): ProvableSig = ElidingProvable.proveArithmetic(t,f)
+
+  override def proveArithmeticLemma(t: QETool, f: Formula): Lemma = ElidingProvable.proveArithmeticLemma(t,f)
 
   override def prettyString: String = s"ElidingProvable(${provable.prettyString})"
 }
@@ -386,7 +395,12 @@ object ElidingProvable {
 
   def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f))
+
+  def proveArithmeticLemma(tool: QETool, f: Formula): Lemma = {
+    val fact = proveArithmetic(tool, f)
+    Lemma(fact, Lemma.requiredEvidence(fact, Nil), None)
+  }
 }
 
 object TermProvable {
@@ -419,11 +433,13 @@ object TermProvable {
     TermProvable(ElidingProvable.startProof(goal), StartProof(fml2Seq(goal)))
   }
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f))
+
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma = {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
     //@TODO Does this work at all
-    val lem = ElidingProvable.proveArithmetic(t,f)
-    Lemma(TermProvable(lem.fact, FOLRConstant(lem.fact.underlyingProvable.conclusion.succ.head)), lem.evidence, lem.name)
+    val lem = ElidingProvable.proveArithmeticLemma(t,f)
+    Lemma(TermProvable(lem.fact, FOLRConstant(lem.fact.conclusion.succ.head)), lem.evidence, lem.name)
   }
 
 }
@@ -575,8 +591,11 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
     TermProvable.startProof(goal)
   }
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma =
+  def proveArithmetic(t: QETool, f: Formula): ProvableSig =
     TermProvable.proveArithmetic(t,f)
+
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma =
+    TermProvable.proveArithmeticLemma(t,f)
 
 
   override def toString: String = s"TermProvable(${provable.toString}, ${pt.toString})"

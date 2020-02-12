@@ -43,7 +43,7 @@ final class Z3 extends Tool with QETacticTool with ToolOperationManagement {
   /** @inheritdoc */
   override def qe(formula: Formula): Lemma = {
     require(isInitialized, "Z3 needs to be initialized before use")
-    ProvableSig.proveArithmetic(z3, formula)
+    ProvableSig.proveArithmeticLemma(z3, formula)
   }
 
   /** @inheritdoc */
