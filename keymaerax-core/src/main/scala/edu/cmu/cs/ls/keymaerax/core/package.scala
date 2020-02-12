@@ -26,7 +26,7 @@ import scala.io.Source
   *     - [[edu.cmu.cs.ls.keymaerax.core.URename Uniform renamings]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.Rule Proof rules]]
   *
-  *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.Lemma lemma data storage]],
+  *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.Provable.toStorageString() Stored Provables as Strings]],
   * [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
   * [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
   * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]] for sets of symbols.
@@ -145,9 +145,10 @@ import scala.io.Source
   * See [[https://doi.org/10.1007/s10817-008-9103-8 sequent calculus]]
   *
   * ==Additional Capabilities==
-  * ===Lemma Mechanism===
-  * A lemma storage mechanism and an interface to real arithmetic decision procedures are defined in
-  * [[edu.cmu.cs.ls.keymaerax.core.Lemma]] and [[edu.cmu.cs.ls.keymaerax.core.QETool]].
+  * ===Stored Provable Mechanism===
+  * A Stored Provable represents a Provable as a String that can be reloaded later as well as an interface to
+  * real arithmetic decision procedures are defined in
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.fromStorageString()]] and [[edu.cmu.cs.ls.keymaerax.core.QETool]].
   *
   * ===Error Reporting===
   * Errors from the prover core are reported as exceptions of type [[edu.cmu.cs.ls.keymaerax.core.ProverException]]
@@ -174,8 +175,7 @@ import scala.io.Source
   * @see [[edu.cmu.cs.ls.keymaerax.core.Provable]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Expression]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.USubstOne]]
   * @note Code Review 2016-08-17
   */
 package object core {
