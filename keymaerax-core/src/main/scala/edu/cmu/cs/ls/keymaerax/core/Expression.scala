@@ -114,18 +114,18 @@ sealed trait Expression {
 // partitioning into types of expressions in terms of atomicity, compositeness
 
 /** Atomic expressions that do not have any proper subexpressions. */
-sealed trait Atomic extends Expression
+trait Atomic extends Expression
 /** Composite expressions that are composed of subexpressions */
-sealed trait Composite extends Expression
+trait Composite extends Expression
 
 /** Unary composite expressions that are composed of one subexpression */
-sealed trait UnaryComposite extends Composite {
+trait UnaryComposite extends Composite {
   /** The child of this unary composite expression */
   val child: Expression
 }
 
 /** Binary composite expressions that are composed of two subexpressions */
-sealed trait BinaryComposite extends Composite {
+trait BinaryComposite extends Composite {
   /** The left child of this binary composite expression */
   val left: Expression
   /** The right child of this binary composite expression */
@@ -135,7 +135,7 @@ sealed trait BinaryComposite extends Composite {
 /** Function/predicate/predicational application
   * @requires child.sort == func.domain
   * @ensures sort == func.sort */
-sealed trait ApplicationOf extends Composite {
+trait ApplicationOf extends Composite {
   insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
   //@note initialization order would dictate that subclasses either provide lazy val or early initializer.
   //insist(sort == func.sort, "sort of application is the sort of the function")
@@ -145,15 +145,13 @@ sealed trait ApplicationOf extends Composite {
   val child : Expression
 }
 
-
 /**
   * A named symbol such as a variable or function symbol or predicate symbol.
   * @note User-level symbols should not use underscores, which are reserved for the core.
   */
-sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
+trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   //@note initialization order uses explicit dataStructureInvariant that is called in all nontrivial subclasses after val have been initialized.
-  //@todo rename: insistNamingConvention
-  private[core] final def namingConvention: Unit = {
+  private[core] final def insistNamingConvention(): Unit = {
     insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"), "non-empty names without underscores (except at end for internal names): " + name)
     //@note in particular: names cannot have primes
     insist(name.charAt(0).isLetter && name.forall(c => c.isLetterOrDigit || c == '_'), "alphabetical name expected: " + name)
@@ -191,11 +189,11 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 
 /** Expressions whose semantic interpretations have access to the state.
   * @note Not soundness-critical, merely speeds up matching in [[SubstitutionPair.freeVars]]. */
-sealed trait StateDependent extends Expression
+trait StateDependent extends Expression
 
 /** Expressions limited to a given sub state-space of only some variables and differential variables.
   * @since 4.2 */
-sealed trait SpaceDependent extends StateDependent {
+trait SpaceDependent extends StateDependent {
   /** The space that this expression lives on. */
   val space: Space
   final val index: Option[Int] = None
@@ -239,15 +237,16 @@ sealed trait Term extends Expression {
 }
 
 /** Atomic terms that have no proper subterms. */
-sealed trait AtomicTerm extends Term with Atomic
+trait AtomicTerm extends Term with Atomic
 
-/** Real terms */
-private[core] sealed trait RTerm extends Term {
+/** Real terms.
+  * Used for commonality instead of leaking outside the core, because inferable from sort */
+private[core] trait RTerm extends Term {
   final val sort: Sort = Real
 }
 
 /** Variables have a name and index and sort. They are either [[BaseVariable]] or [[DifferentialSymbol]]. */
-sealed trait Variable extends NamedSymbol with AtomicTerm
+trait Variable extends NamedSymbol with AtomicTerm
 object Variable {
   /** Create a BaseVariable called 'name' with the given index and sort. */
   def apply(name: String, index: Option[Int]=None, sort: Sort=Real): BaseVariable = BaseVariable(name,index,sort)
@@ -255,7 +254,7 @@ object Variable {
 
 /** Elementary variable called `name` with an index of a fixed sort (that is not a differential variable). */
 case class BaseVariable(name: String, index: Option[Int]=None, sort: Sort=Real) extends Variable {
-  namingConvention
+  insistNamingConvention()
 }
 
 /** Differential symbol x' for variable x.
@@ -270,28 +269,28 @@ case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
   final val index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
   override def toString: String = asString
-  namingConvention
+  insistNamingConvention()
 }
 
 /** Number literal such as 0.5 */
-sealed case class Number(value: BigDecimal) extends AtomicTerm with RTerm
+case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
 /** Function symbol or predicate symbol or predicational symbol `name_index:domain->sort`
   * @param domain the sort of expected arguments.
   * @param sort the sort resulting when this function/predicate/predicational symbol has been applied to an argument.
   * @param interpreted when `true` this function symbol has a fixed interpretation/definition, e.g. `abs`.
   */
-sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interpreted: Boolean = false)
+case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interpreted: Boolean = false)
     extends NamedSymbol {
   final val kind: Kind = FunctionKind
   /** Full string with names and full types */
   override def fullString: String = asString + ":" + domain + "->" + sort
-  namingConvention
+  insistNamingConvention()
 }
 
 /** •: Placeholder for terms in uniform substitutions of given sort. Reserved nullary function symbol
   * \\cdot for uniform substitutions are unlike ordinary function symbols */
-sealed case class DotTerm(s: Sort = Real, idx: Option[Int] = None) extends Expression with NamedSymbol with AtomicTerm {
+case class DotTerm(s: Sort = Real, idx: Option[Int] = None) extends Expression with NamedSymbol with AtomicTerm {
   final val sort: Sort = s
   final val name: String = "\\cdot"
   final val index: Option[Int] = idx
@@ -318,15 +317,15 @@ case class FuncOf(func: Function, child: Term) extends CompositeTerm with Applic
   *       By analogy, `f(|x|)` is like having all variables other than taboo x as argument. */
 case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol {
   override def asString: String = super.asString + "(" + space + ")"
-  namingConvention
+  insistNamingConvention()
 }
 
 
 /** Composite terms that are composed of subterms. */
-sealed trait CompositeTerm extends Term with Composite
+trait CompositeTerm extends Term with Composite
 
 /** Unary Composite Terms, i.e. terms composed of one real subterm. */
-sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
+trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the given argument as child instead. (copy)
     * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
@@ -338,13 +337,14 @@ sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
   val child: Term
 }
 
-/** Unary Composite Real Terms, i.e. real terms composed of one real term. */
-private[core] sealed trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
+/** Unary Composite Real Terms, i.e. real terms composed of one real term.
+  * Used for commonality instead of leaking outside the core, because inferable from sort. */
+private[core] trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
   insist(child.sort == Real, "expected argument sort real: " + child.sort)
 }
 
 /** Binary Composite Terms, i.e. terms composed of two subterms. */
-sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
+trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
   /** Create a term of this constructor but with the give left and right arguments instead. (copy)
     * @note Convenience method not used in the soundness-critical core but simplifies homogeneous data processing.
     * @example {{{
@@ -356,8 +356,9 @@ sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
   val right: Term
 }
 
-/** Binary Composite Real Terms, i.e. real terms composed of two real terms. */
-private[core] sealed trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
+/** Binary Composite Real Terms, i.e. real terms composed of two real terms.
+  * Used for commonality instead of leaking outside the core, because inferable from sort. */
+private[core] trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
   insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
   val left: Term
   val right: Term
@@ -435,10 +436,10 @@ sealed trait Formula extends Expression {
 }
 
 /** Atomic formulas that have no subformulas (but may still have subterms) */
-sealed trait AtomicFormula extends Formula with Atomic
+trait AtomicFormula extends Formula with Atomic
 
 /** Atomic comparison formula composed of two terms. */
-sealed trait ComparisonFormula extends AtomicFormula with BinaryComposite {
+trait ComparisonFormula extends AtomicFormula with BinaryComposite {
   insist(left.sort == right.sort, "expected arguments of the same sort: " + left + " and " + right)
   /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
@@ -450,8 +451,9 @@ sealed trait ComparisonFormula extends AtomicFormula with BinaryComposite {
   val right: Term
 }
 
-/** Real comparison formula composed of two real terms. */
-private[core] sealed trait RComparisonFormula extends ComparisonFormula {
+/** Real comparison formula composed of two real terms.
+  * Used for commonality instead of leaking outside the core, because inferable from sort. */
+private[core] trait RComparisonFormula extends ComparisonFormula {
   insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
 }
 
@@ -506,15 +508,15 @@ case class PredicationalOf(func: Function, child: Formula)
   *       By analogy, `P(|x|)` is like having all variables other than taboo x as argument. */
 case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol {
   override def asString: String = super.asString + "(" + space + ")"
-  namingConvention
+  insistNamingConvention()
 }
 
 
 /** Composite formulas composed of subformulas */
-sealed trait CompositeFormula extends Formula with Composite
+trait CompositeFormula extends Formula with Composite
 
 /** Unary Composite Formulas, i.e. formulas composed of one subformula. */
-sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
+trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the given argument as child instead. (copy)
     * @example {{{
     *         Not(GreaterEqual(Variable("x"),Number(0))).reapply(NotEqual(Number(7),Number(9))) == Not(NotEqual(Number(7),Number(9)))
@@ -526,7 +528,7 @@ sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula 
 }
 
 /** Binary Composite Formulas, i.e. formulas composed of two subformulas. */
-sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
+trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
   /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
     *         Or(GreaterEqual(Variable("x"),Number(0)), False).reapply(True, NotEqual(Number(7),Number(9))) == Or(True, NotEqual(Number(7),Number(9)))
@@ -549,7 +551,7 @@ case class Imply(left: Formula, right:Formula) extends BinaryCompositeFormula { 
 case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula { def reapply = copy }
 
 /** Quantified formulas */
-sealed trait Quantified extends CompositeFormula {
+trait Quantified extends CompositeFormula {
   insist(vars.nonEmpty, "quantifiers bind at least one variable")
   insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   insist(vars.forall(x => x.sort == vars.head.sort), "all vars must have the same sort")
@@ -571,7 +573,7 @@ case class Forall(vars: immutable.Seq[Variable], child: Formula) extends Quantif
 case class Exists(vars: immutable.Seq[Variable], child: Formula) extends Quantified { def reapply = copy }
 
 /** Modal formulas */
-sealed trait Modal extends CompositeFormula {
+trait Modal extends CompositeFormula {
   /** Create a formula of this constructor but with the given program and formula child as argument instead. (copy)
     * @example {{{
     *         Box(ProgramConst("b"), Less(Variable("z"),Number(0))).reapply(
@@ -625,7 +627,7 @@ sealed trait Program extends Expression {
 }
 
 /** Atomic programs that have no subprograms (but may still have subterms or subformulas) */
-sealed trait AtomicProgram extends Program with Atomic
+trait AtomicProgram extends Program with Atomic
 
 /** Uninterpreted program constant symbol / game symbol, possibly limited to the given state space.
   * The semantics of ProgramConst symbol is looked up by the state,
@@ -637,9 +639,9 @@ sealed trait AtomicProgram extends Program with Atomic
   *              - `Taboo(x)` means `x` can neither be free nor bound.
   * @note In theory, `a;` is written `a`.
   *       By analogy, `a{|x|}` has read/write acces to the entire state except taboo x. */
-sealed case class ProgramConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
+case class ProgramConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
-  namingConvention
+  insistNamingConvention()
 }
 
 /** Uninterpreted hybrid system program constant symbols that are NOT hybrid games, limited to the given state space.
@@ -649,9 +651,9 @@ sealed case class ProgramConst(name: String, space: Space = AnyArg) extends Name
   *              - `Taboo(x)` means `x` can neither be free nor bound.
   * @since 4.7.4 also SpaceDependent with `space` parameter.
   */
-sealed case class SystemConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
+case class SystemConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
   override def toString: String = name + (if (space == AnyArg) "{|^@|}" else "{^@" + space + "}")
-  namingConvention
+  insistNamingConvention()
 }
 
 /** x:=e assignment and/or differential assignment x':=e */
@@ -665,10 +667,10 @@ case class Test(cond: Formula) extends AtomicProgram
 
 
 /** Composite programs that are composed of subprograms. */
-sealed trait CompositeProgram extends Program with Composite
+trait CompositeProgram extends Program with Composite
 
 /** Unary Composite Programs, i.e. programs composed of one subprogram. */
-sealed trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
+trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
   /** Create a program of this constructor but with the given argument as child instead. (copy)
     * @example {{{
     *         Loop(ProgramConst("alpha")).reapply(Assign(Variable("x"),Number(42))) == Loop(Assign(Variable("x"),Number(42)))
@@ -679,7 +681,7 @@ sealed trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram 
 }
 
 /** Binary Composite Programs, i.e. programs composed of two subprograms. */
-sealed trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
+trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
   /** Create a program of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
     *         Choice(ProgramConst("alpha"), ProgramConst("beta")).reapply(ProgramConst("gamma"), ProgramConst("delta")) == Choice(ProgramConst("gamma"), ProgramConst("delta"))
@@ -724,7 +726,7 @@ sealed trait DifferentialProgram extends Program {
 }
 
 /** Atomic differential programs that have no sub-differential-equations (but may still have subterms) */
-sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
+trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
 
 /** Uninterpreted differential program constant, limited to the given state space.
   * The semantics of arity 0 DifferentialProgramConst symbol is looked up by the state,
@@ -733,10 +735,10 @@ sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialPr
   * @param space The part of the state space that the interpretation/replacement of this symbol is limited to have free or bound.
   *              `AnyArg is` the default allowing full read/write access to the state.
   *              `Taboo(x)` means `x` can neither be free nor bound. */
-sealed case class DifferentialProgramConst(name: String, space: Space = AnyArg)
+case class DifferentialProgramConst(name: String, space: Space = AnyArg)
   extends AtomicDifferentialProgram with SpaceDependent with NamedSymbol {
   override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
-  namingConvention
+  insistNamingConvention()
 }
 
 /** x'=e atomic differential equation where x is evolving for some time with time-derivative e. */
@@ -802,7 +804,8 @@ object DifferentialProduct {
     case a: AtomicDifferentialProgram => a :: Nil
   }
 
-  /** The list of all literal differential symbols in ODE */
+  /** The list of all literal differential symbols in ODE.
+    * DifferentialProgramConst is counted as having no symbols just yet, because its use is to check nonoverlap of present primed symbols. */
   //@note Differential symbols can only occur on the left of AtomicODEs anyhow.
   //@note Could use the StaticSemantics from this contract equivalently.
   private def differentialSymbols(ode: DifferentialProgram): immutable.List[DifferentialSymbol] = {ode match {
