@@ -199,7 +199,7 @@ package object core {
     */
   @inline final def insist(requirement: Boolean, message: => Any): Unit = {
     if (!requirement)
-      throw new CoreException("Core requirement failed: "+ message)
+      throw new CoreException("Core requirement failed: " + message)
   }
 
   /** Check that the given expression `e` does not throw an exception.

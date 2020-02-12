@@ -19,6 +19,8 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
+import java.security.MessageDigest
+
 import edu.cmu.cs.ls.keymaerax.Configuration
 
 import scala.collection.immutable
@@ -265,6 +267,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   *       nor reflection to bypass immutable val algebraic data types.
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @author Andre Platzer
+  * @see [[Provable.startProof()]]
   * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
   * {{{
   *   import scala.collection.immutable._
@@ -723,8 +726,72 @@ object Provable {
     * @return a Provable of given conclusion and given subgoals.
     * @note soundness-critical magic/trustme, only call from RCF/Lemma within core with true facts.
     */
-  private[core] final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
+  private final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
     Provable(conclusion, subgoals)
+
+
+
+  /*********************************************************************************
+    * Stored Provable as Strings for lemmas, DB, and persistence purposes.
+    * Printed Provables are parsed again if their reprinted checksum is unmodified.
+    **********************************************************************************
+    */
+
+  /** The permanent pretty printer that is used for Provable storage purposes */
+  // = java.lang.Class.forName("edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter").newInstance
+  private val store: PrettyPrinter.PrettyPrinter = edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter
+
+  /** Checksum computation implementation using the checksum algorithm used to stamp stored Provables. */
+  private def checksum(s: String): String =
+    //@note New instance every time, because digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
+    MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+
+  /** A fully parenthesized String representation of the given Sequent for externalization.
+    * @see [[Sequent.toString]]
+    */
+  def toExternalString(s: Sequent): String =
+      s.ante.map(store).mkString(", ") + (if (s.ante.isEmpty) "  ==>  " else "\n  ==>  ") + s.succ.map(store).mkString(", ")
+
+  /** A fully parenthesized String representation of the given Provable for externalization.
+    * @see [[Provable.toString()]]
+    * @see [[Provable.toStorageString()]]
+    */
+  def toExternalString(fact: Provable): String =
+      "Provable(" + toExternalString(fact.conclusion) + (if (fact.isProved) " proved" else "\n  \\from   " + fact.subgoals.map(toExternalString).mkString("\n  \\with   ")) + ")"
+
+  /** Stored Provable representation as a string of the given Provable that will reparse correctly.
+    * @see [[fromStorageString()]]
+    * @ensures fromStorageString(\result) == fact
+    */
+  final def toStorageString(fact: Provable): String = {
+    val s = toExternalString(fact)
+    checksum(s) + "::" + s
+    //@note soundness-critical check that reparse succeeds as expected (unless you trust printer+parser)
+  } ensures(r => fromStorageString(r) == fact, "Stored Provable should reparse to the original\n\n" +
+    checksum(toExternalString(fact)) + "::" + toExternalString(fact))
+
+  /**
+    * Parses a Stored Provable String representation back again as a Provable.
+    * Soundness depends on the fact that the String came from [[toStorageString()]],
+    * which is checked in a lightweight fashion using checksums.
+    * @param storedProvable The String obtained via [[toStorageString()]].
+    * @return The Provable that represents `storedProvable`.
+    * @see [[toStorageString()]]
+    * @throws ProvableStorageException if storedProvable is illegal.
+    */
+  final def fromStorageString(storedProvable: String): Provable = {
+    val separat = storedProvable.indexOf("::")
+    if (separat < 0)
+      throw new ProvableStorageException("syntactically well-formed Provable storage format", storedProvable)
+    val storedChksum = storedProvable.substring(0, separat)
+    val remainder = storedProvable.substring(separat+2)
+    val (conc :: subs) = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser(remainder)._2
+    val reconstructed = oracle(conc, subs.to)
+    if (checksum(toExternalString(reconstructed)) != storedChksum)
+      throw new ProvableStorageException("Stored Provable checksum should not be tampered with", storedProvable)
+    else
+      reconstructed
+  }
 }
 
 

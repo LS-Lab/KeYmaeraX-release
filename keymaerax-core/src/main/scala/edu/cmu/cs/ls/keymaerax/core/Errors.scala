@@ -64,6 +64,10 @@ case class SkolemClashException(msg: String, clashedNames:SetLattice[Variable], 
   extends CriticalCoreException(msg + " " + clashedNames + "\nwhen skolemizing variables " + vars + "\nin " + s)
 
 
+/** Exception indicating that a Provable Storage representation as a String cannot be read, because it has been tampered with. */
+class ProvableStorageException(msg: String, storedProvable: String) extends CoreException(msg + "\n" + storedProvable)
+
+
 // noncritical prover kernel exceptions
 
 /** Noncritical reasoning exceptions directly from the KeYmaera X Prover Core that indicate a proof step was
