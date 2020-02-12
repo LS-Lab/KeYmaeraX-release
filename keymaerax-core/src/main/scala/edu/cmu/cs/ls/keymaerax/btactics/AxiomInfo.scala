@@ -639,13 +639,13 @@ object DerivationInfo {
       , "DIogreater", true, {case () => HilbertCalculus.useAt("DIo open differential invariance >")}),
     new DerivedAxiomInfo("DIo open differential invariance <"
       , AxiomDisplayInfo("DIo <", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]g(x)<h(x)</span>↔[?Q]g(x)<h(x))←(Q→[{x′=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))′))")
-      , "DIoless", true, {case () => HilbertCalculus.useAt("DIo open differential invariance <")}),
-    new CoreAxiomInfo("DV differential variant >="
-      , AxiomDisplayInfo("DVgeq", "todo DVgeq")
-      , "DVgeq", unsure, {case () => HilbertCalculus.useAt("DV differential variant >=")}),
-    new DerivedAxiomInfo("DV differential variant <="
-      , AxiomDisplayInfo("DVleq", "todo DVleq")
-      , "DVleq", unsure, {case () => HilbertCalculus.useAt("DV differential variant <=")})
+      , "DIoless", true, {case () => HilbertCalculus.useAt("DIo open differential invariance <")})
+//    new CoreAxiomInfo("DV differential variant >="
+//      , AxiomDisplayInfo("DVgeq", "todo DVgeq")
+//      , "DVgeq", unsure, {case () => HilbertCalculus.useAt("DV differential variant >=")}),
+//    new DerivedAxiomInfo("DV differential variant <="
+//      , AxiomDisplayInfo("DVleq", "todo DVleq")
+//      , "DVleq", unsure, {case () => HilbertCalculus.useAt("DV differential variant <=")})
   )
   //</editor-fold>
 

@@ -447,6 +447,7 @@ private object DLBySubst {
     * }}}
     * @param variant The variant property or convergence property in terms of new variable `v`.
     * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
+    * @todo adapt to presence of exists in axiomatic rule
     */
   def conRule(v: Variable, variant: Formula) = "conRule" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)

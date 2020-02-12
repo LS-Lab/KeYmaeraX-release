@@ -191,7 +191,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   //it should "prove DI differential invariance from DI" in {check(DIinvariance)}
   it should "prove DI differential invariant from DI" in {check(DIinvariant)}
   it should "prove DIo open differential invariance <" in withMathematica { _ => check(DIOpeninvariantLess)}
-  it should "prove DV differential variant <=" in withMathematica {_ => check(DVLessEqual)}
+//  it should "prove DV differential variant <=" in withMathematica {_ => check(DVLessEqual)}
   it should "prove DW differential weakening" in {check(DWeakening)}
   it should "prove DW differential weakening and" in {check(DWeakeningAnd)}
   it should "prove DR differential refine" in {check(DiffRefine)}
