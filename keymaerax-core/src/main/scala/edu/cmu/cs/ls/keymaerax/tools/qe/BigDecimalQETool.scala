@@ -24,18 +24,21 @@ object BigDecimalQETool extends Tool with QETool {
   private def unableToEvaluate(e: Expression) = (name + " unable to evaluate " + e)
 
   def eval(t: Term) : BigDecimal = t match {
+    case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
     case Plus(a, b) => eval(a) + eval(b)
     case Minus(a, b) => eval(a) - eval(b)
-    case Neg(a) => -eval(a)
     case Times(a, b) => eval(a) * eval(b)
+    case Neg(a) => -eval(a)
     case Power(a, b) =>
-      (eval(a), eval(b)) match {
-        case (x, y) if y.isValidInt && y >= 1 => x pow y.toIntExact
-        case (x, y) if x != 0 && y == 0 => BigDecimal(1)
-        case (x, y) if x == BigDecimal(10) && y.isValidInt => BigDecimal(1).bigDecimal.scaleByPowerOfTen(y.toIntExact)
-        case (x, y) => throw new IllegalArgumentException(unableToEvaluate(t))
-      }
-    case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
+      val (x, y) = (eval(a), eval(b))
+      if (y.isValidInt && y >= 1)
+        x pow y.toIntExact
+      else if (x != 0 && y == 0)
+        BigDecimal(1)
+      else if (x == BigDecimal(10) && y.isValidInt)
+        BigDecimal(1).bigDecimal.scaleByPowerOfTen(y.toIntExact)
+      else
+        throw new IllegalArgumentException(unableToEvaluate(t))
     case FuncOf(f, Pair(a, b)) =>
       if (f == minF) eval(a) min eval(b)
       else if (f == maxF) eval(a) max eval(b)
@@ -44,7 +47,9 @@ object BigDecimalQETool extends Tool with QETool {
       if (f == absF) eval(x).abs
       else throw new IllegalArgumentException(unableToEvaluate(t))
     case Divide(_, _) => throw new IllegalArgumentException(unableToEvaluate(t))
+    case _ => throw new IllegalArgumentException(unableToEvaluate(t))
   }
+
   def eval(fml: Formula) : Boolean = fml match {
     case LessEqual(s, t) => eval(s) <= eval(t)
     case GreaterEqual(s, t) => eval(s) >= eval(t)
