@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.{Evidence, Lemma}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
@@ -30,7 +31,8 @@ class ArithmeticTests extends TacticTestBase {
       }
     }
 
-    override def qe(formula: Formula): Lemma = Provable.proveArithmetic(new MockQETool(), formula)
+    //@todo fix
+    override def qe(formula: Formula): Lemma = ??? //Provable.proveArithmetic(new MockQETool(), formula)
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
       formula shouldBe expected

@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.core.Evidence
+import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence

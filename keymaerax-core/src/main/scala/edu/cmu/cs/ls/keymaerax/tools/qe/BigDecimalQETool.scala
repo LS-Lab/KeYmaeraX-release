@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import java.math.{MathContext, RoundingMode}
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
 
 import scala.collection.immutable.Map

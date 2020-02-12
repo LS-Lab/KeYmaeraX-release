@@ -4,7 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Lemma}
+import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 
 /**
   * Quantifier elimination tool that combines trusted [[edu.cmu.cs.ls.keymaerax.core.QETool]] with other untrusted tools

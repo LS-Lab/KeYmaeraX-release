@@ -6,12 +6,13 @@
  * @author Stefan Mitsch
  * @note Code Review: 2016-08-17
  */
-package edu.cmu.cs.ls.keymaerax.core
+package edu.cmu.cs.ls.keymaerax.lemma
 
 import java.security.MessageDigest
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, lemma}
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxiomInfo, DerivedRuleInfo}
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, _}
 import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
@@ -69,7 +70,8 @@ object Lemma {
         if (!LEMMA_COMPAT_MODE) throw new CoreException("Cannot reload a lemma without Hash evidence: " + name)
     }
     //@note soundness-critical
-    val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
+    //@todo Provable.fromStorageString(....) instead
+    val fact = ??? //Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
 
     val provable =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
@@ -155,9 +157,9 @@ object Lemma {
   * TactixLibrary.byUS(lemmaFact)
   * }}}
   * @author Stefan Mitsch
-  * @see [[ProvableSig.proveArithmetic]]
+  * @see [[ProvableSig.proveArithmeticLemma]]
   * @see [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma.fromString]]
+  * @see [[lemma.Lemma.fromString]]
   * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
   */
 final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], name: Option[String] = None) {
