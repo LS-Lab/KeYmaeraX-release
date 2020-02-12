@@ -19,6 +19,7 @@ object BigDecimalQETool extends Tool with QETool {
   // TODO: taken from DifferentialTactics, should perhaps be in a more central place?
   val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
+  val absF = Function("abs", None, Real, Real, interpreted=true)
 
   private def unableToEvaluate(e: Expression) = (name + " unable to evaluate " + e)
 
@@ -38,6 +39,9 @@ object BigDecimalQETool extends Tool with QETool {
     case FuncOf(f, Pair(a, b)) =>
       if (f == minF) eval(a) min eval(b)
       else if (f == maxF) eval(a) max eval(b)
+      else throw new IllegalArgumentException(unableToEvaluate(t))
+    case FuncOf(f, x) =>
+      if (f == absF) eval(x).abs
       else throw new IllegalArgumentException(unableToEvaluate(t))
     case Divide(_, _) => throw new IllegalArgumentException(unableToEvaluate(t))
   }

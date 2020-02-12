@@ -27,5 +27,6 @@ class BigDecimalQEToolTests extends TacticTestBase  {
   it should "evaluate interpreted functions" in withMathematica { _ =>
     BigDecimalQETool.eval("min(2.7182,3.14159)".asTerm) shouldBe BigDecimal("2.7182")
     BigDecimalQETool.eval("max(2.7182,3.14159)".asTerm) shouldBe BigDecimal("3.14159")
+    BigDecimalQETool.eval("abs(-2.7182)".asTerm) shouldBe BigDecimal("2.7182")
   }
 }
