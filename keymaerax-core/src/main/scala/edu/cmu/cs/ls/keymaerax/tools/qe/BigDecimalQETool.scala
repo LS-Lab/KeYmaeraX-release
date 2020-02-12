@@ -59,8 +59,14 @@ object BigDecimalQETool extends Tool with QETool {
     case NotEqual(s, t) => eval(s) != eval(t)
     case And(f, g) => eval(f) && eval(g)
     case Or(f, g) => eval(f) || eval(g)
+    case Imply(f, g) => !eval(f) || eval(g)
+    case Equiv(f, g) =>
+      if (eval(f)) eval(g)
+      else /* !eval(f) */ !eval(g)
+    case Not(f) => !eval(f)
     case True => true
     case False => false
+    case _ => throw new IllegalArgumentException(unableToEvaluate(fml))
   }
 
   /** @inheritdoc */
