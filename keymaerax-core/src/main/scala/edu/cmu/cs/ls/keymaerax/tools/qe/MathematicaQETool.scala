@@ -23,6 +23,9 @@ import scala.collection.immutable
 class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool with Logging {
 
   /** @inheritdoc */
+  override def quantifierElimination(formula: Formula) = qeEvidence(formula)._1
+
+  /** @inheritdoc */
   def qeEvidence(originalFormula: Formula): (Formula, Evidence) = {
 //    val f = {
 //      val mustBeReals = FormulaTools.unnaturalPowers(originalFormula)

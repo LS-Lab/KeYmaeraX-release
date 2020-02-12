@@ -846,7 +846,7 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
       case Some(t: QETool) =>
         val simpleQeTask = new FutureTask[Either[Formula, Throwable]](() =>
           try {
-            Left(t.qeEvidence("2+3=5".asFormula)._1)
+            Left(t.quantifierElimination("1+2=3".asFormula))
           } catch {
             case e: Throwable => Right(e)
           })
