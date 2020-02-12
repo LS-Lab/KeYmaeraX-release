@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool.{minF, maxF}
 
 import scala.collection.immutable._
 
@@ -91,10 +92,10 @@ object IntervalArithmeticV2 {
       val (la, ua) = eval_ivl(prec)(bounds)(a)
       val (lb, ub) = eval_ivl(prec)(bounds)(b)
       (la.bigDecimal.subtract(ub.bigDecimal, downContext(prec)), ua.bigDecimal.subtract(lb.bigDecimal, upContext(prec)))
-    case FuncOf(m, Pair(a, b)) if m == BigDecimalQETool.minF || m == BigDecimalQETool.maxF =>
+    case FuncOf(m, Pair(a, b)) if m == minF || m == maxF =>
       val (la, ua) = eval_ivl(prec)(bounds)(a)
       val (lb, ub) = eval_ivl(prec)(bounds)(b)
-      if (m == BigDecimalQETool.minF) {
+      if (m == minF) {
         (la.bigDecimal.min(lb.bigDecimal), ua.bigDecimal.min(ub.bigDecimal))
       } else {
         (la.bigDecimal.max(lb.bigDecimal), ua.bigDecimal.max(ub.bigDecimal))
@@ -110,15 +111,23 @@ object IntervalArithmeticV2 {
     case _ => throw new RuntimeException("Unable to compute bounds for " + t)
   }
 
+  def isNumeric(t: Term) : Boolean = t match {
+    case t: BinaryCompositeTerm => isNumeric(t.left) && isNumeric(t.right)
+    case t: UnaryCompositeTerm => isNumeric(t.child)
+    case Number(_) => true
+    case FuncOf(m, Pair(a, b)) if m == minF || m == maxF => isNumeric(a) && isNumeric(b)
+    case _ => false
+  }
+
   private def collect_bound(prec: Int)(fml: Formula, bounds: DecimalBounds): DecimalBounds = {
     fml match {
-      case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+      case LessEqual(t, n) if isNumeric(n) =>
         (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
-      case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+      case LessEqual(n, t) if isNumeric(n) =>
         (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
-      case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
+      case Less(t, n) if isNumeric(n) =>
         (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
-      case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
+      case Less(n, t) if isNumeric(n) =>
         (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
       case _ => bounds
     }
@@ -548,7 +557,7 @@ object IntervalArithmeticV2 {
             throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +
               "Binary operation " + t.getClass.getSimpleName + " not implemented.")
         }
-      case FuncOf(m, Pair(f, g)) if m == BigDecimalQETool.minF || m == BigDecimalQETool.maxF =>
+      case FuncOf(m, Pair(f, g)) if m == minF || m == maxF =>
         val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
         val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1)(g)
         val ff_prv = lowers2(f)
@@ -566,7 +575,7 @@ object IntervalArithmeticV2 {
 
         val h = eval_ivl_term(prec)(FuncOf(m, Pair(ff, gg)))._1
         val H = eval_ivl_term(prec)(FuncOf(m, Pair(F, G)))._2
-        if (m == BigDecimalQETool.minF) {
+        if (m == minF) {
           val minDown = minDownSeq.apply(USubst(
             SubstitutionPair(t_h, h) ::
               SubstitutionPair(t_f, f) ::
@@ -651,27 +660,27 @@ object IntervalArithmeticV2 {
     (lu, assmi) match {
       case ((lowers, uppers), (assm, i)) =>
         assm match {
-          case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case LessEqual(t, n) if isNumeric(n) =>
             (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
-          case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case LessEqual(n, t) if isNumeric(n) =>
             (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
-          case Equal(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case Equal(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t) :: (t_g, n) :: Nil)),
               uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)))
-          case Equal(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case Equal(n, t) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound1, (t_f, n) :: (t_g, t) :: Nil)),
               uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n) :: (t_g, t) :: Nil)))
-          case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case Less(t, n) if isNumeric(n) =>
             (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t) :: (t_g, n) :: Nil)))
-          case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case Less(n, t) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n) :: (t_g, t) :: Nil)), uppers)
-          case Greater(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case Greater(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
-          case Greater(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case Greater(n, t) if isNumeric(n) =>
             (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n) :: (t_g, t) :: Nil)))
-          case GreaterEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case GreaterEqual(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
-          case GreaterEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case GreaterEqual(n, t) if isNumeric(n) =>
             (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n) :: (t_g, t) :: Nil)))
           case _ =>
             (lowers, uppers)
@@ -977,7 +986,7 @@ object IntervalArithmeticV2 {
                 andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
                 QE() & done)
             case LessEqual(_, x) if bounds._1.isDefinedAt(x) => QE() & done
-            case LessEqual(_, n) if BigDecimalQETool.isNumeric(n) => QE() & done
+            case LessEqual(_, n) if isNumeric(n) => QE() & done
             case _ => throw new BelleThrowable("recurseLower went wrong")
           }
       }
@@ -1004,7 +1013,7 @@ object IntervalArithmeticV2 {
                 andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
                 QE() & done)
             case LessEqual(x, _) if bounds._1.isDefinedAt(x) => QE() & done
-            case LessEqual(n, _) if BigDecimalQETool.isNumeric(n) => QE() & done
+            case LessEqual(n, _) if isNumeric(n) => QE() & done
             case _ => throw new BelleThrowable("recurseUpper went wrong")
           }
       }

@@ -20,13 +20,6 @@ object BigDecimalQETool extends Tool with QETool {
   val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
-  def isNumeric(t: Term) : Boolean = t match {
-    case t: BinaryCompositeTerm => isNumeric(t.left) && isNumeric(t.right)
-    case t: UnaryCompositeTerm => isNumeric(t.child)
-    case Number(_) => true
-    case FuncOf(m, Pair(a, b)) if m == minF || m == maxF => isNumeric(a) && isNumeric(b)
-    case _ => false
-  }
   def eval(t: Term) : BigDecimal = t match {
     case Plus(a, b) => eval(a) + eval(b)
     case Minus(a, b) => eval(a) - eval(b)
