@@ -54,7 +54,7 @@ sealed trait SeqPos {
     * The '''signed''' position for the antecedent or succedent list, respectively, '''1-indexed'''.
     *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
     *  Positive numbers indicate succedent positions, 1, 2, 3.
-    *  @todo Zero is unused? Zero is a degenerate case indicating whole sequent 0.
+    *  Zero is unused.
     * @see [[SeqPos.apply()]]
     */
   final lazy val getPos: Int = if (isSucc) {assert(!isAnte); getIndex+1} else {assert(isAnte); -(getIndex+1)}

@@ -26,7 +26,7 @@ import SetLattice.bottom
   * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
   *
   * @note Implements the one-pass version that checks admissibility on the fly and checking upon occurrence.
-  *       Faster than alternative [[USubstChurch]].
+  *       Faster than the alternative [[USubstChurch]].
   * Main ingredient of prover core.
   * @note soundness-critical
   * @author Andre Platzer
@@ -40,10 +40,10 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private/*[this]*/ val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
-  insist(noException(dataStructureInvariant), "unique left-hand sides in substitutees " + this)
+  insist(noException(dataStructureInvariant()), "unique left-hand sides in substitutees " + this)
 
   /** unique left hand sides in subsDefs */
-  private def dataStructureInvariant: Unit = {
+  private def dataStructureInvariant(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     // this check is redundant except that it also yells at {p(.)~>.>=0,p(.)~>p(.)}
     val lefts = subsDefsInput.map(_.what).toList
@@ -92,7 +92,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.
 
   /** apply this uniform substitution everywhere in a term */
-  //@todo could optimize empty subsDefs to be identity right away if that happens often (unlikely)
+  //@note optimizable for empty subsDefs if that happens often (unlikely)
   def apply(t: Term): Term = try usubst(bottom, t) catch {case ex: ProverException => throw ex.inContext(t.prettyString)}
   /** apply this uniform substitution everywhere in a formula */
   def apply(f: Formula): Formula = try usubst(bottom, f) catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
@@ -104,7 +104,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /**
     * Apply uniform substitution everywhere in the sequent.
     */
-  //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensures contracts checked.
+  //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented with formula context
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
 
@@ -127,7 +127,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   // implementation of uniform substitution application
   //@see Figure 2 in Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
 
-  /** uniform substitution on terms */
+  /** uniform substitution on terms.
+    * @param u the set of variables that are taboo, so cannot be introduced free by the substitution into term. */
   private def usubst(u: SetLattice[Variable], term: Term): Term = {
     term match {
       // uniform substitution base cases
@@ -172,7 +173,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   }
 
 
-  /** uniform substitution on formulas */
+  /** uniform substitution on formulas.
+    * @param u the set of variables that are taboo, so cannot be introduced free by the substitution into formula. */
   private def usubst(u: SetLattice[Variable], formula: Formula): Formula = {
     formula match {
       case app@PredOf(p, theta) => subsDefs.find(sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app)) match {
@@ -189,7 +191,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       // unofficial
       case app@PredicationalOf(p, fml) => subsDefs.find(sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app)) match {
         case Some(subs) =>
-          //@todo consider PredicationalOf(_, DotFormula) = subs.what
+          //@note val PredicationalOf(_, DotFormula) = subs.what is easier to read even if possibly a little slower
           val PredicationalOf(wp, wArg) = subs.what
           //redundant: assert(wp == p, "match only if same head")
           //redundant: assert(wArg == DotFormula)
@@ -238,7 +240,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     }
   }
 
-  /** uniform substitution on programs */
+  /** uniform substitution on programs.
+    * @param u the set of variables that are taboo, so cannot be introduced free by the substitution into program. */
   private def usubst(u: SetLattice[Variable], program: Program): (SetLattice[Variable],Program) = {
     program match {
       case a: ProgramConst => subsDefs.find(_.what == a) match {
@@ -253,7 +256,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case a@AssignAny(x)    => (u+x, a)
       case Test(f)           => (u, Test(usubst(u,f)))
       case ODESystem(ode, h) =>
-        //@todo improve: could make smaller for substituted DifferentialProgramConst
+        //@todo improve: u++substBoundVars(ode) would be smaller for substituted DifferentialProgramConst
         val v = u++boundVars(ode)
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
@@ -261,13 +264,14 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       // unoptimized version:  //case Loop(a) if!optima => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
       // optimized version:
       case Loop(a)           => val v = u++substBoundVars(a); val (w,ra) = usubst(v,a);
-        //@todo optimizable redundant: check result of substBoundVars for equality to make it not soundness-critical
+        //@note optimizable checking v==w is redundant but avoids making substBoundVars soundness-critical
         if (v==w) (v, Loop(ra)) else {val (_,rb) = usubst(w, a); (w, Loop(rb))}
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
     }
   }
 
-  /** uniform substitutions on differential programs */
+  /** uniform substitutions on differential programs.
+    * @param v the set of variables that are taboo (including the surrounding ODESystem), so cannot be introduced free by the substitution into ode. */
   private def usubstODE(v: SetLattice[Variable], ode: DifferentialProgram): DifferentialProgram = {
     ode match {
       case AtomicODE(xp: DifferentialSymbol, e) =>
@@ -289,6 +293,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /**
     * Require that this uniform substitution is admissible with the given taboos for expression e, and
     * raise informative exception if not.
+    * @throws SubstitutionClashException if `!taboo.intersect(frees).isEmpty`
     */
   @inline private def requireAdmissible(taboo: SetLattice[Variable], frees: SetLattice[Variable], e: Expression, context: Expression): Unit = {
     val clashes = taboo.intersect(frees)
@@ -296,18 +301,19 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       throw SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
   }
 
-  /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions). */
+  /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions).
+    * @return The SubstitutionPair `w ~> usubst(taboo, r)` or such substitutions on the components in case w and r are Pairs. */
   private def toSubsPairs(taboo: SetLattice[Variable], w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
-    //@todo comment
     case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(taboo, wl, rl) ++ toSubsPairs(taboo, wr, rr)
     case _ => SubstitutionPair(w, usubst(taboo, r)) :: Nil
   }
 
+
   // optimization
 
   /** Predict bound variables of this(program), whether substitution clashes or not.
-    * @note Not soundness-critical as result checked by inclusion for other usubst round
-    * @note Like [[StaticSemantics.boundVars()]] except with replaced program constant symbols etc computed from their bound variables.*/
+    * @note Not soundness-critical as result is checked by inclusion for second usubst round
+    * @note Like [[StaticSemantics.boundVars()]] except with replaced program constant symbols etc computed from their bound variables. */
   private def substBoundVars(program: Program): SetLattice[Variable] = {
     program match {
       // base cases

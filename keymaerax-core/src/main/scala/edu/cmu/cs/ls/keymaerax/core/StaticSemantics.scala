@@ -213,7 +213,7 @@ object StaticSemantics {
     //@note DifferentialFormula in analogy to Differential
     case DifferentialFormula(df) =>
       val vdf = fmlVars(df)
-      //@todo comment
+      //@note FV(df)++FV(df)' are free. But only BV(df) are bound. E.g., (\forall x x>=y)' still only binds x, not x'.
       VCF(fv = SetLattice.extendToDifferentialSymbols(vdf.fv), bv = vdf.bv)
 
     case True | False => VCF(fv = bottom, bv = bottom)
@@ -260,7 +260,7 @@ object StaticSemantics {
     *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
     *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
     * }}}
-    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
+    * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term     => signature(t)
@@ -273,7 +273,7 @@ object StaticSemantics {
   /**
     * The signature of a term, i.e., set of (non-logical) function/functional symbols occurring in it.
     * Disregarding number literals.
-    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
+    * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
     // base cases
@@ -301,7 +301,7 @@ object StaticSemantics {
   /**
     * The signature of a formula, i.e., set of (non-logical) function, predicate, predicational, and atomic program
     * symbols occurring in it.
-    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
+    * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(formula: Formula): immutable.Set[NamedSymbol] = formula match {
     // base cases
@@ -340,7 +340,7 @@ object StaticSemantics {
   /**
     * The signature of a program, i.e., set of function, predicate, and atomic program
     * symbols occurring in it.
-    * @note Core only uses in old [[USubstChurch]] not in new [[USubstOne]], so no soundness-critical anymore.
+    * @note Not soundness-critical anymore since core only uses it in old [[USubstChurch]] not in new [[USubstOne]].
     */
   def signature(program: Program): immutable.Set[NamedSymbol] = program match {
     // base cases
@@ -361,6 +361,7 @@ object StaticSemantics {
     case ODESystem(a, h)  => signature(a) ++ signature(h)
     case DifferentialProduct(a, b) => signature(a) ++ signature(b)
   }
+
 
   /**
     * Any (non-logical) symbols occurring verbatim in expression e, whether free or bound variable or function or predicate or program constant.

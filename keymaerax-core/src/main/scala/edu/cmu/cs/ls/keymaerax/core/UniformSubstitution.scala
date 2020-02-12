@@ -284,10 +284,10 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
-  insist(noException(dataStructureInvariant), "unique left-hand sides in substitutees " + this)
+  insist(noException(dataStructureInvariant()), "unique left-hand sides in substitutees " + this)
 
   /** unique left hand sides in subsDefs */
-  private def dataStructureInvariant: Unit = {
+  private def dataStructureInvariant(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts = subsDefsInput.map(_.what).toList
     insist(lefts.distinct.size == lefts.size, "conflict: no duplicate substitutions for the same substitutee " + subsDefsInput)
@@ -335,7 +335,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.
 
   /** apply this uniform substitution everywhere in a term */
-  //@todo could optimize empty subsDefs to be identity right away if that happens often (unlikely)
+  //@note optimizable for empty subsDefs if that happens often (unlikely)
   def apply(t: Term): Term = {try usubst(t) catch {case ex: ProverException => throw ex.inContext(t.prettyString)}
   } ensures(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
@@ -532,7 +532,8 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     }
   } //ensures(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
-  /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions). */
+  /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions).
+    * @return The SubstitutionPair `w ~> usubst(r)` or such substitutions on the components in case w and r are Pairs. */
   private def toSubsPairs(w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
     case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(wl, rl) ++ toSubsPairs(wr, rr)
     case _ => SubstitutionPair(w, usubst(r)) :: Nil
