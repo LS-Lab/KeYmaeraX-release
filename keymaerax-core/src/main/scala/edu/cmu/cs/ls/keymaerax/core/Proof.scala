@@ -54,7 +54,7 @@ sealed trait SeqPos {
     * The '''signed''' position for the antecedent or succedent list, respectively, '''1-indexed'''.
     *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
     *  Positive numbers indicate succedent positions, 1, 2, 3.
-    *  Zero is a degenerate case indicating whole sequent 0.
+    *  @todo Zero is unused? Zero is a degenerate case indicating whole sequent 0.
     * @see [[SeqPos.apply()]]
     */
   final lazy val getPos: Int = if (isSucc) {assert(!isAnte); getIndex+1} else {assert(isAnte); -(getIndex+1)}
@@ -93,7 +93,6 @@ object SeqPos {
     * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively.
     *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
     *  Positive numbers indicate succedent positions, 1, 2, 3.
-    *  Zero is a degenerate case indicating whole sequent 0.
     * @see [[SeqPos.getPos]]
     */
   def apply(signedPos: Int): SeqPos =
@@ -425,8 +424,8 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     rule(subgoals(subgoal)) match {
       // subgoal closed by proof rule
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
-      // subgoal replaced by new subgoals fml::rest
-      case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
+      // subgoal replaced by new subgoals goal::rest
+      case goal :: rest => new Provable(conclusion, subgoals.updated(subgoal, goal) ++ rest)
     }
   } ensures(r => r.conclusion == conclusion, "Same conclusion after applying proof rules") ensures (
     r => subgoals.patch(subgoal, Nil, 1).toSet.subsetOf(r.subgoals.toSet),
@@ -471,8 +470,8 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
       case Nil =>
         assert(subderivation.isProved && subderivation.proved == subgoals(subgoal), "Subderivation proves the given subgoal " + subgoals(subgoal) + " of\n" + this + "\nby subderivation\n" + subderivation)
         new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
-      // subderivation replaces subgoal by new premises fml::rest
-      case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
+      // subderivation replaces subgoal by new premises goal::rest
+      case goal :: rest => new Provable(conclusion, subgoals.updated(subgoal, goal) ++ rest)
     }
   } ensures(r => r.conclusion == conclusion,
     "Same conclusion\n" + conclusion + " after joining derivations") ensures (
@@ -711,7 +710,7 @@ object Provable {
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, evidence) = t.qeEvidence(f)
     //@note soundness-critical
-    val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
+    val fact = Provable.oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
     Lemma(ElidingProvable(fact), Lemma.requiredEvidence(ElidingProvable(fact), evidence :: Nil), None)
   }
@@ -872,7 +871,7 @@ case class Close(assume: AntePos, pos: SuccPos) extends Rule {
   /** Close identity */
   def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(assume) == s(pos)) {assert (assume.isAnte && pos.isSucc); Nil }
-    else throw new InapplicableRuleException("The referenced formulas are not identical. Cannot close goal.\n  " + s(assume) + " not the same as\n  " + s(pos), this, s)
+    else throw InapplicableRuleException("The referenced formulas are not identical. Cannot close goal.\n  " + s(assume) + " not the same as\n  " + s(pos), this, s)
   } ensures (r => r.isEmpty, "closed if applicable")
 }
 
@@ -889,7 +888,7 @@ case class CloseTrue(pos: SuccPos) extends RightRule {
   /** close true */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == True) {assert(pos.isSucc); Nil }
-    else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + pos, this, s)
+    else throw InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + pos, this, s)
   } ensures (r => s(pos) == True && pos.isSucc && r.isEmpty, "closed if applicable")
 }
 
@@ -906,7 +905,7 @@ case class CloseFalse(pos: AntePos) extends LeftRule {
   /** close false */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == False) { assert(pos.isAnte); Nil }
-    else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + pos, this, s)
+    else throw InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + pos, this, s)
   } ensures (r => s(pos) == False && pos.isAnte && r.isEmpty, "closed if applicable")
 }
 
@@ -925,8 +924,8 @@ case class Cut(c: Formula) extends Rule {
   val name: String = "cut"
   /** cut in the given formula c */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val use = new Sequent(s.ante :+ c, s.succ)
-    val show = new Sequent(s.ante, s.succ :+ c)
+    val use = Sequent(s.ante :+ c, s.succ)
+    val show = Sequent(s.ante, s.succ :+ c)
     immutable.List(use, show)
   } ensures(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)),
     "subsequent of subgoals of cuts"
@@ -1146,7 +1145,6 @@ object UniformRenaming {
   *
   * @param what What variable to replace (along with its associated [[DifferentialSymbol]]).
   * @param repl The target variable to replace `what` with (and vice versa).
-  * @requires repl is fresh in the sequent.
   * @author Andre Platzer
   * @see [[URename]]
   * @see [[Provable.apply()]]
@@ -1225,10 +1223,10 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
       case Diamond(Assign(x, e), g) if x==what => Diamond(Assign(repl, e), renaming(g))
       case Box    (AssignAny(x), g) if x==what => Box    (AssignAny(repl), renaming(g))
       case Diamond(AssignAny(x), g) if x==what => Diamond(AssignAny(repl), renaming(g))
-      case _ => throw new RenamingClashException("Bound renaming only to bound variables " +
+      case _ => throw RenamingClashException("Bound renaming only to bound variables " +
         what + " is not bound by a quantifier or single assignment", this.toString, f.prettyString)
     } else
-    throw new RenamingClashException("Bound renaming only to fresh names but name " +
+    throw RenamingClashException("Bound renaming only to fresh names but name " +
       repl + " is not fresh", this.toString, f.prettyString)
   } ensures(r => r.getClass == f.getClass, "shape unchanged by bound renaming " + this)
 
@@ -1285,10 +1283,10 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
-      case _ => throw new InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
+      case _ => throw InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
     }
     if (taboos.intersect(SetLattice(v)).isEmpty) immutable.List(s.updated(pos, phi))
-    else throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
+    else throw SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
         taboos.intersect(SetLattice(v)), v.toString, s.toString)
   }
 

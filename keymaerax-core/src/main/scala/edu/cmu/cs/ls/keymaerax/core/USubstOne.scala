@@ -86,7 +86,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
     case p: DifferentialProgram => apply(p)
     case p: Program => apply(p)
-    case f: Function => throw new SubstitutionClashException(toString, "", e + "", "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
+    case f: Function => throw SubstitutionClashException(toString, "", e + "", "", "", "substitutions are not defined on an isolated Function that is not applied to arguments.")
   }
 
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.
@@ -99,7 +99,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /** apply this uniform substitution everywhere in a program */
   def apply(p: Program): Program = try usubst(bottom[Variable], p)._2 catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
   /** apply this uniform substitution everywhere in a differential program */
-  def apply(p: DifferentialProgram): DifferentialProgram = try usubstODE(boundVars(p), p).asInstanceOf[DifferentialProgram] catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
+  def apply(p: DifferentialProgram): DifferentialProgram = try usubstODE(boundVars(p), p) catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
 
   /**
     * Apply uniform substitution everywhere in the sequent.
@@ -115,7 +115,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     * Apply uniform substitution everywhere in the sequent with [[SetLattice.allVars]] as taboos.
     */
   //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensures contracts checked.
-  def applyAllTaboo(s: Sequent): Sequent = try { Sequent(s.ante.map(applyAllTaboo(_)), s.succ.map(applyAllTaboo(_))) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
+  def applyAllTaboo(s: Sequent): Sequent = try { Sequent(s.ante.map(applyAllTaboo), s.succ.map(applyAllTaboo)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
 
   /** Union of uniform substitutions, i.e., both replacement lists merged.
@@ -147,9 +147,9 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         //redundant: assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
       case d: DotTerm => subsDefs.find(_.what==d) match {
         case Some(subs) =>
-          requireAdmissible(u, subs.freeVars, subs.repl, term)
+          requireAdmissible(u, subs.freeVars, subs.repl, d)
           subs.repl.asInstanceOf[Term]
-        case None => term
+        case None => d
       }
       case n: Number => n
       //@note except for Differential, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
@@ -161,7 +161,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case Times(l, r)  => Times(usubst(u, l),  usubst(u, r))
       case Divide(l, r) => Divide(usubst(u, l), usubst(u, r))
       case Power(l, r)  => Power(usubst(u, l),  usubst(u, r))
-      case der@Differential(e) => Differential(usubst(allVars, e))
+      case Differential(e) => Differential(usubst(allVars, e))
       // unofficial
       case Pair(l, r) => Pair(usubst(u, l), usubst(u, r))
       case f: UnitFunctional => subsDefs.find(_.what==f) match {
@@ -189,6 +189,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       // unofficial
       case app@PredicationalOf(p, fml) => subsDefs.find(sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app)) match {
         case Some(subs) =>
+          //@todo consider PredicationalOf(_, DotFormula) = subs.what
           val PredicationalOf(wp, wArg) = subs.what
           //redundant: assert(wp == p, "match only if same head")
           //redundant: assert(wArg == DotFormula)
@@ -222,7 +223,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case Equiv(l, r) => Equiv(usubst(u, l), usubst(u, r))
 
       // NOTE DifferentialFormula in analogy to Differential
-      case der@DifferentialFormula(g) => DifferentialFormula(usubst(allVars, g))
+      case DifferentialFormula(g) => DifferentialFormula(usubst(allVars, g))
 
       // binding cases add bound variables to u
       case Forall(vars, g) => Forall(vars, usubst(u++vars, g))
@@ -249,7 +250,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         case None       => (StaticSemantics.spaceVars(a.space), a)
       }
       case Assign(x, e)      => (u+x, Assign(x, usubst(u,e)))
-      case AssignAny(x)      => (u+x, program)
+      case a@AssignAny(x)    => (u+x, a)
       case Test(f)           => (u, Test(usubst(u,f)))
       case ODESystem(ode, h) =>
         //@todo improve: could make smaller for substituted DifferentialProgramConst
@@ -292,11 +293,12 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   @inline private def requireAdmissible(taboo: SetLattice[Variable], frees: SetLattice[Variable], e: Expression, context: Expression): Unit = {
     val clashes = taboo.intersect(frees)
     if (!clashes.isEmpty)
-      throw new SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
+      throw SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
   }
 
   /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions). */
   private def toSubsPairs(taboo: SetLattice[Variable], w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
+    //@todo comment
     case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(taboo, wl, rl) ++ toSubsPairs(taboo, wr, rr)
     case _ => SubstitutionPair(w, usubst(taboo, r)) :: Nil
   }

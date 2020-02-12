@@ -120,11 +120,11 @@ private[core] object AxiomBase extends Logging {
       /**
         * Rule "con convergence".
         * Premise: x > 0, J(||) |- <a{|x|}><x:=x-1;> J(||)
-        * Conclusion:  J(||) |- <a{|x|}*>\exists x (x<=0 & J(||))
+        * Conclusion:  \exists x J(||) |- <a{|x|}*>\exists x (x<=0 & J(||))
         * {{{
-        *     x > 0, J(x) |- <a{|x|}>J(x-1)
+        *        x > 0, J(x) |- <a{|x|}>J(x-1)
         *    ---------------------------------------------------- con
-        *     J(x) |- <a{|x|}*>\exists x (x<=0 & J(x))
+        *     \exists x J(x) |- <a{|x|}*>\exists x (x<=0 & J(x))
         * }}}
         * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
         * @see Section 17.4 of Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
@@ -132,7 +132,7 @@ private[core] object AxiomBase extends Logging {
       ("con convergence",
         (immutable.IndexedSeq(
             Sequent(immutable.IndexedSeq(Greater(x,Number(0)),Jany), immutable.IndexedSeq(Diamond(ProgramConst("a_", Except(x)), Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
-          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
+          Sequent(immutable.IndexedSeq(Exists(immutable.IndexedSeq(x), Jany)), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
     )
   }
 
@@ -368,16 +368,12 @@ Axiom "DIo open differential invariance >"
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
 
-Axiom "DV differential variant >="
-  <{c&true}>f(||)>=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
-End.
-
 Axiom "DMP differential modus ponens"
   ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
 End.
 
 Axiom "Uniq uniqueness"
-  <{c&q1(||)}>p(||) & <{c&q2(||)}>p(||) -> <{c & q1(||)&q2(||)}>p(||)
+  <{c&q(||)}>p(||) & <{c&r(||)}>p(||) -> <{c & q(||)&r(||)}>p(||)
 End.
 
 /* @note soundness requires no primes in f(||) (guaranteed by data structure invariant) */

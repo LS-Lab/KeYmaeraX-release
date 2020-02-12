@@ -108,7 +108,7 @@ object SetLattice {
   /** The set of all variables including differential symbols. */
   val allVars: SetLattice[Variable] = CoFiniteSet(Set.empty, Set.empty)
 
-  /** The set of all variables including differential symbols, except x and x'. */
+  /** The set of all variables including differential symbols, except taboo and taboo'. */
   //@note Cannot remove all x'' from the CoFiniteSet so assume no higher-order differential symbol
   def except(taboo: Variable): SetLattice[Variable] = CoFiniteSet(
     //@note this assumes no higher-order differential symbols

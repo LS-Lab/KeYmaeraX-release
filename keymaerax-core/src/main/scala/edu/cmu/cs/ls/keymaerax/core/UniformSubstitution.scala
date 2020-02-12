@@ -296,7 +296,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     insist(lambdaNames.distinct.size == lambdaNames.size, "conflict: no duplicate substitutions for the same substitutee (modulo renaming) " + this)
   }
 
-  override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
+  override def toString: String = "USubstChurch{" + subsDefs.mkString(", ") + "}"
 
 
   /**
@@ -348,7 +348,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
   } ensures(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
   /** apply this uniform substitution everywhere in a differential program */
-  def apply(p: DifferentialProgram): DifferentialProgram = {try usubst(p).asInstanceOf[DifferentialProgram] catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
+  def apply(p: DifferentialProgram): DifferentialProgram = {try usubst(p) catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
   } ensures(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
@@ -405,7 +405,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
       case Times(l, r)  => Times(usubst(l),  usubst(r))
       case Divide(l, r) => Divide(usubst(l), usubst(r))
       case Power(l, r)  => Power(usubst(l),  usubst(r))
-      case der@Differential(e) => requireAdmissible(allVars, e, term)
+      case Differential(e) => requireAdmissible(allVars, e, term)
         Differential(usubst(e))
       // unofficial
       case Pair(l, r) => Pair(usubst(l), usubst(r))
@@ -461,7 +461,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
       case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
       // NOTE DifferentialFormula in analogy to Differential
-      case der@DifferentialFormula(g) => requireAdmissible(allVars, g, formula)
+      case DifferentialFormula(g) => requireAdmissible(allVars, g, formula)
         DifferentialFormula(usubst(g))
 
       // binding cases add bound variables to u
@@ -551,7 +551,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     */
   @inline private def requireAdmissible(U: SetLattice[Variable], e: Expression, context: Expression): Unit =
     if (!admissible(U, e))
-      throw new SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")
+      throw SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")
 
   /**
     * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.

@@ -56,9 +56,9 @@ object Real extends Sort { override def toString = "Real" }
 /** Sort of state transformations (i.e. programs) */
 object Trafo extends Sort { override def toString = "Trafo" }
 /** Tuple sort for [[edu.cmu.cs.ls.keymaerax.core.Pair Pair]]. */
-case class Tuple(left: Sort, right: Sort) extends Sort { override def toString = "(" + left + "," + right + ")" }
+case class Tuple(left: Sort, right: Sort) extends Sort { override def toString: String = "(" + left + "," + right + ")" }
 /** User-defined object sort */
-case class ObjectSort(name : String) extends Sort { override def toString = name }
+case class ObjectSort(name : String) extends Sort { override def toString: String = name }
 
 
 /** Sorts of state spaces for state-dependent operators
@@ -152,6 +152,7 @@ sealed trait ApplicationOf extends Composite {
   */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   //@note initialization order uses explicit dataStructureInvariant that is called in all nontrivial subclasses after val have been initialized.
+  //@todo rename: insistNamingConvention
   private[core] final def namingConvention: Unit = {
     insist(!name.isEmpty && !name.substring(0, name.length - 1).contains("_"), "non-empty names without underscores (except at end for internal names): " + name)
     //@note in particular: names cannot have primes
@@ -163,7 +164,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   val index: Option[Int]
 
   /** Compare named symbols lexicographically: by name, index, category.
-    * @return 0 for equall symbols
+    * @return 0 for equal symbols
     *         <0 if this is lexicographically before `other`
     *         >0 if this is lexicographically after `other`
     * @note not used in the core, so not soundness-critical, but breaks tactics if wrong. */
@@ -249,7 +250,7 @@ private[core] sealed trait RTerm extends Term {
 sealed trait Variable extends NamedSymbol with AtomicTerm
 object Variable {
   /** Create a BaseVariable called 'name' with the given index and sort. */
-  def apply(name: String, index: Option[Int]=None, sort: Sort=Real): BaseVariable = new BaseVariable(name,index,sort)
+  def apply(name: String, index: Option[Int]=None, sort: Sort=Real): BaseVariable = BaseVariable(name,index,sort)
 }
 
 /** Elementary variable called `name` with an index of a fixed sort (that is not a differential variable). */
@@ -273,7 +274,7 @@ case class DifferentialSymbol(x: Variable) extends Variable with RTerm {
 }
 
 /** Number literal such as 0.5 */
-case class Number(value: BigDecimal) extends AtomicTerm with RTerm
+sealed case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
 /** Function symbol or predicate symbol or predicational symbol `name_index:domain->sort`
   * @param domain the sort of expected arguments.
@@ -438,6 +439,7 @@ sealed trait AtomicFormula extends Formula with Atomic
 
 /** Atomic comparison formula composed of two terms. */
 sealed trait ComparisonFormula extends AtomicFormula with BinaryComposite {
+  insist(left.sort == right.sort, "expected arguments of the same sort: " + left + " and " + right)
   /** Create a formula of this constructor but with the give left and right arguments instead. (copy)
     * @example {{{
     *         GreaterEqual(Number(7), Variable("v")).reapply(Variable("a"), Number(99)) == GreaterEqual(Variable("a"), Number(99))
@@ -459,15 +461,9 @@ object True extends AtomicFormula
 object False extends AtomicFormula
 
 /** ``=`` equality left = right */
-case class Equal(left: Term, right: Term) extends ComparisonFormula {
-  insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
-  def reapply = copy
-}
+case class Equal(left: Term, right: Term) extends ComparisonFormula { def reapply = copy }
 /** != disequality left != right */
-case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
-  insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
-  def reapply = copy
-}
+case class NotEqual(left: Term, right: Term) extends ComparisonFormula { def reapply = copy }
 
 /** >= greater or equal comparison left >= right */
 case class GreaterEqual(left: Term, right: Term) extends RComparisonFormula { def reapply = copy }
@@ -556,7 +552,7 @@ case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula { 
 sealed trait Quantified extends CompositeFormula {
   insist(vars.nonEmpty, "quantifiers bind at least one variable")
   insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
+  insist(vars.forall(x => x.sort == vars.head.sort), "all vars must have the same sort")
   /** Create a formula of this constructor but with the given variable list and child as argument instead. (copy)
     * @example {{{
     *         Forall(immutable.Seq(Variable("x")), PredOf(Function("p",None,Real,Bool),Variable("x"))).reapply(
@@ -759,7 +755,7 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
   * @note This is a case class except for an override of the apply function to ensure left-associative representation.
   * @note Private constructor so only [[DifferentialProduct.apply]] can ever create this, which will re-associate et al.
   */
-final class DifferentialProduct private(final val left: DifferentialProgram, final val right: DifferentialProgram)
+final class DifferentialProduct private(val left: DifferentialProgram, val right: DifferentialProgram)
   extends DifferentialProgram with BinaryComposite {
 
   override def equals(e: Any): Boolean = e match {
@@ -801,7 +797,7 @@ object DifferentialProduct {
   }
 
   /** Turn differential program `ode` along its DifferentialProduct into a list of atomic differential programs */
-  private def listify(ode: DifferentialProgram): immutable.List[DifferentialProgram] = ode match {
+  def listify(ode: DifferentialProgram): immutable.List[DifferentialProgram] = ode match {
     case p: DifferentialProduct => listify(p.left) ++ listify(p.right)
     case a: AtomicDifferentialProgram => a :: Nil
   }
