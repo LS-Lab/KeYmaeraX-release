@@ -20,6 +20,8 @@ object BigDecimalQETool extends Tool with QETool {
   val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
+  private def unableToEvaluate(e: Expression) = (name + " unable to evaluate " + e)
+
   def eval(t: Term) : BigDecimal = t match {
     case Plus(a, b) => eval(a) + eval(b)
     case Minus(a, b) => eval(a) - eval(b)
@@ -30,14 +32,14 @@ object BigDecimalQETool extends Tool with QETool {
         case (x, y) if y.isValidInt && y >= 1 => x pow y.toIntExact
         case (x, y) if x != 0 && y == 0 => BigDecimal(1)
         case (x, y) if x == BigDecimal(10) && y.isValidInt => BigDecimal(1).bigDecimal.scaleByPowerOfTen(y.toIntExact)
-        case (x, y) => throw new IllegalArgumentException("Power " + x + " ^ " + y + " can not be computed exactly")
+        case (x, y) => throw new IllegalArgumentException(unableToEvaluate(t))
       }
     case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
     case FuncOf(f, Pair(a, b)) =>
       if (f == minF) eval(a) min eval(b)
       else if (f == maxF) eval(a) max eval(b)
-      else throw new IllegalArgumentException(name + " can not evaluate " + t)
-    case Divide(_, _) => throw new IllegalArgumentException("Division is not guaranteed to be representable without error: " + t)
+      else throw new IllegalArgumentException(unableToEvaluate(t))
+    case Divide(_, _) => throw new IllegalArgumentException(unableToEvaluate(t))
   }
   def eval(fml: Formula) : Boolean = fml match {
     case LessEqual(s, t) => eval(s) <= eval(t)
