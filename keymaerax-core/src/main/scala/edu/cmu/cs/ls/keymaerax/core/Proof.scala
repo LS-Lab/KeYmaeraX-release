@@ -265,10 +265,13 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   * @note Only private constructor calls for soundness
   * @note For soundness: No reflection should bypass constructor call privacy,
   *       nor reflection to bypass immutable val algebraic data types.
-  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @author Andre Platzer
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable#startProof(edu.cmu.cs.ls.keymaerax.core.Sequent)]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable#startProof(edu.cmu.cs.ls.keymaerax.core.Formula)]]
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.proveArithmetic]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.fromStorageString]]
   * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
   * {{{
   *   import scala.collection.immutable._
@@ -1238,7 +1241,7 @@ object UniformRenaming {
   * @param repl The target variable to replace `what` with (and vice versa).
   * @author Andre Platzer
   * @see [[URename]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable#apply(edu.cmu.cs.ls.keymaerax.core.Provable)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.URename)]]
   * @see [[BoundRenaming]]
   * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */

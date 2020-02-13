@@ -91,7 +91,7 @@ case class Except(taboo: Variable) extends Space { override def toString: String
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]
   * @see [[http://lfcps.org/logic/dL.html Syntax of differential dynamic logic]]
   * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
@@ -229,7 +229,7 @@ trait SpaceDependent extends StateDependent {
   *     - `e^d` power as [[Power]]([[Term]], [[Term]])
   *     - `(e,d)` for pair as [[Pair]] for arguments
   * @author Andre Platzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#termParser]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.termParser]]
   * @see [[http://lfcps.org/logic/dL.html Syntax of differential dynamic logic]]
   */
 sealed trait Term extends Expression {
@@ -428,7 +428,7 @@ case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   *     - `[a]P` box modality application for all runs as [[Box]]([[Program]]], [[Formula]]])
   *     - `⟨a⟩P` diamond modality application for some run as [[Diamond]]([[Program]]], [[Formula]]])
   * @author Andre Platzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#formulaParser]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.formulaParser]]
   */
 sealed trait Formula extends Expression {
   final val kind: Kind = FormulaKind
@@ -619,7 +619,7 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { d
   *   - Special
   *     - `{c&Q}` differential equation system as [[ODESystem]]([[DifferentialProgram]], [[Formula]])
   * @author Andre Platzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.programParser]]
   */
 sealed trait Program extends Expression {
   val kind: Kind = ProgramKind
@@ -719,7 +719,7 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) exten
   *   - BinaryCompositeDifferentialProgram except it's the only composition for differential programs.
   *     - `c,d` differential product as [[DifferentialProduct]]([[DifferentialProgram]]], [[DifferentialProgram]]])
   * @author Andre Platzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.differentialProgramParser]]
   */
 sealed trait DifferentialProgram extends Program {
   override final val kind: Kind = DifferentialProgramKind

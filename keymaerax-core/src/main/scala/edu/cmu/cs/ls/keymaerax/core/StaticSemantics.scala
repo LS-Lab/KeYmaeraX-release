@@ -38,7 +38,7 @@ import scala.collection.immutable
   *   // determine all symbols occurring in the above formula
   *   println("Symbols         " + StaticSemantics.symbols(fml))
   * }}}
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools]]
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools]]
   */
 object StaticSemantics {
 
