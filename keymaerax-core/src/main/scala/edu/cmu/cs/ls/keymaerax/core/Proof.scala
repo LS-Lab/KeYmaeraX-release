@@ -420,7 +420,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
     * Will return a Provable with the same conclusion but an updated set of premises.
     * @throws IllegalArgumentException if subgoal is out of range of the subgoals.
-    * @throws CoreException subtypes if rule raises those exeptions when applied to the indicated subgoal.
+    * @throws CoreException subtypes if rule raises those exceptions when applied to the indicated subgoal.
     * @requires(0 <= subgoal && subgoal < subgoals.length)
     * @note soundness-critical. And soundness needs Rule to be sealed.
     */
@@ -565,6 +565,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
     * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
     * Will return a Provable with the same subgoals but an updated conclusion.
+    * @throws CoreException subtypes if rule raises those exceptions when applied to `newConsequent`.
     * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
   def apply(newConsequence: Sequent, rule: Rule): Provable = {
@@ -615,6 +616,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     *    Gi |- Di
     * }}}
     * which is suitable for being merged back into this Provable for subgoal `i` subsequently.
+    * @throws IllegalArgumentException if subgoal is out of range of the subgoals.
     * @note not soundness-critical only helpful for completeness-critical
     */
   def sub(subgoal: Subgoal): Provable = {
