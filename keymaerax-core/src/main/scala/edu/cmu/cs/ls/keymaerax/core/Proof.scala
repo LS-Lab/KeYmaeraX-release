@@ -720,6 +720,7 @@ object Provable {
     * @param f The formula.
     * @requires QE(f) is equivalent to f
     * @return a Provable with an equivalence of f to the quantifier-free formula equivalent to f, justified by tool.
+    * @see [[QETool.quantifierElimination()]]
     */
   final def proveArithmetic(tool: QETool, f: Formula): Provable = {
     insist(trustedTools.contains(tool.getClass.getCanonicalName), "Trusted tool required: " + tool.getClass.getCanonicalName)
@@ -789,20 +790,24 @@ object Provable {
     * which is checked in a lightweight fashion using checksums.
     * @param storedProvable The String obtained via [[toStorageString()]].
     * @return The Provable that represents `storedProvable`.
-    * @see [[toStorageString()]]
     * @throws ProvableStorageException if storedProvable is illegal.
+    * @see [[toStorageString()]]
     */
   final def fromStorageString(storedProvable: String): Provable = {
     val separat = storedProvable.indexOf("::")
     if (separat < 0)
-      throw new ProvableStorageException("syntactically well-formed Provable storage format", storedProvable)
+      throw new ProvableStorageException("illegal format", storedProvable)
     val storedChksum = storedProvable.substring(0, separat)
     val remainder = storedProvable.substring(separat+2)
-    val (conc :: subs) = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser(remainder)._2
+    val (conc :: subs) = try {
+      edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser(remainder)._2
+    } catch {
+      case ex: Exception => throw new ProvableStorageException("Cannot be parsed: " + ex.toString, storedProvable)
+    }
     //@note soundness-critical
     val reconstructed = oracle(conc, subs.to)
     if (checksum(toExternalString(reconstructed)) != storedChksum)
-      throw new ProvableStorageException("Stored Provable checksum should not be tampered with", storedProvable)
+      throw new ProvableStorageException("checksum should not be tampered with", storedProvable)
     else
       reconstructed
   }

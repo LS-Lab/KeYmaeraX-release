@@ -92,7 +92,7 @@ class UnprovedException(msg: String, provable: String) extends CoreException("Un
 /** Exception indicating that a Provable Storage representation as a String cannot be read, because it has been tampered with.
   * @see [[Provable.fromStorageString()]]
   */
-class ProvableStorageException(msg: String, storedProvable: String) extends CoreException(msg + "\n" + storedProvable)
+class ProvableStorageException(msg: String, storedProvable: String) extends CoreException("Stored Provable " + msg + "\n" + storedProvable)
 
 
 // noncritical prover kernel exceptions
