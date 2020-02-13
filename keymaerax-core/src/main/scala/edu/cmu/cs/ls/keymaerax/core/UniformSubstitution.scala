@@ -129,7 +129,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
-      case PredicationalOf(_, _) => throw new CoreException("Nonsubstitutable expression " + this + " already found in matchKey")
+      case PredicationalOf(_, _) => throw SubstitutionClashException(toString, "<none>", what.toString, repl.toString, "Nonsubstitutable expression. Already found in matchKey")
     }
     case _ => StaticSemantics.freeVars(repl)
   }
@@ -180,7 +180,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case d: DotTerm                  => d
     case DotFormula                  => DotFormula
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
-    case _ => throw new CoreException("Nonsubstitutable expression " + this)
+    case _ => throw SubstitutionClashException(toString, "<none>", what.toString, repl.toString, "Nonsubstitutable expression")
   }
 
   /**

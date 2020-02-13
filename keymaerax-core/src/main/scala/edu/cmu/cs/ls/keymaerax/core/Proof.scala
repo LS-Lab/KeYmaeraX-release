@@ -17,11 +17,11 @@
   */
 package edu.cmu.cs.ls.keymaerax.core
 
-// require favoring immutable Seqs for soundness
-
 import java.security.MessageDigest
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+
+// require favoring immutable Seqs for soundness
 
 import scala.collection.immutable
 
@@ -267,7 +267,8 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   *       nor reflection to bypass immutable val algebraic data types.
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @author Andre Platzer
-  * @see [[Provable.startProof()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable#startProof(edu.cmu.cs.ls.keymaerax.core.Sequent)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable#startProof(edu.cmu.cs.ls.keymaerax.core.Formula)]]
   * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
   * {{{
   *   import scala.collection.immutable._
@@ -394,12 +395,11 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
 
   /**
     * What conclusion this Provable proves if isProved.
-    *
     * @requires(isProved)
+    * @throws UnprovedException if !isProved so illegally trying to read a proved sequent from a Provable that is not in fact proved.
     */
-  final def proved: Sequent = {
-    if (isProved) conclusion else throw new CoreException("Only Provables that have been proved have a proven conclusion " + this)
-  }
+  final def proved: Sequent =
+    if (isProved) conclusion else throw new UnprovedException("Only Provables that have been proved have a proven conclusion", toString)
 
   /**
     * Apply Rule: Apply given proof rule to the indicated subgoal of this Provable, returning the resulting Provable
@@ -419,6 +419,8 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @param subgoal which of our subgoals to apply the given proof rule to.
     * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
     * Will return a Provable with the same conclusion but an updated set of premises.
+    * @throws IllegalArgumentException if subgoal is out of range of the subgoals.
+    * @throws CoreException subtypes if rule raises those exeptions when applied to the indicated subgoal.
     * @requires(0 <= subgoal && subgoal < subgoals.length)
     * @note soundness-critical. And soundness needs Rule to be sealed.
     */
@@ -461,13 +463,15 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @param subgoal the index of our subgoal that the given subderivation concludes.
     * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using subderivation to show our subgoal.
     * Will return a Provable with the same conclusion but an updated set of premises.
+    * @throws IllegalArgumentException if subgoal is out of range of the subgoals.
+    * @throws SubderivationSubstitutionException if the subderivation's conclusion is not equal to the indicated subgoal.
     * @requires(0 <= subgoal && subgoal < subgoals.length)
     * @requires(subderivation.conclusion == subgoals(subgoal))
     * @note soundness-critical
     */
   final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
+    if (subderivation.conclusion != subgoals(subgoal)) throw new SubderivationSubstitutionException(subderivation.toString, subderivation.conclusion.toString, subgoals(subgoal).toString, subgoal, toString)
     subderivation.subgoals.toList match {
       // subderivation proves given subgoal
       case Nil =>
@@ -493,6 +497,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     *
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
+    * @throws SubstitutionClashException if this substitution is not admissible for this Provable.
     * @author Andre Platzer
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
@@ -524,6 +529,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     *
     * @param ren The uniform renaming to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `ren` to our subgoals and conclusion.
+    * @throws RenamingClashException if this uniform renaming is not admissible (because a semantic symbol occurs despite !semantic).
     * @author Andre Platzer
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-030-29436-6_25 Uniform substitution at one fell swoop]]. In Pascal Fontaine, editor, International Conference on Automated Deduction, CADE'19, Natal, Brazil, Proceedings, volume 11716 of LNCS, pp. 425-441. Springer, 2019.
@@ -680,7 +686,7 @@ object Provable {
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note soundness-critical
     */
-  final def startProof(goal : Sequent): Provable = {
+  final def startProof(goal: Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq(goal))
   } ensures(
     r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
@@ -697,15 +703,21 @@ object Provable {
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note Not soundness-critical (convenience method)
     */
-  def startProof(goal : Formula): Provable =
+  def startProof(goal: Formula): Provable =
     startProof(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
 
   /**
     * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
+    * {{{
+    *           *
+    *    -------------- (tool)
+    *     |- f<->QE(f)
+    * }}}
     *
-    * @param tool The quantifier-elimination tool.
+    * @param tool The quantifier-elimination tool that computes the equivalent `QE(f)`.
     * @param f The formula.
-    * @return a Provable with a quantifier-free formula equivalent to f, justified by tool.
+    * @requires QE(f) is equivalent to f
+    * @return a Provable with an equivalence of f to the quantifier-free formula equivalent to f, justified by tool.
     */
   final def proveArithmetic(tool: QETool, f: Formula): Provable = {
     insist(trustedTools.contains(tool.getClass.getCanonicalName), "Trusted tool required: " + tool.getClass.getCanonicalName)
@@ -722,7 +734,7 @@ object Provable {
     * @param conclusion the desired conclusion.
     * @param subgoals the remaining subgoals.
     * @return a Provable of given conclusion and given subgoals.
-    * @note soundness-critical magic/trustme, only call from RCF/Lemma within core with true facts.
+    * @note soundness-critical magic/trustme, only call from [[proveArithmetic()]]/[[fromStorageString()]] with true facts.
     */
   private final def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
     Provable(conclusion, subgoals)
@@ -732,6 +744,7 @@ object Provable {
   /*********************************************************************************
     * Stored Provable as Strings for lemmas, DB, and persistence purposes.
     * Printed Provables are parsed again if their reprinted checksum is unmodified.
+    * Checksum protection is against nonadversarial accidental modification.
     **********************************************************************************
     */
 
@@ -752,7 +765,7 @@ object Provable {
 
   /** A fully parenthesized String representation of the given Provable for externalization.
     * @see [[Provable.toString()]]
-    * @see [[Provable.toStorageString()]]
+    * @see [[toStorageString()]]
     */
   def toExternalString(fact: Provable): String =
       "Provable(" + toExternalString(fact.conclusion) + (if (fact.isProved) " proved" else "\n  \\from   " + fact.subgoals.map(toExternalString).mkString("\n  \\with   ")) + ")"
@@ -934,7 +947,9 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends Rule {
   */
 case class Close(assume: AntePos, pos: SuccPos) extends Rule {
   val name: String = "Close"
-  /** Close identity */
+  /** Close identity
+    * @throws InapplicableRuleException if the two formulas at the two indicated positions in the sequent are not identical.
+    */
   def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(assume) == s(pos)) {assert (assume.isAnte && pos.isSucc); Nil }
     else throw InapplicableRuleException("The referenced formulas are not identical. Cannot close goal.\n  " + s(assume) + " not the same as\n  " + s(pos), this, s)
@@ -951,7 +966,9 @@ case class Close(assume: AntePos, pos: SuccPos) extends Rule {
   */
 case class CloseTrue(pos: SuccPos) extends RightRule {
   val name: String = "CloseTrue"
-  /** close true */
+  /** close true
+    * @throws InapplicableRuleException if the formula True is not at the indicated position in the sequent.
+    */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == True) {assert(pos.isSucc); Nil }
     else throw InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + pos, this, s)
@@ -968,7 +985,8 @@ case class CloseTrue(pos: SuccPos) extends RightRule {
   */
 case class CloseFalse(pos: AntePos) extends LeftRule {
   val name: String = "CloseFalse"
-  /** close false */
+  /** close false
+    * @throws InapplicableRuleException if the formula False is not at the indicated position in the sequent. */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == False) { assert(pos.isAnte); Nil }
     else throw InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + pos, this, s)
@@ -1213,7 +1231,7 @@ object UniformRenaming {
   * @param repl The target variable to replace `what` with (and vice versa).
   * @author Andre Platzer
   * @see [[URename]]
-  * @see [[Provable.apply()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable#apply(edu.cmu.cs.ls.keymaerax.core.Provable)]]
   * @see [[BoundRenaming]]
   * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */
@@ -1224,6 +1242,10 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
 
   override def toString: String = renaming.toString
 
+  /**
+    * Apply uniform renaming everywhere in the sequent.
+    * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
+    */
   def apply(s: Sequent): immutable.List[Sequent] = List(renaming(s))
 }
 
@@ -1278,8 +1300,22 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
 
   override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 
+  /**
+    * Performs bound renaming what~>repl for a fresh repl on a sequent.
+    * @throws RenamingClashException if this bound renaming is not admissible for s at the indicated position
+    *                                because repl,repl',what' already occurred, or
+    *                                because a semantic symbol occurs, or
+    *                                because the formula at `pos` has the wrong shape.
+    */
   def apply(s: Sequent): immutable.List[Sequent] = immutable.List(s.updated(pos, apply(s(pos))))
 
+  /**
+    * Performs bound renaming what~>repl for a fresh repl on a formula.
+    * @throws RenamingClashException if this bound renaming is not admissible for f
+    *                                because repl,repl',what' already occurred, or
+    *                                because a semantic symbol occurs, or
+    *                                because the formula has the wrong shape.
+    */
   def apply(f: Formula): Formula = { if (admissible(f))
     f match {
       case Forall(vars, g) if vars.contains(what) => Forall(vars.updated(vars.indexOf(what), repl), renaming(g))
@@ -1340,6 +1376,12 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   */
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
+
+  /** Skolemize a universal quantifier in the succedent or an existential quantifier in the antecedent.
+    * @throws InapplicableRuleException if something other than the appropriate quantifier is at the indicated position.
+    * @throws SkolemClashException if the quantified variable that is to be Skolemized already occurs free in the sequent.
+    *                              Use [[BoundRenaming]] to resolve.
+    */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     // all free symbols anywhere else in the sequent, i.e. except at the quantifier position
     // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
@@ -1352,7 +1394,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
       case _ => throw InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
     }
     if (taboos.intersect(SetLattice(v)).isEmpty) immutable.List(s.updated(pos, phi))
-    else throw SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
+    else throw SkolemClashException("Variables to be skolemized cannot appear anywhere else in the sequent. BoundRenaming required.",
         taboos.intersect(SetLattice(v)), v.toString, s.toString)
   }
 
