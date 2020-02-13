@@ -1,15 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-import java.math.{MathContext, RoundingMode}
-
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
 
 import scala.collection.immutable.Map
 
-/** (Hopefully) trustworthy and fast tool to help speed up IntervalArithmeticV2
-  * 'proves' quantifier- and variable-free arithmetic formulas by evaluation with BigDecimals
- *
+/** Proves quantifier- and variable-free arithmetic formulas by exact arithmetic evaluation using [[java.math.BigDecimal]]
   * @author Fabian Immler
   */
 object BigDecimalQETool extends Tool with QETool {
@@ -23,42 +19,69 @@ object BigDecimalQETool extends Tool with QETool {
 
   private def unableToEvaluate(e: Expression) = (name + " unable to evaluate " + e)
 
-  def eval(t: Term) : BigDecimal = t match {
-    case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
-    case Plus(a, b) => eval(a) + eval(b)
-    case Minus(a, b) => eval(a) - eval(b)
-    case Times(a, b) => eval(a) * eval(b)
-    case Neg(a) => -eval(a)
+  /** Returns [[Some]] [[Int]] if the argument [[java.math.BigDecimal]] can be represented as an integer or [[None]] otherwise */
+  private def getIntOption(d: java.math.BigDecimal) : Option[Int] =
+    try { Some(d.intValueExact) } catch { case _: ArithmeticException => None }
+
+  /** Evaluate a [[Term]] in exact [[java.math.BigDecimal]] arithmetic.
+    *
+    * @return the [[java.math.BigDecimal]] equal to the input term
+    * @throws IllegalArgumentException if exact evaluation is not possible, e.g., for Variables or non-exact division
+    * @see the documentation of [[java.math.BigDecimal]], in particular the paragraph mentioning [[java.math.MathContext.UNLIMITED]]:
+    *   - Arithmetic methods which take a [[java.math.MathContext.UNLIMITED]] or no [[java.math.MathContext]] object are exact.
+    *   - If the result of division cannot be represented exactly, an [[ArithmeticException]] is thrown.
+    * @note We use [[java.math.BigDecimal]] instead of [[scala.math.BigDecimal]] in order to avoid one layer of indirection and
+    *       therefore reduce the trusted code base.
+    *       Moreover [[java.math.BigDecimal]] is more explicit about rounding modes and precision.
+    * */
+  def eval(t: Term) : java.math.BigDecimal = t match {
+    case Number(a)     => a.bigDecimal
+    case Plus(a, b)    => eval(a).add     (eval(b))
+    case Minus(a, b)   => eval(a).subtract(eval(b))
+    case Times(a, b)   => eval(a).multiply(eval(b))
+    case Neg(a)        => eval(a).negate
     case Power(a, b) =>
       val (x, y) = (eval(a), eval(b))
-      if (y.isValidInt && y >= 1)
-        x pow y.toIntExact
-      else if (x != 0 && y == 0)
-        BigDecimal(1)
-      else if (x == BigDecimal(10) && y.isValidInt)
-        BigDecimal(1).bigDecimal.scaleByPowerOfTen(y.toIntExact)
+      val i = getIntOption(y).getOrElse(throw new IllegalArgumentException(unableToEvaluate(t)))
+      // x ^ i for positive integer i
+      if (i >= 1)
+        x pow i
+      // x ^ 0 = 0 for x != 0
+      else if (x.compareTo(java.math.BigDecimal.ZERO) != 0 && i == 0) /** @note [[x.compareTo]] respects different representations of 0 */
+        java.math.BigDecimal.ONE
+      // 10 ^ i
+      else if (x.compareTo(java.math.BigDecimal.TEN) == 0) /** @note [[x.compareTo]] respects different representations of 0 */
+        java.math.BigDecimal.ONE.scaleByPowerOfTen(i)
       else
         throw new IllegalArgumentException(unableToEvaluate(t))
     case FuncOf(f, Pair(a, b)) =>
-      if (f == minF) eval(a) min eval(b)
-      else if (f == maxF) eval(a) max eval(b)
-      else throw new IllegalArgumentException(unableToEvaluate(t))
+      if      (f == minF) eval(a).min(eval(b))
+      else if (f == maxF) eval(a).max(eval(b))
+      else
+        throw new IllegalArgumentException(unableToEvaluate(t))
     case FuncOf(f, x) =>
       if (f == absF) eval(x).abs
-      else throw new IllegalArgumentException(unableToEvaluate(t))
+      else
+        throw new IllegalArgumentException(unableToEvaluate(t))
     case Divide(_, _) => throw new IllegalArgumentException(unableToEvaluate(t))
     case _ => throw new IllegalArgumentException(unableToEvaluate(t))
   }
 
+  /** Evaluate a [[Formula]] by evaluating its terms in exact [[java.math.BigDecimal]] arithmetic.
+    *
+    * @return the truth value of the input formula or
+    * @throws [[IllegalArgumentException]] if terms cannot be evaluated in exact arithmetic or if Formula is not a
+    *        Boolean combination of numeric comparisons.
+    * */
   def eval(fml: Formula) : Boolean = fml match {
-    case LessEqual(s, t) => eval(s) <= eval(t)
-    case GreaterEqual(s, t) => eval(s) >= eval(t)
-    case Less(s, t) => eval(s) < eval(t)
-    case Greater(s, t) => eval(s) > eval(t)
-    case Equal(s, t) => eval(s) == eval(t)
-    case NotEqual(s, t) => eval(s) != eval(t)
-    case And(f, g) => eval(f) && eval(g)
-    case Or(f, g) => eval(f) || eval(g)
+    case LessEqual(s, t)    => eval(s).compareTo(eval(t)) <= 0
+    case GreaterEqual(s, t) => eval(s).compareTo(eval(t)) >= 0
+    case Less(s, t)         => eval(s).compareTo(eval(t)) < 0
+    case Greater(s, t)      => eval(s).compareTo(eval(t)) > 0
+    case Equal(s, t)        => eval(s).compareTo(eval(t)) == 0
+    case NotEqual(s, t)     => eval(s).compareTo(eval(t)) != 0
+    case And(f, g)   =>  eval(f) && eval(g)
+    case Or(f, g)    =>  eval(f) || eval(g)
     case Imply(f, g) => !eval(f) || eval(g)
     case Equiv(f, g) =>
       if (eval(f)) eval(g)
