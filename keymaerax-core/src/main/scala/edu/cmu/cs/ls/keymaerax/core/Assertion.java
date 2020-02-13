@@ -12,17 +12,21 @@ import java.util.function.Supplier;
  *
  * */
 public class Assertion {
+    /** assert `assertion(argument)` evaluated lazily, lazy evaluation of `message` */
     public static <A> A assertion(java.util.function.Function<A,Boolean> assertion, A argument, Supplier<Object> message) {
         assert assertion.apply(argument) : "assertion failed: " + message.get();
         return argument;
     }
+    /** assert `assertion(argument)` evaluated lazily */
     public static <A> A assertion(java.util.function.Function<A,Boolean> assertion, A argument) {
         assert assertion.apply(argument)  : "assertion failed";
         return argument;
     }
+    /** assert `assertion()` evaluated lazily, lazy evaluation of `message` */
     public static void assertion(Supplier<Boolean> assertion, Supplier<Object> message) {
         assert assertion.get() : "assertion failed: " + message.get();
     }
+    /** assert `assertion()` evaluated lazily*/
     public static void assertion(Supplier<Boolean> assertion) {
         assert assertion.get() : "assertion failed";
     }
