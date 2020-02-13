@@ -766,14 +766,14 @@ object Provable {
   /** A fully parenthesized String representation of the given Sequent for externalization.
     * @see [[Sequent.toString]]
     */
-  def toExternalString(s: Sequent): String =
+  private def toExternalString(s: Sequent): String =
       s.ante.map(store).mkString(", ") + (if (s.ante.isEmpty) "  ==>  " else "\n  ==>  ") + s.succ.map(store).mkString(", ")
 
   /** A fully parenthesized String representation of the given Provable for externalization.
     * @see [[Provable.toString()]]
     * @see [[toStorageString()]]
     */
-  def toExternalString(fact: Provable): String =
+  private def toExternalString(fact: Provable): String =
       "Provable(" + toExternalString(fact.conclusion) + (if (fact.isProved) " proved" else "\n  \\from   " + fact.subgoals.map(toExternalString).mkString("\n  \\with   ")) + ")"
 
   /** Stored Provable representation as a string of the given Provable that will reparse correctly.
