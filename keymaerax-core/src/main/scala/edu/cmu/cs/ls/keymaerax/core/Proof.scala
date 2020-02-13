@@ -748,14 +748,16 @@ object Provable {
     * @see [[Sequent.toString]]
     */
   def toExternalString(s: Sequent): String =
-      s.ante.map(store).mkString(", ") + (if (s.ante.isEmpty) "  ==>  " else "\n  ==>  ") + s.succ.map(store).mkString(", ")
+      s.ante.map(store).mkString(" :: ") + (if (s.ante.isEmpty) "  ==>  " else "\n  ==>  ") + s.succ.map(store).mkString(" :: ")
 
   /** A fully parenthesized String representation of the given Provable for externalization.
     * @see [[Provable.toString()]]
     * @see [[Provable.toStorageString()]]
     */
   def toExternalString(fact: Provable): String =
-      "Provable(" + toExternalString(fact.conclusion) + (if (fact.isProved) " proved" else "\n  \\from   " + fact.subgoals.map(toExternalString).mkString("\n  \\with   ")) + ")"
+      toExternalString(fact.conclusion) +
+        (if (fact.isProved) "\n\\qed"
+         else "\n\\from   " + fact.subgoals.map(toExternalString).mkString("\n\\from   ") + "\n\\qed" )
 
   /** Stored Provable representation as a string of the given Provable that will reparse correctly.
     * @see [[fromStorageString()]]
@@ -763,10 +765,10 @@ object Provable {
     */
   final def toStorageString(fact: Provable): String = {
     val s = toExternalString(fact)
-    checksum(s) + "::" + s
+    s + "::" + checksum(s)
     //@note soundness-critical check that reparse succeeds as expected (unless you trust printer+parser)
   } ensures(r => fromStorageString(r) == fact, "Stored Provable should reparse to the original\n\n" +
-    checksum(toExternalString(fact)) + "::" + toExternalString(fact))
+     toExternalString(fact) + "::" + checksum(toExternalString(fact)))
 
   /**
     * Parses a Stored Provable String representation back again as a Provable.
@@ -778,12 +780,12 @@ object Provable {
     * @throws ProvableStorageException if storedProvable is illegal.
     */
   final def fromStorageString(storedProvable: String): Provable = {
-    val separat = storedProvable.indexOf("::")
+    val separat = storedProvable.lastIndexOf("::")
     if (separat < 0)
       throw new ProvableStorageException("syntactically well-formed Provable storage format", storedProvable)
-    val storedChksum = storedProvable.substring(0, separat)
-    val remainder = storedProvable.substring(separat+2)
-    val (conc :: subs) = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser(remainder)._2
+    val storedChksum = storedProvable.substring(separat+2)
+    val remainder = storedProvable.substring(0, separat)
+    val conc :: subs = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXStoredProvableParser(remainder)
     //@note soundness-critical
     val reconstructed = oracle(conc, subs.to)
     if (checksum(toExternalString(reconstructed)) != storedChksum)
