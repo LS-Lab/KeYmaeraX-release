@@ -41,7 +41,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     output should include ("PROVED")
 
     val exported = KeYmaeraXExtendedLemmaParser(managed(scala.io.Source.fromFile(outputFileName)).apply(_.mkString))
-    exported._2.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
+    exported._2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
     val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
       exported._3.loneElement.asInstanceOf[ToolEvidence].info
     KeYmaeraXArchiveParser(model).loneElement.expandedModel shouldBe conjecture.expandedModel
@@ -86,7 +86,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     outputFileNames.zipWithIndex.foreach({ case (o, i) =>
       val exported = KeYmaeraXExtendedLemmaParser(managed(scala.io.Source.fromFile(o)).apply(_.mkString))
       val conjecture = conjectures(i)
-      exported._2.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
+      exported._2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conjecture.expandedModel.asInstanceOf[Formula]))
       val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
         exported._3.loneElement.asInstanceOf[ToolEvidence].info
       val entry = KeYmaeraXArchiveParser(model).loneElement

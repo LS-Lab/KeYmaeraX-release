@@ -53,7 +53,7 @@ abstract class LemmaDBBase extends LemmaDB {
       //@see[[edu.cmu.cs.ls.keymaerax.core.alternativeLemma]]
       val parse = KeYmaeraXExtendedLemmaParser(alternativeLemma.toString)
       assert(parse._1 == alternativeLemma.name, "reparse of printed alternativeLemma's name should be identical to original alternativeLemma")
-      assert(parse._2 == alternativeLemma.fact.conclusion +: alternativeLemma.fact.subgoals, s"reparse of printed alternativeLemma's fact ${alternativeLemma.fact.conclusion +: alternativeLemma.fact.subgoals}should be identical to original alternativeLemma ${parse._2}")
+      assert(parse._2 == alternativeLemma.fact.underlyingProvable, s"reparse of printed alternativeLemma's fact ${alternativeLemma.fact} should be identical to original alternativeLemma ${parse._2}")
       assert(parse._3 == alternativeLemma.evidence, "reparse of printed alternativeLemma's evidence should be identical to original alternativeLemma")
     }
 

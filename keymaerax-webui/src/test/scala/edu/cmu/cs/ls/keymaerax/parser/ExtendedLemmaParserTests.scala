@@ -7,9 +7,11 @@ import edu.cmu.cs.ls.keymaerax.hydra.SQLite
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.collection.immutable.IndexedSeq
+
+import org.scalatest.LoneElement._
 
 /**
   * @author Nathan Fulton
@@ -18,31 +20,17 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
   "Extended Lemma Parser" should "work" in {
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq("2=2".asFormula, "5=5".asFormula))
+    val storedProvable = Provable.toStorageString(Provable.startProof(sequent))
 
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
-    val hash = "\"\"\"\"" + Lemma.checksum(ProvableSig.startProof(sequent)) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
 
     val lemmaFile =
       s"""Lemma "MyLemma".
-          |Sequent.
-          |Formula: 1=1
-          |Formula: 3=3
-          |==>
-          |Formula: 2=2
-          |Formula: 5=5
-          |Sequent.
-          |Formula: 1=1
-          |Formula: 3=3
-          |==>
-          |Formula: 2=2
-          |Formula: 5=5
+          |"$storedProvable"
           |End.
           |Tool.
           |$tool
-          |End.
-          |Hash.
-          |  hash $hash
           |End.
           |Tool.
           |$kyxversion
@@ -51,8 +39,8 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
 
     parseResult._1.get shouldBe "MyLemma"
-    parseResult._2.length shouldBe 2
-    parseResult._2.head shouldBe sequent
+    parseResult._2.subgoals.loneElement shouldBe sequent
+    parseResult._2.conclusion shouldBe sequent
 
     Lemma.fromString(lemmaFile)
   }
@@ -60,22 +48,10 @@ class ExtendedLemmaParserTests extends TacticTestBase {
   it should "work with no subgoals" in {
     val sequent = Sequent(IndexedSeq("p()".asFormula), IndexedSeq("p()".asFormula))
     val closedProvable = ProvableSig.startProof(sequent).apply(Close(AntePos(0), SuccPos(0)), 0)
-    val hash = "\"\"\"\"" + Lemma.checksum(closedProvable) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
-
-    val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
     val lemmaFile =
       s"""Lemma "MyLemma".
-          |Sequent.
-          |Formula: p()
-          |==>
-          |Formula: p()
-          |End.
-          |Tool.
-          |$tool
-          |End.
-          |Hash.
-          |  hash $hash
+          |"${Provable.toStorageString(closedProvable.underlyingProvable)}"
           |End.
           |Tool.
           |$kyxversion
@@ -84,35 +60,24 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
 
     parseResult._1.get shouldBe "MyLemma"
-    parseResult._2.length shouldBe 1
-    parseResult._2.head shouldBe sequent
+    parseResult._2.subgoals shouldBe empty
+    parseResult._2.conclusion shouldBe sequent
 
     Lemma.fromString(lemmaFile)
   }
 
   it should "work with sequents that don't have antes" in {
     val sequent = Sequent(IndexedSeq(), IndexedSeq("2=2".asFormula, "5=5".asFormula))
-
+    val provable = ProvableSig.startProof(sequent)
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
-    val hash = "\"\"\"\"" + Lemma.checksum(ProvableSig.startProof(sequent)) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
 
     val lemmaFile =
       s"""Lemma "MyLemma".
-          |Sequent.
-          |==>
-          |Formula: 2=2
-          |Formula: 5=5
-          |Sequent.
-          |==>
-          |Formula: 2=2
-          |Formula: 5=5
+          |"${Provable.toStorageString(provable.underlyingProvable)}"
           |End.
           |Tool.
           |$tool
-          |End.
-          |Hash.
-          |  hash $hash
           |End.
           |Tool.
           |$kyxversion
@@ -121,35 +86,24 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
 
     parseResult._1.get shouldBe "MyLemma"
-    parseResult._2.length shouldBe 2
-    parseResult._2.head shouldBe sequent
+    parseResult._2.subgoals.loneElement shouldBe sequent
+    parseResult._2.conclusion shouldBe sequent
 
     Lemma.fromString(lemmaFile)
   }
 
   it should "work with sequents that don't have succs" in {
     val sequent = Sequent(IndexedSeq("1=1".asFormula, "3=3".asFormula), IndexedSeq())
-
+    val provable = ProvableSig.startProof(sequent)
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
-    val hash = "\"\"\"\"" + Lemma.checksum(ProvableSig.startProof(sequent)) + "\"\"\"\""
     val kyxversion = "kyxversion \"\"\"\"" + edu.cmu.cs.ls.keymaerax.core.VERSION + "\"\"\"\""
 
     val lemmaFile =
       s"""Lemma "MyLemma".
-          |Sequent.
-          |Formula: 1=1
-          |Formula: 3=3
-          |==>
-          |Sequent.
-          |Formula: 1=1
-          |Formula: 3=3
-          |==>
+          |"${Provable.toStorageString(provable.underlyingProvable)}"
           |End.
           |Tool.
           |$tool
-          |End.
-          |Hash.
-          |  hash $hash
           |End.
           |Tool.
           |$kyxversion
@@ -158,29 +112,18 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
 
     parseResult._1.get shouldBe "MyLemma"
-    parseResult._2.length shouldBe 2
-    parseResult._2.head shouldBe sequent
+    parseResult._2.subgoals.loneElement shouldBe sequent
+    parseResult._2.conclusion shouldBe sequent
 
     Lemma.fromString(lemmaFile)
   }
 
   it should "parse multi-evidence lemma correctly" in {
+    val sequent = "1=1, 2=2 ==> 3=3, 4=4".asSequent
     val tool = "input \"\"\"\" \"\"\"\"\noutput \"\"\"\" \"\"\"\""
     val lemmaFile =
       s"""Lemma "MyLemma".
-          |Sequent.
-          |Formula: 1=1
-          |Formula: 2=2
-          |==>
-          |Formula: 3=3
-          |Formula: 4=4
-          |Sequent.
-          |Formula: 5=5
-          |==>
-          |Formula: 6=6
-          |Sequent.
-          |Formula: 7=7
-          |==>
+          |"${Provable.toStorageString(Provable.startProof(sequent))}"
           |End.
           |Tool.
           |$tool
@@ -193,7 +136,8 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
 
     parseResult._1 shouldBe Some("MyLemma")
-    parseResult._2.length shouldBe 3
+    parseResult._2.subgoals.loneElement shouldBe sequent
+    parseResult._2.conclusion shouldBe sequent
     parseResult._3.length shouldBe 2
   }
 
@@ -206,16 +150,14 @@ class ExtendedLemmaParserTests extends TacticTestBase {
 
       val lemmaFile =
         s"""Lemma "MyLemma".
-           |Sequent.
-           |==>
-           |Formula: 1=1
+           |"${Provable.toStorageString(Provable.startProof("1=1".asFormula))}"
            |End.
         """.stripMargin
 
       val parseResult = KeYmaeraXExtendedLemmaParser(lemmaFile)
 
       parseResult._1 shouldBe Some("MyLemma")
-      parseResult._2.length shouldBe 1
+      parseResult._2.conclusion shouldBe "==> 1=1".asSequent
       parseResult._3 shouldBe empty
     }
   }
@@ -224,19 +166,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     val tool: String = "input \"\"\"\"" + "output" + "\"\"\"\"\n"
     val lemmaFile =
       s"""Lemma "MyLemma".
-          |Sequent.
-          |Formula: 1=1
-          |Formula: 2=2
-          |==>
-          |Formula: 3=3
-          |Formula: 4=4
-          |Sequent.
-          |Formula: 5=5
-          |==>
-          |Formula: 6=6
-          |Sequent.
-          |Formula: 7=7
-          |==>
+          |"${Provable.toStorageString(Provable.startProof("1=1".asFormula))}"
           |End.
           |Tool.
           |$tool
@@ -262,7 +192,7 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "false")) {
       c.newInstance() // reinitialize [[Lemma.LEMMA_COMPAT_MODE]] from the changed configuration
       (the [AssertionError] thrownBy Lemma(p, ToolEvidence(("a", "a") :: Nil) :: Nil, Some(name))).getMessage should
-        include ("assertion failed: Lemma should have kyxversion and checksum stamps (unless compatibility mode, which is false)")
+        include ("assertion failed: Lemma should have kyxversion (unless compatibility mode, which is false)")
     }
     withTemporaryConfig(Map(Configuration.Keys.LEMMA_COMPATIBILITY -> "true")) {
       c.newInstance() // reinitialize [[Lemma.LEMMA_COMPAT_MODE]] from the changed configuration
@@ -279,16 +209,15 @@ class ExtendedLemmaParserTests extends TacticTestBase {
     try {
       db.add(new Lemma(p, Lemma.requiredEvidence(p, ToolEvidence(("a", "a")::Nil)::Nil), Some(name)))
       val reloadedLemma = db.get(name)
-      reloadedLemma.get.evidence.find(_.isInstanceOf[HashEvidence]) match {
-        case Some(HashEvidence(h)) => h == Lemma.checksum(p)
-          //h == (reloadedLemma.get invokePrivate md5Generator(reloadedLemma.get invokePrivate sequentsToString(p.conclusion :: Nil)))
-        case None => throw new Exception(s"Expected some hash evidence in ${db.get(name).get.toString}")
+      reloadedLemma.get.evidence.find({ case ToolEvidence(("kyxversion", _) :: Nil) => true case _ => false }) match {
+        case Some(ToolEvidence((_, version) :: Nil)) => version shouldBe VERSION
+        case None => throw new Exception(s"Expected some version evidence in ${db.get(name).get.toString}")
       }
       if (remove) db.remove(name)
     } catch {
       case e: Throwable =>
         if (remove) db.remove(name)
-        throw e //stil fail but don't leave clutter around.
+        throw e //still fail but don't leave clutter around
     }
   }
 

@@ -569,7 +569,7 @@ object KeYmaeraX {
             val lemma = Lemma(witness, evidence, Some(name))
             //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
             assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
-            assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion::Nil, lemma.evidence),
+            assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.underlyingProvable, lemma.evidence),
               "reparse of printed lemma is not original lemma")
             Some(lemma)
           case None => None

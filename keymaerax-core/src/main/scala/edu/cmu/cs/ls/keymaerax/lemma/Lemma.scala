@@ -8,14 +8,12 @@
  */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import java.security.MessageDigest
-
 import edu.cmu.cs.ls.keymaerax.{Configuration, lemma}
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxiomInfo, DerivedRuleInfo}
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, _}
-import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
 import edu.cmu.cs.ls.keymaerax.pt._
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
 
@@ -27,11 +25,6 @@ import scala.collection.immutable._
 object Lemma {
   //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
   private val LEMMA_COMPAT_MODE = Configuration(Configuration.Keys.LEMMA_COMPATIBILITY) == "true"
-  //@todo figure out a stable but fast checksum. Ideally something like portable hashCodes.
-  private[this] val digest = MessageDigest.getInstance("MD5")
-
-  /** The pretty printer that is used for lemma storage purposes */
-  private val printer = FullPrettyPrinter
 
   /**
     * Parses a lemma from its string representation.
@@ -61,45 +54,21 @@ object Lemma {
   /** Parses a lemma from its string representation (without consistency checking). */
   private def fromStringInternal(lemma: String): Lemma = {
     //@note should ensure that string was indeed produced by KeYmaera X
-    val (name, sequents, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
-    evidence.find(_.isInstanceOf[HashEvidence]) match {
-      case Some(HashEvidence(hash)) =>
-        assert(hash == checksum(sequents.to),
-          "Expected hashed evidence to match hash of conclusion + subgoals: " + name + "\n" + lemma)
-      case None =>
-        if (!LEMMA_COMPAT_MODE) throw new CoreException("Cannot reload a lemma without Hash evidence: " + name)
-    }
-    //@note soundness-critical
-    //@todo Provable.fromStorageString(....) instead
-    val fact = ??? //Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
-
-    val provable =
+    val (name, provable: Provable, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
+    val fact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        TermProvable(ElidingProvable(fact), name match { case Some(n) =>
+        TermProvable(ElidingProvable(provable), name match { case Some(n) =>
           DerivedAxiomInfo.allInfo.find(_.storedName == n) match {
             case Some(info) => AxiomTerm(info.canonicalName)
             case None =>
               if (DerivedRuleInfo.allInfo.exists(_.storedName == n)) RuleTerm(n)
               else NoProof()
           }
-        case None => FOLRConstant(sequents.head.succ.head) })
+        case None => FOLRConstant(provable.conclusion.succ.head) })
       } else {
-        ElidingProvable(fact)
+        ElidingProvable(provable)
       }
-    Lemma(provable, evidence, name) //@todo also load proof terms.
-  }
-
-  /** Compute the checksum for the given Provable, which provides some protection against accidental changes. */
-  final def checksum(fact: ProvableSig): String = checksum(fact.conclusion +: fact.subgoals)
-
-  /** Compute the checksum for the given sequents, which provides some protection against accidental changes. */
-  private[this] def checksum(sequents: immutable.IndexedSeq[Sequent]): String =
-    digest(sequents.map(s => printer.stringify(s)).mkString(","))
-
-  /** Checksum computation implementation */
-  private[this] def digest(s: String): String = digest.synchronized {
-    //@note digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
-    digest.digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+    Lemma(fact, evidence, name) //@todo also load proof terms.
   }
 
   /** Returns true if `evidence` contains version evidence, false otherwise. */
@@ -108,27 +77,10 @@ object Lemma {
     case _ => false
   })
 
-  /** Returns true if `evidence` contains hash evidence, false otherwise. */
-  private def containsHashEvidence(evidence: List[Evidence]) = evidence.exists(_.isInstanceOf[HashEvidence])
-
   /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: ProvableSig, evidence: List[Evidence] = Nil): List[Evidence] = {
-    val versionEvidence = {
-      if (!containsVersionEvidence(evidence)) Some(ToolEvidence(("kyxversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil))
-      else None
-    }
-
-    val hashEvidence = {
-      if (!containsHashEvidence(evidence)) Some(HashEvidence(checksum(fact)))
-      else None
-    }
-
-    (versionEvidence, hashEvidence) match {
-      case (Some(l), Some(r)) => evidence :+ l :+ r
-      case (Some(l), None) => evidence :+ l
-      case (None, Some(r)) => evidence :+ r
-      case _ => evidence
-    }
+    if (!containsVersionEvidence(evidence)) evidence :+ ToolEvidence(("kyxversion", edu.cmu.cs.ls.keymaerax.core.VERSION) :: Nil)
+    else evidence
   }
 }
 
@@ -164,10 +116,8 @@ object Lemma {
   */
 final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], name: Option[String] = None) {
   insist(name.getOrElse("").forall(c => c!='\"'), "no escape characters in names: " + name)
-  assert(hasStamp, "Lemma should have kyxversion and checksum stamps (unless compatibility mode, which is " + Lemma.LEMMA_COMPAT_MODE + ")\nbut got\n" + this.toStringInternal)
-  private def hasStamp: Boolean = Lemma.LEMMA_COMPAT_MODE || {
-    Lemma.containsVersionEvidence(evidence) && Lemma.containsHashEvidence(evidence)
-  }
+  assert(hasStamp, "Lemma should have kyxversion (unless compatibility mode, which is " + Lemma.LEMMA_COMPAT_MODE + ")\nbut got\n" + this.toStringInternal)
+  private def hasStamp: Boolean = Lemma.LEMMA_COMPAT_MODE || Lemma.containsVersionEvidence(evidence)
 
   /** A string representation of this lemma that will reparse as this lemma.
     * @see [[Lemma.fromString()]] */
@@ -186,21 +136,9 @@ final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], na
     * and will be checked to do so in [[toString]]. */
   private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +
-      sequentToString(fact.conclusion) + "\n" +
-      fact.subgoals.map(sequentToString).mkString("\n") + "\n" +
+      "\"" + Provable.toStorageString(fact.underlyingProvable) + "\"\n" +
       "End.\n" +
       evidence.mkString("\n\n") + "\n"
-  }
-
-  /** Produces a sequent block in Lemma file format */
-  private[this] def sequentToString(s: Sequent): String = {
-    //@note Regarding side-conditions:
-    //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
-    //@note It is enough to use contract-free stringify since toString will reparse the entire lemma in its ensures contract again.
-    "Sequent.\n" +
-      s.ante.map(x => "Formula: " + Lemma.printer.stringify(x)).mkString("\n") +
-      "\n==>\n" +
-      s.succ.map(x => "Formula: " + Lemma.printer.stringify(x)).mkString("\n")
   }
 }
 
