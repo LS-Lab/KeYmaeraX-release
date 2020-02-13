@@ -14,8 +14,8 @@ Main documentation entry points for KeYmaera X API:
   - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
       - `[[edu.cmu.cs.ls.keymaerax.core.Expression Expression]]` - Differential dynamic logic expressions: terms, formulas, programs
       - `[[edu.cmu.cs.ls.keymaerax.core.Sequent Sequent]]` - Sequents of formulas
-      - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules with `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubst]]` for uniform substitutions and [[edu.cmu.cs.ls.keymaerax.core.URename renaming]]
       - `[[edu.cmu.cs.ls.keymaerax.core.Provable Provable]]` - Proof certificates transformed by rules/axioms
+      - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules as well as `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubst]]` for uniform substitutions and [[edu.cmu.cs.ls.keymaerax.core.URename renaming]]
       - `[[edu.cmu.cs.ls.keymaerax.core.StaticSemantics StaticSemantics]]` - Static semantics with free and bound variable analysis
 
   - `[[edu.cmu.cs.ls.keymaerax.infrastruct]]` - Prover infrastructure outside the kernel
@@ -35,7 +35,7 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus SequentCalculus]]` - Sequent Calculus for propositional and first-order logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.HybridProgramCalculus HybridProgramCalculus]]` - Hybrid Program Calculus for differential dynamic logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus DifferentialEquationCalculus]]` - Differential Equation Calculus for differential dynamic logic
-      - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` - Unification-based uniform substitution calculus
+      - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` - Unification-based uniform substitution calculus underlying the other calculi
 
   - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
 
@@ -45,11 +45,15 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser KeYmaeraXArchiveParser]]` - Parser reading KeYmaera X model and proof archive `.kyx` files
 
   - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
+      - `[[edu.cmu.cs.ls.keymaerax.lemma.Lemma Lemma]]` - Lemmas that are Provables to be stored under a name, e.g., in files.
       - `[[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB LemmaDB]]` - Lemma database stored in files or database etc.
 
-  - `[[edu.cmu.cs.ls.keymaerax.tools]]` - Arithmetic back-ends
-      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica Mathematica]]` - Mathematica interface for real arithmetic and ODE solver etc.
-      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Z3 Z3]]` - Z3 interface for real arithmetic.
+  - `[[edu.cmu.cs.ls.keymaerax.tools.qe]]` - Arithmetic back-ends
+      - `[[edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool MathematicaQETool]]` - Mathematica interface for real arithmetic.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool Z3QETool]]` - Z3 interface for real arithmetic.
+  - `[[edu.cmu.cs.ls.keymaerax.tools.ext]]` - Extended back-ends for ODE solving, counterexamples, algebra, etc.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica  Mathematica]]` - Mathematica interface for ODE solving, algebra, simplification, invariant generation, etc.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool Z3QETool]]` - Z3 interface for real arithmetic.
     
 Additional entry points and usage points for KeYmaera X API:
 
@@ -61,9 +65,11 @@ Additional entry points and usage points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.bellerophon.UIIndex]]` - Index determining which canonical reasoning steps to display on User Interface..
 
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]` - Registry for derived axioms and axiomatic proof rules.
+
 ==References==
 
-Full references are provided elsewhere [[http://keymaeraX.org/]], the main references are the following:
+Full references on KeYmaera X are provided elsewhere [[http://keymaeraX.org/]]. The main references are the following:
 
 1. André Platzer. 
 [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].

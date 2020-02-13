@@ -45,27 +45,54 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
   * [[NoncriticalCoreException]] for plausible but inappropriate reasoning attempts. */
 class CoreException(msg: String) extends ProverException(msg)
 
-// critical prover kernel exceptions
+
+// critical logical prover kernel exceptions
 
 /** Critical reasoning exceptions directly from the KeYmaera X Prover Core that indicate a proof step was
   * attempted that would be unsound, and was consequently denied. */
 class CriticalCoreException(msg: String) extends CoreException(msg)
 
-/** Substitution clashes are raised for unsound substitution reasoning attempts. */
+
+/** Exceptions that arise from trying to substitute a subderivation in for a subgoal that does not equal the conclusion of the subderivation.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.Provable,Int)]] */
+case class SubderivationSubstitutionException(subderivation: String/*Provable*/, conclusion: String, subgoal: String/*Sequent*/, subgoalid: Int, provable: String/*Provable*/)
+  extends CriticalCoreException("Subderivation substitution for subgoal does not fit to the subderivation's conclusion.\nsubderivation " + subderivation + "\nconclude: " + conclusion + "\nexpected: " + subgoal + " @" + subgoalid + " into\n" + provable)
+
+/** Substitution clashes are raised for unsound substitution reasoning attempts.
+  * @see [[USubstOne]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubstChurch)]]
+  */
 case class SubstitutionClashException(subst: String/*USubst*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
   extends CriticalCoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info)
 
-/** Uniform or bound renaming clashes are unsound renaming reasoning attempts. */
+/** Uniform or bound renaming clashes are unsound renaming reasoning attempts.
+  * @see [[BoundRenaming]]
+  * @see [[UniformRenaming]]
+  * @see [[URename]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable!.apply(edu.cmu.cs.ls.keymaerax.core.URename)]]
+  */
 case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "")
   extends CriticalCoreException(msg + "\nRenaming " + e + " via " + ren + "\nin " + info)
 
-/** Skolem symbol clashes are unsound Skolemization reasoning attempts. */
+/** Skolem symbol clashes are unsound Skolemization reasoning attempts.
+  * @see [[Skolemize]]
+  */
 case class SkolemClashException(msg: String, clashedNames:SetLattice[Variable], vars:String/*Seq[Variable]*/, s:String/*Sequent*/)
   extends CriticalCoreException(msg + " " + clashedNames + "\nwhen skolemizing variables " + vars + "\nin " + s)
 
 
-/** Exception indicating that a Provable Storage representation as a String cannot be read, because it has been tampered with. */
-class ProvableStorageException(msg: String, storedProvable: String) extends CoreException(msg + "\n" + storedProvable)
+// mediocre prover kernel exceptions whose presence does not indicate logical errors but still malfunctioning uses
+
+/** Exception indicating an attempt to steal a proved sequent from a Provable that was not proved.
+  * @see [[Provable.proved]]
+  * @see [[Provable.isProved]]
+  */
+class UnprovedException(msg: String, provable: String) extends CoreException("Unproved provable: " + msg + "\n" + provable)
+
+/** Exception indicating that a Provable Storage representation as a String cannot be read, because it has been tampered with.
+  * @see [[Provable.fromStorageString]]
+  */
+class ProvableStorageException(msg: String, storedProvable: String) extends CoreException("Stored Provable " + msg + "\n" + storedProvable)
 
 
 // noncritical prover kernel exceptions
@@ -78,7 +105,12 @@ class NoncriticalCoreException(msg: String) extends CoreException(msg)
   * For example, InapplicableRuleException can be raised when trying to apply [[AndRight]]
   * at the correct position 2 in bounds on the right-hand side where it turns out there is an Or formula not an And formula.
   * For readability and code performance reasons, the prover kernel may also raise [[scala.MatchError]]
-  * if the shape of a formula is not as expected.
+  * if the shape of a formula is not as expected, but core tactics will then convert MatchError to InapplicableRuleException.
+  * @see [[Rule]]
+  * @see [[Close]]
+  * @see [[CloseFalse]]
+  * @see [[CloseTrue]]
+  * @see [[Skolemize]]
   */
 case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null)
   extends NoncriticalCoreException(msg + "\n" +

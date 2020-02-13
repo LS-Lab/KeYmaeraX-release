@@ -91,28 +91,40 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
 
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.
 
-  /** apply this uniform substitution everywhere in a term */
+  /** apply this uniform substitution everywhere in a term
+    * @throws SubstitutionClashException if this substitution is not admissible for t.
+    */
   //@note optimizable for empty subsDefs if that happens often (unlikely)
   def apply(t: Term): Term = try usubst(bottom, t) catch {case ex: ProverException => throw ex.inContext(t.prettyString)}
-  /** apply this uniform substitution everywhere in a formula */
+  /** apply this uniform substitution everywhere in a formula
+    * @throws SubstitutionClashException if this substitution is not admissible for f.
+    */
   def apply(f: Formula): Formula = try usubst(bottom, f) catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
-  /** apply this uniform substitution everywhere in a program */
+  /** apply this uniform substitution everywhere in a program
+    * @throws SubstitutionClashException if this substitution is not admissible for p.
+    */
   def apply(p: Program): Program = try usubst(bottom[Variable], p)._2 catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
-  /** apply this uniform substitution everywhere in a differential program */
+  /** apply this uniform substitution everywhere in a differential program
+    * @throws SubstitutionClashException if this substitution is not admissible for p.
+    */
   def apply(p: DifferentialProgram): DifferentialProgram = try usubstODE(boundVars(p), p) catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
 
   /**
     * Apply uniform substitution everywhere in the sequent.
+    * @throws SubstitutionClashException if this substitution is not admissible for s.
     */
   //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented with formula context
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
 
-  /** apply this uniform substitution everywhere in a formula with [[SetLattice.allVars]] as taboos. */
+  /** apply this uniform substitution everywhere in a formula with [[SetLattice.allVars]] as taboos.
+    * @throws SubstitutionClashException if this substitution is not admissible for f (e.g. because it introduces any free variables).
+    */
   def applyAllTaboo(f: Formula): Formula = try usubst(allVars, f) catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
 
   /**
     * Apply uniform substitution everywhere in the sequent with [[SetLattice.allVars]] as taboos.
+    * @throws SubstitutionClashException if this substitution is not admissible for s (e.g. because it introduces any free variables).
     */
   //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensures contracts checked.
   def applyAllTaboo(s: Sequent): Sequent = try { Sequent(s.ante.map(applyAllTaboo), s.succ.map(applyAllTaboo)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }

@@ -104,9 +104,9 @@ import scala.io.Source
   * ===Static Semantics===
   * The static semantics of differential dynamic logic is captured in
   * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
-  * in terms of the [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#freeVars(edu.cmu.cs.ls.keymaerax.core.Expression) free variables]] and
-  * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#boundVars(edu.cmu.cs.ls.keymaerax.core.Expression) bound variables]] that expressions have
-  * as well as their [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#signature(edu.cmu.cs.ls.keymaerax.core.Expression) signatures]] (set of occurring symbols).
+  * in terms of the [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics.freeVars(edu.cmu.cs.ls.keymaerax.core.Expression) free variables]] and
+  * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics.boundVars(edu.cmu.cs.ls.keymaerax.core.Expression) bound variables]] that expressions have
+  * as well as their [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature(edu.cmu.cs.ls.keymaerax.core.Expression) signatures]] (set of occurring symbols).
   * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 2.4]]
   *
   *
