@@ -10,6 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -100,7 +101,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def qe(formula: Formula): Lemma = {
     mQE.timeout = qeInitialTimeout
     try {
-      mQE.run(ProvableSig.proveArithmetic(_, formula))
+      mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
     } catch {
       case _: MathematicaComputationAbortedException =>
         mCEX.timeout = qeCexTimeout
@@ -117,7 +118,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
         cex match {
           case None =>
             mQE.timeout = qeMaxTimeout
-            mQE.run(ProvableSig.proveArithmetic(_, formula))
+            mQE.run(ProvableSig.proveArithmeticLemma(_, formula))
           case Some(cexFml) => Lemma(
             ProvableSig.startProof(False),
             ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)

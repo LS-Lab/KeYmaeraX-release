@@ -43,7 +43,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, QETacticTool, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
@@ -846,7 +846,7 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
       case Some(t: QETool) =>
         val simpleQeTask = new FutureTask[Either[Formula, Throwable]](() =>
           try {
-            Left(t.qeEvidence("2+3=5".asFormula)._1)
+            Left(t.quantifierElimination("1+2=3".asFormula))
           } catch {
             case e: Throwable => Right(e)
           })

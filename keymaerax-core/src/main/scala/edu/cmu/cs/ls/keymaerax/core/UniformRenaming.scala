@@ -48,24 +48,32 @@ final case class URename(what: Variable, repl: Variable, semantic: Boolean = fal
     case f: Function => throw RenamingClashException("Renamings are not defined on an isolated Function that is not applied to arguments.", this.toString, f.asString)
   }
 
-  /** apply this uniform renaming everywhere in a term */
+  /** apply this uniform renaming everywhere in a term.
+    * @throws RenamingClashException if this uniform renaming is not admissible for t (because a semantic symbol occurs despite !semantic).
+    */
   def apply(t: Term): Term = try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
 
-  /** apply this uniform renaming everywhere in a formula */
+  /** apply this uniform renaming everywhere in a formula.
+    * @throws RenamingClashException if this uniform renaming is not admissible for f (because a semantic symbol occurs despite !semantic).
+    */
   def apply(f: Formula): Formula = try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
 
-  /** apply this uniform renaming everywhere in a program */
+  /** apply this uniform renaming everywhere in a differential program.
+    * @throws RenamingClashException if this uniform renaming is not admissible for p (because a semantic symbol occurs despite !semantic).
+    */
   def apply(p: DifferentialProgram): DifferentialProgram = try renameODE(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
 
-  /** apply this uniform renaming everywhere in a program */
+  /** apply this uniform renaming everywhere in a program.
+    * @throws RenamingClashException if this uniform renaming is not admissible for p (because a semantic symbol occurs despite !semantic).
+    */
   def apply(p: Program): Program = try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
 
   /**
     * Apply uniform renaming everywhere in the sequent.
+    * @throws RenamingClashException if this uniform renaming is not admissible for s (because a semantic symbol occurs despite !semantic).
     */
   //@note mapping apply instead of the equivalent rename makes sure the exceptions are augmented and the ensures contracts checked.
-  def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply))
-  } catch { case ex: ProverException => throw ex.inContext(s.toString) }
+  def apply(s: Sequent): Sequent = try Sequent(s.ante.map(apply), s.succ.map(apply)) catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
   // implementation
 

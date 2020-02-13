@@ -273,6 +273,46 @@ class ProvableTest extends FlatSpec with Matchers {
     ))
   }
 
+  it should "print to storage string" in {
+    Provable.toStorageString(Provable.startProof("x>0 -> x>0".asFormula)) shouldBe
+      """  ==>  ((x) > ((0)))->((x) > ((0)))
+        |\from     ==>  ((x) > ((0)))->((x) > ((0)))
+        |\qed::2dffa14ea72cb73ba9d209d9422604d76e1c19f05335918234b7ecdd893c1eec""".stripMargin
+    Provable.toStorageString(Provable.startProof("x>0, y>0 ==> x>0".asSequent)) shouldBe
+      """(x) > ((0)) :: (y) > ((0))
+        |  ==>  (x) > ((0))
+        |\from   (x) > ((0)) :: (y) > ((0))
+        |  ==>  (x) > ((0))
+        |\qed::becba635e6d5fdf324e1e982824d2dc420a884185f542bd4fa9a3b8ce0e62a75""".stripMargin
+    Provable.toStorageString(Provable.startProof("[{x'=2,y'=3}]x>0, y>0 ==> y>0".asSequent)) shouldBe
+      """[{x'=(2),y'=(3)&true}]((x) > ((0))) :: (y) > ((0))
+        |  ==>  (y) > ((0))
+        |\from   [{x'=(2),y'=(3)&true}]((x) > ((0))) :: (y) > ((0))
+        |  ==>  (y) > ((0))
+        |\qed::1c5d5609a270a5bf54252503d48c884c301df424c43f4c04752bc57222d9ddce""".stripMargin
+    Provable.toStorageString(Provable.startProof("true".asFormula)(CloseTrue(SuccPos(0)), 0)) shouldBe
+      """  ==>  true
+        |\qed::7c521c9c96fd55bd63a4b11e3d7385528be5a71af23396de7a36ca10f528d5cd""".stripMargin
+    Provable.toStorageString(Provable.startProof("x>0 & y>0".asFormula)(AndRight(SuccPos(0)), 0)) shouldBe
+      """  ==>  ((x) > ((0)))&((y) > ((0)))
+        |\from     ==>  (x) > ((0))
+        |\from     ==>  (y) > ((0))
+        |\qed::4a2c12541ba6889a753ce490a63e15158554643efd20866bb7da1a1d6ff672ab""".stripMargin
+  }
+
+  it should "parse from storage string" in {
+    {val p = Provable.startProof("x>0 -> x>0".asFormula)
+     Provable.fromStorageString(Provable.toStorageString(p)) shouldBe p}
+    {val p = Provable.startProof("x>0, y>0 ==> x>0".asSequent)
+     Provable.fromStorageString(Provable.toStorageString(p)) shouldBe p}
+    {val p = Provable.startProof("[{x'=2,y'=3}]x>0, y>0 ==> y>0".asSequent)
+      Provable.fromStorageString(Provable.toStorageString(p)) shouldBe p}
+    {val p = Provable.startProof("true".asFormula)(CloseTrue(SuccPos(0)), 0)
+      Provable.fromStorageString(Provable.toStorageString(p)) shouldBe p}
+    {val p = Provable.startProof("x>0 & y>0".asFormula)(AndRight(SuccPos(0)), 0)
+     Provable.fromStorageString(Provable.toStorageString(p)) shouldBe p}
+  }
+
   "Forward Provable" should "continue correct consequence but refuse incorrect consequence" in {
     import scala.collection.immutable._
     val fm = Greater(Variable("x"), Number(5))

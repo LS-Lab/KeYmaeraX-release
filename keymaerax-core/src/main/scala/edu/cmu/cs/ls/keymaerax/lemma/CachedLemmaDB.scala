@@ -7,7 +7,6 @@
   */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.core.Lemma
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable

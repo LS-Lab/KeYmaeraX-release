@@ -2,9 +2,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
-import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 import edu.cmu.cs.ls.keymaerax.tools.ext.CounterExampleTool
 
 import scala.collection.immutable._
@@ -24,13 +26,16 @@ class ArithmeticTests extends TacticTestBase {
       private val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]
       trustedToolsField.set(rcf, trustedTools :+ MockQETool.this.getClass.getCanonicalName)
 
-      override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+      override def quantifierElimination(formula: Formula): Formula = {
         formula shouldBe expected
-        (False, ToolEvidence(List("tool" -> "mock")))
+        False
       }
     }
 
-    override def qe(formula: Formula): Lemma = Provable.proveArithmetic(new MockQETool(), formula)
+    override def qe(formula: Formula): Lemma = {
+      val p = ElidingProvable(Provable.proveArithmetic(new MockQETool(), formula))
+      Lemma(p, Lemma.requiredEvidence(p))
+    }
 
     override def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Term]] = {
       formula shouldBe expected

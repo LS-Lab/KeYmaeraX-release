@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
 
 import scala.collection.immutable.Map
@@ -46,7 +47,10 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   override def cancel(): Boolean = z3.cancel()
 
   /** @inheritdoc */
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+  override def quantifierElimination(formula: Formula) = qeEvidence(formula)._1
+
+  /** @inheritdoc */
+  def qeEvidence(formula: Formula): (Formula, Evidence) = {
     require(isInitialized, "Z3 needs to be initialized before use")
     z3.qe(formula)
   }

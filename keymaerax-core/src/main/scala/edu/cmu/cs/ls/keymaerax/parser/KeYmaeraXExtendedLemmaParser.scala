@@ -4,9 +4,10 @@
   */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -16,21 +17,11 @@ import scala.collection.immutable
   * Parses lemma string representations from the following lemma format:
   * {{{
   *   Lemma "<<lemmaname>>".
-  *   Sequent. /* Lemma conclusion */
-  *     Formula: <<formula>>
-  *     ...
-  *     ==>
-  *     Formula: <<formula>>
-  *     ...
-  *   Sequent. /* Open subgoal 1 */
-  *     ...
+  *     "<<Provable.toStorageString(fact.underlyingProvable)"
   *   End.
   *   Tool.
   *     <<key>> """"<<value>>""""
   *     ...
-  *   End.
-  *   Hash.
-  *     hash """"<<hashcode>>""""
   *   End.
   * }}}
   *
@@ -39,10 +30,10 @@ import scala.collection.immutable
   * @author Stefan Mitsch
   * @author Nathan Fulton
   */
-object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutable.List[Sequent], immutable.List[Evidence]))
+object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], Provable, immutable.List[Evidence]))
   with Logging {
-  /** The lemma name, conclusion::subgoals, and the supporting evidence */
-  private type Lemma = (Option[String], List[Sequent], List[Evidence])
+  /** The lemma name, provable, and the supporting evidence */
+  private type Lemma = (Option[String], Provable, List[Evidence])
 
   /**
     * Returns the lemma parsed from `inputWithPossibleBOM` after removing the BOM.
@@ -74,29 +65,22 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
   }
 
   /** Parses the next lemma from token stream `input` and returns the lemma as well as the remaining tokens. */
-  def parseNextLemma(input: TokenStream): (Option[String], List[Sequent], List[Evidence], TokenStream) = {
-    require(input.head.tok.equals(LEMMA_BEGIN), "Expected ALP file to begin with Lemma block")
+  def parseNextLemma(input: TokenStream): (Option[String], Provable, List[Evidence], TokenStream) = {
+    require(input.head.tok == LEMMA_BEGIN, "Expected ALP file to begin with Lemma block")
 
     val (name, nameRemainderTokens) = parseLemmaName(input)
 
     // Find the End. token and exclude it
-    val (lemmaTokens, remainderTokens) = nameRemainderTokens.span(_.tok != END_BLOCK) match {
+    val (Token(DOUBLE_QUOTES_STRING(storedProvable), _) :: Nil, remainderTokens) = nameRemainderTokens.span(_.tok != END_BLOCK) match {
       case (Token(PERIOD, _) :: a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
       case (a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
       case (a, Token(END_BLOCK, _) :: r) => (a, r)
     }
 
-    // Separate the lemma into subgoals
-    val sequentTokens = splitAtTerminal(SEQUENT_BEGIN, lemmaTokens).map({
-      case Token(PERIOD, _) :: s => s
-      case s => s
-    })
-    val sequents = sequentTokens.map(sequentTokenParser)
-    assert(sequents.nonEmpty, "Lemma should at least have a conclusion")
-
     val (allEvidence, remainder) = parseAllEvidence(remainderTokens)
+    val provable = Provable.fromStorageString(storedProvable)
 
-    (name, sequents, allEvidence, remainder)
+    (name, provable, allEvidence, remainder)
   }
 
   /** Parses the lemma name. Returns the lemma name (None if empty) and the token remainders. */
@@ -106,37 +90,6 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
       case Token(LEMMA_BEGIN, _) :: Token(DOUBLE_QUOTES_STRING(x), _) :: r => if (x.nonEmpty) (Some(x), r) else (None, r)
       case _ => throw new AssertionError("Expected ALP block to have a string as a name") // duplicate requirement
     }
-  }
-
-  /** Splits the `tokens` at terminal `splitTerminal` and returns the resulting separate token streams.  */
-  private def splitAtTerminal(splitTerminal: Terminal, tokens: TokenStream): List[TokenStream] =
-    splitAt((t: Token) => t.tok != splitTerminal, tokens).filter(_.nonEmpty)
-
-  /** Splits a list at each point where `p` is true and removes the fence posts. */
-  @tailrec
-  private def splitAt[T](p: T => Boolean, ts: List[T], pre: List[List[T]] = List()): List[List[T]] = {
-    val (l, r) = ts.span(p)
-    if (r.nonEmpty) splitAt(p, r.tail, pre :+ l)
-    else pre :+ l
-  }
-
-  /** Parses token stream `ts` into a sequent. */
-  private def sequentTokenParser(ts: TokenStream): Sequent = {
-    require(ts.map(_.tok).contains(TURNSTILE))
-
-    val (anteToks, Token(TURNSTILE, _) :: succToks) = ts.span(_.tok != TURNSTILE)
-
-    val antes = splitAtTerminal(FORMULA_BEGIN, anteToks).map({
-      case Token(COLON, _) :: t => t
-      case t => t
-    }).map(x => KeYmaeraXParser.formulaTokenParser(x :+ Token(EOF)))
-
-    val succs = splitAtTerminal(FORMULA_BEGIN, succToks).map({
-      case Token(COLON, _) :: t => t
-      case t => t
-    }).map(x => KeYmaeraXParser.formulaTokenParser(x :+ Token(EOF)))
-
-    Sequent(antes.toIndexedSeq, succs.toIndexedSeq)
   }
 
   /**
@@ -157,8 +110,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
 
   /** Parses token stream `input` into a single piece of evidence; returns the evidence and the remainder tokens. */
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {
-    val beginEvidenceTokens = Set(TOOL_BEGIN, HASH_BEGIN)
-    require(beginEvidenceTokens.contains(input.head.tok), s"expected to find a begin evidence block but found ${input.head.tok}")
+    require(input.head.tok == TOOL_BEGIN, s"expected to find a begin evidence block but found ${input.head.tok}")
 
     //Find the End. token and exclude it.
     val (toolTokens, remainderTokens) =
@@ -173,9 +125,6 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
 
     val evidence = input.head.tok match {
       case TOOL_BEGIN => ToolEvidence(evidenceLines)
-      case HASH_BEGIN =>
-        assert(evidenceLines.head._1 == "hash")
-        HashEvidence(evidenceLines.head._2)
     }
 
     (evidence, remainderTokens)

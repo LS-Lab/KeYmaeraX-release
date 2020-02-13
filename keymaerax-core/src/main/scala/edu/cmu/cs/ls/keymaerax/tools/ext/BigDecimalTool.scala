@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
@@ -37,7 +38,7 @@ final class BigDecimalTool extends Tool with QETacticTool with ToolOperationMana
   /** @inheritdoc */
   override def qe(formula: Formula): Lemma = {
     require(isInitialized, "BigDecimalTool needs to be initialized before use")
-    ProvableSig.proveArithmetic(BigDecimalQETool, formula)
+    ProvableSig.proveArithmeticLemma(BigDecimalQETool, formula)
   }
 
   /** @inheritdoc */

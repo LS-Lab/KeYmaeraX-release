@@ -9,6 +9,7 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
@@ -21,6 +22,9 @@ import scala.collection.immutable
   * @author Stefan Mitsch
   */
 class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool with Logging {
+
+  /** @inheritdoc */
+  override def quantifierElimination(formula: Formula) = qeEvidence(formula)._1
 
   /** @inheritdoc */
   def qeEvidence(originalFormula: Formula): (Formula, Evidence) = {

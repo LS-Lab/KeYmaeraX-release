@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable.Map
@@ -31,7 +32,10 @@ class Polya extends Tool with QETool {
   }
 
   /** @inheritdoc */
-  override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+  override def quantifierElimination(formula: Formula) = qeEvidence(formula)._1
+
+  /** @inheritdoc */
+  def qeEvidence(formula: Formula): (Formula, Evidence) = {
     require(isInitialized, "Polya needs to be initialized before use")
     polya.qe(formula)
   }

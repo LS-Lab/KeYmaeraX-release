@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolOperationManagement}
@@ -43,7 +44,7 @@ final class Z3 extends Tool with QETacticTool with ToolOperationManagement {
   /** @inheritdoc */
   override def qe(formula: Formula): Lemma = {
     require(isInitialized, "Z3 needs to be initialized before use")
-    ProvableSig.proveArithmetic(z3, formula)
+    ProvableSig.proveArithmeticLemma(z3, formula)
   }
 
   /** @inheritdoc */
