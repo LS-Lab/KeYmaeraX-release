@@ -2,31 +2,105 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import java.math.{MathContext, RoundingMode}
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import org.scalatest.LoneElement._
 
 /** Tests for trustworthy BigDecimal computations
   * @author Fabian Immler
   */
 class BigDecimalQEToolTests extends TacticTestBase  {
 
-  "eval" should "enforce arbitrary precision" in withMathematica { _ =>
-    val a = BigDecimal("123", new MathContext(3, RoundingMode.FLOOR))
-    val b = BigDecimal("0.12345", new MathContext(5, RoundingMode.FLOOR))
-    (a + b) shouldBe BigDecimal("123.12345")
-    (b + a) shouldBe BigDecimal("123.12345")
-    BigDecimalQETool.eval(Plus(Number(a), Number(b))) shouldBe BigDecimal("123.12345").bigDecimal
-    (a * b) shouldBe BigDecimal("15.1")
-    (b * a) shouldBe BigDecimal("15.184")
-    BigDecimalQETool.eval(Times(Number(a), Number(b))) shouldBe BigDecimal("15.18435").bigDecimal
-    BigDecimalQETool.eval(Times(Number(b), Number(a))) shouldBe BigDecimal("15.18435").bigDecimal
+  val numbers =
+    ("-2,-1,0,1,2,3,10,730963476657,1180918287134404971234765536279227090481580443894," +
+    "-0.2,0.3,0.000000000000000000000000000000000000000000000000000000000000000000001," +
+    "0.730967787376657," +
+    "16543749471661998771.6510510573789608," +
+    "-51890712899135751252332814755814641.118091828713440497765536090481580443894," +
+    "629649.30412662647769980700759557641946737912396204471525278051877116806").split(',').map(i => Number(BigDecimal(i)))
+
+  def checkEval(mathematica: Mathematica, t: Term, mayFail: Boolean) = {
+    try {
+      val u = Number(BigDecimalQETool.eval(t))
+      val fml = Equal(t, u)
+      val res = mathematica.qe(fml).fact
+      res shouldBe 'proved
+      res.conclusion.ante shouldBe 'empty
+      res.conclusion.succ.loneElement shouldBe Equiv(fml, True)
+    } catch {
+      case iae: IllegalArgumentException =>
+        if (!mayFail) throw iae
+    }
   }
 
-  it should "evaluate interpreted functions" in withMathematica { _ =>
-    BigDecimalQETool.eval("min(2.7182,3.14159)".asTerm) shouldBe BigDecimal("2.7182").bigDecimal
-    BigDecimalQETool.eval("max(2.7182,3.14159)".asTerm) shouldBe BigDecimal("3.14159").bigDecimal
-    BigDecimalQETool.eval("abs(-2.7182)".asTerm) shouldBe BigDecimal("2.7182").bigDecimal
+  "unary operations" should "agree with QE" in withMathematica { mathematica =>
+    for ( n <- numbers ) {
+      checkEval(mathematica, Neg(n), false)
+      checkEval(mathematica, Differential(n), true)
+      withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+        checkEval(mathematica, FuncOf(BigDecimalQETool.absF, n), false)
+      }
+      checkEval(mathematica, FuncOf(Function("f", None, Real, Real), n), true)
+    }
   }
+
+  "binary operations" should "agree with QE" in withMathematica { mathematica =>
+    for ( n <- numbers ; m <- numbers) {
+      checkEval(mathematica, Plus(n, m), false)
+      checkEval(mathematica, Minus(n, m), false)
+      checkEval(mathematica, Times(n, m), false)
+      checkEval(mathematica, Divide(n, m), true)
+      checkEval(mathematica, Power(n, m), true)
+      withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+        checkEval(mathematica, FuncOf(BigDecimalQETool.minF, Pair(n, m)), false)
+        checkEval(mathematica, FuncOf(BigDecimalQETool.maxF, Pair(n, m)), false)
+      }
+      checkEval(mathematica, FuncOf(Function("f", None, Tuple(Real, Real), Real), Pair(n, m)), true)
+    }
+  }
+
+  def checkEval(mathematica: Mathematica, fml: Formula, mayFail: Boolean) = {
+    try {
+      val b = if (BigDecimalQETool.eval(fml)) True else False
+      val res = mathematica.qe(fml).fact
+      res shouldBe 'proved
+      res.conclusion.ante shouldBe 'empty
+      res.conclusion.succ.loneElement shouldBe
+        Equiv(fml, b)
+    } catch {
+      case iae: IllegalArgumentException =>
+        if (!mayFail) throw iae
+    }
+  }
+
+  "comparisons" should "agree with QE" in withMathematica { mathematica =>
+    for ( n <- numbers ; m <- numbers) {
+      checkEval(mathematica, Less(n, m), false)
+      checkEval(mathematica, LessEqual(n, m), false)
+      checkEval(mathematica, Equal(n, m), false)
+      checkEval(mathematica, NotEqual(n, m), false)
+      checkEval(mathematica, Greater(n, m), false)
+      checkEval(mathematica, GreaterEqual(n, m), false)
+    }
+  }
+
+  "boolean combinations" should "agree with QE" in withMathematica { mathematica =>
+    for ( b <- True::False::Nil ; c <- True::False::Nil) {
+      checkEval(mathematica, And(b, c), false)
+      checkEval(mathematica, Or(b, c), false)
+      checkEval(mathematica, Imply(b, c), false)
+      checkEval(mathematica, Equiv(b, c), false)
+    }
+    checkEval(mathematica, Not(True), false)
+    checkEval(mathematica, Not(False), false)
+    checkEval(mathematica, True, false)
+    checkEval(mathematica, False, false)
+
+    checkEval(mathematica, Box(Test(True), True), true)
+  }
+
 }
