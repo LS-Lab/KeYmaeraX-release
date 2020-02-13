@@ -8,13 +8,16 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 /**
-  * Quantifier elimination tool.
+  * Interface to quantifier elimination tools.
   */
 trait QETool {
   /**
     * Returns a quantifier-free formula that is equivalent to the specified formula.
     * @param formula The formula whose quantifier-free equivalent is sought.
     * @return An equivalent quantifier-free formula.
+    * @requires formula is in first-order real arithmetic
+    * @ensures \result is equivalent to formula
+    * @ensures \result is quantifier-free
     */
   def quantifierElimination(formula: Formula): Formula
 }
