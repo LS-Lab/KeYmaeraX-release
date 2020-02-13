@@ -71,7 +71,7 @@ object BigDecimalQETool extends Tool with QETool {
 
   /** @inheritdoc */
   override def qeEvidence(formula: Formula): (Formula, Evidence) =
-    (if (eval(formula)) True else formula, ToolEvidence(("message", "evaluated BigDecimal numerics") :: Nil))
+    (if (eval(formula)) True else False, ToolEvidence(("message", "evaluated BigDecimal numerics") :: Nil))
 
   /** @inheritdoc */
   final override def init(config: Map[String,String]): Unit = {}
