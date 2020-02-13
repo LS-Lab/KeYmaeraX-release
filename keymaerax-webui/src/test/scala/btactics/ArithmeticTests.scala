@@ -25,9 +25,9 @@ class ArithmeticTests extends TacticTestBase {
       private val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]
       trustedToolsField.set(rcf, trustedTools :+ MockQETool.this.getClass.getCanonicalName)
 
-      override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+      override def quantifierElimination(formula: Formula): Formula = {
         formula shouldBe expected
-        (False, ToolEvidence(List("tool" -> "mock")))
+        False
       }
     }
 
