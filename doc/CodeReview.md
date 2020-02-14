@@ -75,13 +75,14 @@ A log of all major code reviews and the findings are reported here:
 
 Code Review Agenda Summary: Core agenda summarized in one place.
 
-  * DONE con: program needs SpaceDependent(Except(v)).
+Code Review: KeYmaera X Core: 2020-02-14
+
+  * Verdict: stable
   * DI: system generalization can only have bound variables of the ODE free in postcondition (and no resulting '' by data structure invariant), just like DI itself has p(x). Vectorial DI systems.
-  * DX skip: no ' in postcondition (no bound differential symbols). Vectors suffice to say [X'=f(X)&q(X)]p(X) -> (q(X)->p(X))
-  * DONE VDG: vectorial DG with vectorial quantifier. DONE indirectly by DG-based differential invariance tactic.
+  * RI, DX skip: no ' in postcondition (no bound differential symbols). Vectors suffice to say [X'=f(X)&q(X)]p(X) -> (q(X)->p(X))
+  * VDG: vectorial DG with vectorial quantifier for liveness.
   * DG: singularities from division by zero disallowed, also via interpreted functions.
-  * DONE Barcan axiom: could add if SystemConst became SpaceDependent.
-  
+
 Code Review: KeYmaera X Core: 2016-08-17
 
   * Verdict: stable
