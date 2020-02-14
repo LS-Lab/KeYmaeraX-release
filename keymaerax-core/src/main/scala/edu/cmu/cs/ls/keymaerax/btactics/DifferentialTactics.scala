@@ -1170,6 +1170,7 @@ private object DifferentialTactics extends Logging {
 
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
     * @todo make this happen by usubst. */
+  @deprecated
   def dgZeroMonomial : DependentPositionTactic = "dgZeroMonomial" by ((pos: Position, seq:Sequent) => {
     if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
 
