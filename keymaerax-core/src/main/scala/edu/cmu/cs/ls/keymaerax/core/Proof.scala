@@ -754,37 +754,15 @@ object Provable {
     **********************************************************************************
     */
 
-  /** The permanent pretty printer that is used for Provable storage purposes */
-  // = java.lang.Class.forName("edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter").newInstance
-  private val store: PrettyPrinter.PrettyPrinter = edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter
-
-  /** Checksum computation implementation using the checksum algorithm used to stamp stored Provables. */
-  private def checksum(s: String): String =
-    //@note New instance every time, because digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
-    MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
-
-  /** A fully parenthesized String representation of the given Sequent for externalization.
-    * @see [[Sequent.toString]]
-    */
-  private def toExternalString(s: Sequent): String =
-    s.ante.map(store).mkString(" :: ") + (if (s.ante.isEmpty) "  ==>  " else "\n  ==>  ") + s.succ.map(store).mkString(" :: ")
-
-  /** A fully parenthesized String representation of the given Provable for externalization.
-    * @see [[Provable.toString()]]
-    * @see [[toStorageString()]]
-    */
-  private def toExternalString(fact: Provable): String = toExternalString(fact.conclusion) +
-    (if (fact.isProved) "\n\\qed"
-     else "\n\\from   " + fact.subgoals.map(toExternalString).mkString("\n\\from   ") + "\n\\qed" )
-
   /** Stored Provable representation as a string of the given Provable that will reparse correctly.
+    * @note If store printer is injective function, then only `fact` reparses via fromStorageString unless checksum modified or not injective.
     * @see [[fromStorageString()]]
     * @ensures fromStorageString(\result) == fact
     */
   final def toStorageString(fact: Provable): String = {
     val s = toExternalString(fact)
     s + "::" + checksum(s)
-    //@note soundness-critical check that reparse succeeds as expected (unless you trust printer+parser)
+    //@note soundness-critical check reparsing to original (unless printer+checksum injective or unless printer+parser trusted)
   } ensures(r => fromStorageString(r) == fact, "Stored Provable should reparse to the original\n\n" +
      toExternalString(fact) + "::" + checksum(toExternalString(fact)))
 
@@ -800,21 +778,47 @@ object Provable {
   final def fromStorageString(storedProvable: String): Provable = {
     val separat = storedProvable.lastIndexOf("::")
     if (separat < 0)
-      throw new ProvableStorageException("syntactically well-formed Provable storage format", storedProvable)
+      throw new ProvableStorageException("syntactically well-formed format", storedProvable)
     val storedChksum = storedProvable.substring(separat+2)
     val remainder = storedProvable.substring(0, separat)
     val conc :: subs = try {
       edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXStoredProvableParser(remainder)
     } catch {
-      case ex: Exception => throw new ProvableStorageException("Cannot be parsed: " + ex.toString, storedProvable)
+      case ex: Exception => throw new ProvableStorageException("cannot be parsed: " + ex.toString, storedProvable)
     }
-    //@note soundness-critical
+    //@note soundness-critical, guarded lightly by checksum
     val reconstructed = oracle(conc, subs.to)
     if (checksum(toExternalString(reconstructed)) != storedChksum)
-      throw new ProvableStorageException("checksum should not be tampered with", storedProvable)
+      throw new ProvableStorageException("checksum has been tampered with", storedProvable)
     else
       reconstructed
   }
+
+  // storage implementation
+
+  /** The permanent pretty printer that is used for Provable storage purposes */
+  // = java.lang.Class.forName("edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter").newInstance
+  private val store: PrettyPrinter.PrettyPrinter = edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter
+
+  /** Checksum computation implementation using the checksum algorithm used to stamp stored Provables. */
+  private def checksum(s: String): String =
+  //@note New instance every time, because digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
+  MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+
+  /** A fully parenthesized String representation of the given Sequent for externalization.
+    * @see [[Sequent.toString]]
+    */
+  private def toExternalString(s: Sequent): String =
+  s.ante.map(store).mkString(" :: ") + (if (s.ante.isEmpty) "  ==>  " else "\n  ==>  ") + s.succ.map(store).mkString(" :: ")
+
+  /** A fully parenthesized String representation of the given Provable for externalization.
+    * @see [[Provable.toString()]]
+    * @see [[toStorageString()]]
+    */
+  private def toExternalString(fact: Provable): String = toExternalString(fact.conclusion) +
+    (if (fact.isProved) "\n\\qed"
+    else "\n\\from   " + fact.subgoals.map(toExternalString).mkString("\n\\from   ") + "\n\\qed" )
+
 }
 
 
