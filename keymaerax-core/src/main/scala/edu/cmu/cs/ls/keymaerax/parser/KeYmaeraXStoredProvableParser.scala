@@ -19,6 +19,7 @@ object KeYmaeraXStoredProvableParser extends (String => immutable.List[Sequent])
     * Returns the sequents parsed from `input`.
     * @param input The contents of the stored provable
     * @return A list of sequents.
+    * @throws ParseException When input cannot be parsed.
     */
   def apply(input: String): immutable.List[Sequent] = try {
     parseProvable(KeYmaeraXLexer.inMode(input, StoredProvableMode))
