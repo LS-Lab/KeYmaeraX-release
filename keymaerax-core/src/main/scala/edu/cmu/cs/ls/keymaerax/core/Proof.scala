@@ -776,24 +776,26 @@ object Provable {
     * @see [[toStorageString()]]
     */
   final def fromStorageString(storedProvable: String): Provable = {
-    val separat = storedProvable.lastIndexOf("::")
-    if (separat < 0)
+    val separator = storedProvable.lastIndexOf("::")
+    if (separator < 0)
       throw new ProvableStorageException("syntactically ill-formed format", storedProvable)
-    val storedChksum = storedProvable.substring(separat+2)
-    val remainder = storedProvable.substring(0, separat)
-    //@todo protect against potential match error conc::subs
-    val conc :: subs = try {
+    val storedChecksum = storedProvable.substring(separator+2)
+    val remainder = storedProvable.substring(0, separator)
+    (try {
       edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXStoredProvableParser(remainder)
     } catch {
-      //@todo ParseException?
       case ex: Exception => throw new ProvableStorageException("cannot be parsed: " + ex.toString, storedProvable).initCause(ex)
+    }) match {
+      case conclusion :: subgoals =>
+        //@note soundness-critical, guarded lightly by checksum
+        val reconstructed = oracle(conclusion, subgoals.to)
+        if (checksum(toExternalString(reconstructed)) != storedChecksum)
+          throw new ProvableStorageException("checksum has been tampered with", storedProvable)
+        else
+          reconstructed
+      case Nil =>
+        throw new ProvableStorageException("empty list of sequents is no Provable", storedProvable)
     }
-    //@note soundness-critical, guarded lightly by checksum
-    val reconstructed = oracle(conc, subs.to)
-    if (checksum(toExternalString(reconstructed)) != storedChksum)
-      throw new ProvableStorageException("checksum has been tampered with", storedProvable)
-    else
-      reconstructed
   }
 
   // storage implementation
