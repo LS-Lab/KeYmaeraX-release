@@ -53,8 +53,7 @@ object Lemma {
 
   /** Parses a lemma from its string representation (without consistency checking). */
   private def fromStringInternal(lemma: String): Lemma = {
-    //@note should ensure that string was indeed produced by KeYmaera X
-    val (name, provable: Provable, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
+    val (name, provable, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
     val fact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
         TermProvable(ElidingProvable(provable), name match { case Some(n) =>
