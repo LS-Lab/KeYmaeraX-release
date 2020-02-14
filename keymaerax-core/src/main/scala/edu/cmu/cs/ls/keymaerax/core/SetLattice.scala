@@ -45,7 +45,7 @@ sealed trait SetLattice[A] {
   /** this--other: Set subtraction */
   def --(other: GenTraversableOnce[A]): SetLattice[A]
   /** this intersect other: Set intersection */
-  //@todo might accept more general GenTraversableOnce?
+  // intersecting CoFiniteSet with never-ending other:GenTraversableOnce[a] stream would not work
   def intersect(other: immutable.Set[A]): SetLattice[A]
 
   // conversions and mappings

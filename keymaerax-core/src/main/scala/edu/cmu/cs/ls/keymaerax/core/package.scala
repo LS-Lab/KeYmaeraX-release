@@ -196,6 +196,7 @@ package object core {
   /** KeYmaera X core kernel version number */
   val VERSION = Source.fromInputStream(getClass.getResourceAsStream("/VERSION")).getLines().next
 
+  /** The uniform substitution type to use */
   type USubst = USubstOne
   /** USubst factory method, forwards to constructor. */
   def USubst(subsDefsInput: immutable.Seq[SubstitutionPair]): USubst = USubstOne(subsDefsInput)
@@ -231,6 +232,7 @@ package object core {
     * Scala-style elidable at compile-time with `-Xdisable-assertions`
     *
     * Lazy evaluation of `condition` on `argument`, lazy evaluation of message.
+    * @author Fabian Immler
     * */
   @elidable(elidable.ASSERTION) @inline
   def assertion[A](condition: A => Boolean, argument: A, message: => Any): A =
@@ -251,15 +253,21 @@ package object core {
   def assertion(condition: =>Boolean, message: => Any): Unit =
     Assertion.assertion(() => condition : java.lang.Boolean, () => message.asInstanceOf[AnyRef])
 
-  /** Contracts (like [[Predef.Ensuring]]) implemented with Java-style assertions (see [[assertion]]) */
+  /** Contracts (like [[Predef.Ensuring]]) implemented with Java-style assertions (see [[assertion]])
+    * @author Fabian Immler
+    */
   implicit final class Ensures[A](private val self: A) extends AnyVal {
 
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: =>Boolean): A = { assertion(cond); self }
 
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: =>Boolean, msg: => Any): A = { assertion(cond, msg);  self }
 
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: A => Boolean): A = { assertion(cond, self); self }
 
+    /** Java-style lazy-evaluation postcondition assertion that can be enabled with `java -ea`, disabled with `java -da`. */
     def ensures(cond: A => Boolean, msg: => Any): A = { assertion(cond, self, msg); self }
 
   }
