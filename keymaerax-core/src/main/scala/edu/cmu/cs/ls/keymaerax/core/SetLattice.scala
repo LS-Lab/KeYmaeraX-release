@@ -109,7 +109,7 @@ object SetLattice {
   val allVars: SetLattice[Variable] = CoFiniteSet(Set.empty, Set.empty)
 
   /** The set of all variables including differential symbols, except taboo and taboo'. */
-  //@note Cannot remove all x'' from the CoFiniteSet so assume no higher-order differential symbol
+  //@note Cannot remove all taboo'' from the CoFiniteSet so assume no higher-order differential symbol
   def except(taboo: Variable): SetLattice[Variable] = CoFiniteSet(
     //@note this assumes no higher-order differential symbols
     if (taboo.isInstanceOf[DifferentialSymbol] || taboo.sort!=Real) Set(taboo)
@@ -125,16 +125,15 @@ object SetLattice {
     */
   def extendToDifferentialSymbols(sl : SetLattice[Variable]) : SetLattice[Variable] = sl match {
     case FiniteSet(set) => FiniteSet(extendToDifferentialSymbols(set))
+    //@todo collapse all cofinite cases into a filter on excluded?
     case CoFiniteSet(excluded, symbols) if !excluded.exists(x=>x.isInstanceOf[DifferentialSymbol]) =>
       //@note if no differential symbols were excluded (such as in V\cup V' or topVarsDiffVars),
       //@note then the lattice is already closed under ' so only literal symbols are augmented with '
       CoFiniteSet(excluded, extendToDifferentialSymbols(symbols))
     case CoFiniteSet(excluded, symbols) if excluded.forall(x => !x.isInstanceOf[BaseVariable] || excluded.contains(DifferentialSymbol(x))) =>
-      //@note if no differential symbols were excluded (such as in V\cup V' or topVarsDiffVars),
-      //@note then the lattice is already closed under ' so only literal symbols are augmented with '
       sl
-    case sl:CoFiniteSet[Variable] =>
-      assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite: " + sl); ???
+    case sl: CoFiniteSet[_] =>
+      throw new AssertionError("Extension to differentialSymbols are not yet implemented if sl isInfinite: " + sl)
   }
 
   /**
@@ -211,6 +210,3 @@ private case class CoFiniteSet[A](excluded: immutable.Set[A], literally: immutab
   override def toString: String = "all but " + excluded.toString
   def prettyString: String = if (excluded.isEmpty) "all" else "all but {" + excluded.mkString(",") + "}"
 }
-
-
-

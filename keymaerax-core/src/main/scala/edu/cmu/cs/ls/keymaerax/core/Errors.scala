@@ -21,7 +21,7 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
     * Returns the logical context, i.e. stack of proof rules or nested logical context information
     * describing in which context this exception occurred.
     */
-  def getContext = logicalContext
+  def getContext: String = logicalContext
 
   /**
     * Add the context information to this exception, returning the resulting exception to be thrown.
@@ -30,7 +30,7 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
     */
   def inContext(context: String, additionalMessage : String = ""): ProverException = {
     this.logicalContext  = this.logicalContext + "\nin " + context
-    if(!additionalMessage.equals("")) this.logicalContext = this.logicalContext + "\n\t(" + additionalMessage + ")"
+    if (additionalMessage != "") this.logicalContext = this.logicalContext + "\n\t(" + additionalMessage + ")"
     this
   }
 
@@ -112,7 +112,7 @@ class NoncriticalCoreException(msg: String) extends CoreException(msg)
   * @see [[CloseTrue]]
   * @see [[Skolemize]]
   */
-case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null)
+case class InapplicableRuleException(msg: String, r: Rule, s: Sequent = null)
   extends NoncriticalCoreException(msg + "\n" +
   "Rule " + r + (if (r.isInstanceOf[PositionRule]) s(r.asInstanceOf[PositionRule].pos) else "") +
   (if (s != null) " applied to " + s else "")) {
@@ -125,7 +125,7 @@ case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null)
 case class ProverAssertionError(msg: String) extends ProverException("Assertion failed " + msg)
 
 /** Thrown to indicate when an unknown operator occurs */
-case class UnknownOperatorException(msg: String, e:Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
+case class UnknownOperatorException(msg: String, e: Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
 
 /** Nil case for exceptions, which is almost useless except when an exception type is needed to indicate that there really was none. */
 object NoProverException extends ProverException("No prover exception has occurred")

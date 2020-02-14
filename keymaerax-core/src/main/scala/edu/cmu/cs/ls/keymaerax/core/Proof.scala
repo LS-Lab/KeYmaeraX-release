@@ -778,13 +778,15 @@ object Provable {
   final def fromStorageString(storedProvable: String): Provable = {
     val separat = storedProvable.lastIndexOf("::")
     if (separat < 0)
-      throw new ProvableStorageException("syntactically well-formed format", storedProvable)
+      throw new ProvableStorageException("syntactically ill-formed format", storedProvable)
     val storedChksum = storedProvable.substring(separat+2)
     val remainder = storedProvable.substring(0, separat)
+    //@todo protect against potential match error conc::subs
     val conc :: subs = try {
       edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXStoredProvableParser(remainder)
     } catch {
-      case ex: Exception => throw new ProvableStorageException("cannot be parsed: " + ex.toString, storedProvable)
+      //@todo ParseException?
+      case ex: Exception => throw new ProvableStorageException("cannot be parsed: " + ex.toString, storedProvable).initCause(ex)
     }
     //@note soundness-critical, guarded lightly by checksum
     val reconstructed = oracle(conc, subs.to)
@@ -815,7 +817,8 @@ object Provable {
     * @see [[Provable.toString()]]
     * @see [[toStorageString()]]
     */
-  private def toExternalString(fact: Provable): String = toExternalString(fact.conclusion) +
+  private def toExternalString(fact: Provable): String =
+    toExternalString(fact.conclusion) +
     (if (fact.isProved) "\n\\qed"
     else "\n\\from   " + fact.subgoals.map(toExternalString).mkString("\n\\from   ") + "\n\\qed" )
 
