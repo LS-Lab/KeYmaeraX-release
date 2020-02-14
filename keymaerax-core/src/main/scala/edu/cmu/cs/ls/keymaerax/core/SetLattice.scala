@@ -5,7 +5,7 @@
 /**
   * Set Lattices are lattice of finite or cofinite sets.
   * @author smitsch
-  * @note Code Review: 2016-08-17
+  * @note Code Review: 2020-02-14
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -17,14 +17,14 @@ import scala.collection.GenTraversableOnce
 
 
 /**
-  * Lattice of sets, i.e. the lattice of sets that also includes top and top-like elements.
+  * Lattice of sets, i.e. the lattice of sets that also includes bottom, top and near-top elements.
   *
   * @tparam A Type of elements in the set
   * @author smitsch
   * @author Andre Platzer
   */
 sealed trait SetLattice[A] {
-  /** True indicates that this lattice represents an infinite set of elements. */
+  /** True indicates that this lattice represents an infinite set of elements, such as all variables. */
   def isInfinite: Boolean
   /** True indicates that this lattice is the empty lattice bottom. */
   def isEmpty: Boolean
@@ -33,18 +33,19 @@ sealed trait SetLattice[A] {
   /** True when this lattice contains the element `elem`. */
   def contains(elem: A): Boolean
 
-  /** Return the set lattice including the extra element `elem` */
+  /** this+elem: Return the set lattice including the extra element `elem` */
   def +(elem: A): SetLattice[A]
-  /** Return the set lattice with the element `elem` removed */
+  /** this-elem: Return the set lattice with the element `elem` removed */
   def -(elem: A): SetLattice[A]
 
   // set operations
 
-  /** Set union */
+  /** this++other: Set union */
   def ++(other: GenTraversableOnce[A]): SetLattice[A]
-  /** Set subtraction */
+  /** this--other: Set subtraction */
   def --(other: GenTraversableOnce[A]): SetLattice[A]
-  /** Set intersection */
+  /** this intersect other: Set intersection */
+  //@todo might accept more general GenTraversableOnce?
   def intersect(other: immutable.Set[A]): SetLattice[A]
 
   // conversions and mappings
@@ -58,7 +59,8 @@ sealed trait SetLattice[A] {
 
   def prettyString: String
 
-  // binary operations with mixed cases
+
+  // binary operations with mixed cases lifting to above binary operations
 
   /* Check whether this lattice is a lattice subset of `other`. */
   def subsetOf(other: SetLattice[A]): Boolean = (this, other) match {
@@ -68,14 +70,14 @@ sealed trait SetLattice[A] {
     case (ts: CoFiniteSet[A], os: CoFiniteSet[A]) => os.excluded.subsetOf(ts.excluded) /* this coset is a subset of that coset if that excluded at most this's excluded */
   }
 
-  /** Set union `this union other`. */
+  /** this++other: Set union. */
   def ++(other: SetLattice[A]): SetLattice[A] = { (this, other) match {
     case (_, FiniteSet(os)) => this ++ os  // ++(GenTraversableOnce[A])
     case (FiniteSet(ts), os: CoFiniteSet[A]) => os ++ ts   // commute to ++(GenTraversableOnce[A])
     case (ts: CoFiniteSet[A], os:CoFiniteSet[A]) => CoFiniteSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)  // union of cosets is intersection of exceptions
   } } ensures(r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
 
-  /** Set subtraction `this minus other`. */
+  /** this--other: Set subtraction. */
   //@note the core only uses finite other here because mustBoundVars are finite
   def --(other: SetLattice[A]): SetLattice[A] = {(this, other) match {
     case (_, FiniteSet(os)) => this -- os   // --(GenTraversableOnce[A])
@@ -83,7 +85,7 @@ sealed trait SetLattice[A] {
     case (ts: CoFiniteSet[A], os: CoFiniteSet[A]) => FiniteSet(os.excluded -- ts.excluded)      /* (all \ t) \ (all \ o) == o \ t, t was excluded and all except o were then removed */
   } } ensures(r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
 
-  /** Set intersection `this intersected other`. */
+  /** this intersect other: Set intersection. */
   def intersect(other: SetLattice[A]): SetLattice[A] = { (this, other) match {
     case (_, FiniteSet(os)) => intersect(os)
     //@note could do symmetric call as well: os.intersect(ts)
