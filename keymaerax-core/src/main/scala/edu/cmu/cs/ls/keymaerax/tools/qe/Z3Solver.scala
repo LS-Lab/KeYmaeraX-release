@@ -44,14 +44,14 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   }, "Z3 not of the expected version and build hash")
 
   /** Return Z3 QE result and the proof evidence */
-  def qe(f: Formula): (Formula, Evidence) = {
+  def qe(f: Formula): Formula = {
     val smtCode = converter(f)
     val z3Output = runZ3Smt(smtCode, "z3sat", getOperationTimeout) //@note (check-sat) gives unsat, sat or unknown
     logger.debug(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     //@note only accepts output that consists of one of the following words, except for trailing whitespace
     z3Output.stripLineEnd match {
-      case "unsat" => (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
+      case "unsat" => True
       case "sat" => throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
       case "unknown" => throw new SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
       case _ => throw new SMTConversionException("Back-conversion of Z3 result \n" + z3Output + "\n is not defined")
