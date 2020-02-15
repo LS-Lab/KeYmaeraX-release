@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) Carnegie Mellon University.
+ * See LICENSE.txt for the conditions of this license.
+ */
+/**
+ * @note Code Review: 2020-02-14
+ */
 package edu.cmu.cs.ls.keymaerax.core;
 
 import java.util.function.Supplier;
@@ -9,8 +16,8 @@ import java.util.function.Supplier;
  * Disabled by default.
  * Enable at run-time with `java -ea`.
  * Disable with `java -da`.
- *
- * */
+ * @author Fabian Immler
+ */
 public class Assertion {
     /** assert `assertion(argument)` evaluated lazily, lazy evaluation of `message` */
     public static <A> A assertion(java.util.function.Function<A,Boolean> assertion, A argument, Supplier<Object> message) {

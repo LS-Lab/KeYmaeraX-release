@@ -13,7 +13,7 @@
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
-  * @note Code Review: 2020-02-11
+  * @note Code Review: 2020-02-14
   */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -510,11 +510,12 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
       //@note case subst.freeVars.isEmpty is covered by Theorem 27 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017
       //@note case isProved is covered by Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26 and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
+      //@note special blessing for "CQ equation congruence" is covered by Brandon Bohrer [[https://github.com/LS-Lab/Isabelle-dL/blob/master/Proof_Checker.thy]]
       if (usubstChurch) {
-        insist(subst.freeVars.isEmpty || isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
+        insist(subst.freeVars.isEmpty || isProved || this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
         new Provable(subst(conclusion), subgoals.map(s => subst(s)))
       } else {
-        if (isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"))
+        if (isProved || this==Provable.rules("CQ equation congruence"))
           new Provable(subst(conclusion), subgoals.map(s => subst(s)))
         else
           new Provable(subst.applyAllTaboo(conclusion), subgoals.map(s => subst.applyAllTaboo(s)))
@@ -639,12 +640,10 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
   * @see [[Provable.startProof()]]
   */
 object Provable {
-  //@todo Code Review: it would be nice if LAX_MODE were false
-  private val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
   /** List of the class names of all external real arithmetic tools whose answers KeYmaera X would believe */
-  private[this] val trustedTools: immutable.List[String] =
+  private val trustedTools: immutable.List[String] =
   "edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool" :: "edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool" ::
-    (if (LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.qe.Polya" :: "edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool$" :: Nil else Nil)
+    "edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool$" :: Nil
 
 
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. (convenience method) */
@@ -761,10 +760,10 @@ object Provable {
     */
   final def toStorageString(fact: Provable): String = {
     val s = toExternalString(fact)
-    s + "::" + checksum(s)
+    s + "::" + checksum(fact)
     //@note soundness-critical check reparsing to original (unless printer+checksum injective or unless printer+parser trusted)
   } ensures(r => fromStorageString(r) == fact, "Stored Provable should reparse to the original\n\n" +
-     toExternalString(fact) + "::" + checksum(toExternalString(fact)))
+     toExternalString(fact) + "::" + checksum(fact))
 
   /**
     * Parses a Stored Provable String representation back again as a Provable.
@@ -776,24 +775,26 @@ object Provable {
     * @see [[toStorageString()]]
     */
   final def fromStorageString(storedProvable: String): Provable = {
-    val separat = storedProvable.lastIndexOf("::")
-    if (separat < 0)
+    val separator = storedProvable.lastIndexOf("::")
+    if (separator < 0)
       throw new ProvableStorageException("syntactically ill-formed format", storedProvable)
-    val storedChksum = storedProvable.substring(separat+2)
-    val remainder = storedProvable.substring(0, separat)
-    //@todo protect against potential match error conc::subs
-    val conc :: subs = try {
+    val storedChecksum = storedProvable.substring(separator+2).toInt
+    val remainder = storedProvable.substring(0, separator)
+    (try {
       edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXStoredProvableParser(remainder)
     } catch {
-      //@todo ParseException?
       case ex: Exception => throw new ProvableStorageException("cannot be parsed: " + ex.toString, storedProvable).initCause(ex)
+    }) match {
+      case conclusion :: subgoals =>
+        //@note soundness-critical, guarded lightly by checksum
+        val reconstructed = oracle(conclusion, subgoals.to)
+        if (checksum(reconstructed) != storedChecksum)
+          throw new ProvableStorageException("checksum has been tampered with", storedProvable)
+        else
+          reconstructed
+      case Nil =>
+        throw new ProvableStorageException("empty list of sequents is no Provable", storedProvable)
     }
-    //@note soundness-critical, guarded lightly by checksum
-    val reconstructed = oracle(conc, subs.to)
-    if (checksum(toExternalString(reconstructed)) != storedChksum)
-      throw new ProvableStorageException("checksum has been tampered with", storedProvable)
-    else
-      reconstructed
   }
 
   // storage implementation
@@ -806,6 +807,10 @@ object Provable {
   private def checksum(s: String): String =
   //@note New instance every time, because digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
   MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+
+  /** Checksum computation implementation using the checksum algorithm used to stamp stored Provables.
+    * @note Assumes Provable/Sequent/Expression hashCode is deterministic+stable across JVM launches and practically injective. */
+  private def checksum(fact: Provable): Int = fact.hashCode()
 
   /** A fully parenthesized String representation of the given Sequent for externalization.
     * @see [[Sequent.toString]]

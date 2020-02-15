@@ -355,10 +355,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 
   "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" in withMathematica { _ =>
     import TactixLibrary._
-    val dgZeroEquilibrium = AxiomInfo.ofCodeName("dgZeroEquilibrium")
-    dgZeroEquilibrium.formula shouldBe "x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula
+    val dgZeroEquilibrium = "x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula
 
-    TactixLibrary.proveBy(dgZeroEquilibrium.formula,
+    TactixLibrary.proveBy(dgZeroEquilibrium,
       implyR(1) & dG("y' = ( (-c*x^(n-1)) / 2)*y".asDifferentialProgram, Some("x*y^2=0&y>0".asFormula))(1) &
       TactixLibrary.boxAnd(1, 0::Nil) &
       DifferentialTactics.diffInd()(1, 0::0::Nil) &

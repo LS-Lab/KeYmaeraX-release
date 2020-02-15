@@ -1,3 +1,12 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Concrete number arithmetic.
+  * @author Fabian Immler
+  * @note Code Review: 2020-02-14
+  */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -6,8 +15,10 @@ import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
 
 import scala.collection.immutable.Map
 
-/** Proves quantifier- and variable-free arithmetic formulas by exact arithmetic evaluation using [[java.math.BigDecimal]]
+/** Proves quantifier- and variable-free arithmetic formulas by exact arithmetic evaluation using [[java.math.BigDecimal]].
+  * Ground term evaluation for formulas with concrete number arithmetic.
   * @author Fabian Immler
+  * @note Java's BigDecimal is clearer and has less indirection than Scala's BigDecimal.
   */
 object BigDecimalQETool extends Tool with QETool {
   /** @inheritdoc */

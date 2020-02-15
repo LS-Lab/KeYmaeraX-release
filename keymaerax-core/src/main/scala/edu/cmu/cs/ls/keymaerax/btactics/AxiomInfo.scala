@@ -750,10 +750,7 @@ object DerivationInfo {
   private[this] lazy val miscInfos: List[DerivationInfo] = List(
     // more
     // Note: only used to implement Dskipd
-    new CoreAxiomInfo("DX differential skip", "DX", "DX", true, {case () => throw new UnsupportedOperationException("DX differential skip is not available for general-purpose use") }),
-
-    // compatibility axioms (derivable with Mathematica, but not with Z3)
-    CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", unsure, _ => TactixLibrary.useAt("dgZeroEquilibrium"))
+    new CoreAxiomInfo("DX differential skip", "DX", "DX", true, {case () => throw new UnsupportedOperationException("DX differential skip is not available for general-purpose use") })
   )
 
   /** Derived axiom cases of [[allInfo]] but [[DerivedAxiomInfo]] can also be filed elsewhere. */
