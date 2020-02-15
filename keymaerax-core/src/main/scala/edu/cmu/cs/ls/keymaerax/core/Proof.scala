@@ -764,7 +764,7 @@ object Provable {
     s + "::" + checksum(fact)
     //@note soundness-critical check reparsing to original (unless printer+checksum injective or unless printer+parser trusted)
   } ensures(r => fromStorageString(r) == fact, "Stored Provable should reparse to the original\n\n" +
-     toExternalString(fact) + "::" + checksum(toExternalString(fact)))
+     toExternalString(fact) + "::" + checksum(fact))
 
   /**
     * Parses a Stored Provable String representation back again as a Provable.
