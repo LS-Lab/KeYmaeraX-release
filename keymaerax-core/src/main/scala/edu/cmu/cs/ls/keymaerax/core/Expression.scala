@@ -29,17 +29,17 @@ import scala.math._
   */
 sealed trait Kind
 /** Expressions that are neither terms nor formulas nor programs nor functions would be of kind ExpressionKind */
-object ExpressionKind extends Kind { override def toString = "Expression" }
+case object ExpressionKind extends Kind { override def toString = "Expression" }
 /** All terms are of kind TermKind */
-object TermKind extends Kind { override def toString = "Term" }
+case object TermKind extends Kind { override def toString = "Term" }
 /** All formulas are of kind FormulaKind */
-object FormulaKind extends Kind { override def toString = "Formula" }
+case object FormulaKind extends Kind { override def toString = "Formula" }
 /** All programs are of kind ProgramKind */
-object ProgramKind extends Kind { override def toString = "Program" }
+case object ProgramKind extends Kind { override def toString = "Program" }
 /** All differential programs are of kind DifferentialProgramKind */
-object DifferentialProgramKind extends Kind/*ProgramKind.type*/ { override def toString = "DifferentialProgram" }
+case object DifferentialProgramKind extends Kind/*ProgramKind.type*/ { override def toString = "DifferentialProgram" }
 /** Function/predicate symbols that are not themselves terms or formulas are of kind FunctionKind, so degenerate. */
-object FunctionKind extends Kind { override def toString = "Function" }
+case object FunctionKind extends Kind { override def toString = "Function" }
 
 
 /**
@@ -48,13 +48,13 @@ object FunctionKind extends Kind { override def toString = "Function" }
   */
 sealed trait Sort
 /** Unit type of [[edu.cmu.cs.ls.keymaerax.core.Nothing Nothing]] */
-object Unit extends Sort { override def toString = "Unit" }
+case object Unit extends Sort { override def toString = "Unit" }
 /** Sort of booleans: [[edu.cmu.cs.ls.keymaerax.core.True True]], [[edu.cmu.cs.ls.keymaerax.core.False False]]. */
-object Bool extends Sort { override def toString = "Bool" }
+case object Bool extends Sort { override def toString = "Bool" }
 /** Sort of real numbers: 0, 1, 2.5 */
-object Real extends Sort { override def toString = "Real" }
+case object Real extends Sort { override def toString = "Real" }
 /** Sort of state transformations (i.e. programs) */
-object Trafo extends Sort { override def toString = "Trafo" }
+case object Trafo extends Sort { override def toString = "Trafo" }
 /** Tuple sort for [[edu.cmu.cs.ls.keymaerax.core.Pair Pair]]. */
 case class Tuple(left: Sort, right: Sort) extends Sort { override def toString: String = "(" + left + "," + right + ")" }
 /** User-defined object sort */
@@ -65,7 +65,7 @@ case class ObjectSort(name : String) extends Sort { override def toString: Strin
   * @see [[SpaceDependent]] */
 sealed trait Space
 /** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
-object AnyArg extends Space { override def toString: String = "||" }
+case object AnyArg extends Space { override def toString: String = "||" }
 /** The sort denoting a slice of the state space that does not include/depend on/affect variable `taboo`. */
 case class Except(taboo: Variable) extends Space { override def toString: String = "|" + taboo.asString + "|" }
 
@@ -297,7 +297,7 @@ case class DotTerm(s: Sort = Real, idx: Option[Int] = None) extends Expression w
 }
 
 /** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */
-object Nothing extends NamedSymbol with AtomicTerm {
+case object Nothing extends NamedSymbol with AtomicTerm {
   final val sort: Sort = Unit
   final val name: String = "\\nothing"
   final val index: Option[Int] = None
@@ -458,9 +458,9 @@ private[core] trait RComparisonFormula extends ComparisonFormula {
 }
 
 /** Verum formula true */
-object True extends AtomicFormula
+case object True extends AtomicFormula
 /** Falsum formula false */
-object False extends AtomicFormula
+case object False extends AtomicFormula
 
 /** ``=`` equality left = right */
 case class Equal(left: Term, right: Term) extends ComparisonFormula { def reapply = copy }
@@ -478,7 +478,7 @@ case class Less(left: Term, right: Term) extends RComparisonFormula { def reappl
 
 /** ⎵: Placeholder for formulas in uniform substitutions. Reserved nullary predicational symbol
   * _ for substitutions are unlike ordinary predicational symbols */
-object DotFormula extends NamedSymbol with AtomicFormula with StateDependent {
+case object DotFormula extends NamedSymbol with AtomicFormula with StateDependent {
   final val name: String = "\\_"
   final val index: Option[Int] = None
 }
