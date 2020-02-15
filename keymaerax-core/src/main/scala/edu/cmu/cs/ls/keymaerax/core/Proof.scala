@@ -510,11 +510,12 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
       //@note case subst.freeVars.isEmpty is covered by Theorem 27 of Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017
       //@note case isProved is covered by Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26 and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
+      //@note special blessing for "CQ equation congruence" is covered by Brandon Bohrer [[https://github.com/LS-Lab/Isabelle-dL/blob/master/Proof_Checker.thy]]
       if (usubstChurch) {
-        insist(subst.freeVars.isEmpty || isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
+        insist(subst.freeVars.isEmpty || isProved || this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
         new Provable(subst(conclusion), subgoals.map(s => subst(s)))
       } else {
-        if (isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"))
+        if (isProved || this==Provable.rules("CQ equation congruence"))
           new Provable(subst(conclusion), subgoals.map(s => subst(s)))
         else
           new Provable(subst.applyAllTaboo(conclusion), subgoals.map(s => subst.applyAllTaboo(s)))
@@ -639,12 +640,10 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
   * @see [[Provable.startProof()]]
   */
 object Provable {
-  //@todo Code Review: it would be nice if LAX_MODE were false
-  private val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
   /** List of the class names of all external real arithmetic tools whose answers KeYmaera X would believe */
-  private[this] val trustedTools: immutable.List[String] =
+  private val trustedTools: immutable.List[String] =
   "edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool" :: "edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool" ::
-    (if (LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.qe.Polya" :: "edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool$" :: Nil else Nil)
+    "edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool$" :: Nil
 
 
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. (convenience method) */
