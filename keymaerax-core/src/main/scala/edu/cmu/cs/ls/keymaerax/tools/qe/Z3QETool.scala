@@ -38,7 +38,7 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   override def restart(): Unit = { }
 
   /** @inheritdoc */
-  override def shutdown(): Unit = z3 = null
+  override def shutdown(): Unit = { z3 = null }
 
   /** @inheritdoc */
   override def isInitialized: Boolean = z3 != null
@@ -47,9 +47,10 @@ final class Z3QETool extends Tool with QETool with ToolOperationManagement {
   override def cancel(): Boolean = z3.cancel()
 
   /** @inheritdoc */
-  override def quantifierElimination(formula: Formula) = qeEvidence(formula)._1
+  override def quantifierElimination(formula: Formula): Formula = qeEvidence(formula)._1
 
   /** @inheritdoc */
+  //@todo remove
   def qeEvidence(formula: Formula): (Formula, Evidence) = {
     require(isInitialized, "Z3 needs to be initialized before use")
     z3.qe(formula)
