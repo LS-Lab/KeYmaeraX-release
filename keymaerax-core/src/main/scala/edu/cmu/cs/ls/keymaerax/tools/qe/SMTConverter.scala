@@ -137,8 +137,6 @@ abstract class SMTConverter extends (Formula=>String) {
       case Minus(l, r)  => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Times(l, r)  => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      //@todo do not compute internally
-      case Power(_, Number(r)) if r==0 => "1"
       case Power(l, Number(r)) if r.isValidInt && r>=1 => convertTerm(Times(l, Power(l, Number(r-1))))
       case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Number(n) =>
