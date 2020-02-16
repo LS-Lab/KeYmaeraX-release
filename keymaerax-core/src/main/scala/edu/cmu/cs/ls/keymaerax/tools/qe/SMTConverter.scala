@@ -123,8 +123,8 @@ abstract class SMTConverter extends (Formula=>String) {
     case LessEqual(l,r) => "(<= "    + convertTerm(l) + " " + convertTerm(r) + ")"
     case True => "true"
     case False => "false"
-    case Forall(vs, ff) => convertForall(vs, ff)
-    case Exists(vs, ff) => convertExists(vs, ff)
+    case f: Forall => convertQuantified(f, "forall")
+    case e: Exists => convertQuantified(e, "exists")
     case m: Modal       => throw new SMTConversionException("There is no conversion from modalities with hybrid programs to SMT " + m)
   }
 
@@ -172,37 +172,19 @@ abstract class SMTConverter extends (Formula=>String) {
     }
   }
 
-  /** Convert nested forall into single-block universal quantifier. */
-  private def convertForall(vs: Seq[Variable], f: Formula) : String = {
-    val (vars, formula) = collectVarsForall(vs, f)
-    require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
-    //@todo introduce function for converting variables
-    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
-  }
-
-  /** Collect all quantified variables used in possibly nested forall expression */
-  @tailrec
-  //@todo see Mathematica converter for uniform Forall/Exists
-  private def collectVarsForall(vsSoFar : Seq[Variable], candidate : Formula) : (Seq[Variable], Formula) = {
-    candidate match {
-      case Forall(nextVs, nextF) =>  collectVarsForall(vsSoFar ++ nextVs, nextF)
+  /** Converts a quantified formula, converts nested quantifiers into block quantifier. */
+  protected def convertQuantified(f: Quantified, op: String): String = {
+    /** Recursively collect quantified variables, return variables+child formula */
+    @tailrec
+    def collectVars(vsSoFar: Array[Variable], candidate: Formula): (Array[Variable], Formula) = (f, candidate) match {
+      // collect only from quantifiers that are the same as the root `f` quantifier
+      case (_: Exists, Exists(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
+      case (_: Forall, Forall(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
       case _ => (vsSoFar, candidate)
     }
-  }
-
-  /** Convert possibly nested exists KeYmaera X expression to SMT */
-  private def convertExists(vs: Seq[Variable], f: Formula) : String = {
-    val (vars, formula) = collectVarsExists(vs, f)
+    val (vars, formula) = collectVars(f.vars.toArray, f.child)
     require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
-    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
-  }
-
-  /** Collect all quantified variables used in possibly nested exists expression */
-  @tailrec
-  private def collectVarsExists(vsSoFar: Seq[Variable], candidate: Formula) : (Seq[Variable], Formula) = {
-    candidate match {
-      case Exists(nextVs, nextF) =>  collectVarsExists(vsSoFar ++ nextVs, nextF)
-      case _ => (vsSoFar, candidate)
-    }
+    "(" + op + " (" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " +
+      convertFormula(formula) + ")"
   }
 }
