@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.SMTConversionException
 
 import scala.annotation.tailrec
-import scala.collection.immutable._
 
 /** A default SMT converter with output as preferred by KeYmaera X. */
 object DefaultSMTConverter extends SMTConverter {}
@@ -46,15 +45,8 @@ abstract class SMTConverter extends (Formula=>String) {
     varDec + "(assert (not " + smtFormula + "))" + "\n(check-sat)\n"
   }
 
-  /** Convert KeYmaera X expression to SMT expression for checking if this expression can be simplified */
-  //@todo Code Review: make generateSMT public and move simplify into ext package
-  def generateSimplify(expr: Term): String = {
-    val (varDec, smtFormula) = generateSMT(expr)
-    varDec + "(simplify " + smtFormula + ")"
-  }
-
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
-  private def generateSMT(expr: Expression): (String, String) = {
+  private[tools] def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
     val names = allSymbols.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")

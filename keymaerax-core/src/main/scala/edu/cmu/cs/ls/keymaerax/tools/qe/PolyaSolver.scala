@@ -88,7 +88,8 @@ class PolyaSolver(val polyaPath: String, val converter: SMTConverter) extends Lo
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
   def simplify(t: Term): Term = {
-    val smtCode = converter.generateSimplify(t)
+    val (varDec, smt) = DefaultSMTConverter.generateSMT(t)
+    val smtCode = varDec + "(simplify " + smt + ")"
     logger.debug("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaSimplify", ".smt2")
     val writer = new FileWriter(smtFile)

@@ -10,12 +10,9 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import java.io._
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.lemma.Evidence
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.sys.process._
@@ -58,31 +55,8 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
     }
   }
 
-  /**
-   * Simplify a KeYmaera X term into a possibly simple term
-   * @param t  KeYmaera X term to be simplified
-   * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
-   */
-  //@todo move into ext package
-  def simplify(t: Term): Term = {
-    val smtCode = converter.generateSimplify(t)
-    logger.debug("[Simplifying with Z3 ...] \n" + smtCode)
-    val z3Output = runZ3Smt(smtCode, "z3simplify", getOperationTimeout)
-    logger.debug("[Z3 simplify result] \n" + z3Output + "\n")
-    if (z3Output.contains("!")) t
-    else {
-      try {
-        KeYmaeraXParser.termParser(z3Output)
-      } catch {
-        case _: ParseException =>
-          logger.debug("[Info] Cannot parse Z3 simplified result: " + z3Output)
-          t
-      }
-    }
-  }
-
   /** Calls Z3 with the command `z3Command` in a temporary SMT file for at most `timeout` time, and returns the resulting output. */
-  private def runZ3Smt(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
+  private[tools] def runZ3Smt(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
     logger.debug("[Calling Z3...] \n" + z3Command)
 
     if (z3Process.isDefined) throw ToolException("Z3 is busy")

@@ -38,8 +38,8 @@ class SMTQETests extends TacticTestBase {
   // Simplify
   // ---------------------------
 
-  "Simplify" should "simplify term" in {
-    z3.simplify("1+x-x".asTerm) should be ("1".asTerm)
+  "Simplify" should "simplify term" in withZ3 { tool =>
+    tool.simplify("1+x-x".asTerm, Nil) should be ("1".asTerm)
     polya.simplify("1+x-x".asTerm) should be ("1".asTerm)
   }
 
