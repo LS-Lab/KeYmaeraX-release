@@ -26,8 +26,10 @@ abstract class SMTConverter extends (Formula=>String) {
   /** Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid. */
   def apply(expr: Formula): String = generateAssertNegation(expr)
 
-  // a prefix that SMT accepts but NamedSymbol would refuse to make disjoint by construction
-  private val PREFIX = "_"
+  // Prefixes that SMT accepts but NamedSymbol would refuse to make disjoint by construction
+  private val VAR_PREFIX = "_v_"
+  private val FUNC_PREFIX = "_f_"
+  private val DIFFSYMBOL_PREFIX = "_d_"
 
   private val SMT_ABS = "absolute"
   private val SMT_MIN = "minimum"
@@ -54,25 +56,20 @@ abstract class SMTConverter extends (Formula=>String) {
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
   private def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
-    //@todo check that mapping from name to type is unique
     val names = allSymbols.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")
     var varDec = allSymbols.map({
         case x: Variable =>
           //@note this check is redundant with the check from nameIdentifier
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
-          "(declare-fun " + PREFIX + nameIdentifier(x) + " () " + x.sort + ")" //@note identical to (declare-const name sort)
-        //@todo case split into interpreted and uninterpreted function symbols
-        case f: Function =>
-          require(f.sort==Real, "Can only deal with function of type real, but not " + f.sort)
-          //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
-          nameIdentifier(f) match {
-            case "min" => "(define-fun " + SMT_MIN + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
-            case "max" => "(define-fun " + SMT_MAX + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
-            case "abs" => "(define-fun " + SMT_ABS + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
-            //@note avoid name clash with variables by double prefix
-            case _ => "(declare-fun " + PREFIX + PREFIX + nameIdentifier(f) + " (" + generateFuncParamSorts(f.domain) +  ") " + f.sort + ")"
-          }
+          "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")" //@note identical to (declare-const name sort)
+        //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
+        case fn@Function("min", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
+        case fn@Function("max", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
+        case fn@Function("abs", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
+        case fn@Function(_, _, _, _, false) =>
+          require(fn.sort==Real, "Only support functions of type real, but not " + fn.sort)
+          "(declare-fun " + nameIdentifier(fn) + " (" + generateFuncParamSorts(fn.domain) +  ") " + fn.sort + ")"
       }
     ).mkString("\n")
     val smtFormula = convertToSMT(expr)
@@ -81,15 +78,19 @@ abstract class SMTConverter extends (Formula=>String) {
     (varDec, smtFormula)
   }
 
-  /** Identifier corresponding to a NamedSymbol including its index.
-    * @note the result is the same as `s.asString` whose implementation is allowed to change for user purposes, though.
-    */
+  /** Identifier corresponding to a NamedSymbol including its index and a type-specific prefix. */
   private def nameIdentifier(s: NamedSymbol): String = {
-    require(s.isInstanceOf[Function] || s.isInstanceOf[Variable])
     require(s.sort == Real, "Only real-valued symbols are currently supported, but got " + s.prettyString + " of sort " + s.sort)
-    //@todo convert differential symbol to unambiguous name
-    if (s.isInstanceOf[DifferentialSymbol]) throw new SMTConversionException("Name conversion of differential symbols not allowed: " + s.prettyString)
-    if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
+    def nameOf(n: String, i: Option[Int]): String = if (i.isEmpty) n else n + "_" + i.get
+    s match {
+      case Function("min", _, _, _, true) => SMT_MIN
+      case Function("max", _, _, _, true) => SMT_MAX
+      case Function("abs", _, _, _, true) => SMT_ABS
+      case Function(name, index, _, _, false) => FUNC_PREFIX + nameOf(name, index)
+      case BaseVariable(name, index, _) => VAR_PREFIX + nameOf(name, index)
+      case DifferentialSymbol(BaseVariable(name, index, _)) => DIFFSYMBOL_PREFIX + nameOf(name, index)
+      case _ => throw new SMTConversionException("Name conversion of " + s.prettyString + " not supported")
+    }
   }
 
 
@@ -158,17 +159,15 @@ abstract class SMTConverter extends (Formula=>String) {
           assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term contains illegal numbers: " + t))
           n.toString()
         }
-      //@todo introduce and use named symbol converter to create appropriate names and check interpreted etc.
-      case t: BaseVariable => PREFIX + nameIdentifier(t)
-      case t: DifferentialSymbol => throw new SMTConversionException("Name conversion of differential symbols not allowed: " + t.prettyString)
-      case FuncOf(fn, Nothing) => PREFIX + nameIdentifier(fn)
-      case FuncOf(fn, child) if fn.interpreted => fn match {
-        case Function("min",None,Tuple(Real,Real),Real,true) => "(" + SMT_MIN + " " + convertTerm(child) + ")"
-        case Function("max",None,Tuple(Real,Real),Real,true) => "(" + SMT_MAX + " " + convertTerm(child) + ")"
-        case Function("abs",None,Real,Real,true) => "(" + SMT_ABS + " " + convertTerm(child) + ")"
-        case _ => throw new SMTConversionException("Interpreted function not supported presently by SMT: " + t)
-      }
-      case FuncOf(fn, child) if !fn.interpreted => "(" + PREFIX + nameIdentifier(fn) + " " + convertTerm(child) + ")"
+      case t: BaseVariable => nameIdentifier(t)
+      case t: DifferentialSymbol => nameIdentifier(t)
+      case FuncOf(fn, Nothing) => nameIdentifier(fn)
+      case FuncOf(fn, child) =>
+        if (fn.interpreted) fn match {
+          case Function("min" | "max", None, Tuple(Real,Real), Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
+          case Function("abs", None, Real, Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
+          case _ => throw new SMTConversionException("Interpreted function not supported presently by SMT: " + t)
+        } else "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
       //@note: disassociates the arguments and no extra parentheses for pairs, since mapping from name to types is unique by assertion in [[generateSMT]]
       case Pair(l, r)  => convertTerm(l) + " " + convertTerm(r)
       case _ => throw new SMTConversionException("Conversion of term to SMT is not defined: " + t)
@@ -180,7 +179,7 @@ abstract class SMTConverter extends (Formula=>String) {
     val (vars, formula) = collectVarsForall(vs, f)
     require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
     //@todo introduce function for converting variables
-    "(forall " + "(" + vars.map(v => "(" + PREFIX + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
+    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested forall expression */
@@ -197,7 +196,7 @@ abstract class SMTConverter extends (Formula=>String) {
   private def convertExists(vs: Seq[Variable], f: Formula) : String = {
     val (vars, formula) = collectVarsExists(vs, f)
     require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
-    "(exists " + "(" + vars.map(v => "(" + PREFIX + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
+    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested exists expression */

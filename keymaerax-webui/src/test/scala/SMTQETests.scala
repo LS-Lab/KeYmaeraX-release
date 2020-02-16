@@ -53,6 +53,7 @@ class SMTQETests extends TacticTestBase {
     ("Unary function reflexivity", "f(x)=f(x)".asFormula, "true".asFormula),
     ("Binary function reflexivity", "f(x,y)=f(x,y)".asFormula, "true".asFormula),
     ("Ternary function reflexivity", "f(x,y,z)=f(x,y,z)".asFormula, "true".asFormula),
+    ("Differential symbol reflexivity", "x'=x'".asFormula, "true".asFormula),
     ("Abs", "abs(y)>=y".asFormula, "true".asFormula),
     ("Min", "min(x,y)<=x".asFormula, "true".asFormula),
     ("Max", "max(x,y)>=x".asFormula, "true".asFormula)
