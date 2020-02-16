@@ -25,4 +25,5 @@ class MathematicaComputationExternalAbortException(msg: String) extends Conversi
 class SMTConversionException(s: String) extends ConversionException(s)
 
 /** Reports errors on QE. */
+//@todo improve exception hierarchy
 class SMTQeException(s: String) extends Exception(s)

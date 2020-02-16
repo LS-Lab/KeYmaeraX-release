@@ -36,7 +36,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       if (e.bigDecimalQ()) Number(e.asBigDecimal()) //@note asBigDecimal does not convert doubles correctly!
       else if (e.realQ()) Number(e.asDouble()) //@note see internal type identifiers in realQ and asDouble (they fit!)
       else if (e.integerQ()) Number(BigDecimal(e.asBigInteger())) //@note e.asLong would lose precision since it truncates if not representable as long
-      else throw new ConversionException("Cannot convert number " + e + " (neither double, long, nor big decimal)") //@note complexQ
+      else throw new ConversionException("Cannot convert number " + e + " (neither double nor big decimal)") //@note complexQ
     }
     //@note self-created MExpr with head RATIONAL are not rationalQ (type identifiers do not match)
     else if (MathematicaOpSpec.rational.applies(e)) convertBinary(e, Divide.apply)
@@ -81,6 +81,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
 
     // Functions and Variables. This case intentionally comes last, so that it doesn't match
     // keywords that were not declared correctly in MathematicaOpSpec (should be none)
+    //@todo move to extended converter
     else if (MathematicaOpSpec.isNonKeywordSymbol(e)) convertAtomicTerm(e)
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
@@ -90,6 +91,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   /** Converts an unary expression. */
   private def convertUnary[T<:Expression](e: MExpr, op: T=>T): T = {
     require(e.args().length == 1, "unary operator expects 1 argument")
+    //@todo fix names to subExpr
     val subformula = convert(e.args().head).asInstanceOf[T]
     op(subformula)
   }
@@ -104,12 +106,13 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   private def convertNary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
     val subexpressions = e.args().map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
+    //@todo fix name asTerms
     val asTerms = subexpressions.map(_.asInstanceOf[T])
     asTerms.reduce((l,r) => op(l,r))
   }
 
   /** Converts a comparison. */
-  private def convertComparison[S<:Expression, T<:Expression](e: MExpr, op: (S,S) => T): T = {
+  private def convertComparison[S<:Term, T<:Formula](e: MExpr, op: (S,S) => T): T = {
     val subexpressions = e.args().map(convert)
     require(subexpressions.length == 2, "binary operator expects 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[S])
@@ -120,8 +123,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   private def convertQuantifier(e: MExpr, op:(Seq[Variable],Formula)=>Formula): Formula = {
     require(e.args().length == 2, "Expected args size 2.")
 
-    val variableBlock = e.args().headOption.getOrElse(
-      throw new ConversionException("Found unexpected empty variable list after quantifier."))
+    val variableBlock = e.args().head
 
     val quantifiedVars: List[Variable] = if (MathematicaOpSpec.list.applies(variableBlock)) {
       //Convert the list of quantified variables
@@ -146,6 +148,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   }
 
   /** Converts an atomic term (either interpreted/uninterpreted function symbol or variable). */
+  //@todo remove
   protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
     case Some(fn) => convertFunction(fn, e.args())
     case None =>

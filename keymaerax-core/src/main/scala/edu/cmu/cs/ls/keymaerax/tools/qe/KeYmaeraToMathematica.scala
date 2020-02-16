@@ -65,13 +65,10 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
   protected[tools] def convertTerm(t: Term): MExpr = {
     require(t.sort == Real || t.sort == Unit || FormulaTools.sortsList(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
-      //@todo Code Review: clean up FuncOf conversion into two cases here
-      //@solution: inlined and simplified the FuncOf cases, moved uniform name conversion into MathematicaNameConversion
-      //@solution: distinguish between interpreted and uninterpreted function symbols
       //@note Uninterpreted functions are mapped to namespace kyx` to avoid clashes with any interpreted names
       case FuncOf(fn, child) =>
         if (fn.interpreted) interpretedSymbols(fn)(convertFunctionArgs(child))
-        else MathematicaOpSpec.func.k2m(fn, convertFunctionArgs(child))
+        else MathematicaOpSpec.func(fn, convertFunctionArgs(child))
       case Neg(c) => MathematicaOpSpec.neg(convertTerm(c))
       case Plus(l, r) => MathematicaOpSpec.plus(convertTerm(l), convertTerm(r))
       case Minus(l, r) => MathematicaOpSpec.minus(convertTerm(l), convertTerm(r))
@@ -82,20 +79,17 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
       case Divide(l, r) => MathematicaOpSpec.divide(convertTerm(l), convertTerm(r))
       case Power(l, r) => MathematicaOpSpec.power(convertTerm(l), convertTerm(r))
       case Number(n) =>
-        if (n.isWhole) {
-          MathematicaOpSpec.bigInt(n.toBigIntExact().getOrElse(
-            throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")))
-        } else if (n.scale > 0) {
-          val num = BigDecimal(n.bigDecimal.unscaledValue())
-          val denom = BigDecimal(BigDecimal(1).bigDecimal.movePointRight(n.scale))
-          assert(n == num/denom, "Expected double to rational conversion to have value " + n + ", but got numerator " + num + " and denominator " + denom)
-          MathematicaOpSpec.rational(convert(Number(num)), convert(Number(denom)))
-        } else if (n.scale < 0) {
-          //@note negative scale means: unscaled*10^(-scale)
-          val num = BigDecimal(n.bigDecimal.unscaledValue()).bigDecimal.movePointLeft(n.scale)
-          assert(n == BigDecimal(num), "Expected double conversion to have value " + n + ", but got " + num)
-          convert(Number(num))
-        } else throw new ConversionException("Number is neither BigInteger nor encodable as rational of BigInteger: " + n)
+        //@todo test and (potentially) fix
+        n.toBigIntExact() match {
+          case Some(i) => MathematicaOpSpec.bigInt(i)
+          case None =>
+            //@note negative scale means: unscaled*10^(-scale)
+            assert(n.scale > 0, "Expected toBigIntExact conversion to fail for scale>0, but got " + n.scale)
+            val num = BigDecimal(n.bigDecimal.unscaledValue())
+            val denom = BigDecimal(BigDecimal(1).bigDecimal.movePointRight(n.scale))
+            assert(n == num/denom, "Expected double to rational conversion to have value " + n + ", but got numerator " + num + " and denominator " + denom)
+            MathematicaOpSpec.rational(convert(Number(num)), convert(Number(denom)))
+        }
       case t: Variable => toMathematica(t)
       case Pair(l, r) => MathematicaOpSpec.pair(convertTerm(l), convertTerm(r))
     }
@@ -103,25 +97,25 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
 
   /** Converts KeYmaera formulas into Mathematica expressions. */
   protected def convertFormula(f: Formula): MExpr = f match {
+    case Not(phi) => MathematicaOpSpec.not(convertFormula(phi))
     case And(l, r)  => MathematicaOpSpec.and(convertFormula(l), convertFormula(r))
-    case Equiv(l,r) => MathematicaOpSpec.equivalent(convertFormula(l), convertFormula(r))
-    case Imply(l,r) => MathematicaOpSpec.implies(convertFormula(l), convertFormula(r))
     case Or(l, r)   => MathematicaOpSpec.or(convertFormula(l), convertFormula(r))
+    case Imply(l,r) => MathematicaOpSpec.implies(convertFormula(l), convertFormula(r))
+    case Equiv(l,r) => MathematicaOpSpec.equivalent(convertFormula(l), convertFormula(r))
     case Equal(l,r) => MathematicaOpSpec.equal(convertTerm(l), convertTerm(r))
     case NotEqual(l,r) => MathematicaOpSpec.unequal(convertTerm(l), convertTerm(r))
     case LessEqual(l,r) => MathematicaOpSpec.lessEqual(convertTerm(l), convertTerm(r))
     case Less(l,r)   => MathematicaOpSpec.less(convertTerm(l), convertTerm(r))
     case GreaterEqual(l,r) => MathematicaOpSpec.greaterEqual(convertTerm(l), convertTerm(r))
     case Greater(l,r) => MathematicaOpSpec.greater(convertTerm(l), convertTerm(r))
-    case False => MathematicaOpSpec.lfalse.op
     case True => MathematicaOpSpec.ltrue.op
-    case Not(phi) => MathematicaOpSpec.not(convertFormula(phi))
+    case False => MathematicaOpSpec.lfalse.op
     case exists: Exists => convertQuantified(exists, MathematicaOpSpec.exists)
     case forall: Forall => convertQuantified(forall, MathematicaOpSpec.forall)
     case _ => throw new ConversionException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
-  /** Converts a quantified formula. */
+  /** Converts a quantified formula, converts nested quantifiers into block quantifier. */
   protected def convertQuantified(f: Quantified, op: QuantifiedMathOpSpec): MExpr = {
     /** Recursively collect quantified variables, return variables+child formula */
     @tailrec
@@ -136,9 +130,10 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     op(vars.map(toMathematica), convertFormula(formula))
   }
 
-  /** Convert function arguments. */
-  private[this] def convertFunctionArgs(args: Term): Array[Expr] = args match {
+  /** Convert function arguments, flattening pairs. */
+  private[this] def convertFunctionArgs(args: Term): Array[MExpr] = args match {
     case _: Pair =>
+      // disassociating pairs since mapping from name to types is unique by assertion [[disjointNames]]
       val converted = convertTerm(args)
       assert(converted.listQ(), "Converted pair expected to be a list, but was " + converted)
       converted.args()

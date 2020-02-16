@@ -49,6 +49,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
     val z3Output = runZ3Smt(smtCode, "z3sat", getOperationTimeout) //@note (check-sat) gives unsat, sat or unknown
     logger.debug(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
+    //@note only accepts output that consists of one of the following words, except for trailing whitespace
     z3Output.stripLineEnd match {
       case "unsat" => (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
       case "sat" => throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
@@ -62,6 +63,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
    * @param t  KeYmaera X term to be simplified
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
+  //@todo move into ext package
   def simplify(t: Term): Term = {
     val smtCode = converter.generateSimplify(t)
     logger.debug("[Simplifying with Z3 ...] \n" + smtCode)
@@ -96,6 +98,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   /** Runs the process `cmd` for at most `timeout` time, and returns the resulting output. */
   private def runZ3(cmd: String, timeout: Int): String = {
     if (z3Process.isDefined) throw ToolException("Z3 is busy")
+    //@todo ensure unique output (make sure no concurrently running Z3)
     var result: String = ""
     val pl = ProcessLogger(s => result = s)
     val p = cmd.run(pl) // start asynchronously, log output to logger
@@ -108,7 +111,9 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
       case ex: TimeoutException =>
         p.destroy()
         throw ToolException(s"Z3 timeout of ${timeout}s exceeded", ex)
-      case _: InterruptedException => p.destroy
+      case ex: InterruptedException =>
+        p.destroy
+        throw ToolException(s"Z3 interrupted", ex)
     } finally {
       z3Process = None
     }

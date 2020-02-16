@@ -121,16 +121,18 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
           ml.evaluate(ctx + ";" + fetchMessagesCmd)
           ml.waitForAnswer()
           val txtMsg = importResult(ml.getExpr, _.toString)
+          //@todo improve exception hierarchy (document exceptions)
           throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
         } else {
           val head = res.head
           if (head == MathematicaOpSpec.check.op) {
             throw new IllegalStateException("JLink returned input as answer: " + res.toString)
-          } else if (MathematicaOpSpec.list.applies(res) && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
+          } else if (MathematicaOpSpec.list.applies(res) && res.args.length == 2 && res.args.head.asInt() == cmdIdx) {
             val theResult = res.args.last
             if (isAborted(theResult)) throw new MathematicaComputationAbortedException(ctx)
             else (theResult.toString, converter(theResult))
           } else {
+            //@todo may not only be caused by stale answer
             throw new IllegalStateException("JLink returned a stale answer for " + res.toString)
           }
         }

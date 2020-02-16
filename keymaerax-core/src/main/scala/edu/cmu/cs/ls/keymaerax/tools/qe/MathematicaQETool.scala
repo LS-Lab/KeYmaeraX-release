@@ -24,18 +24,10 @@ import scala.collection.immutable
 class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool with Logging {
 
   /** @inheritdoc */
-  override def quantifierElimination(formula: Formula) = qeEvidence(formula)._1
+  override def quantifierElimination(formula: Formula): Formula = qeEvidence(formula)._1
 
   /** @inheritdoc */
   def qeEvidence(originalFormula: Formula): (Formula, Evidence) = {
-//    val f = {
-//      val mustBeReals = FormulaTools.unnaturalPowers(originalFormula)
-//      val mustBeRealsInParentFml = mustBeReals.map({ case (t: Term, p: PosInExpr) =>
-//        val parentFormulaPos = FormulaTools.parentFormulaPos(p, originalFormula)
-//        originalFormula.sub(parentFormulaPos).get.asInstanceOf[Formula] -> (t -> parentFormulaPos)
-//      })
-//      new EnsureRealsK2M(originalFormula, mustBeRealsInParentFml.toMap)(originalFormula)
-//    }
     val f = KeYmaeraToMathematica(originalFormula)
     val method = Configuration.getOption(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
       case "Reduce" => MathematicaOpSpec.reduce
@@ -43,6 +35,7 @@ class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool with 
       case m => throw new IllegalStateException("Unknown Mathematica QE method '" + m + "'. Please configure either 'Reduce' or 'Resolve'.")
     }
     val input = method(f, MathematicaOpSpec.list(), MathematicaOpSpec.reals.op)
+    //@todo move evidence into lemma/tactic mechanism
     try {
       val (output, result) = link.run(input, MathematicaToKeYmaera)
       result match {
