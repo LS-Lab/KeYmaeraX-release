@@ -36,8 +36,8 @@ import scala.collection.immutable
 /**
   * Position of a formula in a sequent, i.e. antecedent or succedent positions.
   *
-  * @see [[SeqPos.apply()]]
-  * @see [[Sequent.apply()]]
+  * @see [[SeqPos$.apply(signedPos:Int):edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos*]]
+  * @see [[Sequent.apply(pos:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos):edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula*]]
   * @see [[AntePos]]
   * @see [[SuccPos]]
   */
@@ -57,7 +57,7 @@ sealed trait SeqPos {
     *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
     *  Positive numbers indicate succedent positions, 1, 2, 3.
     *  Zero is unused.
-    * @see [[SeqPos.apply()]]
+    * @see [[SeqPos.apply(signedPos:Int):edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos*]]
     */
   final lazy val getPos: Int = if (isSucc) {assert(!isAnte); getIndex+1} else {assert(isAnte); -(getIndex+1)}
 
@@ -143,7 +143,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     * Retrieves the formula in sequent at a given succedent position.
     * @param pos the succedent position of the formula
     * @return the formula at the given position from the succedent
-    * @note slightly faster version with the same result as [[Sequent.apply(SeqPos)]]
+    * @note slightly faster version with the same result as [[Sequent.apply(pos:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos):edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula*]]
     */
   def apply(pos: AntePos): Formula = ante(pos.getIndex)
 
@@ -151,7 +151,7 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     * Retrieves the formula in sequent at a given antecedent position.
     * @param pos the antecedent position of the formula
     * @return the formula at the given position from the antecedent
-    * @note slightly faster version with the same result as [[Sequent.apply(SeqPos)]]
+    * @note slightly faster version with the same result as [[Sequent.apply(pos:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos):edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula*]]
     */
   def apply(pos: SuccPos): Formula = succ(pos.getIndex)
 
@@ -184,9 +184,9 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     case sp: SuccPos => updated(sp, f)
     case ap: AntePos => updated(ap, f)
   }
-/** A copy of this sequent with the indicated antecedent position replaced by the formula f, same as [[updated()]]. */
+/** A copy of this sequent with the indicated antecedent position replaced by the formula f, same as [[Sequent.updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]. */
   def updated(p: AntePos, f: Formula): Sequent = Sequent(ante.updated(p.getIndex, f), succ)
-  /** A copy of this sequent with the indicated succedent position replaced by the formula f, same as [[updated()]]. */
+  /** A copy of this sequent with the indicated succedent position replaced by the formula f, same as [[Sequent.updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]. */
   def updated(p: SuccPos, f: Formula): Sequent = Sequent(ante, succ.updated(p.getIndex, f))
 
   /**
@@ -195,19 +195,19 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
     * @param p the position of the replacement
     * @param s the sequent glued / concatenated to this sequent after dropping p.
     * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
-    * @see [[Sequent.updated(Position,Formula)]]
-    * @see [[Sequent.glue(Sequent)]]
+    * @see [[Sequent.updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]]]
+    * @see [[Sequent.glue(s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]]
     */
   def updated(p: SeqPos, s: Sequent): Sequent = p match {
     case sp: SuccPos => updated(sp, s)
     case ap: AntePos => updated(ap, s)
   }
-  /** A copy of this sequent with the indicated antecedent position replaced by gluing the sequent s, same as [[updated()]] */
+  /** A copy of this sequent with the indicated antecedent position replaced by gluing the sequent s, same as [[updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]] */
   def updated(p: AntePos, s: Sequent): Sequent = {
     Sequent(ante.patch(p.getIndex, Nil, 1), succ).glue(s)
   } ensures(r=> r.glue(Sequent(immutable.IndexedSeq(this(p)), immutable.IndexedSeq())).sameSequentAs(this.glue(s)),
     "result after re-including updated formula is equivalent to " + this + " glue " + s)
-  /** A copy of this sequent with the indicated succedent position replaced by gluing the sequent s, same as [[updated()]] */
+  /** A copy of this sequent with the indicated succedent position replaced by gluing the sequent s, same as [[updated(p:edu\.cmu\.cs\.ls\.keymaerax\.core\.SeqPos,s:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent*]] */
   def updated(p: SuccPos, s: Sequent): Sequent = {
     Sequent(ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
   } ensures(r=> r.glue(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
@@ -267,11 +267,11 @@ final case class Sequent(ante: immutable.IndexedSeq[Formula], succ: immutable.In
   *       nor reflection to bypass immutable val algebraic data types.
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.proveArithmetic]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.fromStorageString]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
   * {{{
   *   import scala.collection.immutable._
@@ -451,9 +451,9 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     *
     * This function implements the substitution principle for hypotheses.
     * {{{
-    *    G1 |- D1 ... Gi |- Di ... Gn |- Dn              G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
-    *   ------------------------------------     =>     ---------------------------------------------------------------
-    *                  G |- D                                         G |- D
+    *   G1 |- D1 ... Gi |- Di ... Gn |- Dn      G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
+    *   ----------------------------------  =>  -------------------------------------------------------------
+    *                 G |- D                                           G |- D
     * }}}
     * using the given subderivation
     * {{{
@@ -637,7 +637,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
 /** Starting new Provables to begin a proof, either with unproved conjectures or with proved axioms or axiomatic proof rules.
   * @see [[Provable.axioms]]
   * @see [[Provable.rules]]
-  * @see [[Provable.startProof()]]
+  * @see [[Provable$.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   */
 object Provable {
   /** List of the class names of all external real arithmetic tools whose answers KeYmaera X would believe */
@@ -672,7 +672,7 @@ object Provable {
     *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only list locally sound rules.
-    * @see [[Provable.apply(USubst)]]
+    * @see [[Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstOne):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
     */
   val rules: immutable.Map[String, Provable] = AxiomBase.loadAxiomaticRules.mapValues(rule =>
     new Provable(rule._2, rule._1)
@@ -755,7 +755,7 @@ object Provable {
 
   /** Stored Provable representation as a string of the given Provable that will reparse correctly.
     * @note If store printer is injective function, then only `fact` reparses via fromStorageString unless checksum modified or not injective.
-    * @see [[fromStorageString()]]
+    * @see [[Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
     * @ensures fromStorageString(\result) == fact
     */
   final def toStorageString(fact: Provable): String = {
@@ -769,10 +769,10 @@ object Provable {
     * Parses a Stored Provable String representation back again as a Provable.
     * Soundness depends on the fact that the String came from [[toStorageString()]],
     * which is checked in a lightweight fashion using checksums.
-    * @param storedProvable The String obtained via [[toStorageString()]].
+    * @param storedProvable The String obtained via [[toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]].
     * @return The Provable that represents `storedProvable`.
     * @throws ProvableStorageException if storedProvable is illegal.
-    * @see [[toStorageString()]]
+    * @see [[Provable.toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]]
     */
   final def fromStorageString(storedProvable: String): Provable = {
     val separator = storedProvable.lastIndexOf("::")
@@ -820,7 +820,7 @@ object Provable {
 
   /** A fully parenthesized String representation of the given Provable for externalization.
     * @see [[Provable.toString()]]
-    * @see [[toStorageString()]]
+    * @see [[toStorageString(fact:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable):String*]]
     */
   private def toExternalString(fact: Provable): String =
     toExternalString(fact.conclusion) +
@@ -1254,7 +1254,7 @@ object UniformRenaming {
   * @param repl The target variable to replace `what` with (and vice versa).
   * @author Andre Platzer
   * @see [[URename]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.URename)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   * @see [[BoundRenaming]]
   * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */

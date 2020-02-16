@@ -116,7 +116,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
     * @return essentially freeVars(repl) except for special handling of UnitFunctional and UnitPredicational arguments.
     * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-    * @see [[StaticSemantics.freeVars()]]
+    * @see [[StaticSemantics.freeVars(f:edu\.cmu\.cs\.ls\.keymaerax\.core\.Formula):edu\.cmu\.cs\.ls\.keymaerax\.core\.SetLattice[edu\.cmu\.cs\.ls\.keymaerax\.core\.Variable]*]]
     */
   lazy val freeVars: SetLattice[Variable] = what match {
     //@note semantic state-dependent symbols have no free variables.
@@ -138,7 +138,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     * The (new) bound variables that this substitution introduces.
     * That is the (new) bound variables introduces by this substitution, i.e. all bound variables of `repl`.
     * These are all the bound variables of the formula or program `repl` (and irrelevant bottom for terms).
-    * @see [[StaticSemantics.boundVars()]]
+    * @see [[StaticSemantics.boundVars(a:edu\.cmu\.cs\.ls\.keymaerax\.core\.Program):edu\.cmu\.cs\.ls\.keymaerax\.core\.SetLattice[edu\.cmu\.cs\.ls\.keymaerax\.core\.Variable]*]]
     */
   lazy val boundVars: SetLattice[Variable] = repl match {
     case replf: Formula => StaticSemantics.boundVars(replf)
@@ -223,7 +223,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-94205-6_15 Uniform substitution for differential game logic]]. In Didier Galmiche, Stephan Schulz and Roberto Sebastiani, editors, Automated Reasoning, 9th International Joint Conference, IJCAR 2018, volume 10900 of LNCS, pp. 211-227. Springer 2018.
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubstChurch)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstChurch):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   * @see [[USubstOne]]
   * @example Uniform substitution can be applied to a formula
   * {{{

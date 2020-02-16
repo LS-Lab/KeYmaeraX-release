@@ -37,7 +37,7 @@ import org.apache.logging.log4j.scala.Logging
   * @author Andre Platzer
   * @author Yong Kiam Tan
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
   */
 private[core] object AxiomBase extends Logging {
   /**

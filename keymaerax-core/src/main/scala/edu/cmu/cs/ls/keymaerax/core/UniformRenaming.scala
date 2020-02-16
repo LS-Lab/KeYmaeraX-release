@@ -30,7 +30,7 @@ import scala.collection.immutable
   * @note soundness-critical
   * @see [[UniformRenaming]]
   * @see [[BoundRenaming]]
-  * @see [[Provable.apply()]]
+  * @see [[Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   */
 final case class URename(what: Variable, repl: Variable, semantic: Boolean = false) extends (Expression => Expression) {
   insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort: " + this)

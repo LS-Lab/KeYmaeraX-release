@@ -17,14 +17,14 @@ import scala.collection.immutable
 import scala.io.Source
 
 /**
-  * KeYmaera X Kernel:
-  * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
-  * ==============================================================================================
+  * KeYmaera X Kernel is the soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X.
+  *
+  * =KeYmaera X Kernel=
   *
   * The KeYmaera X Kernel implements [[https://doi.org/10.1007/s10817-016-9385-1 Differential Dynamic Logic]] and defines
   *
   *   - Syntax of
-  * [[http://symbolaris.com/logic/dL.html differential dynamic logic]]:
+  * [[http://lfcps.org/logic/dL.html differential dynamic logic]]:
   *     - [[edu.cmu.cs.ls.keymaerax.core.Expression Syntax of dL Expressions]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics Static Semantics]]
   *
@@ -34,7 +34,7 @@ import scala.io.Source
   *     - [[edu.cmu.cs.ls.keymaerax.core.URename Uniform renamings]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.Rule Proof rules]]
   *
-  *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.Provable.toStorageString() Stored Provables as Strings]],
+  *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.Provable.fromStorageString(storedProvable:String):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable* Stored Provables as Strings]],
   * [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
   * [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
   * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]] for sets of symbols.
@@ -48,10 +48,10 @@ import scala.io.Source
   *
   * ===Constructing Proofs===
   * The proof certificates of KeYmaera X are of type [[edu.cmu.cs.ls.keymaerax.core.Provable]].
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof]] begins a new proof of a
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof(goal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Sequent):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]] begins a new proof of a
   * [[edu.cmu.cs.ls.keymaerax.core.Sequent]] containing the conjectured differential dynamic logic formula.
   * A proof rule of type [[edu.cmu.cs.ls.keymaerax.core.Rule]] can be applied to any subgoal of a
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable]] by [[edu.cmu.cs.ls.keymaerax.core.Provable.apply]] to advance the proof
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable]] by [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(rule:edu\.cmu\.cs\.ls\.keymaerax\.core\.Rule,subgoal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable\.Subgoal):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]] to advance the proof
   * until that Provable has been proved since [[edu.cmu.cs.ls.keymaerax.core.Provable.isProved]] is true.
   * Subgoals are identified by integers.
   * {{{
@@ -71,7 +71,7 @@ import scala.io.Source
   *
   * ===Combining Proofs===
   * Multiple Provable objects for subderivations obtained from different sources can also be merged
-  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply()]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
+  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.Provable,Int)]].
   * The above example can be continued to merge proofs as follows:
   * {{{
   *   // ... continued from above
@@ -90,7 +90,7 @@ import scala.io.Source
   *
   *
   * ==Differential Dynamic Logic==
-  * The language of [[http://symbolaris.com/logic/dL.html differential dynamic logic]] is described
+  * The language of [[http://lfcps.org/logic/dL.html differential dynamic logic]] is described
   * in KeYmaera X by its [[edu.cmu.cs.ls.keymaerax.core.Expression syntax]] and [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics static semantics]].
   *
   * ===Syntax===
@@ -142,7 +142,7 @@ import scala.io.Source
   * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 3]] and [[https://doi.org/10.1007/978-3-030-29436-6_25 one-pass Section 3]]
   *
   * [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]] can be used on proof certificates with the
-  * [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubst)]],
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubst):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]],
   * including uniform substitution instances of axioms or axiomatic rules.
   * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 3]]
   *
@@ -170,9 +170,9 @@ import scala.io.Source
   *
   * ===Overall Code Complexity===
   * Overall, the majority of the KeYmaera X Prover Microkernel implementation consists of data structure
-  * declarations or similar self-evident code, with some straightforward code such as [[StaticSemantics]].
-  * The highest complexity has the [[USubstOne uniform substitution application mechanism]]
-  * and the highest information density has the [[AxiomBase axiom list]].
+  * declarations or similar mostly self-evident code. This includes straightforward variable categorization in [[StaticSemantics]].
+  * The highest complexity is for the [[USubstOne uniform substitution application mechanism]].
+  * The highest information density is in the [[AxiomBase axiom list]].
   *
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
@@ -253,7 +253,7 @@ package object core {
   def assertion(condition: =>Boolean, message: => Any): Unit =
     Assertion.assertion(() => condition : java.lang.Boolean, () => message.asInstanceOf[AnyRef])
 
-  /** Contracts (like [[Predef.Ensuring]]) implemented with Java-style assertions (see [[assertion]])
+  /** Contracts (like [[scala.Predef.Ensuring]]) implemented with Java-style assertions (see [[assertion]])
     * @author Fabian Immler
     */
   implicit final class Ensures[A](private val self: A) extends AnyVal {
