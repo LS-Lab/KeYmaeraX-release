@@ -36,4 +36,13 @@ class QETest extends TacticTestBase {
       qeTool.qe(formula).fact.conclusion shouldBe s"==> ${formula.prettyString} <-> true".asSequent
     }
   }
+
+  it should "neither return $Failed nor complain about stale answer if $Failed" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
+    val t = "a".asVariable
+    import edu.cmu.cs.ls.keymaerax.core._
+    def eq(n: Int) = Equal(Times(Number(n), t), (0 until n).map(_ => t).reduce(Plus))
+    val n = 250
+    qeTool.qe(eq(n)).fact.conclusion.succ(0).asInstanceOf[Equiv].right shouldBe True
+  }
+
 }
