@@ -205,7 +205,7 @@ private object QUOTATION_MARK extends Terminal("\"")
 
 /** Separates formulas in stored provables. */
 private object FORMULA_SEPARATOR  extends OPERATOR("::") {
-  override def regexp: Regex = """::""".r
+  override def regexp: Regex = """::[^=]""".r //@note disambiguate from ::= [[PRG_DEF]]
 }
 /** Separates sequents in stored provables. */
 private object FROM  extends OPERATOR("\\from") {
@@ -647,15 +647,15 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     //
     FORMULA_SEPARATOR.startPattern -> ((s: String, loc: Location, mode, _) => mode match {
       case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, FORMULA_SEPARATOR, loc))
-      case _ => throw new Exception("Encountered a formula separator symbol \\, in a non-storedprovable input")
+      case _ => throw new Exception("Encountered a formula separator symbol " + FORMULA_SEPARATOR.img + " in a non-storedprovable input")
     }),
     FROM.startPattern -> ((s: String, loc: Location, mode, _) => mode match {
       case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, FROM, loc))
-      case _ => throw new Exception("Encountered a \\from symbol in a non-storedprovable input")
+      case _ => throw new Exception("Encountered a " + FROM.img + " symbol in a non-storedprovable input")
     }),
     QED.startPattern -> ((s: String, loc: Location, mode, _) => mode match {
       case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, QED, loc))
-      case _ => throw new Exception("Encountered a \\qed symbol in a non-storedprovable input")
+      case _ => throw new Exception("Encountered a " + QED.img + " symbol in a non-storedprovable input")
     }),
     //
     IDENT.startPattern -> ((s: String, loc: Location, _, name: String) => {
