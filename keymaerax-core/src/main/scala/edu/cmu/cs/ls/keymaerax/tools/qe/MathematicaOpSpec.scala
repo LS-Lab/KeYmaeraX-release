@@ -14,8 +14,9 @@ trait MathematicaOpSpec {
 
   /**
     * Whether e is `thing` or starts with head `thing`.
-    * @return True if `e` and `thing` are ==-related; false otherwise.
+    * @return True if `e` and `thing` are equal; false otherwise.
     */
+  //@todo spell out directly in applies
   def hasHead(e: Expr, thing: Expr): Boolean = e == thing || e.head == thing
 }
 
@@ -62,7 +63,7 @@ case class NameMathOpSpec(k2m: (NamedSymbol, Array[Expr]) => Expr, applies: Expr
   def apply(ns: NamedSymbol, args: Array[Expr]): Expr = k2m(ns, args)
 }
 
-/** Function Math operators, with `k2m` converter {{{args => Expr}}}. */
+/** Interpreted functions. */
 case class InterpretedMathOpSpec(op: Expr, fn: Function) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with head `op` and arguments `args`. */
   def apply(args: Array[Expr]): Expr = new Expr(op, args)
@@ -85,6 +86,7 @@ object MathematicaOpSpec {
     "InverseFunction", "Integrate", "Rule", "List", "Reduce", "Reals")
 
   /** Indicates whether the expression `e` is a keyword. */
+  //@todo should never happen in back-conversion (all our names are prefixed with kyx`)
   def isNonKeywordSymbol(e: Expr): Boolean =
     (e.head().symbolQ() && !keywords.contains(e.head().toString)) || (e.symbolQ() && !keywords.contains(e.toString))
 
@@ -111,6 +113,7 @@ object MathematicaOpSpec {
   val list = NaryMathOpSpec(Expr.SYM_LIST)
 
   /** Mathematica function application f(args). */
+  //@todo avoid variable arguments
   def apply(f: Expr): (Expr*) => Expr = (args: Seq[Expr]) => new Expr(f, args.toArray)
 
   //</editor-fold>
@@ -154,7 +157,7 @@ object MathematicaOpSpec {
   )
 
   val pair: BinaryMathOpSpec = new BinaryMathOpSpec(Expr.SYM_LIST) {
-    //@note inherited apply converts nested pairs into nested lists of length 2 each
+    //@note inherited apply gets pairs as lists of length 2 each
     override def applies(e: Expr): Boolean = e.listQ
   }
 
@@ -164,8 +167,10 @@ object MathematicaOpSpec {
 
   val equal: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Equal"))
 
+  // x!=y
   val unequal: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Unequal"))
 
+  // x<y<=z
   val inequality: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Inequality"))
 
   val greater: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Greater"))
