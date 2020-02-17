@@ -84,20 +84,21 @@ private[tools] object MathematicaNameConversion {
 
   /** Masking without contracts. */
   private def uncheckedMaskName(ns: NamedSymbol): String = {
+    //@todo simplify mask/unmask with a symbol that is disallowed in our names, accepted by Mathematica and does not need escaping in regular expressions
     //Ensure that none of the "special" strings occur in the variable name.
-    insist(!ns.name.contains("\\$"), "Character '$' not allowed in variable names")
-    //@note double-check with all separators
-    insist(!ns.name.contains(UNDERSCORE), "String '" + UNDERSCORE + "' not allowed in variable names")
+    insist(!ns.name.contains("$"), "Character '$' not allowed in variable names")
     insist(!ns.name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
-    insist(!ns.name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
     insist(ns.sort==Real, "still only accepting reals for conversion")
+    //@note double-check separators (UNDERSCORE and SEP contain $ so are checked with above)
+    assert(!ns.name.contains(UNDERSCORE), "String '" + UNDERSCORE + "' not allowed in variable names")
+    assert(!ns.name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
 
-    //@todo Code Review: handle interpreted functions properly, handle name conflicts
-    //@solution (name conflicts): symmetric name conversion in unmaskName, contract in KeYmaeraToMathematica and MathematicaToKeYmaera
+    //@solution (name conflicts): symmetric name conversion in unmaskName, contract disjointNames in KeYmaeraToMathematica and MathematicaToKeYmaera
     ns match {
       case Function(_, _, _, _, true) => throw new ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
       case DifferentialSymbol(_) => throw new ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ =>
+        assert(ns.name.count(c => c == '_') <= 1, "At most one _ in names")
         val identifier = ns.name.replace("_", UNDERSCORE)
         PREFIX + (ns.index match {
           case Some(idx) => identifier + SEP + idx
@@ -119,8 +120,6 @@ private[tools] object MathematicaNameConversion {
     def regexOf(s: String) = s.replace("$", "\\$")
 
     val uscoreMaskedName = maskedName.replaceAll(regexOf(UNDERSCORE), "_")
-    //@todo Code Review: contains --> startsWith, improve readability/prefix+sep handling in a single name
-    //@solution: streamlined implementation
     if (uscoreMaskedName.startsWith(PREFIX)) {
       val name = uscoreMaskedName.replaceFirst(PREFIX, "")
       if (name.contains(SEP)) {

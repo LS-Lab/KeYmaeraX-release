@@ -57,11 +57,11 @@ object BigDecimalQETool extends Tool with QETool {
       val i = getIntOption(y).getOrElse(throw new IllegalArgumentException(unableToEvaluate(t)))
       // x ^ i for positive integer i
       if (i >= 1)
-        x pow i
+        x.pow(i)
       // x ^ 0 = 0 for x != 0
       else if (x.compareTo(java.math.BigDecimal.ZERO) != 0 && i == 0) /** @note [[x.compareTo]] respects different representations of 0 */
         java.math.BigDecimal.ONE
-      // 10 ^ i
+      // 10 ^ i for negative exponents i
       else if (x.compareTo(java.math.BigDecimal.TEN) == 0) /** @note [[x.compareTo]] respects different representations of 0 */
         java.math.BigDecimal.ONE.scaleByPowerOfTen(i)
       else
@@ -75,6 +75,7 @@ object BigDecimalQETool extends Tool with QETool {
       if (f == absF) eval(x).abs
       else
         throw new IllegalArgumentException(unableToEvaluate(t))
+    //@todo allow tame cases of division
     case Divide(_, _) => throw new IllegalArgumentException(unableToEvaluate(t))
     case _ => throw new IllegalArgumentException(unableToEvaluate(t))
   }
@@ -101,11 +102,15 @@ object BigDecimalQETool extends Tool with QETool {
     case Not(f) => !eval(f)
     case True => true
     case False => false
+    //@todo make sure it'll throw exception if f not variable-free (short-circuit evaluation above!)
+    case Forall(_, f) => eval(f)
+    case Exists(_, f) => eval(f)
     case _ => throw new IllegalArgumentException(unableToEvaluate(fml))
   }
 
   /** @inheritdoc */
-  override def quantifierElimination(formula: Formula) = qeEvidence(formula)._1
+  //@todo clean up qe and qeEvidence
+  override def quantifierElimination(formula: Formula): Formula = qeEvidence(formula)._1
 
   /** @inheritdoc */
   def qeEvidence(formula: Formula): (Formula, Evidence) =
