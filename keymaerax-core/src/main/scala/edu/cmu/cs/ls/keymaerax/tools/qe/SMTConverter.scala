@@ -9,9 +9,8 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.SMTConversionException
-import org.apache.logging.log4j.scala.Logging
 
-import scala.collection.immutable._
+import scala.annotation.tailrec
 
 /** A default SMT converter with output as preferred by KeYmaera X. */
 object DefaultSMTConverter extends SMTConverter {}
@@ -22,17 +21,14 @@ object DefaultSMTConverter extends SMTConverter {}
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-abstract class SMTConverter extends (Formula=>String) with Logging {
+abstract class SMTConverter extends (Formula=>String) {
   /** Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid. */
-  def apply(expr: Formula): String = {
-    val negation = generateAssertNegation(expr)
-    val result = negation
-    logger.debug(s"SMT output for ${expr.prettyString} (NEGATED AS: $result) is: \n$result")
-    result
-  }
+  def apply(expr: Formula): String = generateAssertNegation(expr)
 
-  // a prefix that SMT accepts but NamedSymbol would refuse to make disjoint by construction
-  private val PREFIX = "_"
+  // Prefixes that SMT accepts but NamedSymbol would refuse to make disjoint by construction
+  private val VAR_PREFIX = "_v_"
+  private val FUNC_PREFIX = "_f_"
+  private val DIFFSYMBOL_PREFIX = "_d_"
 
   private val SMT_ABS = "absolute"
   private val SMT_MIN = "minimum"
@@ -49,15 +45,8 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
     varDec + "(assert (not " + smtFormula + "))" + "\n(check-sat)\n"
   }
 
-  /** Convert KeYmaera X expression to SMT expression for checking if this expression can be simplified */
-  //@todo Code Review: this is unused and may not be useful anyhow
-  def generateSimplify(expr: Term): String = {
-    val (varDec, smtFormula) = generateSMT(expr)
-    varDec + "(simplify " + smtFormula + ")"
-  }
-
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
-  private def generateSMT(expr: Expression): (String, String) = {
+  private[tools] def generateSMT(expr: Expression): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr).toList.sorted
     val names = allSymbols.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")
@@ -65,16 +54,14 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
         case x: Variable =>
           //@note this check is redundant with the check from nameIdentifier
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
-          "(declare-fun " + PREFIX + nameIdentifier(x) + " () " + x.sort + ")" //@note identical to (declare-const name sort)
-        case f: Function =>
-          require(f.sort==Real, "Can only deal with function of type real, but not " + f.sort)
-          //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
-          nameIdentifier(f) match {
-            case "min" => "(define-fun " + SMT_MIN + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
-            case "max" => "(define-fun " + SMT_MAX + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
-            case "abs" => "(define-fun " + SMT_ABS + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
-            case _ => "(declare-fun " + PREFIX + nameIdentifier(f) + " (" + generateFuncPrmtSorts(f.domain) +  ") " + f.sort + ")"
-          }
+          "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")" //@note identical to (declare-const name sort)
+        //@todo Could translate "axiomatic" definitions of abs/min/max to SMT-definitions dynamically instead.
+        case fn@Function("min", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
+        case fn@Function("max", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
+        case fn@Function("abs", _, _, _, true) => "(define-fun " + nameIdentifier(fn) + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
+        case fn@Function(_, _, _, _, false) =>
+          require(fn.sort==Real, "Only support functions of type real, but not " + fn.sort)
+          "(declare-fun " + nameIdentifier(fn) + " (" + generateFuncParamSorts(fn.domain) +  ") " + fn.sort + ")"
       }
     ).mkString("\n")
     val smtFormula = convertToSMT(expr)
@@ -83,29 +70,34 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
     (varDec, smtFormula)
   }
 
-  /** Identifier corresponding to a NamedSymbol including its index.
-    * @note the result is the same as `s.asString` whose implementation is allowed to change for user purposes, though.
-    */
+  /** Identifier corresponding to a NamedSymbol including its index and a type-specific prefix. */
   private def nameIdentifier(s: NamedSymbol): String = {
-    require(s.isInstanceOf[Function] || s.isInstanceOf[Variable])
     require(s.sort == Real, "Only real-valued symbols are currently supported, but got " + s.prettyString + " of sort " + s.sort)
-    if (s.isInstanceOf[DifferentialSymbol]) throw new SMTConversionException("Name conversion of differential symbols not allowed: " + s.prettyString)
-    if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
+    def nameOf(n: String, i: Option[Int]): String = if (i.isEmpty) n else n + "_" + i.get
+    s match {
+      case Function("min", _, _, _, true) => SMT_MIN
+      case Function("max", _, _, _, true) => SMT_MAX
+      case Function("abs", _, _, _, true) => SMT_ABS
+      case Function(name, index, _, _, false) => FUNC_PREFIX + nameOf(name, index)
+      case BaseVariable(name, index, _) => VAR_PREFIX + nameOf(name, index)
+      case DifferentialSymbol(BaseVariable(name, index, _)) => DIFFSYMBOL_PREFIX + nameOf(name, index)
+      case _ => throw new SMTConversionException("Name conversion of " + s.prettyString + " not supported")
+    }
   }
 
 
   /** Convert sort to SMT parameter declaration syntax. */
-  private def generateFuncPrmtSorts(t: Sort) : String = t match {
+  private def generateFuncParamSorts(t: Sort) : String = t match {
     case Unit => ""
-    //@note: disassociate the arguments
-    case Tuple(l, r) => generateFuncPrmtSorts(l) + " " + generateFuncPrmtSorts(r)
+    //@note: disassociate the arguments, since mapping from name to types is unique by assertion in [[generateSMT]]
+    case Tuple(l, r) => generateFuncParamSorts(l) + " " + generateFuncParamSorts(r)
     case _ => t.toString
   }
 
   private def convertToSMT(expr: Expression) : String = expr match {
     case t: Term  => convertTerm(t)
     case f: Formula => convertFormula(f)
-    case _ => throw new SMTConversionException("The input expression: \n" + expr + "\nis expected to be formula.")
+    case _ => throw new SMTConversionException("The input expression: \n" + expr + "\nis expected to be a term or formula.")
   }
 
   /** Convert KeYmaera X formula to string in SMT notation */
@@ -123,8 +115,8 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
     case LessEqual(l,r) => "(<= "    + convertTerm(l) + " " + convertTerm(r) + ")"
     case True => "true"
     case False => "false"
-    case Forall(vs, ff) => convertForall(vs, ff)
-    case Exists(vs, ff) => convertExists(vs, ff)
+    case f: Forall => convertQuantified(f, "forall")
+    case e: Exists => convertQuantified(e, "exists")
     case m: Modal       => throw new SMTConversionException("There is no conversion from modalities with hybrid programs to SMT " + m)
   }
 
@@ -137,7 +129,6 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
       case Minus(l, r)  => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Times(l, r)  => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Power(_, Number(r)) if r==0 => "1"
       case Power(l, Number(r)) if r.isValidInt && r>=1 => convertTerm(Times(l, Power(l, Number(r-1))))
       case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Number(n) =>
@@ -146,61 +137,46 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
         /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
           *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
           *      both have the maximal range in their category */
-        assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term contains illegal numbers: " + t))
-        //@note SMT form of negative number -5 is (- 5)
-        // avoids conversion to double, uses 'signum' to determine sign and builtin negate function
         //@note n.signum < 0 is equivalent to n < BigDecimal(0)
         if (n.signum < 0) {
+          //@note SMT form of negative number -5 is (- 5)
+          // avoids conversion to double, uses 'signum' to determine sign and builtin negate function
           //@note negative form has to be representable, in particular n cannot have been MIN_LONG
           assert((-n).isDecimalDouble || (-n).isValidLong, throw new SMTConversionException("Term contains illegal numbers: " + t))
           //@todo Real literals should contain a dot in Z3 (integer without dot), check whether compatible with Polya
           "(- " + (-n).toString() + ")"
-        } else n.toString()
-      case t: BaseVariable => PREFIX + nameIdentifier(t)
-      case t: DifferentialSymbol => throw new SMTConversionException("Name conversion of differential symbols not allowed: " + t.prettyString)
-      case FuncOf(fn, Nothing) => PREFIX + nameIdentifier(fn)
-      case FuncOf(fn, child) if fn.interpreted => fn match {
-        case Function("min",None,Tuple(Real,Real),Real,true) => "(" + SMT_MIN + " " + convertTerm(child) + ")"
-        case Function("max",None,Tuple(Real,Real),Real,true) => "(" + SMT_MAX + " " + convertTerm(child) + ")"
-        case Function("abs",None,Real,Real,true) => "(" + SMT_ABS + " " + convertTerm(child) + ")"
-        case _ => throw new SMTConversionException("Interpreted function not supported presently by SMT: " + t)
-      }
-      case FuncOf(fn, child) if !fn.interpreted => "(" + PREFIX + nameIdentifier(fn) + " " + convertTerm(child) + ")"
-      //@note: disassociates the arguments and no extra parentheses for pairs
+        } else {
+          assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term contains illegal numbers: " + t))
+          n.toString()
+        }
+      case t: BaseVariable => nameIdentifier(t)
+      case t: DifferentialSymbol => nameIdentifier(t)
+      case FuncOf(fn, Nothing) => nameIdentifier(fn)
+      case FuncOf(fn, child) =>
+        if (fn.interpreted) fn match {
+          case Function("min" | "max", None, Tuple(Real,Real), Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
+          case Function("abs", None, Real, Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
+          case _ => throw new SMTConversionException("Interpreted function not supported presently by SMT: " + t)
+        } else "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
+      //@note: disassociates the arguments and no extra parentheses for pairs, since mapping from name to types is unique by assertion in [[generateSMT]]
       case Pair(l, r)  => convertTerm(l) + " " + convertTerm(r)
       case _ => throw new SMTConversionException("Conversion of term to SMT is not defined: " + t)
     }
   }
 
-  /** Convert possibly nested forall KeYmaera X expression to SMT */
-  private def convertForall(vs: Seq[Variable], f: Formula) : String = {
-    val (vars, formula) = collectVarsForall(vs, f)
-    //@todo code review: assert sort==real and use sort
-    //@ran todo-resolved: changed as suggested
-    require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
-    "(forall " + "(" + vars.map(v => "(" + PREFIX + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
-  }
-
-  /** Collect all quantified variables used in possibly nested forall expression */
-  private def collectVarsForall(vsSoFar : Seq[Variable], candidate : Formula) : (Seq[Variable], Formula) = {
-    candidate match {
-      case Forall(nextVs, nextF) =>  collectVarsForall(vsSoFar ++ nextVs, nextF)
+  /** Converts a quantified formula, converts nested quantifiers into block quantifier. */
+  protected def convertQuantified(f: Quantified, op: String): String = {
+    /** Recursively collect quantified variables, return variables+child formula */
+    @tailrec
+    def collectVars(vsSoFar: Array[Variable], candidate: Formula): (Array[Variable], Formula) = (f, candidate) match {
+      // collect only from quantifiers that are the same as the root `f` quantifier
+      case (_: Exists, Exists(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
+      case (_: Forall, Forall(nextVs, nextf)) => collectVars(vsSoFar ++ nextVs, nextf)
       case _ => (vsSoFar, candidate)
     }
-  }
-
-  /** Convert possibly nested exists KeYmaera X expression to SMT */
-  private def convertExists(vs: Seq[Variable], f: Formula) : String = {
-    val (vars, formula) = collectVarsExists(vs, f)
+    val (vars, formula) = collectVars(f.vars.toArray, f.child)
     require(vars.forall(v => v.sort==Real), "Can only deal with functions with parameters of type real")
-    "(exists " + "(" + vars.map(v => "(" + PREFIX + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " + convertFormula(formula) + ")"
-  }
-
-  /** Collect all quantified variables used in possibly nested exists expression */
-  private def collectVarsExists(vsSoFar: Seq[Variable], candidate: Formula) : (Seq[Variable], Formula) = {
-    candidate match {
-      case Exists(nextVs, nextF) =>  collectVarsExists(vsSoFar ++ nextVs, nextF)
-      case _ => (vsSoFar, candidate)
-    }
+    "(" + op + " (" + vars.map(v => "(" + nameIdentifier(v) + " " + v.sort + ")").mkString(" ") + ") " +
+      convertFormula(formula) + ")"
   }
 }

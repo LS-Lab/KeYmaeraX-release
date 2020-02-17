@@ -43,8 +43,6 @@ object ExtMathematicaOpSpec {
 
   val nestList = NaryMathOpSpec(symbol("NestList"))
 
-  val apply = NaryMathOpSpec(symbol("Apply"))
-
   val compoundExpression = NaryMathOpSpec(symbol("CompoundExpression"))
 
   val first = NaryMathOpSpec(symbol("First"))

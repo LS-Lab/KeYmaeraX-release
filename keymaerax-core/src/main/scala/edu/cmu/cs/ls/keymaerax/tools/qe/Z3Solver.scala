@@ -10,12 +10,9 @@ package edu.cmu.cs.ls.keymaerax.tools.qe
 import java.io._
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.lemma.Evidence
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.sys.process._
@@ -33,6 +30,9 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   /** The currently running Z3 process. */
   private var z3Process: Option[Process] = None
 
+  /** Provides a unique index for identifying the next query, incremented on every Z3 query. */
+  private var queryIndex = 0
+
   /** The expected version and hash code */
   private val version :: hash :: Nil =
     scala.io.Source.fromInputStream(getClass.getResourceAsStream("/z3/VERSION")).getLines().toList
@@ -44,43 +44,22 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   }, "Z3 not of the expected version and build hash")
 
   /** Return Z3 QE result and the proof evidence */
-  def qe(f: Formula): (Formula, Evidence) = {
+  def qe(f: Formula): Formula = {
     val smtCode = converter(f)
     val z3Output = runZ3Smt(smtCode, "z3sat", getOperationTimeout) //@note (check-sat) gives unsat, sat or unknown
     logger.debug(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
+    //@note only accepts output that consists of one of the following words, except for trailing whitespace
     z3Output.stripLineEnd match {
-      case "unsat" => (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
+      case "unsat" => True
       case "sat" => throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
       case "unknown" => throw new SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
       case _ => throw new SMTConversionException("Back-conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
   }
 
-  /**
-   * Simplify a KeYmaera X term into a possibly simple term
-   * @param t  KeYmaera X term to be simplified
-   * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
-   */
-  def simplify(t: Term): Term = {
-    val smtCode = converter.generateSimplify(t)
-    logger.debug("[Simplifying with Z3 ...] \n" + smtCode)
-    val z3Output = runZ3Smt(smtCode, "z3simplify", getOperationTimeout)
-    logger.debug("[Z3 simplify result] \n" + z3Output + "\n")
-    if (z3Output.contains("!")) t
-    else {
-      try {
-        KeYmaeraXParser.termParser(z3Output)
-      } catch {
-        case _: ParseException =>
-          logger.debug("[Info] Cannot parse Z3 simplified result: " + z3Output)
-          t
-      }
-    }
-  }
-
   /** Calls Z3 with the command `z3Command` in a temporary SMT file for at most `timeout` time, and returns the resulting output. */
-  private def runZ3Smt(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
+  private[tools] def runZ3Smt(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
     logger.debug("[Calling Z3...] \n" + z3Command)
 
     if (z3Process.isDefined) throw ToolException("Z3 is busy")
@@ -96,35 +75,44 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   /** Runs the process `cmd` for at most `timeout` time, and returns the resulting output. */
   private def runZ3(cmd: String, timeout: Int): String = {
     if (z3Process.isDefined) throw ToolException("Z3 is busy")
-    var result: String = ""
-    val pl = ProcessLogger(s => result = s)
-    val p = cmd.run(pl) // start asynchronously, log output to logger
-    z3Process = Some(p)
-    val f = Future(blocking(p.exitValue()))
-    val exitVal = try {
-      if (timeout >= 0) Await.result(f, duration.Duration(timeout, "sec"))
-      else Await.result(f, duration.Duration.Inf)
+    //@note running on a single process, but additionally safeguard with a query index to test whether the returned
+    // result fits the input query index
+    val qidx: Long = synchronized { queryIndex += 1; queryIndex }
+    var result: (Long, String) = (-1, "")
+    val pl = ProcessLogger(s => result = (qidx, s))
+    val (p, f) = synchronized {
+      val p = cmd.run(pl) // start asynchronously, log output to logger
+      z3Process = Some(p)
+      (p, Future(blocking((qidx, p.exitValue()))))
+    }
+    try {
+      val (exitQIdx, exitVal) =
+        if (timeout >= 0) Await.result(f, duration.Duration(timeout, "sec"))
+        else Await.result(f, duration.Duration.Inf)
+      if (exitQIdx != qidx) throw ToolException("Expected query index on tool exit to match input query index, but exit " + exitQIdx + " != " + qidx)
+      if (exitVal == 0) {
+        if (result._1 == qidx) result._2
+        else throw ToolException("Expected result query index to match input query index, but result " + result._1 + " != " + qidx)
+      } else {
+        throw ToolException("Error executing Z3, exit value " + exitVal)
+      }
     } catch {
       case ex: TimeoutException =>
         p.destroy()
         throw ToolException(s"Z3 timeout of ${timeout}s exceeded", ex)
-      case _: InterruptedException => p.destroy
+      case ex: InterruptedException =>
+        p.destroy
+        throw ToolException(s"Z3 interrupted", ex)
     } finally {
       z3Process = None
-    }
-
-    if (exitVal == 0) {
-      result
-    } else {
-      throw ToolException(s"Error executing Z3, exit value $exitVal")
     }
   }
 
   /** Cancels the current Z3 process. */
   def cancel(): Boolean = z3Process match {
     case Some(p) =>
-      z3Process = None
       p.destroy()
+      z3Process = None
       true
     case None => true
   }

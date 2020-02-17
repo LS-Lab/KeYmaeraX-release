@@ -78,7 +78,7 @@ trait OpSpec extends Ordered[OpSpec] {
 /** Nullary operator notation specification with a constructor. */
 case class UnitOpSpec(op: Terminal, prec: Int,
                                const: String => Expression) extends OpSpec {
-  final def assoc = AtomicFormat
+  final def assoc: OpNotation = AtomicFormat
 }
 
 object UnitOpSpec {
@@ -160,9 +160,9 @@ object OpSpec {
 
   /** Interpreted symbols which are interpreted by tools or are defined to have a fixed semantics. */
   private val interpretedSymbols: List[Function] = {
-    Function("abs",None,Real,Real,true) ::
-    Function("min",None,Tuple(Real,Real),Real,true) ::
-    Function("max",None,Tuple(Real,Real),Real,true) :: Nil
+    Function("abs",None,Real,Real,interpreted=true) ::
+    Function("min",None,Tuple(Real,Real),Real,interpreted=true) ::
+    Function("max",None,Tuple(Real,Real),Real,interpreted=true) :: Nil
   } ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
   private val interpretation: Map[String,Function] = interpretedSymbols.map(f => (f.name -> f)).toMap
 
@@ -213,6 +213,7 @@ object OpSpec {
   val sDotFormula   = UnitOpSpec(PLACE,                 0, DotFormula)
   val sTrue         = UnitOpSpec(TRUE,                  0, True)
   val sFalse        = UnitOpSpec(FALSE,                 0, False)
+  //@todo resolve ambiguous reference: (name, e:Expression) should be (name, e:Term)
   val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(func(name, None, e.sort, Bool), e.asInstanceOf[Term]))
   val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(func(name, None, e.sort, Bool), e.asInstanceOf[Formula]))
   val sUnitPredicational= UnitOpSpec(none,              0, name => UnitPredicational(name,AnyArg))
@@ -245,8 +246,8 @@ object OpSpec {
   private val diffprogfmlprog = (DifferentialProgramKind,FormulaKind)
 
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
-  val sSystemConst = UnitOpSpec(none,    0, name => SystemConst(name))
-  val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name, AnyArg))
+  val sSystemConst  = UnitOpSpec(none,    0, name => SystemConst(name))
+  val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
   assert(sAssign>sMinus, "atomic programs bind weaker than their constituent terms")
   //val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
@@ -341,7 +342,7 @@ object OpSpec {
     case p: Dual         => sDual
     case _: SystemConst  => sSystemConst
 
-    case f: Function     => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
+    case f: Function     => throw new AssertionError("No completed expressions of FunctionKind can be constructed")
 
   }
 

@@ -38,8 +38,8 @@ class SMTQETests extends TacticTestBase {
   // Simplify
   // ---------------------------
 
-  "Simplify" should "simplify term" in {
-    z3.simplify("1+x-x".asTerm) should be ("1".asTerm)
+  "Simplify" should "simplify term" in withZ3 { tool =>
+    tool.simplify("1+x-x".asTerm, Nil) should be ("1".asTerm)
     polya.simplify("1+x-x".asTerm) should be ("1".asTerm)
   }
 
@@ -53,6 +53,7 @@ class SMTQETests extends TacticTestBase {
     ("Unary function reflexivity", "f(x)=f(x)".asFormula, "true".asFormula),
     ("Binary function reflexivity", "f(x,y)=f(x,y)".asFormula, "true".asFormula),
     ("Ternary function reflexivity", "f(x,y,z)=f(x,y,z)".asFormula, "true".asFormula),
+    ("Differential symbol reflexivity", "x'=x'".asFormula, "true".asFormula),
     ("Abs", "abs(y)>=y".asFormula, "true".asFormula),
     ("Min", "min(x,y)<=x".asFormula, "true".asFormula),
     ("Max", "max(x,y)>=x".asFormula, "true".asFormula)
@@ -61,7 +62,7 @@ class SMTQETests extends TacticTestBase {
   "Z3" should "prove every basic example" in {
     forEvery (basicExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qe(input)._1 shouldBe expected
+        z3.qe(input) shouldBe expected
       }}
     }
   }
@@ -90,7 +91,7 @@ class SMTQETests extends TacticTestBase {
   "Z3" should "prove every complicated example" in {
     forEvery (complicatedExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qe(input)._1 shouldBe expected
+        z3.qe(input) shouldBe expected
       }}
     }
   }
@@ -126,7 +127,7 @@ class SMTQETests extends TacticTestBase {
     z3.setOperationTimeout(30)
     forEvery (regressionExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qe(input)._1 shouldBe expected
+        z3.qe(input) shouldBe expected
       }}
     }
   }
@@ -148,7 +149,7 @@ class SMTQETests extends TacticTestBase {
     val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
 
     val z3Default = new Z3Solver(Z3Installer.z3Path, DefaultSMTConverter)
-    z3Default.qe(f)._1 shouldBe "true".asFormula
+    z3Default.qe(f) shouldBe "true".asFormula
 
     // converter that always translates to ^
     val z3Power = new Z3Solver(Z3Installer.z3Path, new SMTConverter() {
@@ -157,14 +158,14 @@ class SMTQETests extends TacticTestBase {
         case _ => super.convertTerm(t)
       }
     })
-    z3Power.qe(f)._1 shouldBe "true".asFormula
+    z3Power.qe(f) shouldBe "true".asFormula
   }
 
   "Z3Reports" should "prove intervalUpDivide" ignore {
     val intervalUpDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))"
     val intervalUpDivide = intervalUpDivideStr.asFormula
     println(intervalUpDivideStr)
-    z3.qe(intervalUpDivide)._1 shouldBe "true".asFormula
+    z3.qe(intervalUpDivide) shouldBe "true".asFormula
   }
 
   it should "prove intervalDownDivide" ignore {
@@ -172,7 +173,7 @@ class SMTQETests extends TacticTestBase {
 //    val intervalDownDivideStr = "h_() <= f_()/g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | 0 < gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))"
     val intervalDownDivide = intervalDownDivideStr.asFormula
     println(intervalDownDivideStr)
-    z3.qe(intervalDownDivide)._1 shouldBe "true".asFormula
+    z3.qe(intervalDownDivide) shouldBe "true".asFormula
 
   }
 }

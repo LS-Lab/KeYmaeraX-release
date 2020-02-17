@@ -152,7 +152,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     val start = System.currentTimeMillis()
     val request = () => {
       val expr: Expr = ExtMathematicaOpSpec.compoundExpression(
-        MathematicaOpSpec(MathematicaOpSpec.symbol("Pause"))(MathematicaOpSpec.int(5)),
+        MathematicaOpSpec(MathematicaOpSpec.symbol("Pause"))(MathematicaOpSpec.int(5) :: Nil),
         MathematicaOpSpec.int(7))
       commandRunner.run(expr, MathematicaToKeYmaera)._2
     }
@@ -186,7 +186,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
       the [ToolException] thrownBy theLink.run(() => theLink match {
         case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.invokePrivate(ml())).
           run(ExtMathematicaOpSpec.compoundExpression(
-            MathematicaOpSpec(MathematicaOpSpec.symbol("Pause"))(MathematicaOpSpec.int(30)),
+            MathematicaOpSpec(MathematicaOpSpec.symbol("Pause"))(MathematicaOpSpec.int(30) :: Nil),
             MathematicaOpSpec.int(7)
           ), MathematicaToKeYmaera)._2
       } , executor) should

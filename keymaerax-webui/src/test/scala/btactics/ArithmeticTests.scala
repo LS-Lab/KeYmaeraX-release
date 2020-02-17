@@ -1,3 +1,8 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
@@ -80,14 +85,23 @@ class ArithmeticTests extends TacticTestBase {
     proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "not support differential symbols" in withQE { _ =>
-    the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1'".asFormula,
+  it should "not support differential symbols" in withMathematica { _ =>
+    the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1".asFormula,
       TactixLibrary.QE) } should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
   }
 
-  it should "not prove differential symbols by some hidden assumption in the backend solver" in withQE { _ =>
+  it should "support differential symbols with Z3" in withZ3 { _ =>
+    proveBy("5=5 | x' = 1".asFormula, TactixLibrary.QE) shouldBe 'proved
+  }
+
+  it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
       TactixLibrary.QE) should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
+  }
+
+  it should "not prove differential symbols by some hidden assumption in Z3" in withZ3 { _ =>
+    the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
+      TactixLibrary.QE) should have message "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall y \\forall x (x>=y->x'>=y')\n"
   }
 
   it should "avoid name clashes with Mathematica" in withMathematica { _ =>
