@@ -24,7 +24,7 @@ import scala.collection.immutable._
 class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   val randomTrials = 100
-  val randomComplexity = 3 // 12
+  val randomComplexity = 12 // 5 // 12
   val tamperComplexity = 2
   val rand = new RandomFormula()
 
@@ -96,6 +96,7 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
   private def tamperFormula(f: Formula, tamperComplexity: Int = tamperComplexity): Formula = {
     //@todo also for other kinds
     val pos = rand.nextSubPosition(f, FormulaKind)
+    //@todo swallow and retry CoreException "No differentials in evolution domain constraints"
     FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
   }
 }
