@@ -13,15 +13,16 @@ import edu.cmu.cs.ls.keymaerax.tools.ConversionException
   */
 private[tools] object MathematicaNameConversion {
   // a prefix that Mathematica accepts but NamedSymbol would refuse to make disjoint by construction
-  private val PREFIX = "kyx`"
-  private val SEP    = "$i$"
-  private val UNDERSCORE = "$u$"
+  private val NAMESPACE_PREFIX = "kyx`"
+  // replacements for unsupported symbols _
+  private val INDEX_SEP        = "$i$"
+  private val UNDERSCORE_REPL  = "$u$"
 
   /**
     * Converts a KeYmaera name into a Mathematica symbol. Masks names as follows:
     * {{{
-    * base + index     ---> PREFIX + base + SEP + index
-    * base only        ---> PREFIX + base
+    * base + index     ---> NAMESPACE_PREFIX + base + INDEX_SEP + index
+    * base only        ---> NAMESPACE_PREFIX + base
     * }}}
     * @param ns The KeYmaera name to convert.
     * @return The Mathematica symbol.
@@ -41,8 +42,8 @@ private[tools] object MathematicaNameConversion {
     * between variables and functions (Symbol -> Variable, Expr with arguments -> Function). In
     * each case, decomposes the Mathematica name based upon the possible forms of the name:
     * {{{
-    * PREFIX + base + SEP + index ---> name + index
-    * PREFIX + base               ---> name only
+    * NAMESPACE_PREFIX + base + INDEX_SEP + index ---> name + index
+    * NAMESPACE_PREFIX + base               ---> name only
     * }}}
     * @param e The Mathematica 'name'
     * @return The named symbol.
@@ -84,14 +85,15 @@ private[tools] object MathematicaNameConversion {
 
   /** Masking without contracts. */
   private def uncheckedMaskName(ns: NamedSymbol): String = {
-    //@todo simplify mask/unmask with a symbol that is disallowed in our names, accepted by Mathematica and does not need escaping in regular expressions
-    //Ensure that none of the "special" strings occur in the variable name.
-    insist(!ns.name.contains("$"), "Character '$' not allowed in variable names")
-    insist(!ns.name.contains(PREFIX), "String '" + PREFIX + "' not allowed in variable names")
     insist(ns.sort==Real, "still only accepting reals for conversion")
-    //@note double-check separators (UNDERSCORE and SEP contain $ so are checked with above)
-    assert(!ns.name.contains(UNDERSCORE), "String '" + UNDERSCORE + "' not allowed in variable names")
-    assert(!ns.name.contains(SEP), "String '" + SEP + "' not allowed in variable names")
+    //Ensure that none of the "special" strings occur in the variable name.
+    //@note $ cannot occur by [[NamedSymbol]] data structure invariant isLetterOrDigit ('$'.isLetterOrDigit == false)
+    assert(!ns.name.contains("$"), "Character '$' not allowed in variable names")
+    //@note kyx` cannot occur by [[NamedSymbol]] data structure invariant isLetterOrDigit ('`'.isLetterOrDigit == false)
+    assert(!ns.name.contains(NAMESPACE_PREFIX), "String '" + NAMESPACE_PREFIX + "' not allowed in variable names")
+    //@note double-check separators (UNDERSCORE_REPL and INDEX_SEP contain $ so are checked with above)
+    assert(!ns.name.contains(UNDERSCORE_REPL), "String '" + UNDERSCORE_REPL + "' not allowed in variable names")
+    assert(!ns.name.contains(INDEX_SEP), "String '" + INDEX_SEP + "' not allowed in variable names")
 
     //@solution (name conflicts): symmetric name conversion in unmaskName, contract disjointNames in KeYmaeraToMathematica and MathematicaToKeYmaera
     ns match {
@@ -99,9 +101,9 @@ private[tools] object MathematicaNameConversion {
       case DifferentialSymbol(_) => throw new ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ =>
         assert(ns.name.count(c => c == '_') <= 1, "At most one _ in names")
-        val identifier = ns.name.replace("_", UNDERSCORE)
-        PREFIX + (ns.index match {
-          case Some(idx) => identifier + SEP + idx
+        val identifier = ns.name.replaceAllLiterally("_", UNDERSCORE_REPL)
+        NAMESPACE_PREFIX + (ns.index match {
+          case Some(idx) => identifier + INDEX_SEP + idx
           case None      => identifier
         })
     }
@@ -117,17 +119,16 @@ private[tools] object MathematicaNameConversion {
 
   /** Unmasking without contracts. */
   private[tools] def uncheckedUnmaskName(maskedName: String): (String, Option[Int]) = {
-    def regexOf(s: String) = s.replace("$", "\\$")
-
-    val uscoreMaskedName = maskedName.replaceAll(regexOf(UNDERSCORE), "_")
-    if (uscoreMaskedName.startsWith(PREFIX)) {
-      val name = uscoreMaskedName.replaceFirst(PREFIX, "")
-      if (name.contains(SEP)) {
-        // name is of the form thename$i$number, we split into thename and number
-        val parts = name.split(regexOf(SEP))
-        insist(parts.size == 2, "Expected " + SEP + " once only")
-        (parts.head, Some(Integer.parseInt(parts.last)))
-      } else (name , None)
-    } else throw new ConversionException("Name conversion of interpreted function symbols not allowed: " + uscoreMaskedName)
+    val uscoreMaskedName = maskedName.replaceAllLiterally(UNDERSCORE_REPL, "_")
+    if (uscoreMaskedName.startsWith(NAMESPACE_PREFIX)) {
+      val strippedName = uscoreMaskedName.substring(NAMESPACE_PREFIX.length)
+      strippedName.indexOf(INDEX_SEP) match {
+        case -1 => (strippedName, None)
+        case i =>
+          val (name, index) = strippedName.splitAt(i)
+          //@note not stripPrefix, it is .substring with a redundant .startsWith already guaranteed by .indexOf+.splitAt
+          (name, Some(Integer.parseInt(index.substring(INDEX_SEP.length))))
+      }
+    } else throw new ConversionException("Name conversion of unprefixed (" + NAMESPACE_PREFIX + ") names not allowed: " + uscoreMaskedName)
   }
 }
