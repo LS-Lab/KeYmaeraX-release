@@ -5,7 +5,7 @@
 /**
   * KeYmaera X Exception and Error Hierarchy.
   * @author Andre Platzer
-  * @note Code Review: 2020-02-14
+  * @note Code Review: 2020-02-17
   */
 package edu.cmu.cs.ls.keymaerax.core
 

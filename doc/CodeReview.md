@@ -20,7 +20,7 @@ KeYmaera X Kernel Code Review Steps
 
 1. Expression.scala for correctness and compliance with section 2.1 [1]
 2. StaticSemantics.scala for correctness and compliance with section 2.4 [1]
-3. UniformSubstitution.scala for correctness and compliance with section 3.0 [1]
+3. UniformSubstitution.scala for correctness and compliance with section 3.0 [1], (yet USubstChurch unused)
 4. USubstOne.scala for correctness and compliance with section 3.0 [4]
 5. UniformRenaming.scala for correctness
 6. Proof.scala for correctness and compliance with [1] as well as sequent calculus [2]
@@ -41,7 +41,7 @@ In addition to the above files, an extended code review also considers
 11. tools.qe package: SMTConverter.scala, Z3*.scala, KeYmaeraToMathematica.scala, Mathematica*.scala, BigDecimalQETool.scala
 
 References
-----------
+==========
 
 1. André Platzer. 
 A complete uniform substitution calculus for differential dynamic logic. 
@@ -69,13 +69,13 @@ In Pascal Fontaine, editor, International Conference on Automated Deduction, CAD
 [DOI 10.1007/978-3-030-29436-6_25](https://doi.org/10.1007/978-3-030-29436-6_25)
 
 ------------------------------------------------------------------
+Code Review Log
+===============
 
-The date of last full code review is added to the top of the file as @note Code Review: 2016-03-22.
+The date of last full code review is added to the top of the file as @note Code Review: 2020-02-17.
 A log of all major code reviews and the findings are reported here:
 
-Code Review Agenda Summary: Core agenda summarized in one place.
-
-Code Review: KeYmaera X Core: 2020-02-14
+Code Review: KeYmaera X Core: 2020-02-17
 
   * Verdict: stable
   * DI: system generalization can only have bound variables of the ODE free in postcondition (and no resulting '' by data structure invariant), just like DI itself has p(x). Vectorial DI systems.
@@ -83,6 +83,12 @@ Code Review: KeYmaera X Core: 2020-02-14
   * VDG: vectorial DG with vectorial quantifier for liveness.
   * DG: singularities from division by zero disallowed, also via interpreted functions.
 
+Code Review confirmed
+
+  * DONE con: program needs SpaceDependent(Except(v)).
+  * DONE VDG: vectorial DG with vectorial quantifier. DONE indirectly by DG-based differential invariance tactic.
+  * DONE Barcan axiom: could add if SystemConst became SpaceDependent.
+  
 Code Review: KeYmaera X Core: 2016-08-17
 
   * Verdict: stable
