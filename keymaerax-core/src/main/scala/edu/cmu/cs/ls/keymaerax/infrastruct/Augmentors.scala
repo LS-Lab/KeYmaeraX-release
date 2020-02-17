@@ -8,6 +8,7 @@ import ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 
 /**
  * If imported, automatically augments core data structures with convenience wrappers for tactic purposes
@@ -368,6 +369,24 @@ object Augmentors {
         if (fs != f) exhaustiveSubst(fs) else fs
       }
       exhaustiveSubst(e.elaborateToFunctions(subst.subsDefsInput.flatMap(s => StaticSemantics.signature(s.what)).toSet))
+    }
+
+    /** Lists all subpositions of expression `e`, categorized by their kind. */
+    def listSubPos: List[(Kind, PosInExpr)] = {
+      def collector(collected: ListBuffer[(Kind, PosInExpr)]): ExpressionTraversalFunction = new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = { collected.append((e.kind, p)); Left(None) }
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = { collected.append((e.kind, p)); Left(None) }
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = { collected.append((e.kind, p)); Left(None) }
+      }
+
+      val subPositions = ListBuffer.empty[(Kind, PosInExpr)]
+      e match {
+        case t: Term => ExpressionTraversal.traverse(collector(subPositions), t)
+        case f: Formula => ExpressionTraversal.traverse(collector(subPositions), f)
+        case p: Program => ExpressionTraversal.traverse(collector(subPositions), p)
+      }
+
+      subPositions.toList
     }
   }
 
