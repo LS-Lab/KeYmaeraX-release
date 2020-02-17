@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTravers
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -245,6 +246,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** padding such that at least lefts many formula in antecedent of pr by weakening */
+  @tailrec
   private def padLeft(vars : IndexedSeq[Variable], n : Int, pr: ProvableSig, lefts: Int): ProvableSig = {
     require(lefts>=0)
     if (pr.conclusion.ante.length >= lefts) pr
@@ -255,6 +257,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   }
 
   /** padding such that at least rights many formula in succedent of pr by weakening */
+  @tailrec
   private def padRight(vars : IndexedSeq[Variable], n : Int, pr: ProvableSig, rights: Int): ProvableSig = {
     require(rights>=0)
     if (pr.conclusion.succ.length >= rights) pr
@@ -264,8 +267,32 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     }
   }
 
+  /** Randomly generate a PosInExpr that is defined and of the expected kind in the given expression.
+    * @param kind What kind of subexpressions to collect.
+    *             `ExpressionKind` means any subterm/subformula/subprogram/...
+    * @ensures e.at(\result).isDefined && e.at(\result).get.kind==kind */
+  def nextSubPosition(e: Expression, kind: Kind): PosInExpr = {
+    val l: List[(Kind, PosInExpr)] = Augmentors.ExpressionAugmentor(e).listSubPos.
+      filter(k => kind==ExpressionKind || k._1==kind)
+    l(rand.nextInt(l.length))._2
+  }
+
+  /** Randomly generate a top-level SeqPos that is defined in the given sequent.
+    * @ensures seq(\result) throws no Exception */
+  def nextSeqPos(seq: Sequent): SeqPos = {
+    if (seq.ante.isEmpty && seq.succ.isEmpty)
+        throw new IllegalArgumentException("No defined positions in empty sequent")
+    val ant = if (seq.ante.isEmpty) false else if (seq.succ.isEmpty) true else rand.nextBoolean()
+    if (ant)
+      SeqPos(-1 - rand.nextInt(seq.ante.length))
+    else
+      SeqPos(1 + rand.nextInt(seq.succ.length))
+  }
+
+
   // closer to implementation-specific
 
+  /** Randomly generate some arbitrary position */
   def nextPosition(size : Int): Position = if (rand.nextBoolean())
     AntePosition.base0(rand.nextInt(size), PosInExpr(nextPos(size)))
   else

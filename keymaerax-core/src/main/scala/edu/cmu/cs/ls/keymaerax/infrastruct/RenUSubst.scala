@@ -21,10 +21,6 @@ object RenUSubst {
     URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky")) == ProgramConst("quarky")
   } catch { case e: RenamingClashException => false })*/
 
-  private[infrastruct] val TRANSPOSITION = try {
-    URename(Variable("quark"), Variable("quark", Some(5)))(Variable("quark", Some(5))) == Variable("quark")
-  } catch { case e: RenamingClashException => false }
-
   /** Create a renaming uniform substitution from the given list of replacements. */
   def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) /*: RenUSubst*/ =
   //if (semanticRenaming) new URenAboveUSubst(subsDefsInput) else
