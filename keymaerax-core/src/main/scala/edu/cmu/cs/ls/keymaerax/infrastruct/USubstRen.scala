@@ -44,11 +44,8 @@ final case class USubstRenChurch(private[infrastruct] val subsDefsInput: immutab
   /** include transpositions for renamings if need be */
   private def augmentTranspositions(rena: immutable.Map[Variable,Variable]): immutable.Map[Variable,Variable] = {
     insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed in cyclic ways again: " + this)
-    if (USubstRenChurch.TRANSPOSITION)
       rena ++ (rena.map(sp => sp._2->sp._1))
-    else
-      rena
-  } ensures( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
+  } ensures( r => rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
 
   /** the ApplicationOf subset of subs with matching heads */
   private val matchHeads: immutable.Map[Function,(ApplicationOf,Expression)] =

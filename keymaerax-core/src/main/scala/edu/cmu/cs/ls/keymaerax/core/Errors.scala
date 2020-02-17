@@ -54,13 +54,13 @@ class CriticalCoreException(msg: String) extends CoreException(msg)
 
 
 /** Exceptions that arise from trying to substitute a subderivation in for a subgoal that does not equal the conclusion of the subderivation.
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.Provable,Int)]] */
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(rule:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable,subgoal:edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable\.Subgoal):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]] */
 case class SubderivationSubstitutionException(subderivation: String/*Provable*/, conclusion: String, subgoal: String/*Sequent*/, subgoalid: Int, provable: String/*Provable*/)
   extends CriticalCoreException("Subderivation substitution for subgoal does not fit to the subderivation's conclusion.\nsubderivation " + subderivation + "\nconclude: " + conclusion + "\nexpected: " + subgoal + " @" + subgoalid + " into\n" + provable)
 
 /** Substitution clashes are raised for unsound substitution reasoning attempts.
   * @see [[USubstOne]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubstChurch)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(subst:edu\.cmu\.cs\.ls\.keymaerax\.core\.USubstChurch):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   */
 case class SubstitutionClashException(subst: String/*USubst*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
   extends CriticalCoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info)
@@ -69,7 +69,7 @@ case class SubstitutionClashException(subst: String/*USubst*/, U: String/*SetLat
   * @see [[BoundRenaming]]
   * @see [[UniformRenaming]]
   * @see [[URename]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable!.apply(edu.cmu.cs.ls.keymaerax.core.URename)]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   */
 case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "")
   extends CriticalCoreException(msg + "\nRenaming " + e + " via " + ren + "\nin " + info)

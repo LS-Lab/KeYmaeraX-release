@@ -14,10 +14,11 @@ import scala.collection.immutable
   * for all (what,repl) in renames.
   *
   * Performs semantic renaming, i.e. leaves program constants etc. unmodified.
+  * @param semantic `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   */
-final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (Expression => Expression) {
+final case class MultiRename(rens: immutable.Seq[(Variable,Variable)], semantic: Boolean = true) extends (Expression => Expression) {
   insist(rens.forall(sp => sp._1.sort == sp._2.sort), "Uniform renaming only to variables of the same sort: " + this)
   insist({val repls = rens.map(sp=>sp._1).toList; repls.length == repls.distinct.length}, "No contradictory or duplicate renamings: " + this)
   /** filtered without identity renaming */
@@ -25,14 +26,8 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed yet again: " + this)
   /** including transpositions */
   private val renaming: immutable.Map[Variable,Variable] = {
-    if (USubstRenChurch.TRANSPOSITION)
-      rena ++ (rena.map(sp => (sp._2,sp._1)))
-    else
-      rena
-  } ensures( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
-
-  /** `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead. */
-  private val semanticRenaming: Boolean = true
+      rena ++ rena.map(sp => (sp._2,sp._1))
+  } ensures( r => rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
 
   override def toString: String = "MultiRename{" + rens.map(sp => sp._1.toString + "~>" + sp._2).mkString(", ") + "}"
 
@@ -93,21 +88,28 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   // implementation
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
-  private def renameVar(x: Variable, context: Expression): Variable = renaming.get(x) match {
+  private def renVar(x: Variable): Variable = renaming.get(x) match {
     case Some(repl) => repl
     case None => x match {
-      case DifferentialSymbol(y) => DifferentialSymbol(renameVar(y, context))
+      case DifferentialSymbol(y) => DifferentialSymbol(renVar(y))
       case _ => x
     }
   }
 
+  /** Rename taboo variable (and/or differential symbol) in the given space. */
+  private def renSpace(space: Space): Space = space match {
+    case AnyArg        => AnyArg
+    case Except(taboo) => Except(renVar(taboo))
+  }
+
 
   private def rename(term: Term): Term = term match {
-    case x: Variable                      => renameVar(x, term)
+    case x: Variable                      => renVar(x)
     case n: Number                        => n
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
     case Nothing | DotTerm(_, _)          => term
-    case _: UnitFunctional                => if (semanticRenaming) term else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
+    case UnitFunctional(f,sp,s)           => if (semantic) UnitFunctional(f,renSpace(sp),s)
+    else throw RenamingClashException("Cannot replace semantic dependencies syntactically: UnitFunctional " + term, this.toString, term.toString)
     // homomorphic cases
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeTerm => f.reapply(rename(f.left), rename(f.right))
@@ -124,9 +126,9 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
 
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta)   => PredOf(p, rename(theta))
-    case PredicationalOf(c, fml) => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
-    case DotFormula         => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
-    case _: UnitPredicational => if (semanticRenaming) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case PredicationalOf(c, fml) => if (semantic) formula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case DotFormula         => if (semantic) DotFormula else throw RenamingClashException("Cannot replace semantic dependencies syntactically: DotFormula " + formula, this.toString, formula.toString)
+    case UnitPredicational(p,sp) => if (semantic) UnitPredicational(p,renSpace(sp)) else throw RenamingClashException("Cannot replace semantic dependencies syntactically: UnitPredicational " + formula, this.toString, formula.toString)
     case True | False       => formula
 
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
@@ -150,18 +152,18 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
     // NOTE DifferentialFormula in analogy to Differential
     case DifferentialFormula(g) => DifferentialFormula(rename(g))
 
-    case Forall(vars, g) => Forall(vars.map(x => renameVar(x,formula)), rename(g))
-    case Exists(vars, g) => Exists(vars.map(x => renameVar(x,formula)), rename(g))
+    case Forall(vars, g) => Forall(vars.map(renVar), rename(g))
+    case Exists(vars, g) => Exists(vars.map(renVar), rename(g))
 
     case Box(p, g)       => Box(rename(p), rename(g))
     case Diamond(p, g)   => Diamond(rename(p), rename(g))
   }
 
   private def rename(program: Program): Program = program match {
-    case a: ProgramConst             => if (semanticRenaming) program else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
-    case a: SystemConst              => if (semanticRenaming) program else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: SystemConstant " + a, this.toString, program.toString)
-    case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
-    case AssignAny(x)                => AssignAny(renameVar(x,program))
+    case ProgramConst(a,sp)          => if (semantic) ProgramConst(a,renSpace(sp)) else throw RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
+    case SystemConst(a,sp)           => if (semantic) SystemConst(a,renSpace(sp)) else throw RenamingClashException("Cannot replace semantic dependencies syntactically: SystemConstant " + a, this.toString, program.toString)
+    case Assign(x, e)                => Assign(renVar(x), rename(e))
+    case AssignAny(x)                => AssignAny(renVar(x))
     case Test(f)                     => Test(rename(f))
     case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))
     //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
@@ -175,8 +177,8 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   }
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
-    case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
-    case c: DifferentialProgramConst => if (semanticRenaming) ode else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)
+    case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renVar(x)), rename(e))
+    case DifferentialProgramConst(c,sp) => if (semantic) DifferentialProgramConst(c,renSpace(sp)) else throw RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + ode, this.toString, ode.toString)
     // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
   }

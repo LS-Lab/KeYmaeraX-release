@@ -39,7 +39,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
            ProgramConst(_, _) | SystemConst(_, _) | DifferentialProgramConst(_, _) => bottom
-      case PredicationalOf(_, _) => throw new CoreException("Nonsubstitutable expression " + this)
+      case PredicationalOf(_, _) => throw SubstitutionClashException(toString, "<none>", what.toString, repl.toString, "Nonsubstitutable expression")
     }
     case _ => StaticSemantics.freeVars(repl)
   }
@@ -58,7 +58,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
     case PredicationalOf(lf, arg) =>
       //assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
       other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
-    case _ => assert(false, "sameHead only used for ApplicationOf"); false
+    case _ => throw new AssertionError("sameHead only used for ApplicationOf")
   }
 
 }
@@ -95,11 +95,8 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   /** include transpositions for renamings if need be */
   private def augmentTranspositions(rena: immutable.Map[Variable,Variable]): immutable.Map[Variable,Variable] = {
     insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed in cyclic ways again: " + this)
-    if (USubstRenChurch.TRANSPOSITION)
-      rena ++ (rena.map(sp => sp._2->sp._1))
-    else
-      rena
-  } ensures( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
+      rena ++ rena.map(sp => sp._2->sp._1)
+  } ensures( r => rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
 
   /** The ApplicationOf subset of substitutions represented as map matching head~>URenSubstitutionPair. */
   private val matchHeads: immutable.Map[Function,URenSubstitutionPair] =
@@ -107,8 +104,6 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       sp =>
         (sp._2.what.asInstanceOf[ApplicationOf].func, sp._2)
       )
-
-  //if (BelleExpr.DEBUG) println("DOING " + this + "  with  rens=" + rens.map(sp => sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(",") + "  subs=" + subs.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(",") + "  heads=" + matchHeads)
 
   //@todo check for substitutable expressions like in USubst
 
@@ -166,12 +161,18 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   // implementation
 
   /** Rename a variable */
-  private def renameVar(x: Variable): Variable = rens.get(x) match {
+  private def renVar(x: Variable): Variable = rens.get(x) match {
     case Some(repl) => repl
     case None => x match {
-      case DifferentialSymbol(y) => DifferentialSymbol(renameVar(y))
+      case DifferentialSymbol(y) => DifferentialSymbol(renVar(y))
       case _ => x
     }
+  }
+
+  /** Rename taboo variable (and/or differential symbol) in the given space. */
+  private def renSpace(space: Space): Space = space match {
+    case AnyArg        => AnyArg
+    case Except(taboo) => Except(renVar(taboo))
   }
 
   // implementation of uniform substitution application
@@ -180,8 +181,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   private def usubst(u: SetLattice[Variable], term: Term): Term = {
     term match {
       // uniform substitution base cases
-      case x: Variable => renameVar(x)
-//      case DifferentialSymbol(x) => DifferentialSymbol(renameVar(x, term))
+      case x: Variable => renVar(x)
       case app@FuncOf(f, theta) => matchHeads.get(f) match {
         case Some(subs) =>
           val FuncOf(wf, wArg) = subs.what
@@ -205,10 +205,11 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case Times(l, r)  => Times(usubst(u, l),  usubst(u, r))
       case Divide(l, r) => Divide(usubst(u, l), usubst(u, r))
       case Power(l, r)  => Power(usubst(u, l),  usubst(u, r))
-      case der@Differential(e) => Differential(usubst(allVars, e))
+      case Differential(e) => Differential(usubst(allVars, e))
       // unofficial
       case Pair(l, r)   => Pair(usubst(u, l), usubst(u, r))
       case f: UnitFunctional => subsDefs.getOrElse(f, URenSubstitutionPair(f,f)).repl.asInstanceOf[Term]
+      //@todo case fun@UnitFunctional(f,sp,s) => subsDefs.getOrElse(fun, URenSubstitutionPair(fun,UnitFunctional(f,renSpace(sp),s))).repl.asInstanceOf[Term]
     }
   }
 
@@ -260,21 +261,29 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case Equiv(l, r) => Equiv(usubst(u, l), usubst(u, r))
 
       // NOTE DifferentialFormula in analogy to Differential
-      case der@DifferentialFormula(g) => DifferentialFormula(usubst(allVars, g))
+      case DifferentialFormula(g) => DifferentialFormula(usubst(allVars, g))
 
       // binding cases add bound variables to u
-      case Forall(vars, g) => val renv=vars.map(x => renameVar(x)); Forall(renv, usubst(u++renv, g))
-      case Exists(vars, g) => val renv=vars.map(x => renameVar(x)); Exists(renv, usubst(u++renv, g))
+      case Forall(vars, g) => val renv=vars.map(renVar); Forall(renv, usubst(u++renv, g))
+      case Exists(vars, g) => val renv=vars.map(renVar); Exists(renv, usubst(u++renv, g))
 
       case Box(p, g)       => val (v,rp) = usubst(u,p); Box(rp, usubst(v,g))
       case Diamond(p, g)   => val (v,rp) = usubst(u,p); Diamond(rp, usubst(v,g))
       case p: UnitPredicational => subsDefs.getOrElse(p, URenSubstitutionPair(p,p)).repl.asInstanceOf[Formula]
+      //@todo case pred@UnitPredicational(p,sp) => subsDefs.getOrElse(pred, URenSubstitutionPair(pred,UnitPredicational(p,renSpace(sp)))).repl.asInstanceOf[Formula]
     }
   }
 
   /** uniform substitution on programs */
   private def usubst(u: SetLattice[Variable], program: Program): (SetLattice[Variable],Program)  = {
     program match {
+//@todo      case ap@ProgramConst(a,sp) =>
+//        val r = subsDefs.getOrElse(ap, URenSubstitutionPair(ap,ProgramConst(a,renSpace(sp)))).repl.asInstanceOf[Program]
+//        (u++boundVars(r), r)
+//      //@todo optimizable: store boundVars(ProgramConst/SystemConst/DifferentialProgramConst) in substitution pair
+//      case ap@SystemConst(a,sp) =>
+//        val r = subsDefs.getOrElse(ap, URenSubstitutionPair(ap,SystemConst(a,renSpace(sp)))).repl.asInstanceOf[Program]
+//        (u++boundVars(r), r)
       case a: ProgramConst =>
         val r = subsDefs.getOrElse(a, URenSubstitutionPair(a,a)).repl.asInstanceOf[Program]
         (u++boundVars(r), r)
@@ -282,8 +291,8 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case a: SystemConst =>
         val r = subsDefs.getOrElse(a, URenSubstitutionPair(a,a)).repl.asInstanceOf[Program]
         (u++boundVars(r), r)
-      case Assign(x, e)      => val rx=renameVar(x); (u+rx, Assign(rx, usubst(u,e)))
-      case AssignAny(x)      => val rx=renameVar(x); (u+rx, AssignAny(rx))
+      case Assign(x, e)      => val rx=renVar(x); (u+rx, Assign(rx, usubst(u,e)))
+      case AssignAny(x)      => val rx=renVar(x); (u+rx, AssignAny(rx))
       case Test(f)           => (u, Test(usubst(u,f)))
       case ODESystem(ode, h) =>
         //@todo improve: could make smaller for substituted DifferentialProgramConst
@@ -295,7 +304,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       //case Loop(a) if!optima => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
       case Loop(a)           => val v = u++substBoundVars(a); val (w,ra) = usubst(v,a);
         // redundant: check result of substBoundVars for equality to make it not soundness-critical
-        if (v==w) (v, Loop(ra)) else {val (_,rb) = usubst(w, a); (w, Loop(rb))}
+        (v, Loop(ra))  //if (v==w) (v, Loop(ra)) else {val (_,rb) = usubst(w, a); (w, Loop(rb))}
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
     }
   }
@@ -306,9 +315,10 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
     ode match {
       case AtomicODE(DifferentialSymbol(x), e) =>
         //assert(v.contains(DifferentialSymbol(x)) && v.contains(x), "all bound variables already added to ODE taboos")
-        AtomicODE(DifferentialSymbol(renameVar(x)), usubst(v, e))
+        AtomicODE(DifferentialSymbol(renVar(x)), usubst(v, e))
       //@note Space compliance will be checked in SubstitutionPair construction.
       case c: DifferentialProgramConst => subsDefs.getOrElse(c, URenSubstitutionPair(c,c)).repl.asInstanceOf[DifferentialProgram]
+      //@todo case cp@DifferentialProgramConst(c,sp) => subsDefs.getOrElse(cp, URenSubstitutionPair(cp,DifferentialProgramConst(c,renSpace(sp)))).repl.asInstanceOf[DifferentialProgram]
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(v, a), usubstODE(v, b))
     }
@@ -335,7 +345,8 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   // optimization
 
   /** Predict bound variables of this(program), whether substitution clashes or not.
-    * @note Not soundness-critical as result checked by inclusion for other usubst round */
+    * The result predicts changes due to renaming of variables.
+    * @note Not soundness-critical as result can be checked by inclusion for other usubst round */
   private def substBoundVars(program: Program): SetLattice[Variable] = {
     program match {
       // base cases
@@ -343,18 +354,18 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case a: ProgramConst             => if (subsDefs.contains(a))
         StaticSemantics.boundVars(subsDefs(a).repl.asInstanceOf[Program])
       else
-        StaticSemantics.spaceVars(a.space)
+        StaticSemantics.spaceVars(renSpace(a.space))
       case a: SystemConst              => if (subsDefs.contains(a))
         StaticSemantics.boundVars(subsDefs(a).repl.asInstanceOf[Program])
       else
-        allVars
+        StaticSemantics.spaceVars(renSpace(a.space))
       case c: DifferentialProgramConst => if (subsDefs.contains(c))
         StaticSemantics.boundVars(subsDefs(c).repl.asInstanceOf[DifferentialProgram])
       else
-        StaticSemantics.spaceVars(c.space)
-      case Assign(x, e)                => SetLattice(x)
+        StaticSemantics.spaceVars(renSpace(c.space))
+      case Assign(x, e)                => SetLattice(renVar(x))
       case Test(f)                     => bottom
-      case AtomicODE(xp@DifferentialSymbol(x), e) => SetLattice(Set(x,xp))
+      case AtomicODE(DifferentialSymbol(x), e) => val y=renVar(x); SetLattice(Set(y,DifferentialSymbol(y)))
       // combinator cases
       case Choice(a, b)                => substBoundVars(a) ++ substBoundVars(b)
       case Compose(a, b)               => substBoundVars(a) ++ substBoundVars(b)
@@ -363,7 +374,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
 
       // special cases
       //@note x:=* in analogy to x:=e
-      case AssignAny(x)                => SetLattice(x)
+      case AssignAny(x)                => SetLattice(renVar(x))
       //@note system generalization of x'=e&h
       case ODESystem(a, h)             => substBoundVars(a)
       case DifferentialProduct(a, b)   => substBoundVars(a) ++ substBoundVars(b)
