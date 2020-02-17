@@ -209,6 +209,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       // unofficial
       case Pair(l, r)   => Pair(usubst(u, l), usubst(u, r))
       case f: UnitFunctional => subsDefs.getOrElse(f, URenSubstitutionPair(f,f)).repl.asInstanceOf[Term]
+      //@todo case fun@UnitFunctional(f,sp,s) => subsDefs.getOrElse(fun, URenSubstitutionPair(fun,UnitFunctional(f,renSpace(sp),s))).repl.asInstanceOf[Term]
     }
   }
 
@@ -269,12 +270,20 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case Box(p, g)       => val (v,rp) = usubst(u,p); Box(rp, usubst(v,g))
       case Diamond(p, g)   => val (v,rp) = usubst(u,p); Diamond(rp, usubst(v,g))
       case p: UnitPredicational => subsDefs.getOrElse(p, URenSubstitutionPair(p,p)).repl.asInstanceOf[Formula]
+      //@todo case pred@UnitPredicational(p,sp) => subsDefs.getOrElse(pred, URenSubstitutionPair(pred,UnitPredicational(p,renSpace(sp)))).repl.asInstanceOf[Formula]
     }
   }
 
   /** uniform substitution on programs */
   private def usubst(u: SetLattice[Variable], program: Program): (SetLattice[Variable],Program)  = {
     program match {
+//@todo      case ap@ProgramConst(a,sp) =>
+//        val r = subsDefs.getOrElse(ap, URenSubstitutionPair(ap,ProgramConst(a,renSpace(sp)))).repl.asInstanceOf[Program]
+//        (u++boundVars(r), r)
+//      //@todo optimizable: store boundVars(ProgramConst/SystemConst/DifferentialProgramConst) in substitution pair
+//      case ap@SystemConst(a,sp) =>
+//        val r = subsDefs.getOrElse(ap, URenSubstitutionPair(ap,SystemConst(a,renSpace(sp)))).repl.asInstanceOf[Program]
+//        (u++boundVars(r), r)
       case a: ProgramConst =>
         val r = subsDefs.getOrElse(a, URenSubstitutionPair(a,a)).repl.asInstanceOf[Program]
         (u++boundVars(r), r)
@@ -309,6 +318,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
         AtomicODE(DifferentialSymbol(renVar(x)), usubst(v, e))
       //@note Space compliance will be checked in SubstitutionPair construction.
       case c: DifferentialProgramConst => subsDefs.getOrElse(c, URenSubstitutionPair(c,c)).repl.asInstanceOf[DifferentialProgram]
+      //@todo case cp@DifferentialProgramConst(c,sp) => subsDefs.getOrElse(cp, URenSubstitutionPair(cp,DifferentialProgramConst(c,renSpace(sp)))).repl.asInstanceOf[DifferentialProgram]
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(v, a), usubstODE(v, b))
     }
@@ -335,9 +345,8 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   // optimization
 
   /** Predict bound variables of this(program), whether substitution clashes or not.
-    * @note Not soundness-critical as result checked by inclusion for other usubst round */
-  /** Predict bound variables of this(program), whether substitution clashes or not.
-    * @note Not soundness-critical as result checked by inclusion for other usubst round */
+    * The result predicts changes due to renaming of variables.
+    * @note Not soundness-critical as result can be checked by inclusion for other usubst round */
   private def substBoundVars(program: Program): SetLattice[Variable] = {
     program match {
       // base cases
@@ -345,18 +354,18 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
       case a: ProgramConst             => if (subsDefs.contains(a))
         StaticSemantics.boundVars(subsDefs(a).repl.asInstanceOf[Program])
       else
-        StaticSemantics.spaceVars(a.space)
+        StaticSemantics.spaceVars(renSpace(a.space))
       case a: SystemConst              => if (subsDefs.contains(a))
         StaticSemantics.boundVars(subsDefs(a).repl.asInstanceOf[Program])
       else
-        allVars
+        StaticSemantics.spaceVars(renSpace(a.space))
       case c: DifferentialProgramConst => if (subsDefs.contains(c))
         StaticSemantics.boundVars(subsDefs(c).repl.asInstanceOf[DifferentialProgram])
       else
-        StaticSemantics.spaceVars(c.space)
-      case Assign(x, e)                => SetLattice(x)
+        StaticSemantics.spaceVars(renSpace(c.space))
+      case Assign(x, e)                => SetLattice(renVar(x))
       case Test(f)                     => bottom
-      case AtomicODE(xp@DifferentialSymbol(x), e) => SetLattice(Set(x,xp))
+      case AtomicODE(DifferentialSymbol(x), e) => val y=renVar(x); SetLattice(Set(y,DifferentialSymbol(y)))
       // combinator cases
       case Choice(a, b)                => substBoundVars(a) ++ substBoundVars(b)
       case Compose(a, b)               => substBoundVars(a) ++ substBoundVars(b)
@@ -365,7 +374,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
 
       // special cases
       //@note x:=* in analogy to x:=e
-      case AssignAny(x)                => SetLattice(x)
+      case AssignAny(x)                => SetLattice(renVar(x))
       //@note system generalization of x'=e&h
       case ODESystem(a, h)             => substBoundVars(a)
       case DifferentialProduct(a, b)   => substBoundVars(a) ++ substBoundVars(b)
