@@ -12,50 +12,46 @@ trait MathematicaOpSpec {
   /** The operator symbol */
   def op: Expr
 
-  /**
-    * Whether e is `thing` or starts with head `thing`.
-    * @return True if `e` and `thing` are equal; false otherwise.
-    */
-  //@todo spell out directly in applies
-  def hasHead(e: Expr, thing: Expr): Boolean = e == thing || e.head == thing
+  /** Indicates whether this operator can be applied to Mathematica expression `e`. */
+  def applies(e: Expr): Boolean
 }
 
 /** Math literals. */
 case class LiteralMathOpSpec(op: Expr) extends MathematicaOpSpec {
-  /** Indicates whether Mathematica expression `e` fits this operator. */
-  def applies(e: Expr): Boolean = hasHead(e, op)
+  /** @inheritdoc */
+  override def applies(e: Expr): Boolean = e == op
 }
 
 /** Unary Math operators. */
 case class UnaryMathOpSpec(op: Expr) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with argument `e`. */
   def apply(e: Expr): Expr = new Expr(op, Array[Expr](e))
-  /** Indicates whether Mathematica expression `e` fits this operator. */
-  def applies(e: Expr): Boolean = hasHead(e, op)
+  /** @inheritdoc */
+  override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** Binary Math operators. */
 case class BinaryMathOpSpec(op: Expr) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with argument `e`. */
   def apply(l: Expr, r: Expr): Expr = new Expr(op, Array[Expr](l, r))
-  /** Indicates whether Mathematica expression `e` fits this operator. */
-  def applies(e: Expr): Boolean = hasHead(e, op)
+  /** @inheritdoc */
+  override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** Nary Math operators. */
 case class NaryMathOpSpec(op: Expr) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with argument `e`. */
   def apply(args: Expr*): Expr = new Expr(op, args.toArray)
-  /** Indicates whether Mathematica expression `e` fits this operator. */
-  def applies(e: Expr): Boolean = hasHead(e, op)
+  /** @inheritdoc */
+  override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** Quantifier Math operators. */
 case class QuantifiedMathOpSpec(op: Expr) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with quantified variables `vars` and formula `q`. */
   def apply(vars: Array[Expr], q: Expr): Expr = new Expr(op, Array[Expr](MathematicaOpSpec.list(vars:_*), q))
-  /** Indicates whether Mathematica expression `e` fits this operator. */
-  def applies(e: Expr): Boolean = hasHead(e, op)
+  /** @inheritdoc */
+  override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** [[NamedSymbol]] operators, with `k2m` converter {{{(name, args) => Expr}}}. */
@@ -67,28 +63,12 @@ case class NameMathOpSpec(k2m: (NamedSymbol, Array[Expr]) => Expr, applies: Expr
 case class InterpretedMathOpSpec(op: Expr, fn: Function) extends MathematicaOpSpec {
   /** Creates a Mathematica expression with head `op` and arguments `args`. */
   def apply(args: Array[Expr]): Expr = new Expr(op, args)
-  /** Indicates whether Mathematica expression `e` fits this operator. */
-  def applies(e: Expr): Boolean = hasHead(e, op)
+  /** @inheritdoc */
+  override def applies(e: Expr): Boolean = e.head == op
 }
 
 /** Mathematica operator specifications with conversions. */
 object MathematicaOpSpec {
-
-  /** Keywords, not to convert as functions or variables.  */
-  private val keywords: Seq[String] = Seq(
-    // terms
-    "Minus", "Plus", "Subtract", "Times", "Divide", "Rational", "Power",
-    // comparisons
-    "Equal", "Unequal", "Less", "LessEqual", "Greater", "GreaterEqual", "Inequality",
-    // formulas
-    "False", "True", "Not", "And", "Or", "Implies", "Equivalent", "ForAll", "Exists",
-    // rest
-    "InverseFunction", "Integrate", "Rule", "List", "Reduce", "Reals")
-
-  /** Indicates whether the expression `e` is a keyword. */
-  //@todo should never happen in back-conversion (all our names are prefixed with kyx`)
-  def isNonKeywordSymbol(e: Expr): Boolean =
-    (e.head().symbolQ() && !keywords.contains(e.head().toString)) || (e.symbolQ() && !keywords.contains(e.toString))
 
   //<editor-fold desc="Basic data structures">
 
@@ -113,8 +93,7 @@ object MathematicaOpSpec {
   val list = NaryMathOpSpec(Expr.SYM_LIST)
 
   /** Mathematica function application f(args). */
-  //@todo avoid variable arguments
-  def apply(f: Expr): (Expr*) => Expr = (args: Seq[Expr]) => new Expr(f, args.toArray)
+  def apply(f: Expr): Seq[Expr] => Expr = (args: Seq[Expr]) => new Expr(f, args.toArray)
 
   //</editor-fold>
 
@@ -134,13 +113,18 @@ object MathematicaOpSpec {
 
   val power: BinaryMathOpSpec = BinaryMathOpSpec(symbol("Power"))
 
+  // implicit function application name[args]
   val func: NameMathOpSpec = NameMathOpSpec(
     (name: NamedSymbol, args: Array[Expr]) => {
       require(args.length <= 2, "Functions expected to have at most 2 arguments (nothing, single argument, or converted pair)")
       new Expr(MathematicaNameConversion.toMathematica(name), args)
     },
-    e => e.head.symbolQ() && e.args().length <= 2
+    e => MathematicaNameConversion.isConvertibleName(e.head) && e.args().length <= 2
   )
+  // explicit function application Apply[name, args]
+  val mapply: NaryMathOpSpec = new NaryMathOpSpec(symbol("Apply")) {
+    override def applies(e: Expr): Boolean = super.applies(e) && MathematicaNameConversion.isConvertibleName(e.args.head)
+  }
 
   val abs: InterpretedMathOpSpec = InterpretedMathOpSpec(symbol("Abs"), Function("abs", None, Real, Real, interpreted=true))
 
@@ -153,12 +137,12 @@ object MathematicaOpSpec {
       require(args.isEmpty, "Unexpected arguments")
       MathematicaNameConversion.toMathematica(name)
     },
-    _.symbolQ()
+    MathematicaNameConversion.isConvertibleName
   )
 
   val pair: BinaryMathOpSpec = new BinaryMathOpSpec(Expr.SYM_LIST) {
     //@note inherited apply gets pairs as lists of length 2 each
-    override def applies(e: Expr): Boolean = e.listQ
+    override def applies(e: Expr): Boolean = e.listQ && e.args().length == 2
   }
 
   //</editor-fold>

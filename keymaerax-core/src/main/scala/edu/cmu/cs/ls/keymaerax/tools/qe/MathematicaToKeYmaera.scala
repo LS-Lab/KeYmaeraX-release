@@ -79,10 +79,13 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     // Pairs
     else if (MathematicaOpSpec.pair.applies(e)) convertList(e)
 
-    // Functions and Variables. This case intentionally comes last, so that it doesn't match
-    // keywords that were not declared correctly in MathematicaOpSpec (should be none)
-    //@todo move to extended converter
-    else if (MathematicaOpSpec.isNonKeywordSymbol(e)) convertAtomicTerm(e)
+    // Variables and function symbols
+    else if (MathematicaOpSpec.variable.applies(e)) convertAtomicTerm(e)
+    else if (MathematicaOpSpec.func.applies(e)) convertAtomicTerm(e)
+    else if (MathematicaOpSpec.mapply.applies(e)) convertAtomicTerm(e)
+    else if (MathematicaOpSpec.abs.applies(e)) convertAtomicTerm(e)
+    else if (MathematicaOpSpec.min.applies(e)) convertAtomicTerm(e)
+    else if (MathematicaOpSpec.max.applies(e)) convertAtomicTerm(e)
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
     else throw new ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
@@ -148,10 +151,10 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   }
 
   /** Converts an atomic term (either interpreted/uninterpreted function symbol or variable). */
-  //@todo remove
   protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
     case Some(fn) => convertFunction(fn, e.args())
     case None =>
+      //@note insists on [[MathematicaNameConversion.NAMESPACE_PREFIX]] to avoid clash with Mathematica names
       MathematicaNameConversion.toKeYmaera(e) match {
         case fn: Function =>
           insist(!fn.interpreted, "Expected uninterpreted function symbol, but got interpreted " + fn)
@@ -174,7 +177,7 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
       require(exprs.length % 2 == 1, "Expected pairs of expressions separated by operators")
       if (exprs.length == 1) Nil
       //@note Instead of importing from a newly created Mathematica expression, could also copy the comparison conversion again
-      else importResult(MathematicaOpSpec(exprs(1))(exprs(0), exprs(2)), convert).asInstanceOf[ComparisonFormula] ::
+      else importResult(MathematicaOpSpec(exprs(1))(exprs(0) :: exprs(2) :: Nil), convert).asInstanceOf[ComparisonFormula] ::
         // keep right-child exprs(2) around because that's the left-child for the subsequent inequality if any
         extractInequalities(exprs.tail.tail)
     }

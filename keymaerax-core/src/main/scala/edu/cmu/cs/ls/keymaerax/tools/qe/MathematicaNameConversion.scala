@@ -18,6 +18,9 @@ private[tools] object MathematicaNameConversion {
   private val INDEX_SEP        = "$i$"
   private val UNDERSCORE_REPL  = "$u$"
 
+  /** Indicates whether `e` is a name convertible to a KeYmaera X variable or function symbol. */
+  def isConvertibleName(e: MExpr): Boolean = e.symbolQ && e.asString.startsWith(NAMESPACE_PREFIX)
+
   /**
     * Converts a KeYmaera name into a Mathematica symbol. Masks names as follows:
     * {{{
@@ -35,7 +38,7 @@ private[tools] object MathematicaNameConversion {
       case _ => maskName(ns)
     }
     MathematicaOpSpec.symbol(name)
-  } ensures (r => r.symbolQ(), "symbol names expected as result")
+  } ensures (r => isConvertibleName(r), "Symbol names expected as result")
 
   /**
     * Converts a Mathematica name into its corresponding KeYmaera X named symbol (Variable or Function). Distinguishes
@@ -50,21 +53,22 @@ private[tools] object MathematicaNameConversion {
     * @note Refuses to convert interpreted function symbols (i.e., any name not prefixed with kyx)
     */
   def toKeYmaera(e: MExpr): NamedSymbol = {
-    if (e.symbolQ()) {
-      val (name, index) = unmaskName(e.asString())
+    if (e.symbolQ) {
+      val (name, index) = unmaskName(e.asString)
       Variable(name, index, Real)
     } else {
-      val (name, index) = unmaskName(e.head().asString())
-      val fnDomain = convertFunctionDomain(e.args())
+      val (name, index) = unmaskName(e.head.asString)
+      val fnDomain = convertFunctionDomain(e.args)
       Function(name, index, fnDomain, Real, interpreted = false)
     }
   }
 
   /** Converts a nested list of arguments into nested tuples of reals */
   private def convertFunctionDomain(arg: MExpr): Sort = {
-    if (arg.listQ()) {
-      assert(arg.args().length == 2, "Pair arguments have been turned into lists of length 2")
-      Tuple(convertFunctionDomain(arg.args()(0)), convertFunctionDomain(arg.args()(1)))
+    if (arg.listQ) {
+      assert(arg.args.length == 2, "Pair arguments have been turned into lists of length 2")
+      val theArgs = arg.args
+      Tuple(convertFunctionDomain(theArgs(0)), convertFunctionDomain(theArgs(1)))
     } else {
       Real
     }

@@ -615,7 +615,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
     // init[n_] := Map[List[#]&, FindInstance[a>=..., {a, ...}, Reals, n]] as pure function
     val init =
       ExtMathematicaOpSpec.setDelayed(
-        MathematicaOpSpec.symbol("init"),
+        MathematicaOpSpec.symbol("kyx`init"),
         ExtMathematicaOpSpec.function(
           ExtMathematicaOpSpec.map(
             ExtMathematicaOpSpec.function(MathematicaOpSpec.list(ExtMathematicaOpSpec.placeholder.op)),
@@ -641,7 +641,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
       )).toArray
 
     val step = ExtMathematicaOpSpec.setDelayed(
-        MathematicaOpSpec.symbol("step"),
+        MathematicaOpSpec.symbol("kyx`step"),
         ExtMathematicaOpSpec.function(
           ExtMathematicaOpSpec.module(
             MathematicaOpSpec.list(stepModuleInit:_*),
@@ -659,14 +659,14 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         ExtMathematicaOpSpec.function(
           ExtMathematicaOpSpec.n(
             ExtMathematicaOpSpec.nestList(
-              MathematicaOpSpec.symbol("step"),
+              MathematicaOpSpec.symbol("kyx`step"),
               ExtMathematicaOpSpec.placeholder.op,
               MathematicaOpSpec.int(steps)
             )
           )
         ),
-        ExtMathematicaOpSpec.apply(
-          MathematicaOpSpec.symbol("init"),
+        MathematicaOpSpec.mapply(
+          MathematicaOpSpec.symbol("kyx`init"),
           MathematicaOpSpec.list(MathematicaOpSpec.int(n))
         )
       )
