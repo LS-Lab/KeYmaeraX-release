@@ -7,8 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext._
-import edu.cmu.cs.ls.keymaerax.tools.install.{PolyaInstaller, Z3Installer}
-import edu.cmu.cs.ls.keymaerax.tools.qe.Polya
+import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
 import org.apache.logging.log4j.scala.Logging
 
 
@@ -206,14 +205,6 @@ class MultiToolProvider(providers: List[ToolProvider]) extends PreferredToolProv
   // wolfram tool providers know alternative names to supply named tools
   override def qeTool(name: Option[String]): Option[QETacticTool] = providers.flatMap(_.qeTool(name)).headOption
   override def invGenTool(name: Option[String]): Option[InvGenTool] = providers.flatMap(_.invGenTool(name)).headOption
-}
-
-/** A tool provider that provides Polya as a QE tool, everything else is None.
-  * @author Stefan Mitsch
-  */
-class PolyaToolProvider extends PreferredToolProvider({
-    val p = new Polya; p.init(Map("polyaPath" -> PolyaInstaller.polyaPath)); p :: Nil}) {
-  def tool(): Polya = tools().head.asInstanceOf[Polya]
 }
 
 /** Base class for Wolfram tools with alternative names. */

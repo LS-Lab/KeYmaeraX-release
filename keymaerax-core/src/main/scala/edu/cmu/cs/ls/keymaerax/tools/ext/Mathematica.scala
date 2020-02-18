@@ -108,12 +108,10 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
         val cex = try {
           mCEX.findCounterExample(stripUniversalClosure(formula))
         } catch {
-          case _: MathematicaComputationAbortedException => None
-          case _: MathematicaComputationFailedException => None
-          case _: ToolException => None
-          case ex: MathematicaComputationExternalAbortException =>
+          case ex: MathematicaComputationUserAbortException =>
             //@note external abort means do not try any further
             throw ex
+          case _: ToolException => None
         }
         cex match {
           case None =>
@@ -123,7 +121,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
             ProvableSig.startProof(False),
             ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(",")))  :: Nil)
         }
-      case ex: MathematicaComputationExternalAbortException => throw ex
+      case ex: MathematicaComputationUserAbortException => throw ex
     }
   }
 
@@ -132,7 +130,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   private def stripUniversalClosure(fml: Formula): Formula = fml match {
     case f: Imply => f
     case Forall(_, f) => stripUniversalClosure(f)
-    case f => throw new IllegalArgumentException("Expected shape \\forall x (p(x) -> q(x)), but got " + f.prettyString)
+    case f => throw ConversionException("Expected shape \\forall x (p(x) -> q(x)), but got " + f.prettyString)
   }
 
   /** Returns a formula describing the symbolic solution of the specified differential equation system.

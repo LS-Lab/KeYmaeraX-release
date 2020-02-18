@@ -30,15 +30,12 @@ class UncheckedBaseM2KConverter extends MathematicaToKeYmaera {
 
   /** Extends default converter with rule and rule list handling */
   override def convert(e: MExpr): KExpr = {
-    if (isAborted(e)) throw new MathematicaComputationAbortedException(e.toString)
-    else if (isFailed(e)) throw new MathematicaComputationFailedException(e.toString)
+    if (isAborted(e)) throw MathematicaComputationAbortedException(e.toString)
+    else if (isFailed(e)) throw MathematicaComputationFailedException(e.toString)
     else if (MathematicaOpSpec.rule.applies(e)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
       MathematicaOpSpec.rule.applies))) convertRuleList(e)
     // Derivatives are of the form Derivative[1][x]
-    //@todo Code Review: check e.head
-    //@solution: additional checks for head + moved into non-soundness-critical converter
-    //@note e.head() by itself is not meaningful -- it combines e.head.head == Derivative and e.head.args == degree
     else if (e.head.args().length == 1 && e.head().args.head.integerQ() && e.head().args.head.asInt() == 1 &&
       e.head.head.symbolQ() && ExtMathematicaOpSpec.derivative.applies(e.head)) convertDerivative(e)
     else if (MathematicaOpSpec.lfalse.applies(e)) False
@@ -187,7 +184,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
           case _ => throw new IllegalArgumentException("Expected a conjunction of invariant list (length and (Formula,List[Formula])) and an invariant/candidate indicator, but got " + invList.prettyString)
         }
       case fml: Formula => ((fml, "Unknown") :: Nil, True)
-      case _ => throw ToolException("Expected a formula from Pegasus call but got a non-formula expression: " +
+      case _ => throw ConversionException("Expected a formula from Pegasus call but got a non-formula expression: " +
         listFml.prettyString)
     }
   }
@@ -199,7 +196,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
         l :: decodeTermList(r)
       case Nothing => List()
       case _ =>
-        throw ToolException("Expected a term list to decode but got a ill-formed expression: " + listTrm.prettyString)
+        throw ConversionException("Expected a term list to decode but got a ill-formed expression: " + listTrm.prettyString)
     }
   }
 
@@ -214,8 +211,8 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
         }
       } else if (elements.forall(_.isInstanceOf[Term])) {
         (elements :+ Nothing).map(_.asInstanceOf[Term]).reduceRight(Pair)
-      } else throw new ConversionException("Pegasus converter expected either list of formulas or list of terms")
-    } else throw new ConversionException("Expected a list, but got " + e)
+      } else throw ConversionException("Pegasus converter expected either list of formulas or list of terms")
+    } else throw ConversionException("Expected a list, but got " + e)
   }
 }
 
@@ -342,7 +339,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseK
       }
     }, t) match {
     case Some(resultTerm) => resultTerm
-    case None => throw new IllegalArgumentException("Unable to functionalize " + t)
+    case None => throw ConversionException("Unable to functionalize " + t)
   }
 
   /**
@@ -361,7 +358,7 @@ class MathematicaODESolverTool(override val link: MathematicaLink) extends BaseK
       }
     }, f) match {
     case Some(resultF) => resultF
-    case None => throw new IllegalArgumentException("Unable to defunctionalize " + f)
+    case None => throw ConversionException("Unable to defunctionalize " + f)
   }
 
   def deriveBy(term: Term, v: Variable): Term = {
@@ -403,7 +400,7 @@ class MathematicaPDESolverTool(override val link: MathematicaLink) extends BaseK
       case r: Equal => List(r.right).iterator
       case r: And => FormulaTools.conjuncts(r).map({case Equal(_,b) => b}).iterator
       case r: Or => FormulaTools.disjuncts(r).flatMap(disj=>FormulaTools.conjuncts(disj).map{case Equal(_,b) => b}).iterator
-      case r => throw ToolException("Mathematica did not solve the PDE for : " + diffSys + "\n" + r)
+      case r => throw ToolExecutionException("Mathematica did not solve the PDE for : " + diffSys + "\n" + r)
     }
   }
 }
@@ -492,7 +489,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     val (_, result) = run(input)
     result match {
       case Pair(quot,Pair(rem,Nothing)) => (quot, rem)
-      case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
+      case r => throw ConversionException("Unexpected output " + r + " of class " + r.getClass)
     }
   }
 
@@ -509,7 +506,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     result match {
       // turn nested back into list of terms
       case r: Term => PegasusM2KConverter.decodeTermList(r)
-      case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
+      case r => throw ConversionException("Unexpected output " + r + " of class " + r.getClass)
     }
   }
 
@@ -527,7 +524,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
     result match {
       //Mathematica returns [l,r] where l is a list, r is a singleton
       case Pair(l,Pair(r,Nothing)) => (PegasusM2KConverter.decodeTermList(l), r)
-      case r => throw new IllegalStateException("Unexpected output " + r + " of class " + r.getClass)
+      case r => throw ConversionException("Unexpected output " + r + " of class " + r.getClass)
     }
   }
 }
@@ -555,7 +552,7 @@ class MathematicaSimplificationTool(override val link: MathematicaLink) extends 
       val (_, result) = run(input)
       result match {
         case r: Expression => r
-        case _ => throw ToolException("Mathematica did not successfuly simplify: " + expr + " under assumptions " + assumptions)
+        case _ => throw ToolExecutionException("Mathematica did not successfuly simplify: " + expr + " under assumptions " + assumptions)
       }
   }
 }
@@ -577,11 +574,11 @@ object SimulationM2KConverter extends M2KConverter[Simulation] {
           case fml: Formula => FormulaTools.conjuncts(fml).map({
             case Equal(name: NamedSymbol, value: Number) => name -> value
             case Equal(FuncOf(fn, _), value: Number) => fn -> value
-            case s => throw new IllegalArgumentException("Expected state description Equal(...), but got " + s)
+            case s => throw ConversionException("Expected state description Equal(...), but got " + s)
           }).toMap
-          case s => throw new IllegalArgumentException("Expected state formula, but got " + s)
+          case s => throw ConversionException("Expected state formula, but got " + s)
         }).toList}).toList
-    } else throw new IllegalArgumentException("Expected list of simulation states, but got " + e)
+    } else throw ConversionException("Expected list of simulation states, but got " + e)
   }
 }
 

@@ -1,3 +1,7 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -63,6 +67,11 @@ class ODETests extends TacticTestBase {
     proveBy(fml, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  it should "prove when invariants are present in negated form" in withQE { _ =>
+    val s = "x!=ox | y!=oy, (x+w/1-ox)^2+(y-v/1-oy)^2 != v^2+w^2 ==> [{x'=v, y'=w, v'=1*w, w'=-1*v}]!(x=ox & y=oy)".asSequent
+    proveBy(s, ODE(1)) shouldBe 'proved
+  }
+
   "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3 { _ =>
     the [BelleThrowable] thrownBy TactixLibrary.proveBy("\\forall x_0 (x_0>0&true->\\forall x (x>0->-x>=0))".asFormula, QE) should have message
       "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall x_0 \\forall x (x_0>0&x>0->-x>=0)\n"
@@ -106,10 +115,6 @@ class ODETests extends TacticTestBase {
     proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
   }
 
-  //  ignore should "DGauto x_>0 -> [{x_'=-x_}]x_>0 by DA" in withQE { qeTool =>
-  //    proveBy("x_>0 -> [{x_'=-x_}]x_>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
-  //  }
-
   it should "DGauto x>0->[{x'=-x+1}]x>0" in withMathematica { _ =>
     //@note: ghost is y'=1/2*y for x*y^2>0
     proveBy("x>0->[{x'=-x+1}]x>0".asFormula, implyR(1) & DGauto(1)) shouldBe 'proved
@@ -140,7 +145,7 @@ class ODETests extends TacticTestBase {
     proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), DGauto(1)) shouldBe 'proved
   }
 
-  it should "DGauto x>b |- [{x'=2}]x>b" taggedAs TodoTest ignore withMathematica { _ =>
+  it should "FEATURE_REQUEST: DGauto x>b |- [{x'=2}]x>b" taggedAs TodoTest in withMathematica { _ =>
     proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), DGauto(1)) shouldBe 'proved
   }
 
@@ -195,13 +200,13 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "work with nested ODEs" ignore withQE { _ =>
-    //@note Fails because ODE no longer solves
+  it should "FEATURE_REQUEST: work with nested ODEs" taggedAs TodoTest ignore withQE { _ =>
+    //@note stuck in ODE because ODE no longer solves
     proveBy("x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula, (unfoldProgramNormalize & ODE(1))*3) shouldBe 'proved
   }
 
-  it should "work with solvable maybe bound" ignore withQE { _ =>
-    //@note Fails because ODE no longer solves
+  it should "FEATURE_REQUEST: work with solvable maybe bound" taggedAs TodoTest ignore withQE { _ =>
+    //@note stuck in ODE because ODE no longer solves
     val result = proveBy("[{x'=5}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, ODE(1))
     result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asSequent
   }
@@ -361,7 +366,8 @@ class ODETests extends TacticTestBase {
     ("x>-1->[{x'=-x-1}]x>-1", "Any"),
     // improved
     ("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8", "Any"),
-    ("x>=1->[{x'=x^2+2*x^4}]x^3>=x^2", "Any") // @generalize(x>=1)&dI
+    ("x>=1->[{x'=x^2+2*x^4}]x^3>=x^2", "Any"), // @generalize(x>=1)&dI
+    ("x-x^2*y>=2&y!=5->[{x'=-x^2,y'=-1+2*x*y}]x-x^2*y>=2", "Any")
   )
 
   it should "prove a list of ODEs" in withQE { qeTool =>
@@ -399,13 +405,12 @@ class ODETests extends TacticTestBase {
   }
 
   private val nops = Table("Formula",
-    "x=-1&y>=0->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0",
-    "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0",
-    "x-x^2*y>=2&y!=5->[{x'=-x^3,y'=-1+2*x*y}]x-x^2*y>=2",
+    "x=-1&y>=0->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0", // false, expect counterexample
+    "x=-1&y=1->[{x'=6*x*y-2*y^3,y'=-6*x^2+6*x*y^2}]-2*x*y^3+6*x^2*y>=0",  // false, expect counterexample
     "x^3>-1->[{x'=-x-1}]x^3>-1" // @generalize(x>=-1)&ode
   )
 
-  it should "prove a list of ODEs with cuts after improving tactics" taggedAs TodoTest ignore withQE { _ =>
+  it should "FEATURE_REQUEST: prove a list of ODEs with cuts after improving tactics" taggedAs TodoTest in withQE { _ =>
     forEvery (nops) {
       formula =>
         whenever(!Thread.currentThread().isInterrupted) {
@@ -414,16 +419,16 @@ class ODETests extends TacticTestBase {
     }
   }
 
-  it should "use an annotated differential invariant" ignore withMathematica { _ =>
-    //todo: ODE now refutes this
-    val g = "[{x'=-y,y'=x}@invariant(x^2+y^2=old(x^2+y^2))]x>0".asFormula
-    proveBy(g, ODE(1)).subgoals.loneElement shouldBe "old=x^2+y^2 ==> [{x'=-y,y'=x & x^2+y^2=old}]x>0".asSequent
+  it should "use an annotated differential invariant" in withMathematica { _ =>
+    proveBy("x=3 & y=4 ==> [{x'=-y,y'=x}]x^2+y^2=25".asSequent, ODE(1)) shouldBe 'proved
+    //@todo find out whether ODE uses the annotated invariant at all
+    proveBy("x=3 & y=4 ==> [{x'=-y,y'=x}@invariant(x^2+y^2=old(x^2+y^2))]x^2+y^2<=25".asSequent, ODE(1)) shouldBe 'proved
   }
 
-  it should "use annotated differential invariants" ignore withMathematica { _ =>
-    //todo: ODE now refutes this
-    val g = "[{x'=-y,y'=x,z'=2}@invariant(z>=old(z), x^2+y^2=old(x^2+y^2))]x>0".asFormula
-    proveBy(g, ODE(1)).subgoals.loneElement shouldBe "z_0=z, old=x^2+y^2 ==> [{x'=-y,y'=x, z'=2 & z>=z_0 & x^2+y^2=old}]x>0".asSequent
+  it should "use annotated differential invariants" in withMathematica { _ =>
+    //@todo find out whether ODE uses the annotated invariant at all
+    val g = "z>0, x=3, y=4 ==> [{x'=-z*y,y'=z*x,z'=z}@invariant(z>=old(z), x^2+y^2=old(x^2+y^2))]x^2+y^2=25".asSequent
+    proveBy(g, ODE(1)) shouldBe 'proved
   }
 
   it should "interpret implications as differential invariants in simple ODE" in withMathematica { _ =>

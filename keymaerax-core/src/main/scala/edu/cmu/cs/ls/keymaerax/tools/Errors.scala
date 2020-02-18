@@ -6,24 +6,34 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core.ProverException
 
-/** Arithmetic tool exceptions */
-case class ToolException(msg: String, cause: Throwable = null) extends ProverException(msg, cause)
+/** Tool exceptions. */
+abstract class ToolException(msg: String, cause: Throwable) extends ProverException(msg, cause)
 
-/** Reports errors converting to/from a tool. */
-class ConversionException(s: String) extends Exception(s)
+/** Errors raised from the KeYmaera X side of the tool interaction. */
+abstract class ToolInternalException(msg: String, cause: Throwable) extends ToolException(msg, cause)
 
-/** Reports Mathematica computation failures ($Failed). */
-class MathematicaComputationFailedException(msg: String) extends ConversionException(msg)
+/** Errors raised from the external tool. */
+abstract class ToolExternalException(msg: String, cause: Throwable) extends ToolException(msg, cause)
 
-/** Internal abort of computations (e.g., by TimeConstrained, by $Abort). */
-class MathematicaComputationAbortedException(msg: String) extends ConversionException(msg)
+/** Reports internal errors converting to/from a tool. */
+case class ConversionException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)
 
-/** Externally triggered abort (e.g., by stopping from the UI). */
-class MathematicaComputationExternalAbortException(msg: String) extends ConversionException(msg)
+/** Internal errors when setting up tools, communicating commands, etc. */
+case class ToolCommunicationException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)
 
-/** Reports errors converting to/from SMTLib format. */
-class SMTConversionException(s: String) extends ConversionException(s)
+/** External execution errors when setting up tool, starting, executing commands, shutdown etc. */
+case class ToolExecutionException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
 
-/** Reports errors on QE. */
-//@todo improve exception hierarchy
-class SMTQeException(s: String) extends Exception(s)
+
+/** User-triggered abort (e.g., by stopping from the UI). */
+case class MathematicaComputationUserAbortException(msg: String) extends ToolInternalException(msg, null)
+
+/** Abort of external computations (e.g., by TimeConstrained, by $Abort), internal since "planned" command failure. */
+case class MathematicaComputationAbortedException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)
+
+/** Reports external Mathematica computation failures ($Failed). */
+case class MathematicaComputationFailedException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+
+
+/** Reports QE errors from Z3. */
+case class SMTQeException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)

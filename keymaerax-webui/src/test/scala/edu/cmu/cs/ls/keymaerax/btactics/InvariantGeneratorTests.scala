@@ -1,11 +1,14 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.PrintWriter
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic, TacticStatistics}
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint, ProofHint}
+import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
@@ -18,7 +21,6 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SuccPosition}
 import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.{Seconds, Span}
 
 import scala.collection.immutable
@@ -40,28 +42,27 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   "Differential invariant generator" should "use Pegasus lazily" in {
     //@note pegasusInvariantGenerator asks ToolProvider.invGenTool
 
-    val mockProvider = new NoneToolProvider {
-      var requestedInvGenerators: List[Option[String]] = Nil
+    def mockProvider(requestedInvGenerators: ListBuffer[Option[String]]): NoneToolProvider = new NoneToolProvider {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = {
-        requestedInvGenerators = requestedInvGenerators :+ name
+        requestedInvGenerators.append(name)
         super.invGenTool(name)
       }
     }
 
-    ToolProvider.setProvider(mockProvider)
+    val requestedInvGenerators: ListBuffer[Option[String]] = ListBuffer.empty
+    ToolProvider.setProvider(mockProvider(requestedInvGenerators))
 
     val gen = InvariantGenerator.differentialInvariantGenerator("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
-    mockProvider.requestedInvGenerators shouldBe 'empty
+    requestedInvGenerators shouldBe 'empty
     gen should not be 'empty
     gen.head shouldBe ("x>0".asFormula, None)
   }
 
   it should "use Pegasus lazily from ODE" in {
     // InvariantGenerator relevance filter tends to break this test
-    val mockInvgen = new InvGenTool {
-      var requestedInvs: ListBuffer[ODESystem] = ListBuffer.empty
+    def mockInvgen(requestedInvs: ListBuffer[ODESystem]): InvGenTool = new InvGenTool {
       override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
-        requestedInvs += ode
+        requestedInvs.append(ode)
         Nil
       }
       override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = true
@@ -69,11 +70,12 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
       override def genODECond(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = (Nil,Nil)
     }
 
+    val requestedInvs: ListBuffer[ODESystem] = ListBuffer.empty
     ToolProvider.setProvider(new MathematicaToolProvider(configFileMathematicaConfig) {
-      override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen)
+      override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen(requestedInvs))
     })
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
-    mockInvgen.requestedInvs shouldBe 'empty
+    requestedInvs shouldBe 'empty
   }
 
   it should "not fail if Mathematica is unavailable" in {
@@ -103,19 +105,22 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     InvariantGenerator.defaultInvariantGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("v=0".asFormula, None)
   }
 
+  it should "provide precondition as invariant candidate" in {
+    val s = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
+    InvariantGenerator.defaultInvariantGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("x^2+y^2=2".asFormula, None)
+  }
+
   it should "provide conjunctive candidates on diffcut chains with strict or mixed inequalities" in {
     //@note replaces Pegasus with mock provider
     val mockProvider = new NoneToolProvider {
-      var requestedInvGenerators: List[Option[String]] = Nil
       override def invGenTool(name: Option[String]): Option[InvGenTool] = {
-        requestedInvGenerators = requestedInvGenerators :+ name
         Some(new InvGenTool {
           override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
             Left(("x>0".asFormula, "Unknown") :: ("y>1".asFormula, "Unknown") :: Nil) :: Nil
           }
-          override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = ???
-          override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = ???
-          override def genODECond(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = ???
+          override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = true
+          override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = None
+          override def genODECond(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = (List.empty, List.empty)
         })
       }
     }
@@ -147,7 +152,8 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   }
 
   "Configurable generator" should "return annotated conditional invariants" in withQE { _ =>
-    val fml = "y>0 ==> [{x:=2; ++ x:=-2;}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=-2*y -> y<=old(y)))}]y>0".asSequent
+    // parse formula with invariant annotations to populate invariant generator
+    "y>0 ==> [{x:=2; ++ x:=-2;}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=-2*y -> y<=old(y)))}]y>0".asSequent
     TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y>=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
     TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
   }
@@ -187,11 +193,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
         ex.printStackTrace()
         Nil
     }
-  }
-
-  private def tableResults(results: Seq[BenchmarkResult]) = {
-    Table(("Benchmark name", "Entry name", "Status", "Duration", "Failure Cause"),
-      results.map(r => (benchmarkName, r.name, r.status, r.totalDuration, r.ex)):_*)
   }
 
   private def setTimeouts(tool: ToolOperationManagement)(testcode: => Any): Unit = {
@@ -274,55 +275,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
         println(s"Done generating (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
         Some((candidates, invGenStart, invGenEnd))
       case _ => None
-    }
-  }
-
-  private def runCheckCandidates(name: String, modelContent: String, tactic: Option[String], candidates: List[(Formula, Option[ProofHint])]): BenchmarkResult = {
-    beforeEach()
-    withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
-    qeDurationListener.reset()
-    if (candidates.nonEmpty) {
-      println(s"Checking $name with candidates " + candidates.mkString(","))
-      val (model, _) = parseStripHints(modelContent)
-      TactixLibrary.invGenerator = FixedGenerator(candidates)
-      TactixLibrary.differentialInvGenerator = FixedGenerator(candidates)
-      val start = System.currentTimeMillis()
-      try {
-        val proof = failAfter(Span(timeout, Seconds)) { proveBy(model, TactixLibrary.master()) }
-        val end = System.currentTimeMillis()
-        println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
-        val result =
-          if (proof.isProved) "proved"
-          else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
-          else "unfinished"
-        BenchmarkResult(name, result, timeout, end-start, qeDurationListener.duration, 0, end-start, proof.steps, 1, None)
-      } catch {
-        case ex: TestFailedDueToTimeoutException =>
-          println(s"Timeout checking $name")
-          BenchmarkResult(name, "timeout", timeout, -1, -1, -1, -1, -1, -1, Some(ex))
-      }
-    } else if (tactic.isDefined) {
-      println(s"Checking $name with tactic script")
-      val (model, defs) = parseStripHints(modelContent)
-      val t = BelleParser.parseWithInvGen(tactic.get, None, defs)
-      val start = System.currentTimeMillis()
-      try {
-        val proof = failAfter(Span(timeout, Seconds)) { proveBy(model, t) }
-        val end = System.currentTimeMillis()
-        println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
-        val result =
-          if (proof.isProved) "proved"
-          else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
-          else "unfinished"
-        BenchmarkResult(name, result, timeout, end - start, qeDurationListener.duration, 0, end - start, proof.steps,
-          TacticStatistics.size(t), None)
-      } catch {
-        case ex: TestFailedDueToTimeoutException =>
-          println(s"Timeout checking $name")
-          BenchmarkResult(name, "timeout", timeout, -1, -1, -1, -1, -1, -1, Some(ex))
-      }
-    } else {
-      BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, -1, -1, None)
     }
   }
 

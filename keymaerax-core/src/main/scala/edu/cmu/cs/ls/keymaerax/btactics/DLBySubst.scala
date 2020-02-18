@@ -417,8 +417,7 @@ private object DLBySubst {
             useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
             assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(BelleLabels.initCase)
             ,
-            //@todo adapt to "con convergence flat" and its modified branch order
-            cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence flat") <(
+            cohide(pp) & implyR(1) & byUS(DerivedAxioms.convergenceFlat) <(
               existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
@@ -447,9 +446,8 @@ private object DLBySubst {
     * }}}
     * @param variant The variant property or convergence property in terms of new variable `v`.
     * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
-    * @todo adapt to presence of exists in axiomatic rule
     */
-  def conRule(v: Variable, variant: Formula) = "conRule" byWithInput(variant, (pos, sequent) => {
+  def conRule(v: Variable, variant: Formula): DependentPositionWithAppliedInputTactic = "conRule" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
     val ur = URename(Variable("x_",None,Real), v)
@@ -458,8 +456,7 @@ private object DLBySubst {
       uniformRename(ur) & label(BelleLabels.initCase)
       ,
       cohide(pos) & implyR(1)
-        & existsL(-1)
-        & byUS("con convergence flat") <(
+        & byUS(DerivedAxioms.convergenceFlat) <(
         existsL(-1) & andL(-1) & uniformRename(ur) & label(BelleLabels.useCase)
         ,
         assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep)

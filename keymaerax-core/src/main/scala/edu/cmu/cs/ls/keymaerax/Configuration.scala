@@ -39,7 +39,6 @@ object Configuration {
     val LOG_QE = "LOG_QE"
     val LOG_QE_DURATION = "LOG_QE_DURATION"
     val LOG_QE_STDOUT = "LOG_QE_STDOUT"
-    val POLYA_PATH = "POLYA_PATH"
     val PORT = "PORT"
     val PROOF_TERM = "PROOF_TERM"
     val QE_LOG_PATH = "QE_LOG_PATH"

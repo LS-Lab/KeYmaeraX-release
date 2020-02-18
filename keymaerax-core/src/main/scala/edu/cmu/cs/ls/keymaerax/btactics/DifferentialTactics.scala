@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.infrastruct._
@@ -757,30 +758,20 @@ private object DifferentialTactics extends Logging {
     *         This can be used to prevent (unnecessary) invariant generation for loops or ODEs from happening
     *         Return False in all other cases (including when the sequent or position are not of the expected shape)
     */
-  private def invCheckHelper(pos: Position, seq: Sequent): Boolean = {
+  private def isInvariantQuestion(pos: Position, seq: Sequent): Boolean = {
+    def isInvQuestion(a: Program, p: Formula, prgAssumptions: Formula): Boolean = {
+      val assms = seq.ante.flatMap(flattenConjunctions).toList
+      //Track constant assumptions separately
+      val odeBV = StaticSemantics.boundVars(a)
+      val (assmsConst, assmsRest) = assms.partition(StaticSemantics.freeVars(_).intersect(odeBV).isEmpty)
+      val conjConst = assmsConst.foldLeft(prgAssumptions)(And)
+      val conjRest = assmsRest.foldLeft[Formula](True)(And)
+      proveBy(Imply(conjConst, Equiv(conjRest, p)), ?(timeoutCEXQE)).isProved
+    }
+
     seq.sub(pos) match {
-      case Some(Box(ode: ODESystem, post)) if post.isFOL =>
-        val assms = seq.ante.flatMap(flattenConjunctions).toList
-        //Track constant assumptions separately
-        val odeBV = StaticSemantics.boundVars(ode)
-        val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
-        val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(odeBV).isEmpty)
-        val conjConst = assmsConst.foldLeft(ode.constraint)( (f, a) => And(f, a))
-        val conjRest = assmsRest.foldLeft(True: Formula)( (f, a) => And(f, a))
-        val detectEquiv = proveBy(Imply(conjConst, Equiv(conjRest, post)), ?(timeoutCEXQE))
-        detectEquiv.isProved
-
-      case Some(Box(l: Loop, post)) if post.isFOL =>
-        val assms = seq.ante.flatMap(flattenConjunctions).toList
-        //Track constant assumptions separately
-        val loopBV = StaticSemantics.boundVars(l)
-        val assmsConst = assms.filter(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
-        val assmsRest = assms.filterNot(f => StaticSemantics.freeVars(f).intersect(loopBV).isEmpty)
-        val conjConst = assmsConst.foldLeft(True: Formula)( (f, a) => And(f, a))
-        val conjRest = assmsRest.foldLeft(True: Formula)( (f, a) => And(f, a))
-        val detectEquiv = proveBy(Imply(conjConst, Equiv(conjRest, post)), ?(timeoutCEXQE))
-        detectEquiv.isProved
-
+      case Some(Box(ode: ODESystem, post)) => post.isFOL && isInvQuestion(ode, post, ode.constraint)
+      case Some(Box(l: Loop, post)) => post.isFOL && isInvQuestion(l, post, True)
       case _ => false
     }
   }
@@ -788,10 +779,8 @@ private object DifferentialTactics extends Logging {
   /** Invariance check
     * @return Executes t if it detects a purely invariance question (for all subgoals) otherwise execute f
     */
-  def invCheck(t: BelleExpr, f: BelleExpr): DependentPositionTactic = "invCheck" by ((pos:Position) => {
-    doIfElse(pr =>
-      pr.subgoals.forall(s => invCheckHelper(pos, s))
-    )(t, f)
+  def invCheck(t: BelleExpr, f: BelleExpr): DependentPositionTactic = "invCheck" by ((pos: Position) => {
+    doIfElse(pr => pr.subgoals.forall(s => isInvariantQuestion(pos, s)))(t, f)
   })
 
   /** ODE counterexample finder
@@ -1046,11 +1035,33 @@ private object DifferentialTactics extends Logging {
   lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
-    if(TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
+    if (TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
       throw new BelleThrowable("The strongest ODE invariant has already been added to the domain constraint.\nTry dW or solve the ODE to make progress in your proof.")
 
+    def odeWithInvgen(sys: ODESystem, generator: Generator[GenProduct],
+                      onGeneratorError: Throwable => Stream[GenProduct]): DependentPositionTactic = fastODE(
+      try {
+        generator(seq, pos).iterator
+      } catch {
+        case ex: Exception =>
+          logger.warn("Failed to produce a proof for this ODE. Underlying cause: generator error listing options " + ex)
+          onGeneratorError(ex).iterator
+      }
+    )(
+      //@note aborts with error if the ODE was left unchanged -- invariant generators failed
+      assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0 :: Nil)).contains(sys),
+        failureMessage
+      )(pos) &
+        ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+          case Some(ODESystem(_, extendedQ)) =>
+            if (sys.constraint == True && extendedQ != True) useAt("true&")(ppos ++
+              PosInExpr(1 :: FormulaTools.posOf(extendedQ, sys.constraint).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+            else skip
+        })) (pos ++ PosInExpr(0 :: Nil))
+    )
+
     seq.sub(pos) match {
-      case Some(Box(sys@ODESystem(ode, q), _)) =>
+      case Some(Box(sys: ODESystem, _)) =>
         // Try to prove postcondition invariant
         odeInvariant()(pos) & done |
         // Counterexample check
@@ -1062,30 +1073,18 @@ private object DifferentialTactics extends Logging {
           // todo: Pegasus should tell us for nonlinear ODEs
           // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
           invCheck(
-            assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
-              "ODE invariant generation skipped."),
-
-            fastODE(
-              try {
-                TactixLibrary.differentialInvGenerator(seq,pos).iterator
-              } catch {
-                case err: Exception =>
-                  logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-                  Stream[GenProduct]().iterator
-              }
-            )(
-              //@note aborts with error if the ODE was left unchanged -- invariant generators failed
-              assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
-                failureMessage
-              )(pos) &
-                ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
-                  case Some(ODESystem(_, extendedQ)) =>
-                    if (q == True && extendedQ != True) useAt("true&")(ppos ++
-                      PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
-                    else skip
-                })) (pos ++ PosInExpr(0 :: Nil))
+            //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
+            //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
+            //  "ODE invariant generation skipped.")
+            //@note ODEInvariance not yet proving all invariance questions: try if Pegasus finds simpler invariants
+            odeWithInvgen(sys, InvariantGenerator.pegasusInvariants,
+              //@note ran out of options on generator error
+              (ex: Throwable) => throw new BelleTacticFailure("Detected an invariant-only question at " +
+                seq.sub(pos)+ " but ODE automation was unable to prove it.", ex)
             )(pos)
-          ) (pos)
+            ,
+            odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
+          )(pos)
         )
       case _ => throw new BelleThrowable("ODE automation only applies to box ODEs.")
     }

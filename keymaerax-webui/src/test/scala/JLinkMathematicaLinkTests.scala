@@ -16,6 +16,7 @@ import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Map
 import org.scalatest.LoneElement._
+import org.scalatest.Inside._
 
 /**
  * Tests the JLink Mathematica implementation.
@@ -56,24 +57,30 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   }
 
   "abs(-5) > 4" should "be provable with QE" in withMathematica { link =>
-    the [CoreException] thrownBy link.qe("abs(-5) > 4".asFormula) should have message
-      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    inside (the [ConversionException] thrownBy link.qe("abs(-5) > 4".asFormula)) {
+      case ConversionException(_, cause) => cause should have message
+        "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    }
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       link.qe("abs(-5) > 4".asFormula).fact.conclusion shouldBe "==> abs(-5) > 4 <-> true".asSequent
     }
   }
 
   "min(1,3) = 1" should "be provable with QE" in withMathematica { link =>
-    the [CoreException] thrownBy link.qe("min(1,3) = 1".asFormula) should have message
-      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    inside (the [ConversionException] thrownBy link.qe("min(1,3) = 1".asFormula)) {
+      case ConversionException(_, cause) => cause should have message
+        "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    }
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       link.qe("min(1,3) = 1".asFormula).fact.conclusion shouldBe "==> min(1,3) = 1 <-> true".asSequent
     }
   }
 
   "max(1,3) = 3" should "be provable with QE" in withMathematica { link =>
-    the [CoreException] thrownBy link.qe("max(1,3) = 3".asFormula) should have message
-      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    inside (the [ConversionException] thrownBy link.qe("max(1,3) = 3".asFormula)) {
+      case ConversionException(_, cause) => cause should have message
+        "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    }
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       link.qe("max(1,3) = 3".asFormula).fact.conclusion shouldBe "==> max(1,3) = 3 <-> true".asSequent
     }
@@ -183,7 +190,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     var compAfterRestart: Option[Expression] = None
 
     val t = new Thread(() => {
-      the [ToolException] thrownBy theLink.run(() => theLink match {
+      the [ToolCommunicationException] thrownBy theLink.run(() => theLink match {
         case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.invokePrivate(ml())).
           run(ExtMathematicaOpSpec.compoundExpression(
             MathematicaOpSpec(MathematicaOpSpec.symbol("Pause"))(MathematicaOpSpec.int(30) :: Nil),

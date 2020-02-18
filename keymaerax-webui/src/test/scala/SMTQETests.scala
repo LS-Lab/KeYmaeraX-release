@@ -6,41 +6,26 @@
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{Power, Term}
-import edu.cmu.cs.ls.keymaerax.tools.install.{PolyaInstaller, Z3Installer}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, PolyaSolver, SMTConverter, Z3Solver}
+import edu.cmu.cs.ls.keymaerax.core.{Equiv, Power, Sequent, Term}
+import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
+import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, SMTConverter, Z3Solver}
 import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.Inside._
 
 /**
- * Tests Z3 and Polya on SMT-Lib format input.
+ * Tests Z3 on SMT-Lib format input.
  * Created by ran on 3/27/15.
  *
  * @author Ran Ji
  * @author Stefan Mitsch
  */
 class SMTQETests extends TacticTestBase {
-  var z3: Z3Solver = _
-  var polya: PolyaSolver = _
-
-  override def beforeEach(): Unit = {
-    super.beforeEach()
-    z3 = new Z3Solver(Z3Installer.z3Path, DefaultSMTConverter)
-    polya = new PolyaSolver(PolyaInstaller.polyaPath, DefaultSMTConverter)
-  }
-
-  override def afterEach(): Unit = {
-    z3 = null
-    polya = null
-    super.afterEach()
-  }
-
   // ---------------------------
   // Simplify
   // ---------------------------
 
   "Simplify" should "simplify term" in withZ3 { tool =>
     tool.simplify("1+x-x".asTerm, Nil) should be ("1".asTerm)
-    polya.simplify("1+x-x".asTerm) should be ("1".asTerm)
   }
 
   // ---------------------------
@@ -59,19 +44,12 @@ class SMTQETests extends TacticTestBase {
     ("Max", "max(x,y)>=x".asFormula, "true".asFormula)
   )
 
-  "Z3" should "prove every basic example" in {
+  "Z3" should "prove every basic example" in withZ3 { z3 =>
     forEvery (basicExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qe(input) shouldBe expected
-      }}
-    }
-  }
-
-  "Polya" should "prove every basic example" ignore {
-    //@todo Polya proves not every example
-    forEvery (basicExamples) {
-      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        polya.qe(input)._1 shouldBe expected
+        inside (z3.qe(input).fact.conclusion) {
+          case Sequent(_, IndexedSeq(Equiv(_, r))) => r shouldBe expected
+        }
       }}
     }
   }
@@ -88,18 +66,18 @@ class SMTQETests extends TacticTestBase {
     //Does not prove with 4.4.1 //("Typical ODE solution output", "A>=0 & v>=0 & x_0>=0 -> \\forall t_ (t_>=0 -> (\\forall s_ (0<=s_&s_<=t_ -> v+A*s_>=0) -> A/2*t^2+v*t_+x_0>=0))".asFormula, "true".asFormula)
   )
 
-  "Z3" should "prove every complicated example" in {
+  "Z3" should "prove every complicated example" in withZ3 { z3 =>
     forEvery (complicatedExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qe(input) shouldBe expected
+        inside (z3.qe(input).fact.conclusion) {
+          case Sequent(_, IndexedSeq(Equiv(_, r))) => r shouldBe expected
+        }
       }}
     }
   }
 
-  it should "prove complex 1" in {
+  it should "prove complex 1" in withZ3 { z3 =>
     a [SMTQeException] should be thrownBy z3.qe("x > 0 -> !x^2-2*x+1=0".asFormula)
-    //@todo update Polya to latest version
-    //polya.qeEvidence("x > 0 -> !x^2-2*x+1=0".asFormula) //@todo check expected result
   }
 
   // ---------------------------
@@ -123,11 +101,13 @@ class SMTQETests extends TacticTestBase {
     ("Robix Theorem 14-5", "\\forall xr_0 \\forall xg_0 \\forall vr_0 \\forall t__0 \\forall ep_0 \\forall b_0 \\forall Vmax_0 \\forall T_0 \\forall GDelta_0 \\forall A_0 (A_0>0&b_0>0&ep_0>0&Vmax_0>=2*A_0*ep_0&GDelta_0>Vmax_0*ep_0+Vmax_0^2/(2*b_0)&0<=vr_0&vr_0<=Vmax_0&xr_0+vr_0^2/(2*b_0) < xg_0+GDelta_0&(xg_0-GDelta_0 < xr_0->vr_0=0|T_0>=vr_0/b_0)&(xr_0<=xg_0-GDelta_0->vr_0>=A_0*ep_0&T_0>(xg_0-xr_0-GDelta_0)/(A_0*ep_0)+ep_0+Vmax_0/b_0|vr_0<=A_0*ep_0&T_0>ep_0-vr_0/A_0+(xg_0-xr_0-GDelta_0)/(A_0*ep_0)+ep_0+Vmax_0/b_0)&xr_0<=xg_0-GDelta_0&(xr_0+vr_0^2/(2*b_0)+(A_0/b_0+1)*(A_0/2*ep_0^2+ep_0*vr_0)>=xg_0+GDelta_0|vr_0+A_0*ep_0>Vmax_0)&t__0>=0&(0<=t__0&t__0<=t__0->t__0+0<=ep_0&vr_0>=0)->0<=vr_0&vr_0<=Vmax_0&vr_0*t__0+xr_0+vr_0^2/(2*b_0) < xg_0+GDelta_0&(xg_0-GDelta_0 < vr_0*t__0+xr_0->vr_0=0|-t__0+T_0>=vr_0/b_0)&(vr_0*t__0+xr_0<=xg_0-GDelta_0->vr_0>=A_0*ep_0&-t__0+T_0>(xg_0-(vr_0*t__0+xr_0)-GDelta_0)/(A_0*ep_0)+ep_0+Vmax_0/b_0|vr_0<=A_0*ep_0&-t__0+T_0>ep_0-vr_0/A_0+(xg_0-(vr_0*t__0+xr_0)-GDelta_0)/(A_0*ep_0)+ep_0+Vmax_0/b_0))".asFormula, "true".asFormula)
   )
 
-  "Z3" should "prove every regression example" in {
+  "Z3" should "prove every regression example" in withZ3 { z3 =>
     z3.setOperationTimeout(30)
     forEvery (regressionExamples) {
       (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
-        z3.qe(input) shouldBe expected
+        inside (z3.qe(input).fact.conclusion) {
+          case Sequent(_, IndexedSeq(Equiv(_, r))) => r shouldBe expected
+        }
       }}
     }
   }
@@ -138,7 +118,7 @@ class SMTQETests extends TacticTestBase {
     proveBy(f, TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "not exceed a timeout" ignore {
+  it should "not exceed a timeout" in withZ3 { z3 =>
     //@note takes >60s with v4.5.0, unknown with 4.4.1
     val f = "\\forall x_0 \\forall v_0 \\forall t__0 \\forall ep_0 \\forall S_0 \\forall B_0 \\forall A_0 (A_0>0&B_0>0&ep_0>0&x_0+v_0^2/(2*B_0)+(A_0/B_0+1)*(A_0/2*ep_0^2+ep_0*v_0)<=S_0&t__0>=0&\\forall s_ (0<=s_&s_<=t__0->A_0*s_+v_0>=0&s_+0<=ep_0)&v_0>=0&x_0+v_0^2/(2*B_0)<=S_0->A_0/2*t__0^2+v_0*t__0+x_0+(A_0*t__0+v_0)^2/(2*B_0)<=S_0)".asFormula
     z3.setOperationTimeout(5)
@@ -161,19 +141,14 @@ class SMTQETests extends TacticTestBase {
     z3Power.qe(f) shouldBe "true".asFormula
   }
 
-  "Z3Reports" should "prove intervalUpDivide" ignore {
+  "Z3Reports" should "prove intervalUpDivide" in withZ3 { z3 =>
     val intervalUpDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))"
-    val intervalUpDivide = intervalUpDivideStr.asFormula
-    println(intervalUpDivideStr)
-    z3.qe(intervalUpDivide) shouldBe "true".asFormula
+    z3.qe(intervalUpDivideStr.asFormula).fact shouldBe 'proved
   }
 
-  it should "prove intervalDownDivide" ignore {
+  it should "prove intervalDownDivide" in withZ3 { z3 =>
     val intervalDownDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x/y <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(z<=xx/yy & z<=xx/Y & z<=X/yy & z<=X/Y))))"
-//    val intervalDownDivideStr = "h_() <= f_()/g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | 0 < gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))"
-    val intervalDownDivide = intervalDownDivideStr.asFormula
-    println(intervalDownDivideStr)
-    z3.qe(intervalDownDivide) shouldBe "true".asFormula
+    z3.qe(intervalDownDivideStr.asFormula).fact shouldBe 'proved
 
   }
 }
