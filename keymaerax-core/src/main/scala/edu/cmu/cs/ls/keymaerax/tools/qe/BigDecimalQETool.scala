@@ -10,8 +10,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.lemma.Evidence
-import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable.Map
 
@@ -109,12 +108,7 @@ object BigDecimalQETool extends Tool with QETool {
   }
 
   /** @inheritdoc */
-  //@todo clean up qe and qeEvidence
-  override def quantifierElimination(formula: Formula): Formula = qeEvidence(formula)._1
-
-  /** @inheritdoc */
-  def qeEvidence(formula: Formula): (Formula, Evidence) =
-    (if (eval(formula)) True else False, ToolEvidence(("message", "evaluated BigDecimal numerics") :: Nil))
+  override def quantifierElimination(formula: Formula): Formula = if (eval(formula)) True else False
 
   /** @inheritdoc */
   final override def init(config: Map[String,String]): Unit = {}
