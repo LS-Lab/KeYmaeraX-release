@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="loginApp" ng-controller="ServerInfoCtrl">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="KeYmaera&#160;X Prover User Interface">
+    <meta name="author" content="Logical Systems Lab, Carnegie Mellon University">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>KeYmaera&#160;X Prover</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Custom styles for this template -->
+    <link href="css/jumbotron.css" rel="stylesheet">
+    <link href="css/sticky-footer-navbar.css" rel="stylesheet">
+    <link href="css/xeditable.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-inverse navbar-fixed-top" role="navigation" ng-controller="AutoLoginCtrl">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">KeYmaera&#160;X</a>
+        </div>
+        <div class="navbar-collapse collapse">
+            <!-- empty -->
+        </div>
+    </div>
+</div>
+
+<noscript><b>Error: Using the KeYmaera&#160;X user interface requires enabling JavaScript in your browser!</b></noscript>
+
+<!-- Main jumbotron for a primary message or call to action -->
+<div class="jumbotron">
+    <div class="container">
+        <h1>KeYmaera&#160;X</h1>
+        <p>An aXiomatic Tactical Theorem Prover for Hybrid Systems</p>
+        <p><i class="fa fa-spinner fa-spin"></i> Starting</p>
+    </div>
+</div>
+
+<div class="footer">
+    <div class="container">
+        <p class="text-muted">KeYmaera&#160;X version {{keymaeraXVersion}}
+            <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b><a class="text-danger" target="blank_" href="http://keymaeraX.org/">new version {{latestVersion}} is now available from KeYmaeraX.org</a></b>).</span>
+            <span ng-if="!versionInfoAvailable">(no network).</span>
+            <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>
+            <i class="fa fa-copyright"></i> Carnegie Mellon University, <a href="https://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a> 2014-2019 </p>
+    </div>
+</div>
+
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery-ui.min.js"></script>
+<script src="/js/bootstrap/bootstrap.min.js"></script>
+<script src="/js/angular/angular.min.js"></script>
+<script src="/js/angular/angular-sanitize.min.js"></script>
+<script src="/js/angular/angular-cookies.min.js"></script>
+<script src="/js/angular/angular-route.min.js"></script>
+<script src="/js/angular/angular-animate.min.js"></script>
+<script src="/js/angular/bootstrap/ui-bootstrap-tpls-2.5.0.min.js" ></script>
+<script src="/js/loginApp.js"></script>
+<!-- Load services -->
+<script src="/js/services/services.js"></script>
+<script src="/js/services/session.js"></script>
+<!-- Load interceptors -->
+<script src="/js/controllers/interceptors.js"></script>
+<script src="/js/controllers/auth.js"></script>
+<!-- Load controller module -->
+<script src="/js/controllers.js"></script>
+<!-- Load individual controllers -->
+<script src="/js/controllers/factories.js"></script>
+<script src="/js/controllers/errorReport.js"></script>
+<script src="/js/controllers/login.js"></script>
+<script src="/js/controllers/serverinfo.js"></script>
+
+</body>
+</html>
