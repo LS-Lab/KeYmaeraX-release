@@ -5,9 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import TacticFactory._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
 /**
   * Decision procedures for various classes of differential equations.

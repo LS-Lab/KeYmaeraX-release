@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core.Expression
+import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
 
 import scala.collection.immutable._
 

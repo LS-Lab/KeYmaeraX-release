@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, QETool}
+import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
 
 import scala.language.postfixOps
 

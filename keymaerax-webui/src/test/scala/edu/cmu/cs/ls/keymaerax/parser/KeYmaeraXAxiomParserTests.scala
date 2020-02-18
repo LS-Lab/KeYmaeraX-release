@@ -15,11 +15,11 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
   "Axiom parser" should "parse a formula inside an axiom box" in {
     val input =
       """
-        |Axiom "This is an axiom".
+        |Axiom "This is an axiom"
         | 1 = 1
         |End.
         |
-        |Axiom "This is another = axiom".
+        |Axiom "This is another = axiom"
         | x=x
         |End.
       """.stripMargin
@@ -40,7 +40,7 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
 
   it should "parse all instantiate (found failure case)" in {
     val input =
-      """Axiom /*\\foralli */ "all instantiate".
+      """Axiom /*\\foralli */ "all instantiate"
         |  (\forall x p(x)) -> p(t())
         |End.""".stripMargin
     val axioms = KeYmaeraXAxiomParser(input)

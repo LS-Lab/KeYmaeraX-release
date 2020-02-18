@@ -2,11 +2,11 @@ package edu.cmu.cs.ls.keymaerax.pt
 
 import java.io.{BufferedWriter, FileWriter, Writer}
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedRuleInfo, ExpressionTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedRuleInfo}
 import edu.cmu.cs.ls.keymaerax.core.{DotFormula, _}
-import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter.{ID,ISABELLE_IDS,IDEnum,IDLeft,IDRight,IDUnit,Irule,Isequent}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter.{ID, IDEnum, IDLeft, IDRight, IDUnit, ISABELLE_IDS, Irule, Isequent}
 import org.apache.logging.log4j.scala.Logging
 
 /**
@@ -179,7 +179,7 @@ object IDMap extends Logging {
       case (acc,(UnitPredicational(name,arg),repl)) => ofUnitPred(name,repl,acc)
       case (acc,(ProgramConst(name,_),repl)) => ofProg(name,repl,acc)
       // Isabelle formalization doesn't have games, so collapse it all to systems anyway
-      case (acc,(SystemConst(name),repl)) => ofProg(name,repl,acc)
+      case (acc,(SystemConst(name,_),repl)) => ofProg(name,repl,acc)
       case (acc,(DifferentialProgramConst(name,_),repl)) => ofDiffConst(name,repl,acc)
       case (acc,(UnitFunctional(name,_,_),repl)) =>
 //        println("Translating functional replaced with: " + repl)
@@ -741,7 +741,7 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
           case (_:UnitPredicational,e:Formula) => apply(e, if(depred)DepredSubst() else FunSubst())
         })),
       extendSub(sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case (_,e:Formula) => apply(e, sm=ConSubst())})),
-      extendSub(sortSubs(prog, {case ProgramConst(name,_) =>  m.progMap(name) case SystemConst(name) =>  m.progMap(name)}, {case (_,e:Program) => apply(e,NonSubst())})),
+      extendSub(sortSubs(prog, {case ProgramConst(name,_) =>  m.progMap(name) case SystemConst(name,_) =>  m.progMap(name)}, {case (_,e:Program) => apply(e,NonSubst())})),
       extendSub(sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.odeMap(name)}, {case (_,e:DifferentialProgram) => apply(e,NonSubst())})),
       space)
     res
@@ -1230,7 +1230,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
 
   def apply(hp:Program,sm:SymMode):Ihp = {
     hp match {
-      case SystemConst(name) => IPvar(IDEnum(m.progMap((name))))
+      case SystemConst(name,_) => IPvar(IDEnum(m.progMap((name))))
       case ProgramConst(name,_) => IPvar(IDEnum(m.progMap((name))))
       case Assign(BaseVariable(x,ind,_),e) => IAssign(IDEnum(m.varMap((x,ind))),apply(e,sm))
       case Assign(DifferentialSymbol(BaseVariable(x,ind,_)),e) => IDiffAssign(IDEnum(m.varMap((x,ind))),apply(e,ddefun(sm)))

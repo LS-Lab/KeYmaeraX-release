@@ -5,8 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
-import edu.cmu.cs.ls.keymaerax.core.QETool
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext._
+import edu.cmu.cs.ls.keymaerax.tools.install.Z3Installer
 import org.apache.logging.log4j.scala.Logging
 
 
@@ -45,7 +46,7 @@ object ToolProvider extends ToolProvider with Logging {
 
   def defaultTool(): Option[Tool] = f.defaultTool()
 
-  def qeTool(name: Option[String] = None): Option[QETool] = f.qeTool(name)
+  def qeTool(name: Option[String] = None): Option[QETacticTool] = f.qeTool(name)
 
   def invGenTool(name: Option[String] = None): Option[InvGenTool] = f.invGenTool(name)
 
@@ -79,7 +80,7 @@ object ToolProvider extends ToolProvider with Logging {
             """.stripMargin
         logger.info(msg)
         new Z3ToolProvider
-      } else new MultiToolProvider(tp :: new Z3ToolProvider() :: Nil)
+      } else new MultiToolProvider(tp :: new Z3ToolProvider :: Nil)
     } catch {
       case ex: Throwable =>
         val msg =
@@ -109,7 +110,7 @@ trait ToolProvider {
   def tool(name: String): Option[Tool] = tools().find(_.name.equalsIgnoreCase(name))
 
   /** Returns a QE tool. */
-  def qeTool(name: Option[String] = None): Option[QETool]
+  def qeTool(name: Option[String] = None): Option[QETacticTool]
 
   def invGenTool(name: Option[String] = None): Option[InvGenTool]
 
@@ -145,7 +146,7 @@ trait ToolProvider {
 class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends ToolProvider {
   require(toolPreferences != null && toolPreferences.nonEmpty && toolPreferences.forall(_.isInitialized), "Initialized tool expected")
 
-  private[this] lazy val qe: Option[Tool with QETool] = toolPreferences.find(_.isInstanceOf[QETool]).map(_.asInstanceOf[Tool with QETool])
+  private[this] lazy val qe: Option[Tool with QETacticTool] = toolPreferences.find(_.isInstanceOf[QETacticTool]).map(_.asInstanceOf[Tool with QETacticTool])
   private[this] lazy val invgen: Option[Tool with InvGenTool] = toolPreferences.find(_.isInstanceOf[InvGenTool]).map(_.asInstanceOf[Tool with InvGenTool])
   private[this] lazy val ode: Option[Tool with ODESolverTool] = toolPreferences.find(_.isInstanceOf[ODESolverTool]).map(_.asInstanceOf[Tool with ODESolverTool])
   private[this] lazy val pde: Option[Tool with PDESolverTool] = toolPreferences.find(_.isInstanceOf[PDESolverTool]).map(_.asInstanceOf[Tool with PDESolverTool])
@@ -157,8 +158,8 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
 
   override def tools(): List[Tool] = toolPreferences
   override def defaultTool(): Option[Tool] = toolPreferences.headOption
-  override def qeTool(name: Option[String] = None): Option[QETool] = ensureInitialized[Tool with QETool](name match {
-    case Some(qeToolName) => toolPreferences.find(t => t.isInstanceOf[QETool] && t.name == qeToolName).map(_.asInstanceOf[Tool with QETool])
+  override def qeTool(name: Option[String] = None): Option[QETacticTool] = ensureInitialized[Tool with QETacticTool](name match {
+    case Some(qeToolName) => toolPreferences.find(t => t.isInstanceOf[QETacticTool] && t.name == qeToolName).map(_.asInstanceOf[Tool with QETacticTool])
     case None => qe
   })
   override def invGenTool(name: Option[String] = None): Option[InvGenTool] = ensureInitialized[Tool with InvGenTool](name match {
@@ -187,7 +188,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
 class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
   override def defaultTool(): Option[Tool] = None
-  override def qeTool(name: Option[String] = None): Option[QETool] = None
+  override def qeTool(name: Option[String] = None): Option[QETacticTool] = None
   override def invGenTool(name: Option[String] = None): Option[InvGenTool] = None
   override def odeTool(): Option[ODESolverTool] = None
   override def pdeTool(): Option[PDESolverTool] = None
@@ -202,15 +203,8 @@ class NoneToolProvider extends ToolProvider {
 /** Combines multiple tool providers. */
 class MultiToolProvider(providers: List[ToolProvider]) extends PreferredToolProvider(providers.flatMap(_.tools())) {
   // wolfram tool providers know alternative names to supply named tools
-  override def qeTool(name: Option[String]): Option[QETool] = providers.flatMap(_.qeTool(name)).headOption
+  override def qeTool(name: Option[String]): Option[QETacticTool] = providers.flatMap(_.qeTool(name)).headOption
   override def invGenTool(name: Option[String]): Option[InvGenTool] = providers.flatMap(_.invGenTool(name)).headOption
-}
-
-/** A tool provider that provides Polya as a QE tools, everything else is None.
-  * @author Stefan Mitsch
-  */
-class PolyaToolProvider extends PreferredToolProvider({ val p = new Polya; p.init(Map()); p :: Nil }) {
-  def tool(): Polya = tools().head.asInstanceOf[Polya]
 }
 
 /** Base class for Wolfram tools with alternative names. */
@@ -222,7 +216,7 @@ abstract class WolframToolProvider(tool: Tool, alternativeNames: List[String]) e
     }
     case t => t
   }
-  override def qeTool(name: Option[String] = None): Option[QETool] = alternativeTool(name, super.qeTool)
+  override def qeTool(name: Option[String] = None): Option[QETacticTool] = alternativeTool(name, super.qeTool)
   override def invGenTool(name: Option[String] = None): Option[InvGenTool] = alternativeTool(name, super.invGenTool)
 }
 
@@ -249,21 +243,16 @@ class WolframScriptToolProvider extends WolframToolProvider({ val m = new Mathem
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
-/** A tool provider that provides Z3 as QE tool and KeYmaera's own bundled diff. solution tool, everything else is None.
+/** A tool provider that provides Z3 as QE tool and our own bundled algebra tool and diff. solution tool, everything else is None.
+  * Initializes the Z3 installation and updates the Z3 binary on version updates.
   * @author Stefan Mitsch
   */
-class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); val ode = new IntegratorODESolverTool; ode.init(Map()); z :: ode :: Nil }) {
+class Z3ToolProvider extends PreferredToolProvider[Tool]({
+    val z = new Z3; z.init(Map("z3Path" -> Z3Installer.z3Path))
+    val algebra = new RingsAlgebraTool(); algebra.init(Map.empty)
+    val ode = new IntegratorODESolverTool; ode.init(Map.empty)
+    z :: algebra :: ode :: Nil}) {
+
+  /** Returns the main Z3 tool. */
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
 }
-
-/** A tool provider that favors Mathematica tools, but supplies Z3 when specifically asked.
-  * @author Stefan Mitsch
-  */
-class MathematicaZ3ToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); m :: z :: m :: Nil }) { }
-
-/** A tool provider that provides all Mathematica tools, but favors Z3 for QE unless specifically asked to provide Mathematica.
-  * @author Stefan Mitsch
-  */
-class Z3MathematicaToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(new JLinkMathematicaLink("Mathematica"), "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); z :: m :: Nil }) { }

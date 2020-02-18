@@ -46,7 +46,7 @@ object SignAnalysis {
     val aggregate = formulaSigns.reduceLeft((acc,e) =>
       acc ++ e.map{ case (k,v) => k -> (acc.getOrElse(k, Map()) ++ v.map{ case (l,u) => l -> (u ++ acc.getOrElse(k, Map()).getOrElse(l, Set())) }) })
     aggregate.map(p => p._1 -> (if (p._2.size > 1 && p._2.contains(Sign.Unknown)) p._2.filterKeys(_ != Sign.Unknown) else p._2))
-  } ensuring(r => r.forall(p => p._2.keySet.size == 1 || !p._2.keySet.contains(Sign.Unknown))) // either unambiguous one of (+,-,?) or contradiction (+-)
+  } ensures(r => r.forall(p => p._2.keySet.size == 1 || !p._2.keySet.contains(Sign.Unknown))) // either unambiguous one of (+,-,?) or contradiction (+-)
 
   /** Aggregates sign bottom up in terms */
   def aggregateSigns(signs: Signs): Signs = {
@@ -133,7 +133,7 @@ object SignAnalysis {
     case Greater(Number(i), Neg(r)) if i == 0 => Greater(r, Number(0))
     case Greater(Number(i), r) if i == 0 => Greater(Neg(r), Number(0))
     case Greater(l, r) => Greater(Minus(l, r), Number(0))
-  }} ensuring (r => r match {
+  }} ensures (r => r match {
     case NotEqual(_,     Number(i)) => i == 0
     case Equal(_,        Number(i)) => i == 0
     case GreaterEqual(_, Number(i)) => i == 0

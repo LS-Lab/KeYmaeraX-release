@@ -2,9 +2,7 @@ package btactics.cexsearch
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch._
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence}
 
 /**
   * Test cases for counterexample search. We generally don't care what the counterexample is as long as it's  a counterexample.
@@ -15,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence
   * for the report.
   * Created by bbohrer on 4/24/16.
   */
-class CexSearchTests  extends TacticTestBase {
+class CexSearchTests extends TacticTestBase {
   val algos: List[(SearchNode => Option[ConcreteState])] =
     List(BreadthFirstSearch)
 

@@ -20,11 +20,11 @@ The easiest way to run KeYmaera X is to download binaries
 
 First ensure that the following software is installed
 - [Java Development Kit JDK](https://java.com/download)
-  (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ is also compatible with Java 1.8)
+  (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended.)
 - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Previous versions may work.
+  (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
   The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
-  Without active Mathemetica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
+  Without active Mathematica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
 
 See [more details on installation, usage, FAQ](http://keymaeraX.org/download.html)
 
@@ -38,7 +38,7 @@ parameters `-mathkernel` and `-jlink`. Example parameters that are appropriate w
 Mathematica is installed in the default location are provided below.
 
 #### Default Configuration Parameters per Operating System
-Mac OS, 64bit, Mathematica 10.4+
+macOS, 64bit, Mathematica 10.4+
 * `-mathkernel /Applications/Mathematica.app/Contents/MacOS/MathKernel`
 * `-jlink /Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64`
 
@@ -56,6 +56,10 @@ To compile KeYmaera X from source code and learn about faster incremental compil
 In a nutshell, install the right software and run the following to build `keymaerax.jar`:
 
     sbt clean assembly
+
+[ScalaDoc API documentation for KeYmaera X](http://keymaerax.org/scaladoc) can be generated locally with:
+
+    sbt unidoc
 
 Publications
 ============
@@ -138,7 +142,7 @@ In Catherine Dubois, Paolo Masci and Dominique Méry, editors, 3rd Workshop on F
 Copyright and Licenses
 ======================
 
-Copyright (C) 2014-2019 Carnegie Mellon University. See COPYRIGHT.txt for details.
+Copyright (C) 2014-2020 Carnegie Mellon University. See COPYRIGHT.txt for details.
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Marcus Voelp, Ran Ji.
 
 See LICENSE.txt for the conditions of using this software.

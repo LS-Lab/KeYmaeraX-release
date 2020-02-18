@@ -6,7 +6,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable}
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, StaticSemanticsTools}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.List
@@ -192,7 +193,8 @@ object InvariantGenerator extends Logging {
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
-          def pegasusInvs = tool.invgen(ode, sequent.ante, post)
+          def pegasusInvs =
+            tool.invgen(ode, sequent.ante :+ Not(sequent.succ.patch(pos.index0, Nil, 1).reduceRightOption(Or).getOrElse(False)), post)
           def conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
             case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
             case Right(r) => r.length > 1 && r.map(_._1).exists(strictInequality)

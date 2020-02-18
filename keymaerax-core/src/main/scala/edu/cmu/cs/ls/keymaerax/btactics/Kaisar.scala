@@ -1,10 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{existsR, _}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
@@ -46,7 +47,7 @@ object Kaisar {
   *
   * - Note also that there are far more cases in the grammar of dL as it appears in KeYmaera X than you see in the paper.
   *  This is because the KeYmaera X core is based on the calculus of:
-  *  "André Platzer.  A complete uniform substitution calculus for differential dynamic logic.  Journal of Automated Reasoning, 2016."
+  *  "Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017."
   *  And even then has a number of constructs needed in practice but not mentioned there.
   *
   *
@@ -150,7 +151,7 @@ object Kaisar {
       case BaseVariable(id, _, _) => Some(id)
       case UnitFunctional(id, _, _) => Some(id)
       case ProgramConst(id, _) => Some(id)
-      case SystemConst(id) => Some(id)
+      case SystemConst(id, _) => Some(id)
       case _ => None
     }
   }
@@ -222,7 +223,7 @@ object Kaisar {
     }
 
     def replay(changes: List[HCAssign], e: Term): Term = {
-      import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+      import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
       changes.foldLeft(e)({ case (e: Term, hc) => e.replaceFree(hc.hp.x, hc.hp.e) })
     }
 
@@ -486,7 +487,7 @@ object Kaisar {
         e match {
           case ProgramConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
-          case SystemConst(fname) if c.hasDef(fname) =>
+          case SystemConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
           case DifferentialProgramConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
@@ -1155,7 +1156,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
     case BaseVariable(id, _, _) if c.hasDef(id) => matchDef(id)
     case UnitFunctional(id, _, _) if c.hasDef(id) => matchDef(id)
     case ProgramConst(id, _) if c.hasDef(id) => matchDef(id)
-    case SystemConst(id) if c.hasDef(id) => matchDef(id)
+    case SystemConst(id, _) if c.hasDef(id) => matchDef(id)
     case PredOf(Function("p", _, _, _, _), args) if collectVarPat(args).isDefined || collectNegVarPat(args).isDefined =>
       (collectVarPat(args), collectNegVarPat(args)) match {
         case (Some(pos), _) =>
@@ -1286,7 +1287,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
       } else {
         throw exn
       }
-    case SystemConst(name: String) =>
+    case SystemConst(name: String, _) =>
       if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {

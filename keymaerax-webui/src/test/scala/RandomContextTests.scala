@@ -3,17 +3,17 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.btactics.Context
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
+import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Context, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.parser._
-import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
 /**
  * Tests the context splitting on randomly generated formulas

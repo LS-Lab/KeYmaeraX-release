@@ -10,12 +10,12 @@ import java.io.FileWriter
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.DefaultSMTConverter
+import edu.cmu.cs.ls.keymaerax.tools.qe.DefaultSMTConverter
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -57,7 +57,7 @@ object QELogger extends Logging {
       case b: BinaryCompositeFormula => 1 + measure(b.left) + measure(b.right)
       case q: Quantified => 1 + measure(q.child)
       // Not allowed in QE calls
-      // case m: Modal => 1 + measure(m.program) + measure(m.child)
+      case m: Modal => throw new IllegalArgumentException("Modalities cannot occur in real arithmetic quantifier elimination: " + f)
       // case p: PredOf => 1 + measure(p.child)
       // case p: PredicationalOf => 1 + measure(p.child)
     }

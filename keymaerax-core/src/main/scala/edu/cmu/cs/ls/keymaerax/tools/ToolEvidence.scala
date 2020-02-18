@@ -1,15 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.security.MessageDigest
-
-import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
+import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
-
 import scala.collection.immutable
 
-case class ToolEvidence(info: immutable.List[(String,String)]) extends Evidence {
+/** Evidence provided by tools. */
+case class ToolEvidence(info: immutable.List[(String, String)]) extends Evidence {
   override def toString: String =
     "Tool.\n  " + info.map(entry => entry._1 + " \"\"\"\"" + entry._2 + "\"\"\"\"").mkString("\n  ") + "\nEnd."
 
@@ -24,8 +22,3 @@ case class ToolEvidence(info: immutable.List[(String,String)]) extends Evidence 
 
   override def hashCode: Int = info.map({ case (k,v) => (k, KeYmaeraXLexer.normalizeNewlines(v))}).hashCode()
 }
-
-case class HashEvidence(h: String) extends Evidence {
-  override def toString = "Hash.\n  hash \"\"\"\"" + h + "\"\"\"\"\nEnd."
-}
-

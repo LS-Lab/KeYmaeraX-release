@@ -24,6 +24,7 @@ object ExpressionMode extends LexerMode
 object AxiomFileMode extends LexerMode
 object ProblemFileMode extends LexerMode
 object LemmaFileMode extends LexerMode
+object StoredProvableMode extends LexerMode
 
 /**
  * Terminal symbols of the differential dynamic logic grammar.
@@ -202,6 +203,19 @@ private object TILDE      extends OPERATOR("~")
 private object BACKSLASH extends Terminal("\\\\")
 private object QUOTATION_MARK extends Terminal("\"")
 
+/** Separates formulas in stored provables. */
+private object FORMULA_SEPARATOR  extends OPERATOR("::") {
+  override def regexp: Regex = """::[^=]""".r //@note disambiguate from ::= [[PRG_DEF]]
+}
+/** Separates sequents in stored provables. */
+private object FROM  extends OPERATOR("\\from") {
+  override def regexp: Regex = """\\from""".r
+}
+/** Separates stored provables. */
+private object QED  extends OPERATOR("\\qed") {
+  override def regexp: Regex = """\\qed""".r
+}
+
 /*@TODO
 private object DCHOICE  extends OPERATOR("--") {
   override def regexp = """--""".r
@@ -293,9 +307,6 @@ private object LEMMA_BEGIN extends Terminal("Lemma") {
 }
 private object TOOL_BEGIN extends Terminal("Tool") {
   override def regexp: Regex = """Tool""".r
-}
-private object HASH_BEGIN extends Terminal("Hash") {
-  override def regexp: Regex = """Hash""".r
 }
 private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
   override def regexp: Regex = TOOL_VALUE_PAT.regexp
@@ -467,17 +478,13 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
       case LemmaFileMode => Right(consumeTerminalLength(s, TOOL_BEGIN, loc))
       case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
     }),
-    HASH_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
-      case LemmaFileMode => Right(consumeTerminalLength(s, HASH_BEGIN, loc))
-      case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
-    }),
     SEQUENT_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
       case LemmaFileMode => Right(consumeTerminalLength(s, SEQUENT_BEGIN, loc))
       case _ => throw new Exception("Encountered ``Sequent`` in a non-lemma file.")
     }),
     TURNSTILE.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
-      case LemmaFileMode => Right(consumeTerminalLength(s, TURNSTILE, loc))
-      case _ => throw new Exception("Encountered a turnstile symbol ==> in a non-lemma file.")
+      case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, TURNSTILE, loc))
+      case _ => throw new Exception("Encountered a turnstile symbol ==> in a non-lemma file or non-storedprovable input")
     }),
     FORMULA_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
       case LemmaFileMode => Right(consumeTerminalLength(s, FORMULA_BEGIN, loc))
@@ -637,6 +644,19 @@ object KeYmaeraXLexer extends (String => List[Token]) with Logging {
     PSEUDO.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, PSEUDO, loc))),
     //
     INVARIANT.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, INVARIANT, loc))),
+    //
+    FORMULA_SEPARATOR.startPattern -> ((s: String, loc: Location, mode, _) => mode match {
+      case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, FORMULA_SEPARATOR, loc))
+      case _ => throw new Exception("Encountered a formula separator symbol " + FORMULA_SEPARATOR.img + " in a non-storedprovable input")
+    }),
+    FROM.startPattern -> ((s: String, loc: Location, mode, _) => mode match {
+      case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, FROM, loc))
+      case _ => throw new Exception("Encountered a " + FROM.img + " symbol in a non-storedprovable input")
+    }),
+    QED.startPattern -> ((s: String, loc: Location, mode, _) => mode match {
+      case LemmaFileMode | StoredProvableMode => Right(consumeTerminalLength(s, QED, loc))
+      case _ => throw new Exception("Encountered a " + QED.img + " symbol in a non-storedprovable input")
+    }),
     //
     IDENT.startPattern -> ((s: String, loc: Location, _, name: String) => {
       val (n, idx) = splitName(name)

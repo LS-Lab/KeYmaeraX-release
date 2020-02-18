@@ -6,9 +6,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{chase, skip}
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
 
 /**
   * Hilbert Calculus for differential dynamic logic.
@@ -22,7 +26,7 @@ object HilbertCalculus extends HilbertCalculus
   * Hilbert Calculus for differential dynamic logic.
   *
   * Provides the axioms and axiomatic proof rules from Figure 2 and Figure 3 in:
-  * Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+  * Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @author Andre Platzer
   * @author Stefan Mitsch
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
@@ -72,11 +76,33 @@ trait HilbertCalculus extends UnifyUSCalculus {
     SequentCalculus.cohideR(pos) & DLBySubst.G
     )
 
-  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation.
+    * {{{
+    *      p(x) |- q(x)
+    *   ---------------------------------
+    *   \forall x p(x) |- \forall x q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
+    //@todo use allDist & DerivedAxioms.allGeneralize
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
-  /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val monb               : BelleExpr         = byUS("[] monotone")
-  /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)` */
+  /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
+    * {{{
+    *      p(x) |- q(x)
+    *   ------------------- M[.]
+    *   [a]p(x) |- [a]q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
+  lazy val monb               : BelleExpr         = byUS(DerivedAxioms.boxMonotone)
+  /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
+    * {{{
+    *      p(x) |- q(x)
+    *   ------------------- M
+    *   [a]p(x) |- [a]q(x)
+    * }}}
+    * @see [[UnifyUSCalculus.CMon()]]
+    */
   lazy val mond               : BelleExpr         = byUS("<> monotone")
 
   //
@@ -196,12 +222,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
     useAt("DC differential cut",
-      (us:Option[Subst])=>us.getOrElse(throw BelleUnsupportedFailure("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+      (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   })
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DCd(invariant: Formula)  : DependentPositionTactic = useAt("DCd diamond differential cut",
-    (us:Option[Subst])=>us.getOrElse(throw BelleUnsupportedFailure("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+    (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols
     * as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`.
@@ -236,7 +262,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
+        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
         ))
@@ -249,7 +275,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
+        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
         ))
@@ -262,7 +288,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     (us:Option[Subst])=>{
       val singular = FormulaTools.singularities(b)
       insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-      us.getOrElse(throw BelleUnsupportedFailure("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
+      us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
         (Variable("y_",None,Real), y),
         (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
       ))
@@ -273,7 +299,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw BelleUnsupportedFailure("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
+        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
         ))
@@ -298,14 +324,30 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
     * @see [[UnifyUSCalculus.chase]]
     */
-  lazy val derive: DependentPositionTactic = "derive" by {(pos:Position) => chase(pos)}
+  lazy val derive: DependentPositionTactic = "derive" by {(pos:Position, seq: Sequent) =>
+    val chaseNegations = seq.sub(pos) match {
+      case Some(post: DifferentialFormula) =>
+        val notPositions = ListBuffer.empty[PosInExpr]
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+            case Not(_) if !notPositions.exists(_.isPrefixOf(p)) => notPositions.append(p); Left(None)
+            case _ => Left(None)
+          }
+        }, post)
+        notPositions.map(p => chase('Rlast, pos.inExpr ++ p)).
+          reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
+      case _ => skip
+    }
+
+    chaseNegations & chase(pos)
+  }
 
   /**
     * Derive: provides individual differential axioms bundled as [[HilbertCalculus.derive]].
     *
     * There is rarely a reason to use these separate axioms, since [[HilbertCalculus.derive]] already
     * uses the appropriate differential axiom as needed.
-    * @see Figure 3 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
+    * @see Figure 3 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     * @see [[HilbertCalculus.derive]]
     */
   object Derive {

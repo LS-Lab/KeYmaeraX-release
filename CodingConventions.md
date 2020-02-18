@@ -8,9 +8,9 @@ Especially for the soundness-critical core, we adopt the following coding conven
 
 3) Use pure functional code without mutable data structures and without side effects. Algebraic datatypes via case classes are encouraged along with value pattern matching such as: val Imply(p,q) = f. One downside is that incomprehensible MatchErrors are thrown if f is not of this shape, which may require additional error messages.
 
-4) Requires preconditions are strictly enforced. Ample use of asserts, assumes, and ensuring postconditions are encouraged. Their string arguments should state the expected POSITIVE outcome, unlike thrown exceptions, whose strings talk negatively about what failed. No hidden aspects that are crucial to the understanding of the correctness of the local code is acceptable without documentation or local checking via asserts even if that causes redundant assertion checking.
+4) Requires preconditions are strictly enforced. Ample use of asserts, assumes, and ensures postconditions are encouraged. Their string arguments should state the expected POSITIVE outcome, unlike thrown exceptions, whose strings talk negatively about what failed. No hidden aspects that are crucial to the understanding of the correctness of the local code is acceptable without documentation or local checking via asserts even if that causes redundant assertion checking.
 
-  assert, assume, require, ensuring
+  assert, assume, require, ensures
   
 If there is a way of running your core code to obtain an incorrect answer or incorrect behavior without a requires contract failing, then your code is wrong. If you detect invalid input by a requires contracts, then it's the fault of the program calling yours. If your assert or ensures contracts fails, then at least it prevented incorrect output from happening.
 

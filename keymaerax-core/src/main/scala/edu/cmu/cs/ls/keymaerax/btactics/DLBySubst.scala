@@ -9,9 +9,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType,
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import BelleLabels._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
@@ -99,7 +100,7 @@ private object DLBySubst {
         }, prg)
         if (fmls.isEmpty) abstractionb(pos)
         else throw new BelleFriendlyUserMessage("Abstraction would lose information from tests and/or evolution domain constraints")
-      case e => throw BelleTacticFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
+      case e => throw new BelleTacticFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
         e.map(_.prettyString) + " at position " + pos.prettyString + " in sequent " + seq.prettyString)
     }
   })
@@ -416,8 +417,7 @@ private object DLBySubst {
             useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
             assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(BelleLabels.initCase)
             ,
-            //@todo adapt to "con convergence flat" and its modified branch order
-            cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence flat") <(
+            cohide(pp) & implyR(1) & byUS(DerivedAxioms.convergenceFlat) <(
               existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
@@ -447,7 +447,7 @@ private object DLBySubst {
     * @param variant The variant property or convergence property in terms of new variable `v`.
     * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
     */
-  def conRule(v: Variable, variant: Formula) = "conRule" byWithInput(variant, (pos, sequent) => {
+  def conRule(v: Variable, variant: Formula): DependentPositionWithAppliedInputTactic = "conRule" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
     val ur = URename(Variable("x_",None,Real), v)
@@ -456,8 +456,7 @@ private object DLBySubst {
       uniformRename(ur) & label(BelleLabels.initCase)
       ,
       cohide(pos) & implyR(1)
-        & existsL(-1)
-        & byUS("con convergence flat") <(
+        & byUS(DerivedAxioms.convergenceFlat) <(
         existsL(-1) & andL(-1) & uniformRename(ur) & label(BelleLabels.useCase)
         ,
         assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep)
@@ -538,7 +537,7 @@ private object DLBySubst {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
   })
 
@@ -557,7 +556,7 @@ private object DLBySubst {
     case Some(Forall(vars, p)) =>
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
   })
 }

@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{ExtremeTest, IgnoreInBuildTest, SlowTest}
@@ -13,9 +13,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 
 import scala.collection.immutable.IndexedSeq
-import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
+import org.scalatest.prop.TableDrivenPropertyChecks.{forEvery,whenever}
 import org.scalatest.prop.Tables._
-import org.scalatest.time.SpanSugar._
 import org.scalatest.LoneElement._
 
 /**
@@ -57,31 +56,33 @@ class ContinuousInvariantTests extends TacticTestBase {
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
-      case gen: ConfigurableGenerator[Formula] => gen
+    val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
+      case gen: ConfigurableGenerator[GenProduct] => gen
     }
     TactixLibrary.invGenerator = FixedGenerator(Nil)
     forEvery(Table(("Name", "Model"),
       entries.map(e => e.name -> e.model):_*).
       filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
       (name, model) =>
-        println("\n" + name)
-        val Imply(assumptions, succFml@Box(ode@ODESystem(_, _), _)) = model
+        whenever(!Thread.currentThread().isInterrupted) {
+          println("\n" + name)
+          val Imply(assumptions, succFml@Box(ode@ODESystem(_, _), _)) = model
 
-        //@note the annotations in nonlinear.kyx are produced by Pegasus
-        val invariants = InvariantGenerator.pegasusInvariants(
-          Sequent(IndexedSeq(assumptions), IndexedSeq(succFml)), SuccPos(0))
+          //@note the annotations in nonlinear.kyx are produced by Pegasus
+          val invariants = InvariantGenerator.pegasusInvariants(
+            Sequent(IndexedSeq(assumptions), IndexedSeq(succFml)), SuccPos(0))
 
-        annotatedInvariants.products.get(ode) match {
-          case Some(invs) =>
-            invariants.map(_._1) should contain theSameElementsInOrderAs invs
-          case None =>
-            //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
-            // fail if invariant generator improves and finds an invariant.
-            // In that case, add annotation to nonlinear.kyx.
-            invariants shouldBe empty
+          annotatedInvariants.products.get(ode) match {
+            case Some(invs) =>
+              invariants.map(_._1) should contain theSameElementsInOrderAs invs.map(_._1)
+            case None =>
+              //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
+              // fail if invariant generator improves and finds an invariant.
+              // In that case, add annotation to nonlinear.kyx.
+              invariants shouldBe empty
+          }
+          println(name + " done")
         }
-        println(name + " done")
     }
   }
 
@@ -89,21 +90,25 @@ class ContinuousInvariantTests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "-1")) {
       val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-      val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
-        case gen: ConfigurableGenerator[Formula] => gen
+      val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
+        case gen: ConfigurableGenerator[GenProduct] => gen
       }
 
+      //forEvery swallows test timeout of failAfter; failAfter signaler interrupts thread, which we pick up with whenever
+      //to skip the remaining entries
       forEvery(Table(("Name", "Model"),
-        entries.map(e => e.name -> e.model): _*).
+        entries.map(e => e.name -> e.defs.exhaustiveSubst(e.model)): _*).
         filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
         (name, model) =>
-          println("\n" + name)
-          val Imply(_, Box(ode@ODESystem(_, _), _)) = model
-          annotatedInvariants.products.get(ode) match {
-            case Some(invs) => tool.lzzCheck(ode, invs.reduce(And)) shouldBe true
-            case None => // no invariant to fast-check
+          whenever (!Thread.currentThread().isInterrupted) {
+            println("\n" + name)
+            val Imply(_, Box(ode@ODESystem(_, _), _)) = model
+            annotatedInvariants.products.get(ode) match {
+              case Some(invs) => tool.lzzCheck(ode, invs.map(_._1).reduce(And)) shouldBe true
+              case None => // no invariant to fast-check
+            }
+            println(name + " done")
           }
-          println(name + " done")
       }
     }
   }
@@ -135,9 +140,11 @@ class ContinuousInvariantTests extends TacticTestBase {
         filter(e => e.tactics.nonEmpty).
         map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
         (name, model, tactic) =>
-          println("\n" + name + " with " + BellePrettyPrinter(tactic))
-          proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
-          println(name + " done")
+          whenever(!Thread.currentThread().isInterrupted) {
+            println("\n" + name + " with " + BellePrettyPrinter(tactic))
+            proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
+            println(name + " done")
+          }
       }
     }
   }, 300)

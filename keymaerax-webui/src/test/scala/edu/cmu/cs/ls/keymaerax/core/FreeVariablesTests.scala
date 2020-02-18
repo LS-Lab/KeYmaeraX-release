@@ -2,12 +2,15 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+import edu.cmu.cs.ls.keymaerax.btactics.TacticHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.immutable.Set
+import org.scalatest.OptionValues._
+import org.scalatest.time.Nanoseconds
 
 /**
  * Tests free variables
@@ -279,5 +282,40 @@ class FreeVariablesTests extends FlatSpec with Matchers {
 
   "Free variables of [x:=1;][x'=1;]true" should "be {}" in {
     StaticSemantics("[x:=1;][{x'=1}]true".asFormula).fv should be (SetLattice.bottom)
+  }
+
+  "Fresh index computation" should "work on formulas" in {
+    TacticHelper.freshIndexInFormula("x", "true".asFormula) shouldBe 'empty
+    TacticHelper.freshIndexInFormula("x", "y>0".asFormula) shouldBe 'empty
+    TacticHelper.freshIndexInFormula("x", "x>y".asFormula).value shouldBe 0
+    TacticHelper.freshIndexInFormula("x", "x>x_0".asFormula).value shouldBe 1
+    TacticHelper.freshIndexInFormula("x", "x>x_4".asFormula).value shouldBe 5
+  }
+
+  it should "work on sequents" in {
+    TacticHelper.freshIndexInSequent("x", Sequent(scala.collection.immutable.IndexedSeq.empty, scala.collection.immutable.IndexedSeq.empty)) shouldBe 'empty
+    TacticHelper.freshIndexInSequent("x", "==> true".asSequent) shouldBe 'empty
+    TacticHelper.freshIndexInSequent("x", "==> y>0".asSequent) shouldBe 'empty
+    TacticHelper.freshIndexInSequent("x", "==> x>y, z>x".asSequent).value shouldBe 0
+    TacticHelper.freshIndexInSequent("x", "x_0>4 ==> x>5, x<7".asSequent).value shouldBe 1
+    TacticHelper.freshIndexInSequent("x", "x_4=7, x_5=3 ==> x>x_2, x_8<5".asSequent).value shouldBe 9
+  }
+
+  it should "return names on sequents" in {
+    TacticHelper.freshNamedSymbol("x".asVariable, Sequent(scala.collection.immutable.IndexedSeq.empty, scala.collection.immutable.IndexedSeq.empty)) shouldBe "x".asVariable
+    TacticHelper.freshNamedSymbol("x".asVariable, "==> true".asSequent) shouldBe "x".asVariable
+    TacticHelper.freshNamedSymbol("x".asFunction, "==> y>0".asSequent) shouldBe "x".asFunction
+    TacticHelper.freshNamedSymbol("x_0".asFunction, "==> x>y, z>x".asSequent) shouldBe "x_0".asFunction
+    TacticHelper.freshNamedSymbol("x".asFunction, "==> x>x_0(y), z>x".asSequent) shouldBe "x_1".asFunction
+    TacticHelper.freshNamedSymbol("x".asVariable, "x_0>4 ==> x>5, x<7".asSequent) shouldBe "x_1".asVariable
+    TacticHelper.freshNamedSymbol("x_55".asVariable, "x_4=7, x_5=3 ==> x>x_2, x_8<5".asSequent) shouldBe "x_9".asVariable
+    TacticHelper.freshNamedSymbol(".".asNamedSymbol, "==> ._2 > 7".asSequent) shouldBe "._3".asNamedSymbol
+    TacticHelper.freshNamedSymbol("x".asVariable, "==> [x;]y>4".asSequent) shouldBe "x_0".asVariable
+    TacticHelper.freshNamedSymbol("p".asFunction, "==> p(x)".asSequent) shouldBe "p_0".asFunction
+    TacticHelper.freshNamedSymbol("x".asVariable, "==> [{y'=x, x'=4}]x>4".asSequent) shouldBe "x_0".asVariable
+
+    the [IllegalArgumentException] thrownBy TacticHelper.freshNamedSymbol(UnitFunctional("x", AnyArg, Real), "==> x(||) > 0".asSequent) should have message "Cannot obtain fresh symbol, since class edu.cmu.cs.ls.keymaerax.core.UnitFunctional does not have index"
+    the [IllegalArgumentException] thrownBy TacticHelper.freshNamedSymbol(UnitPredicational("x", AnyArg), "==> x(||)".asSequent) should have message "Cannot obtain fresh symbol, since class edu.cmu.cs.ls.keymaerax.core.UnitPredicational does not have index"
+    the [IllegalArgumentException] thrownBy TacticHelper.freshNamedSymbol(ProgramConst("x", AnyArg), "==> [x;]y>0".asSequent) should have message "Cannot obtain fresh symbol, since class edu.cmu.cs.ls.keymaerax.core.ProgramConst does not have index"
   }
 }

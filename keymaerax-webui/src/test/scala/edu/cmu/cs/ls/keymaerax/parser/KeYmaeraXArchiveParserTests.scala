@@ -5,10 +5,11 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PartialTactic
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Function, Real, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
@@ -115,7 +116,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -142,7 +144,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -166,7 +169,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("t", None) -> (None, Real, None, UnknownLocation),
         ("x", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
+    entry.model shouldBe "[a;]x<=2".asFormula
+    entry.expandedModel shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -190,7 +194,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "f(x)>g(x,y) & x+2>5".asFormula
+    entry.model shouldBe "f(x)>g(x,y) & h(x)>5".asFormula
+    entry.expandedModel shouldBe "f(x)>g(x,y) & x+2>5".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -210,7 +215,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("f", None) -> (Some(Unit), Real, Some("5".asTerm), UnknownLocation),
         ("p", None) -> (Some(Real), Bool, Some(".>0".asFormula), UnknownLocation)
       )))
-    entry.model shouldBe "5>0".asFormula
+    entry.model shouldBe "p(f())".asFormula
+    entry.expandedModel shouldBe "5>0".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -636,6 +642,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry.model shouldBe "x>y -> [{x'=1}]x>=y".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"x>=old(x)\", 1)", implyR(1) & dC("x>=old(x)".asFormula)(1)) :: Nil
+    entry.info shouldBe empty
+  }
+
+  it should "elaborate to functions when parsing a tactic" in withQE { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real y; End.
+        | ProgramVariables Real x; End.
+        | Problem x>y -> [{x'=1}]x>=y End.
+        | Tactic "Simple". implyR(1) ; dC("y=old(y)", 1) End.
+        |End.
+      """.stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (Some(Unit), Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y() -> [{x'=1}]x>=y()".asFormula
+    entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
     entry.info shouldBe empty
   }
 
@@ -1209,7 +1239,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry1.model shouldBe "x>y -> x>=y".asFormula
+    entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
+    entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
     entry1.info shouldBe empty
 
@@ -1233,8 +1264,166 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry2.model shouldBe "x>y -> x>=y".asFormula
-    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})",
+      ExpandAll(entry2.defs.substs) & TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.info shouldBe empty
+  }
+
+  it should "add to all entries but not auto-expand if tactic expands" in {
+    val input =
+      """SharedDefinitions.
+        | B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.
+        |
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". expand "gt" ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 2
+
+    val entry1 = entries.head
+    entry1.name shouldBe "Entry 1"
+    entry1.kind shouldBe "lemma"
+    entry1.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.problemContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0>._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
+    entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry1.tactics shouldBe empty
+    entry1.info shouldBe empty
+
+    val entry2 = entries(1)
+    entry2.name shouldBe "Entry 2"
+    entry2.kind shouldBe "theorem"
+    entry2.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". expand "gt" ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    entry2.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry2.tactics shouldBe ("Proof Entry 2", """expand "gt" ; useLemma({`Entry 1`})""",
+      Expand("gt".asNamedSymbol, "gt(._0,._1) ~> ._0 > ._1".asSubstitutionPair) &
+        TactixLibrary.useLemma("Entry 1", None))::Nil
+    entry2.info shouldBe empty
+  }
+
+  it should "add to all entries but not auto-expand if tactic uses US to expand" in {
+    val input =
+      """SharedDefinitions.
+        | B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.
+        |
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 2
+
+    val entry1 = entries.head
+    entry1.name shouldBe "Entry 1"
+    entry1.kind shouldBe "lemma"
+    entry1.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.problemContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0>._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
+    entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry1.tactics shouldBe empty
+    entry1.info shouldBe empty
+
+    val entry2 = entries(1)
+    entry2.name shouldBe "Entry 2"
+    entry2.kind shouldBe "theorem"
+    entry2.fileContent shouldBe
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Theorem "Entry 2".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        | Tactic "Proof Entry 2". US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
+        |End.""".stripMargin
+    entry2.defs should beDecl(
+      Declaration(Map(
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
+    entry2.tactics shouldBe ("Proof Entry 2", """US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`})""",
+      TactixLibrary.uniformSubstitute(RenUSubst(("gt(._0,._1)".asFormula,  "._0>._1".asFormula) :: Nil).usubst) &
+        TactixLibrary.useLemma("Entry 1", None))::Nil
     entry2.info shouldBe empty
   }
 
@@ -1302,7 +1491,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, UnknownLocation),
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
-    entry.model shouldBe "\\exists t (t=1 & x*t>y) -> x>=y".asFormula
+    entry.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
+    entry.expandedModel shouldBe "\\exists t (t=1 & x*t>y) -> x>=y".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
@@ -1736,15 +1926,17 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
   
   it should "report substitution errors" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    val entries = KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> y>=0; End.
         | ProgramVariables Real y; End.
         | Problem [y:=0;]p() End.
         |End.""".stripMargin
-    ) should have message """<somewhere> Definition p() as y>=0 must declare arguments {y}
-                            |Found:    <unknown> at <somewhere>
-                            |Expected: <unknown>""".stripMargin
+    )
+    the [ParseException] thrownBy entries.loneElement.expandedModel should have message
+      """<somewhere> Definition p() as y>=0 must declare arguments {y}
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "report imbalanced parentheses in predicate definitions" in {

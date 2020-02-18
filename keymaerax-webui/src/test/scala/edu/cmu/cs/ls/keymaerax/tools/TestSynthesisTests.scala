@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, ModelPlex, SimplifierV2, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.ext.TestSynthesis
 
 import scala.language.postfixOps
 

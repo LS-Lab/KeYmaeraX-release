@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
@@ -13,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, StringConverter}
 
 /**

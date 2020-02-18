@@ -3,20 +3,21 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
-  * @note Code Review: 2016-08-17
+  * @note Code Review: 2020-02-17
   */
 package edu.cmu.cs.ls.keymaerax.core
 
 /**
-  * Quantifier elimination tool.
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.ToolProvider]]
+  * Interface to quantifier elimination tools.
   */
 trait QETool {
   /**
-    * Returns a quantifier-free formula that is equivalent to the specified formula, together with the actual input
-    * sent to this tool and the actual output it produced.
+    * Returns a quantifier-free formula that is equivalent to the specified formula.
     * @param formula The formula whose quantifier-free equivalent is sought.
-    * @return An equivalent quantifier-free formula, with tool evidence.
+    * @return An equivalent quantifier-free formula.
+    * @requires formula is in first-order real arithmetic
+    * @ensures \result is equivalent to formula
+    * @ensures \result is quantifier-free
     */
-  def qeEvidence(formula: Formula): (Formula, Evidence)
+  def quantifierElimination(formula: Formula): Formula
 }

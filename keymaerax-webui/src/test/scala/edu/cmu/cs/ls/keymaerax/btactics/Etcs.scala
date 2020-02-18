@@ -6,12 +6,16 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+
+import scala.io.Source
 
 /**
   * ETCS test cases.
@@ -125,15 +129,13 @@ class Etcs extends TacticTestBase {
   }
 
   it should "prove safety with detailed brake model" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyt")).mkString)
-    proveBy(s, tactic) shouldBe 'proved
+    val entry = KeYmaeraXArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-extendedbraking.kyx")).mkString).head
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.loneElement._3) shouldBe 'proved
   }
 
   it should "prove safety with detailed brake model, no air resistance" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-brakingnoair.kyx"))
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-brakingnoair.kyt")).mkString)
-    proveBy(s, tactic) shouldBe 'proved
+    val entry = KeYmaeraXArchiveParser.parse(Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-brakingnoair.kyx")).mkString).head
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.loneElement._3) shouldBe 'proved
   }
 
 //  "ETCS ModelPlex" should "synthesize a ctrl monitor from essentials" in withMathematica { tool =>

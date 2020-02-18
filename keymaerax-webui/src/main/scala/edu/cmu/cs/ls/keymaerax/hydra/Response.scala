@@ -11,7 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -24,8 +24,10 @@ import java.io.{PrintWriter, StringWriter}
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer
@@ -834,7 +836,7 @@ case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTr
       "id" -> proofIdJson(proofId),
       "nodes" -> JsObject(theNodes.toMap),
       "root" -> JsString(root.id.toString),
-      "isProved" -> JsBoolean(root.done)
+      "isProved" -> JsBoolean(root.isProved)
     )
   }
 
@@ -1020,6 +1022,25 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   }
 
   def getJson = JsArray(derivationInfos.map(derivationJson):_*)
+}
+
+case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])]) extends Response {
+  /** Transforms name `n`, its expression `ne`, its replacement `re`, and the plaintext signature from the model. */
+  private def getDefJson(n: NamedSymbol, ne: Expression, re: Option[Expression], s: Option[InputSignature]): JsValue = {
+    JsObject(
+      "symbol" -> JsString(n.prettyString),
+      "definition" -> JsObject(
+        "what" -> JsString(ne.prettyString),
+        "repl" -> JsString(s match {
+          case Some(is) => is._2.map(_.prettyString).getOrElse("")
+          case None => re.map(_.prettyString).getOrElse("")
+        }),
+        "editable" -> JsBoolean(s.isEmpty)
+      )
+    )
+  }
+
+  def getJson: JsValue = JsArray(defs.map(d => getDefJson(d._1, d._2, d._3, d._4)):_*)
 }
 
 class PruneBelowResponse(item: AgendaItem) extends Response {

@@ -1,15 +1,22 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.{File, FileWriter, FilenameFilter}
+import java.lang.reflect.InvocationTargetException
+
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
-import edu.cmu.cs.ls.keymaerax.core.{Lemma, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
 
+import scala.reflect.runtime.{universe => ru}
 import scala.collection.immutable
+import scala.collection.immutable.Map
 
 /**
   * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
@@ -39,8 +46,28 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
     }
   }
 
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withZ3 { qeTool =>
-    DerivedAxioms.prepopulateDerivedLemmaDatabase()
+  "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" taggedAs KeYmaeraXTestTags.CheckinTest in withZ3 { _ =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
+        // delete all stored lemmas
+        LemmaDBFactory.lemmaDB.deleteDatabase()
+        // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
+        val c = DerivedAxioms.getClass.getDeclaredConstructor()
+        c.setAccessible(true)
+        withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of DerivedAxioms.scala for hints where to add missing dependency\n") {
+          try {
+            println("Deriving " + fm.symbol + "...")
+            fm.bind(c.newInstance())()
+            println("...done")
+          } catch {
+            case ex: InvocationTargetException =>
+              val missingDependency = "Lemma ([^\\s]*) should".r.findFirstMatchIn(ex.getCause.getMessage).
+                map(_.group(1)).getOrElse("<unknown>")
+              fail("Missing dependency to '" + missingDependency + "'", ex.getCause)
+          }
+        }
+      })
+    }
   }
 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
@@ -107,7 +134,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   //it should "prove DI differential invariance from DI" in {check(DIinvariance)}
   it should "prove DI differential invariant from DI" in {check(DIinvariant)}
-  it should "prove DIo open differential invariance >" in {check(DIOpeninvariantLess)}
+  it should "prove DIo open differential invariance >" in withZ3 {_ => check(DIOpeninvariantLess)}
   it should "prove DW differential weakening" in {check(DWeakening)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
@@ -226,4 +253,57 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove [] monotone 2" in withZ3 { qeTool => boxMonotone2.fact.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
+
+  //@note must be last to populate the lemma database during build
+  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withZ3 { _ =>
+    LemmaDBFactory.lemmaDB.deleteDatabase()
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val writeEffect = true
+      // use a new instance of the DerivedAxioms singleton object to store all axioms to the lemma database
+      val c = DerivedAxioms.getClass.getDeclaredConstructor()
+      c.setAccessible(true)
+      c.newInstance().asInstanceOf[DerivedAxioms.type].prepopulateDerivedLemmaDatabase()
+
+      val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
+      // see [[FileLemmaDB.scala]] for path of actual lemma files
+      val lemmaFiles = new File(cache.getAbsolutePath + File.separator + "lemmadb").listFiles(new FilenameFilter() {
+        override def accept(dir: File, name: String): Boolean = name.endsWith(".alp")
+      }).map(_.getName.stripSuffix(".alp"))
+
+      val lemmas = getDerivedAxiomsMirrors.map({ case (valName, m) => valName -> m().asInstanceOf[Lemma] })
+      // we allow lazy val forwarding, but all of them have to refer to the same lemma
+      val forwards = lemmas.groupBy({ case (_, lemma) => lemma }).filter(_._2.length > 1)
+      println("Lemma forwards:\n" + forwards.map(f => f._1.name.getOrElse("<anonymous>") + " <- " + f._2.map(_._1).mkString("[", ",", "]")).mkString("\n"))
+      // the lemma database only stores the one lemma referred to from one or more lazy vals
+      lemmaFiles.length shouldBe lemmaFiles.distinct.length
+      // the lemma database stores all the distinct lemmas in DerivedAxioms
+      forwards.keys.flatMap(_.name).toList.diff(lemmaFiles) shouldBe empty
+
+      if (writeEffect) {
+        val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
+        if (!versionFile.exists()) {
+          if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+        }
+        assert(versionFile.exists())
+        val fw = new FileWriter(versionFile)
+        fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+        fw.close()
+      }
+    }
+  }
+
+  /** Returns the reflection mirrors to access the lazy vals in DerivedAxioms. */
+  private def getDerivedAxiomsMirrors = {
+    val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val fns = lemmas.map(_.getName)
+
+    val mirror = ru.runtimeMirror(getClass.getClassLoader)
+    // access the singleton object
+    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val im = mirror.reflect(moduleMirror.instance)
+
+    //@note lazy vals have a "hidden" getter method that does the initialization
+    val fields = fns.map(fn => fn -> ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    fields.map(f => f._2.toString -> im.reflectMethod(f._2))
+  }
 }

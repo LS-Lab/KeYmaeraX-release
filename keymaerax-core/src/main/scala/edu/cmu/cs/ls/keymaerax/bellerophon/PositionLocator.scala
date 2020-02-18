@@ -5,9 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.FormulaTools
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Locate Positions

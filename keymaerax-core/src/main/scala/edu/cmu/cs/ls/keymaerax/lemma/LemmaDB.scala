@@ -7,11 +7,10 @@
   */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.core.Lemma
-import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.core._
 
 /**
-  * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get
+ * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get
  * an instance of a lemma database.
  *
  * @author Stefan Mitsch
@@ -36,41 +35,49 @@ import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
  */
 trait LemmaDB {
 
+  /** Identifies a lemma. */
   type LemmaID = String
 
   /**
    * Indicates whether or not this lemma DB contains a lemma with the specified ID.
- *
    * @param lemmaID Identifies the lemma.
-    *
-    *
    * @return True, if this lemma DB contains a lemma with the specified ID; false otherwise.
    */
-  def contains(lemmaID: LemmaID): Boolean = get(lemmaID).isDefined
+  def contains(lemmaID: LemmaID): Boolean
 
   /**
    * Returns the lemma with the given name or None if non-existent.
- *
    * @param lemmaID Identifies the lemma.
    * @return The lemma, if found under the given lemma ID. None otherwise.
-   * @ensures contains(lemmaID) && \result==Some(l) && l.name == lemmaID
-   *         || !contains(lemmaID) && \result==None
+   * @ensures contains(lemmaID) && \result == Some(l) && l.name == lemmaID
+   *         || !contains(lemmaID) && \result == None
    */
-  def get(lemmaID: LemmaID): Option[Lemma] = get(List(lemmaID)).flatMap(_.headOption)
+  def get(lemmaID: LemmaID): Option[Lemma] = get(List(lemmaID)).flatMap(_.headOption) ensures(r =>
+    contains(lemmaID) && r.isDefined && r.get.name.contains(lemmaID) || !contains(lemmaID) && r.isEmpty)
 
-  def get(lemmaIDs: List[LemmaID]):Option[List[Lemma]]
+  /**
+   * Returns the lemmas with IDs `lemmaIDs` or None if any of the `lemmaIDs` does not exist.
+   * @param lemmaIDs Identifies the lemmas.
+   * @return The list of lemmas, if all `lemmaIDs` exist. None otherwise.
+   * @ensures lemmaIDs.forall(contains) && \result == Some(l) && l.names == lemmaIDs
+   *         || !lemmaIDs.forall(contains) && \result == None
+   */
+  def get(lemmaIDs: List[LemmaID]): Option[List[Lemma]]
 
   /**
    * Adds a new lemma to this lemma DB, with a unique name or None, which will automatically assign a name.
- *
    * @param lemma The lemma whose Provable will be inserted under its name.
    * @return Internal lemma identifier.
    * @requires if (lemma.name==Some(n)) then !contains(n)
-   * @ensures  if (lemma.name==Some(n)) then \result==n  (usually)
+   * @ensures  contains(\result) && if (lemma.name==Some(n)) then \result==n  (usually)
    */
   def add(lemma: Lemma): LemmaID
 
-  /** Delete the lemma of the given identifier, throwing exceptions if that was unsuccessful.*/
+  /**
+   * Delete the lemma of the given identifier, throwing exceptions if that was unsuccessful.
+   * @param name Identifies the lemma.
+   * @ensures !contains(name)
+   */
   def remove(name: LemmaID): Unit
 
   /** Removes all lemmas in `folder`. */

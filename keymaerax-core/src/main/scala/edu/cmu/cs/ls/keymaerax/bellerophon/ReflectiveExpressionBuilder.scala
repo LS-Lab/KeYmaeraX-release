@@ -3,9 +3,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.reflect.runtime.universe.typeTag
 
 /**
@@ -29,8 +31,7 @@ object ReflectiveExpressionBuilder extends Logging {
         info.belleExpr
       }
     val expressionArgs = args.filter(_.isLeft).
-      map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown."))).
-      map(_.map({ case e: Expression => defs.exhaustiveSubst(e) case e => e }))
+      map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown.")))
 
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
@@ -41,6 +42,7 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr: TypedFunc[Variable, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe => expr(y)
       case (expr: TypedFunc[Term, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe => expr(term)
       case (expr: TypedFunc[Expression, _], (ex: Expression) :: Nil) if expr.argType.tpe <:< typeTag[Expression].tpe => expr(ex)
+      case (expr: TypedFunc[USubst, _], (ex: USubst) :: Nil) if expr.argType.tpe <:< typeTag[USubst].tpe => expr(ex)
       case (expr: TypedFunc[Option[Formula], _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Option[Formula]].tpe  => expr(Some(fml))
       case (expr: TypedFunc[Option[Variable], _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Option[Variable]].tpe => expr(Some(y))
       case (expr: TypedFunc[Option[Term], _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Option[Term]].tpe => expr(Some(term))
@@ -51,6 +53,7 @@ object ReflectiveExpressionBuilder extends Logging {
       case _ => throw new ReflectiveExpressionBuilderExn("Expected a TypedFunc (cannot match due to type erasure)")
     }
 
+    @tailrec
     def fillOptions(expr: Any): Any = expr match {
       case e: TypedFunc[Option[Formula], _]  if e.argType.tpe <:< typeTag[Option[Formula]].tpe  => fillOptions(e(None))
       case e: TypedFunc[Option[Term], _]     if e.argType.tpe <:< typeTag[Option[Term]].tpe     => fillOptions(e(None))

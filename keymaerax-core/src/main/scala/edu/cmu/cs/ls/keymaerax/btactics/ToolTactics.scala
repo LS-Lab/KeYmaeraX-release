@@ -3,15 +3,17 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
+import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
@@ -35,13 +37,13 @@ private object ToolTactics {
         Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
         ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
       case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
-      case _ => throw BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
+      case _ => throw new BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
     }
     nil
   })
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
+  def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETacticTool): BelleExpr = Idioms.NamedTactic("QE", {
     val doRcf = rcf(qeTool) &
       Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
         if (s.succ.head == False) label(BelleLabels.QECEX)
@@ -98,7 +100,7 @@ private object ToolTactics {
     hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
   })
 
-  def fullQE(qeTool: => QETool): BelleExpr = fullQE()(qeTool)
+  def fullQE(qeTool: => QETacticTool): BelleExpr = fullQE()(qeTool)
 
   // Follows heuristic in C.W. Brown. Companion to the tutorial: Cylindrical algebraic decomposition, (ISSAC 2004)
   // www.usna.edu/Users/cs/wcbrown/research/ISSAC04/handout.pdf
@@ -185,7 +187,7 @@ private object ToolTactics {
   }
 
   //Note: the same as fullQE except it uses computes the heuristic order in the middle
-  def heuristicQE(qeTool: => QETool, po: Ordering[Variable]=equalityOrder): BelleExpr = {
+  def heuristicQE(qeTool: => QETacticTool, po: Ordering[Variable]=equalityOrder): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("ordered QE",
       //      DebuggingTactics.recordQECall() &
@@ -204,7 +206,7 @@ private object ToolTactics {
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(qeTool: => QETool): BelleExpr = "pQE" by ((s: Sequent) => {
+  def partialQE(qeTool: => QETacticTool): BelleExpr = "pQE" by ((s: Sequent) => {
     // dependent tactic so that qeTool is evaluated only when tactic is executed, but not when tactic is instantiated
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     hidePredicates & toSingleFormula & rcf(qeTool) &
@@ -217,7 +219,7 @@ private object ToolTactics {
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: => QETool): BelleExpr = "rcf" by ((sequent: Sequent) => {
+  def rcf(qeTool: => QETacticTool): BelleExpr = "rcf" by ((sequent: Sequent) => {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
@@ -225,7 +227,7 @@ private object ToolTactics {
     //Run QE and extract the resulting provable and equivalence
     //@todo how about storing the lemma, but also need a way of finding it again
     //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
-    val qeFact = ProvableSig.proveArithmetic(qeTool, sequent.succ.head).fact
+    val qeFact = qeTool.qe(sequent.succ.head).fact
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
     cutLR(result)(1) & Idioms.<(
@@ -245,6 +247,7 @@ private object ToolTactics {
     to match {
       case f: Formula => transformFormula(f, sequent, pos)
       case t: Term => transformTerm(t, sequent, pos)
+      case _ => assert(false, "Precondition already checked that other types cannot occur " + to); ???
     }
   })
 
@@ -272,14 +275,14 @@ private object ToolTactics {
           case ex: UnificationException =>
             //@note looks for specific transform position until we have better formula diff
             //@note Exception reports variable unifications and function symbol unifications swapped
-            if (ex.e2.asExpr.isInstanceOf[FuncOf] && !ex.e1.asExpr.isInstanceOf[FuncOf]) {
-              FormulaTools.posOf(e, ex.e1.asExpr) match {
-                case Some(pp) => transform(ex.e2.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
+            if (ex.input.asExpr.isInstanceOf[FuncOf] && !ex.shape.asExpr.isInstanceOf[FuncOf]) {
+              FormulaTools.posOf(e, ex.shape.asExpr) match {
+                case Some(pp) => transform(ex.input.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
                 case _ => transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
               }
             } else {
-              FormulaTools.posOf(e, ex.e2.asExpr) match {
-                case Some(pp) => transform(ex.e1.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
+              FormulaTools.posOf(e, ex.input.asExpr) match {
+                case Some(pp) => transform(ex.shape.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
                 case _ => transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
               }
             }
@@ -429,7 +432,7 @@ private object ToolTactics {
         pushIn(pos.inExpr)(pos.top)
       )
       )
-    else throw BelleTacticFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
+    else throw new BelleTacticFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
   }
 
   /** Transforms the term at position `pos` into the term `to`. */

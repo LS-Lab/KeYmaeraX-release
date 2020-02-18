@@ -6,10 +6,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.lang.Number
 
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ExpressionTraversal, FormulaTools}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 import org.apache.logging.log4j.scala.Logger
 
 import scala.annotation.tailrec
@@ -124,6 +125,7 @@ object UIIndex {
               else ("solve" :: "dC" :: "dI" ::  "dG" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
             }
             else ("solve" :: "dC" :: Nil) ++ (maybeSplit :+ "GV" :+ "MR")
+          case ProgramConst(name, _) => s"""expand "$name"""" :: rules
           case _ => rules
         }
 
@@ -140,6 +142,7 @@ object UIIndex {
           case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
           case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "diamondd"
           case _: ODESystem => "solve" :: "dC" :: rules
+          case ProgramConst(name, _) => s"""expand "$name"""" :: rules
           case _ => rules
         }
 
@@ -203,6 +206,8 @@ object UIIndex {
             case (Equal(_: Variable | _: FuncOf, _: Variable | _: FuncOf), true) => "allL2R" :: "allR2L" :: alwaysApplicable
             case (Equal(_: Variable | _: FuncOf, _), true) => "allL2R" :: alwaysApplicable
             case (Equal(_, _: Variable | _: FuncOf), true) => "allR2L" :: alwaysApplicable
+            case (FuncOf(fn, _), _) => s"""expand "${fn.prettyString}"""" :: alwaysApplicable
+            case (PredOf(fn, _), _) => s"""expand "${fn.prettyString}"""" :: alwaysApplicable
             case _ => alwaysApplicable
           }
         }

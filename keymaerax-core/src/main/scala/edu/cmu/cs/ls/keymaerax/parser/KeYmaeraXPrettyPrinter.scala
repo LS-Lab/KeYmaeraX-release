@@ -12,13 +12,15 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 
 import scala.collection.immutable._
 import org.typelevel.paiges._
-
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
@@ -27,7 +29,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  */
 object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
   /** This default pretty printer. */
-  val pp = this
+  val pp: KeYmaeraXPrettyPrinter.type = this
 }
 
 /**
@@ -37,7 +39,7 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
   */
 object KeYmaeraXNoContractPrettyPrinter extends KeYmaeraXPrecedencePrinter {
   /** This default pretty printer without contract checking. */
-  val pp = this
+  val pp: KeYmaeraXNoContractPrettyPrinter.type = this
 
   override def apply(expr: Expression): String = stringify(expr)
 }
@@ -48,9 +50,10 @@ object KeYmaeraXNoContractPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 trait BasePrettyPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string */
-  def apply(expr: Expression): String = stringify(expr) ensuring(
+  def apply(expr: Expression): String = stringify(expr) ensures(
     r => expr.kind == FunctionKind || reparse(expr, r) == expr,
-    "Parse of print is identity." +
+    "Expect parse of print to be identity." +
+      //@todo reconcile first and last line of contract message
       "\nExpression: " + FullPrettyPrinter.stringify(expr) + "\t@ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
       "\nReparsed:   " + stringify(reparse(expr, stringify(expr))) + "\t@ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
@@ -76,7 +79,8 @@ trait BasePrettyPrinter extends PrettyPrinter {
     case FormulaKind => parser.formulaParser(print)
     case ProgramKind => parser.programParser(print)
     case DifferentialProgramKind => parser.differentialProgramParser(print)
-    case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
+    case FunctionKind => throw new AssertionError("No completed expressions of FunctionKind can be constructed")
+    case ExpressionKind => throw new AssertionError("No expressions of ExpressionKind can be constructed")
   }
 
   /** Pretty-print term to a string but without contract checking! */
@@ -122,19 +126,22 @@ object FullPrettyPrinter extends BasePrettyPrinter {
 
   private def pp(term: Term): String = term match {
     case Nothing       => op(term).opcode
+    //@note DotTerm does not have an OpSpec img because it has concrete names (similar to variables)
     case DotTerm(sort, idx) => "•" +
       (idx match { case None => "" case Some(i) => "_" + i }) +
       (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
     case x: Variable            => x.asString
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
-    // forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
+    //@note forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
     case Number(n)              => "(" + n.bigDecimal.toPlainString + ")"
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     // special notation
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
     case UnitFunctional(name,space,sort) => name + "(" + space + ")"
+    //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeTerm  => op(t).opcode + "(" + pp(t.child) + ")"
+    //@note all binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeTerm =>
       "(" + pp(t.left) + ")" + op(t).opcode + "(" + pp(t.right) + ")"
   }
@@ -150,7 +157,9 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case f: Box                 => "[" + pp(f.program) + "]" + "(" + pp(f.child) + ")"
     case f: Diamond             => "<" + pp(f.program) + ">" + "(" + pp(f.child) + ")"
     case UnitPredicational(name,space) => name + "(" + space + ")"
+    //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeFormula=> op(t).opcode + "(" + pp(t.child) + ")"
+    //@note all binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeFormula=>
       "(" + pp(t.left) + ")" + op(t).opcode + "(" + pp(t.right) + ")"
   }
@@ -159,18 +168,18 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case a: ProgramConst        => statement(a.asString)
     case a: SystemConst         => statement(a.toString)
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
-    //case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case Test(f)                => statement(op(program).opcode + "(" + pp(f) + ")")
     case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
     //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
     //@note This is only used in printing internal data structures, not user input.
-    //@note no positional change since only internal data structure swap-over
     case ode: DifferentialProgram => "{" + ppODE(ode) + "}"
+    //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeProgram => "{" + pp(t.child) + "}" + op(program).opcode
 //    case t: Compose if OpSpec.statementSemicolon =>
 //      //@note in statementSemicolon mode, suppress opcode of Compose since already after each statement
 //      "{" + pp(t.left) + "}" + /*op(t).opcode + */ "{" + pp(t.right) + "}"
+    //@note all binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeProgram =>
       "{" + pp(t.left) + "}" + op(t).opcode + "{" + pp(t.right) + "}"
   }
@@ -247,6 +256,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case _: PredOf => "(" + text + ")"
     case _: Pair => "(" + text + ")"
     case _: PredicationalOf => "{" + text + "}"
+    case _ => throw new AssertionError("no parenthetical expression " + expr)
   }
 
   //@todo could add contract that TermAugmentor(original)(q) == term
@@ -265,14 +275,31 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     } else n.bigDecimal.toPlainString
     case FuncOf(f, c)           => f.asString + "(" + pp(q++0, c) + ")"
     // special notation
-    case Pair(l, r)             => wrap(pp(q++0, l) + ppOp(term) + pp(q++1, r), term)
+    case p: Pair                =>
+      //@todo create positions when flattening pairs
+      /** Flattens pairs in right-associative way */
+      def flattenPairs(e: Term): List[Term] = e match {
+        case Pair(l, r) => l :: flattenPairs(r)
+        case t => t :: Nil
+      }
+      val flattened = flattenPairs(p)
+      // PosInExpr for a list [a,b,c,d] ~> .0, .1.0, .1.1.0, .1.1.1, which are the binary digits of [0,2,6,7] computed as [2^1-2, 2^2-2, 2^3-2, 2^3-1]
+      val posInExprs = ListBuffer.empty[PosInExpr]
+      for (i <- flattened.indices.takeRight(flattened.size-1)) {
+        // (1<<i)-2 go right i-2 times, then go left
+        posInExprs.append(PosInExpr(((1<<i)-2).toBinaryString.map(_.asDigit).toList))
+      }
+      posInExprs.append(PosInExpr(((1<<posInExprs.size)-1).toBinaryString.map(_.asDigit).toList))
+      wrap(flattened.zipWithIndex.map({ case (p, i) => pp(q++posInExprs(i), p) }).mkString(ppOp(term)), term)
     case UnitFunctional(name,space,sort) => name + "(" + space + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => ppOp(t) + "(" + pp(q++0, Number(n)) + ")"
     // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
     case t: Neg if !negativeBrackets => val c = pp(q++0, t.child)
       ppOp(t) + (if (c.charAt(0).isDigit) " " else "") + wrapChild(t, c)
+    //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeTerm  => ppOp(t) + wrapChild(t, pp(q++0, t.child))
+    //@note all binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeTerm =>
       wrapLeft(t, pp(q++0, t.left)) + ppOp(t) + wrapRight(t, pp(q++1, t.right))
   })
@@ -290,7 +317,9 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case f: Box                 => wrap(pp(q++0, f.program), f) + wrapChild(f, pp(q++1, f.child))
     case f: Diamond             => wrap(pp(q++0, f.program), f) + wrapChild(f, pp(q++1, f.child))
     case UnitPredicational(name,space) => name + "(" + space + ")"
+    //@note all remaining unary operators are prefix, see [[OpSpec]]
     case t: UnaryCompositeFormula=> ppOp(t) + wrapChild(t, pp(q++0, t.child))
+    //@note all binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeFormula=>
       wrapLeft(t, pp(q++0, t.left)) + ppOp(t) + wrapRight(t, pp(q++1, t.right))
   })
@@ -299,17 +328,16 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case a: ProgramConst        => statement(a.asString)
     case a: SystemConst         => statement(a.toString)
     case Assign(x, e)           => statement(pp(q++0, x) + ppOp(program) + pp(q++1, e))
-    //case DiffAssign(xp, e)      => statement(pp(q++0, xp) + op(program).opcode + pp(q++1, e))
     case AssignAny(x)           => statement(pp(q++0, x) + ppOp(program))
     case Test(f)                => statement(ppOp(program) + pp(q++0, f))
+    //@todo avoid & true
     case ODESystem(ode, f)      => wrap(ppODE(q++0, ode) + (if (false && f==True) "" else ppOp(program) + pp(q++1, f)), program)
     //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
-    //@note This is only used in printing internal data structures, not user input.
-    //@note no positional change since only internal data structure swap-over
+    //@note This is only used in printing internal data structures, not user input (ODESystem case catches user input).
+    //@note no positional change since ODESystem already descended into child position
     case ode: DifferentialProgram => wrap(ppODE(q, ode), program)
     //@note forced parentheses in grammar for loops and duals
     case t: UnaryCompositeProgram => wrap(pp(q++0, t.child), program) + ppOp(program)
-    //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose => pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))
     case t: BinaryCompositeProgram => pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))
   })
@@ -336,11 +364,6 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   protected def wrapLeft(t: BinaryComposite, leftPrint: String): String = "(" + leftPrint + ")"
   /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
   protected def wrapRight(t: BinaryComposite, rightPrint: String): String = "(" + rightPrint + ")"
-
-//  /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
-//  protected def wrapLeft(t: ComparisonFormula, leftPrint: String): String = "(" + leftPrint + ")"
-//  /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
-//  protected def wrapRight(t: ComparisonFormula, rightPrint: String): String = "(" + rightPrint + ")"
 
   /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
   protected def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
@@ -391,16 +414,24 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
 
   /**
     * Whether parentheses around ``t.child`` can be skipped because they are implicit.
-    *
     * @see [[wrapChild()]]
     */
   protected def skipParens(t: UnaryComposite): Boolean
+
+  /**
+    * Whether parentheses around ``t.child`` can be skipped because they are implicit.
+    * @see [[wrapChild()]]
+    */
   protected def skipParens(t: Quantified): Boolean
+
+  /**
+    * Whether parentheses around ``t.child`` can be skipped because they are implicit.
+    * @see [[wrapChild()]]
+    */
   protected def skipParens(t: Modal): Boolean
 
   /**
     * Whether parentheses around ``t.left`` can be skipped because they are implicit.
-    *
     * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
     * @see [[wrapLeft()]]
     */
@@ -408,7 +439,6 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
 
   /**
     * Whether parentheses around ``t.right`` can be skipped because they are implicit.
-    *
     * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
     * @see [[wrapRight()]]
     */
@@ -417,32 +447,34 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
 }
 
 /**
- * Precedence-based: KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
- * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
- * with explicit statement end ``;`` operator.
-  *
+  * Precedence-based: KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
+  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
+  * with explicit statement end ``;`` operator.
   * @author Andre Platzer
- * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
- * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
- */
+  * @todo Augment with ensures postconditions that check correct reparse non-recursively.
+  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+  */
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
+  /** @inheritdoc */
   protected override def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
+
+  /** @inheritdoc */
   protected override def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
+
+  /** @inheritdoc */
   protected override def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
 
   /**
-   * Whether parentheses around ``t.left`` can be skipped because they are implied.
-    *
+    * Whether parentheses around ``t.left`` can be skipped because they are implied.
     * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-   */
+    */
   protected override def skipParensLeft(t: BinaryComposite): Boolean =
     op(t.left) < op(t) || op(t.left) <= op(t) && op(t).assoc == LeftAssociative && op(t.left).assoc == LeftAssociative
 
   /**
-   * Whether parentheses around ``t.right`` can be skipped because they are implied.
-    *
+    * Whether parentheses around ``t.right`` can be skipped because they are implied.
     * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-   */
+    */
   protected override def skipParensRight(t: BinaryComposite): Boolean =
     op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
 
@@ -456,6 +488,7 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
   * @author Andre Platzer
   * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
   */
+@deprecated("Use PrettierPrinter instead")
 class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
   // eloquent space if no parentheses
@@ -498,6 +531,8 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
     case FormulaKind => sub.isInstanceOf[BinaryCompositeFormula]
     case ProgramKind => sub.isInstanceOf[BinaryCompositeProgram]
     case DifferentialProgramKind => sub.isInstanceOf[DifferentialProduct]
+    case FunctionKind => assert(false, "No completed expressions of FunctionKind can be constructed"); ???
+    case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
   private def weight1(sub: Expression, par: BinaryComposite): Int = {
@@ -513,12 +548,12 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
 /**
   * Vertical layout using an implementation based on Wadler's "A Prettier Printer"
-  *
   * @author Fabian Immler
   * @see [[http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf]]
   */
 class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
 
+  /** Encloses document `doc` between strings `s1` and `s2`, preferably rendered in a single line. */
   protected def encloseText(s1: String, doc: Doc, s2: String): Doc = doc.tightBracketBy(Doc.text(s1), Doc.text(s2))
 
   protected def wrapDoc(doc: Doc, expr: Expression): Doc = expr match {
@@ -528,6 +563,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case _: PredOf => encloseText("(", doc,")")
     case _: Pair => encloseText("(", doc,")")
     case _: PredicationalOf => encloseText("{", doc,"}")
+    case _ => throw new AssertionError("no parenthetical expression " + expr)
   }
 
   protected def wrapChildDoc(t: UnaryComposite, doc: Doc): Doc =
@@ -550,8 +586,15 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   protected def docOf(term: Term): Doc = term match {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
+    //@todo if f(pairs) skip parentheses
     case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
-    case Pair(l, r)             => wrapDoc((Doc.lineBreak + docOf(l) + Doc.text(ppOp(term)) + Doc.lineBreak + docOf(r) + Doc.lineBreak).nested(2).grouped, term)
+    case p: Pair                =>
+      /** Flattens pairs in right-associative way */
+      def flattenPairs(e: Term): List[Term] = e match {
+        case Pair(l, r) => l :: flattenPairs(r)
+        case t => t :: Nil
+      }
+      wrapDoc((Doc.lineBreak + flattenPairs(p).map(docOf).reduce[Doc]({ case (a, b) => a + Doc.text(ppOp(term)) + Doc.lineBreak + b + Doc.lineBreak })).nested(2).grouped, term)
     case Neg(Number(_))         => Doc.text(pp(HereP, term))
     case t: Neg if !negativeBrackets =>
       val c = pp(HereP, t.child)
@@ -568,6 +611,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case PredicationalOf(p, c)  => (Doc.text(p.asString) + Doc.lineBreak + encloseText("{", docOf(c), "}").nested(2)).grouped
     case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line + wrapRightDoc(f, docOf(f.right))).grouped
     case DifferentialFormula(g) => encloseText("(", docOf(g), ")" + ppOp(formula))
+    // prints quantifiers with comma-separated list of variables
     case f: Quantified          => (Doc.text(ppOp(formula)) + Doc.space + Doc.intercalate(Doc.comma+Doc.space, f.vars.map(docOf(_))) +
       (Doc.line + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
     case f: Box                 => (wrapDoc(docOf(f.program), f) + (Doc.lineBreak + wrapChildDoc(f, docOf(f.child))).nested(2)).grouped
@@ -577,6 +621,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case t: BinaryCompositeFormula=> (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line + wrapRightDoc(t, docOf(t.right))).grouped
   }
 
+  /** Statement with closing ; */
   protected def statementDoc(s: Doc): Doc = if (OpSpec.statementSemicolon) s + Doc.text(";") else s
 
   protected def docOf(program: Program): Doc = program match {
@@ -585,11 +630,13 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case Assign(x, e)           => statementDoc(docOf(x) + Doc.text(ppOp(program)) + (Doc.lineBreak + docOf(e)).nested(2)).grouped
     case AssignAny(x)           => statementDoc(docOf(x) + Doc.text(ppOp(program)))
     case Test(f)                => statementDoc(Doc.text(ppOp(program)) + docOf(f).nested(2)).grouped
-    case ODESystem(ode, f) if f != True => wrapDoc(docOfODE(ode) + Doc.space + Doc.text(ppOp(program)) + Doc.line + docOf(f), program).grouped
-    case ODESystem(ode, f) if f == True => wrapDoc(docOfODE(ode), program).grouped
+    case ODESystem(ode, True) => wrapDoc(docOfODE(ode), program).grouped
+    case ODESystem(ode, f) => wrapDoc(docOfODE(ode) + Doc.space + Doc.text(ppOp(program)) + Doc.line + docOf(f), program).grouped
     case ode: DifferentialProgram => (Doc.line + wrapDoc(docOfODE(ode), program) + Doc.line).grouped
+    //@note all remaining unary operators are postfix, see [[OpSpec]]
     case t: UnaryCompositeProgram => (wrapDoc(docOf(t.child), program) + Doc.text(ppOp(program))).grouped
     case t: Compose => (pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + pwrapRightDoc(t, docOf(t.right))).grouped
+    //@note all remaining binary operators are infix, see [[OpSpec]]
     case t: BinaryCompositeProgram => (pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + Doc.line + pwrapRightDoc(t, docOf(t.right))).grouped
   }
 
@@ -611,12 +658,19 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     doc.render(margin)
   }
 
-  override def stringify(seq: Sequent): String = {
-    val doc = Doc.intercalate(Doc.line,(1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
+  def docOf(seq: Sequent) : Doc =
+    Doc.intercalate(Doc.line, (1 to seq.ante.length).map(i => Doc.text(-i + ": ") + (Doc.line + docOf(seq.ante(i - 1))).nested(2))) +
       Doc.line + Doc.text(" ==> ") + Doc.line +
       Doc.intercalate(Doc.line, (1 to seq.succ.length).map(i => Doc.text(+i + ": ") + (Doc.line + docOf(seq.succ(i - 1))).nested(2)))
-    doc.render(margin)
-  }
 
+  override def stringify(seq: Sequent): String = docOf(seq).render(margin)
+
+  def docOf(prv: ProvableSig): Doc =
+    Doc.text("Conclusion:") + (Doc.line + docOf(prv.conclusion)).nested(2) +
+      Doc.line + Doc.text(prv.subgoals.length + " subgoals" + (if (prv.subgoals.length == 0) "." else ":")) + Doc.line +
+      Doc.intercalate(Doc.line, prv.subgoals.zipWithIndex.map{case (seq, i) =>
+        Doc.text("Subgoal " + i + ": ") + (Doc.line + docOf(seq).nested(2))})
+
+  def stringify(prv: ProvableSig): String = docOf(prv).render(margin)
 
 }

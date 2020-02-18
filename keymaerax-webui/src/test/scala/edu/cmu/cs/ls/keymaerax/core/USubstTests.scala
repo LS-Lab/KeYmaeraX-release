@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, SystemTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -287,7 +287,7 @@ class USubstTests extends SystemTestBase {
   it should "clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val x = Variable("x_",None,Real)
     val fml = GreaterEqual(x, Number(0))
-    val prem = ProvableSig.axioms("vacuous all quantifier")
+    val prem = ProvableInfo("vacuous all quantifier").provable
     val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
     //a [SubstitutionClashException] should be thrownBy
@@ -298,7 +298,7 @@ class USubstTests extends SystemTestBase {
   }
   it should "old clash when using vacuous all quantifier forall x for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
-    val prem = ProvableSig.axiom("vacuous all quantifier")
+    val prem = AxiomInfo("vacuous all quantifier").formula
     val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
     //a [SubstitutionClashException] should be thrownBy

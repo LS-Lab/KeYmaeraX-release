@@ -8,8 +8,11 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool.{minF, maxF}
 
 import scala.collection.immutable._
 
@@ -33,10 +36,10 @@ object IntervalArithmeticV2 {
                           (bounds: DecimalBounds)
                           (lat: Term, uat: Term)
                           (lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) = {
-    val (la, _) = eval_ivl(prec)(bounds)(lat)
-    val (_, ua) = eval_ivl(prec)(bounds)(uat)
-    val (lb, _) = eval_ivl(prec)(bounds)(lbt)
-    val (_, ub) = eval_ivl(prec)(bounds)(ubt)
+    val (la, ua1) = eval_ivl(prec)(bounds)(lat)
+    val ua = if (lat == uat) ua1 else eval_ivl(prec)(bounds)(uat)._2
+    val (lb, ub1) = eval_ivl(prec)(bounds)(lbt)
+    val ub = if (lbt == ubt) ub1 else eval_ivl(prec)(bounds)(ubt)._2
     val pairs = (List(la, la, ua, ua), List(lb, ub, lb, ub)).zipped
     val lowers = pairs map ((a, b) => f(a, b, downContext(prec)))
     val uppers = pairs map ((a, b) => f(a, b, upContext(prec)))
@@ -49,21 +52,29 @@ object IntervalArithmeticV2 {
     op_endpoints((a, b, c) => a.bigDecimal.divide(b.bigDecimal, c))(prec)(bounds)(lat, uat)(lbt, ubt)
 
   private def power_endpoints(prec: Int)(bounds: DecimalBounds)(lat: Term, uat: Term)(n: Int) : (BigDecimal, BigDecimal) = {
-    val (la, _) = eval_ivl(prec)(bounds)(lat)
-    val (_, ua) = eval_ivl(prec)(bounds)(uat)
-    val lower: BigDecimal =
-      if (n % 2 == 1) la.bigDecimal.pow(n, downContext(prec))
-      else {
-        if (0 <= la) la.bigDecimal.pow(n, downContext(prec))
-        else {
-          if (ua <= 0) ua.bigDecimal.pow(n, downContext(prec))
-          else 0
-        }
+    if (n >= 0) {
+      val (la, _) = eval_ivl(prec)(bounds)(lat)
+      val (_, ua) = eval_ivl(prec)(bounds)(uat)
+      if (n == 0) {
+        if (la > 0 || ua < 0) (1, 1)
+        else throw new IllegalArgumentException("Power [" + la + ", " + ua + "]^0 is not defined")
       }
-    val upper = (la.bigDecimal.pow(n, upContext(prec))) max (ua.bigDecimal.pow(n, upContext(prec)))
-    (lower, upper)
+      val lower: BigDecimal =
+        if (n % 2 == 1) la.bigDecimal.pow(n, downContext(prec))
+        else {
+          if (0 <= la) la.bigDecimal.pow(n, downContext(prec))
+          else {
+            if (ua <= 0) ua.bigDecimal.pow(n, downContext(prec))
+            else 0
+          }
+        }
+      val upper = (la.bigDecimal.pow(n, upContext(prec))) max (ua.bigDecimal.pow(n, upContext(prec)))
+      (lower, upper)
+    } else {
+      val (l, u) = power_endpoints(prec)(bounds)(lat, uat)(-n)
+      divide_endpoints(prec)(bounds)(Number(1), Number(1))(Number(l), Number(u))
+    }
   }
-
   /** Compute interval bounds by recursing over the input term structure.
     * An environment of bounds for variables and function symbols can be provided, too.
     *
@@ -81,10 +92,10 @@ object IntervalArithmeticV2 {
       val (la, ua) = eval_ivl(prec)(bounds)(a)
       val (lb, ub) = eval_ivl(prec)(bounds)(b)
       (la.bigDecimal.subtract(ub.bigDecimal, downContext(prec)), ua.bigDecimal.subtract(lb.bigDecimal, upContext(prec)))
-    case FuncOf(m, Pair(a, b)) if m == BigDecimalQETool.minF || m == BigDecimalQETool.maxF =>
+    case FuncOf(m, Pair(a, b)) if m == minF || m == maxF =>
       val (la, ua) = eval_ivl(prec)(bounds)(a)
       val (lb, ub) = eval_ivl(prec)(bounds)(b)
-      if (m == BigDecimalQETool.minF) {
+      if (m == minF) {
         (la.bigDecimal.min(lb.bigDecimal), ua.bigDecimal.min(ub.bigDecimal))
       } else {
         (la.bigDecimal.max(lb.bigDecimal), ua.bigDecimal.max(ub.bigDecimal))
@@ -100,15 +111,23 @@ object IntervalArithmeticV2 {
     case _ => throw new RuntimeException("Unable to compute bounds for " + t)
   }
 
+  def isNumeric(t: Term) : Boolean = t match {
+    case t: BinaryCompositeTerm => isNumeric(t.left) && isNumeric(t.right)
+    case t: UnaryCompositeTerm => isNumeric(t.child)
+    case Number(_) => true
+    case FuncOf(m, Pair(a, b)) if m == minF || m == maxF => isNumeric(a) && isNumeric(b)
+    case _ => false
+  }
+
   private def collect_bound(prec: Int)(fml: Formula, bounds: DecimalBounds): DecimalBounds = {
     fml match {
-      case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+      case LessEqual(t, n) if isNumeric(n) =>
         (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
-      case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+      case LessEqual(n, t) if isNumeric(n) =>
         (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
-      case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
+      case Less(t, n) if isNumeric(n) =>
         (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
-      case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
+      case Less(n, t) if isNumeric(n) =>
         (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
       case _ => bounds
     }
@@ -202,12 +221,23 @@ object IntervalArithmeticV2 {
       case Some(prv) => prv
       case None =>
         val prv: ProvableSig =
-          if (n % 2 == 0)
-            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
-              "((((0<=ff_() & h_()<=ff_()^"+n+") | (F_()<=0 & h_()<=F_()^"+n+") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true))" +
-              "==> h_()<=f_()^"+n).asSequent, QE & done)
-          else
-            proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^"+n+"))<->true)) ==> h_()<=f_()^"+n+"").asSequent, QE & done)
+          if (n >= 0) {
+            if (n % 2 == 0)
+              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+                "((((0<=ff_() & h_()<=ff_()^" + n + ") | (F_()<=0 & h_()<=F_()^" + n + ") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true))" +
+                "==> h_()<=f_()^" + n).asSequent, QE & done)
+            else
+              proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^" + n + "))<->true)) ==> h_()<=f_()^" + n + "").asSequent, QE & done)
+          } else {
+            if (n % 2 == 0)
+              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+                "((((0<ff_() & h_()*F_()^" + -n + "<=1) | (F_()<0 & h_()*ff_()^" + -n + "<=1)))<->true))" +
+                "==> h_()<=f_()^" + n).asSequent, QE & done)
+            else
+              proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+                "(((ff_()>0 & h_()*F_()^" + -n + "<=1) | (F_()<0 & h_()*F_()^" + -n + ">=1))<->true))" +
+                "==> h_()<=f_()^" + n + "").asSequent, QE & done)
+          }
         powerDownCache = powerDownCache.updated(n, prv)
         prv
     }
@@ -216,7 +246,18 @@ object IntervalArithmeticV2 {
     powerUpCache.get(n) match {
       case Some(prv) => prv
       case None =>
-        val prv: ProvableSig = proveBy(("((ff_()<=f_() & f_()<=F_()) & (((ff_()^" + n + " <= h_() & F_()^" + n + " <=h_()))<->true)) ==> f_()^" + n + " <=h_()").asSequent, QE & done)
+        val prv: ProvableSig =
+          if (n >= 0)
+            proveBy(("((ff_()<=f_() & f_()<=F_()) & (((ff_()^" + n + " <= h_() & F_()^" + n + " <=h_()))<->true)) ==> f_()^" + n + " <=h_()").asSequent, QE & done)
+          else if (n % 2 == 0) {
+            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+              "(((ff_()>0 & 1 <=ff_()^" + -n + "*h_()) | (F_()<0 & 1 <=F_()^" + -n + "*h_()))<->true))" +
+              "==> f_()^" + n + " <=h_()").asSequent, QE & done)
+          } else {
+            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+              "(((ff_()>0 & 1 <=ff_()^" + -n + "*h_()) | (F_()<0 & 1 >=ff_()^" + -n + "*h_()))<->true))" +
+              "==> f_()^" + n + " <=h_()").asSequent, QE & done)
+          }
         powerUpCache = powerUpCache.updated(n, prv)
         prv
     }
@@ -240,7 +281,7 @@ object IntervalArithmeticV2 {
   def BoundMap(): BoundMap = HashMap[Term, ProvableSig]()
 
   private def recurse(prec: Int)
-             (qeTool: QETool)
+             (qeTool: QETacticTool)
              (assms: IndexedSeq[Formula])
              (lowers: BoundMap, uppers: BoundMap)
              (t: Term): (BoundMap, BoundMap)
@@ -277,8 +318,8 @@ object IntervalArithmeticV2 {
             SubstitutionPair(t_f, f) ::
             SubstitutionPair(t_ff, ff) :: Nil))
 
-        val h_le = ProvableSig.proveArithmetic(qeTool, negDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-        val H_le = ProvableSig.proveArithmetic(qeTool, negUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+        val h_le = qeTool.qe(negDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+        val H_le = qeTool.qe(negUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
         val h_prv = (CutHide(negDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
           apply(negDown, 0).
@@ -327,8 +368,8 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
 
-            val h_le = ProvableSig.proveArithmetic(qeTool, plusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val H_le = ProvableSig.proveArithmetic(qeTool, plusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(plusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(plusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
             val h_prv = (CutHide(plusDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(plusDown, 0).
@@ -363,8 +404,8 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_gg, gg) :: Nil))
 
-            val h_le = ProvableSig.proveArithmetic(qeTool, minusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-            val H_le = ProvableSig.proveArithmetic(qeTool, minusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(minusDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(minusUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
             val h_prv = (CutHide(minusDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(minusDown, 0).
@@ -396,7 +437,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val h_le = ProvableSig.proveArithmetic(qeTool, multDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(multDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val ante = multDown.conclusion.ante(0)
             val ff_f_F_gg_g_G = ProvableSig.startProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
               apply(AndRight(SuccPos(0)), 0).
@@ -421,7 +462,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val H_le = ProvableSig.proveArithmetic(qeTool, multUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(multUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_prv = (CutHide(multUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(multUp, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -442,7 +483,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val h_le = ProvableSig.proveArithmetic(qeTool, divideDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(divideDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val ante = divideDown.conclusion.ante(0)
             val ff_f_F_gg_g_G = ProvableSig.startProof(Sequent(assms, IndexedSeq(ante.asInstanceOf[And].left))).
               apply(AndRight(SuccPos(0)), 0).
@@ -467,7 +508,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_g, g) ::
                 SubstitutionPair(t_F, F) ::
                 SubstitutionPair(t_G, G) :: Nil))
-            val H_le = ProvableSig.proveArithmetic(qeTool, divideUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(divideUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_prv = (CutHide(divideUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(divideUp, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -475,7 +516,7 @@ object IntervalArithmeticV2 {
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
-          case Power(_, i: Number) if i.value.isValidInt && i.value >= 1 =>
+          case Power(_, i: Number) if i.value.isValidInt =>
             // Lower Bound
             val n = i.value.toIntExact
             val ivl = power_endpoints(prec)(DecimalBounds())(ff, F)(n)
@@ -486,7 +527,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_ff, ff) ::
                 SubstitutionPair(t_f, f) ::
                 SubstitutionPair(t_F, F) :: Nil))
-            val h_le = ProvableSig.proveArithmetic(qeTool, powerDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val h_le = qeTool.qe(powerDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val h_prv = (CutHide(powerDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
               apply(powerDown, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -502,7 +543,7 @@ object IntervalArithmeticV2 {
                 SubstitutionPair(t_ff, ff) ::
                 SubstitutionPair(t_f, f) ::
                 SubstitutionPair(t_F, F) :: Nil))
-            val H_le = ProvableSig.proveArithmetic(qeTool, powerUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+            val H_le = qeTool.qe(powerUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
             val H_prv = (CutHide(powerUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
               apply(powerUp, 0).
               apply(AndRight(SuccPos(0)), 0).
@@ -516,7 +557,7 @@ object IntervalArithmeticV2 {
             throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +
               "Binary operation " + t.getClass.getSimpleName + " not implemented.")
         }
-      case FuncOf(m, Pair(f, g)) if m == BigDecimalQETool.minF || m == BigDecimalQETool.maxF =>
+      case FuncOf(m, Pair(f, g)) if m == minF || m == maxF =>
         val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
         val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1)(g)
         val ff_prv = lowers2(f)
@@ -534,7 +575,7 @@ object IntervalArithmeticV2 {
 
         val h = eval_ivl_term(prec)(FuncOf(m, Pair(ff, gg)))._1
         val H = eval_ivl_term(prec)(FuncOf(m, Pair(F, G)))._2
-        if (m == BigDecimalQETool.minF) {
+        if (m == minF) {
           val minDown = minDownSeq.apply(USubst(
             SubstitutionPair(t_h, h) ::
               SubstitutionPair(t_f, f) ::
@@ -548,8 +589,8 @@ object IntervalArithmeticV2 {
               SubstitutionPair(t_F, F) ::
               SubstitutionPair(t_G, G) :: Nil))
 
-          val h_le = ProvableSig.proveArithmetic(qeTool, minDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-          val H_le = ProvableSig.proveArithmetic(qeTool, minUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val h_le = qeTool.qe(minDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val H_le = qeTool.qe(minUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
           val h_prv = (CutHide(minDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
             apply(minDown, 0).
@@ -582,8 +623,8 @@ object IntervalArithmeticV2 {
               SubstitutionPair(t_F, F) ::
               SubstitutionPair(t_G, G) :: Nil))
 
-          val h_le = ProvableSig.proveArithmetic(qeTool, maxDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
-          val H_le = ProvableSig.proveArithmetic(qeTool, maxUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val h_le = qeTool.qe(maxDown.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+          val H_le = qeTool.qe(maxUp.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
 
           val h_prv = (CutHide(maxDown.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(h, t)))))).
             apply(maxDown, 0).
@@ -619,27 +660,27 @@ object IntervalArithmeticV2 {
     (lu, assmi) match {
       case ((lowers, uppers), (assm, i)) =>
         assm match {
-          case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case LessEqual(t, n) if isNumeric(n) =>
             (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
-          case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case LessEqual(n, t) if isNumeric(n) =>
             (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
-          case Equal(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case Equal(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t) :: (t_g, n) :: Nil)),
               uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)))
-          case Equal(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case Equal(n, t) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound1, (t_f, n) :: (t_g, t) :: Nil)),
               uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n) :: (t_g, t) :: Nil)))
-          case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case Less(t, n) if isNumeric(n) =>
             (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t) :: (t_g, n) :: Nil)))
-          case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case Less(n, t) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n) :: (t_g, t) :: Nil)), uppers)
-          case Greater(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case Greater(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
-          case Greater(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case Greater(n, t) if isNumeric(n) =>
             (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n) :: (t_g, t) :: Nil)))
-          case GreaterEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+          case GreaterEqual(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
-          case GreaterEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+          case GreaterEqual(n, t) if isNumeric(n) =>
             (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n) :: (t_g, t) :: Nil)))
           case _ =>
             (lowers, uppers)
@@ -661,7 +702,7 @@ object IntervalArithmeticV2 {
     *
     * */
   def proveBounds(prec: Int)
-                 (qeTool: QETool)
+                 (qeTool: QETacticTool)
                  (assms: IndexedSeq[Formula])
                  (include_assms: Boolean)
                  (lowers0: BoundMap, uppers0: BoundMap)
@@ -674,8 +715,8 @@ object IntervalArithmeticV2 {
     terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2)(t))
   }
 
-  private def proveCompBoth(qeTool: QETool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
-    val le_prv = ProvableSig.proveArithmetic(qeTool, leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+  private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
+    val le_prv = qeTool.qe(leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
     le_prv.conclusion.succ(0) match {
       case Equiv(a, True) =>
       case _ =>
@@ -698,7 +739,8 @@ object IntervalArithmeticV2 {
   private def requireOneSucc(seq: Sequent, who: String) : Unit =
     require(seq.succ.length == 1, who + " requires exactly one formula in the succedent.")
 
-  private def intervalArithmeticComparison(precision: Int, qeTool: QETool) = new BuiltInTactic("ANON") {
+  private def intervalArithmeticComparison(precision: Int, qeTool: QETacticTool) = new BuiltInTactic("ANON") {
+    val notSupportedMessage = "intervalArithmetic requires either of <=,<,>,=> in the succedent"
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "intervalArithmeticComparison")
       val sequent = provable.subgoals(0)
@@ -737,9 +779,11 @@ object IntervalArithmeticV2 {
               proveCompBoth(qeTool,
                 gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
                 provable, G_prv, ff_prv)
+            case _ =>
+              throw new BelleThrowable(notSupportedMessage)
           }
         case _ =>
-          throw new BelleThrowable("intervalArithmetic requires either of <=,<,>,=> in the succedent")
+          throw new BelleThrowable(notSupportedMessage)
       }
     }
   }
@@ -802,7 +846,6 @@ object IntervalArithmeticV2 {
                 useAt(DerivedAxioms.notGreaterEqual, PosInExpr(0 :: Nil))(pos)
               case _ => unsupportedError(fml)
             }
-          case Equal(f, g) => nil
           case Less(a, b) => nil
           case LessEqual(a, b) => nil
           case Greater(a, b) => nil
@@ -812,7 +855,7 @@ object IntervalArithmeticV2 {
     }
   }
 
-  private def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
     requireOneSucc(seq, "intervalArithmeticBool")
     seq.succ(0) match {
       case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))
@@ -822,12 +865,11 @@ object IntervalArithmeticV2 {
     }
   }
 
-  val intervalArithmetic = "intervalArithmetic" by {
-    val qeTool = ToolProvider.qeTool().get
+  lazy val intervalArithmetic: BelleExpr = "intervalArithmetic" by {
     val precision = 15
     SaturateTactic(orRi) &
       intervalArithmeticPreproc(1) &
-      intervalArithmeticBool(precision, qeTool)
+      intervalArithmeticBool(precision, ToolProvider.qeTool().get)
   }
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
@@ -858,21 +900,26 @@ object IntervalArithmeticV2 {
     case fml: PredOf => List(fml.child)
     case fml: PredicationalOf => terms_of(fml.child)
     case fml: ComparisonFormula => List(fml.left, fml.right)
+    case _ => List()
   }
 
   val intervalCut : DependentPositionTactic = "intervalCut" by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
       case Some(t: Term) => intervalCutTerms(List(t))
-      case _ => throw new BelleThrowable("intervalCut needs to be called on a ComparisonFormula or a Term")
+      case _ => throw new BelleThrowable("intervalCut needs to be called on a Formula or a Term")
     }
   }
 
   /** Tactics appear to be a bit slow */
   object Slow {
 
-    def usubst_append(ts: List[(Term, Term)])(uso: Option[Subst]) = uso match {
-      case Some(us) => us ++ RenUSubst(USubst(ts.map(s => (SubstitutionPair(s._1, s._2)))))
+    def usubst_append(ts: List[(Term, Term)])(uso: Option[Subst]) = {
+      val renUsubst = RenUSubst(USubst(ts.map(s => (SubstitutionPair(s._1, s._2)))))
+      uso match {
+        case Some(us) => us ++ renUsubst
+        case None => renUsubst
+      }
     }
 
     def negDown(bound: Term) =
@@ -939,7 +986,7 @@ object IntervalArithmeticV2 {
                 andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
                 QE() & done)
             case LessEqual(_, x) if bounds._1.isDefinedAt(x) => QE() & done
-            case LessEqual(_, n) if BigDecimalQETool.isNumeric(n) => QE() & done
+            case LessEqual(_, n) if isNumeric(n) => QE() & done
             case _ => throw new BelleThrowable("recurseLower went wrong")
           }
       }
@@ -966,7 +1013,7 @@ object IntervalArithmeticV2 {
                 andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
                 QE() & done)
             case LessEqual(x, _) if bounds._1.isDefinedAt(x) => QE() & done
-            case LessEqual(n, _) if BigDecimalQETool.isNumeric(n) => QE() & done
+            case LessEqual(n, _) if isNumeric(n) => QE() & done
             case _ => throw new BelleThrowable("recurseUpper went wrong")
           }
       }

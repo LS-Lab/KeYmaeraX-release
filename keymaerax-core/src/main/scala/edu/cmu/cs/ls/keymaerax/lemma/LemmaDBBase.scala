@@ -7,45 +7,53 @@
   */
 package edu.cmu.cs.ls.keymaerax.lemma
 
-import edu.cmu.cs.ls.keymaerax.core.Lemma
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
 import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
 
 /**
   * Common Lemma Database implemented from string-based storage primitives.
-  * Common logic shared by most lemma DB implementations. Most lemma DB's can (and should) be implemented
+  * Common logic shared by most lemma DB implementations. Most lemma DBs can (and should) be implemented
   * by extending this class and implementing the abstract methods for basic storage operations.
   *
-  * Created by bbohrer on 8/3/16.
+  * @author Brandon Bohrer
   */
 abstract class LemmaDBBase extends LemmaDB {
   /** Reads a list of lemmas with the given identifiers from the storage, giving back to-be-parsed lemmas. */
-  def readLemmas(ids: List[LemmaID]): Option[List[String]]
+  protected def readLemmas(ids: List[LemmaID]): Option[List[String]]
   /** Write the string representation `lemma` of a lemma under the name `id`. */
-  def writeLemma(id: LemmaID, lemma:String): Unit
+  protected def writeLemma(id: LemmaID, lemma: String): Unit
   /** Creates an identifier for a lemma, without any content. */
-  def createLemma(): LemmaID
+  protected def createLemma(): LemmaID
 
-
-  override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
-    readLemmas(ids).map(_.map(Lemma.fromString)) //@todo This should be over-ridden in every implementation so maybe we should just leave it abstract.
-  }
+  /** @inheritdoc */
+  final override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
+    readLemmas(ids).map(_.map(Lemma.fromString)).map(_.map(lemma =>
+      if (ProvableSig.PROOF_TERMS_ENABLED) {
+        Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
+      } else {
+        lemma
+      }
+    ))
+  } ensures(r => r match {
+    case Some(l) =>
+      val names = l.map(_.name).filter(_.isDefined).map(_.get)
+      names.diff(ids).isEmpty && ids.diff(names).isEmpty
+    case None => !ids.forall(contains)
+  })
 
   /** Performance */
   private val REDUNDANT_CHECKS = false
-  private def saveLemma(lemma:Lemma, id:LemmaID): Unit = {
-    val alternativeFact =
-      if(ProvableSig.PROOF_TERMS_ENABLED) {
-        TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof())
-      } else {
-        lemma.fact
-      }
-    val alternativeLemma = Lemma(alternativeFact, lemma.evidence, lemma.name)
+
+  /** @inheritdoc */
+  private def saveLemma(lemma: Lemma, id: LemmaID): Unit = {
+    require(lemma.name.isEmpty || lemma.name.contains(id), "Lemma name " + lemma.name + " does not match id " + id)
+    val alternativeLemma = proofTermLemma(lemma)
     if (REDUNDANT_CHECKS) {
       //@see[[edu.cmu.cs.ls.keymaerax.core.alternativeLemma]]
       val parse = KeYmaeraXExtendedLemmaParser(alternativeLemma.toString)
       assert(parse._1 == alternativeLemma.name, "reparse of printed alternativeLemma's name should be identical to original alternativeLemma")
-      assert(parse._2 == alternativeLemma.fact.conclusion +: alternativeLemma.fact.subgoals, s"reparse of printed alternativeLemma's fact ${alternativeLemma.fact.conclusion +: alternativeLemma.fact.subgoals}should be identical to original alternativeLemma ${parse._2}")
+      assert(parse._2 == alternativeLemma.fact.underlyingProvable, s"reparse of printed alternativeLemma's fact ${alternativeLemma.fact} should be identical to original alternativeLemma ${parse._2}")
       assert(parse._3 == alternativeLemma.evidence, "reparse of printed alternativeLemma's evidence should be identical to original alternativeLemma")
     }
 
@@ -53,49 +61,42 @@ abstract class LemmaDBBase extends LemmaDB {
     // read again to make sure we will get the alternativeLemma we just stored
     get(id) match {
       case None =>
-        throw new IllegalStateException("alternativeLemma " + id + " was not successfully inserted in database.")
+        throw new IllegalStateException("Lemma " + id + " was not successfully inserted in database.")
       case Some(got) =>
-        val alternativeGot =
-          got.fact match {
-            case TermProvable(pr, pt) => Lemma(TermProvable(pr, NoProof()), got.evidence, got.name)
-            case _ => got
-          }
-        if (alternativeGot != alternativeLemma) {
-          val b1 = got.fact == alternativeLemma.fact
-          val b1a = got.fact.underlyingProvable == alternativeLemma.fact.underlyingProvable
-          val b1b = got.fact.asInstanceOf[TermProvable].pt == alternativeLemma.fact.asInstanceOf[TermProvable].pt
-          val b2 = got.evidence == alternativeLemma.evidence
-          val b3 = got.name == alternativeLemma.name
+        if (proofTermLemma(got) != alternativeLemma) {
           remove(id)
-          throw new IllegalStateException(s"lemma retrieved back from DB after storing it differed from lemma in memory -> deleted\n\tOriginal: ${alternativeLemma.toString}\n\tReloaded: ${got.toString}")
+          throw new IllegalStateException(s"Lemma retrieved back from DB after storing it differed from lemma in memory -> deleted\n\tOriginal: ${alternativeLemma.toString}\n\tReloaded: ${got.toString}")
         }
     }
-  }
+  } ensures(get(id).contains(proofTermLemma(lemma)), "Source lemma and saved lemma differ:\n\tOriginal: " + lemma.toString + "\n\tReloaded: " + get(id).toString)
 
-  override def  add(lemma: Lemma): LemmaID = {
+  /** @inheritdoc */
+  override def add(lemma: Lemma): LemmaID = {
+    // synchronize to make sure concurrent calls use distinct IDs
     val id = this.synchronized {
-      // synchronize to make sure concurrent calls use distinct ID's
+      // `lemma.name` empty or not stored, or the lemma stored under `lemma.name` is identical to `lemma`
+      require(lemma.name.flatMap(get) match { case None => true case Some(l) => l == lemma },
+        "Lemma name " + lemma.name + " must be unique, or DB content must already have stored the identical lemma:\n" + lemma)
       lemma.name match {
-        case Some(n) =>
-          val got = get(n)
-          val isOk = got == None || got == Some(lemma)
-          if(!isOk) {
-            require(isOk,
-              "Lemma name " + n + " must be unique, or DB content must already have stored the identical lemma: \n" + lemma)
-          }
-          n
+        case Some(n) => n
         case None => createLemma()
       }
     }
+    //@note overwrites pre-existing identical lemma
     saveLemma(lemma, id)
     id.toString
-  }
+  } ensures(r => get(r).contains(proofTermLemma(lemma)))
 
   /** Turns a list of options into a list or to a None if any list element was None.
     * For convenience when implementing bulk get() from individual get() */
-  protected def flatOpt[T](L:List[Option[T]]):Option[List[T]] =
-  L.foldRight[Option[List[T]]](Some(Nil)){
-    case (Some(x),Some(xs)) => Some(x::xs)
+  protected def flatOpt[T](l: List[Option[T]]): Option[List[T]] = l.foldRight[Option[List[T]]](Some(Nil)) {
+    case (Some(x), Some(xs)) => Some(x::xs)
     case _ => None
-  }
+  } ensures(r => if (l.exists(_.isEmpty)) r.isEmpty else r.contains(l.flatten))
+
+  /** Returns the lemma with a [[TermProvable]] in place of `lemma.fact` if proof terms are enable. Returns the lemma unmodified otherwise. */
+  private def proofTermLemma(lemma: Lemma): Lemma = {
+    if (ProvableSig.PROOF_TERMS_ENABLED) Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
+    else lemma
+  } ensures(r => r.name == lemma.name && r.evidence == lemma.evidence && r.fact.underlyingProvable == lemma.fact.underlyingProvable)
 }

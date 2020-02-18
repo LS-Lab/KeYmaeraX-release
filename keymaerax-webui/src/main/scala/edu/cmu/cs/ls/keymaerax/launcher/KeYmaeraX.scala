@@ -12,7 +12,7 @@ import java.security.Permission
 import java.util.concurrent.TimeUnit
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
+import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
@@ -20,10 +20,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tools.{DefaultConfiguration, ToolConfiguration, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
@@ -31,6 +33,7 @@ import scala.collection.immutable
 import scala.compat.Platform
 import scala.util.Random
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.install.{DefaultConfiguration, ToolConfiguration}
 import org.apache.logging.log4j.MarkerManager
 import org.apache.logging.log4j.scala.Logger
 
@@ -39,6 +42,9 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.concurrent.duration.Duration
 import scala.reflect.io.File
+import resource._
+
+import scala.annotation.tailrec
 
 /**
   * Command-line interface launcher for [[http://keymaeraX.org/ KeYmaera X]],
@@ -64,6 +70,9 @@ object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
+  /**
+    * Names of actions that KeYmaera X command line interface supports.
+    */
   object Modes {
     val CODEGEN: String = "codegen"
     val MODELPLEX: String = "modelplex"
@@ -74,6 +83,9 @@ object KeYmaeraX {
     val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI)
   }
 
+  /**
+    * Names of tools that KeYmaera X command line interface supports in `-tool`.
+    */
   object Tools {
     val MATHEMATICA: String = "mathematica"
     val WOLFRAMENGINE: String = "wolframengine"
@@ -87,7 +99,8 @@ object KeYmaeraX {
   val usage: String =
     """Usage: java -jar keymaerax.jar
       |  -ui [web server options] |
-      |  -prove file.kyx [-out file.kyp] [-timeout seconds] [-verbose] |
+      |  -prove file.kyx [-conjecture file2.kyx] [-out file.kyp]
+      |     [-timeout seconds] [-verbose] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
@@ -127,14 +140,17 @@ object KeYmaeraX {
       |Use option -license to show the license conditions.""".stripMargin
 
 
-  private def launched() {
+  private def launched(): Unit = {
     LAUNCH = true
     //println("Launching KeYmaera X")
   }
   var LAUNCH: Boolean = false
 
   def main(args: Array[String]): Unit = {
-    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {println(usage); exit(1)}
+    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
+      println(help)
+      exit(1)
+    }
     println("KeYmaera X Prover" + " " + VERSION + "\n" + "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
     else {
@@ -174,6 +190,22 @@ object KeYmaeraX {
     }
   }
 
+  /**
+    * Statistics about size of prover kernel.
+    */
+  def stats: String = {
+    "    with " + Provable.rules.size + " axiomatic rules and " + Provable.axiom.size + " axioms"
+  }
+
+  /**
+    * KeYmaera X -help string.
+    */
+  def help: String = {
+    stats + "\n" + usage
+  }
+
+
+
   private def configFromFile(defaultTool: String): OptionMap = {
     Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
       case Tools.MATHEMATICA => Map('tool -> Tools.MATHEMATICA) ++
@@ -192,7 +224,7 @@ object KeYmaeraX {
     })
   }
 
-
+  @tailrec
   private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
       case Nil => map
@@ -236,6 +268,9 @@ object KeYmaeraX {
       case "-out" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
         else optionErrorReporter("-out")
+      case "-conjecture" :: value :: tail =>
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('conjecture -> value), tail)
+        else optionErrorReporter("-conjecture")
       case "-fallback" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
         else optionErrorReporter("-fallback")
@@ -301,7 +336,7 @@ object KeYmaeraX {
   private def parseBelleTactic(fileName: String) = {
     try {
       initializeProver(Map('tool -> "z3")) //@note parsing a tactic requires prover (AxiomInfo)
-      val fileContents: String = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
+      val fileContents: String = managed(scala.io.Source.fromFile(fileName)).apply(_.getLines().mkString("\n"))
       BelleParser(fileContents)
       println("Parsed file successfully")
       sys.exit(0)
@@ -322,6 +357,7 @@ object KeYmaeraX {
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
+      case "-conjecture" => println(noValueMessage + "Please use: -conjecture FILENAME.kyx\n\n" + usage); exit(1)
       case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
       case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.[scala|kyt]\n\n" + usage); exit(1)
       case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
@@ -342,7 +378,7 @@ object KeYmaeraX {
     }
 
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    KeYmaeraXTool.init(Map.empty)
 
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
@@ -424,6 +460,7 @@ object KeYmaeraX {
     Await.ready(Future { ToolProvider.shutdown() }, Duration(5, TimeUnit.SECONDS))
     ToolProvider.setProvider(new NoneToolProvider())
     TactixLibrary.invGenerator = FixedGenerator(Nil)
+    KeYmaeraXTool.shutdown()
     //@note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
   }
 
@@ -443,7 +480,7 @@ object KeYmaeraX {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
-        val source = scala.io.Source.fromFile(fileName).mkString
+        val source = managed(scala.io.Source.fromFile(fileName)).apply(_.mkString)
         if (fileName.endsWith(".scala")) {
           val tacticGenClasses = new ScalaTacticCompiler().compile(source)
           assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
@@ -472,7 +509,7 @@ object KeYmaeraX {
   }
 
   /** Proves a single entry */
-  private def prove(name: String, input: Formula, fileContent: String,
+  private def prove(name: String, input: Formula, fileContent: String, defs: Declaration,
                     tacticName: String, tactic: BelleExpr, timeout: Long,
                     outputFileName: Option[String], options: OptionMap): ProofStatistics = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
@@ -511,9 +548,13 @@ object KeYmaeraX {
 
       if (witness.isProved) {
         assert(witness.subgoals.isEmpty)
-        val proved = witness.proved
+        val expected = inputSequent.exhaustiveSubst(USubst(defs.substs))
+        //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
+        insist(KeYmaeraXParser(KeYmaeraXPrettyPrinter(input)) == input, "parse of print is identity")
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
-        assert(inputSequent == proved, "Proved the original problem and not something else")
+        insist(witness.proved == expected, "Expected to have proved the original problem and not something else, but proved witness deviates from input")
+        //@note check that proved conclusion is what we actually wanted to prove
+        insist(witness.conclusion == expected, "Expected proved conclusion to be original problem, but proved conclusion deviates from input")
 
         //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
         val evidence = ToolEvidence(List(
@@ -523,18 +564,12 @@ object KeYmaeraX {
           "proof" -> "" //@todo serialize proof
         )) :: Nil
 
-        //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
-        assert(KeYmaeraXParser(KeYmaeraXPrettyPrinter(input)) == input, "parse of print is identity")
-        //@note check that proved conclusion is what we actually wanted to prove
-        assert(witness.conclusion == inputSequent && witness.proved == inputSequent,
-          "proved conclusion deviates from input")
-
         val lemma = outputFileName match {
           case Some(_) =>
             val lemma = Lemma(witness, evidence, Some(name))
             //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
             assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
-            assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion::Nil, lemma.evidence),
+            assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.underlyingProvable, lemma.evidence),
               "reparse of printed lemma is not original lemma")
             Some(lemma)
           case None => None
@@ -565,9 +600,9 @@ object KeYmaeraX {
         }
 
         if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
-          ProofStatistics(name, tacticName, "disproved", Some(witness), timeout, -1, -1, -1, -1)
+          ProofStatistics(name, tacticName, "disproved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
         } else {
-          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, -1, -1, -1, -1)
+          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
         }
       }
     } catch {
@@ -599,6 +634,21 @@ object KeYmaeraX {
     val archiveContent = inFiles.map(p => p -> KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).filterNot(_.isExercise))
     println("Proving entries from " + archiveContent.size + " files")
 
+    val conjectureFileName = options.get('conjecture).map(_.toString)
+    val conjectureFiles = conjectureFileName.map(findFiles).getOrElse(List.empty)
+    val conjectureContent = conjectureFiles.flatMap(p => KeYmaeraXArchiveParser.parseFromFile(p.toFile.getAbsolutePath).
+      filterNot(_.isExercise).map(_ -> p).groupBy(_._1.name)).toMap
+    val duplicateConjectures = conjectureContent.filter(_._2.size > 1)
+    // conjectures must have unique names across files
+    assert(duplicateConjectures.isEmpty, "Duplicate entry names in conjecture files:\n" + duplicateConjectures.map(c => c._1 + " in " + c._2.map(_._2).mkString(",")))
+    // if exactly one conjecture and one solution: replace regardless of names; otherwise: insist on same entry names and replace by entry name
+    val entryNamesDiff = archiveContent.flatMap(_._2.map(_.name)).toSet.diff(conjectureContent.keySet)
+    assert(
+      conjectureContent.isEmpty
+        || (conjectureContent.map(_._2.size).sum == 1 && archiveContent.map(_._2.size).sum == 1)
+        || entryNamesDiff.isEmpty, "Conjectures and archives must agree on names, but got diff " + entryNamesDiff.mkString(","))
+    assert(conjectureContent.values.flatMap(_.flatMap(_._1.tactics)).isEmpty, "Conjectures must not list tactics")
+
     val outputFilePrefix = options.getOrElse('out, inputFileName).toString.stripSuffix(".kyp")
     val outputFileSuffix = ".kyp"
     //@note same archive entry name might be present in several .kyx files
@@ -610,8 +660,18 @@ object KeYmaeraX {
           + e.name.replaceAll("\\W", "_") + outputFileSuffix)).toMap
       }).toMap
 
+    /** Replaces the conjecture of `entry` with the `conjecture`. */
+    def replace(entry: ParsedArchiveEntry, conjecture: ParsedArchiveEntry): ParsedArchiveEntry = {
+      conjecture.copy(tactics = entry.tactics)
+    }
+
     val statistics = archiveContent.flatMap({case (path: Path, entries) =>
-      entries.flatMap(entry => proveEntry(path, entry, outputFileNames(path)(entry), options))
+      entries.flatMap(entry => proveEntry(
+        path,
+        replace(entry, conjectureContent.getOrElse(entry.name,
+          conjectureContent.headOption.map(_._2).getOrElse((entry -> path) :: Nil)).head._1),
+        outputFileNames(path)(entry),
+        options))
     })
 
     statistics.foreach(println)
@@ -626,9 +686,9 @@ object KeYmaeraX {
 
   private def proveEntry(path: Path, entry: ParsedArchiveEntry, outputFileName: String,
                          options: OptionMap): List[ProofStatistics] = {
-    def savePt(pt:ProvableSig):Unit = {
+    def savePt(pt: ProvableSig): Unit = {
       (pt, options.get('ptOut)) match {
-        case (ptp: TermProvable, Some(path:String)) =>
+        case (ptp: TermProvable, Some(path: String)) =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp
           val writer = new PrintWriter(path)
@@ -672,7 +732,7 @@ object KeYmaeraX {
           else qeDurationListener :: Nil
         BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
 
-        val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, tacticName, tactic,
+        val proofStat = prove(entry.name, entry.model.asInstanceOf[Formula], entry.fileContent, entry.defs, tacticName, tactic,
           timeout, if (i == 0) Some(outputFileName) else None, options)
 
         proofStat.witness match {
@@ -843,9 +903,9 @@ object KeYmaeraX {
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
-    val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
-    val tacticInput = tacticFileNameDotKyt.map(scala.io.Source.fromFile(_).mkString)
-    val defsInput = scaladefsFilename.map(scala.io.Source.fromFile(_).mkString)
+    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx)).apply(_.mkString)
+    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
+    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
     val inputFormula: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
@@ -924,7 +984,7 @@ object KeYmaeraX {
 
   def codegenQuantitative(entry: ParsedArchiveEntry, outputFileName: String, head: String,
                           vars: Option[Set[BaseVariable]], kind: String): Unit = {
-    import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+    import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     val (monitorFml: Formula, monitorStateVars: Set[BaseVariable]) =
       if (entry.model.asInstanceOf[Formula].isFOL) {
         val stateVars = vars match {
@@ -1129,7 +1189,8 @@ object KeYmaeraX {
 
   /** Finds files matching the pattern in fileName (specific file or using glob wildcards). */
   private def findFiles(fileName: String): List[Path] = {
-    if (new java.io.File(fileName).exists) Paths.get(fileName).toAbsolutePath :: Nil
+    // specific file, no wildcard support when referring to a specific entry
+    if (new java.io.File(fileName).exists || fileName.contains("#")) Paths.get(fileName).toAbsolutePath :: Nil
     else {
       val path = Paths.get(fileName).toAbsolutePath
       val dir = path.getParent

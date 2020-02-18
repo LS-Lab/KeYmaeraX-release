@@ -5,10 +5,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import Augmentors._
-import StaticSemanticsTools._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable._
 
@@ -220,8 +220,8 @@ private object EqualityTactics {
     abbrvV match { case Some(v) => t::v::Nil case None => t::Nil }, (pos: Position, sequent: Sequent) => {
       val inFml = sequent.sub(pos) match {
         case Some(p: Formula) => p
-        case Some(t: Term) => throw BelleTacticFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
-        case _ => throw BelleIllFormedError("Position " + pos + " does not point to an expression")
+        case Some(t: Term) => throw new BelleTacticFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
+        case _ => throw new BelleIllFormedError("Position " + pos + " does not point to an expression")
       }
       require(abbrvV.isEmpty ||
         !sequent.sub(pos).map(StaticSemantics.signature).contains(abbrvV.get),

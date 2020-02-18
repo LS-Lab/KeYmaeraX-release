@@ -9,12 +9,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{And, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
-import edu.cmu.cs.ls.keymaerax.lemma.{CachedLemmaDB, FileLemmaDB, LemmaDB, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
+import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, NoProof, ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 

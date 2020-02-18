@@ -7,12 +7,14 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import java.util.concurrent.ExecutionException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, TimeoutException}
@@ -102,7 +104,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                         convertPending: Boolean, executePending: Boolean): (BelleValue, ExecutionContext) = synchronized {
     if (isDead) (goal, ctx)
     else try {
-      tactic match {
+      val (result, resultCtx) = tactic match {
         // combinators
         case SeqTactic(left, right) =>
           val (leftResult, leftCtx) = try {
@@ -188,10 +190,18 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               (accProvables :+ branchResult._1, accCtx.glue(branchResult._2, branchOpenGoals))
             })
 
-            val result = provables.reverse.zipWithIndex.foldRight(p)({ case ((BelleProvable(cp, _), i), provable) => provable(cp, i) })
+            val result = provables.reverse.zipWithIndex.foldRight(p)({
+              case ((p: BelleDelayedSubstProvable, i), provable) => replaceConclusion(provable, i, p.p, p match {
+                case p: BelleDelayedSubstProvable => Some(p.subst)
+                case _ => None
+              })._1
+              case ((BelleProvable(cp, _), i), provable) => provable(cp, i)
+            })
 
             //@note close branching in a graph t0; <(t1, ..., tn); tx with BranchPointer(parent, -1, _)
-            (BelleProvable(result), resultCtx.closeBranch())
+            val substs = provables.flatMap({ case p: BelleDelayedSubstProvable => Some(p.subst) case _ => None })
+            if (substs.isEmpty) (BelleProvable(result), resultCtx.closeBranch())
+            else (new BelleDelayedSubstProvable(result, None, substs.reduce(_++_)), resultCtx.closeBranch())
           case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(tactic, "")
         }
 
@@ -253,6 +263,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             throw new BelleThrowable("Let of multiple goals is not currently supported.").inContext(tactic, "")
 
           // flatten nested Lets into a single inner proof
+          @tailrec
           def flattenLets(it: BelleExpr, substs: List[SubstitutionPair],
                           repls: List[(Expression, Expression)]): (ProvableSig, USubst, BelleExpr) = it match {
             case Let(a, v, c) => flattenLets(c, substs :+ SubstitutionPair(a, v), repls :+ v -> a)
@@ -282,6 +293,10 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           } else {
             runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
             runningInner(tactic, BelleProvable(provable.sub(0), lbl)) match {
+              case p: BelleDelayedSubstProvable =>
+                val r = (new BelleDelayedSubstProvable(replaceConclusion(provable, 0, p.p, Some(p.subst))._1, lbl, p.subst), ctx.store(tactic))
+                runningInner = null
+                r
               case BelleProvable(innerProvable, _) =>
                 val r = (BelleProvable(provable(innerProvable, 0), lbl), ctx.store(tactic))
                 runningInner = null
@@ -367,17 +382,21 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
               if (ctx.onBranch >= 0) {
                 if (provable.subgoals.size > 1) tactic match {
-                  case t: NoOpTactic =>
+                  case _: NoOpTactic =>
                     //@note execute but do not store no-op tactics
                     runningInner = inner(Nil)
                     runningInner(tactic, goal) match { case _: BelleProvable => runningInner = null }
                     (goal, ctx)
                   case _ =>
                     //@note tactic operating on multiple subgoals without OnAll
-                    throw BelleIllFormedError("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
+                    throw new BelleIllFormedError("Tactic " + tactic.prettyString + " not suitable for " + provable.subgoals.size + " subgoals")
                 } else {
                   runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
                   runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
+                    case p: BelleDelayedSubstProvable =>
+                      val result = (new BelleDelayedSubstProvable(replaceConclusion(provable, 0, p.p, Some(p.subst))._1,  labels, p.subst), ctx.store(tactic))
+                      runningInner = null
+                      result
                     case BelleProvable(innerProvable, _) =>
                       val result = (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
                       runningInner = null
@@ -427,6 +446,17 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
               }
           }
       }
+
+      // preserve delayed substitutions
+      val preservedSubstResult = goal match {
+        case p: BelleDelayedSubstProvable => result match {
+          case fp: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.subst ++ fp.subst)
+          case fp: BelleProvable => new BelleDelayedSubstProvable(fp.p, fp.label, p.subst)
+          case _ => result
+        }
+        case _ => result
+      }
+      (preservedSubstResult, resultCtx)
     } catch {
       case e: BelleThrowable =>
         if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,

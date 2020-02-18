@@ -5,8 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
 /**
   * Implementation: Tactics for manipulating box/diamond properties about hybrid programs.
@@ -15,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
   */
 private object HybridProgramTactics {
   import TacticFactory._
-  import Augmentors._
+  import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
   /**
     * Decomposes a question of the form {a ++ b ++ c}; plant into a;plant , b;plant , c;plant

@@ -1,25 +1,69 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent}
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent, StaticSemantics, SubstitutionPair, USubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.collection.immutable.{List, Map}
 import scala.util.Try
 
 trait ProofTreeNodeId {}
 
+/**
+  * A Proof Tree Node represents the central element of managing a (possibly large compound) inference during proof search in a [[ProofTree]].
+  * Unlike the stateless [[edu.cmu.cs.ls.keymaerax.core.Provable]] representation of the prover kernel,
+  * proof trees provide navigation and tactic scheduling infrastructure.
+  *
+  * Beyond providing proof tree navigation information, this type manages the interface to the kernel's provable.
+  * Proof tree nodes consist of a local provable that created this proof node, and which can later be
+  * stitched together after completing the entire subproof.
+  * The [[provable]] function can later perform the computation required to staple the proof together
+  * as far as the children have completed it.
+  *
+  * The proof treee node also provides infrastructure for letting tactics run to expand this proof tree node.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable]]
+  * @see [[ProvableSig]]
+  */
 trait ProofTreeNode {
+  // proof tree node identifier information
+
   /** The node ID. */
   val id: ProofTreeNodeId
 
-  /** The proof this node is a part of. */
+  /** The proof that this proof node is a part of. */
   val proofId: String
+
+
+  // kernel interface with actual provables that this proof tree node contains
+
+  /** The local provable, whose subgoals will be filled in by the node's [[children]].
+    * @see [[provable]] */
+  def localProvable: ProvableSig
+
+  /** The tree node's conclusion (might be subject to other nodes being proved). */
+  final def conclusion: Sequent = localProvable.conclusion
+
+  /** Compute the overall provable with the sub-proofs already filled in for the local subgoals (potentially expensive) from [[children]].
+    * @see [[localProvable]] */
+  final def provable: ProvableSig = theProvable
+
+  /** Indicates whether or not the proof from this node downwards is done (potentially expensive).
+    * @see [[ProvableSig.isProved]] */
+  final def isProved: Boolean = provable.isProved
+
+
+  // proof tree navigation
 
   /** The node's parent, None if root. */
   def parent: Option[ProofTreeNode]
@@ -36,8 +80,12 @@ trait ProofTreeNode {
   /** The number of subgoals in the local provable (fast, doesn't actually load the provable). */
   def numSubgoals: Int
 
-  /** The tactic (serialized BelleExpr) that produced this node from its parent. */
+  /** The tactic (serialized BelleExpr) that produced this node from its parent.
+    * @ensures \result == None  <->  parent == None */
   def maker: Option[String]
+
+
+  // meta info
 
   /** The tactic short name. */
   def makerShortName: Option[String]
@@ -45,17 +93,16 @@ trait ProofTreeNode {
   /** The node label. */
   def label: Option[BelleLabel]
 
-  /** A local provable, whose subgoals are filled in by the node's children. */
-  def localProvable: ProvableSig
-
-  /** The tree node's conclusion (might be subject to other nodes being proved). */
-  def conclusion: Sequent = localProvable.conclusion
-
   /** The node's goal, None if closed. */
   def goal: Option[Sequent]
 
   /** The index of the goal (subgoal in local provable) that this node targets. */
   def goalIdx: Int
+
+  // tactic application or proof tree manipulation at this proof tree node
+
+  /** Deletes this node with the entire subtree underneath. */
+  def pruneBelow(): Unit
 
   /** Returns a list of tactics that are applicable at the specified position in this node's goal. Each entry is
     * the typical form of the tactic and an optional more convenient variant of the tactic. */
@@ -77,12 +124,6 @@ trait ProofTreeNode {
   /** Returns suggestions for tactic argument inputs, argument info according to UIIndex and DerivationInfo. */
   def tacticInputSuggestions(pos: Position): Map[ArgInfo, Expression]
 
-  /** The overall provable with the sub-proofs filled in for the local subgoals (potentially expensive). */
-  def provable: ProvableSig = theProvable
-
-  /** Indicates whether or not the proof from this node downwards is done (potentially expensive). */
-  def done: Boolean = provable.isProved
-
   /** Runs a tactic on this node. */
   //@todo shortName should be derived from tactic
   //@todo interpreter/listener interface needs revision
@@ -95,13 +136,36 @@ trait ProofTreeNode {
                  executor: BellerophonTacticExecutor = BellerophonTacticExecutor.defaultExecutor,
                  wait: Boolean = false): String
 
-  /** Deletes this node with the entire subtree underneath. */
-  def pruneBelow(): Unit
+
+  // internals
+
+  /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
+    * Returns `goal` if `sub` is not applicable at `i`. */
+  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]) = {
+    if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
+    else if (substs.nonEmpty) {
+      // apply only substitutions for difference between goal and sub
+      val goalSig = StaticSemantics.signature(goal.subgoals(i)) ++ substs.flatMap(s => StaticSemantics.signature(s.repl))
+      val subSig = StaticSemantics.signature(sub.conclusion)
+      val sigDiff = goalSig -- subSig
+      val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
+      exhaustiveSubst(goal, RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst)(sub, i)
+    } else goal
+  }
+
 
   // cached computations
-  private lazy val theProvable = {
+
+  /** Merges all descendent provables into the local provable. */
+  private lazy val theProvable: ProvableSig = {
     if (localProvable.isProved) localProvable
-    else if (children.isEmpty) localProvable.sub(goalIdx) //@note if no followup proof step happened, then return stuttering proof step
+    else (applyWithSubst(localProvable, _, goalIdx, _)).tupled(mergedDescendentProvable)
+  }
+
+  /** Creates intermediate provables for all descendents of the shape mergable into the local provable's subgoal. */
+  private lazy val mergedDescendentProvable: (ProvableSig, List[SubstitutionPair]) = {
+    if (localProvable.isProved) localProvable -> Nil
+    else if (children.isEmpty) localProvable.sub(goalIdx) -> Nil //@note if no followup proof step happened, then return stuttering proof step
     else {
       // the provable representing our proof step is the localProvable stored in all children (for lookup performance)
       // myProvable := obtain the unique localProvable that all children agree on, because they are off to prove its respective subgoals
@@ -109,21 +173,77 @@ trait ProofTreeNode {
       val myProvable = children.head.localProvable
       assert(children.forall(_.localProvable == myProvable), "All children share the same local provable, only differing in goalIdx")
 
-      // merge finalized provables from all children into myProvable
+      // merge finalized provables from all children into local provable;
+      // if they cannot be merged verbatim, merge by delayed substitution;
       // if they cannot be merged (backsubstitution failed, see SequentialInterpreter Let): keep global
-      if (myProvable.isProved) myProvable
-      else children.map(_.provable).zipWithIndex.foldRight(myProvable)({ case ((sub, i), global) =>
-        if (global.subgoals(i) == sub.conclusion) global(sub, i)
-        else global
+      if (myProvable.isProved) {
+        val substs = children.flatMap(c => c.mergedDescendentProvable._2 ++ makerSubst(c.maker))
+        myProvable -> substs
+      } else children.map(c => (c.mergedDescendentProvable, c.maker)).zipWithIndex.foldRight(myProvable -> List.empty[SubstitutionPair])({ case ((((sub, subSubsts), subMaker), i), (global, globalSubsts)) =>
+        val ms = makerSubst(subMaker)
+        val preSubsts = (globalSubsts ++ subSubsts)
+        val substs = (preSubsts ++ ms).distinct
+        applyWithSubst(global, sub, i, substs) -> substs
       })
     }
   }
+
+  /** Applies substitutions `s` to provable `p` exhaustively. */
+  @tailrec
+  private def exhaustiveSubst(p: ProvableSig, s: USubst): ProvableSig = {
+    val substituted = p(s)
+    if (substituted != p) exhaustiveSubst(substituted, s)
+    else substituted
+  }
+
+  private lazy val usMatcher = """(US\(")([^"]*)("\))""".r
+
+  /** Extracts the substitution from a tactic string (None if the tactic string is not a uniform substitution). */
+  private def makerSubst(maker: Option[String]): List[SubstitutionPair] = maker.map(m => {
+    if (m.contains("US(")) {
+      import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+      // collect substitutions of expandAll (serializes to sequence of US), and
+      // anywhere in custom tactics, e.g., "expand Q; unfold; expand P; master"
+      usMatcher.findAllMatchIn(m).map(m => m.group(2).trim).map(_.asSubstitutionPair).toList.distinct
+    } else Nil
+  }).getOrElse(Nil)
 
   private lazy val theDescendants = children ++ children.flatMap(_.allDescendants)
   private lazy val theAncestors = parent.toList ++ parent.map(_.allAncestors).getOrElse(Nil)
 }
 
+
+/**
+  * The central proof tree data structure managing the proof search, consisting of a set of [[ProofTreeNode]].
+  * Unlike the stateless [[edu.cmu.cs.ls.keymaerax.core.Provable]] representation of the prover kernel,
+  * proof trees provide navigation and tactic scheduling infrastructure.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable]]
+  * @see [[ProvableSig]]
+  */
 trait ProofTree {
+  /** Verify that the proof is closed by constructing a proved provable.
+    * @ensures \result==root.provable.isProved
+    * @see [[ProofTreeNode.isProved]]
+    * @see [[done]] */
+  def isProved: Boolean = { load(); root.provable.isProved }
+
+
+  // proof tree navigation
+
+  /** The root node with the desired conclusion of this proof tree */
+  def root: ProofTreeNode
+
+  /** All proof nodes anywhere in the proof tree, including root, inner nodes, and leaves. */
+  def nodes: List[ProofTreeNode]
+
+  /** The proof's open goals, which are the leaves that are not done yet */
+  def openGoals: List[ProofTreeNode]
+
+  /** Lightweight check indicating, if true, that the proof database representation thinks it might be closed (not verified by core yet).
+    * @see [[isProved]] */
+  def done: Boolean
+
+
   /** Locates a node in the proof tree by its ID.
     * @see noteIdFromString(String) */
   def locate(id: ProofTreeNodeId): Option[ProofTreeNode]
@@ -133,39 +253,26 @@ trait ProofTree {
     * @see [[locate(ProofTreeNodeId)]] */
   def locate(id: String): Option[ProofTreeNode] = nodeIdFromString(id).flatMap(locate)
 
+  /** Converts a string representation to a node ID.
+    * @see [[locate(ProofTreeNodeId) */
+  def nodeIdFromString(id: String): Option[ProofTreeNodeId]
+
+  /** Prefetch all nodes in a proof tree from the database. Does not include provables by default (expensive to load).
+    * The resulting ProofTree is functionally equivalent to this tree but provides fast access. */
+  def load(withProvables: Boolean=false): ProofTree
+
+  // tactical information
+
   /** Locates the tree root, which contains the original conjecture that this proof tries to prove. */
-  def root: ProofTreeNode
-
-  /** All proof nodes anywhere in the proof tree, including root, inner nodes, and leaves. */
-  def nodes: List[ProofTreeNode]
-
-  /** The proof's open goals, which are the leaves that are not done yet */
-  def openGoals: List[ProofTreeNode]
-
   /** String representation of the global tactic that reproducse this whole proof tree from the conjecture at the root (very expensive) */
   def tacticString: String
 
   /** The global tactic that reproducse this whole proof tree from the conjecture at the root (very expensive) */
   def tactic: BelleExpr = BelleParser(tacticString)
 
-  /** Indicates whether or not the proof database representation thinkgs it might be closed (not verified by core yet).
-    * @see [[verifyClosed]] */
-  def isClosed: Boolean
 
-  /** The proof info. */
+  /** The proof info with meta information about this proof, e.g., its name. */
   def info: ProofPOJO
-
-  /** Prefetch all nodes in a proof tree from the database. Does not include provables by default (expensive to load).
-    * The resulting ProofTree is functionally equivalent to this tree but provides fast access. */
-  def load(withProvables: Boolean=false): ProofTree
-
-  /** Verify that the proof is closed by constructing a proved provable.
-    * @ensures \result==root.provable.isProved */
-  def verifyClosed: Boolean = { load(); root.provable.isProved }
-
-  /** Converts a string representation to a node ID.
-    * @see [[locate(ProofTreeNodeId) */
-  def nodeIdFromString(id: String): Option[ProofTreeNodeId]
 
   override def toString: String = printBelow(root, "")
 
@@ -173,6 +280,7 @@ trait ProofTree {
     indent + node.id + "\n" + node.children.map(printBelow(_, indent + "  ")).mkString("\n")
   }
 }
+
 
 abstract class ProofTreeBase(val proofId: String) extends ProofTree {
 
@@ -189,6 +297,11 @@ case class DbStepPathNodeId(step: Option[Int], branch: Option[Int]) extends Proo
   }
 }
 
+/**
+  * A [[ProofTreeNode]] that happens to be stored in the database `db`.
+  * @param db The database that this proof tree node is stored in.
+  * @param proofId the identifier for the proof that this proof tree node belongs to.
+  */
 abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends ProofTreeNode {
   /** Runs a tactic on this node. */
   override def runTactic(userId: String, interpreter: List[IOListener] => Interpreter, tactic: BelleExpr,
@@ -464,7 +577,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
       ((0 until f.numSubgoals).toSet -- closed).toList})
 
     val goalNodes: List[ProofTreeNode] =
-      if (root.children.isEmpty && !root.done) root::Nil
+      if (root.children.isEmpty && !root.isProved) root::Nil
       else finalOpenBranches.flatMap({ case (fs, subgoals) => subgoals.map(sgi =>
         DbPlainExecStepProofTreeNode.fromExecutionStep(db, proofId)(fs, Some(sgi))
       )})
@@ -479,7 +592,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   override def tacticString: String = { load(); new ExtractTacticFromTrace(db).getTacticString(this) }
 
   /** Indicates whether or not the proof might be closed. */
-  override def isClosed: Boolean = dbProofInfo.closed
+  override def done: Boolean = dbProofInfo.closed
 
   /** Returns a loaded proof tree to avoid ripple loading. */
   override def load(withProvables: Boolean=false): ProofTree = {
@@ -540,6 +653,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 case class AgendaItem(id: String, name: String, proofId: String, ancestors: List[String] = Nil) {
   def path: List[String] = id +: ancestors
 }
+
 object AgendaItem {
   /** Creates a name from the deriviation info of `codeName`. */
   def nameOf(codeName: String): String = {

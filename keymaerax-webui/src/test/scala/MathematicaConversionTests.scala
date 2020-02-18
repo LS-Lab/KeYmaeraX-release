@@ -10,7 +10,9 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.ext.{BaseKeYmaeraMathematicaBridge, JLinkMathematicaLink, KeYmaeraMathematicaBridge, UncheckedBaseK2MConverter, UncheckedBaseM2KConverter}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, MathematicaToKeYmaera}
 
 import scala.collection.immutable._
 
@@ -251,6 +253,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     val e = "g()".asTerm
     val math = new UncheckedBaseK2MConverter()(e)
     localMl.run(math)._2 shouldBe e
+  }
+
+  it should "convert nested quantifiers" in {
+    round trip "\\forall a \\forall b \\exists c \\forall d (a<=b -> c>=a+d)".asFormula
   }
 
   "KeYmaera -> Mathematica" should "convert Apply" in {

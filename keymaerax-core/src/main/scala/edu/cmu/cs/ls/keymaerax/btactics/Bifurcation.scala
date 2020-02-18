@@ -1,9 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleFriendlyUserMessage, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleFriendlyUserMessage}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, ODESystem, Sequent}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
 /** Implements a bifurcation-based proof search technique for the dynamic logic of ODEs. */
 object Bifurcation {

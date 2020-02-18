@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, Idioms, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{AtomicODE, DifferentialSymbol}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 

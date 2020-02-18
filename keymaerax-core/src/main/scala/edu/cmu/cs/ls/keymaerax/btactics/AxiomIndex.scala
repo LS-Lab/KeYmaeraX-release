@@ -5,18 +5,21 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.switch
 
 /**
-  * Axiom Indexing data structures for canonical proof strategies and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
+  * Central Axiom Indexing data structures for canonical proof strategies, including
+  * [[UnifyUSCalculus.chase]], [[UnifyUSCalculus.chaseFor()]]  and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
   * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
   * @see [[TactixLibrary.step]]
   * @see [[TactixLibrary.sequentStepIndex]]
  */
@@ -112,7 +115,6 @@ object AxiomIndex extends Logging {
 
 
     case "DW differential weakening" => (PosInExpr(0::Nil), unknown)
-    case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
     case "DIo open differential invariance >" | "DIo open differential invariance <" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DV differential variant >=" | "DV differential variant <=" => (PosInExpr(1::Nil), PosInExpr(0::1::1::1::0::Nil)::PosInExpr(0::1::1::1::1::0::Nil)::PosInExpr(0::1::Nil)::PosInExpr(Nil)::Nil)
     case "leave within closed <=" | "open invariant closure >" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)

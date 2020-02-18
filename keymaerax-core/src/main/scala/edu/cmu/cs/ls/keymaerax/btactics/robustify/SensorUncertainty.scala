@@ -6,9 +6,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics.robustify
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentTactic}
-import edu.cmu.cs.ls.keymaerax.btactics.FormulaTools
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.ProgramHelpers
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**

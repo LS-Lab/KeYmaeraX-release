@@ -5,7 +5,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable._
 
@@ -221,7 +222,7 @@ protected object FOQuantifierTactics {
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
             /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
-            /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.derivedAxiomOrRule("exists generalize")(subst))
+            /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.existsGeneralize.fact(subst))
             )
         case _ => throw new BelleThrowable("Position " + pos + " must refer to a formula in sequent " + sequent)
       }
@@ -265,7 +266,7 @@ protected object FOQuantifierTactics {
               val fresh = TacticHelper.freshNamedSymbol(fn, sequent)
               Variable(fresh.name, fresh.index, fresh.sort)
             } else funcVar
-          case _ => throw BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
+          case _ => throw new BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
         }
     }
 
@@ -324,4 +325,9 @@ protected object FOQuantifierTactics {
     else sorted.map(t => universalGen(None, t)(pos)).reduce[BelleExpr](_ & _)
   })
   lazy val universalClosure: DependentPositionTactic = universalClosure()
+
+  /** repeated application of [[TactixLibrary.allL]] */
+  def allLs(vs: List[Term]) : DependentPositionTactic = "allLs" by { pos: Position =>
+    vs.map(allL(_)(pos): BelleExpr).reduceLeft(_ & _)
+  }
 }

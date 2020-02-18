@@ -6,12 +6,13 @@
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr.HereP
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
@@ -188,5 +189,62 @@ class CoreTests extends FlatSpec with Matchers {
     an [IndexOutOfBoundsException] should be thrownBy testRule(EquivLeft(aPos), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(CloseTrue(sPos), s)
     an [IndexOutOfBoundsException] should be thrownBy testRule(CloseFalse(aPos), s)
+  }
+
+  "ensures" should "either throw an exception or not evaluate condition and message" in {
+    var cnd1 = false
+    var msg1 = false
+    var cnd2 = false
+    var cnd3 = false
+    var msg3 = false
+    var cnd4 = false
+
+    def fun1(): Int = { 0 } ensures (r => { cnd1 = true; r > 0 }, { msg1 = true; "non-positive" })
+
+    def fun2(): Int = { 0 } ensures (r => { cnd2 = true; r > 0 })
+
+    def fun3(): Int = { 0 } ensures ({ cnd3 = true; false }, { msg3 = true; "false" })
+
+    def fun4(): Int = { 0 } ensures { cnd4 = true; false }
+
+    // check if assertions are enabled
+    try {
+      assertion(false)
+      // no exception was thrown:
+      // assertions are disabled (java -da) or elided (scalacOptions ++= Seq("-Xdisable-assertions"))
+      println("Assertions Disabled")
+      // no side effects should occur
+      fun1() shouldBe 0
+      cnd1 shouldBe false
+      msg1 shouldBe false
+
+      fun2() shouldBe 0
+      cnd2 shouldBe false
+
+      fun3() shouldBe 0
+      cnd3 shouldBe false
+      msg3 shouldBe false
+
+      fun4() shouldBe 0
+      cnd4 shouldBe false
+    }
+    catch {
+      // assertions are enabled (java -ea)
+      case e: AssertionError =>
+        println("Assertions Enabled")
+        e.getMessage shouldBe "assertion failed"
+        // exceptions
+        the[AssertionError] thrownBy fun1() should have message "assertion failed: non-positive"
+        the[AssertionError] thrownBy fun2() should have message "assertion failed"
+        the[AssertionError] thrownBy fun3() should have message "assertion failed: false"
+        the[AssertionError] thrownBy fun4() should have message "assertion failed"
+        // side effects
+        cnd1 shouldBe true
+        cnd2 shouldBe true
+        cnd3 shouldBe true
+        cnd4 shouldBe true
+        msg1 shouldBe true
+        msg3 shouldBe true
+    }
   }
 }

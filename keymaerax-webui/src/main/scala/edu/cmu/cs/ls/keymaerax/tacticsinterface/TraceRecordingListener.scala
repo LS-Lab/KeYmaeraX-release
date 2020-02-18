@@ -1,3 +1,7 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.tacticsinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -12,6 +16,7 @@ import scala.collection.mutable.ListBuffer
   */
 
 /**
+  * When registered to a BelleInterpreter, listens to all inferences and records them in the database `db`.
   * @param ruleName A display name merely for UI purposes
   */
 class TraceRecordingListener(db: DBAbstraction,

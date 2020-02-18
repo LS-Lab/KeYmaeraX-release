@@ -71,14 +71,14 @@ trait OpSpec extends Ordered[OpSpec] {
   /** Compare this operator specification to another one such that ``this<other`` says that ``this`` binds stronger than ``other``. */
   def compare(other: OpSpec): Int = {
     prec - other.prec
-  } /*ensuring(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
-  //@note violates this ensuring clause since two different operators can have same precedence.
+  } /*ensures(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
+  //@note violates this ensures clause since two different operators can have same precedence.
 }
 
 /** Nullary operator notation specification with a constructor. */
 case class UnitOpSpec(op: Terminal, prec: Int,
                                const: String => Expression) extends OpSpec {
-  final def assoc = AtomicFormat
+  final def assoc: OpNotation = AtomicFormat
 }
 
 object UnitOpSpec {
@@ -160,10 +160,10 @@ object OpSpec {
 
   /** Interpreted symbols which are interpreted by tools or are defined to have a fixed semantics. */
   private val interpretedSymbols: List[Function] = {
-    Function("abs",None,Real,Real,true) ::
-    Function("min",None,Tuple(Real,Real),Real,true) ::
-    Function("max",None,Tuple(Real,Real),Real,true) :: Nil
-  } ensuring(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
+    Function("abs",None,Real,Real,interpreted=true) ::
+    Function("min",None,Tuple(Real,Real),Real,interpreted=true) ::
+    Function("max",None,Tuple(Real,Real),Real,interpreted=true) :: Nil
+  } ensures(r => r.forall(f => f.interpreted), "only interpreted symbols are interpreted")
   private val interpretation: Map[String,Function] = interpretedSymbols.map(f => (f.name -> f)).toMap
 
   /** Function(name,index,domain,sort) is created while filtering interpreted functions appropriately. */
@@ -213,6 +213,7 @@ object OpSpec {
   val sDotFormula   = UnitOpSpec(PLACE,                 0, DotFormula)
   val sTrue         = UnitOpSpec(TRUE,                  0, True)
   val sFalse        = UnitOpSpec(FALSE,                 0, False)
+  //@todo resolve ambiguous reference: (name, e:Expression) should be (name, e:Term)
   val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(func(name, None, e.sort, Bool), e.asInstanceOf[Term]))
   val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(func(name, None, e.sort, Bool), e.asInstanceOf[Formula]))
   val sUnitPredicational= UnitOpSpec(none,              0, name => UnitPredicational(name,AnyArg))
@@ -245,8 +246,8 @@ object OpSpec {
   private val diffprogfmlprog = (DifferentialProgramKind,FormulaKind)
 
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
-  val sSystemConst = UnitOpSpec(none,    0, name => SystemConst(name))
-  val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name, AnyArg))
+  val sSystemConst  = UnitOpSpec(none,    0, name => SystemConst(name))
+  val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
   assert(sAssign>sMinus, "atomic programs bind weaker than their constituent terms")
   //val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
@@ -283,7 +284,7 @@ object OpSpec {
   /** The operator notation of the top-level operator of ``expr`` with opcode, precedence and associativity  */
   def op(expr: Expression): OpSpec = expr match {
       //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
-      //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.
+      //@todo could add a contract ensures that constructor applied to expressions's children indeed produces expr.
     // terms
     case _: DotTerm      => sDotTerm
     case Nothing         => sNothing
@@ -340,6 +341,9 @@ object OpSpec {
     case p: Choice       => sChoice
     case p: Dual         => sDual
     case _: SystemConst  => sSystemConst
+
+    case f: Function     => throw new AssertionError("No completed expressions of FunctionKind can be constructed")
+
   }
 
 }

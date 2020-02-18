@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.pt
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
@@ -22,6 +23,7 @@ import scala.collection.immutable.IndexedSeq
   * @author Andre Platzer
   * @author Nathan Fulton
   * @author Brandon Bohrer
+  * @author Andre Platzer
   * @see [[Provable]]
   */
 trait ProvableSig {
@@ -50,9 +52,9 @@ trait ProvableSig {
     *
     * @return true if conclusion is proved by this Provable,
     *         false if subgoals are missing that need to be proved first.
-    * @note soundness-critical
+    * @see [[Provable.isProved]]
     */
-  def isProved: Boolean = subgoals.isEmpty
+  final def isProved: Boolean = underlyingProvable.isProved
 
   /**
     * What conclusion this Provable proves if isProved.
@@ -80,7 +82,6 @@ trait ProvableSig {
     * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
     * Will return a Provable with the same conclusion but an updated set of premises.
     * @requires(0 <= subgoal && subgoal < subgoals.length)
-    * @note soundness-critical. And soundness needs Rule to be sealed.
     */
   def apply(rule: Rule, subgoal: Subgoal): ProvableSig
 
@@ -112,7 +113,6 @@ trait ProvableSig {
     * Will return a Provable with the same conclusion but an updated set of premises.
     * @requires(0 <= subgoal && subgoal < subgoals.length)
     * @requires(subderivation.conclusion == subgoals(subgoal))
-    * @note soundness-critical
     */
   def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig
 
@@ -129,9 +129,10 @@ trait ProvableSig {
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
-    * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
   def apply(subst: USubst): ProvableSig
+
+  def apply(ren: URename): ProvableSig
 
   // forward proofs (convenience)
 
@@ -154,7 +155,6 @@ trait ProvableSig {
     * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
     * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
     * Will return a Provable with the same subgoals but an updated conclusion.
-    * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
   def apply(newConsequence: Sequent, rule: Rule): ProvableSig
 
@@ -176,7 +176,6 @@ trait ProvableSig {
     * @param prolongation the subderivation used to prolong this Provable.
     *                       Where subderivation has a  subgoal equaling our conclusion.
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
-    * @note not soundness-critical derived function since implemented in terms of other apply functions
     */
   def apply(prolongation: ProvableSig): ProvableSig
 
@@ -192,7 +191,6 @@ trait ProvableSig {
     *    Gi |- Di
     * }}}
     * which is suitable for being merged back into this Provable for subgoal `i` subsequently.
-    * @note not soundness-critical only helpful for completeness-critical
     */
   def sub(subgoal: Subgoal): ProvableSig
 
@@ -209,7 +207,6 @@ trait ProvableSig {
     * }}}
     *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    * @note soundness-critical: only valid formulas are sound axioms.
     */
   val axioms: Map[String, ProvableSig]
 
@@ -221,7 +218,6 @@ trait ProvableSig {
     * }}}
     *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    * @note soundness-critical: only list locally sound rules.
     * @see [[Provable.apply(USubst)]]
     */
   val rules: immutable.Map[String, ProvableSig]
@@ -236,7 +232,6 @@ trait ProvableSig {
     *
     * @param goal the desired conclusion.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
-    * @note soundness-critical
     */
   def startProof(goal : Sequent): ProvableSig
 
@@ -250,7 +245,6 @@ trait ProvableSig {
     *
     * @param goal the desired conclusion formula for the succedent.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
-    * @note Not soundness-critical (convenience method)
     */
   def startProof(goal : Formula): ProvableSig
 
@@ -261,11 +255,17 @@ trait ProvableSig {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
-  def proveArithmetic(t: QETool, f: Formula): Lemma
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma
+
+  def proveArithmetic(t: QETool, f: Formula): ProvableSig
+
 
   def prettyString: String
 }
 
+/**
+  * @see [[Provable]]
+  */
 object ProvableSig {
   /** Whether to use proof terms instead of eliding them */
   var PROOF_TERMS_ENABLED: Boolean = Configuration(Configuration.Keys.PROOF_TERM) == "true"
@@ -282,7 +282,6 @@ object ProvableSig {
     * }}}
     *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    * @note soundness-critical: only valid formulas are sound axioms.
     */
   def axioms: immutable.Map[String, ProvableSig] = {
     if (PROOF_TERMS_ENABLED) TermProvable.axioms else ElidingProvable.axioms
@@ -296,7 +295,6 @@ object ProvableSig {
     * }}}
     *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    * @note soundness-critical: only list locally sound rules.
     * @see [[Provable.apply(USubst)]]
     */
   def rules: immutable.Map[String, ProvableSig] = {
@@ -313,7 +311,6 @@ object ProvableSig {
     *
     * @param goal the desired conclusion.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
-    * @note soundness-critical
     */
   def startProof(goal : Sequent): ProvableSig =
     if(PROOF_TERMS_ENABLED) TermProvable.startProof(goal) else ElidingProvable.startProof(goal)
@@ -328,10 +325,12 @@ object ProvableSig {
     *
     * @param goal the desired conclusion formula for the succedent.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
-    * @note Not soundness-critical (convenience method)
     */
   def startProof(goal : Formula): ProvableSig =
     if(PROOF_TERMS_ENABLED) TermProvable.startProof(goal) else ElidingProvable.startProof(goal)
+
+  def proveArithmetic(t: QETool, f: Formula): ProvableSig =
+    if(PROOF_TERMS_ENABLED) TermProvable.proveArithmetic(t,f) else ElidingProvable.proveArithmetic(t,f)
 
   /**
     * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
@@ -340,8 +339,9 @@ object ProvableSig {
     * @param f The formula.
     * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
     */
-  def proveArithmetic(t: QETool, f: Formula): Lemma =
-    if(PROOF_TERMS_ENABLED) TermProvable.proveArithmetic(t,f) else Provable.proveArithmetic(t,f)
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma =
+    if(PROOF_TERMS_ENABLED) TermProvable.proveArithmeticLemma(t,f) else ElidingProvable.proveArithmeticLemma(t,f)
+
 }
 
 /**
@@ -362,9 +362,11 @@ case class ElidingProvable(provable: Provable) extends ProvableSig {
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig =
     ElidingProvable(provable(subderivation.underlyingProvable, subgoal), steps+subderivation.steps)
 
-  override def apply(subst: USubst): ProvableSig =  {
+  override def apply(subst: USubst): ProvableSig =
     ElidingProvable(provable(subst), steps+1)
-  }
+
+  override def apply(ren: URename): ProvableSig =
+    ElidingProvable(provable(ren), steps+1)
 
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = ElidingProvable(provable(newConsequence, rule), steps+1)
 
@@ -377,7 +379,9 @@ case class ElidingProvable(provable: Provable) extends ProvableSig {
 
   override def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
 
-  override def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
+  override def proveArithmetic(t: QETool, f: Formula): ProvableSig = ElidingProvable.proveArithmetic(t,f)
+
+  override def proveArithmeticLemma(t: QETool, f: Formula): Lemma = ElidingProvable.proveArithmeticLemma(t,f)
 
   override def prettyString: String = s"ElidingProvable(${provable.prettyString})"
 }
@@ -392,7 +396,12 @@ object ElidingProvable {
 
   def startProof(goal: Formula): ProvableSig = ElidingProvable(Provable.startProof(goal), 0)
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f))
+
+  def proveArithmeticLemma(tool: QETool, f: Formula): Lemma = {
+    val fact = proveArithmetic(tool, f)
+    Lemma(fact, Lemma.requiredEvidence(fact, Nil), None)
+  }
 }
 
 object TermProvable {
@@ -425,11 +434,13 @@ object TermProvable {
     TermProvable(ElidingProvable.startProof(goal), StartProof(fml2Seq(goal)))
   }
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+  def proveArithmetic(tool: QETool, f: Formula): ProvableSig = ElidingProvable(Provable.proveArithmetic(tool,f))
+
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma = {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
     //@TODO Does this work at all
-    val lem = ElidingProvable.proveArithmetic(t,f)
-    Lemma(TermProvable(lem.fact, FOLRConstant(lem.fact.underlyingProvable.conclusion.succ.head)), lem.evidence, lem.name)
+    val lem = ElidingProvable.proveArithmeticLemma(t,f)
+    Lemma(TermProvable(lem.fact, FOLRConstant(lem.fact.conclusion.succ.head)), lem.evidence, lem.name)
   }
 
 }
@@ -542,6 +553,9 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
     TermProvable(provable(subst), UsubstProvableTerm(pt, subst))
   }
 
+  //@todo implement
+  override def apply(ren: URename): ProvableSig = ???
+
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig =
     TermProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))
 
@@ -578,8 +592,11 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
     TermProvable.startProof(goal)
   }
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma =
+  def proveArithmetic(t: QETool, f: Formula): ProvableSig =
     TermProvable.proveArithmetic(t,f)
+
+  def proveArithmeticLemma(t: QETool, f: Formula): Lemma =
+    TermProvable.proveArithmeticLemma(t,f)
 
 
   override def toString: String = s"TermProvable(${provable.toString}, ${pt.toString})"

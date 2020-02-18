@@ -30,6 +30,12 @@ class StringConverter(val s: String) {
     case _ => throw new IllegalArgumentException("Input " + s + " is not a variable")
   }
 
+  def asFunction: Function = KeYmaeraXParser.termParser(s) match {
+    case v: Variable  => Function(v.name, v.index, Unit, Real, interpreted=false)
+    case FuncOf(f, _) => f
+    case _ => throw new IllegalArgumentException("Input " + s + " is not a function")
+  }
+
   def asFormula: Formula = KeYmaeraXParser.formulaParser(s)
 
   def asProgram: Program = KeYmaeraXParser.programParser(s)
@@ -69,5 +75,17 @@ class StringConverter(val s: String) {
       smartFmlSplit("",succ.split(",(?![^{]*})").toList).toIndexedSeq
     )
     res
+  }
+
+  /** Converts a string `what ~> repl` into a substitution pair. */
+  def asSubstitutionPair: SubstitutionPair = {
+    val exprs = s.split("~>")
+    assert(exprs.size == 2, "Expected substitution pair of shape what ~> repl, but got " + s)
+    val repl = KeYmaeraXParser(exprs(1))
+    val what =
+      if (repl.kind == FormulaKind) KeYmaeraXParser.formulaParser(exprs(0))
+      else if (repl.kind == TermKind) KeYmaeraXParser.termParser(exprs(0))
+      else KeYmaeraXParser.programParser(exprs(0))
+    SubstitutionPair(what, repl)
   }
 }

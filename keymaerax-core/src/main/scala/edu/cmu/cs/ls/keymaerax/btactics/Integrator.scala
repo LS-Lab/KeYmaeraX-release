@@ -8,8 +8,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleTacticFailure}
-import edu.cmu.cs.ls.keymaerax.tools.{ODESolverTool, Tool, ToolBase}
+import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.tools.Tool
+import edu.cmu.cs.ls.keymaerax.tools.ext.ODESolverTool
 import org.apache.logging.log4j.scala.Logging
 
 /**
@@ -52,32 +53,28 @@ object Integrator extends Logging {
   }
 
   /**
-    * Glue code that implements the [[edu.cmu.cs.ls.keymaerax.tools.ODESolverTool]] interface using the Integrator.
+    * Glue code that implements the [[edu.cmu.cs.ls.keymaerax.tools.ext.ODESolverTool]] interface using the Integrator.
  *
     * @todo untested
     */
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = {
     apply(iv, diffArg, ODESystem(diffSys)).foldLeft[Formula](True)((fml, eqn) => And(fml, eqn)) match {
       case True => None
-      case And(l,r) => {
+      case And(l,r) =>
         //throw away the initial True
-        if(l != True) throw new AxiomaticODESolver.AxiomaticODESolverExn("Expected the left-most component to be a True.")
+        if(l != True) throw AxiomaticODESolver.AxiomaticODESolverExn("Expected the left-most component to be a True.")
         Some(r)
-      }
     }
   }
 
   /** Returns true if `t` contains variables that have solutions in `solvedComponents`
+    * @param t The term to analyze.
     * @param solvedComponents Should be a list of equalities with Variables on the LHS. */
   private def containsSolvedComponents(t: Term, solvedComponents: List[Equal]) = {
     assert(solvedComponents.forall(eq => eq.left.isInstanceOf[Variable]))
     val solutions = conditionsToValues(solvedComponents)
 
-    freeVars(t)
-      .toSet
-      .map((x: NamedSymbol) => x.asInstanceOf[Variable])
-      .find((x: Variable) => solutions.keySet.contains(x))
-      .nonEmpty
+    freeVars(t).toSet.exists(solutions.keySet.contains)
   }
 
   private def replaceSolvedDependentVariables(t: Term, eqns : List[Equal]): Term = {
@@ -88,13 +85,6 @@ object Integrator extends Logging {
       logger.debug(s"Replacing $v with $t in $newT")
       SubstitutionHelper.replaceFree(newT)(v, t)
     })
-  }
-
-  private def valueFor(v: Variable, equalities: List[Equal]): Option[Equal] = equalities.find(eq => eq.left == v)
-  private def hasValue(v: Variable, equalities: List[Equal]) = valueFor(v, equalities).nonEmpty
-
-  private def nonRecurrentPrimes(odes: List[AtomicODE], primedVars: Set[Variable]): Set[Variable] = {
-    odes.flatMap(ode => if (StaticSemantics.freeVars(ode.e).intersect(primedVars).isEmpty) ode.xp::ode.xp.x::Nil else Nil).toSet
   }
 
   /**
@@ -141,7 +131,10 @@ object Integrator extends Logging {
   }
 }
 
-class IntegratorODESolverTool extends ToolBase("IntegratorDiffSolutionTool") with ODESolverTool {
+class IntegratorODESolverTool extends Tool with ODESolverTool {
+  /** @inheritdoc */
+  override val name: String = "IntegratorDiffSolutionTool"
+
   /**
     * Computes the symbolic solution of a differential equation in normal form.
     *
@@ -154,7 +147,18 @@ class IntegratorODESolverTool extends ToolBase("IntegratorDiffSolutionTool") wit
     Some(Integrator(iv, diffArg, ODESystem(diffSys, True)).reduce[Formula]((l,r) => And(l,r)))
   }
 
-  override def init(config: Map[String, String]): Unit = { initialized = true }
-  override def restart(): Unit = { initialized = true }
-  override def shutdown(): Unit = { initialized = false }
+  /** @inheritdoc */
+  override def init(config: Map[String, String]): Unit = { }
+
+  /** @inheritdoc */
+  override def restart(): Unit = { }
+
+  /** @inheritdoc */
+  override def shutdown(): Unit = { }
+
+  /** @inheritdoc */
+  override def isInitialized: Boolean = true
+
+  /** @inheritdoc */
+  override def cancel(): Boolean = true
 }

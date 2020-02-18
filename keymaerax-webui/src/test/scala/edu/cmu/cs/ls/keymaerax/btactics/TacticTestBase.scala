@@ -6,16 +6,19 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.{JLinkMathematicaLink, Mathematica, QETacticTool, Z3}
+import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, M2KConverter}
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
 import org.scalatest.concurrent.{Signaler, TimeLimitedTests, TimeLimits}
@@ -137,7 +140,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    *    }
    * }}}
    * */
-  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
+  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1): Unit = mathematicaProvider.synchronized {
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
     withTemporaryConfig(Map(
         Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
@@ -149,13 +152,17 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
+
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
       implicit val signaler: Signaler = (t: Thread) => {
         theInterpreter.kill()
         tool.cancel()
         t.interrupt()
-        provider.shutdown()
-        mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+        mathematicaProvider.synchronized {
+          mathematicaProvider().doShutdown() //@note see [[afterAll]]
+          provider.shutdown()
+          mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+        }
       }
       failAfter(to) { testcode(tool) }
     }
@@ -189,31 +196,11 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: QETool => Any, timeout: Int = -1): Unit = {
+  def withQE(testcode: QETacticTool => Any, timeout: Int = -1): Unit = {
     withClue("Mathematica") { withMathematica(testcode, timeout) }
     afterEach()
     beforeEach()
     withClue("Z3") { withZ3(testcode, timeout) }
-  }
-
-  /**
-    * Creates and initializes Polya for tests that want to use QE. Also necessary for tests that use derived
-    * axioms that are proved by QE.
-    * Note that Mathematica should also ne initialized in order to perform DiffSolution and CounterExample
-    * @example{{{
-    *    "My test" should "prove something with Mathematica" in withPolya { implicit qeTool =>
-    *      // ... your test code here
-    *    }
-    * }}}
-    * */
-  def withPolya(testcode: Polya => Any) {
-    val provider = new PolyaToolProvider
-    ToolProvider.setProvider(provider)
-    val tool = provider.tool()
-    implicit val signaler: Signaler = { _: Thread => tool.cancel() }
-    failAfter(timeLimit) {
-      testcode(tool)
-    }
   }
 
   /** Creates and initializes Mathematica; checks that a Matlab bridge is configured. @see[[withMathematica]]. */
@@ -309,11 +296,18 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     * @todo remove proveBy in favor of [[TactixLibrary.proveBy]] to avoid incompatibilities or meaingless tests if they do something else
     */
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
-  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]]=>Unit = _ => {}): ProvableSig = {
+  def proveBy(fml: Formula, tactic: BelleExpr, labelCheck: Option[List[BelleLabel]] => Unit = _ => {}, defs: Declaration = Declaration(Map.empty)): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(fml))
     theInterpreter(tactic, v) match {
+      case dsp: BelleDelayedSubstProvable =>
+        dsp.p.conclusion shouldBe Sequent(
+          IndexedSeq(),
+          IndexedSeq(fml.exhaustiveSubst(dsp.subst ++ USubst(defs.substs)).asInstanceOf[Formula])
+        )
+        labelCheck(dsp.label)
+        dsp.p
       case BelleProvable(provable, labels) =>
-        provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+        provable.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(defs.exhaustiveSubst(fml)))
         labelCheck(labels)
         provable
       case r => fail("Unexpected tactic result " + r)

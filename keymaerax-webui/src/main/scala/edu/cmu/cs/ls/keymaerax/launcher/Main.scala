@@ -7,28 +7,35 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io._
 import javax.swing.JOptionPane
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, core}
+import edu.cmu.cs.ls.keymaerax.core.Ensures
 import edu.cmu.cs.ls.keymaerax.hydra._
-import spray.json.JsArray
 
-import scala.collection.JavaConversions._
+//import scala.collection.JavaConverters._
+
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
+import scala.collection.immutable.List
+
 /**
-  * Prelauncher that restarts a big stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
+  * Prelauncher that restarts a big-stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]],
+  * the aXiomatic Tactical Theorem Prover for Hybrid Systems and Hybrid Games.
+  *
   * Usage:
   * {{{
   *  java -jar keymaerax.jar
-  *  java -Xss20M -jar keymaerax.jar
+  *  java -Xss20M -jar keymaerax.jar -launch
   * }}}
-  * Created by nfulton on 4/17/15.
   * @todo move functionality directly into KeYmaeraX.scala?
   * @author Nathan Fulton
   * @author Stefan Mitsch
+  * @since 4/17/15
   * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
   */
 object Main {
+  import core.VERSION
+
   /** This flag is set to true iff this process odes nothing but re-launch */
   var IS_RELAUNCH_PROCESS = false
 
@@ -36,6 +43,14 @@ object Main {
   private var logFile = false
 
   def main(args : Array[String]) : Unit = {
+    // prelaunch help without launching an extra JVM
+    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
+      println("KeYmaera X Prover" + " " + VERSION)
+      println(KeYmaeraX.help)
+      exit(1)
+    }
+
+    // isFirstLaunch indicates that an extra big-stack JVM still has to be launched
     val isFirstLaunch = if (args.length >= 1) {
       !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
     } else true
@@ -86,6 +101,10 @@ object Main {
       KeYmaeraX.main(args)
     }
   }
+
+  /** Exit gracefully */
+  private def exit(status: Int): Nothing = {sys.exit(status)}
+
 
   def startServer(args: Array[String]) : Unit = {
     LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
@@ -191,7 +210,7 @@ object Main {
       if(recSuccess) f.delete()
       else false
     }
-  } ensuring(r => !r || !f.exists())
+  } ensures(r => !r || !f.exists())
 
   /** Kills the current process and shows an error message if the current database is deprecated.
     * @todo similar behavior for the cache
@@ -357,7 +376,7 @@ object Main {
   private def runCmd(cmd: List[String]) = {
     launcherDebug("Running command:\n" + cmd.mkString(" "))
 
-    val pb = new ProcessBuilder(cmd)
+    val pb = new ProcessBuilder(cmd: _*)
     var pollOnStd = false
     try {
       if (logFile) {
@@ -475,7 +494,7 @@ object Main {
     println(prefix + s)
   }
 
-  /** A robust locking mechanism for ensuring that there's only ever one instance of KeYmaera X running.
+  /** A robust locking mechanism for ensures that there's only ever one instance of KeYmaera X running.
     * Also displays GUI messages when the lock cannot be obtained so that confused users don't have to wonder why KeYmaera X won't start.
     *
     * @todo decide if java.nio lock files are a better solution. Definitely keep port-based stale checking, though
@@ -528,19 +547,19 @@ object Main {
       //This file is later destroyed in the shutdown hook.
       launcherDebug("Obtaining lock.")
       obtainLock()
-    } ensuring(e => lockObtained == true && lockFile.exists())
+    } ensures(e => lockObtained == true && lockFile.exists())
 
     def obtainLock() = {
       require(!lockFile.exists(), "Cannot obtain a lock if the lock file exists.")
       lockObtained = true
       assert(lockFile.createNewFile(), "could not obtain lock file even though we just checked that the file does not exist.")
       lockFile.deleteOnExit()
-    } ensuring(e => lockObtained == true && lockFile.exists())
+    } ensures(e => lockObtained == true && lockFile.exists())
 
     /** Deletes the lock file regardless of whether this is the process that created the lock file. */
     private def forceDeleteLock() = {
       lockFile.delete()
-    } ensuring(!lockFile.exists())
+    } ensures(!lockFile.exists())
 
     /** Deletes the lock file ONLY IF this process obtained the lock (i.e., lockObtained = true).
       * @note not strictly necessary as lont as File.deleteOnExit works properly. */

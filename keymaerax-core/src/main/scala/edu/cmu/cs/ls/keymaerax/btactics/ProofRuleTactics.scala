@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.{Configuration, core}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -15,7 +16,7 @@ import org.apache.logging.log4j.scala.Logging
  * and other proof rules that are implemented by KeYmaera X.
   *
   * @author Nathan Fulton
- * @see [[SequentCalculi]]
+ * @see [[SequentCalculus]]
  */
 private object ProofRuleTactics extends Logging {
   //@note Rule.LAX_MODE not accessible outside core
@@ -25,7 +26,7 @@ private object ProofRuleTactics extends Logging {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
-    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {
@@ -143,13 +144,13 @@ private object ProofRuleTactics extends Logging {
     else {
       //@note contextualize
         // [x:=f(x)]P(x)
-        import Augmentors.SequentAugmentor
+        import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
         val fml = sequent.apply(pos).asInstanceOf[Formula]
         // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
         //@note the proof is the same for \forall x p(x) etc.
         val brenL = core.BoundRenaming(what, repl, AntePos(0))
         val brenR = core.BoundRenaming(what, repl, SuccPos(0))
-        val mod = brenR(fml) ensuring(r => r==brenL(fml), "bound renaming for formula is independent of position")
+        val mod = brenR(fml) ensures(r => r==brenL(fml), "bound renaming for formula is independent of position")
         // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
         val side: ProvableSig = (ProvableSig.startProof(Equiv(mod, fml))
           // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
@@ -187,7 +188,7 @@ private object ProofRuleTactics extends Logging {
       tactic(pos)
     else {
       //@note contextualize
-      import Augmentors.SequentAugmentor
+      import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.SequentAugmentor
       val fml: Formula = sequent.apply(pos).asInstanceOf[Formula]
       val mod: Formula = predictor(fml)
       // |- mod <-> fml
@@ -221,7 +222,7 @@ private object ProofRuleTactics extends Logging {
     })
 
   def skolemizeR = new BuiltInRightTactic("skolemizeR") {
-    override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos.top), 0)
@@ -230,7 +231,7 @@ private object ProofRuleTactics extends Logging {
 
   @deprecated("Use SequentCalculus.closeT instead")
   private[btactics] def closeTrue = new BuiltInRightTactic("CloseTrue") {
-    override def computeSuccResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
+    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseTrue(pos.top), 0)
     }
@@ -238,7 +239,7 @@ private object ProofRuleTactics extends Logging {
 
   @deprecated("Use SequentCalculus.closeF instead")
   private[btactics] def closeFalse = new BuiltInLeftTactic("CloseFalse") {
-    override def computeAnteResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+    override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
       requireOneSubgoal(provable, name)
       provable(core.CloseFalse(pos.top), 0)
     }

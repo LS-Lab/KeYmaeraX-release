@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, PosInExpr, Position, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logger
@@ -44,25 +45,15 @@ object ODEInvariance {
 
   /* Stash of derived axioms */
   // Rewrite >=
-  private lazy val geq = remember("f_()>=0 <-> f_()>0 | f_()=0".asFormula, QE, namespace)
+  private[btactics] lazy val geq = remember("f_()>=0 <-> f_()>0 | f_()=0".asFormula, QE, namespace)
   // Cont with the domain constraint already refined to >= instead of >
-  private lazy val contAx =
+  private[btactics] lazy val contAx =
     remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
         implyRi & byUS("Cont continuous existence"),
         DW(1) & G(1) & useAt("> flip")(1,0::Nil) & useAt(">= flip")(1,1::Nil) & useAt("<=")(1,1::Nil) & prop
       ), namespace)
-  //iff version of uniqueness axiom
-  private lazy val uniqAx =
-    remember("<{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c&q(||) & r(||)}>p(||)".asFormula,
-      prop <(
-        cut("<{c&q(||) & r(||)}>(p(||)|p(||))".asFormula) <(
-          cohide2(-3,1) & mond & prop,
-          hideR(1) & useAt("Uniq uniqueness",PosInExpr(1::Nil))(1) & prop),
-        dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop),
-        dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop)
-      ),namespace)
 
   //Extra conversion rewrites for and/or
   //Refine left/right disjunct
@@ -244,7 +235,7 @@ object ODEInvariance {
             useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpclosed(r))
       case ConjFml(l, r) =>
         DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
-          andL(-3) & useAt(uniqAx, PosInExpr(1 :: Nil))(1) & andR(1) < (
+          andL(-3) & useAt("Uniq uniqueness iff", PosInExpr(1 :: Nil))(1) & andR(1) < (
           hideL(-4) & lpclosed(l),
           hideL(-3) & lpclosed(r)
         )
@@ -590,11 +581,14 @@ object ODEInvariance {
     remember("<{c&!q(||) | r(||)}>!r(||) -> ([{c&r(||)}]p(||) -> [{c&q(||)}]p(||))".asFormula,
       implyR(1) & implyR(1) &
         useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
+        cutL("<{c&!q(||)|r(||)}>(!r(||) | !p(||))".asFormula)(-1) <( skip , cohideR(3) & implyR(1) & mond & prop) &
         useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+        cutL("<{c&q(||)}>(!r(||) | !p(||))".asFormula)(-2) <( skip , cohideR(2) & implyR(1) & mond & prop) &
         andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
           implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
-          cohideR(2) & implyR(1) & mond & prop), namespace)
+          cohideR(2) & implyR(1) & mond & prop)
+      , namespace)
 
   def domainStuck : DependentPositionTactic = "domainStuck" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel, "domain stuck only at top-level")
@@ -1087,7 +1081,7 @@ object ODEInvariance {
     remember("-abs(f())>=0<->f()=0".asFormula,QE,namespace)
   private lazy val uniqMin =
     remember("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
-      useAt(uniqAx)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
+      useAt("Uniq uniqueness iff")(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
       namespace)
 
   private lazy val refAbs =

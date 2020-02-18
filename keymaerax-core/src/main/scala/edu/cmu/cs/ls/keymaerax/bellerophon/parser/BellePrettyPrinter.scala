@@ -43,6 +43,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
       case _ => e match {
         case DefTactic(name, t) => op(e).terminal.img + " " + name + " " + AS.img + " (" + pp(t, indent) + ")"
         case ApplyDefTactic(DefTactic(name, _)) => name
+        case e: ExpandAll => e.prettyString
+        case e: Expand => e.prettyString
         case SeqTactic(l,r)    => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
         case EitherTactic(l,r) => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
         case AfterTactic(l,r)  => sanitizeBinary(wrapLeft(e, l, indent), op(e).terminal.img, wrapRight(e, r, indent))
@@ -57,6 +59,8 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case BuiltInTactic(name) if name == "ANON" => ""
         case BuiltInPositionTactic(name) if name != "ANON" => name
         case BuiltInPositionTactic(name) if name == "ANON" => ""
+        case b: CoreLeftTactic => b.name
+        case b: CoreRightTactic => b.name
         case b: BuiltInLeftTactic => b.name
         case b: BuiltInRightTactic => b.name
         case e: PartialTactic => wrapLeft(e, e.child, indent) + " " + op(e).terminal.img
@@ -81,7 +85,6 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case it : InputTactic =>
           val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
           it.name + "(" + eargs + ")"
-        case ProveAs(_, _, _) => "proveAs"
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
         case NamedTactic(name, _) if name != "ANON" => name
         case dot: BelleDot => "_@" + dot.hashCode()
