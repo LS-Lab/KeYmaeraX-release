@@ -79,7 +79,7 @@ class PolyaSolver(val polyaPath: String, val converter: SMTConverter) extends Lo
     if (polyaResult == "-1") throw new SMTQeException("QE with Polya gives -1 (POSSIBLY SAT). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
     else if (polyaResult == "1") (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> polyaOutput)))
     else if (polyaResult == "0") throw new SMTQeException("QE with Polya gives 0 (FAILED). Cannot reduce the following formula to True:\n" + KeYmaeraXPrettyPrinter(f) + "\n")
-    else throw new SMTConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
+    else throw ConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
   }
 
   /**

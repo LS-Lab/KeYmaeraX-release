@@ -52,9 +52,9 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
     //@note only accepts output that consists of one of the following words, except for trailing whitespace
     z3Output.stripLineEnd match {
       case "unsat" => True
-      case "sat" => throw new SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
-      case "unknown" => throw new SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
-      case _ => throw new SMTConversionException("Back-conversion of Z3 result \n" + z3Output + "\n is not defined")
+      case "sat" => throw SMTQeException("QE with Z3 gives SAT. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
+      case "unknown" => throw SMTQeException("QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + f.prettyString + "\n")
+      case _ => throw ConversionException("Back-conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
   }
 
@@ -62,7 +62,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
   private[tools] def runZ3Smt(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
     logger.debug("[Calling Z3...] \n" + z3Command)
 
-    if (z3Process.isDefined) throw ToolException("Z3 is busy")
+    if (z3Process.isDefined) throw ToolCommunicationException("Z3 is busy")
 
     val smtFile = File.createTempFile(tmpFilePrefix, ".smt2")
     val writer = new FileWriter(smtFile)
@@ -74,7 +74,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
 
   /** Runs the process `cmd` for at most `timeout` time, and returns the resulting output. */
   private def runZ3(cmd: String, timeout: Int): String = {
-    if (z3Process.isDefined) throw ToolException("Z3 is busy")
+    if (z3Process.isDefined) throw ToolCommunicationException("Z3 is busy")
     //@note running on a single process, but additionally safeguard with a query index to test whether the returned
     // result fits the input query index
     val qidx: Long = synchronized { queryIndex += 1; queryIndex }
@@ -89,20 +89,20 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
       val (exitQIdx, exitVal) =
         if (timeout >= 0) Await.result(f, duration.Duration(timeout, "sec"))
         else Await.result(f, duration.Duration.Inf)
-      if (exitQIdx != qidx) throw ToolException("Expected query index on tool exit to match input query index, but exit " + exitQIdx + " != " + qidx)
+      if (exitQIdx != qidx) throw ToolCommunicationException("Expected query index on tool exit to match input query index, but exit " + exitQIdx + " != " + qidx)
       if (exitVal == 0) {
         if (result._1 == qidx) result._2
-        else throw ToolException("Expected result query index to match input query index, but result " + result._1 + " != " + qidx)
+        else throw ToolCommunicationException("Expected result query index to match input query index, but result " + result._1 + " != " + qidx)
       } else {
-        throw ToolException("Error executing Z3, exit value " + exitVal)
+        throw SMTQeException("Error executing Z3, exit value " + exitVal)
       }
     } catch {
       case ex: TimeoutException =>
         p.destroy()
-        throw ToolException(s"Z3 timeout of ${timeout}s exceeded", ex)
+        throw ToolCommunicationException(s"Z3 timeout of ${timeout}s exceeded", ex)
       case ex: InterruptedException =>
         p.destroy
-        throw ToolException(s"Z3 interrupted", ex)
+        throw ToolCommunicationException(s"Z3 interrupted", ex)
     } finally {
       z3Process = None
     }

@@ -29,11 +29,11 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   it should "throw exception in converting illegal big positive numbers" in {
-    a [SMTConversionException] should be thrownBy converter("9223372036854775808 > 1".asFormula)
+    a [ConversionException] should be thrownBy converter("9223372036854775808 > 1".asFormula)
   }
 
   it should "throw exception in converting illegal big negative numbers" in {
-    a [SMTConversionException] should be thrownBy converter("-9223372036854775808 < 1".asFormula)
+    a [ConversionException] should be thrownBy converter("-9223372036854775808 < 1".asFormula)
   }
 
   "Variables" should "convert numbers" in {

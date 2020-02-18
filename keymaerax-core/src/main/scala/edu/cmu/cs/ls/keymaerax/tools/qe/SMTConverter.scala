@@ -8,7 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.SMTConversionException
+import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 
 import scala.annotation.tailrec
 
@@ -81,7 +81,7 @@ abstract class SMTConverter extends (Formula=>String) {
       case Function(name, index, _, _, false) => FUNC_PREFIX + nameOf(name, index)
       case BaseVariable(name, index, _) => VAR_PREFIX + nameOf(name, index)
       case DifferentialSymbol(BaseVariable(name, index, _)) => DIFFSYMBOL_PREFIX + nameOf(name, index)
-      case _ => throw new SMTConversionException("Name conversion of " + s.prettyString + " not supported")
+      case _ => throw ConversionException("Name conversion of " + s.prettyString + " not supported")
     }
   }
 
@@ -97,7 +97,7 @@ abstract class SMTConverter extends (Formula=>String) {
   private def convertToSMT(expr: Expression) : String = expr match {
     case t: Term  => convertTerm(t)
     case f: Formula => convertFormula(f)
-    case _ => throw new SMTConversionException("The input expression: \n" + expr + "\nis expected to be a term or formula.")
+    case _ => throw ConversionException("The input expression: \n" + expr + "\nis expected to be a term or formula.")
   }
 
   /** Convert KeYmaera X formula to string in SMT notation */
@@ -117,7 +117,7 @@ abstract class SMTConverter extends (Formula=>String) {
     case False => "false"
     case f: Forall => convertQuantified(f, "forall")
     case e: Exists => convertQuantified(e, "exists")
-    case m: Modal       => throw new SMTConversionException("There is no conversion from modalities with hybrid programs to SMT " + m)
+    case m: Modal       => throw ConversionException("There is no conversion from modalities with hybrid programs to SMT " + m)
   }
 
   /** Convert KeYmaera X term to string in SMT notation */
@@ -142,11 +142,11 @@ abstract class SMTConverter extends (Formula=>String) {
           //@note SMT form of negative number -5 is (- 5)
           // avoids conversion to double, uses 'signum' to determine sign and builtin negate function
           //@note negative form has to be representable, in particular n cannot have been MIN_LONG
-          assert((-n).isDecimalDouble || (-n).isValidLong, throw new SMTConversionException("Term contains illegal numbers: " + t))
+          assert((-n).isDecimalDouble || (-n).isValidLong, throw ConversionException("Term contains illegal numbers: " + t))
           //@todo Real literals should contain a dot in Z3 (integer without dot), check whether compatible with Polya
           "(- " + (-n).toString() + ")"
         } else {
-          assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term contains illegal numbers: " + t))
+          assert(n.isDecimalDouble || n.isValidLong, throw ConversionException("Term contains illegal numbers: " + t))
           n.toString()
         }
       case t: BaseVariable => nameIdentifier(t)
@@ -156,11 +156,11 @@ abstract class SMTConverter extends (Formula=>String) {
         if (fn.interpreted) fn match {
           case Function("min" | "max", None, Tuple(Real,Real), Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
           case Function("abs", None, Real, Real, true) => "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
-          case _ => throw new SMTConversionException("Interpreted function not supported presently by SMT: " + t)
+          case _ => throw ConversionException("Interpreted function not supported presently by SMT: " + t)
         } else "(" + nameIdentifier(fn) + " " + convertTerm(child) + ")"
       //@note: disassociates the arguments and no extra parentheses for pairs, since mapping from name to types is unique by assertion in [[generateSMT]]
       case Pair(l, r)  => convertTerm(l) + " " + convertTerm(r)
-      case _ => throw new SMTConversionException("Conversion of term to SMT is not defined: " + t)
+      case _ => throw ConversionException("Conversion of term to SMT is not defined: " + t)
     }
   }
 

@@ -87,7 +87,12 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
       case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.ml)
     }
     (cmd.toString, link.run(() => {
-      commandRunner.run(memoryConstrained(timeConstrained(cmd)), m2k)._2
+      try {
+        commandRunner.run(memoryConstrained(timeConstrained(cmd)), m2k)._2
+      } catch {
+        case ex: IllegalArgumentException =>
+          throw ConversionException("Error executing " + cmd.toString + " command", ex)
+      }
     }, mathematicaExecutor))
   }
 
@@ -308,34 +313,27 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
         executor.remove(taskId)
         result
       case Some(Right(throwable)) => throwable match {
-        case ex: MathematicaComputationAbortedException =>
+        case ex: ToolInternalException =>
+          // internal: Mathematica still functional
           executor.remove(taskId)
           throw ex
-        case ex: ConversionException =>
-          executor.remove(taskId)
-          // conversion error, but Mathematica still functional
-          throw ToolException("Error converting " + engineName + " result", ex)
-        case ex: IllegalArgumentException =>
-          executor.remove(taskId)
-          // computation error, but Mathematica still functional
-          throw ToolException("Error executing " + engineName + " command", ex)
-        case ex: Throwable =>
+        case ex: ToolExternalException =>
           logger.warn(ex)
           executor.remove(taskId, force = true)
           try {
             restart()
           } catch {
-            case restartEx: Throwable =>
-              throw ToolException("Restarting " + engineName + " failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of " + engineName + " (KeYmaera X->Preferences). " + engineName + " error that triggered the restart:\n" + ex.getMessage, restartEx)
+            case ex: Throwable =>
+              throw ToolExecutionException("Restarting " + engineName + " failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of " + engineName + " (KeYmaera X->Preferences). " + engineName + " error that triggered the restart:\n" + ex.getMessage, ex)
           }
-          throw ToolException("Restarted " + engineName + ", please rerun the failed command (error details below)", throwable)
+          throw ToolCommunicationException("Restarted " + engineName + ", please rerun the failed command (error details below)", ex)
       }
       case None =>
         //@note Thread is interrupted by another thread (e.g., UI button 'stop')
         cancel()
         executor.remove(taskId, force = true)
         logger.debug("Initiated aborting "  + engineName)
-        throw new MathematicaComputationExternalAbortException("Mathematica task aborted")
+        throw MathematicaComputationUserAbortException("Mathematica task aborted")
     }
   }
 
@@ -510,34 +508,26 @@ class WolframScript extends MathematicaLink with Logging {
         executor.remove(taskId)
         result
       case Some(Right(throwable)) => throwable match {
-        case ex: MathematicaComputationAbortedException =>
+        case ex: ToolInternalException =>
           executor.remove(taskId)
           throw ex
-        case ex: ConversionException =>
-          executor.remove(taskId)
-          // conversion error, but Wolfram Engine still functional
-          throw ToolException("Error converting Wolfram Engine result", ex)
-        case ex: IllegalArgumentException =>
-          executor.remove(taskId)
-          // computation error, but Wolfram Engine still functional
-          throw ToolException("Error executing Wolfram Engine command", ex)
-        case ex: Throwable =>
+        case ex: ToolExternalException =>
           logger.warn(ex)
           executor.remove(taskId, force = true)
           try {
             restart()
           } catch {
             case restartEx: Throwable =>
-              throw ToolException("Restarting Wolfram Engine failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of Wolfram Engine (Help->Tools). Wolfram Engine error that triggered the restart:\n" + ex.getMessage, restartEx)
+              throw ToolExecutionException("Restarting Wolfram Engine failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of Wolfram Engine (Help->Tools). Wolfram Engine error that triggered the restart:\n" + ex.getMessage, restartEx)
           }
-          throw ToolException("Restarted Wolfram Engine, please rerun the failed command (error details below)", throwable)
+          throw ToolCommunicationException("Restarted Wolfram Engine, please rerun the failed command (error details below)", throwable)
       }
       case None =>
         //@note Thread is interrupted by another thread (e.g., UI button 'stop')
         cancel()
         executor.remove(taskId, force = true)
         logger.debug("Initiated aborting Wolfram Engine")
-        throw new MathematicaComputationExternalAbortException("Computation aborted")
+        throw MathematicaComputationUserAbortException("Computation aborted")
     }
   }
 
@@ -613,8 +603,7 @@ class WolframScript extends MathematicaLink with Logging {
       val result = evaluate("6*9")
       Some(importResult(result, e => e.integerQ() && e.asInt() == 54))
     } catch {
-      //@todo need better error reporting, this way it will never show up on UI
-      case e: Throwable => logger.warn("WARNING: Wolfram Engine may not be functional \n cause: " + e, e); None
+      case e: Throwable => throw ToolExecutionException("Error running test computation", e)
     }
   }
 
@@ -644,7 +633,7 @@ class WolframScript extends MathematicaLink with Logging {
       if (rs.contains("malloc")) evaluate(cmd)
       else parseExpressionJSON(rs)
     } else {
-      throw ToolException(s"Error executing Wolfram Engine, exit value $exitVal")
+      throw ToolExecutionException(s"Error executing Wolfram Engine, exit value $exitVal")
     }
   }
 
@@ -655,7 +644,7 @@ class WolframScript extends MathematicaLink with Logging {
       // symbols are "symbol"
       case JsString(s) => new MExpr(Expr.SYMBOL, s)
       case JsNumber(n) if  n.isWhole() => new MExpr(n.toBigIntExact().getOrElse(
-        throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
+        throw ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
       case JsNumber(n) if !n.isWhole() => new MExpr(n.bigDecimal)
       case JsTrue => MathematicaOpSpec.ltrue.op
       case JsFalse => MathematicaOpSpec.lfalse.op
@@ -667,7 +656,7 @@ class WolframScript extends MathematicaLink with Logging {
     val json = try {
       JsonParser(expr)
     } catch {
-      case ex: JsonParser.ParsingException => throw ToolException("Error parsing Wolfram Engine response; checking license may have failed, please double-check Wolfram Engine is activated and retry", ex)
+      case ex: JsonParser.ParsingException => throw ConversionException("Error parsing Wolfram Engine response; checking license may have failed, please double-check Wolfram Engine is activated and retry", ex)
     }
     convertJSON(json)
   }

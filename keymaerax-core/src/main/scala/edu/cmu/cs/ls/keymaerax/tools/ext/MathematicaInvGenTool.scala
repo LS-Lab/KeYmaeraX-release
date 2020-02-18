@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
-import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, ToolException}
+import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
@@ -95,7 +95,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     result match {
       case True => true
       case False => false
-      case _ => throw ToolException("Expected true/false from Pegasus call but got expression: " +
+      case _ => throw ConversionException("Expected true/false from Pegasus call but got expression: " +
         result.prettyString)
     }
   }
@@ -180,7 +180,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
       .map({
         case f@Function(_,_,Unit,_,_) =>
-          FuncOf(f,Nothing) //for k2m conversion to work reliably on constants
+          FuncOf(f, Nothing) //for k2m conversion to work reliably on constants
         case e => e
       } )
 
@@ -204,14 +204,12 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     try {
       val (output, result) = runUnchecked(command)
       result match {
-        case And(Equal(_,n:Number), And(And(And( And(i1,i2),n1) ,n2) ,n3)) => {
+        case And(Equal(_, n: Number), And(And(And( And(i1, i2), n1), n2), n3)) =>
           assert(n.value.toInt == 5)
-          (List(i1,i2),List(n1,n2,n3))
-        }
-        case _ => {
+          (List(i1, i2),List(n1, n2, n3))
+        case _ =>
           logger.warn("Incorrect pattern returned: " + output)
           (List(),List())
-        }
       }
     }
   }

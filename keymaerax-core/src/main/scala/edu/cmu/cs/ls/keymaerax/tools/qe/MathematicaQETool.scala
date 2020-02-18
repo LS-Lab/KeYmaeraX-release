@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Evidence
 import edu.cmu.cs.ls.keymaerax.tools._
-import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 
@@ -21,14 +20,19 @@ import scala.collection.immutable
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
-class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool with Logging {
+class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool {
 
   /** @inheritdoc */
   override def quantifierElimination(formula: Formula): Formula = qeEvidence(formula)._1
 
   /** @inheritdoc */
   def qeEvidence(originalFormula: Formula): (Formula, Evidence) = {
-    val f = KeYmaeraToMathematica(originalFormula)
+    val f = try {
+      KeYmaeraToMathematica(originalFormula)
+    } catch {
+      case ex: ConversionException => throw ex
+      case ex: Throwable => throw ConversionException("Error converting to Mathematica: " + originalFormula.prettyString, ex)
+    }
     val method = Configuration.getOption(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
       case "Reduce" => MathematicaOpSpec.reduce
       case "Resolve" => MathematicaOpSpec.resolve
@@ -40,9 +44,8 @@ class MathematicaQETool(val link: MathematicaCommandRunner) extends QETool with 
       val (output, result) = link.run(input, MathematicaToKeYmaera)
       result match {
         case resultingQeFormula: Formula =>
-          logger.debug(s"Mathematica QE result from input ${originalFormula.prettyString}: " + resultingQeFormula.prettyString)
           (resultingQeFormula, ToolEvidence(immutable.List("input" -> input.toString, "output" -> output)))
-        case _ => throw ToolException("Expected a formula from Reduce call but got a non-formula expression.")
+        case _ => throw ConversionException("Expected a formula from Reduce call but got a non-formula expression.")
       }
     } finally { input.dispose() }
   }

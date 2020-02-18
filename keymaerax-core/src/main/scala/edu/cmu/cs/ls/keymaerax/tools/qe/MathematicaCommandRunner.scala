@@ -4,8 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
-import com.wolfram.jlink.KernelLink
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
+import com.wolfram.jlink.{KernelLink, MathLinkException}
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, ToolCommunicationException, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
 import org.apache.logging.log4j.scala.Logging
@@ -18,6 +18,10 @@ trait MathematicaCommandRunner {
     * @param m2k The converter from Mathematica back to KeYmaera X.
     * @return The result string and the converted result.
     * @tparam T The KeYmaera X expression type.
+    * @throws MathematicaComputationAbortedException if the computation was aborted inside Mathematica (e.g., due to timeout)
+    * @throws ConversionException if the conversion back from Mathematica (using `converter`) fails
+    * @throws ToolExecutionException if the command execution fails or no-ops or returns an unexpected answer format
+    * @throws ToolCommunicationException if the communication with the tool fails or the tool is not in a proper state
     * @ensures cmd is freed and should not ever be used again.
     */
   def run[T](cmd: MExpr, m2k: M2KConverter[T]): (String, T)
@@ -69,7 +73,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
 
   /** @inheritdoc */
   override def doRun[T](cmd: MExpr, m2k: M2KConverter[T]): (String, T) = try {
-    if (ml == null) throw new IllegalStateException("No MathKernel set")
+    if (ml == null) throw ToolCommunicationException("No MathKernel set")
     val qidx: Long = ml.synchronized { JLinkMathematicaCommandRunner.queryIndex += 1; JLinkMathematicaCommandRunner.queryIndex }
     val indexedCmd = MathematicaOpSpec.list(new MExpr(qidx), cmd)
     // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
@@ -96,8 +100,12 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
 
   /** Send command `cmd` for evaluation to Mathematica kernel straight away. */
   private def dispatch(cmd: String): Unit = {
-    if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.evaluate(cmd)
+    if (ml == null) throw ToolCommunicationException("No MathKernel set")
+    try {
+      ml.evaluate(cmd)
+    } catch {
+      case ex: MathLinkException => throw ToolExecutionException("Error executing command " + cmd, ex)
+    }
   }
 
   /**
@@ -107,33 +115,48 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
     * @param converter Converts Mathematica expressions back to KeYmaera X expressions.
     * @param ctx The context for error messages in exceptions.
     * @tparam T The exact KeYmaera X expression type expected as result.
+    * @throws MathematicaComputationAbortedException if the computation was aborted inside Mathematica
+    * @throws ToolExecutionException if the command execution fails or no-ops or returns an unexpected answer format
+    * @throws ConversionException if the conversion back from Mathematica (using `converter`) fails
     * @return The result as string and converted to the expected result type.
     */
   private def getAnswer[T](cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
-    if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.waitForAnswer()
+    if (ml == null) throw ToolCommunicationException("No MathKernel set")
+    try {
+      ml.waitForAnswer()
+    } catch {
+      case ex: MathLinkException => throw ToolExecutionException("Error executing Mathematica command " + ctx, ex)
+    }
     importResult(ml.getExpr,
       res => {
         if (isAborted(res)) {
-          throw new MathematicaComputationAbortedException(ctx)
+          throw MathematicaComputationAbortedException(ctx)
         } else if (res == MathematicaOpSpec.exception.op) {
           // an exception occurred, rerun to get the messages
           ml.evaluate(ctx + ";" + fetchMessagesCmd)
-          ml.waitForAnswer()
+          try {
+            ml.waitForAnswer()
+          } catch {
+            case ex: MathLinkException => throw ToolExecutionException("Error obtaining exception details for failed command " + ctx, ex)
+          }
           val txtMsg = importResult(ml.getExpr, _.toString)
-          //@todo improve exception hierarchy (document exceptions)
-          throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
+          throw ToolExecutionException("Input " + ctx + " cannot be evaluated: " + txtMsg)
         } else {
           val head = res.head
           if (head == MathematicaOpSpec.check.op) {
-            throw new IllegalStateException("JLink returned input as answer: " + res.toString)
+            throw ToolExecutionException("JLink returned input as answer: " + res.toString)
           } else if (MathematicaOpSpec.list.applies(res) && res.args.length == 2 && res.args.head.asInt() == cmdIdx) {
             val theResult = res.args.last
-            if (isAborted(theResult)) throw new MathematicaComputationAbortedException(ctx)
-            else (theResult.toString, converter(theResult))
+            if (isAborted(theResult)) throw MathematicaComputationAbortedException(ctx)
+            else (theResult.toString,
+              try {
+                converter(theResult)
+              } catch {
+                case ex: ConversionException => throw ex
+                case ex: Throwable => throw ConversionException("Error converting from Mathematica, returned result expression is: " + theResult.toString, ex)
+              })
           } else {
-            //@todo may not only be caused by stale answer
-            throw new IllegalStateException("JLink returned a stale answer for " + res.toString)
+            throw ToolExecutionException("Unexpected result: either result length != 2 or JLink returned a stale answer: " + res.toString)
           }
         }
       })
