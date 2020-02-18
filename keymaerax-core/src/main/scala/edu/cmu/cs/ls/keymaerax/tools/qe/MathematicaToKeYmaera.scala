@@ -28,15 +28,15 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   /** Converts a Mathematica expression to a KeYmaera expression. */
   private[tools] def convert(e: MExpr): KExpr = {
     //Exceptional states
-    if (isAborted(e)) throw new MathematicaComputationAbortedException(e.toString)
-    else if (isFailed(e)) throw new MathematicaComputationFailedException(e.toString)
+    if (isAborted(e)) throw MathematicaComputationAbortedException(e.toString)
+    else if (isFailed(e)) throw MathematicaComputationFailedException(e.toString)
 
     // explicit Numbers that are not rationals
     else if (e.numberQ() && !e.rationalQ()) {
       if (e.bigDecimalQ()) Number(e.asBigDecimal()) //@note asBigDecimal does not convert doubles correctly!
       else if (e.realQ()) Number(e.asDouble()) //@note see internal type identifiers in realQ and asDouble (they fit!)
       else if (e.integerQ()) Number(BigDecimal(e.asBigInteger())) //@note e.asLong would lose precision since it truncates if not representable as long
-      else throw new ConversionException("Cannot convert number " + e + " (neither double nor big decimal)") //@note complexQ
+      else throw ConversionException("Cannot convert number " + e + " (neither double nor big decimal)") //@note complexQ
     }
     //@note self-created MExpr with head RATIONAL are not rationalQ (type identifiers do not match)
     else if (MathematicaOpSpec.rational.applies(e)) convertBinary(e, Divide.apply)
@@ -72,9 +72,9 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.exists.applies(e)) convertQuantifier(e, Exists.apply)
 
     // Rules and List of rules not supported -> override if needed
-    else if (MathematicaOpSpec.rule.applies(e)) throw new ConversionException("Unsupported conversion RULE " + e)
+    else if (MathematicaOpSpec.rule.applies(e)) throw ConversionException("Unsupported conversion RULE " + e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
-      MathematicaOpSpec.rule.applies))) throw new ConversionException("Unsupported conversion List[RULE] " + e)
+      MathematicaOpSpec.rule.applies))) throw ConversionException("Unsupported conversion List[RULE] " + e)
 
     // Pairs
     else if (MathematicaOpSpec.pair.applies(e)) convertList(e)
@@ -88,35 +88,31 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     else if (MathematicaOpSpec.max.applies(e)) convertAtomicTerm(e)
 
     // not supported in soundness-critical conversion, but can be overridden for non-soundness-critical tools (CEX, ODE solving)
-    else throw new ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
+    else throw ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   } ensures(r => StaticSemantics.symbols(r).forall({case fn@Function(_, _, _, _, true) => MathematicaConversion.interpretedSymbols.contains(fn) case _ => true}), "Interpreted functions must have expected domain and sort for conversion of " + e)
 
   /** Converts an unary expression. */
   private def convertUnary[T<:Expression](e: MExpr, op: T=>T): T = {
-    require(e.args().length == 1, "unary operator expects 1 argument")
-    //@todo fix names to subExpr
-    val subformula = convert(e.args().head).asInstanceOf[T]
-    op(subformula)
+    require(e.args.length == 1, "unary operator expects 1 argument")
+    op(convert(e.args.head).asInstanceOf[T])
   }
 
   /** Converts a binary expression. */
   private def convertBinary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
-    require(e.args().length == 2, "binary operator expects 2 arguments")
+    require(e.args.length == 2, "binary operator expects 2 arguments")
     convertNary(e, op)
   }
 
   /** Converts an n-ary expression. */
   private def convertNary[T<:Expression](e: MExpr, op: (T,T) => T): T = {
-    val subexpressions = e.args().map(convert)
+    val subexpressions = e.args.map(convert)
     require(subexpressions.length >= 2, "nary operator expects at least 2 arguments")
-    //@todo fix name asTerms
-    val asTerms = subexpressions.map(_.asInstanceOf[T])
-    asTerms.reduce((l,r) => op(l,r))
+    subexpressions.map(_.asInstanceOf[T]).reduce(op)
   }
 
   /** Converts a comparison. */
   private def convertComparison[S<:Term, T<:Formula](e: MExpr, op: (S,S) => T): T = {
-    val subexpressions = e.args().map(convert)
+    val subexpressions = e.args.map(convert)
     require(subexpressions.length == 2, "binary operator expects 2 arguments")
     val asTerms = subexpressions.map(_.asInstanceOf[S])
     op(asTerms(0), asTerms(1))
@@ -124,19 +120,20 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
 
   /** Converts a sequence of quantified variables into nested quantifiers. */
   private def convertQuantifier(e: MExpr, op:(Seq[Variable],Formula)=>Formula): Formula = {
-    require(e.args().length == 2, "Expected args size 2.")
+    require(e.args.length == 2, "Expected args size 2.")
 
-    val variableBlock = e.args().head
+    val variableBlock = e.args.head
 
-    val quantifiedVars: List[Variable] = if (MathematicaOpSpec.list.applies(variableBlock)) {
-      //Convert the list of quantified variables
-      variableBlock.args().toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
-    } else {
-      List(convert(variableBlock).asInstanceOf[Variable])
-    }
+    val quantifiedVars: List[Variable] =
+      if (MathematicaOpSpec.list.applies(variableBlock)) {
+        //Convert the list of quantified variables
+        variableBlock.args.toList.map(n => MathematicaNameConversion.toKeYmaera(n).asInstanceOf[Variable])
+      } else {
+        List(convert(variableBlock).asInstanceOf[Variable])
+      }
 
     //Recurse on the body of the expression.
-    val bodyOfQuantifier = convert(e.args().tail.head).asInstanceOf[Formula]
+    val bodyOfQuantifier = convert(e.args.tail.head).asInstanceOf[Formula]
 
     // convert quantifier block into chain of single quantifiers
     quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
@@ -146,19 +143,19 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   protected def convertList(e: MExpr): Pair = {
     if (e.listQ) {
       assert(e.args.length == 2, "pairs are represented as lists of length 2 in Mathematica")
-      Pair(convert(e.args().head).asInstanceOf[Term], convert(e.args().tail.head).asInstanceOf[Term])
-    } else throw new ConversionException("Expected a list, but got " + e)
+      Pair(convert(e.args.head).asInstanceOf[Term], convert(e.args.tail.head).asInstanceOf[Term])
+    } else throw ConversionException("Expected a list, but got " + e)
   }
 
   /** Converts an atomic term (either interpreted/uninterpreted function symbol or variable). */
   protected def convertAtomicTerm(e: MExpr): KExpr = interpretedSymbols(e) match {
-    case Some(fn) => convertFunction(fn, e.args())
+    case Some(fn) => convertFunction(fn, e.args)
     case None =>
       //@note insists on [[MathematicaNameConversion.NAMESPACE_PREFIX]] to avoid clash with Mathematica names
       MathematicaNameConversion.toKeYmaera(e) match {
         case fn: Function =>
           insist(!fn.interpreted, "Expected uninterpreted function symbol, but got interpreted " + fn)
-          convertFunction(fn, e.args())
+          convertFunction(fn, e.args)
         case result: Variable => result
     }
   }
@@ -166,8 +163,8 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   /** Convert the arguments of a function and combine with fn into a FuncOf */
   protected def convertFunction(fn: Function, args: Array[MExpr]): KExpr = {
     assert(args.length <= 2, "Pairs are expected to be represented as nested lists (at most 2 args), but got " + args)
-    val arguments = args.map(convert).map(_.asInstanceOf[Term])
-    FuncOf(fn, arguments.reduceRightOption[Term]((l, r) => Pair(l, r)).getOrElse(Nothing))
+    val arguments = args.map(convert).map(_.asInstanceOf[Term]).reduceRightOption[Term](Pair).getOrElse(Nothing)
+    FuncOf(fn, arguments)
   }
 
   /** Converts inequality chains of the form a <= b < c < 0 to conjunctions of individual inequalities a <= b & b < c & c < 0 */
@@ -183,16 +180,12 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
     }
 
     // conjunction of converted individual inequalities
-    extractInequalities(e.args()).reduceRight(And)
+    extractInequalities(e.args).reduceRight(And)
   }
 
   // reporting
 
   /** Prints debug information. */
-  private def mathInfo(e: MExpr): String = {
-    "args:\t" + {if (e.args().length == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
-    "\n" +
-    "toString:\t" + e.toString
-  }
+  private def mathInfo(e: MExpr): String = "args:\t" + e.args.map(_.toString).mkString(",") + "\ntoString:\t" + e
 }
   
