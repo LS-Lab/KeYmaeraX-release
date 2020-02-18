@@ -1,8 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
-import java.io.{File, FileOutputStream}
-import java.nio.channels.Channels
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -10,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.FormulaTools
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
+import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
@@ -23,9 +21,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[Expression](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
     with InvGenTool with Logging {
 
-  init()
-
-  private val pegasusPath = File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
+  private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
   private val joinedPath = "FileNameJoin[{$HomeDirectory," + scala.reflect.io.File(pegasusPath).segments.map(seg => "\"" + seg + "\"").mkString(",") + "}]"
   private val setPathsCmd =
     s"""
@@ -213,46 +209,4 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       }
     }
   }
-
-  private def init(): Unit = {
-    // copy Pegasus Mathematica notebooks
-    val pegasusTempDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
-    if (!new File(pegasusTempDir).exists) new File(pegasusTempDir).mkdirs
-
-    val pegasusResourcePath = "/Pegasus/"
-    val pegasusResourceNames =
-      "Primitives/BarrierCertificates.m" ::
-      "Primitives/DarbouxPolynomials.m" ::
-      "Primitives/Dependency.m" ::
-      "Primitives/DiscreteAbstraction.m" ::
-      "Primitives/FirstIntegrals.m" ::
-      "Primitives/Linear.m" ::
-      "Primitives/LinearAlgebraicInvariants.m" ::
-      "Primitives/LZZ.m" ::
-      "Primitives/Primitives.m" ::
-      "Primitives/QualAbsPolynomials.m" ::
-      "Primitives/TransitionRelation.m" ::
-      "Strategies/DarbouxDDC.m" ::
-      "Strategies/DiffSaturation.m" ::
-      "Strategies/Generic.m" ::
-      "Strategies/GenericNonLinear.m" ::
-      "Strategies/Helper.m" ::
-      "Strategies/InvariantExtractor.m" ::
-      "Strategies/OneDimensional.m" ::
-      "Classifier.m" ::
-      "Pegasus.m" ::
-      "Refute.m" ::
-      Nil
-
-    pegasusResourceNames.foreach(n => {
-      val pegasusDestPath = pegasusTempDir + File.separator + n
-      if (!new File(pegasusDestPath).getParentFile.exists) new File(pegasusDestPath).getParentFile.mkdirs
-      val pegasusDest = new FileOutputStream(pegasusDestPath)
-      val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + n))
-      pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
-    })
-    val pegasusAbsPaths = pegasusResourceNames.map(n => pegasusTempDir + File.separator + n)
-    assert(pegasusAbsPaths.forall(new File(_).exists()), "Missing Pegasus files")
-  }
-
 }
