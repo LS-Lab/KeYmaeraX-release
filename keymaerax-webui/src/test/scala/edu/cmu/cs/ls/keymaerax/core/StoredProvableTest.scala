@@ -59,13 +59,19 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     for (i <- 1 to randomTrials) {
       val readagain = Provable.fromStorageString(stored)
       val separator = stored.lastIndexOf("::")
-      val storedChecksum = stored.substring(separator+2).toInt
+      val storedChecksum = stored.substring(separator+2)
       val remainder = stored.substring(0, separator)
-      tamperFact(""+storedChecksum, readagain, randomTrials/10, tamperComplexity)
+      tamperFact(storedChecksum, readagain, randomTrials/10, tamperComplexity)
     }
 
   private def tamperFact(chksum: String, fact: Provable, randomTrials: Int= randomTrials, tamperComplexity: Int = tamperComplexity) = {
     val toExt = PrivateMethod[String]('toExternalString)
+    val pseudotampered = Provable.invokePrivate(toExt(fact.conclusion)) +
+      (if (fact.subgoals.length <= 1) "\n\\qed"
+      else "\n\\from   " + fact.subgoals.map(s => Provable.invokePrivate(toExt(s))).mkString("\n\\from   ") + "\n\\qed") +
+      "::" + chksum
+    fact shouldBe Provable.fromStorageString(pseudotampered)
+
     for (i <- 1 to randomTrials) {
       val which = rand.rand.nextInt(1 + fact.subgoals.length)
       val (tampered, pos) = if (which == 0) {
@@ -95,8 +101,12 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
 
   private def tamperFormula(f: Formula, tamperComplexity: Int = tamperComplexity): Formula = {
     //@todo also for other kinds
-    val pos = rand.nextSubPosition(f, FormulaKind)
-    //@todo swallow and retry CoreException "No differentials in evolution domain constraints"
-    FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
+    for (i <- 1 to 100) try {
+      val pos = rand.nextSubPosition(f, FormulaKind)
+      return FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
+    } catch {
+      case possible: CoreException if possible.getMessage.contains("No differentials in evolution domain constraints") => /* continue */
+    }
+    return True
   }
 }
