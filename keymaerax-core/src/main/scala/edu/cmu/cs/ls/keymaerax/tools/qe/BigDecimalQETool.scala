@@ -74,8 +74,18 @@ object BigDecimalQETool extends Tool with QETool {
       if (f == absF) eval(x).abs
       else
         throw new IllegalArgumentException(unableToEvaluate(t))
-    //@todo allow tame cases of division
-    case Divide(_, _) => throw new IllegalArgumentException(unableToEvaluate(t))
+    case Divide(a, b) =>
+      val dividend = eval(a)
+      val divisor = eval(b)
+      try {
+        /** @note divide throws an [[ArithmeticException]] if the exact quotient does not have a terminating decimal expansion */
+        val quotient = dividend.divide(divisor)
+        // assert correctness of the exact result
+        assert(quotient.multiply(divisor).compareTo(dividend) == 0)
+        quotient
+      } catch {
+        case _: ArithmeticException => throw new IllegalArgumentException(unableToEvaluate(t))
+      }
     case _ => throw new IllegalArgumentException(unableToEvaluate(t))
   }
 
@@ -92,18 +102,27 @@ object BigDecimalQETool extends Tool with QETool {
     case Greater(s, t)      => eval(s).compareTo(eval(t)) > 0
     case Equal(s, t)        => eval(s).compareTo(eval(t)) == 0
     case NotEqual(s, t)     => eval(s).compareTo(eval(t)) != 0
-    case And(f, g)   =>  eval(f) && eval(g)
-    case Or(f, g)    =>  eval(f) || eval(g)
-    case Imply(f, g) => !eval(f) || eval(g)
+    case And(f, g) =>
+      val a = eval(f)
+      val b = eval(g)
+      // @note avoid short-circuit evaluation to ensure input formula is a Boolean combination of numeric comparisons
+      a && b
+    case Or(f, g) =>
+      val a = eval(f)
+      val b = eval(g)
+      // @note avoid short-circuit evaluation to ensure input formula is a Boolean combination of numeric comparisons
+      a || b
+    case Imply(f, g) =>
+      val a = eval(f)
+      val b = eval(g)
+      // @note avoid short-circuit evaluation to ensure input formula is a Boolean combination of numeric comparisons
+      ! a || b
     case Equiv(f, g) =>
       if (eval(f)) eval(g)
       else /* !eval(f) */ !eval(g)
     case Not(f) => !eval(f)
     case True => true
     case False => false
-    //@todo make sure it'll throw exception if f not variable-free (short-circuit evaluation above!)
-    case Forall(_, f) => eval(f)
-    case Exists(_, f) => eval(f)
     case _ => throw new IllegalArgumentException(unableToEvaluate(fml))
   }
 
