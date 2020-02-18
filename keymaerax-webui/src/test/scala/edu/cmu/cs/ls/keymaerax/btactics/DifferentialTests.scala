@@ -1506,7 +1506,7 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  "Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
+  "OUTDATED: Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
     proveBy(Sequent(IndexedSeq("a()>0".asFormula), IndexedSeq("<{x'=a()}>x>=b()".asFormula)), diffVar(1)) shouldBe 'proved
   }
 

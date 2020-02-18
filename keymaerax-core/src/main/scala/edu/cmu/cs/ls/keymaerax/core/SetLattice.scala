@@ -5,7 +5,7 @@
 /**
   * Set Lattices are lattice of finite or cofinite sets.
   * @author smitsch
-  * @note Code Review: 2020-02-14
+  * @note Code Review: 2020-02-17
   */
 package edu.cmu.cs.ls.keymaerax.core
 
