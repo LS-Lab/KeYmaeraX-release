@@ -65,8 +65,9 @@ abstract class SMTConverter extends (Formula=>String) {
       }
     ).mkString("\n")
     val smtFormula = convertToSMT(expr)
-    //@todo check whether newlines are nonsignificant so can be added unconditionally
-    if(varDec.nonEmpty) varDec += "\n"
+    //@note newline characters considered insignificant whitespace
+    // @see [[http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf, p. 22]]
+    if (varDec.nonEmpty) varDec += "\n"
     (varDec, smtFormula)
   }
 
@@ -132,8 +133,12 @@ abstract class SMTConverter extends (Formula=>String) {
       case Power(l, Number(r)) if r.isValidInt && r>=1 => convertTerm(Times(l, Power(l, Number(r-1))))
       case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Number(n) =>
-        //@todo Code Review: check number conventions supported by SMTLIB format
-        //@note according to the SMTLib specification, numbers without . are mathematical integers, numbers with . are mathematical reals
+        //@@note SMTLib distinguishes numerals (0 | [^0]digit+) from decimals (numeral [\.] 0* numeral)
+        //@note according to the SMTLib specification, numbers without . are numerals, numbers with . are decimals;
+        // their meaning depends on the underlying theory!
+        // @see [[http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf, p. 22, p. 25]]
+        // Z3 interprets them as mathematical Integers and mathematical Reals
+
         /**@note decimalDouble is 64 bit IEEE 754 double-precision float,
           *      long is 64 bit signed value. -9223372036854775808 to 9223372036854775807
           *      both have the maximal range in their category */
@@ -143,10 +148,11 @@ abstract class SMTConverter extends (Formula=>String) {
           // avoids conversion to double, uses 'signum' to determine sign and builtin negate function
           //@note negative form has to be representable, in particular n cannot have been MIN_LONG
           assert((-n).isDecimalDouble || (-n).isValidLong, throw ConversionException("Term contains illegal numbers: " + t))
-          //@todo Real literals should contain a dot in Z3 (integer without dot), check whether compatible with Polya
+          //@note if toString output contains '.' then SMTLib decimal, otherwise SMTLib numeral
           "(- " + (-n).toString() + ")"
         } else {
           assert(n.isDecimalDouble || n.isValidLong, throw ConversionException("Term contains illegal numbers: " + t))
+          //@note if toString output contains '.' then SMTLib decimal, otherwise SMTLib numeral
           n.toString()
         }
       case t: BaseVariable => nameIdentifier(t)
