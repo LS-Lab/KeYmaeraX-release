@@ -1,7 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.math.{MathContext, RoundingMode}
-
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -86,6 +84,25 @@ class BigDecimalQEToolTests extends TacticTestBase  {
       checkEval(mathematica, Greater(n, m), false)
       checkEval(mathematica, GreaterEqual(n, m), false)
     }
+  }
+
+  "division" should "return the exact result" in withMathematica { mathematica =>
+    checkEval(mathematica, "1/2".asTerm, false)
+    checkEval(mathematica, "1/-2".asTerm, false)
+    checkEval(mathematica, "3/3".asTerm, false)
+    checkEval(mathematica, "-3/3".asTerm, false)
+    checkEval(mathematica, "14/7".asTerm, false)
+    checkEval(mathematica, "-14/-7".asTerm, false)
+    checkEval(mathematica, "1/0.02".asTerm, false)
+    checkEval(mathematica, "0.005/0.02".asTerm, false)
+  }
+
+  "division" should "fail for nonterminating decimal expansion of exact result" in withMathematica { mathematica =>
+    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/3".asTerm, false)
+    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "4/3".asTerm, false)
+    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "15/7".asTerm, false)
+    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/0.03".asTerm, false)
+    a [IllegalArgumentException] should be thrownBy checkEval(mathematica, "1/0".asTerm, false)
   }
 
   "boolean combinations" should "agree with QE" in withMathematica { mathematica =>

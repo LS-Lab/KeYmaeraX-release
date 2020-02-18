@@ -74,8 +74,18 @@ object BigDecimalQETool extends Tool with QETool {
       if (f == absF) eval(x).abs
       else
         throw new IllegalArgumentException(unableToEvaluate(t))
-    //@todo allow tame cases of division
-    case Divide(_, _) => throw new IllegalArgumentException(unableToEvaluate(t))
+    case Divide(a, b) =>
+      val dividend = eval(a)
+      val divisor = eval(b)
+      try {
+        /** @note divide throws an [[ArithmeticException]] if the exact quotient does not have a terminating decimal expansion */
+        val quotient = dividend.divide(divisor)
+        // assert correctness of the exact result
+        assert(quotient.multiply(divisor).compareTo(dividend) == 0)
+        quotient
+      } catch {
+        case _: ArithmeticException => throw new IllegalArgumentException(unableToEvaluate(t))
+      }
     case _ => throw new IllegalArgumentException(unableToEvaluate(t))
   }
 
