@@ -35,7 +35,7 @@ abstract class SMTConverter extends (Formula=>String) {
   private val SMT_MAX = "maximum"
   /**
     * Convert KeYmaera X expression to SMT expression with negated formula form
-    * the result SMT expression is checked by Z3 or Polya for satisfiability
+    * the result SMT expression is checked by Z3 for satisfiability
     * if SMT solver returns:
     *   unsatisfiable => original KeYmaera X formula `expr` is valid
     *   satisfiable => original KeYmaera X formula `expr` is not valid, but is not necessarily equivalent to False.
