@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.infrastruct._
@@ -1034,11 +1035,33 @@ private object DifferentialTactics extends Logging {
   lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
-    if(TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
+    if (TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
       throw new BelleThrowable("The strongest ODE invariant has already been added to the domain constraint.\nTry dW or solve the ODE to make progress in your proof.")
 
+    def odeWithInvgen(sys: ODESystem, generator: Generator[GenProduct],
+                      onGeneratorError: Throwable => Stream[GenProduct]): DependentPositionTactic = fastODE(
+      try {
+        generator(seq, pos).iterator
+      } catch {
+        case ex: Exception =>
+          logger.warn("Failed to produce a proof for this ODE. Underlying cause: generator error listing options " + ex)
+          onGeneratorError(ex).iterator
+      }
+    )(
+      //@note aborts with error if the ODE was left unchanged -- invariant generators failed
+      assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0 :: Nil)).contains(sys),
+        failureMessage
+      )(pos) &
+        ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+          case Some(ODESystem(_, extendedQ)) =>
+            if (sys.constraint == True && extendedQ != True) useAt("true&")(ppos ++
+              PosInExpr(1 :: FormulaTools.posOf(extendedQ, sys.constraint).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+            else skip
+        })) (pos ++ PosInExpr(0 :: Nil))
+    )
+
     seq.sub(pos) match {
-      case Some(Box(sys@ODESystem(ode, q), _)) =>
+      case Some(Box(sys: ODESystem, _)) =>
         // Try to prove postcondition invariant
         odeInvariant()(pos) & done |
         // Counterexample check
@@ -1050,30 +1073,18 @@ private object DifferentialTactics extends Logging {
           // todo: Pegasus should tell us for nonlinear ODEs
           // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
           invCheck(
-            assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
-              "ODE invariant generation skipped."),
-
-            fastODE(
-              try {
-                TactixLibrary.differentialInvGenerator(seq,pos).iterator
-              } catch {
-                case err: Exception =>
-                  logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-                  Stream[GenProduct]().iterator
-              }
-            )(
-              //@note aborts with error if the ODE was left unchanged -- invariant generators failed
-              assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
-                failureMessage
-              )(pos) &
-                ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
-                  case Some(ODESystem(_, extendedQ)) =>
-                    if (q == True && extendedQ != True) useAt("true&")(ppos ++
-                      PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
-                    else skip
-                })) (pos ++ PosInExpr(0 :: Nil))
+            //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
+            //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
+            //  "ODE invariant generation skipped.")
+            //@note ODEInvariance not yet proving all invariance questions: try if Pegasus finds simpler invariants
+            odeWithInvgen(sys, InvariantGenerator.pegasusInvariants,
+              //@note ran out of options on generator error
+              (ex: Throwable) => throw new BelleTacticFailure("Detected an invariant-only question at " +
+                seq.sub(pos)+ " but ODE automation was unable to prove it.", ex)
             )(pos)
-          ) (pos)
+            ,
+            odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
+          )(pos)
         )
       case _ => throw new BelleThrowable("ODE automation only applies to box ODEs.")
     }
