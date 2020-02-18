@@ -226,15 +226,23 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       "Primitives/Dependency.m" ::
       "Primitives/DiscreteAbstraction.m" ::
       "Primitives/FirstIntegrals.m" ::
+      "Primitives/Linear.m" ::
+      "Primitives/LinearAlgebraicInvariants.m" ::
       "Primitives/LZZ.m" ::
       "Primitives/Primitives.m" ::
-      "Primitives/QualitativeAbstractionPolynomials.m" ::
+      "Primitives/QualAbsPolynomials.m" ::
+      "Primitives/TransitionRelation.m" ::
+      "Strategies/DarbouxDDC.m" ::
+      "Strategies/DiffSaturation.m" ::
+      "Strategies/Generic.m" ::
       "Strategies/GenericNonLinear.m" ::
+      "Strategies/Helper.m" ::
+      "Strategies/InvariantExtractor.m" ::
       "Strategies/OneDimensional.m" ::
-      "Refute.m" ::
       "Classifier.m" ::
-      "InvariantExtractor.m" ::
-      "Pegasus.m" :: Nil
+      "Pegasus.m" ::
+      "Refute.m" ::
+      Nil
 
     pegasusResourceNames.foreach(n => {
       val pegasusDestPath = pegasusTempDir + File.separator + n
