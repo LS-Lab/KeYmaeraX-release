@@ -12,7 +12,7 @@ SplittingBarrierMATLAB::usage="SplittingBarrierMATLAB[problem_List] uses SOSBarr
 
 
 SOSBarrierMATLAB::usage="SOSBarrierMATLAB[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
-Options[SOSBarrierMATLAB]= {Lambda -> {}, MaxDeg -> 10};
+Options[SOSBarrierMATLAB]= {Lambda -> {}, MaxDeg -> 4};
 
 
 SOSBarrierVecMATLAB::usage="SOSBarrierMATLAB[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
@@ -156,7 +156,7 @@ inits = "<>MmaToMatlab[init]<>";
 unsafes = "<>MmaToMatlab[unsafe]<>" ;
 % Conj. Polynomials characterizing the ev. domain
 dom = "<>MmaToMatlab[Qc]<>" ;
-g = "<>MmaToMatlab[1+Total[rvars^2]]<>";
+g = 1+0*vars(1) %"<>MmaToMatlab[1+Total[rvars^2]]<>";
 
 % Configurable options from Mathematica
 % Configurable lambda in B' >= lambda B
@@ -261,7 +261,7 @@ B2 = 0
 
 sosprog=StringReplace[sosprog,{"`"->"backtick","$"->"dollar"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
-(*Print[sosprog];*)
+Print[sosprog];
 res =MATLink`MEvaluate@barrierscript;
 (*Print[res];*)
 lines=StringSplit[res,{"B2"~~___~~"=", "break"}];
