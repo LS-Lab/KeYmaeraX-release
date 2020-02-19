@@ -32,13 +32,13 @@ HeuInvariants::usage="Heuristics[problem_List,degree]";
 BarrierCert::usage="BarrierCert[problem_List]";
 
 (* Options and defaults for each of these methods
-	Deg \[Rule] -1 means run with default heuristic 
+	Deg \[Rule] -1 means run with default heuristic for choosing the degree
+	The default values are configured assuming a 2 minute timeout
 *)
-Options[HeuInvariants]= {Timeout -> \[Infinity]};
-Options[FirstIntegrals]= {Deg -> -1, Timeout -> \[Infinity]};
-Options[DbxPoly]= {Deg -> -1, Timeout -> \[Infinity]};
-Options[BarrierCert]= {Deg -> -1, Timeout -> \[Infinity]};
-
+Options[HeuInvariants]= {Timeout -> 20};
+Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
+Options[DbxPoly]= {Deg -> -1, Timeout -> 30};
+Options[BarrierCert]= {Deg -> -1, Timeout -> Infinity};
 
 
 Begin["`Private`"];
@@ -57,8 +57,8 @@ polys = DeleteDuplicates[Join[
 (*res=Map[InvariantExtractor`DWC[problem,{#},{}]&,polys];*)
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[HeuInvariants,Timeout],
-Print["HeuInvariants skipped."]; {}],
-{}]
+{}],
+Print["HeuInvariants skipped."]; {}]
 
 ]
 
@@ -94,8 +94,8 @@ minVs=Flatten[MapThread[If[#2==-Infinity,{},{#1>=#2}] &, {fIs,lowers}]];
 
 Union[maxVs,minVs]
 ], OptionValue[FirstIntegrals,Timeout],
-Print["FirstIntegrals skipped."]; {}],
-{}]
+{}],
+Print["FirstIntegrals skipped."]; {}]
 
 ]
 
@@ -113,8 +113,8 @@ TimeConstrained[Block[{},
 polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout], deg];
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[DbxPoly,Timeout],
-Print["DbxPoly skipped."]; {}],
-{}]
+{}],
+Print["DbxPoly skipped."]; {}]
 
 ]
 
@@ -136,13 +136,15 @@ deg= If[OptionValue[BarrierCert,Deg] < 0,
 		OptionValue[BarrierCert, Deg]];
 			
 If[OptionValue[BarrierCert, Timeout] > 0,
+CheckAbort[
 TimeConstrained[Block[{},
 polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
 polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[BarrierCert,Timeout],
-Print["BarrierCert skipped."];{}],
-{}]
+MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]]
+,
+Print["BarrierCert skipped."];{}]
 
 ]]
 
