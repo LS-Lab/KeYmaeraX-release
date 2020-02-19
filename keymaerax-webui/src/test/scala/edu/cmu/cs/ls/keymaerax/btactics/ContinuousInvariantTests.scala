@@ -60,29 +60,33 @@ class ContinuousInvariantTests extends TacticTestBase {
       case gen: ConfigurableGenerator[GenProduct] => gen
     }
     TactixLibrary.invGenerator = FixedGenerator(Nil)
-    forEvery(Table(("Name", "Model"),
-      entries.map(e => e.name -> e.model):_*).
-      filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
-      (name, model) =>
-        whenever(!Thread.currentThread().isInterrupted) {
-          println("\n" + name)
-          val Imply(assumptions, succFml@Box(ode@ODESystem(_, _), _)) = model
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT -> "120")) {
+      forEvery(Table(("Name", "Model"),
+        entries.map(e => e.name -> e.model): _*).
+        filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
+        (name, model) =>
+          whenever(!Thread.currentThread().isInterrupted) {
+            println("\n" + name)
+            val Imply(assumptions, succFml@Box(ode@ODESystem(_, _), _)) = model
 
-          //@note the annotations in nonlinear.kyx are produced by Pegasus
-          val invariants = InvariantGenerator.pegasusInvariants(
-            Sequent(IndexedSeq(assumptions), IndexedSeq(succFml)), SuccPos(0))
+            //@note the annotations in nonlinear.kyx are produced by Pegasus
+            val invariants = InvariantGenerator.pegasusInvariants(
+              Sequent(IndexedSeq(assumptions), IndexedSeq(succFml)), SuccPos(0))
 
-          annotatedInvariants.products.get(ode) match {
-            case Some(invs) =>
-              invariants.map(_._1) should contain theSameElementsInOrderAs invs.map(_._1)
-            case None =>
-              //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
-              // fail if invariant generator improves and finds an invariant.
-              // In that case, add annotation to nonlinear.kyx.
-              invariants shouldBe empty
+            println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
+
+            annotatedInvariants.products.get(ode) match {
+              case Some(invs) =>
+                invariants.map(_._1) should contain theSameElementsInOrderAs invs.map(_._1)
+              case None =>
+                //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
+                // fail if invariant generator improves and finds an invariant.
+                // In that case, add annotation to nonlinear.kyx.
+                invariants shouldBe empty
+            }
+            println(name + " done")
           }
-          println(name + " done")
-        }
+      }
     }
   }
 

@@ -140,7 +140,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
             case ex: MathLinkException => throw ToolExecutionException("Error obtaining exception details for failed command " + ctx, ex)
           }
           val txtMsg = importResult(ml.getExpr, _.toString)
-          throw ToolExecutionException("Input " + ctx + " cannot be evaluated: " + txtMsg)
+          throw ToolExecutionException("Input " + ctx + " cannot be evaluated, cause: " + txtMsg)
         } else {
           val head = res.head
           if (head == MathematicaOpSpec.check.op) {

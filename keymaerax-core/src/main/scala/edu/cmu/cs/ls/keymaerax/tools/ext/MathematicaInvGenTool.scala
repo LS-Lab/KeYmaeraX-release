@@ -48,7 +48,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
     logger.debug("Raw Mathematica input into Pegasus: " + problem)
 
-    val sanityTimeout = rule(symbol("SanityTimeout"), int(Integer.parseInt(Configuration.getOption(Configuration.Keys.PEGASUS_SANITY_TIMEOUT).getOrElse("0"))))
+    val sanityTimeout = rule(symbol(PEGASUS_NAMESPACE + "SanityTimeout"), int(Integer.parseInt(Configuration.getOption(Configuration.Keys.PEGASUS_SANITY_TIMEOUT).getOrElse("0"))))
     val pegasusMain = Configuration.getOption(Configuration.Keys.PEGASUS_MAIN_FILE).getOrElse("Pegasus.m")
     val command = compoundExpression(
       setPathsCmd,
@@ -57,7 +57,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
 
     try {
-      val (output, result) = run(command)
+      val (output, result) = runUnchecked(command.toString)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
       (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (invariants, flag) =>
         assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
@@ -82,7 +82,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       applyFunc(symbol(LZZ_NAMESPACE + "InvS"))(k2m(inv), vectorField, vars, k2m(ode.constraint))
     )
 
-    val (output, result) = run(command)
+    val (output, result) = runUnchecked(command.toString)
     logger.debug("LZZ check: "+ result.prettyString + " from raw output " + output)
     result match {
       case True => true
@@ -128,7 +128,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
 
     try {
-      val (output, result) = run(command, CEXM2KConverter)
+      val (output, result) = runUnchecked(command.toString, CEXM2KConverter)
       logger.debug("Counterexample: " + result + " from raw output " + output)
       result match {
         case Left(cex: Formula) => cex match {
@@ -177,7 +177,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
 
     try {
-      val (output, result) = run(command)
+      val (output, result) = runUnchecked(command.toString)
       result match {
         case And(Equal(_, n: Number), And(And(And( And(i1, i2), n1), n2), n3)) =>
           assert(n.value.toInt == 5)
