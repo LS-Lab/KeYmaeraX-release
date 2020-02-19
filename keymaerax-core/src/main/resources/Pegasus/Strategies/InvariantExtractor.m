@@ -22,9 +22,16 @@ formula
 ]
 
 
-Options[DWC]={TransitionRemovalMethod->"LZZ-vanilla", Parallel->False, SimplifyInvariant->DoNotSimplify, Smallest->False, WorkingPrecision -> \[Infinity]};
+Options[DWC]= {
+	TransitionRemovalMethod->"LZZ-vanilla",
+	Parallel->False,
+	SimplifyInvariant->DoNotSimplify,
+	Smallest->False,
+	WorkingPrecision -> \[Infinity],
+	Timeout-> \[Infinity]};
 
-DWC[problem_List, A0_List, cuts_List, opts:OptionsPattern[]]:=DWC[precond, postcond, system, A0, cuts]=Catch[
+DWC[problem_List, A0_List, cuts_List, opts:OptionsPattern[]]:=
+DWC[precond, postcond, system, A0, cuts]=Catch[
 Module[{pre,post,GT,EQ,LT,p,f,vars,H0},
 
 {pre,{f,vars,H0},post} = problem;

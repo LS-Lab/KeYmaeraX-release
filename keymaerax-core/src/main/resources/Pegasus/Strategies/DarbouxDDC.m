@@ -19,7 +19,7 @@ DarbouxDDCStrongIn::usage="DarbouxDDCStrongIn[problem_List]";
 Begin["`Private`"];
 
 
-DarbouxPolynomialsM[ode_List,time_Integer,maxdeg_Integer]:=Catch[Module[{f,vars,Q,deg,dbx,realdbx,i},
+DarbouxPolynomialsM[ode_List,time_,maxdeg_Integer]:=Catch[Module[{f,vars,Q,deg,dbx,realdbx,i},
 {f,vars,Q}=ode;
 
 dbx={};
