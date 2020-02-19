@@ -7,7 +7,6 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.KExpr
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{ExtMathematicaOpSpec, JLinkMathematicaLink, Mathematica, MathematicaLink, ToolExecutor}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
@@ -151,7 +150,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     val commandRunner = theLink match {
       case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.invokePrivate(ml()))
     }
-    val executor: ToolExecutor[KExpr] = new ToolExecutor(1)
+    val executor: ToolExecutor = new ToolExecutor(1)
 
     val workers = executor.availableWorkers()
     workers should be >= 1
@@ -185,7 +184,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     val lnk = PrivateMethod[MathematicaLink]('link)
     val ml = PrivateMethod[KernelLink]('ml)
     val theLink = link invokePrivate lnk()
-    val executor: ToolExecutor[KExpr] = new ToolExecutor(1)
+    val executor: ToolExecutor = new ToolExecutor(1)
 
     var compAfterRestart: Option[Expression] = None
 

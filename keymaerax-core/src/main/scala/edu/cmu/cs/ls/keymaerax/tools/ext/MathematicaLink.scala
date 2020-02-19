@@ -38,7 +38,7 @@ trait MathematicaLink {
   /** Runs command `cmd` converting back with `m2k` using tool `executor`, with Mathematica exception checking.
     * @ensures cmd is freed and should not ever be used again.
     */
-  def run[T](cmd: () => T, executor: ToolExecutor[T]): T
+  def run[T](cmd: () => T, executor: ToolExecutor): T
 
   /** Cancels the current request.
     *
@@ -78,26 +78,32 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   var memoryLimit: Long = MEMORY_LIMIT_OFF
 
   protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
-  protected val mathematicaExecutor: ToolExecutor[T] = new ToolExecutor(1)
+  protected val mathematicaExecutor: ToolExecutor = new ToolExecutor(1)
 
-  override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(memoryConstrained(timeConstrained(cmd)), m2k)
+  /** @inheritdoc */
+  override def runUnchecked(cmd: String): (String, T) = runUnchecked(cmd, m2k)
 
-  override def run(cmd: MExpr): (String, T) = {
+  /** @inheritdoc */
+  override def run(cmd: MExpr): (String, T) = run(cmd, m2k)
+
+  /** Run `cmd` with a local converter back from Mathematica. */
+  private[tools] def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
+    link.runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
+
+  /** Run `cmd` with a local converter back from Mathematica. */
+  private[tools] def run[S](cmd: MExpr, localm2k: M2KConverter[S]): (String, S) = {
     val commandRunner = link match {
       case j: JLinkMathematicaLink => JLinkMathematicaCommandRunner(j.ml)
     }
     (cmd.toString, link.run(() => {
       try {
-        commandRunner.run(memoryConstrained(timeConstrained(cmd)), m2k)._2
+        commandRunner.run(memoryConstrained(timeConstrained(cmd)), localm2k)._2
       } catch {
         case ex: IllegalArgumentException =>
           throw ConversionException("Error executing " + cmd.toString + " command", ex)
       }
     }, mathematicaExecutor))
   }
-
-  def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
-    link.runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
 
   def availableWorkers: Int = mathematicaExecutor.availableWorkers()
   def shutdown(): Unit = mathematicaExecutor.shutdown()
@@ -304,7 +310,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
     * @return The result, as string and as KeYmaera X expression.
     * @ensures cmd is freed and should not ever be used again.
     */
-  override def run[T](cmd: () => T, executor: ToolExecutor[T]): T = {
+  override def run[T](cmd: () => T, executor: ToolExecutor): T = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     val taskId = executor.schedule(_ => { ml.synchronized { cmd() } })
 
@@ -500,7 +506,7 @@ class WolframScript extends MathematicaLink with Logging {
     * @return The result, as string and as KeYmaera X expression.
     * @ensures cmd is freed and should not ever be used again.
     */
-  override def run[T](cmd: () => T, executor: ToolExecutor[T]): T = {
+  override def run[T](cmd: () => T, executor: ToolExecutor): T = {
     val taskId = executor.schedule(_ => { wolframProcess.synchronized { cmd() } })
 
     executor.wait(taskId) match {
