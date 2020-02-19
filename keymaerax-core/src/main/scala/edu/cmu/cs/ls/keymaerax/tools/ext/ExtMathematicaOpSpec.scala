@@ -25,6 +25,10 @@ object ExtMathematicaOpSpec {
 
   val placeholder = LiteralMathOpSpec(symbol("#"))
 
+  val homeDirectory = LiteralMathOpSpec(symbol("$HomeDirectory"))
+
+  val path = LiteralMathOpSpec(symbol("$Path"))
+
   //</editor-fold>
 
   //<editor-fold desc="Basic datastructures and operations">
@@ -46,6 +50,16 @@ object ExtMathematicaOpSpec {
   val compoundExpression = NaryMathOpSpec(symbol("CompoundExpression"))
 
   val first = NaryMathOpSpec(symbol("First"))
+
+  val appendTo = BinaryMathOpSpec(symbol("AppendTo"))
+
+  val fileNameJoin = UnaryMathOpSpec(symbol("FileNameJoin"))
+
+  val setDirectory = UnaryMathOpSpec(symbol("SetDirectory"))
+
+  val needs = BinaryMathOpSpec(symbol("Needs"))
+
+  def applyFunc(fn: Expr) = NaryMathOpSpec(fn)
 
   //</editor-fold>
 
