@@ -18,7 +18,7 @@ object PegasusInstaller extends Logging {
   /** The path to the installed Pegasus. */
   val pegasusRelativeResourcePath: String = {
     val absolutePath = copyToDisk()
-    val relativePath = Configuration(Configuration.Keys.PEGASUS_PATH)
+    val relativePath = Configuration.Pegasus.path
     assert(absolutePath == System.getProperty("user.home") + File.separator + relativePath, "Unexpected absolute/relative path")
     File.separator + relativePath
   }
@@ -26,7 +26,7 @@ object PegasusInstaller extends Logging {
   /** Copies Pegasus to the disk. Returns the path to the Pegasus installation. */
   def copyToDisk(): String = {
     // copy Pegasus Mathematica notebooks
-    val pegasusDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
+    val pegasusDir = Configuration.path(Configuration.Keys.Pegasus.PATH)
     if (!new File(pegasusDir).exists) new File(pegasusDir).mkdirs
 
     val pegasusResourcePath = "/Pegasus/"

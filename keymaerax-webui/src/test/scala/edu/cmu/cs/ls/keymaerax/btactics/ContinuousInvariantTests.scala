@@ -53,25 +53,31 @@ class ContinuousInvariantTests extends TacticTestBase {
     candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant=false, None))
   }
 
-  it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { tool =>
+  it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica { tool =>
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
     val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
       case gen: ConfigurableGenerator[GenProduct] => gen
     }
     TactixLibrary.invGenerator = FixedGenerator(Nil)
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT -> "120")) {
+    withTemporaryConfig(Map(
+      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
+      Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "-1")
+    ) {
       forEvery(Table(("Name", "Model"),
         entries.map(e => e.name -> e.model): _*).
         filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
         (name, model) =>
           whenever(tool.isInitialized) {
             println("\n" + name)
-            val Imply(assumptions, succFml@Box(ode@ODESystem(_, _), _)) = model
+            val Imply(assumptions, goal@Box(ode: ODESystem, _)) = model
 
             //@note the annotations in nonlinear.kyx are produced by Pegasus
             val invariants = InvariantGenerator.pegasusInvariants(
-              Sequent(IndexedSeq(assumptions), IndexedSeq(succFml)), SuccPos(0))
+              Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0))
 
             println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
 
@@ -91,7 +97,7 @@ class ContinuousInvariantTests extends TacticTestBase {
   }
 
   it should "fast-check invariants with LZZ" taggedAs SlowTest in withMathematica { tool =>
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "-1")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "-1")) {
       val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
       val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
@@ -118,7 +124,7 @@ class ContinuousInvariantTests extends TacticTestBase {
   }
 
   it should "consider constants when fast-checking invariants with LZZ" in withMathematica { tool =>
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "5")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "5")) {
       val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial: Example 9a", io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).head
 
@@ -134,24 +140,29 @@ class ContinuousInvariantTests extends TacticTestBase {
     }
   }
 
-  it should "produce invariants that are provable with ODE" taggedAs ExtremeTest in withMathematica ({ tool =>
+  it should "produce invariants that are provable with ODE" taggedAs ExtremeTest in withMathematica { tool =>
     withTemporaryConfig(Map(
-        Configuration.Keys.ODE_TIMEOUT_FINALQE -> "300",
-        Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "60")) {
+      Configuration.Keys.ODE_TIMEOUT_FINALQE -> "300",
+      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.INVCHECK_TIMEOUT -> "60")) {
       val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
         getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-      forEvery(Table(("Name", "Model", "Tactic"), entries.
-        filter(e => e.tactics.nonEmpty).
-        map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
-        (name, model, tactic) =>
+      forEvery(Table(("Name", "Model"), entries.map(e => (e.name, e.model)):_*)) {
+        (name, model) =>
           whenever(tool.isInitialized) {
-            println("\n" + name + " with " + BellePrettyPrinter(tactic))
-            proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
+            println("\n" + name)
+            val Imply(assumptions, goal@Box(ODESystem(_, _), _)) = model
+            val invariants = InvariantGenerator.pegasusInvariants(
+              Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0))
+            println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
+            TactixLibrary.invGenerator = FixedGenerator(invariants.toList)
+            TactixLibrary.differentialInvGenerator = FixedGenerator(invariants.toList)
+            proveBy(model.asInstanceOf[Formula], implyR(1) & ODE(1)) shouldBe 'proved
             println(name + " done")
           }
       }
     }
-  }, 300)
+  }
 
   "Refute ODE" should "find a simple counterexample" in withMathematica { tool =>
     val cex = tool.refuteODE(

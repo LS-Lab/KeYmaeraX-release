@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, MathematicaOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.symbol
 
 /** Extended Mathematica operator specifications for non-soundness critical tools. */
@@ -28,6 +28,8 @@ object ExtMathematicaOpSpec {
   val homeDirectory = LiteralMathOpSpec(symbol("$HomeDirectory"))
 
   val path = LiteralMathOpSpec(symbol("$Path"))
+
+  val infinity = applyFunc(symbol("DirectedInfinity"))(MathematicaOpSpec.int(1))
 
   //</editor-fold>
 

@@ -10,6 +10,7 @@ import java.nio.file.{Files, Paths}
 
 import org.apache.commons.configuration2.PropertiesConfiguration
 
+import scala.reflect.runtime.universe._
 import scala.collection.JavaConverters._
 
 /** The KeYmaera X configuration.
@@ -47,17 +48,34 @@ object Configuration {
     val MATHEMATICA_QE_METHOD = "QE_METHOD"
     val SMT_CACHE_PATH = "SMT_CACHE_PATH"
     val TEST_DB_PATH = "TEST_DB_PATH"
-    val PEGASUS_PATH = "PEGASUS_PATH"
-    val PEGASUS_MAIN_FILE = "PEGASUS_MAIN_FILE"
     val Z3_PATH = "Z3_PATH"
     val QE_TIMEOUT_INITIAL = "QE_TIMEOUT_INITIAL"
     val QE_TIMEOUT_CEX = "QE_TIMEOUT_CEX"
     val QE_TIMEOUT_MAX = "QE_TIMEOUT_MAX"
     val QE_ALLOW_INTERPRETED_FNS = "QE_ALLOW_INTERPRETED_FNS"
     val ODE_TIMEOUT_FINALQE = "ODE_TIMEOUT_FINALQE"
-    val PEGASUS_INVGEN_TIMEOUT = "PEGASUS_INVGEN_TIMEOUT"
-    val PEGASUS_INVCHECK_TIMEOUT = "PEGASUS_INVCHECK_TIMEOUT"
-    val PEGASUS_SANITY_TIMEOUT = "PEGASUS_SANITY_TIMEOUT"
+    object Pegasus {
+      val PATH = "PEGASUS_PATH"
+      val MAIN_FILE = "PEGASUS_MAIN_FILE"
+      val INVGEN_TIMEOUT = "PEGASUS_INVGEN_TIMEOUT"
+      val INVCHECK_TIMEOUT = "PEGASUS_INVCHECK_TIMEOUT"
+      val SANITY_TIMEOUT = "PEGASUS_SANITY_TIMEOUT"
+      object HeuristicInvariants {
+        val TIMEOUT = "PEGASUS_HEURISTICS_TIMEOUT"
+      }
+      object FirstIntegrals {
+        val TIMEOUT = "PEGASUS_FIRSTINTEGRALS_TIMEOUT"
+        val DEGREE = "PEGASUS_FIRSTINTEGRALS_DEGREE"
+      }
+      object Darboux {
+        val TIMEOUT = "PEGASUS_DARBOUX_TIMEOUT"
+        val DEGREE = "PEGASUS_DARBOUX_DEGREE"
+      }
+      object Barrier {
+        val TIMEOUT = "PEGASUS_BARRIER_TIMEOUT"
+        val DEGREE = "PEGASUS_BARRIER_DEGREE"
+      }
+    }
     val MATHEMATICA_MEMORY_LIMIT = "MATHEMATICA_MEMORY_LIMIT"
   }
 
@@ -91,6 +109,22 @@ object Configuration {
   def apply(key: String): String = config.getString(key)
 
   /** Returns the value of `key` or None, if not present. */
+  def get[T](key: String)(implicit tag: TypeTag[T]): Option[T] = {
+    def safeGet(getter: String => Any): Option[T] = if (contains(key)) Some(getter(key).asInstanceOf[T]) else None
+    tag.tpe match {
+      case t if t =:= typeOf[Boolean]=> safeGet(config.getBoolean)
+      case t if t =:= typeOf[String] => safeGet(config.getString)
+      case t if t =:= typeOf[Int]    => safeGet(config.getInt)
+      case t if t =:= typeOf[Long]   => safeGet(config.getLong)
+      case t if t =:= typeOf[Float]  => safeGet(config.getFloat)
+      case t if t =:= typeOf[Double] => safeGet(config.getDouble)
+      case t if t =:= typeOf[BigInt] => safeGet(config.getBigInteger)
+      case t if t =:= typeOf[BigDecimal] => safeGet(config.getBigDecimal)
+    }
+  }
+
+  /** Returns the value of `key` or None, if not present. */
+  @deprecated("Use get instead")
   def getOption(key: String): Option[String] = if (contains(key)) Some(apply(key)) else None
 
   /** Returns the configuration entry `key` as an absolute path with file separators. */
@@ -111,6 +145,34 @@ object Configuration {
     config.clearProperty(key)
     if (saveToFile) config.write(new PrintWriter(new File(CONFIG_PATH)))
   }
+
+  //<editor-fold desc="Configuration access shortcuts>
+
+  /** Pegasus configuration access shortcuts. */
+  object Pegasus {
+    def path: String = apply(Configuration.Keys.Pegasus.PATH)
+    def mainFile(default: String): String = get[String](Configuration.Keys.Pegasus.MAIN_FILE).getOrElse(default)
+    def invGenTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVGEN_TIMEOUT).getOrElse(default)
+    def invCheckTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVCHECK_TIMEOUT).getOrElse(default)
+    def sanityTimeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.SANITY_TIMEOUT).getOrElse(default)
+    object HeuristicInvariants {
+      def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
+    }
+    object FirstIntegrals {
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT).getOrElse(default)
+      def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.DEGREE).getOrElse(default)
+    }
+    object Darboux {
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Darboux.TIMEOUT).getOrElse(default)
+      def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Darboux.DEGREE).getOrElse(default)
+    }
+    object Barrier {
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Barrier.TIMEOUT).getOrElse(default)
+      def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Barrier.DEGREE).getOrElse(default)
+    }
+  }
+
+  //</editor-fold>
 
   private def updateConfig(config: PropertiesConfiguration): PropertiesConfiguration = {
     val default = new PropertiesConfiguration()

@@ -160,10 +160,10 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
 
   "Pegasus" should "return invariant postcondition if sanity timeout > 0" in withMathematica { _ =>
     val seq = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_SANITY_TIMEOUT -> "0")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0")) {
       InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs Nil
     }
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_SANITY_TIMEOUT -> "5")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "5")) {
       InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> Some(PegasusProofHint(isInvariant = true, None))) :: Nil
     }
   }
@@ -199,8 +199,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     withTemporaryConfig(Map(
       Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true",
       Configuration.Keys.ODE_TIMEOUT_FINALQE -> "120",
-      Configuration.Keys.PEGASUS_INVGEN_TIMEOUT -> "120",
-      Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT ->"60",
+      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.INVCHECK_TIMEOUT ->"60",
       Configuration.Keys.LOG_QE_DURATION -> "true")) {
       tool.setOperationTimeout(120)
       testcode
@@ -221,7 +221,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with Barrier only" ignore withMathematica { tool => setTimeouts(tool) {
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE -> "Pegasus_BarrierOnly.m")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.MAIN_FILE -> "Pegasus_BarrierOnly.m")) {
       val results = entries.map(e => runInvGen(e.name, e.model))
       val writer = new PrintWriter(benchmarkName + "_invgen_barrier_proofhints.csv")
       writer.write(
@@ -232,7 +232,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with Darboux only" ignore withMathematica { tool => setTimeouts(tool) {
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE -> "Pegasus_DbxOnly.m")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.MAIN_FILE -> "Pegasus_DbxOnly.m")) {
       val results = entries.map(e => runInvGen(e.name, e.model))
       val writer = new PrintWriter(benchmarkName + "_invgen_dbx_proofhints.csv")
       writer.write(
@@ -243,7 +243,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with summands only" ignore withMathematica { tool => setTimeouts(tool) {
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE -> "Pegasus_SummandsOnly.m")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.MAIN_FILE -> "Pegasus_SummandsOnly.m")) {
       val results = entries.map(e => runInvGen(e.name, e.model))
       val writer = new PrintWriter(benchmarkName + "_invgen_summands_proofhints.csv")
       writer.write(
@@ -254,7 +254,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
 
   it should "generate invariants with first integrals only" ignore withMathematica { tool => setTimeouts(tool) {
-    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE ->"Pegasus_FIOnly.m")) {
+    withTemporaryConfig(Map(Configuration.Keys.Pegasus.MAIN_FILE ->"Pegasus_FIOnly.m")) {
       val results = entries.map(e => runInvGen(e.name, e.model))
       val writer = new PrintWriter(benchmarkName + "_invgen_firstintegrals_proofhints.csv")
       writer.write(

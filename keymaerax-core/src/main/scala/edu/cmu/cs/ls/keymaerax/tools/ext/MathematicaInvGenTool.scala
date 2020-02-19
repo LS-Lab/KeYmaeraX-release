@@ -10,8 +10,6 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
-
-
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
@@ -29,6 +27,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   private val LZZ_NAMESPACE = "LZZ`"
   private val REFUTE_NAMESPACE = "Refute`"
 
+  private def psymbol(s: String) = symbol(PEGASUS_NAMESPACE + s)
+
   private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
   private val pathSegments = scala.reflect.io.File(pegasusPath).segments.map(string)
   private val joinedPath = fileNameJoin(list(homeDirectory.op :: pathSegments:_*))
@@ -37,7 +37,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   /** @inheritdoc */
   override def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
+    timeout = Configuration.Pegasus.invGenTimeout(-1)
 
     val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
     val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)):_*)
@@ -48,12 +48,31 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
     logger.debug("Raw Mathematica input into Pegasus: " + problem)
 
-    val sanityTimeout = rule(symbol(PEGASUS_NAMESPACE + "SanityTimeout"), int(Integer.parseInt(Configuration.getOption(Configuration.Keys.PEGASUS_SANITY_TIMEOUT).getOrElse("0"))))
-    val pegasusMain = Configuration.getOption(Configuration.Keys.PEGASUS_MAIN_FILE).getOrElse("Pegasus.m")
+    def timeoutExpr(t: Int) = if (t >= 0) int(t) else infinity
+
+    val setOptions = applyFunc(psymbol("SetOptions"))
+    val options = compoundExpression(
+      setOptions(psymbol("InvGen"),
+        rule(psymbol("SanityCheckTimeout"), timeoutExpr(Configuration.Pegasus.sanityTimeout()))),
+      setOptions(psymbol("HeuInvariants"),
+        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.HeuristicInvariants.timeout()))),
+      setOptions(psymbol("FirstIntegrals"),
+        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.FirstIntegrals.timeout())),
+        rule(psymbol("Deg"), int(Configuration.Pegasus.FirstIntegrals.degree()))),
+      setOptions(psymbol("DbxPoly"),
+        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.FirstIntegrals.timeout())),
+        rule(psymbol("Deg"), int(Configuration.Pegasus.Darboux.degree()))),
+      setOptions(psymbol("BarrierCert"),
+        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Barrier.timeout())),
+        rule(psymbol("Deg"), int(Configuration.Pegasus.Barrier.degree())))
+    )
+
+    val pegasusMain = Configuration.Pegasus.mainFile("Pegasus.m")
     val command = compoundExpression(
       setPathsCmd,
       needs(string(PEGASUS_NAMESPACE), string(pegasusMain)),
-      applyFunc(symbol(PEGASUS_NAMESPACE + "InvGen"))(problem, sanityTimeout)
+      options,
+      applyFunc(psymbol("InvGen"))(problem)
     )
 
     try {
@@ -72,7 +91,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
   /** @inheritdoc */
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = {
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+    timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
     val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
     val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)):_*)
@@ -97,7 +116,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     require(postCond.isFOL, "Unable to refute ODE, expected FOL post conditions but got " + postCond.prettyString)
     require(assumptions.forall(_.isFOL), "Unable to refute ODE, expected FOL assumptions but got " + assumptions)
 
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+    timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
     val rhs = DifferentialHelper.atomicOdes(ode).map(_.e)
     // All things that need to be considered as parameters (or variables)
@@ -160,7 +179,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     require(postCond.isFOL, "Unable to generate ODE conditions, expected FOL post conditions but got " + postCond.prettyString)
     require(assumptions.forall(_.isFOL), "Unable to generate ODE conditions, expected FOL assumptions but got " + assumptions)
 
-    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+    timeout = Configuration.Pegasus.invCheckTimeout(-1)
 
     val odeVars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
     val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m):_*)

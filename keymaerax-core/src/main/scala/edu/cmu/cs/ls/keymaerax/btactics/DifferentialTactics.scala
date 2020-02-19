@@ -38,7 +38,7 @@ private object DifferentialTactics extends Logging {
   private[btactics] def timeoutQE = QE(Nil, None, Some(ODE_QE_TIMEOUT))
   // QE with default timeout for use in counterexample tactics (timeout in seconds)
   private[btactics] val ODE_CEX_TIMEOUT =
-      Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+      Try(Integer.parseInt(Configuration(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT))).getOrElse(-1)
   private[btactics] def timeoutCEXQE = QE(Nil, None, Some(ODE_CEX_TIMEOUT))
 
   /** @see [[HilbertCalculus.DE]] */
