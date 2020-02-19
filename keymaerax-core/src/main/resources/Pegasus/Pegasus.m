@@ -87,13 +87,13 @@ If[OptionValue[SanityTimeout] > 0,
   Print["Precondition implies postcondition. Proceeding."]];
 
   (* TODO: LZZ should directly work with constant assumptions instead of this expansion trickery? *)
-  postInvariant=LZZ`InvSFast[post, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constasms]];
+  postInvariant=LZZ`InvSFast[post, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[postInvariant], 
   Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{{post,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}},True}], 
   Print["Postcondition is (probably) not an invariant. Inv check gave: ", postInvariant,". Proceeding."]];
 
   (* TODO: LZZ should directly work with constant assumptions instead of this expansion trickery? *)
-  preInvariant=LZZ`InvSFast[pre, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constasms]];
+  preInvariant=LZZ`InvSFast[pre, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[preInvariant], 
   Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{{pre,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}}, True}], 
   Print["Precondition is (probably) not an invariant. Inv check gave: ",preInvariant,". Proceeding."]];
