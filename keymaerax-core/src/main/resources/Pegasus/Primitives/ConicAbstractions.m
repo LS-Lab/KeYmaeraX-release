@@ -11,10 +11,46 @@ Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* 
 BeginPackage["ConicAbstractions`"];
 
 
-ConicAbstractionsPartition::usage="Uses techniques from the thesis to partition state space; used in TransitionRel"
+ConicAbstractionsPartition::usage="Uses techniques from the thesis to partition state space; used in TransitionRel";
+
+
+DimPartitionM::usage="Splits along dimensions";
+ConicPartition::usage="Computes the conic partition for a linear system";
 
 
 Begin["`Private`"]
+
+
+(* Paritioning derivative space into uniform pizza slices in arbitrary dimensions 
+using rotation matrices *)
+RotateM[vec_List,splits_]:=Module[{u,v,rot,ang},
+ang=Pi/splits;
+{u,v}=vec;
+rot=N[RotationMatrix[ang,{u,v}]];
+Round[Table[MatrixPower[rot,i,u],{i,0 ,splits-1}],0.00001]
+];
+
+
+DimPartitionM[mat_,splits_,dim_]:=Module[{hd,tl},
+hd=First[mat];
+tl=Drop[mat,1];
+Flatten[Map[RotateM[{#,hd},splits]&,tl],1]
+]
+
+
+ConicPartition[problem_List, splits_]:=Module[
+	{pre,f,vars,X, Q,post,i, A, b, es, diagA, eigv, initRegPoints,
+	ZPoints, v0, p, unifPartition,normals,mat},
+{pre,{f,vars,Q},post}=problem;
+(* Now we'll need to diagonalize our system *)
+A = Grad[f, vars];
+b = f - A.vars;
+mat=IdentityMatrix[Length[vars]];
+(*mat=Eigenvectors[Inverse[A]];*)
+unifPartition = DimPartitionM[mat,splits, Length[vars]];
+normals=Map[#.A&,unifPartition];
+polys=Map[#.vars&,normals]
+];
 
 
 (* Checks if a matrix has all real eigenvalues-- *)
@@ -44,14 +80,6 @@ Return[pointList];
 ]
 
 
-(* Paritioning derivative space into uniform pizza slices in arbitrary dimensions 
-using rotation matrices *)
-RotateM[vec_List,splits_]:=Module[{u,v,rot,ang},
-ang=2Pi/splits;
-{u,v}=vec;
-rot=RotationMatrix[ang,{u,v}];
-Table[N[MatrixPower[rot,i,u]],{i,0 ,splits-1}]
-];
 PartitionsM[vec_List,splits_, vars_]:=Module[{ls,ls2,result},
 ls=RotateM[vec,splits];
 ls2=RotateLeft[ls,1];
