@@ -194,7 +194,7 @@ object InvariantGenerator extends Logging {
         case Some(tool) =>
           def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
           def pegasusInvs =
-            tool.invgen(ode, sequent.ante :+ Not(sequent.succ.patch(pos.index0, Nil, 1).reduceRightOption(Or).getOrElse(False)), post)
+            tool.invgen(ode, sequent.ante :+ Not(sequent.succ.patch(pos.index0, Nil, 1).filter(_.isFOL).reduceRightOption(Or).getOrElse(False)), post)
           def conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
             case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
             case Right(r) => r.length > 1 && r.map(_._1).exists(strictInequality)
@@ -211,7 +211,7 @@ object InvariantGenerator extends Logging {
             } else {
               pegasusInvs.toStream.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
-          invs
+          invs.distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
