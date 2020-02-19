@@ -37,7 +37,7 @@ BarrierCert::usage="BarrierCert[problem_List]";
 *)
 Options[HeuInvariants]= {Timeout -> 20};
 Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
-Options[DbxPoly]= {Deg -> -1, Timeout -> 30};
+Options[DbxPoly]= {Deg -> -1, Timeout -> 40};
 Options[BarrierCert]= {Deg -> -1, Timeout -> Infinity};
 
 
@@ -110,7 +110,8 @@ deg = If[OptionValue[DbxPoly,Deg] < 0,
 
 If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
-polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout], deg];
+(* Spend 3/4 time budget on polynomial finding *)
+polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout]*3/4, deg];
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[DbxPoly,Timeout],
 {}],
