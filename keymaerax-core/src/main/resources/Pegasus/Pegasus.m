@@ -16,7 +16,7 @@ BeginPackage["Pegasus`"];
 
 AugmentWithParameters::usage="AugmentWithParameters[problem_List] Splits out parameter information in the problem";
 InvGen::usage="InvGen[problem_List] Run Pegasus on problem";
-Options[InvGen]= {SanityTimeout -> 0};
+Options[InvGen]= {SanityCheckTimeout -> 0};
 
 
 Begin["`Private`"]
@@ -73,13 +73,13 @@ If[Length[prob[[2]]]!=3, Print[ERRSTR]; Throw[{}]];
 
 If[Length[prob[[2]][[1]]]!=Length[prob[[2]][[2]]]||Length[prob[[2]]]==0, Print[ERRSTR]; Throw[{}]];
 
-If[Length[prob]==3, Print["Extending"];eprob=AugmentWithParameters[prob]];
+If[Length[prob]==3, Print["Extending"]; eprob=AugmentWithParameters[prob]];
 
 Print[eprob];
 {pre,{f,vars,evoConst},post,{constvars,constQ}}=eprob;
 
 (* Sanity check with timeout *)
-If[OptionValue[SanityTimeout] > 0,
+If[OptionValue[InvGen,SanityCheckTimeout] > 0,
   TimeConstrained[Block[{},
   preImpliesPost=Primitives`CheckSemiAlgInclusion[And[pre,constQ,evoConst], post, Join[constvars,vars]];
   If[ Not[TrueQ[preImpliesPost]], 
@@ -97,7 +97,7 @@ If[OptionValue[SanityTimeout] > 0,
   If[ TrueQ[preInvariant], 
   Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{{pre,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}}, True}], 
   Print["Precondition is (probably) not an invariant. Inv check gave: ",preInvariant,". Proceeding."]];
-],OptionValue[SanityTimeout]]];
+], OptionValue[InvGen,SanityCheckTimeout]]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
 (* TODO: put in the classifier?? *)

@@ -31,27 +31,45 @@ HeuInvariants::usage="Heuristics[problem_List,degree]";
 (* Returns invariants generated from barrier certificate *)
 BarrierCert::usage="BarrierCert[problem_List]";
 
+(* Options and defaults for each of these methods
+	Deg \[Rule] -1 means run with default heuristic 
+*)
+Options[HeuInvariants]= {Timeout -> \[Infinity]};
+Options[FirstIntegrals]= {Deg -> -1, Timeout -> \[Infinity]};
+Options[DbxPoly]= {Deg -> -1, Timeout -> \[Infinity]};
+Options[BarrierCert]= {Deg -> -1, Timeout -> \[Infinity]};
+
+
 
 Begin["`Private`"];
 
 
 HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
 {pre, { vf, vars, Q }, post} = problem;
+
+If[OptionValue[HeuInvariants, Timeout] > 0,
+TimeConstrained[Block[{},
 polys = DeleteDuplicates[Join[
 	QualAbsPolynomials`ProblemFactorsWithLie[problem],
 	QualAbsPolynomials`PhysicalQuantities[problem],
 	QualAbsPolynomials`SummandFactors[problem],
 	QualAbsPolynomials`SFactorList[problem]]];
-
 (*res=Map[InvariantExtractor`DWC[problem,{#},{}]&,polys];*)
 InvariantExtractor`DWC[problem,polys,{}][[2]]
+], OptionValue[HeuInvariants,Timeout],
+Print["HeuInvariants skipped."]; {}],
+{}]
+
 ]
 
 
 FirstIntegrals[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat,uppers,lowers,bound},
 {pre, { vf, vars, Q }, post} = problem;
+
 (* Heuristic *)
-deg = Max[10-Length[vars],1];
+deg = If[OptionValue[FirstIntegrals,Deg] < 0,
+		Max[10-Length[vars],1],
+		OptionValue[FirstIntegrals, Deg]];
 rat = 5;
 bound=10^8;
 
@@ -59,30 +77,45 @@ bound=10^8;
 upperRat[num_]:=If[TrueQ[Element[num,Reals] && num < bound],Primitives`UpperRat[num, rat], Infinity];
 lowerRat[num_]:=If[TrueQ[Element[num,Reals] && num > -bound],Primitives`LowerRat[num, rat], -Infinity];
 
+If[OptionValue[FirstIntegrals, Timeout] > 0,
+TimeConstrained[Block[{},
 (* Compute functionally independent first integrals up to given degree *)
 fIs=Primitives`FuncIndep[FirstIntegrals`FindFirstIntegrals[{vf,vars,Q},deg],vars];
-
 (* upper and lower bounds on the FIs
-todo: NMaxValue instead? Needs extra LZZ check: it doesn't give the real max/mins sometimes!
-*)
+todo: NMaxValue instead? Needs extra LZZ check: it doesn't give the real max/mins sometimes! *)
 uppers = Map[upperRat[MaxValue[{#,pre},vars]]&,fIs];
 lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs];
-(*
-Print["First integrals:",fIs];
+
+(*Print["First integrals:",fIs];
 Print[uppers,lowers]; *)
 
 maxVs=Flatten[MapThread[If[#2==Infinity,{},{#1<=#2}] &, {fIs,uppers}]];
-(* Return polynomials encoding the max/min values that the integrals can take on the initial set *)
-(* p+c \[GreaterEqual]0 invariant *)
 minVs=Flatten[MapThread[If[#2==-Infinity,{},{#1>=#2}] &, {fIs,lowers}]];
+
 Union[maxVs,minVs]
+], OptionValue[FirstIntegrals,Timeout],
+Print["FirstIntegrals skipped."]; {}],
+{}]
+
 ]
 
 
-DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys},
+DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys,deg},
 {pre, { vf, vars, Q }, post} = problem;
-polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, 10, Max[10-Length[vars],1]];
+
+(* Heuristic *)
+deg = If[OptionValue[DbxPoly,Deg] < 0,
+		Max[10-Length[vars],1],
+		OptionValue[DbxPoly, Deg]];
+
+If[OptionValue[DbxPoly, Timeout] > 0,
+TimeConstrained[Block[{},
+polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout], deg];
 InvariantExtractor`DWC[problem,polys,{}][[2]]
+], OptionValue[DbxPoly,Timeout],
+Print["DbxPoly skipped."]; {}],
+{}]
+
 ]
 
 
@@ -93,13 +126,24 @@ If[Length[cr] > 0,Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]
 ,{}]]
 
 
-BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS,polys},
-  {pre, { vf, vars, Q }, post} = problem;
-  If[pre===True,Return[{}]];
-  If[post===False,Return[{}]];
-  polySOS=BarrierCertificates`SOSBarrierMATLAB[problem];
-  polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
-  InvariantExtractor`DWC[problem,polys,{}][[2]]
+BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS,polys,deg},
+{pre, { vf, vars, Q }, post} = problem;
+If[pre===True,Return[{}]];
+If[post===False,Return[{}]];
+
+deg= If[OptionValue[BarrierCert,Deg] < 0,
+		10,
+		OptionValue[BarrierCert, Deg]];
+			
+If[OptionValue[BarrierCert, Timeout] > 0,
+TimeConstrained[Block[{},
+polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
+polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
+InvariantExtractor`DWC[problem,polys,{}][[2]]
+], OptionValue[BarrierCert,Timeout],
+Print["BarrierCert skipped."];{}],
+{}]
+
 ]]
 
 
