@@ -42,7 +42,13 @@ Begin[ "Private`" ];
 
 (* Computing the monomial basis for polynomials of maximal total degree maxdeg *)
 GenMonomialBasis[vars_List,maxdeg_Integer?NonNegative]:=Module[{monomialOrder="DegreeReverseLexicographic"},
-Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^maxdeg , vars, monomialOrder]];
+Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^maxdeg , vars, monomialOrder]]
+]
+
+
+(*internally used*)
+GenMonomialBasisCoeffs[vars_List,maxdeg_Integer?NonNegative]:=Module[{},
+Select[Permutations[Flatten[Table[Table[j,{i,1,Length[vars]}],{j,0,maxdeg}]],{Length[vars]}], Apply[Plus, #] <= maxdeg &]
 ]
 
 
@@ -53,7 +59,7 @@ r=deg,
 (* Maximum total polynomial degree of the vector field *)
 d=Max[Map[Primitives`PolynomDegree,vectorField]]},
 (* Compute the monomial basis *)
-MonBas=MonomialList[FromCoefficientRules[Map[Rule[#,1]&,GenMonomialBasis[vars,r]],vars]];
+MonBas=MonomialList[FromCoefficientRules[Map[Rule[#,1]&,GenMonomialBasisCoeffs[vars,r]],vars]];
 (* Create a template polynomial with symbolic coefficients *)
 TemplateCoeffs=Table[Symbol["COEFF"<>ToString[i]], {i,1,Length[MonBas]}];
 FITemplate=Evaluate[TemplateCoeffs.MonBas];
