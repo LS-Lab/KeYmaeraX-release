@@ -99,13 +99,21 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     }
   }
 
+  /** Tamper with a formula by randomly replacing one of its subexpressions */
   private def tamperFormula(f: Formula, tamperComplexity: Int = tamperComplexity): Formula = {
-    //@todo also for other kinds
+    // rejection sampling
     for (i <- 1 to 100) try {
       val pos = rand.nextSubPosition(f, FormulaKind)
-      return FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
+      FormulaAugmentor(f).sub(pos) match {
+        case Some(_: Term)    => return FormulaAugmentor(f).replaceAt(pos, rand.nextTerm(tamperComplexity))
+        case Some(_: Formula) => return FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
+        case Some(_: Program) => return FormulaAugmentor(f).replaceAt(pos, rand.nextProgram(tamperComplexity))
+        case None => throw new AssertionError("nextSubPosition should only find defined positions: " + f + " at " + pos + " is " + FormulaAugmentor(f).sub(pos))
+      }
     } catch {
       case possible: CoreException if possible.getMessage.contains("No differentials in evolution domain constraints") => /* continue */
+      case possible: ClassCastException if possible.getMessage.contains("cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable") => /* continue */
+      case possible: ClassCastException if possible.getMessage.contains("cannot be cast to edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol") => /* continue */
     }
     return True
   }
