@@ -374,7 +374,7 @@ class ODETests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "60")) {
       forEvery(list) {
         (formula, requiredTool) =>
-          whenever(!Thread.currentThread().isInterrupted) {
+          whenever(qeTool.isInitialized) {
             println("Proving " + formula)
             if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
               TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
@@ -388,7 +388,7 @@ class ODETests extends TacticTestBase {
     withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "60")) {
       forEvery(list) {
         (formula, requiredTool) =>
-          whenever(!Thread.currentThread().isInterrupted) {
+          whenever(qeTool.isInitialized) {
             if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
               println("Works now with " + qeTool.asInstanceOf[Tool].name + "? " + formula)
               try {
@@ -410,10 +410,10 @@ class ODETests extends TacticTestBase {
     "x^3>-1->[{x'=-x-1}]x^3>-1" // @generalize(x>=-1)&ode
   )
 
-  it should "FEATURE_REQUEST: prove a list of ODEs with cuts after improving tactics" taggedAs TodoTest in withQE { _ =>
+  it should "FEATURE_REQUEST: prove a list of ODEs with cuts after improving tactics" taggedAs TodoTest in withQE { tool =>
     forEvery (nops) {
       formula =>
-        whenever(!Thread.currentThread().isInterrupted) {
+        whenever(tool.isInitialized) {
           TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
         }
     }

@@ -46,7 +46,7 @@ class SMTQETests extends TacticTestBase {
 
   "Z3" should "prove every basic example" in withZ3 { z3 =>
     forEvery (basicExamples) {
-      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
+      (name, input, expected) => whenever(z3.isInitialized) { withClue(name) {
         inside (z3.qe(input).fact.conclusion) {
           case Sequent(_, IndexedSeq(Equiv(_, r))) => r shouldBe expected
         }
@@ -68,7 +68,7 @@ class SMTQETests extends TacticTestBase {
 
   "Z3" should "prove every complicated example" in withZ3 { z3 =>
     forEvery (complicatedExamples) {
-      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
+      (name, input, expected) => whenever(z3.isInitialized) { withClue(name) {
         inside (z3.qe(input).fact.conclusion) {
           case Sequent(_, IndexedSeq(Equiv(_, r))) => r shouldBe expected
         }
@@ -104,7 +104,7 @@ class SMTQETests extends TacticTestBase {
   "Z3" should "prove every regression example" in withZ3 { z3 =>
     z3.setOperationTimeout(30)
     forEvery (regressionExamples) {
-      (name, input, expected) => whenever(!Thread.currentThread().isInterrupted) { withClue(name) {
+      (name, input, expected) => whenever(z3.isInitialized) { withClue(name) {
         inside (z3.qe(input).fact.conclusion) {
           case Sequent(_, IndexedSeq(Equiv(_, r))) => r shouldBe expected
         }

@@ -11,14 +11,14 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Program}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, ToolEvidence}
 import org.scalatest.AppendedClues
 import org.scalatest.exceptions.TestFailedException
 
@@ -64,12 +64,12 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
     }
   }
 
-  it should "prove all entries flagged as being provable with Mathematica" in withMathematica { _ => withDatabase {
-    prove("Mathematica" :: "Z3" :: Nil)
+  it should "prove all entries flagged as being provable with Mathematica" in withMathematica { tool => withDatabase {
+    prove(tool, "Mathematica" :: "Z3" :: Nil)
   }}
   it should "prove all entries flagged as being provable with Z3" in withZ3 { tool => withDatabase {
     tool.setOperationTimeout(30) // avoid getting stuck
-    prove("Z3" :: Nil)
+    prove(tool, "Z3" :: Nil)
   }}
 
   /* Try to see if any of the Mathematica entries work with Z3. Test "fails" if Z3 can prove an entry. */
@@ -78,7 +78,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
 
     tool.setOperationTimeout(30) // avoid getting stuck
     forEvery (mathematicaEntries) { (_, name, model, _, _, _, tactic, kind) =>
-      whenever(!Thread.currentThread().isInterrupted) {
+      whenever(tool.isInitialized) {
         try {
           runEntry(name, model, kind, tactic.head, db)
           fail("Now works with Z3: " + tutorialName + "/" + name + "/" + tactic.head._1)
@@ -91,9 +91,9 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
   }}
 
   /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE("tool") (if any) match any of the tools */
-  private def prove(tools: List[String])(db: TempDBTools): Unit = {
+  private def prove(tool: Tool, tools: List[String])(db: TempDBTools): Unit = {
     forEvery (filterEntriesByTool(_.forall(m => tools.contains(m.group("toolName"))), replaceQE=false)) { (_, name, model, _, _, _, tactic, kind) =>
-      whenever(!Thread.currentThread().isInterrupted) { runEntry(name, model, kind, tactic.head, db) }
+      whenever(tool.isInitialized) { runEntry(name, model, kind, tactic.head, db) }
     }
   }
 

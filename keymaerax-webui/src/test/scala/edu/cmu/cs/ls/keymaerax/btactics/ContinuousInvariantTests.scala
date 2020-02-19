@@ -53,7 +53,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant=false, None))
   }
 
-  it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
+  it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { tool =>
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
     val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
@@ -65,7 +65,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         entries.map(e => e.name -> e.model): _*).
         filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
         (name, model) =>
-          whenever(!Thread.currentThread().isInterrupted) {
+          whenever(tool.isInitialized) {
             println("\n" + name)
             val Imply(assumptions, succFml@Box(ode@ODESystem(_, _), _)) = model
 
@@ -104,7 +104,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         entries.map(e => e.name -> e.defs.exhaustiveSubst(e.model)): _*).
         filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
         (name, model) =>
-          whenever (!Thread.currentThread().isInterrupted) {
+          whenever (tool.isInitialized) {
             println("\n" + name)
             val Imply(_, Box(ode@ODESystem(_, _), _)) = model
             annotatedInvariants.products.get(ode) match {
@@ -134,7 +134,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     }
   }
 
-  it should "produce invariants that are provable with ODE" taggedAs ExtremeTest in withMathematica ({ _ =>
+  it should "produce invariants that are provable with ODE" taggedAs ExtremeTest in withMathematica ({ tool =>
     withTemporaryConfig(Map(
         Configuration.Keys.ODE_TIMEOUT_FINALQE -> "300",
         Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "60")) {
@@ -144,7 +144,7 @@ class ContinuousInvariantTests extends TacticTestBase {
         filter(e => e.tactics.nonEmpty).
         map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
         (name, model, tactic) =>
-          whenever(!Thread.currentThread().isInterrupted) {
+          whenever(tool.isInitialized) {
             println("\n" + name + " with " + BellePrettyPrinter(tactic))
             proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
             println(name + " done")

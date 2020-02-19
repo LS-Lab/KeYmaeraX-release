@@ -157,7 +157,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       implicit val signaler: Signaler = (t: Thread) => {
         theInterpreter.kill()
         tool.cancel()
-        t.interrupt()
+        tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
         mathematicaProvider.synchronized {
           mathematicaProvider().doShutdown() //@note see [[afterAll]]
           provider.shutdown()
@@ -196,7 +196,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: QETacticTool => Any, timeout: Int = -1): Unit = {
+  def withQE(testcode: Tool with QETacticTool => Any, timeout: Int = -1): Unit = {
     withClue("Mathematica") { withMathematica(testcode, timeout) }
     afterEach()
     beforeEach()
