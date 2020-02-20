@@ -806,7 +806,7 @@ object Provable {
   /** Checksum computation implementation using the checksum algorithm used to stamp stored Provables. */
   private def checksum(s: String): String =
   //@note New instance every time, because digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
-  MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+  MessageDigest.getInstance("MD5").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
 
   /** A fully parenthesized String representation of the given Sequent for externalization.
     * @see [[Sequent.toString]]
