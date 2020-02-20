@@ -105,7 +105,7 @@ DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys,deg},
 
 (* Heuristic *)
 deg = If[OptionValue[DbxPoly,Deg] < 0,
-		Max[10-Length[vars],1],
+		Max[6-Length[vars],1],
 		OptionValue[DbxPoly, Deg]];
 
 If[OptionValue[DbxPoly, Timeout] > 0,

@@ -24,18 +24,23 @@ ManPS2::usage=
 An implementation of Y.K. Man's algorithm for Darboux polynomial generation (up to given degree) for a polynomial vector field.
 See alorithm new_ps_1 in Y.K. Man 'Computing Closed Form Solutions of First Order ODEs Using the Prelle-Singer Procedure', J. Symb. Comput., 1993.";
 
-DbxDefault::usage="DbxDefault[{vf,vars,domain},degree] Adds some bells and whistles to cleanup ManPS2 ";
+DbxDefault::usage="DbxDefault[{vf,vars,domain},degree] Adds some bells and whistles to cleanup ManPS2,
+e.g. turns complex (or irrational) results into real ones";
 
 
 Begin["`Private`"];
 
 
-DbxDefault[{vf_List,vars_List,domain_}, deg_Integer]:=Module[{dbx,realdbx},
+DbxDefault[{vf_List,vars_List,domain_}, deg_Integer]:=Module[{dbx,realdbx,ratdbx,irratdbx,irratsq},
 dbx=DarbouxPolynomials`ManPS2[{vf,vars,domain}, deg];
 (* Hack: Set all remaining parameters to 1 *)
 dbx=Map[Primitives`InstantiateParameters[#,vars,1]&,dbx];
-(* Return deduplicated and noncomplexified polynomials*)
-Map[If[Primitives`IsRealPolynomial[#], #, #*Primitives`ConjugatePolynomial[#]//Expand]&, dbx]//DeleteDuplicates
+(* deduplicated and noncomplexified polynomials*)
+realdbx=Map[If[Primitives`IsRealPolynomial[#], #, #*Primitives`ConjugatePolynomial[#]//Expand]&, dbx]//DeleteDuplicates;
+ratdbx=Select[realdbx,Primitives`IsRatPolynomial];
+irratdbx=Select[realdbx,Not[Primitives`IsRatPolynomial[#]]&];
+irratsq=Select[Map[Expand[#[[1]]*#[[2]]]&,Tuples[{irratdbx,irratdbx}]]//DeleteDuplicates,Primitives`IsRatPolynomial];
+Join[ratdbx,irratsq]//DeleteDuplicates
 ]
 
 
