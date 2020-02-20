@@ -39,7 +39,7 @@ fIs
 
 PrecomputeFIsM[ode_List]:=Module[{vf,vars,Q},
 {vf,vars,Q} = ode;
-Primitives`FuncIndep[FirstIntegrals`FindFirstIntegrals[{vf,vars,Q},Max[5-Length[vars],1]],vars]]
+Primitives`FuncIndep[FirstIntegrals`FindFirstIntegrals[{vf,vars,Q},Max[10-Length[vars],1]],vars]]
 
 
 PrecomputeFIs[ode_List, deps_List]:=Module[{vf,vars,Q,subs,dbx,fIs},
@@ -59,8 +59,26 @@ fIconj = Map[#==(#//.reps)&,fIs]//.List->And;
 
 
 
-Reducible[p_, ps_List] := Module [{},
-MemberQ[Flatten[Map[PolynomialReduce[p,#,Variables[p]][[1]][[1]]&,ps]],1]
+(* Copied from GenericNonLinear.m *)
+BoundFIs[prob_List,fIs_List]:=Module[{pre,vf,vars,Q,post,reps,fIconj,constvars,constQ,
+	rat,bound,uppers,lowers,maxVs,minVs},
+
+{pre,{vf,vars,Q},post,{constvars,constQ}} = prob;
+
+rat = 5;
+bound=10^8;
+
+(* Create rationalization function wrappers *)
+upperRat[num_]:=If[TrueQ[Element[num,Reals] && num < bound],Primitives`UpperRat[num, rat], Infinity];
+lowerRat[num_]:=If[TrueQ[Element[num,Reals] && num > -bound],Primitives`LowerRat[num, rat], -Infinity];
+
+uppers = Map[upperRat[MaxValue[{#,pre&&Q},vars]]&,fIs];
+lowers = Map[lowerRat[MinValue[{#,pre&&Q},vars]]&,fIs];
+
+maxVs=Flatten[MapThread[If[#2==Infinity,{},{#1<=#2}] &, {fIs,uppers}]];
+minVs=Flatten[MapThread[If[#2==-Infinity,{},{#1>=#2}] &, {fIs,lowers}]];
+
+AddToPre[prob,Union[maxVs,minVs]/.List->And]
 ]
 
 
@@ -79,7 +97,6 @@ AddToPre[prob_ ,premore_] := Module[{pre,f,vars,Q,post,constvars,constQ},
 GenerateRatFI[dbx_,vf_,vars_] :=Module[{cofactors},
 If[Length[dbx]==0,Return[{}]];
 cofactors=FirstIntegrals`DbxCofactors[dbx,vf,vars];
-(*Print["rational: ",dbx,cofactors,vars];*)
 FirstIntegrals`RatFIGen[dbx,cofactors,vars]
 ]
 
@@ -89,7 +106,7 @@ ConstrainedDDC[dbxs_List, pre_, vars_, added_, polys_, vf_, cont_] := Module[{lt
 
 If[Length[dbxs]==0,
 	(* Run the "continuation" *)
-	Return[cont[added, GenerateRatFI[polys,vf,vars]]]];
+	Return[cont[added,polys]]];
 
 {hd}=Take[dbxs,1];
 tl=Rest[dbxs];
@@ -127,12 +144,14 @@ SetOptions[GenericNonLinear`HeuInvariants,Timeout->40];
 SetOptions[GenericNonLinear`BarrierCert,Timeout->Infinity];
 (*SetOptions[DiffSaturation`DiffSat,UseDependencies\[Rule]False];*)
 
-cont[add_,ratFIs_]:=Block[{prob2,prob3},
-Print["Continuing with: ",add,ratFIs];
+cont[add_,polys_]:=Block[{prob2,prob3,ratFIs},
 
-prob2=AugmentFIs[prob,Join[fIs,ratFIs]];
-prob3=AddToPre[prob2,add];
-Print[prob3];
+ratFIs=GenerateRatFI[polys,f,vars];
+Print["Rational FIs:",ratFIs];
+
+prob2=AddToPre[prob,add];
+prob3=BoundFIs[prob2,Join[fIs,ratFIs]];
+
 DiffSaturation`DiffSat[prob3]
 ];
 

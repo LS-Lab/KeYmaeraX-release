@@ -43,8 +43,11 @@ strategies = {
 (* TODO: explicitly use the constvars and constasms below!! *)
 { pre, { f, vars, evoConst }, post, {constvars,constasms}}=problem;
 
-post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
-Print["Postcondition: ", post];
+post=Assuming[And[evoConst], FullSimplify[post, Reals]];
+Print["Postcondition (dom simplify): ", post];
+If[TrueQ[post], Print["Postcondition trivally implied by domain constraint. Returning."]; Throw[{{True,{}}, True}]];
+post=Assuming[And[constasms], FullSimplify[post, Reals]];
+Print["Postcondition (const simplify): ", post];
 If[TrueQ[post], Print["Postcondition trivally implied by domain constraint. Returning."]; Throw[{{True,{}}, True}]];
 
 deps=If[OptionValue[DiffSat,UseDependencies],Join[Dependency`VariableDependencies[{pre, { f, vars, evoConst }, post}],{vars}],{vars}];

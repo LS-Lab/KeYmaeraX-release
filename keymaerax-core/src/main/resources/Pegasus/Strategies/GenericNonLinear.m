@@ -50,10 +50,13 @@ HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
 If[OptionValue[HeuInvariants, Timeout] > 0,
 TimeConstrained[Block[{},
 polys = DeleteDuplicates[Join[
+	QualAbsPolynomials`SummandFactors[problem],
+	QualAbsPolynomials`SFactorList[problem]
+	(*,
 	QualAbsPolynomials`ProblemFactorsWithLie[problem],
 	QualAbsPolynomials`PhysicalQuantities[problem],
-	QualAbsPolynomials`SummandFactors[problem],
-	QualAbsPolynomials`SFactorList[problem]]];
+	*)
+	]];
 (*res=Map[InvariantExtractor`DWC[problem,{#},{}]&,polys];*)
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[HeuInvariants,Timeout],
