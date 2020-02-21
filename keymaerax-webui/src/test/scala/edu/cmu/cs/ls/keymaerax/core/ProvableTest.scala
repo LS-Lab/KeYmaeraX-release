@@ -278,27 +278,27 @@ class ProvableTest extends FlatSpec with Matchers {
     Provable.toStorageString(Provable.startProof("x>0 -> x>0".asFormula)) shouldBe
       """  ==>  ((x) > ((0)))->((x) > ((0)))
         |\from     ==>  ((x) > ((0)))->((x) > ((0)))
-        |\qed::431251189""".stripMargin
+        |\qed::edfb8475b8dd8b609ca95a5dccfc4bbf""".stripMargin
     Provable.toStorageString(Provable.startProof("x>0, y>0 ==> x>0".asSequent)) shouldBe
       """(x) > ((0)) :: (y) > ((0))
         |  ==>  (x) > ((0))
         |\from   (x) > ((0)) :: (y) > ((0))
         |  ==>  (x) > ((0))
-        |\qed::521205737""".stripMargin
+        |\qed::d0a1dfc51350c263e39bc5fba13192c1""".stripMargin
     Provable.toStorageString(Provable.startProof("[{x'=2,y'=3}]x>0, y>0 ==> y>0".asSequent)) shouldBe
       """[{x'=(2),y'=(3)&true}]((x) > ((0))) :: (y) > ((0))
         |  ==>  (y) > ((0))
         |\from   [{x'=(2),y'=(3)&true}]((x) > ((0))) :: (y) > ((0))
         |  ==>  (y) > ((0))
-        |\qed::349020043""".stripMargin
+        |\qed::b54b97c2c2a88560333d75ce6c445d9a""".stripMargin
     Provable.toStorageString(Provable.startProof("true".asFormula)(CloseTrue(SuccPos(0)), 0)) shouldBe
       """  ==>  true
-        |\qed::-1344539268""".stripMargin
+        |\qed::e02d96fbea9765496a14c7459b48a40d""".stripMargin
     Provable.toStorageString(Provable.startProof("x>0 & y>0".asFormula)(AndRight(SuccPos(0)), 0)) shouldBe
       """  ==>  ((x) > ((0)))&((y) > ((0)))
         |\from     ==>  (x) > ((0))
         |\from     ==>  (y) > ((0))
-        |\qed::-2052644622""".stripMargin
+        |\qed::221cbcbb08844a1b786dae89e903e458""".stripMargin
   }
 
   it should "parse from storage string" in {
