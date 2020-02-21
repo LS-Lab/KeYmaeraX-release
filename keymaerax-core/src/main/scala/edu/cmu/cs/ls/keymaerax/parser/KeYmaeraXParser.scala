@@ -421,8 +421,9 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
       case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Token(RBANANA, _) =>
         reduceUnitFuncOrPredOf(st, 3, tok, AnyArg, r)
       // nullary functional/predicational symbols of argument Taboo
+      // @todo: update for vectorial taboos
       case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) :+ Expr(x: Variable) :+ Token(RBANANA, _) =>
-        reduceUnitFuncOrPredOf(st, 4, tok, Except(x), r)
+        reduceUnitFuncOrPredOf(st, 4, tok, Except(x::Nil), r)
       //      case r :+ Token(tok:IDENT,_) if la==LBANANA || la==LBARB =>
       //        shift(st)
       case r :+ Token(tok: IDENT, _) :+ Token(LBANANA, _) =>
@@ -440,13 +441,15 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
         reduce(st, 3, DifferentialProgramConst(tok.name, AnyArg), r)
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
         require(tok.index == None, "no index supported for ProgramConst")
-        reduce(st, 5, ProgramConst(tok.name, Except(x)), r)
+        // @todo: update for vectorial taboos
+        reduce(st, 5, ProgramConst(tok.name, Except(x::Nil)), r)
       // DifferentialProgramConst symbols of argument Taboo
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) =>
         if (la == SEMI) shift(st)
         else {
           require(tok.index == None, "no index supported for DifferentialProgramConst")
-          reduce(st, 4, DifferentialProgramConst(tok.name, Except(x)), r)
+          // @todo: update for vectorial taboos
+          reduce(st, 4, DifferentialProgramConst(tok.name, Except(x::Nil)), r)
         }
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
         require(tok.index == None, "no index supported for SystemConst")
