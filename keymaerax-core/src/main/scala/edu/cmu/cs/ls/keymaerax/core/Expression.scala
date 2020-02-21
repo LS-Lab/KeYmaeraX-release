@@ -66,8 +66,13 @@ case class ObjectSort(name : String) extends Sort { override def toString: Strin
 sealed trait Space
 /** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
 case object AnyArg extends Space { override def toString: String = "||" }
-/** The sort denoting a slice of the state space that does not include/depend on/affect variable `taboo`. */
-case class Except(taboo: Variable) extends Space { override def toString: String = "|" + taboo.asString + "|" }
+/** The sort denoting a slice of the state space that does not include/depend on/affect variables `taboo`. */
+case class Except(taboos: List[Variable]) extends Space {
+  //@note empty taboos should use AnyArg instead
+  insist(taboos.nonEmpty, "taboos expect non-empty list of taboo variables")
+
+  override def toString: String = "|" + taboos.mkString(",") + "|"
+}
 
 
 /*********************************************************************************
