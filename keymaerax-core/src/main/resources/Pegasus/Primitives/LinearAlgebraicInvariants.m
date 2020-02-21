@@ -111,8 +111,6 @@ relIm=MapThread[#1^2+#2^2-1&,{ws,zs}];
 (*
   The following should work correctly when the eigenvalues are rational
  but is a naive approximation when they aren't
-
-RationalQ[x_]:=(Head[x]===Rational||IntegerQ[x]);
  
 EigSolve[A_]:=Block[{eigs,realRatEigs,imRatEigs,realEigs,imEigs,p,q,rep1,rep2,
 uvar,vvar,wvar,zvar,ratrel,us,vs,ws,zs,irratrel,repu,repv,repw,repz,

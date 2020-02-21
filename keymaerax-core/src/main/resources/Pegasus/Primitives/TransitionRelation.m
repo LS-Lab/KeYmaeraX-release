@@ -29,7 +29,7 @@ Return[Flatten[QualAbsPolynomials`SFactorList[problem]]];
 
 (* This method for creating a partition uses techniques from Giacobbe's conic abstractions paper *)
 ConicAbstractionsFactors[problem_, splits_] := Module[{},
-Return[ConicAbstractions`ConicAbstractionsPartition[problem, splits]];
+Return[ConicAbstractions`ConicPartition[problem, splits]];
 ];
 
 

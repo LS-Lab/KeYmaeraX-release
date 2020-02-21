@@ -37,7 +37,7 @@ BarrierCert::usage="BarrierCert[problem_List]";
 *)
 Options[HeuInvariants]= {Timeout -> 20};
 Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
-Options[DbxPoly]= {Deg -> -1, Timeout -> 30};
+Options[DbxPoly]= {Deg -> -1, Timeout -> 40};
 Options[BarrierCert]= {Deg -> -1, Timeout -> Infinity};
 
 
@@ -50,10 +50,13 @@ HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
 If[OptionValue[HeuInvariants, Timeout] > 0,
 TimeConstrained[Block[{},
 polys = DeleteDuplicates[Join[
+	QualAbsPolynomials`SummandFactors[problem],
+	QualAbsPolynomials`SFactorList[problem]
+	(*,
 	QualAbsPolynomials`ProblemFactorsWithLie[problem],
 	QualAbsPolynomials`PhysicalQuantities[problem],
-	QualAbsPolynomials`SummandFactors[problem],
-	QualAbsPolynomials`SFactorList[problem]]];
+	*)
+	]];
 (*res=Map[InvariantExtractor`DWC[problem,{#},{}]&,polys];*)
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[HeuInvariants,Timeout],
@@ -105,12 +108,13 @@ DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys,deg},
 
 (* Heuristic *)
 deg = If[OptionValue[DbxPoly,Deg] < 0,
-		Max[10-Length[vars],1],
+		Max[6-Length[vars],1],
 		OptionValue[DbxPoly, Deg]];
 
 If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
-polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout], deg];
+(* Spend 3/4 time budget on polynomial finding *)
+polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout]*3/4, deg];
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[DbxPoly,Timeout],
 {}],

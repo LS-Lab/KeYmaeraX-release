@@ -32,15 +32,20 @@ FuncIndep::usage="FuncIndep[polynomials_List, vars_List] Returns a list of funct
 
 ConjugatePolynomial::usage="ConjugatePolynomial[poly] Returns the conjugate of a complex polynomial"
 IsRealPolynomial::usage="IsRealPolynomial[poly] Returns true if poly is in R[x] and false if poly is not a real polynomial"
+IsRatPolynomial::usage="IsRatPolynomial[poly] Returns true if poly is in R[x] with rational coefficients"
 IsConcretePolynomial::usage="IsConcretePolynomial[poly, vars] returns true if the variables of poly are a subset of vars and false otherwise";
 
 CheckSemiAlgInclusion::usage="CheckSemiAlgInclusion[s_,t_,vars_List] checks if t implies s universally on vars"
 
 InstantiateParameters::usage="InstantiateParameters[poly,vars,val] instantiates any symbolic parameter in a polynomial (not in vars) to val"
 
+RationalQ::usage="RationalQ analogous to IntegerQ"
 
 
 Begin["`Private`"]
+
+
+RationalQ[x_]:=(Head[x]===Rational||IntegerQ[x]);
 
 
 ConjugatePolynomial[poly_]:=Module[{vars=Variables[poly]},
@@ -50,6 +55,11 @@ FromCoefficientRules[CoefficientRules[poly,vars]/.{Rule[a_,b_]:>Rule[a,Conjugate
 
 IsRealPolynomial[poly_]:=Module[{vars=Variables[poly]},
 AllTrue[Flatten[CoefficientList[poly,vars]], PossibleZeroQ[Im[#]]&]
+]
+
+
+IsRatPolynomial[poly_]:=Module[{vars=Variables[poly]},
+AllTrue[Flatten[CoefficientList[poly,vars]], RationalQ[#]&]
 ]
 
 

@@ -23,15 +23,10 @@ DarbouxPolynomialsM[ode_List,time_,maxdeg_Integer]:=Catch[Module[{f,vars,Q,deg,d
 {f,vars,Q}=ode;
 
 dbx={};
-(* Print[DarbouxPolynomials`ManPS2[{f,vars,Q}, 2]]; *)
 TimeConstrained[For[i=1,i<=maxdeg,i++,
-  dbx=Union[dbx,DarbouxPolynomials`ManPS2[{f,vars,Q}, i]]],time];
-(* Currently unable to take advantage of parametric Darboux polynomials *)
-dbx=Select[dbx,Primitives`IsConcretePolynomial[#,vars]&];
+  dbx=Union[dbx,DarbouxPolynomials`DbxDefault[{f,vars,Q}, i]]],time];
 Print["Generated Darboux polynomials: ",dbx];
-(* Darboux polynomials come in complex conjugate pairs - we multiply with the conjugates to eliminate complex coefficients *)
-realdbx=Map[If[Primitives`IsRealPolynomial[#], #, #*Primitives`ConjugatePolynomial[#]//Expand]&, dbx]//DeleteDuplicates;
-Throw[realdbx]
+Throw[dbx]
 ]]
 
 

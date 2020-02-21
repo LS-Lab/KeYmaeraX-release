@@ -17,7 +17,7 @@ BeginPackage["DiffSaturation`"];
 SanityTimeout controls how long internal sanity check QE calls take.
 StrategyTimeout controls how each sub-strategy call takes *)
 DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem"
-Options[DiffSat]= {StrategyTimeout -> Infinity};
+Options[DiffSat]= {UseDependencies -> True,StrategyTimeout->Infinity};
 
 
 Begin["`Private`"]
@@ -43,10 +43,14 @@ strategies = {
 (* TODO: explicitly use the constvars and constasms below!! *)
 { pre, { f, vars, evoConst }, post, {constvars,constasms}}=problem;
 
+post=Assuming[And[evoConst], FullSimplify[post, Reals]];
+Print["Postcondition (dom simplify): ", post];
+If[TrueQ[post], Print["Postcondition trivally implied by domain constraint. Returning."]; Throw[{{True,{}}, True}]];
+post=Assuming[And[constasms], FullSimplify[post, Reals]];
+Print["Postcondition (const simplify): ", post];
+If[TrueQ[post], Print["Postcondition trivally implied by domain constraint. Returning."]; Throw[{{True,{}}, True}]];
 
-post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
-
-deps=Join[Dependency`VariableDependencies[{pre, { f, vars, evoConst }, post}],{vars}];
+deps=If[OptionValue[DiffSat,UseDependencies],Join[Dependency`VariableDependencies[{pre, { f, vars, evoConst }, post}],{vars}],{vars}];
 
 invlist=True;
 cutlist={};

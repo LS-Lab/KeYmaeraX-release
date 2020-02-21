@@ -30,6 +30,16 @@ computes a list of RATIONAL first integrals (up to some given maximum
 polynomial total degree in the variables 'vars') for the system of ODEs
 described by vectorField. This implementation relies on computing Darboux polynomials.";
 
+RatFIGen::usage="
+RatFIGen[dbxList_List, cofactors_List,vars_List]
+generates a list of rational first integrals from dbx (with given cofactors) over the variables
+"
+
+DbxCofactors::usage="
+DbxCofactors[dbxList_List,vf_List,vars_List]
+Compute cofactors of the list of Darboux polynomials.
+Requires: dbxList is a list of genuine Darboux polynomials"
+
 FindLinSysIntegrals::usage="
 FindLinSysIntegrals[vars_List, vectorField_List] 
 computes a list of first integrals (which may be rational functions) for the system of LINEAR ODEs
@@ -91,16 +101,18 @@ Print["Number of cofactors does not match the number of Darboux polynomials."];
 Throw[{}]];
 Module[{
 lambdas=Table[Symbol["lambda"<>ToString[i]],{i, Length[dbxList]}],
-notAllLambdaZero,coeffConstraints,sol, exponents
+notAllLambdaZero,coeffConstraints,sol, exponents,smallLambda
 },
 (* Constraints: 
 i) not all lambdas are 0, and 
  ii) Subscript[cofact, 1]*Subscript[lambda, 1] + ... + Subscript[cofact, k]*Subscript[lambda, k] = 0 
 *)
 notAllLambdaZero=Or@@Map[#!=0&,lambdas];
+smallLambda=True;
+(* Try to restrict the modulus: smallLambda=And@@Map[-10 \[LessEqual] # \[LessEqual] 10& ,lambdas];*)
 coeffConstraints=And@@CoefficientRules[lambdas.cofactors,vars]/.{Rule[mon_List,coeff_]:> coeff==0};
 (* Solve for lambdas over the integers; seek at most n-1 solutions *)
-sol=FindInstance[coeffConstraints&& notAllLambdaZero, lambdas, Integers,Length[vars]-1];
+sol=FindInstance[coeffConstraints&& notAllLambdaZero &&smallLambda, lambdas, Integers,Length[vars]-1];
 (* Bring the solution to normal form and remove redundancies *)
 exponents=DeleteDuplicatesBy[Map[(lambdas/.sol[[#]])/GCD[Sequence@@(lambdas/.sol[[#]])]&, Range[Length[sol]]],
 (* This deletes vectors that differ by sign *) 
@@ -115,8 +127,7 @@ FindRationalFirstIntegrals[{vectorField_List,vars_List,domain_},deg_Integer?NonN
 Module[{dbx,cofactors},
 (* TODO: currently we discard Darboux polynomials with complex coefficients.
 This is a limitation because they always come in conjugate pairs and can be used to construct a real first integral. *)
-dbx=Select[DarbouxPolynomials`ManPS2[{vectorField,vars,domain},deg], FreeQ[#,_Complex]&];
-dbx=Map[Primitives`InstantiateParameters[#,vars,1]&,dbx];
+dbx=DarbouxPolynomials`DbxDefault[{vectorField,vars,domain},deg];
 (* Forget about first integrals *)
 dbx=Select[dbx, Not[TrueQ[Simplify[Grad[#,vars].vectorField]==0]] &];
 (* If there are no real Darboux polynomials, return the empty list *)
