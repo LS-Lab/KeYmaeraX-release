@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
-import scala.util.Try
 
 /**
  * A continuous invariant implementation using Mathematica over the JLink interface.
@@ -68,23 +67,24 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     )
 
     val pegasusMain = Configuration.Pegasus.mainFile("Pegasus.m")
-    val command = compoundExpression(
+    //@note quiet suppresses messages, since translated into Exception in command runner
+    val command = quiet(compoundExpression(
       setPathsCmd,
       needs(string(PEGASUS_NAMESPACE), string(pegasusMain)),
       options,
-      applyFunc(psymbol("InvGen"))(problem)
+      applyFunc(psymbol("InvGen"))(problem))
     )
 
     try {
-      val (output, result) = runUnchecked(command.toString)
+      val (output, result) = run(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
       (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (invariants, flag) =>
         assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
         if (flag == True) Left(invariants) else Right(invariants)
       })
     } catch {
-      case ex: ConversionException =>
-        logger.warn("Pegasus conversion exception", ex)
+      case ex: Throwable =>
+        logger.warn("Pegasus invariant generator exception", ex)
         Nil
     }
   }

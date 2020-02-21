@@ -110,7 +110,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
 
   protected def timeConstrained(cmd: MExpr): MExpr =
     if (timeout < 0) cmd
-    else new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(cmd, new MExpr(timeout)))
+    else MathematicaOpSpec.timeConstrained(cmd, MathematicaOpSpec.int(timeout))
 
   protected def timeConstrained(cmd: String): String =
     if (timeout < 0) cmd
@@ -118,7 +118,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
 
   protected def memoryConstrained(cmd: MExpr): MExpr =
     if (memoryLimit < 0) cmd
-    else new MExpr(new MExpr(Expr.SYMBOL,  "MemoryConstrained"), Array(cmd, new MExpr(memoryLimit*1000000)))
+    else MathematicaOpSpec.memoryConstrained(cmd, MathematicaOpSpec.long(memoryLimit*1000000))
 
   protected def memoryConstrained(cmd: String): String =
     if (memoryLimit < 0) cmd

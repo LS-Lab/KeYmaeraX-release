@@ -185,7 +185,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
         }
       case fml: Formula => ((fml, "Unknown") :: Nil, True)
       case _ => throw ConversionException("Expected a formula from Pegasus call but got a non-formula expression: " +
-        listFml.prettyString)
+        listFml.prettyString + "(" + listFml.toString + ")")
     }
   }
 
