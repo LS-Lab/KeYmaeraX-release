@@ -23,10 +23,12 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     with InvGenTool with Logging {
 
   private val PEGASUS_NAMESPACE = "Pegasus`"
+  private val GENERICNONLINEAR_NAMESPACE = "GenericNonLinear`"
   private val LZZ_NAMESPACE = "LZZ`"
   private val REFUTE_NAMESPACE = "Refute`"
 
   private def psymbol(s: String) = symbol(PEGASUS_NAMESPACE + s)
+  private def gnlsymbol(s: String) = symbol(GENERICNONLINEAR_NAMESPACE + s)
 
   private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
   private val pathSegments = scala.reflect.io.File(pegasusPath).segments.map(string)
@@ -53,17 +55,17 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val options = compoundExpression(
       setOptions(psymbol("InvGen"),
         rule(psymbol("SanityCheckTimeout"), timeoutExpr(Configuration.Pegasus.sanityTimeout()))),
-      setOptions(psymbol("HeuInvariants"),
-        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.HeuristicInvariants.timeout()))),
-      setOptions(psymbol("FirstIntegrals"),
-        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.FirstIntegrals.timeout())),
-        rule(psymbol("Deg"), int(Configuration.Pegasus.FirstIntegrals.degree()))),
-      setOptions(psymbol("DbxPoly"),
-        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.FirstIntegrals.timeout())),
-        rule(psymbol("Deg"), int(Configuration.Pegasus.Darboux.degree()))),
-      setOptions(psymbol("BarrierCert"),
-        rule(psymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Barrier.timeout())),
-        rule(psymbol("Deg"), int(Configuration.Pegasus.Barrier.degree())))
+      setOptions(gnlsymbol("HeuInvariants"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.HeuristicInvariants.timeout()))),
+      setOptions(gnlsymbol("FirstIntegrals"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.FirstIntegrals.timeout())),
+        rule(gnlsymbol("Deg"), int(Configuration.Pegasus.FirstIntegrals.degree()))),
+      setOptions(gnlsymbol("DbxPoly"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Darboux.timeout())),
+        rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Darboux.degree()))),
+      setOptions(gnlsymbol("BarrierCert"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Barrier.timeout())),
+        rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Barrier.degree())))
     )
 
     val pegasusMain = Configuration.Pegasus.mainFile("Pegasus.m")
