@@ -49,7 +49,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     def timeoutExpr(t: Int) = if (t >= 0) int(t) else infinity
 
-    val setOptions = applyFunc(psymbol("SetOptions"))
+    val setOptions = applyFunc(symbol("SetOptions"))
     val options = compoundExpression(
       setOptions(psymbol("InvGen"),
         rule(psymbol("SanityCheckTimeout"), timeoutExpr(Configuration.Pegasus.sanityTimeout()))),
