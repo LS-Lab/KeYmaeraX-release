@@ -509,19 +509,19 @@ private object DifferentialTactics extends Logging {
           case (Number(n), _) if n == 0 =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
-                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+                (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
             useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
           case (_, Neg(Number(n))) =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
-                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
-                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(-n)) :: Nil)
+                (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(-n)) :: Nil)
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
           case _ =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
-                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
-                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+                (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
         }
 
@@ -579,7 +579,7 @@ private object DifferentialTactics extends Logging {
             ("y_".asTerm, y_DE.xp.x) ::
               ("b(|y_|)".asTerm, y_DE.e) ::
               ("q(|y_|)".asFormula, q) ::
-              (DifferentialProgramConst("c", Except("y_".asVariable)), c) ::
+              (DifferentialProgramConst("c", Except("y_".asVariable::Nil)), c) ::
               ("p(|y_|)".asFormula, p.replaceAll(y_DE.xp.x, "y_".asVariable)) ::
               Nil)
 
@@ -1615,7 +1615,7 @@ private object DifferentialTactics extends Logging {
     val ghost: Variable = Variable("y_")
     require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
     val spooky: Term = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
-      UnitFunctional("jj",Except(ghost),Real)
+      UnitFunctional("jj",Except(ghost::Nil),Real)
     else
       FuncOf(Function("jj",None,Unit,Real),Nothing) //Variable("jj")
     //@todo should allocate space maybe or already actually by var in this lambda
