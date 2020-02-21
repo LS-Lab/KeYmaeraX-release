@@ -204,8 +204,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Creates and initializes Mathematica; checks that a Matlab bridge is configured. @see[[withMathematica]]. */
-  def withMathematicaMatlab(testcode: Mathematica => Any) {
-    withMathematica { tool =>
+  def withMathematicaMatlab(testcode: Mathematica => Any, timeout: Int = -1) {
+    if (System.getProperty("KILL_MATLAB") == "true") Runtime.getRuntime.exec("pkill -9 MATLAB")
+    withMathematica ({ tool =>
       val getLink = PrivateMethod[JLinkMathematicaLink]('link)
       val link = tool invokePrivate getLink()
       link.runUnchecked("""Needs["MATLink`"]""", new M2KConverter[KExpr]() {
@@ -218,7 +219,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         override def convert(e: MExpr): KExpr = throw new Exception("Unexpected call to convert")
       })
       testcode(tool)
-    }
+    }, timeout)
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
