@@ -35,9 +35,9 @@ class UnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     val fact = AxiomInfo("DGd diamond differential ghost constant").formula match {case Equiv(l,_) => l}
     val goal = "<{t'=1}>\\forall x x^2>=0".asFormula
     UnificationMatch(fact, goal) shouldBe RenUSubst(
-      (DifferentialProgramConst("c", Except(y)), AtomicODE(DifferentialSymbol(Variable("t")), Number(1))) ::
-        (UnitPredicational("q", Except(y)), True) ::
-        (UnitPredicational("p", Except(y)), Forall(Seq(Variable("x")), GreaterEqual(Power(Variable("x"),Number(2)), Number(0)))) :: Nil
+      (DifferentialProgramConst("c", Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("t")), Number(1))) ::
+        (UnitPredicational("q", Except(y::Nil)), True) ::
+        (UnitPredicational("p", Except(y::Nil)), Forall(Seq(Variable("x")), GreaterEqual(Power(Variable("x"),Number(2)), Number(0)))) :: Nil
     )
   }
 
@@ -47,10 +47,10 @@ class UnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     val goal = "<{t'=1}>\\forall x x^2>=0<->\\forall x <{t'=1,x'=1&true}>\\forall x x^2>=0".asFormula
     // renaming transposes forall y_ to forall x, should keep forall y_
     UnificationMatch(fact, goal) shouldBe RenUSubst(
-      (DifferentialProgramConst("c", Except(y)), AtomicODE(DifferentialSymbol(Variable("t")), Number(1))) ::
-        (UnitPredicational("q", Except(y)), True) ::
-        (UnitPredicational("p", Except(y)), Forall(Seq(y), GreaterEqual(Power(y,Number(2)), Number(0)))) ::
-        (UnitFunctional("b", Except(y), Real), Number(1)) ::
+      (DifferentialProgramConst("c", Except(y::Nil)), AtomicODE(DifferentialSymbol(Variable("t")), Number(1))) ::
+        (UnitPredicational("q", Except(y::Nil)), True) ::
+        (UnitPredicational("p", Except(y::Nil)), Forall(Seq(y), GreaterEqual(Power(y,Number(2)), Number(0)))) ::
+        (UnitFunctional("b", Except(y::Nil), Real), Number(1)) ::
         (y, Variable("x")) :: Nil
     )
   }
