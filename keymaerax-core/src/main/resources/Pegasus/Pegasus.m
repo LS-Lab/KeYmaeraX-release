@@ -64,18 +64,31 @@ Requires either {pre,{vf,vars,Q},post} or {pre,{vf,vars,Q},post,{constvars,const
 pre,post are the pre/postconditions respectively,\n
 vf,vars are lists of equal length representing an ODE vars'=vf\n
 Q is the domain constraint\n
-constvars lists parameters for the problem and constQ are assumptions about parameters\n
+constvars lists parameters for the problem and constQ are
+	Throw[DiffSaturation`FormatResult[False,{},False]],  assumptions about parameters\n
 constvars and constQ are automatically generated if not present";
 
-If[Length[prob]!=3 && Length[prob]!=4, Print[ERRSTR]; Throw[{}]];
+If[Length[prob]!=3 && Length[prob]!=4,
+	Print[ERRSTR];
+	Throw[DiffSaturation`FormatResult[False,{},False]]
+	];
 
-If[Length[prob[[2]]]!=3, Print[ERRSTR]; Throw[{}]];
+If[Length[prob[[2]]]!=3,
+	Print[ERRSTR];
+	Throw[DiffSaturation`FormatResult[False,{},False]]
+	];
 
-If[Length[prob[[2]][[1]]]!=Length[prob[[2]][[2]]]||Length[prob[[2]]]==0, Print[ERRSTR]; Throw[{}]];
+If[Length[prob[[2]][[1]]]!=Length[prob[[2]][[2]]]||Length[prob[[2]]]==0,
+	Print[ERRSTR];
+	Throw[DiffSaturation`FormatResult[False,{},False]]
+	];
 
-If[Length[prob]==3, Print["Extending"]; eprob=AugmentWithParameters[prob]];
+If[Length[prob]==3,
+	Print["Extending problem. "];
+	eprob=AugmentWithParameters[prob]
+	];
 
-Print[eprob];
+Print["Input problem: ", eprob];
 {pre,{f,vars,evoConst},post,{constvars,constQ}}=eprob;
 
 (* Sanity check with timeout *)
@@ -83,20 +96,25 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
   TimeConstrained[Block[{},
   preImpliesPost=Primitives`CheckSemiAlgInclusion[And[pre,constQ,evoConst], post, Join[constvars,vars]];
   If[ Not[TrueQ[preImpliesPost]], 
-  Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{}, False}], 
-  Print["Precondition implies postcondition. Proceeding."]];
+    Print["Precondition does not even imply postcondition! Nothing to do."];
+	Throw[DiffSaturation`FormatResult[False,{},False]], 
+    Print["Precondition implies postcondition. Proceeding."]
+    ];
 
   (* TODO: LZZ should directly work with constant assumptions instead of this expansion trickery? *)
   postInvariant=LZZ`InvSFast[post, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[postInvariant], 
-  Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{{post,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}},True}], 
-  Print["Postcondition is (probably) not an invariant. Inv check gave: ", postInvariant,". Proceeding."]];
+    Print["Postcondition is an invariant! Nothing to do."];
+	Throw[DiffSaturation`FormatResult[post,{ {post,Symbol["Unkown"]} },True]],  
+    Print["Postcondition is (probably) not an invariant. Inv check gave: ", postInvariant,". Proceeding."]
+    ];
 
   (* TODO: LZZ should directly work with constant assumptions instead of this expansion trickery? *)
   preInvariant=LZZ`InvSFast[pre, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[preInvariant], 
-  Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{{pre,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}}, True}], 
-  Print["Precondition is (probably) not an invariant. Inv check gave: ",preInvariant,". Proceeding."]];
+    Print["Precondition is an invariant! Nothing to do."];
+	Throw[DiffSaturation`FormatResult[pre,{ {pre,Symbol["Unkown"]} },True]],  
+    Print["Precondition is (probably) not an invariant. Inv check gave: ",preInvariant,". Proceeding."]];
 ], OptionValue[InvGen,SanityCheckTimeout]]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)

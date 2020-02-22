@@ -19,6 +19,12 @@ StrategyTimeout controls how each sub-strategy call takes *)
 DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem";
 Options[DiffSat]= {UseDependencies -> True,StrategyTimeout->Infinity};
 
+FormatResult::usage="FormatResult[inv,cuts,proved]
+	Formats the result in diff sat result into the right format.
+	inv = the generated invariant,
+	cuts = list of cuts building that invariant,
+	proved = whether this invariant proves the given problem."
+
 
 Begin["`Private`"]
 
