@@ -110,17 +110,6 @@ object SetLattice {
   /** The set of all variables including differential symbols. */
   val allVars: SetLattice[Variable] = CoFiniteSet(Set.empty, Set.empty)
 
-  /** The set of all variables including differential symbols, except taboo and taboo' for all taboo in taboos. */
-  //@note Cannot remove all taboo'' from the CoFiniteSet so assume no higher-order differential symbol
-  def except(taboos: List[Variable]): SetLattice[Variable] = CoFiniteSet(
-    //@note this assumes no higher-order differential symbols
-    taboos.flatMap(
-      taboo =>
-        if (taboo.isInstanceOf[DifferentialSymbol] || taboo.sort!=Real) List(taboo)
-        else List(taboo, DifferentialSymbol(taboo))
-    ).toSet,
-    Set.empty)
-
   /**
     * Symbols and differential symbols of set lattice sl.
     * Will leave all Function and ProgramConst and DifferentialProgramConst in sl untouched
