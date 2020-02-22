@@ -734,6 +734,55 @@ object Provable {
   }
 
   /**
+    * Axiom schema for vectorial differential ghosts, schematic in dimension
+    * {{{
+    *   [{c{|y_|},y_'=g(||)&q(|y_|)}] (||y_||^2)' <= a(|y_|) ||y_||^2 + b(|y_|)
+    *   -> ( [{c{|y_|}&q(|y_|)}]p(|y_|) <-> [{c{|y_|},y_'=g(||)&q(|y_|)}]p(|y_|) )
+    * }}}
+    *
+    * @param dim The number of ghost variables
+    */
+  final def vectorialDG(dim : Int): Provable = {
+    insist(dim > 0, "Must introduce at least one vectorial differential ghost variable.")
+
+    // The list of variables y__1, y__2, ..., y__dim
+    val ghosts = (1 to dim).map( i => BaseVariable("y_", Some(i)))
+    // The list of RHS g1(||), g2(||), ..., gdim(||)
+    // @todo: UnitFunctionals may need an index argument
+    val ghostRHSs = (1 to dim).map( i => UnitFunctional("g"+i,AnyArg,Real))
+    // The list ghost ODEs y__1'=g1(||), y__2'=g2(||), ..., y__dim'=gdim(||)
+    val ghostODEList = (ghosts zip ghostRHSs).map{ case (y,rhs) => AtomicODE(DifferentialSymbol(y), rhs) }
+    // The list of ghost ODEs as a single ODE
+    val ghostODEs = ghostODEList.reduce(DifferentialProduct.apply)
+
+    // The base ODE c{|y_|}
+    val baseODE = DifferentialProgramConst("c",Except(ghosts))
+    // The base ODE extended with ghost ODEs
+    val extODE = DifferentialProduct(baseODE, ghostODEs)
+    val domain = UnitPredicational("q",Except(ghosts))
+    val post = UnitPredicational("p",Except(ghosts))
+
+    // The squared norm of the vector ||y__1, y__2, ..., y__dim||^2
+    val sqnorm = ghosts.tail.foldLeft(Power(ghosts.head,Number(2)):Term)( (f,e) => Plus(f, Power(e,Number(2))))
+    val cofA = UnitFunctional("a_",Except(ghosts),Real)
+    val cofB = UnitFunctional("b_",Except(ghosts),Real)
+    // The norm bound required of the ghost ODEs (||y_||^2)' <= a(|y_|)||y_||^2 + b(|y_|)
+    val normBound = LessEqual( Differential(sqnorm) , Plus(Times(cofA,sqnorm), cofB) )
+
+    val DG =
+      Imply(
+        // [{c{|y_|},y_'=g(||)&q(|y_|)}] (||y_||^2)' <= a(|y_|) ||y_||^2 + b(|y_|) ->
+        Box(ODESystem(extODE,domain),normBound),
+        // [{c{|y_|}&q(|y_|)}]p(|y_|) <-> [{c{|y_|},y_'=g(||)&q(|y_|)}]p(|y_|)
+        Equiv(Box(ODESystem(baseODE,domain),post), Box(ODESystem(extODE,domain),post))
+      )
+
+    //@note soundness-critical
+    oracle(Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(DG)),
+      immutable.IndexedSeq())
+  }
+
+  /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
     *
     * @param conclusion the desired conclusion.
