@@ -16,11 +16,24 @@ BeginPackage["DiffSaturation`"];
 (* DiffSat.
 SanityTimeout controls how long internal sanity check QE calls take.
 StrategyTimeout controls how each sub-strategy call takes *)
-DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem"
+DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem";
 Options[DiffSat]= {UseDependencies -> True,StrategyTimeout->Infinity};
 
 
 Begin["`Private`"]
+
+
+FormatResult[inv_, cuts_List, proved_]:=Module[{formatcuts},
+formatcuts = Map[ {#[[1]], Symbol["Hint"] -> #[[2]]} & ,cuts];
+{
+	Symbol["ResultType"] -> Symbol["DiffSat"],
+	Symbol["Result"] -> {
+		Symbol["Invariant"] -> inv,
+		Symbol["Cuts"] -> formatcuts,
+		Symbol["Proved"] -> proved
+	}	
+}
+]
 
 
 DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
@@ -28,29 +41,32 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 polyList,invlist,cuts,cutlist,strat,hint,
 curproblem,subproblem,deps,curdep,timeoutmultiplier,
-constvars,constasms},
+constvars,constasms,invs},
 
 (* Bring symbolic parameters into the dynamics *)
 Print["Input Problem: ", problem];
 
 strategies = {
-{GenericNonLinear`HeuInvariants, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]},
-{GenericNonLinear`FirstIntegrals, Symbol["kyx`ProofHint"]==Symbol["kyx`FirstIntegral"]},
-{GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"]},
-{GenericNonLinear`BarrierCert, Symbol["kyx`ProofHint"]==Symbol["kyx`Barrier"]}
+	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"]},
+	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"]},
+	{GenericNonLinear`DbxPoly, Symbol["kyx`Darboux"]},
+	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"]}
 };
 
 (* TODO: explicitly use the constvars and constasms below!! *)
-{ pre, { f, vars, evoConst }, post, {constvars,constasms}}=problem;
+{ pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
 
-post=Assuming[And[evoConst], FullSimplify[post, Reals]];
-Print["Postcondition (dom simplify): ", post];
-If[TrueQ[post], Print["Postcondition trivally implied by domain constraint. Returning."]; Throw[{{True,{}}, True}]];
-post=Assuming[And[constasms], FullSimplify[post, Reals]];
-Print["Postcondition (const simplify): ", post];
-If[TrueQ[post], Print["Postcondition trivally implied by domain constraint. Returning."]; Throw[{{True,{}}, True}]];
+post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
+Print["Postcondition (simplify): ", post];
+If[TrueQ[post],
+	Print["Postcondition trivally implied by domain constraint. Returning."];
+	Throw[FormatResult[True, {}, True]]
+	];
 
-deps=If[OptionValue[DiffSat,UseDependencies],Join[Dependency`VariableDependencies[{pre, { f, vars, evoConst }, post}],{vars}],{vars}];
+deps=If[OptionValue[DiffSat,UseDependencies],
+	Join[Dependency`VariableDependencies[{pre, { f, vars, evoConst }, post}],{vars}],
+	{vars}
+	];
 
 invlist=True;
 cutlist={};
@@ -64,23 +80,26 @@ Do[
 Print["Trying strategy: ",ToString[strat]," ",hint];
 
 curproblem = {pre,{f,vars,evoConst},post};
-subproblem=Dependency`FilterVars[curproblem,curdep];
+subproblem = Dependency`FilterVars[curproblem,curdep];
 
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
 (*Print[subproblem];*)
-inv=TimeConstrained[
-	strat[subproblem]//DeleteDuplicates,
+invs = TimeConstrained[
+	Block[{res},
+	res = strat[subproblem];
+	If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
+	res]//DeleteDuplicates,
 	OptionValue[StrategyTimeout],
 	Print["Strategy timed out after: ",OptionValue[StrategyTimeout]];
-	{True,{True}}];
-	
+	{True}];
+
 (* Simplify invariant w.r.t. the domain constraint *)
-cuts=Map[Assuming[And[evoConst,constasms], FullSimplify[#, Reals]]&, inv];
+cuts=Map[Assuming[And[evoConst,constasms], FullSimplify[#, Reals]]&, invs];
 
 inv=cuts//.{List->And};
 
-Print["Extracted (simplified) invariant(s): ",inv]
+Print["Extracted (simplified) invariant(s): ", inv]
 
 (* Needs something like this?
  ecvoConst=And[evoConst,inv[[1]]]; *)
@@ -95,14 +114,17 @@ If[TrueQ[inv], (*Print["Skipped"]*),
 post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
+
 invImpliesPost=Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars];
-If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
-(*Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]*)]
+If[TrueQ[invImpliesPost],
+	Print["Generated invariant implies postcondition. Returning."];
+	Throw[FormatResult[invlist,cutlist, True]]
+]
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
 
 (* Throw whatever invariant was last computed *)
-Throw[{{invlist,cutlist}, False}]
+Throw[FormatResult[invlist,cutlist, False]];
 ]]
 
 
