@@ -17,7 +17,7 @@ BeginPackage["DiffSaturation`"];
 SanityTimeout controls how long internal sanity check QE calls take.
 StrategyTimeout controls how each sub-strategy call takes *)
 DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem";
-Options[DiffSat]= {UseDependencies -> True,StrategyTimeout->Infinity};
+Options[DiffSat]= {UseDependencies -> True,StrategyTimeout->Infinity, MinimizeCuts->True};
 
 FormatResult::usage="FormatResult[inv,cuts,proved]
 	Formats the result in diff sat result into the right format.
@@ -39,6 +39,25 @@ formatcuts = Map[ {#[[1]], Symbol["Hint"] -> #[[2]]} & ,cuts];
 		Symbol["Proved"] -> proved
 	}	
 }
+]
+
+
+ReduceCuts[cutlist_List, problem_]:=Module[{pre,f,vars,evoConst,post,constvars,constasms,i,added,rest,cuts},
+
+{ pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
+cuts=Map[#[[1]]&,cutlist];
+added={};
+
+For[i=1,i<=Length[cutlist],i++,
+	rest=Drop[cuts,i]/.List->And;
+	If[TrueQ[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms,rest], post, vars]],
+		(* skip *),
+		added=Join[added,{i}];
+		evoConst=And[evoConst,cuts[[i]]]
+	];
+];
+
+cutlist[[added]]
 ]
 
 
@@ -124,6 +143,11 @@ Print["Evo: ",evoConst," Post: ",post];
 invImpliesPost=Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars];
 If[TrueQ[invImpliesPost],
 	Print["Generated invariant implies postcondition. Returning."];
+	If[OptionValue[MinimizeCuts],
+		Print["Reducing input cutlist: ", invlist, cutlist];
+		cutlist=ReduceCuts[cutlist,problem];
+		invlist=Map[#[[1]]&,cutlist]/.List->And;
+		];
 	Throw[FormatResult[invlist,cutlist, True]]
 ]
 ,{strathint, strategies}(* End Do loop *)]
