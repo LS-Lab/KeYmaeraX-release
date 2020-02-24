@@ -80,10 +80,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     try {
       val (output, result) = run(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
-      (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (invariants, flag) =>
-        assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
-        if (flag == True) Left(invariants) else Right(invariants)
-      })
+      val (invariants, flag) = PegasusM2KConverter.extractResult(result)
+      assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
+      if (flag == True) Left(invariants) :: Nil else Right(invariants) :: Nil
     } catch {
       case ex: Throwable =>
         logger.warn("Pegasus invariant generator exception", ex)
