@@ -152,7 +152,7 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
 }
 
 object PegasusM2KConverter extends UncheckedBaseM2KConverter {
-  private def diffSatResult = new BinaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+  private def diffSatResult: BinaryMathOpSpec = new BinaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
     override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 &&
       MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
       e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("DiffSat")
