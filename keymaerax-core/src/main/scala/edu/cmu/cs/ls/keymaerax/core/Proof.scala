@@ -758,12 +758,12 @@ object Provable {
     // The base ODE c{|y_|}
     val baseODE = DifferentialProgramConst("c",Except(ghosts))
     // The base ODE extended with ghost ODEs
-    val extODE = DifferentialProduct(baseODE, ghostODEs)
+    val extODE = DifferentialProduct(ghostODEs,baseODE)
     val domain = UnitPredicational("q",Except(ghosts))
     val post = UnitPredicational("p",Except(ghosts))
 
     // The squared norm of the vector ||y__1, y__2, ..., y__dim||^2
-    val sqnorm = ghosts.tail.foldLeft(Power(ghosts.head,Number(2)):Term)( (f,e) => Plus(f, Power(e,Number(2))))
+    val sqnorm = ghosts.tail.foldLeft( Times(ghosts.head,ghosts.head):Term)( (f,e) => Plus(f, Times(e,e)))
     val cofA = UnitFunctional("a_",Except(ghosts),Real)
     val cofB = UnitFunctional("b_",Except(ghosts),Real)
     // The norm bound required of the ghost ODEs (||y_||^2)' <= a(|y_|)||y_||^2 + b(|y_|)
