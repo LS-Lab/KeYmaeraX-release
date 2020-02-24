@@ -907,8 +907,15 @@ object ODEInvariance {
 
     val finproptU = getLemma("frobenius_subord_U_"+n.toString)
     val finproptL = getLemma("frobenius_subord_L_"+n.toString)
+
     if(finproptU.isDefined && finproptL.isDefined)
       return (finproptU.get.fact,finproptL.get.fact)
+    else if(finproptU.isDefined ^ finproptL.isDefined)
+    {
+      //If, for some reason, only one of them got added
+      removeLemma("frobenius_subord_U_"+n.toString)
+      removeLemma("frobenius_subord_L_"+n.toString)
+    }
 
     val gPrefix = "gfrosub"
     val pPrefix = "pfrosub"
@@ -981,7 +988,6 @@ object ODEInvariance {
     if(affineOpt.isDefined)
       return (affineOpt.get.fact)
 
-
     // The prefix for a just uses the same one as Frobenius subord
     val bPrefix = "baffine"
     val xPrefix = "xaffine"
@@ -1010,36 +1016,6 @@ object ODEInvariance {
     lem
   }
 
-  // Puts an ODE into affine form
-  def affine_form (odes: DifferentialProgram) : (List[List[Term]], List[Term]) = {
-
-    val odels = DifferentialProduct.listify(odes).map {
-      case AtomicODE(x,e) => (x,e)
-      case _ => ??? //probably error
-    }
-
-    val lhs = odels.map(_._1)  // list of LHS y' of the ODEs
-    val lhsvar = lhs.map(_.x.asInstanceOf[BaseVariable]) // list of y corresponding to the y'
-    val rhs = odels.map( _._2) // list of RHS g(x,y) corresponding to the y'
-
-    // the system matrix "A"
-    val amat = rhs.map(t => simplifiedJacobian(t,lhsvar,ToolProvider.simplifierTool()))
-
-    // ensure that "A" is actually linear
-    val amatfree = amat.flatten.map( t => StaticSemantics.freeVars(t))
-    if(amatfree.exists( s => lhsvar.exists(v => s.contains(v))))
-      ??? //todo: raise error
-
-    // @todo: this is a very hacky way to get the "linear" part
-    val bvec = (matvec_prod(amat,lhsvar) zip rhs).map( e => simpWithTool(ToolProvider.simplifierTool(),Minus(e._1,e._2)))
-
-    val bvecfree = bvec.map( t => StaticSemantics.freeVars(t))
-    if(bvecfree.exists( s => lhsvar.exists(v => s.contains(v))))
-      ??? //todo: raise error
-
-    (amat,bvec)
-  }
-
   /**
     * Helper and lemmas
     */
@@ -1059,12 +1035,12 @@ object ODEInvariance {
   private val leftMultId = remember("1*f() = f()".asFormula,QE)
 
   // Symbolic matrix and vector products, assuming that the dimensions all match up
-  private def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
+  def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
     val zipped = (v1 zip v2).map({case (t1,t2)=>Times(t1,t2)})
     zipped.reduce(Plus.apply)
   }
 
-  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] = {
+  def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] = {
     m.map(ls => dot_prod(ls,v))
   }
 
@@ -1084,6 +1060,11 @@ object ODEInvariance {
   private def getLemma(name: String): Option[Lemma] = {
     val lemmaDB = LemmaDBFactory.lemmaDB
     lemmaDB.get(name)
+  }
+
+  private def removeLemma(name: String): Unit = {
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    lemmaDB.remove(name)
   }
 
   private def storeLemma(pr:ProvableSig, name: String): Unit = {
