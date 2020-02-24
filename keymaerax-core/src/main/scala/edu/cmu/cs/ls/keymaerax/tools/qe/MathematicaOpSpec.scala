@@ -90,6 +90,9 @@ object MathematicaOpSpec {
   /** Creates a Mathematica String. */
   def string(s: String): Expr = new Expr(s)
 
+  /** Creates a Mathematica Boolean. */
+  def bool(b: Boolean): Expr = if (b) Expr.SYM_TRUE else Expr.SYM_FALSE
+
   def list: NaryMathOpSpec = NaryMathOpSpec(Expr.SYM_LIST)
 
   /** Mathematica function application f(args). */
