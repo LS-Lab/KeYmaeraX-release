@@ -1010,6 +1010,36 @@ object ODEInvariance {
     lem
   }
 
+  // Puts an ODE into affine form
+  def affine_form (odes: DifferentialProgram) : (List[List[Term]], List[Term]) = {
+
+    val odels = DifferentialProduct.listify(odes).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => ??? //probably error
+    }
+
+    val lhs = odels.map(_._1)  // list of LHS y' of the ODEs
+    val lhsvar = lhs.map(_.x.asInstanceOf[BaseVariable]) // list of y corresponding to the y'
+    val rhs = odels.map( _._2) // list of RHS g(x,y) corresponding to the y'
+
+    // the system matrix "A"
+    val amat = rhs.map(t => simplifiedJacobian(t,lhsvar,ToolProvider.simplifierTool()))
+
+    // ensure that "A" is actually linear
+    val amatfree = amat.flatten.map( t => StaticSemantics.freeVars(t))
+    if(amatfree.exists( s => lhsvar.exists(v => s.contains(v))))
+      ??? //todo: raise error
+
+    // @todo: this is a very hacky way to get the "linear" part
+    val bvec = (matvec_prod(amat,lhsvar) zip rhs).map( e => simpWithTool(ToolProvider.simplifierTool(),Minus(e._1,e._2)))
+
+    val bvecfree = bvec.map( t => StaticSemantics.freeVars(t))
+    if(bvecfree.exists( s => lhsvar.exists(v => s.contains(v))))
+      ??? //todo: raise error
+
+    (amat,bvec)
+  }
+
   /**
     * Helper and lemmas
     */

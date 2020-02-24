@@ -322,7 +322,7 @@ object DifferentialHelper {
     }
   }
 
-  private def derive(t : Term, odes: Map[BaseVariable,Term]) : Term ={
+  private def derive(t : Term, odes: Map[BaseVariable,Term]) : Term = {
     t match {
       case n:Number => Number(0) //c'=0
       case x:BaseVariable => odes.getOrElse(x,Number(0)) //x'
@@ -350,6 +350,12 @@ object DifferentialHelper {
     }
   }
 
+  // Compute the simplified Jacobian of a term with respect to a list of variables
+  def simplifiedJacobian(t : Term, vars : List[BaseVariable], tool: Option[SimplificationTool]) : List[Term] = {
+    vars.map(v => simpWithTool(tool,derive(t, Map(v -> Number(1)))))
+  }
+
+  // Compute the simplified Lie derivative of a term with respect to an ODE
   def simplifiedLieDerivative(p:DifferentialProgram,t:Term, tool: Option[SimplificationTool]) : Term = {
     val ld = derive(t,DependencyAnalysis.collapseODE(p))
     val ts1 = simpWithTool(tool,ld)
