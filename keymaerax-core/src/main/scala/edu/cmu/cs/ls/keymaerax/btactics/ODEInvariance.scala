@@ -971,6 +971,45 @@ object ODEInvariance {
     (ub,lb)
   }
 
+  // Proves the following matrix-vector bound
+  // 2(Ax.x) + 2b.x <= 2||A|| ||x||^2 + (1+(b.x)^2) <= 2(||A||^2+1)||x||^2 + ||b||^2||x||^2 + 1
+  def affine_norm_bound (n : Int) : (ProvableSig) = {
+
+    require(n>=1, "Symbolic affine norm inequality only applies for n >= 1")
+
+    val affineOpt = getLemma("affine_norm_bound_"+n.toString)
+    if(affineOpt.isDefined)
+      return (affineOpt.get.fact)
+
+
+    // The prefix for a just uses the same one as Frobenius subord
+    val bPrefix = "baffine"
+    val xPrefix = "xaffine"
+
+    val b = List.range(0,n).map(i => mkConst(bPrefix,i))
+    val x = List.range(0,n).map(i => mkConst(xPrefix,i))
+
+    //This is done purely usubst style using Cauchy Schwartz
+    val cs = cauchy_schwartz_bound(n)
+    val csLhs = cs.conclusion.succ(0).sub(PosInExpr(0::0::Nil)).get
+
+    //b.x * b.x <= ||b||^2||x||^2
+    val blem0 = cs(UnificationMatch.unifiable(csLhs, dot_prod(b, x)).get.usubst)
+    //b.x * b.x + 1 <= ||b||^2||x||^2 + 1
+    val blem1 = useFor(lemAdd1,PosInExpr(0::Nil))(Position(1))(blem0)
+    //2(b.x) <= b.x*b.x + 1
+    val blem2 = lemSq(UnificationMatch.unifiable("a()".asTerm, dot_prod(b, x)).get.usubst)
+    //2(b.x) <= ||b||^2||x||^2 + 1
+    val blem = useFor(useFor(lemTrans,PosInExpr(0::Nil))(Position(1))(blem2),PosInExpr(0::Nil))(Position(1))(blem1)
+
+    //2(Ax.x) <= (||A||^2+1)||x||^2
+    val frosub = frobenius_subord_bound(n)._1
+
+    val lem = useFor(useFor(lemAffinecomb,PosInExpr(0::Nil))(Position(1))(frosub),PosInExpr(0::Nil))(Position(1))(blem)
+    storeLemma(lem,"affine_norm_bound_"+n.toString)
+    lem
+  }
+
   /**
     * Helper and lemmas
     */
@@ -979,6 +1018,10 @@ object ODEInvariance {
   private val lemDist = remember("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
   private val lemUb = proveBy("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a()<= (b()+1)*c()".asFormula,QE)
   private val lemLb = proveBy("c() >=0 -> a()*a() <= b()*c()*c() -> 2*a() >= -(b()+1)*c()".asFormula,QE)
+
+  private val lemSq = proveBy("2*a() <= a()*a() + 1".asFormula,QE)
+  private val lemAdd1 = proveBy("a() <= b() -> a() +1 <= b() + 1".asFormula,QE)
+  private val lemAffinecomb = proveBy("a() <= d()*x() -> b() <= c()*x() + 1 -> a() + b() <= (d()+c()) * x() +1 ".asFormula,QE)
 
   // Specialized lemma to rearrange the ghosts
   private val ghostLem1 = remember("y() > 0 & pp() <= (g()*p()) -> ((-g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
