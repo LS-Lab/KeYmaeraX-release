@@ -197,9 +197,9 @@ object DependencyAnalysis {
   }
 
   //Finds the SCC on the ODE variables, and ignores any variables that do not occur in the ODE 'ed variables
-  def analyseODEVars(p:ODESystem, ignoreTest:Boolean = false, checklinear:Boolean = true)  : Map[BaseVariable,Set[BaseVariable]] = {
+  def analyseODEVars(p:ODESystem, ignoreTest:Boolean = false, checkLinear:Boolean = true)  : Map[BaseVariable,Set[BaseVariable]] = {
     val vars = odevars(p)
-    vars.map(v => (v,analyseODE(p,Set(v),ignoreTest,checklinear)._1.intersect(vars))).toMap
+    vars.map(v => (v,analyseODE(p,Set(v),ignoreTest,checkLinear)._1.intersect(vars))).toMap
   }
 
   // Naive DFS starting from a variable

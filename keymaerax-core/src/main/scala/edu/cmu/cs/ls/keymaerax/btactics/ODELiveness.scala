@@ -4,16 +4,17 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
+
+import scala.collection.immutable.Nil
 
 /**
   * Implements ODE tactics for liveness.
@@ -91,9 +92,10 @@ object ODELiveness {
     val oderen = vdgren.conclusion.succ(0).sub(PosInExpr(0::0::0::Nil)).get
     val unif = UnificationMatch.unifiable(oderen, DifferentialProduct(ghostODEs,DifferentialProgramConst("dummy_",Except(lhs)))).get
 
+    val res = vdgren(unif.usubst)
     //println("vdgraw ",vdgraw)
     //println("vdgren ",vdgren)
-    vdgren(unif.usubst)
+    res
   }
 
   /** Repeated use of DE system */
@@ -125,7 +127,7 @@ object ODELiveness {
   }
 
   // returns the diff ghost instantiated and discharged to <ghost,c>P <-> <c> P
-  private def proveVDGprecond(ghostODEs:DifferentialProgram) : ProvableSig = {
+  private def affineVDGprecond(ghostODEs:DifferentialProgram) : ProvableSig = {
 
     //@note: throws IllegalArgumentException if affine form fails
     val (a,b,x) = affine_form(ghostODEs)
@@ -212,7 +214,8 @@ object ODELiveness {
       case _ => return None
     }.toMap
 
-    val adjs = analyseODEVars(ODESystem(ode,True), ignoreTest = true, checklinear = false)
+    val adjs = analyseODEVars(ODESystem(ode,True), ignoreTest = true, checkLinear = false)
+
     val ls = scc(adjs).map(_.toList)
 
     val odeGroups = ls.map( vs => {
@@ -228,7 +231,7 @@ object ODELiveness {
 
       curode = DifferentialProduct(odeG,curode)
 
-      val vdg = try proveVDGprecond(odeG) catch {
+      val vdg = try affineVDGprecond(odeG) catch {
         case e: IllegalArgumentException => return None
       }
 
@@ -261,4 +264,107 @@ object ODELiveness {
     Some(res)
   }
 
+  //Helper to remove a nonlinear ODE
+  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean) : DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
+
+    val vdgpre = getVDGinst(ode)
+    val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get, seq.sub(pos).get).usubst
+
+    // the concrete vdg instance
+    val vdg = vdgpre(vdgsubst)
+
+    val vdgasm = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
+    // check for an assumption in the context
+    val ind = seq.ante.indexWhere( f => UnificationMatch.unifiable(vdgasm,f).isDefined )
+
+    if(ind == -1) {
+      if (strict) throw new BelleThrowable("odeReduce failed to autoremove: " + ode + ". Try to add an assumption of this form to the antecedents: " + vdgasm)
+      else skip
+    }
+    else {
+      val unif = UnificationMatch(vdgasm,seq.ante(ind)).usubst
+      val finaleq = ElidingProvable(vdg(unif))
+      val finalrw = useFor(propLem,PosInExpr(0::Nil))(Position(1))(finaleq)
+      val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
+      cutL(concl)(pos) <(skip,
+        cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & closeId
+      )
+    }
+  })
+
+  private val propLem = proveBy("(p() -> (q() <-> r())) -> (p() -> (r() -> q()))".asFormula,prop)
+
+  private def removeODEs(ls : List[DifferentialProgram], pos:Position, strict:Boolean = true) : BelleExpr = {
+
+    if(ls.isEmpty) return skip
+
+    val vdg = try
+      affineVDGprecond(ls.head)
+    catch {
+      case e : IllegalArgumentException =>
+        return removeODENonLin(ls.head,strict)(pos) & removeODEs(ls.tail,pos, strict)
+    }
+    useAt(vdg,PosInExpr(1::Nil))(pos) & removeODEs(ls.tail,pos, strict)
+  }
+
+  // Applied to a top-level position (currently, succedent diamond),
+  // this removes irrelevant ODEs
+  def odeReduce : DependentPositionTactic = "odeReduce" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "odeReduce is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("odeReduce only applicable to diamond ODE in succedent")
+    }
+
+    val ode = sys.ode
+
+    val odels = DifferentialProduct.listify(ode).map{
+      case ve@AtomicODE(x,e) => (x.x,ve)
+      case _ => throw new BelleThrowable("odeReduce only applicable to concrete ODEs")
+    }.toMap
+
+    // The set of variables transitively depended on by the postcondition and domain constraint
+    // These cannot be removed!
+    val fvs = StaticSemantics.freeVars(And(sys.constraint,post)).toSet
+    val basefvs = fvs.filter(v => v.isInstanceOf[BaseVariable]).map(v =>v.asInstanceOf[BaseVariable])
+    val unremovable = analyseODE(ODESystem(ode,True), basefvs , ignoreTest = true, checkLinear = false)._1.toList
+
+    val adjs = analyseODEVars(ODESystem(ode,True), ignoreTest = true, checkLinear = false)
+    // The remaining removable ODEs
+    val ls = scc(adjs).map(_.toList)
+
+    if(ls.length <= 1)
+      // unable to do anything for a single group of ODE
+      skip
+
+    else {
+      val lsr = ls.filter(vs => vs.intersect(unremovable).isEmpty)
+      val lsu = ls.filter(vs => vs.intersect(unremovable).nonEmpty)
+
+      // println(ls)
+
+      //We will remove the ODEs in ls from back to front
+      val odeGroups = lsr.map(vs => {
+        val odes = vs.map(vv => odels(vv))
+        odes.tail.foldLeft(odes.head: DifferentialProgram)((p, r) => DifferentialProduct(p, r))
+      }
+      )
+
+      val goal = lsr.reverse.flatMap(_.toList) ++ lsu.flatMap(_.toList)
+      val sortTac = AxiomaticODESolver.selectionSort(sys.constraint, Not(post), ode, goal, AntePosition(seq.ante.length + 1))
+
+      val red = removeODEs(odeGroups.reverse, AntePosition(seq.ante.length + 1))
+      //    val resode = DifferentialProduct(timeode,ode)
+      //    val goal = ls.reverse.flatMap(_.toList)
+      //    val sortTac = AxiomaticODESolver.selectionSort(True, Not(post), resode, goal:+timevar, AntePosition(1))
+
+      //Moves diamonds into anteposition and sorts
+      useAt("<> diamond", PosInExpr(1 :: Nil))(pos) & notR(pos) & sortTac &
+        // Apply the reduction
+        red &
+        //Moves back into diamond
+        useAt("[] box", PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) & useAt("!! double negation")(seq.succ.length, 1 :: Nil)
+    }
+  })
 }
