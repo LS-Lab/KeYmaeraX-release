@@ -60,6 +60,9 @@ object Configuration {
       val INVGEN_TIMEOUT = "PEGASUS_INVGEN_TIMEOUT"
       val INVCHECK_TIMEOUT = "PEGASUS_INVCHECK_TIMEOUT"
       val SANITY_TIMEOUT = "PEGASUS_SANITY_TIMEOUT"
+      object DiffSaturation {
+        val MINIMIZE_CUTS = "PEGASUS_DIFFSAT_MINIMIZE_CUTS"
+      }
       object HeuristicInvariants {
         val TIMEOUT = "PEGASUS_HEURISTICS_TIMEOUT"
       }
@@ -155,6 +158,9 @@ object Configuration {
     def invGenTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVGEN_TIMEOUT).getOrElse(default)
     def invCheckTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVCHECK_TIMEOUT).getOrElse(default)
     def sanityTimeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.SANITY_TIMEOUT).getOrElse(default)
+    object DiffSaturation {
+      def minimizeCuts(default: Boolean = true): Boolean = get[Boolean](Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS).getOrElse(default)
+    }
     object HeuristicInvariants {
       def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)
     }

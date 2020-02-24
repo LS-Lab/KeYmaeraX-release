@@ -24,11 +24,13 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
   private val PEGASUS_NAMESPACE = "Pegasus`"
   private val GENERICNONLINEAR_NAMESPACE = "GenericNonLinear`"
+  private val DIFFSATURATION_NAMESPACE = "DiffSaturation`"
   private val LZZ_NAMESPACE = "LZZ`"
   private val REFUTE_NAMESPACE = "Refute`"
 
   private def psymbol(s: String) = symbol(PEGASUS_NAMESPACE + s)
   private def gnlsymbol(s: String) = symbol(GENERICNONLINEAR_NAMESPACE + s)
+  private def dssymbol(s: String) = symbol(DIFFSATURATION_NAMESPACE + s)
 
   private val pegasusPath = PegasusInstaller.pegasusRelativeResourcePath
   private val pathSegments = scala.reflect.io.File(pegasusPath).segments.map(string)
@@ -65,7 +67,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
         rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Darboux.degree()))),
       setOptions(gnlsymbol("BarrierCert"),
         rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Barrier.timeout())),
-        rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Barrier.degree())))
+        rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Barrier.degree()))),
+      setOptions(dssymbol("DiffSat"),
+        rule(dssymbol("MinimizeCuts"), bool(Configuration.Pegasus.DiffSaturation.minimizeCuts())))
     )
 
     val pegasusMain = Configuration.Pegasus.mainFile("Pegasus.m")
