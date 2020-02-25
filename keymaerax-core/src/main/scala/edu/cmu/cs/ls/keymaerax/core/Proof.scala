@@ -809,10 +809,10 @@ object Provable {
     */
   final def toStorageString(fact: Provable): String = {
     val s = toExternalString(fact)
-    s + "::" + checksum(fact)
+    s + "::" + checksum(s)
     //@note soundness-critical check reparsing to original (unless printer+checksum injective or unless printer+parser trusted)
   } ensures(r => fromStorageString(r) == fact, "Stored Provable should reparse to the original\n\n" +
-     toExternalString(fact) + "::" + checksum(fact))
+     toExternalString(fact) + "::" + checksum(toExternalString(fact)))
 
   /**
     * Parses a Stored Provable String representation back again as a Provable.
@@ -827,7 +827,7 @@ object Provable {
     val separator = storedProvable.lastIndexOf("::")
     if (separator < 0)
       throw new ProvableStorageException("syntactically ill-formed format", storedProvable)
-    val storedChecksum = storedProvable.substring(separator+2).toInt
+    val storedChecksum = storedProvable.substring(separator+2)
     val remainder = storedProvable.substring(0, separator)
     (try {
       edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXStoredProvableParser(remainder)
@@ -837,7 +837,7 @@ object Provable {
       case conclusion :: subgoals =>
         //@note soundness-critical, guarded lightly by checksum
         val reconstructed = oracle(conclusion, subgoals.to)
-        if (checksum(reconstructed) != storedChecksum)
+        if (checksum(toExternalString(reconstructed)) != storedChecksum)
           throw new ProvableStorageException("checksum has been tampered with", storedProvable)
         else
           reconstructed
@@ -855,11 +855,7 @@ object Provable {
   /** Checksum computation implementation using the checksum algorithm used to stamp stored Provables. */
   private def checksum(s: String): String =
   //@note New instance every time, because digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
-  MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
-
-  /** Checksum computation implementation using the checksum algorithm used to stamp stored Provables.
-    * @note Assumes Provable/Sequent/Expression hashCode is deterministic+stable across JVM launches and practically injective. */
-  private def checksum(fact: Provable): Int = fact.hashCode()
+  MessageDigest.getInstance("MD5").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
 
   /** A fully parenthesized String representation of the given Sequent for externalization.
     * @see [[Sequent.toString]]
