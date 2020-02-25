@@ -3864,4 +3864,26 @@ object DerivedAxioms extends Logging {
     byUS(equivReflexiveAxiom)
   )
 
+  // Liveness additions
+
+  /**
+    * {{{Axiom "K<&>".
+    *    [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note postcondition refinement
+    */
+  lazy val kDomD: Lemma = derivedAxiom("K<&>",
+    "==> [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))".asSequent,
+    implyR(1) & implyR(1) &
+      useExpansionAt("<> diamond")(1) &
+      useExpansionAt("<> diamond")(-2) &
+      notL(-2) & notR(1) & implyRi()(-1,1) &
+      useAt("DR differential refine",PosInExpr(1::Nil))(1) & TactixLibrary.boxAnd(1) & andR(1) <(
+      DW(1) & G(1) & implyR(1) & closeId,
+      closeId
+    )
+  )
 }

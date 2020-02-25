@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 
+import scala.collection.immutable
 import scala.collection.immutable.Nil
 
 /**
@@ -367,4 +368,86 @@ object ODELiveness {
         useAt("[] box", PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) & useAt("!! double negation")(seq.succ.length, 1 :: Nil)
     }
   })
+
+  /** Adds compatible box modalities from the assumptions to the domain constraint
+    * [x'=f(x)&A]B is compatible for [x'=f(x)&Q]P
+    * if A implies Q
+    *
+    * For compatible assumptions, the rule adds them by diff cut:
+    *
+    * G, [x'=f(x)&A]B |- [x'=f(x)&Q&B]P
+    * ---
+    * G, [x'=f(x)&A]B |- [x'=f(x)&Q]P
+    */
+  private def compatCuts : DependentPositionTactic = "ANON" by ((pos:Position, seq:Sequent) => {
+    // should be called internally at top level box positions only
+    // assert(pos.isTopLevel)
+
+    val SEMANTIC = true //checks compatibility semantically by default
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case _ => ??? //internal bug: throw new BelleThrowable("kDomD only applicable to diamond ODE in succedent")
+    }
+
+    val doms = FormulaTools.conjuncts(sys.constraint)
+
+    val compatAsms = seq.ante.zipWithIndex.flatMap( fi =>
+      fi._1 match {
+        case Box(sys2:ODESystem,post) =>
+          if(sys.ode==sys2.ode) {
+            val pr = proveBy( Sequent(immutable.IndexedSeq(sys.constraint),immutable.IndexedSeq(sys2.constraint)), Idioms.?(QE) ) //todo: timeout
+            if(pr.isProved)
+              Some(sys2.constraint, pr, post, fi._2)
+            else None
+          }
+          else None
+        case _ => None
+      })
+
+    // val compatAsms = matchingAsms.map()
+    // println("compatible asms: ",compatAsms)
+
+    compatAsms.foldLeft((skip,0)) (
+      (in,fp) => {
+        val (dom,pr,f,i) = (fp._1,fp._2,fp._3,fp._4)
+        val ctr = in._2
+        (in._1 & dC(f)(pos) <(
+          skip,
+          cohideOnlyL(AntePosition(i+1)) & cohideOnlyR(pos) &
+          dR(dom)(1) <( closeId,
+            DifferentialTactics.diffWeakenG(1) & implyR(1) & ((andL(-1) & hideL(-2))*ctr) & by(pr) )
+        ), ctr+1)
+      }
+
+    )._1
+  })
+
+  /** Implements K<&> rule
+    * todo: possibly increase automation for both premises
+    *
+    * G, [ODE & Q & !P] !R |- <ODE & Q> R
+    * G |- [ODE & Q & !P] !R
+    * ---- (kDomD)
+    * G |- <ODE & Q> P
+    *
+    * @param target the formula R to refine the postcondition
+    * @return two premises, as shown above when applied to a top-level succedent diamond
+    */
+  def kDomainDiamond(target: Formula): DependentPositionTactic = "kDomD" byWithInput (target,(pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "kDomD is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("kDomD only applicable to diamond ODE in succedent")
+    }
+
+    val newfml = Diamond(sys,target)
+
+    cutR(newfml)(pos) <(
+      skip,
+      useAt("K<&>",PosInExpr(1::Nil))(pos) & compatCuts(pos)
+    )
+  })
+
 }

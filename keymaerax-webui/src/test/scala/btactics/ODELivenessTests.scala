@@ -24,7 +24,7 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "correctly prove affine norm bound" in withQE { _ =>
-    val affnorm = (1 to 10).map(ODEInvariance.affine_norm_bound(_))
+    val affnorm = (1 to 10).map(ODEInvariance.affine_norm_bound)
     affnorm.exists(_.isProved == false) shouldBe false
   }
 
@@ -101,6 +101,18 @@ class ODELivenessTests extends TacticTestBase {
     val pr = proveBy(seq, odeReduce(1))
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}](d*d)'<=1*(d*d)+5  ==>  <{e'=5&e<=5}>e<=5".asSequent
+  }
+
+  "kdomd" should "refine ODE postcondition with chosen assumptions" in withQE { _ =>
+    val seq = "[{x'=x,v'=v}] v <= 100 , a > 0, [{x'=x,v'=v&x+v^2<=6}] x <= 1 , b < 0, [{x'=x,v'=v&x=1}] 1+1=2 ==> <{x'=x, v'=v}> x+v^2 > 5".asSequent
+
+    val pr = proveBy(seq, kDomainDiamond("x > 5".asFormula)(1))
+
+    println(pr)
+
+    pr.subgoals.length shouldBe 2
+    pr.subgoals(0) shouldBe "[{x'=x,v'=v&true}]v<=100, a>0, [{x'=x,v'=v&x+v^2<=6}]x<=1, b < 0, [{x'=x,v'=v&x=1}]1+1=2 ==> <{x'=x,v'=v&true}>x>5".asSequent
+    pr.subgoals(1) shouldBe "[{x'=x,v'=v&true}]v<=100, a>0, [{x'=x,v'=v&x+v^2<=6}]x<=1, b < 0, [{x'=x,v'=v&x=1}]1+1=2 ==> [{x'=x,v'=v&((true&!x+v^2>5)&v<=100)&x<=1}](!x>5)".asSequent
   }
 
 }
