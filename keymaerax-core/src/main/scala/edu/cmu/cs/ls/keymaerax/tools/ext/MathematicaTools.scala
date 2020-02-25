@@ -279,7 +279,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
       def convertCuts(e: MExpr): Formula = {
         require(cuts.applies(e), "Expected a rule Cuts -> { {<formula>, Hint-><...>}, ... }, but got " + e)
         Equiv(pred("Cuts"),
-          if (e.args()(1).args.length > 0) And(Equal(LIST_LENGTH, Number(e.args()(1).args.length)), e.args()(1).args.map(convertCut).reduceRight(And))
+          if (e.args()(1).args.length > 0) And(Equal(LIST_LENGTH, Number(e.args()(1).args.length)), e.args()(1).args.map(convertCut).reduceLeft(And))
           else Equal(LIST_LENGTH, Number(e.args()(1).args.length))
         )
       }
