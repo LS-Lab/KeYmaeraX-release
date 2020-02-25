@@ -56,7 +56,7 @@ object UnificationMatch extends FreshUnificationMatch
   * }}}
   * @author Andre Platzer
   */
-trait Matcher extends ((Expression,Expression) => RenUSubst) with Logging {
+trait Matcher extends ((Expression,Expression) => RenUSubst) {
   /** Check result of unification for being a valid unifier/matcher */
   private[infrastruct] val REVERIFY = Matcher.REVERIFY
   /** The (generalized) substitutions used for unification purposes
@@ -77,10 +77,10 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) with Logging {
 
 
   /** unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None */
-  def unifiable(shape: Expression, input: Expression): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Expression un-unifiable " + e); None}
+  def unifiable(shape: Expression, input: Expression): Option[Subst]
 
   /** unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None */
-  def unifiable(shape: Sequent, input: Sequent): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None}
+  def unifiable(shape: Sequent, input: Sequent): Option[Subst]
 
   /** apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that `\result(shape)==input`. */
   def apply(shape: Expression, input: Expression): Subst
@@ -107,19 +107,31 @@ object Matcher {
   * A matcher that insists on always matching as if there were arbitrary expressions as opposed to specializing to Term versus Formula etc.
   * @author Andre Platzer
   */
-trait InsistentMatcher extends Matcher {
-  def apply(shape: Term, input: Term): Subst       = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
-  def apply(shape: Formula, input: Formula): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
-  def apply(shape: Program, input: Program): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
-  def apply(shape: DifferentialProgram, input: DifferentialProgram): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+trait InsistentMatcher extends Matcher with Logging {
+  override def apply(shape: Term, input: Term): Subst       = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: Formula, input: Formula): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: Program, input: Program): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: DifferentialProgram, input: DifferentialProgram): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+
+  override def unifiable(shape: Expression, input: Expression): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Expression un-unifiable " + e); None}
+
+  override def unifiable(shape: Sequent, input: Sequent): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None}
 }
 
 /**
   * A matcher that forwards all unification functionality to [[BaseMatcher.unify()]].
   * @author Andre Platzer
   */
-trait BaseMatcher extends Matcher {
-  def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
+trait BaseMatcher extends Matcher with Logging {
+  private def unifyExpr(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
+    e1 match {
+      case t1: Term => val t2=e2.asInstanceOf[Term]; unifier(t1, t2, unify(t1,t2))
+      case f1: Formula => val f2=e2.asInstanceOf[Formula]; unifier(f1, f2, unify(f1,f2))
+      case p1: DifferentialProgram if !p1.isInstanceOf[ODESystem] => val p2=e2.asInstanceOf[DifferentialProgram]; unifier(p1, p2, unify(p1,p2))
+      case p1: Program => val p2=e2.asInstanceOf[Program]; unifier(p1, p2, unify(p1,p2))
+    } else throw new UnificationException(e1.prettyString, e2.prettyString, "have incompatible kinds " + e1.kind + " and " + e2.kind)
+
+  override def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
     e1 match {
       case t1: Term => apply(t1, e2.asInstanceOf[Term])
       case f1: Formula => apply(f1, e2.asInstanceOf[Formula])
@@ -128,30 +140,36 @@ trait BaseMatcher extends Matcher {
     } else throw new UnificationException(e1.prettyString, e2.prettyString, "have incompatible kinds " + e1.kind + " and " + e2.kind)
 
   //@note To circumvent shortcomings of renaming-unaware unification algorithm, the following code unifies for renaming, renames, and then reunifies the renamed outcomes for substitution
-  def apply(e1: Term, e2: Term): Subst = {try {
+  override def apply(e1: Term, e2: Term): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
-  def apply(e1: Formula, e2: Formula): Subst = {try {
+  override def apply(e1: Formula, e2: Formula): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
-  def apply(e1: Program, e2: Program): Subst = {try {
+  override def apply(e1: Program, e2: Program): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
-  def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = {try {
+  override def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = {try {
     unifier(e1, e2, unifyODE(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
-  def apply(e1: Sequent, e2: Sequent): Subst = {try {
+  override def apply(e1: Sequent, e2: Sequent): Subst = {try {
     unifier(e1, e2, unify(e1, e2))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString     + "\n   with  " + e2.toString)}
   } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
+
+
+  override def unifiable(shape: Expression, input: Expression): Option[Subst] = try {Some(unifyExpr(shape, input))} catch {case e: UnificationException => logger.debug("Expression un-unifiable " + e); None}
+
+  override def unifiable(shape: Sequent, input: Sequent): Option[Subst] = try {Some(unifier(shape, input, unify(shape, input)))} catch {case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None}
+
 
   /** Create the unifier `us` for e1 and e2. */
   protected def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
@@ -620,7 +638,7 @@ private final object RenUnificationMatch extends UnificationMatchBase {
   * Matcher leaves input alone and only substitutes into shape.
   * @author Andre Platzer
   */
-private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { outer =>
+private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher with Logging { outer =>
   require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")
   override private[infrastruct] val REVERIFY = Matcher.REVERIFY
   // pass 1
@@ -638,6 +656,15 @@ private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { out
     usubstUMatcher(ren(e1), e2) ++ ren
   }
 
+  override def apply(shape: Term, input: Term): Subst       = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: Formula, input: Formula): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: Program, input: Program): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: DifferentialProgram, input: DifferentialProgram): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+
+  override def unifiable(shape: Expression, input: Expression): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Expression un-unifiable " + e); None}
+
+  override def unifiable(shape: Sequent, input: Sequent): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None}
+
   override def apply(e1: Expression, e2: Expression): Subst = { try {
     unify(e1, e2)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
@@ -647,15 +674,9 @@ private class UnificationMatchURenAboveUSubst extends /*Insistent*/Matcher { out
     unify(e1, e2)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
-
-  //@todo this should come from extends InsistentMatcher
-  def apply(e1: Term, e2: Term): Subst       = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
-  def apply(e1: Formula, e2: Formula): Subst = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
-  def apply(e1: Program, e2: Program): Subst = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
-  def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
 }
 
-class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
+class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher with Logging {
   require(!RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming NO semantic renaming")
   override private[infrastruct] val REVERIFY = Matcher.REVERIFY
   // pass 1
@@ -668,6 +689,15 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
   }
   // pass 2
   private val renUMatcher = RenUnificationMatch
+
+  override def apply(shape: Term, input: Term): Subst       = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: Formula, input: Formula): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: Program, input: Program): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+  override def apply(shape: DifferentialProgram, input: DifferentialProgram): Subst = apply(shape.asInstanceOf[Expression], input.asInstanceOf[Expression])
+
+  override def unifiable(shape: Expression, input: Expression): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Expression un-unifiable " + e); None}
+
+  override def unifiable(shape: Sequent, input: Sequent): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => logger.debug("Sequent un-unifiable " + e); None}
 
   private def staple(e: Expression, ren: Subst, subst: Subst): Subst = {
     import Augmentors.FormulaAugmentor
@@ -730,12 +760,6 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
     unify(e1, e2)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
   } ensures (r => !REVERIFY || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould become equal under their unifier unifier\n" + (unify(e1, e2)) + "\nhence: " + (unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
-
-  //@todo this should come from extends InsistentMatcher
-  def apply(e1: Term, e2: Term): Subst       = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
-  def apply(e1: Formula, e2: Formula): Subst = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
-  def apply(e1: Program, e2: Program): Subst = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
-  def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = apply(e1.asInstanceOf[Expression], e2.asInstanceOf[Expression])
 
 }
 
