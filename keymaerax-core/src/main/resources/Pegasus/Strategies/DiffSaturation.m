@@ -50,7 +50,12 @@ added={};
 
 For[i=1,i<=Length[cutlist],i++,
 	rest=Drop[cuts,i]/.List->And;
-	If[TrueQ[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms,rest], post, vars]],
+	If[TrueQ[
+	And[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms,rest], post, vars],
+	LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]
+	],
+		Print["Skipped: ",cuts[[i]]]
+		(*Print["INFO: ",rest,f,vars,And[evoConst,constasms],LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]*)
 		(* skip *),
 		added=Join[added,{i}];
 		evoConst=And[evoConst,cuts[[i]]]
