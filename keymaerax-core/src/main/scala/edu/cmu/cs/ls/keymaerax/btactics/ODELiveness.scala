@@ -73,30 +73,32 @@ object ODELiveness {
   }
 
   // Helper that gets the appropriate VDG instance (already instantiated for the ghosts by renaming and friends)
-  private def getVDGinst(ghostODEs:DifferentialProgram) : Provable = {
+  private def getVDGinst(ghostODEs:DifferentialProgram) : (Provable, Provable) = {
 
     val odels = DifferentialProduct.listify(ghostODEs).map {
       case AtomicODE(x,e) => (x,e)
-      case _ => ??? //probably error
+      case _ => throw new IllegalArgumentException("list of ghost ODEs should all be atomic, found: "+ghostODEs)
     }
     val ghostlist = DifferentialProduct.listify(ghostODEs)
     val dim = ghostlist.length
-    val vdgraw = Provable.vectorialDG(dim)
+    val (vdgrawimply,vdgrawylpmi) = Provable.vectorialDG(dim)
 
     // @TODO: this very manually applies the uniform renaming part, since it's not automated elsewhere yet (?)
     // would also be much cleaner if one could access the renaming part more easily.
     val ghosts = (1 to dim).map( i => BaseVariable("y_", Some(i)))
     val lhs = odels.map(_._1.x)  // variables in the ODE
-    val vdgren = (lhs zip ghosts).foldLeft(vdgraw)( (acc,bv) => acc(URename(bv._1,bv._2,semantic=true)) )
+    val vdgimplyren = (lhs zip ghosts).foldLeft(vdgrawimply)( (acc,bv) => acc(URename(bv._1,bv._2,semantic=true)) )
+    val vdgylpmiren = (lhs zip ghosts).foldLeft(vdgrawylpmi)( (acc,bv) => acc(URename(bv._1,bv._2,semantic=true)) )
 
     // Now do the substitution part
-    val oderen = vdgren.conclusion.succ(0).sub(PosInExpr(0::0::0::Nil)).get
-    val unif = UnificationMatch.unifiable(oderen, DifferentialProduct(ghostODEs,DifferentialProgramConst("dummy_",Except(lhs)))).get
+    val odeimplyren = vdgimplyren.conclusion.succ(0).sub(PosInExpr(0::0::0::Nil)).get
+    val unif = UnificationMatch.unifiable(odeimplyren, DifferentialProduct(ghostODEs,DifferentialProgramConst("dummy_",Except(lhs)))).get
 
-    val res = vdgren(unif.usubst)
-    //println("vdgraw ",vdgraw)
-    //println("vdgren ",vdgren)
-    res
+    val resimply = vdgimplyren(unif.usubst)
+    val resylpmi = vdgylpmiren(unif.usubst)
+
+    //println(resimply,resylpmi)
+    (resimply,resylpmi)
   }
 
   /** Repeated use of DE system */
@@ -152,7 +154,7 @@ object ODELiveness {
     // lipsM should always be 1 thanks to the way affine_norm_bound is proved
     val lipsM = bound.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get
 
-    val vdgpre = getVDGinst(ghostODEs)
+    val vdgpre = getVDGinst(ghostODEs)._1
 
     val lipsLsub = vdgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::0::0::Nil)).get
     val lipsMsub = vdgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::1::Nil)).get
@@ -241,8 +243,7 @@ object ODELiveness {
           implyR(1) &
             useAt("<> diamond",PosInExpr(1::Nil))(1) &
             useAt("<> diamond",PosInExpr(1::Nil))(-1) &
-            notL(-1) & notR(1) & implyRi & equivifyR(1) &
-            commuteEquivR(1) &
+            notL(-1) & notR(1) & implyRi &
             byUS(vdg)
         )
       )
@@ -268,13 +269,14 @@ object ODELiveness {
   //Helper to remove a nonlinear ODE
   private def removeODENonLin(ode : DifferentialProgram, strict:Boolean) : DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
 
-    val vdgpre = getVDGinst(ode)
-    val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get, seq.sub(pos).get).usubst
+    val vdgpre = getVDGinst(ode)._1
+    val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
 
     // the concrete vdg instance
     val vdg = vdgpre(vdgsubst)
 
     val vdgasm = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
+
     // check for an assumption in the context
     val ind = seq.ante.indexWhere( f => UnificationMatch.unifiable(vdgasm,f).isDefined )
 
@@ -284,16 +286,14 @@ object ODELiveness {
     }
     else {
       val unif = UnificationMatch(vdgasm,seq.ante(ind)).usubst
-      val finaleq = ElidingProvable(vdg(unif))
-      val finalrw = useFor(propLem,PosInExpr(0::Nil))(Position(1))(finaleq)
+      val finalrw = ElidingProvable(vdg(unif))
       val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
+
       cutL(concl)(pos) <(skip,
         cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & closeId
       )
     }
   })
-
-  private val propLem = proveBy("(p() -> (q() <-> r())) -> (p() -> (r() -> q()))".asFormula,prop)
 
   private def removeODEs(ls : List[DifferentialProgram], pos:Position, strict:Boolean = true) : BelleExpr = {
 
@@ -305,7 +305,8 @@ object ODELiveness {
       case e : IllegalArgumentException =>
         return removeODENonLin(ls.head,strict)(pos) & removeODEs(ls.tail,pos, strict)
     }
-    useAt(vdg,PosInExpr(1::Nil))(pos) & removeODEs(ls.tail,pos, strict)
+
+    useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)
   }
 
   // Applied to a top-level position (currently, succedent diamond),
@@ -424,9 +425,9 @@ object ODELiveness {
   })
 
   /** Implements K<&> rule
-    * todo: possibly increase automation for both premises
+    * Note: uses auto cuts for the later premise
     *
-    * G, [ODE & Q & !P] !R |- <ODE & Q> R
+    * G |- <ODE & Q> R
     * G |- [ODE & Q & !P] !R
     * ---- (kDomD)
     * G |- <ODE & Q> P
@@ -447,6 +448,33 @@ object ODELiveness {
     cutR(newfml)(pos) <(
       skip,
       useAt("K<&>",PosInExpr(1::Nil))(pos) & compatCuts(pos)
+    )
+  })
+
+  /** Implements DR<.> rule
+    * Note: uses auto cuts for the later premise
+    *
+    * G |- <ODE & R> P
+    * G |- [ODE & R] Q
+    * ---- (kDomD)
+    * G |- <ODE & Q> P
+    *
+    * @param target the formula R to refine the domain constraint
+    * @return two premises, as shown above when applied to a top-level succedent diamond
+    */
+  def dDR(target: Formula): DependentPositionTactic = "dDR" byWithInput (target,(pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dDR is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("dDR only applicable to diamond ODE in succedent")
+    }
+
+    val newfml = Diamond(ODESystem(sys.ode,target),post)
+
+    cutR(newfml)(pos) <(
+      skip,
+      useAt("DR<> differential refine",PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
   })
 

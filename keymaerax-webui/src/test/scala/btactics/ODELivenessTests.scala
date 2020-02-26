@@ -13,10 +13,10 @@ class ODELivenessTests extends TacticTestBase {
 
   //todo: move
   "vdg" should "unify ODEs correctly" in withQE { _ =>
-      val ax = ElidingProvable(Provable.vectorialDG(2))
+      val ax = ElidingProvable(Provable.vectorialDG(2)._1)
       val pr = proveBy(
-        ("[{x'=1,y'=z,z'=-y & x <= 5}](y*y+z*z)' <= x*(y*y+z*z) + x^2 ->" +
-          "([{x'=1 & x <= 5}]x >= 5 <-> [{x'=1,y'=z,z'=-y & x <= 5}]x>=5)").asFormula,
+        ("[{y'=z,z'=-y,x'=1 & x <= 5}](y*y+z*z)' <= x*(y*y+z*z) + x^2 ->" +
+          "([{x'=1 & x <= 5}]x >= 5 <- [{y'=z,z'=-y,x'=1 & x <= 5}]x>=5)").asFormula,
         byUS(ax)
       )
     println(pr)
@@ -71,7 +71,7 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   "odeReduce" should "automatically delete irrelevant ODEs" in withQE { _ =>
-    val seq = "d >0 , 1+1=2 ==><{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5".asSequent
+    val seq = "d >0 , 1+1=2 ==> <{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5".asSequent
 
     val pr = proveBy(seq, odeReduce(1))
 
@@ -103,7 +103,7 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}](d*d)'<=1*(d*d)+5  ==>  <{e'=5&e<=5}>e<=5".asSequent
   }
 
-  "kdomd" should "refine ODE postcondition with chosen assumptions" in withQE { _ =>
+  "kdomd" should "refine ODE postcondition (with auto DC of assumptions)" in withQE { _ =>
     val seq = "[{x'=x,v'=v}] v <= 100 , a > 0, [{x'=x,v'=v&x+v^2<=6}] x <= 1 , b < 0, [{x'=x,v'=v&x=1}] 1+1=2 ==> <{x'=x, v'=v}> x+v^2 > 5".asSequent
 
     val pr = proveBy(seq, kDomainDiamond("x > 5".asFormula)(1))
@@ -113,6 +113,18 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals.length shouldBe 2
     pr.subgoals(0) shouldBe "[{x'=x,v'=v&true}]v<=100, a>0, [{x'=x,v'=v&x+v^2<=6}]x<=1, b < 0, [{x'=x,v'=v&x=1}]1+1=2 ==> <{x'=x,v'=v&true}>x>5".asSequent
     pr.subgoals(1) shouldBe "[{x'=x,v'=v&true}]v<=100, a>0, [{x'=x,v'=v&x+v^2<=6}]x<=1, b < 0, [{x'=x,v'=v&x=1}]1+1=2 ==> [{x'=x,v'=v&((true&!x+v^2>5)&v<=100)&x<=1}](!x>5)".asSequent
+  }
+
+  "ddr" should "refine ODE domains (with auto DC of assumptions)" in withQE { _ =>
+    val seq = "a() > 0, [{x'=x,v'=v}]v>=0 , v = 1 ==> <{x'=x, v'=v & v >= 0}> x+v^2 > 5".asSequent
+
+    val pr = proveBy(seq, dDR("x > 100 & v <= 5".asFormula)(1))
+
+    println(pr)
+
+    pr.subgoals.length shouldBe 2
+    pr.subgoals(0) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  <{x'=x,v'=v&x>100&v<=5}>x+v^2>5".asSequent
+    pr.subgoals(1) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  [{x'=x,v'=v&(x>100&v<=5)&v>=0}]v>=0".asSequent
   }
 
 }
