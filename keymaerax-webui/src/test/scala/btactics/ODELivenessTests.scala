@@ -24,8 +24,25 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "correctly prove affine norm bound" in withQE { _ =>
-    val affnorm = (1 to 10).map(ODEInvariance.affine_norm_bound)
+    val affnorm = (1 to 5).map(ODEInvariance.affine_norm_bound)
     affnorm.exists(_.isProved == false) shouldBe false
+  }
+
+  it should "vDG on left and right of sequent" in withQE { _ =>
+    val seq = "[{z'=100}]z=1, <{a'=x+y+z}>a=1 ==> < {x'=1} > 1+1 = 3 , [{y'=2}] 1+1=0".asSequent
+
+    val pr = proveBy(seq,
+      // nonlinear ghosts can always be added to boxes on left and diamonds on right
+      vDG("z'=z^100*y,y'=z*y^2".asDifferentialProgram)(1) &
+      vDG("a'=a^2+b^3+x+y+100".asDifferentialProgram)(-1) &
+      // only affine ones can be added to diamonds on left and boxes on right
+      vDG("z'=y*a*z+a+b+w,w'=w+z".asDifferentialProgram)(2) &
+      vDG("b'=a*b+b*a+1,c'=b+c".asDifferentialProgram)(-2)
+    )
+
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe
+    "[{a'=a^2+b^3+x+y+100,z'=100&true}]z=1, <{b'=a*b+b*a+1,c'=b+c,a'=x+y+z&true}>a=1 ==> <{z'=z^100*y,y'=z*y^2,x'=1&true}>1+1=3, [{z'=y*a*z+a+b+w,w'=w+z,y'=2&true}]1+1=0".asSequent
   }
 
   "GEx" should "identity affine form for an ODE" in withQE { _ =>
@@ -70,13 +87,13 @@ class ODELivenessTests extends TacticTestBase {
     res.get.conclusion.succ(0) shouldBe "<{gextimevar_'=1,ee'=ff,g'=aa^2*g+gg,gg'=g+b^2*g,f'=a,dd'=ee,a'=b,aa'=bb,cc'=dd,e'=f,bb'=cc,d'=e,c'=d,b'=c,ff'=aa&true}>gextimevar_>p()".asFormula
   }
 
-  "odeReduce" should "automatically delete irrelevant ODEs" in withQE { _ =>
-    val seq = "d >0 , 1+1=2 ==> <{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5".asSequent
+  "odeReduce" should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
+    val seq = "d >0 , 1+1=2 ==> 1+1=3, <{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5, 2+2=1".asSequent
 
-    val pr = proveBy(seq, odeReduce(1))
+    val pr = proveBy(seq, odeReduce(2))
 
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "d>0, 1+1=2  ==>  <{x'=x+1,c'=d+e(),v'=2&c<=5}>x+v<=5".asSequent
+    pr.subgoals(0) shouldBe "d>0, 1+1=2  ==> 1+1=3, <{x'=x+1,c'=d+e(),v'=2&c<=5}>x+v<=5, 2+2=1".asSequent
   }
 
   it should "throw a helpful error when it gets stuck" in withQE { _ =>
@@ -126,5 +143,4 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals(0) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  <{x'=x,v'=v&x>100&v<=5}>x+v^2>5".asSequent
     pr.subgoals(1) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  [{x'=x,v'=v&(x>100&v<=5)&v>=0}]v>=0".asSequent
   }
-
 }

@@ -73,7 +73,7 @@ object ODELiveness {
   }
 
   // Helper that gets the appropriate VDG instance (already instantiated for the ghosts by renaming and friends)
-  private def getVDGinst(ghostODEs:DifferentialProgram) : (Provable, Provable) = {
+  private def getVDGinst(ghostODEs:DifferentialProgram) : (ProvableSig, ProvableSig) = {
 
     val odels = DifferentialProduct.listify(ghostODEs).map {
       case AtomicODE(x,e) => (x,e)
@@ -98,7 +98,7 @@ object ODELiveness {
     val resylpmi = vdgylpmiren(unif.usubst)
 
     //println(resimply,resylpmi)
-    (resimply,resylpmi)
+    (ElidingProvable(resimply), ElidingProvable(resylpmi))
   }
 
   /** Repeated use of DE system */
@@ -129,7 +129,7 @@ object ODELiveness {
     }
   }
 
-  // returns the diff ghost instantiated and discharged to <ghost,c>P <-> <c> P
+  // returns the diff ghost instantiated and discharged
   private def affineVDGprecond(ghostODEs:DifferentialProgram) : ProvableSig = {
 
     //@note: throws IllegalArgumentException if affine form fails
@@ -182,7 +182,7 @@ object ODELiveness {
           )(1),
           G(1) & by(bound)
         ),
-        by(ElidingProvable(vdg))
+        by(vdg)
       ))
 
     pr
@@ -191,14 +191,6 @@ object ODELiveness {
   private val ineqLem1 = proveBy("f()=g()&f()<=h() ==>  g()<=h()".asSequent,QE)
   private val ineqLem = remember("[a_{|^@|};]f(||)=g(||) & [a_{|^@|};]f(||) <= h(||) -> [a_{|^@|};]g(||)<=h(||)".asFormula,
     implyR(1) & useAt("[] split", PosInExpr(1::Nil))(-1) & monb & byUS(ineqLem1)).fact
-
-  private val diaflipLem = remember("(<a;>!p(||) <-> <b;>!p(||)) <-> ([a;]p(||) <-> [b;]p(||))".asFormula,
-    useAt("<> diamond",PosInExpr(1::Nil))(1,0::0::Nil) &
-      useAt("!! double negation",PosInExpr(0::Nil))(1,0::0::0::1::Nil) &
-      useAt("<> diamond",PosInExpr(1::Nil))(1,0::1::Nil) &
-      useAt("!! double negation",PosInExpr(0::Nil))(1,0::1::0::1::Nil) &
-      prop
-  ).fact
 
   /**
     * Given ODE, returns the global existence axiom <t'=1,x'=f(x)>t>p() (if it proves)
@@ -238,19 +230,8 @@ object ODELiveness {
         case e: IllegalArgumentException => return None
       }
 
-      pr = proveBy(Diamond(ODESystem(curode,True), post),
-        cutR(pr.conclusion.succ(0))(1) <( by(pr),
-          implyR(1) &
-            useAt("<> diamond",PosInExpr(1::Nil))(1) &
-            useAt("<> diamond",PosInExpr(1::Nil))(-1) &
-            notL(-1) & notR(1) & implyRi &
-            byUS(vdg)
-        )
-      )
-
-      //println("pr: ",pr)
-      if(!pr.isProved)
-        return None
+      val vdgflip = flipModality(vdg)
+      pr = useFor(vdgflip,PosInExpr(0::Nil))(Position(1))(pr)
     }
 
     val resode = DifferentialProduct(timeode,ode)
@@ -286,7 +267,7 @@ object ODELiveness {
     }
     else {
       val unif = UnificationMatch(vdgasm,seq.ante(ind)).usubst
-      val finalrw = ElidingProvable(vdg(unif))
+      val finalrw = vdg(unif)
       val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
 
       cutL(concl)(pos) <(skip,
@@ -309,7 +290,7 @@ object ODELiveness {
     useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)
   }
 
-  // Applied to a top-level position (currently, succedent diamond),
+  // Applied to a top-level position containing a succedent diamond
   // this removes irrelevant ODEs
   def odeReduce : DependentPositionTactic = "odeReduce" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "odeReduce is only applicable at a top-level succedent")
@@ -366,7 +347,9 @@ object ODELiveness {
         // Apply the reduction
         red &
         //Moves back into diamond
-        useAt("[] box", PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) & useAt("!! double negation")(seq.succ.length, 1 :: Nil)
+        useAt("[] box", PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) &
+        useAt("!! double negation")(seq.succ.length, 1 :: Nil) &
+        ProofRuleTactics.exchangeR(Position(seq.succ.length),pos)
     }
   })
 
@@ -477,5 +460,74 @@ object ODELiveness {
       useAt("DR<> differential refine",PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
   })
+
+  /** Implements vDG rule that adds ghosts to an ODE on the left or right, in either modality
+    * For boxes on the right and diamonds on the left, the ODE must be affine
+    *
+    * {{{
+    *   G |- [y'=g(x,y),x'=f(x)]P
+    *   ---- vDG (g affine in y)
+    *   G |- [x'=f(x)]P
+    *
+    *   [y'=g(x,y),x'=f(x)]P |- D
+    *   ----
+    *   [x'=f(x)]P |- D
+    *
+    * }}}
+    *
+    * @param ghost the ODEs to ghost in
+    * @return the sequent with ghosts added in requested position
+    */
+  def vDG(ghost: DifferentialProgram): DependentPositionTactic = "vDG" byWithInput (ghost,(pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel, "vDG is only applicable at a top-level succedent")
+
+    val (sys,post,isBox) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post,false)
+      case Some(Box(sys:ODESystem,post)) => (sys,post,true)
+      case _ => throw new BelleThrowable("vDG only applicable to diamond ODE in succedent")
+    }
+
+    //@todo: Check that ghosts are sufficiently fresh and return a nice error
+
+    if(pos.isSucc ^ isBox) {
+      val vdg = getVDGinst(ghost)._2
+      if(isBox) useAt(vdg,PosInExpr(0::Nil))(pos)
+      else //diamond in succedent
+        useAt(flipModality(vdg),PosInExpr(1::Nil))(pos)
+    }
+    else {
+      val vdg = affineVDGprecond(ghost)
+      if(isBox) useAt(vdg,PosInExpr(1::Nil))(pos)
+      else //diamond in antecedent
+        useAt(flipModality(vdg),PosInExpr(0::Nil))(pos)
+    }
+  })
+
+  // Flips a proved [a]p(||) -> [b]p(||) into <b>p(||) -> <a>p(||) or vice versa, possibly with bananas for p(||)
+  private def flipModality(pr:ProvableSig) : ProvableSig = {
+
+    val fml = pr.conclusion.succ(0)
+
+
+    fml match {
+      case Imply(Box(proga,post),Box(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+        proveBy(Imply(Diamond(progb,post),Diamond(proga,post)),
+          implyR(1) &
+            useAt("<> diamond", PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt("<> diamond", PosInExpr(1 :: Nil))(-1) & notL(-1) &
+          implyRi & byUS(pr)
+        )
+      }
+      case Imply(Diamond(proga,post),Diamond(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+        proveBy(Imply(Box(progb,post),Box(proga,post)),
+          implyR(1) &
+            useAt("[] box", PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt("[] box", PosInExpr(1 :: Nil))(-1) & notL(-1) &
+            implyRi & byUS(pr)
+        )
+      }
+      case _ => ???
+    }
+  }
 
 }
