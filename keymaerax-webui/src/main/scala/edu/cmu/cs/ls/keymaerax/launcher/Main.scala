@@ -61,12 +61,16 @@ object Main {
       val keymaeraxjar: String = jarLocation
 
       val javaVersion = System.getProperty("java.version")
-      val javaMajorMinor :: updateVersion :: Nil =
+      val javaMajorMinor :: legacyUpdateVersion :: Nil =
         if (javaVersion.contains("_")) javaVersion.split("_").toList
         else javaVersion :: "-1" :: Nil
-      val _ :: javaMajor :: javaMinor :: Nil =
-        if (javaMajorMinor.startsWith("1.")) javaMajorMinor.split("\\.").toList
-        else "1" +: javaMajorMinor.split("\\.").toList.dropRight(1) //@note Java 10 onwards (drop update version)
+      val _ :: javaMajor :: javaMinor :: updateVersion :: Nil = {
+        val majorMinor = javaMajorMinor.split("\\.").toList
+        if (majorMinor.length == 1) "1" +: majorMinor :+ "0" :+ legacyUpdateVersion
+        else if (majorMinor.length == 2) majorMinor :+ "0" :+ legacyUpdateVersion
+        else if (Integer.parseInt(majorMinor.head) >= 9) "1" +: majorMinor //@note Java 9 onwards are of the shape 9.0.2
+        else majorMinor.take(3) :+ legacyUpdateVersion
+      }
 
       if (Integer.parseInt(javaMajor) < 8 || (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)) {
         println(s"KeYmaera X requires at least Java version 1.8.0_111, but was started with $javaVersion. Please update Java and restart KeYmaera X.")
