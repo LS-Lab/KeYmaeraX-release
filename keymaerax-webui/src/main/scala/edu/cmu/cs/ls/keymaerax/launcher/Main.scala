@@ -75,15 +75,9 @@ object Main {
       if (Integer.parseInt(javaMajor) < 8 || (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)) {
         println(s"KeYmaera X requires at least Java version 1.8.0_111, but was started with $javaVersion. Please update Java and restart KeYmaera X.")
       } else {
-        val cmd =
-          if (Integer.parseInt(javaMajor) <= 8) {
-            (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
-              (if (args.isEmpty) "-ui" :: Nil else Nil)
-          } else {
-            (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
-              (if (args.intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
-          }
-        launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
+        val cmd = (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
+          (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
+        launcherLog("Restarting KeYmaera I with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
     } else if (args.contains("-ui")) {

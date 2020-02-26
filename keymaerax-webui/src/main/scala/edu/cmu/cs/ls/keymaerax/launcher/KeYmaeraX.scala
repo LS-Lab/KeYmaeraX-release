@@ -1065,7 +1065,7 @@ object KeYmaeraX {
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
-    val augmentedArgs = if (args.intersect(Modes.modes.toList).isEmpty) args :+ Modes.UI else args
+    val augmentedArgs = if (args.map(_.stripPrefix("-")).intersect(Modes.modes.toList).isEmpty) args :+ Modes.UI else args
     if (LAUNCH) Main.main("-launch" +: augmentedArgs)
     else Main.main(augmentedArgs)
   }
