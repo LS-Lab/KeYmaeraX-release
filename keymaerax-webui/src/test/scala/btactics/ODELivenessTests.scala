@@ -99,6 +99,18 @@ class ODELivenessTests extends TacticTestBase {
     res.get.conclusion.succ(0) shouldBe "<{gextimevar_'=1,ee'=ff,g'=aa^2*g+gg,gg'=g+b^2*g,f'=a,dd'=ee,a'=b,aa'=bb,cc'=dd,e'=f,bb'=cc,d'=e,c'=d,b'=c,ff'=aa&true}>gextimevar_>p()".asFormula
   }
 
+  "compatibility" should "automatically match by compatibility" in withQE { _ =>
+    val seq = "[{x'=1 & x < 6}]x>1,[{x'=1 & x < 4}]x>4, [{v'=2,x'=1}]v<=5, [{v'=2,x'=1}]x+z<=5 ==> [{x'=1 & x < 5}]1+1=2".asSequent
+
+    //First and last assumptions are compatible and can be automatically added
+    val pr = proveBy(seq, compatCuts(1))
+
+    println(pr)
+
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe " [{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  [{x'=1&(x < 5&x>1)&x+z<=5}]1+1=2".asSequent
+  }
+
   "odeReduce" should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
     val seq = "d >0 , 1+1=2 ==> 1+1=3, <{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5, 2+2=1".asSequent
 
@@ -203,7 +215,6 @@ class ODELivenessTests extends TacticTestBase {
         // same, actually p = 1
         cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
 
-
         //Keep compactness assumption around, wrap into tactic
         cut("[{t'=1, u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
           skip,
@@ -226,11 +237,13 @@ class ODELivenessTests extends TacticTestBase {
         // Not great either: nasty ODE order!
         cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
           odeReduce(1) & cohideR(1) & solve(1) & QE,
-          cohideOnlyR(2) & skip //todo: need to unify modulo ODE reorder here
+          cohideOnlyR(2) &
+          compatCuts(1) & dW(1) & QE
         )
 
     )
 
     println(pr)
+    pr shouldBe 'proved
   }
 }

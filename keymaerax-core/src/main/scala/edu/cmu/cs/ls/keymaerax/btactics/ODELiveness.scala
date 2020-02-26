@@ -366,6 +366,35 @@ object ODELiveness {
     }
   })
 
+  // Tries to make the second ODE line up with the first one by deleting and reordering ODEs
+  private def compatODE(ode1: DifferentialProgram, ode2: DifferentialProgram, dom: Formula, post:Formula) : Option[BelleExpr] = {
+    val ode1ls = DifferentialProduct.listify(ode1)
+    val ode2ls = DifferentialProduct.listify(ode2)
+
+    //ODE2 must be at least a subset of ODE1
+    if(ode2ls.diff(ode1ls).nonEmpty) None
+    else {
+      // ODE1 can have some extras, which we can get rid of
+      val extra = ode1ls.diff(ode2ls)
+      val extravars = extra.map(_.asInstanceOf[AtomicODE].xp.x)
+
+      if(!StaticSemantics.freeVars(And(dom,post)).intersect(extravars.toSet).isEmpty)
+        return None
+
+      val vars = extravars ++ (ode2ls.map(_.asInstanceOf[AtomicODE].xp.x))
+
+      //println(dom,post)
+      // The goal is to sort ODE1 into extra++ODE2
+      Some(
+        AxiomaticODESolver.selectionSort(dom, post, ode1, vars, AntePosition(1)) &
+        (
+          if(extra.isEmpty) skip
+          else vDG(extra.reduce(DifferentialProduct.apply))(1)
+        ))
+
+    }
+  }
+
   /** Adds compatible box modalities from the assumptions to the domain constraint
     * [x'=f(x)&A]B is compatible for [x'=f(x)&Q]P
     * if A implies Q
@@ -376,7 +405,7 @@ object ODELiveness {
     * ---
     * G, [x'=f(x)&A]B |- [x'=f(x)&Q]P
     */
-  private def compatCuts : DependentPositionTactic = "ANON" by ((pos:Position, seq:Sequent) => {
+  def compatCuts : DependentPositionTactic = "ANON" by ((pos:Position, seq:Sequent) => {
     // should be called internally at top level box positions only
     // assert(pos.isTopLevel)
 
@@ -389,12 +418,17 @@ object ODELiveness {
 
     val compatAsms = seq.ante.zipWithIndex.flatMap( fi =>
       fi._1 match {
-        case Box(sys2:ODESystem,post) =>
-          if(sys.ode==sys2.ode && !doms.contains(post)) { //ignoring existing postconditions in domain to line up with dC
-            val pr = proveBy( Sequent(immutable.IndexedSeq(sys.constraint),immutable.IndexedSeq(sys2.constraint)), Idioms.?(QE) ) //todo: timeout
-            if(pr.isProved)
-              Some(sys2.constraint, pr, post, fi._2)
-            else None
+        case Box(sys2:ODESystem,post2) =>
+          if(!doms.contains(post2)) { //ignoring existing postconditions in domain to line up with dC
+            compatODE(sys2.ode,sys.ode,sys2.constraint,post2) match {
+              case None => None
+              case Some(tac) => {
+                val pr = proveBy(Sequent(immutable.IndexedSeq(sys.constraint), immutable.IndexedSeq(sys2.constraint)), Idioms.?(QE)) //todo: timeout
+                if (pr.isProved)
+                  Some(sys2.constraint, pr, post2, fi._2, tac)
+                else None
+              }
+            }
           }
           else None
         case _ => None
@@ -404,12 +438,15 @@ object ODELiveness {
 
     compatAsms.foldLeft((skip,0)) (
       (in,fp) => {
-        val (dom,pr,f,i) = (fp._1,fp._2,fp._3,fp._4)
+        val (dom,pr,f,i,tac) = (fp._1,fp._2,fp._3,fp._4,fp._5)
         val ctr = in._2
         (in._1 & dC(f)(pos) <(
           skip,
           cohideOnlyL(AntePosition(i+1)) & cohideOnlyR(pos) &
-          dR(dom)(1) <( closeId,
+            //DebuggingTactics.print("before") &
+            tac &
+            //DebuggingTactics.print("after") &
+            dR(dom)(1) <( closeId,
             DifferentialTactics.diffWeakenG(1) & implyR(1) & ((andL(-1) & hideL(-2))*ctr) & by(pr) )
         ), ctr+1)
       }
@@ -517,7 +554,6 @@ object ODELiveness {
   private def flipModality(pr:ProvableSig) : ProvableSig = {
 
     val fml = pr.conclusion.succ(0)
-
 
     fml match {
       case Imply(Box(proga,post),Box(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
