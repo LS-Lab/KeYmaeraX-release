@@ -438,8 +438,7 @@ object Main {
       errReaderThread.start()
     }
 
-    proc.waitFor()
-    println("")
+    System.exit(proc.waitFor())
   }
 
   private def exitWith(err : String) = {
