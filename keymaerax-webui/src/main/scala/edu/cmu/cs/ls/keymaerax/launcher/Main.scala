@@ -76,7 +76,7 @@ object Main {
             (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
               (if (args.isEmpty) "-ui" :: Nil else Nil)
           } else {
-            (java :: "-Xss20M" :: "--add-modules" :: "java.xml.bind" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
+            (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
               (if (args.intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
           }
         launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
