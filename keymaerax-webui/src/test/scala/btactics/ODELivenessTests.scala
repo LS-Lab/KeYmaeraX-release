@@ -45,6 +45,18 @@ class ODELivenessTests extends TacticTestBase {
     "[{a'=a^2+b^3+x+y+100,z'=100&true}]z=1, <{b'=a*b+b*a+1,c'=b+c,a'=x+y+z&true}>a=1 ==> <{z'=z^100*y,y'=z*y^2,x'=1&true}>1+1=3, [{z'=y*a*z+a+b+w,w'=w+z,y'=2&true}]1+1=0".asSequent
   }
 
+  it should "get instantiated vdg" in withQE { _ =>
+    val vdginst = getVDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
+    println(vdginst)
+
+    //todo: parsing support
+    //vdginst._1 shouldBe 'proved
+    //vdginst._1.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,dummy_{|v,z|}&q(|v,z|)}]2*(v*(v^2+z)+z*(v*y+z))<=a_(|v,z|)*(v*v+z*z)+b_(|v,z|)->[{v'=v^2+z,z'=v*y+z,dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)->[{dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
+
+    //vdginst._2 shouldBe 'proved
+    //vdginst._2.conclusion shouldBe "==> [{dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)->[{v'=v^2+z,z'=v*y+z,dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
+  }
+
   "GEx" should "identity affine form for an ODE" in withQE { _ =>
     val ode = "z'=v^2+g()*y+z,y'=f()*x*x+z".asDifferentialProgram
 
@@ -108,16 +120,16 @@ class ODELivenessTests extends TacticTestBase {
         println(e.getMessage)
         true
         // it should have this error:
-        //"because odeReduce failed to autoremove: {d'=d^2+f}. Try to add an assumption of this form to the antecedents: [{d'=d^2+f,f'=f,e'=5&e<=5}](d*d)'<=a_(|d|)*(d*d)+b_(|d|)"
+        //"because odeReduce failed to autoremove: {d'=d^2+f}. Try to add an assumption of this form to the antecedents: [{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=a_(|d|)*(d*d)+b_(|d|)"
     }
   }
 
   it should "continue using assms" in withQE { _ =>
-    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] (d*d)' <= 1*(d*d)+5 ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
+    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] 2*(d*(d^2+f)) <= 1*(d*d)+5 ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 
     val pr = proveBy(seq, odeReduce(1))
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}](d*d)'<=1*(d*d)+5  ==>  <{e'=5&e<=5}>e<=5".asSequent
+    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=1*(d*d)+5  ==>  <{e'=5&e<=5}>e<=5".asSequent
   }
 
   "kdomd" should "refine ODE postcondition (with auto DC of assumptions)" in withQE { _ =>
@@ -142,5 +154,83 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals.length shouldBe 2
     pr.subgoals(0) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  <{x'=x,v'=v&x>100&v<=5}>x+v^2>5".asSequent
     pr.subgoals(1) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  [{x'=x,v'=v&(x>100&v<=5)&v>=0}]v>=0".asSequent
+  }
+
+  "liveness" should "support liveness proofs by hand (1)" in withMathematica { _ =>
+    // FM'19 linear ODE example
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+        kDomainDiamond("u^2+v^2=1/4".asFormula)(1) <(
+          skip,
+          dW(1) & QE
+        ) &
+        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <( //@todo: make axiomatic IVT
+          skip,
+          ODE(1) //@todo: Z3 simplifier broken
+        ) &
+        // Wrap into tactic
+        cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
+        vDG("t'=1".asDifferentialProgram)(1) &
+        // same, actually p = 1
+        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
+
+        // Not great
+        kDomainDiamond("t > 2*p".asFormula)(1) <(
+          skip,
+          dC("p-1/2*t >= u^2+v^2-1/4".asFormula)(1) <( ODE(1), ODE(1) )
+        ) &
+
+        //Wrap into global existence tactic:
+        odeReduce(1) &
+        solve(1) & QE
+    )
+
+    pr shouldBe 'proved
+  }
+
+  it should "support liveness proofs by hand (2)" in withMathematica { _ =>
+    // FM'19 nonlinear ODE example
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+
+        // Wrap into tactic
+        cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
+        vDG("t'=1".asDifferentialProgram)(1) &
+        // same, actually p = 1
+        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
+
+
+        //Keep compactness assumption around, wrap into tactic
+        cut("[{t'=1, u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
+          skip,
+          useAt("<> diamond",PosInExpr(1::Nil))(1) & prop
+        ) &
+
+        // cut some extra information that will get auto DC-ed in K<&>
+        cut("[{t'=1, u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) <(
+          skip,
+          hideL(-4) & cohideOnlyR(2) & ODE(1)
+        ) &
+        // Not great
+        kDomainDiamond("t > 2/3*p".asFormula)(1)
+          <(
+          skip,
+          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <( ODE(1), hideL(-5) & hideL(-4) & ODE(1)) //todo: ODE fix! ignore box stuff in antecedents
+          )
+        &
+
+        // Not great either: nasty ODE order!
+        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
+          odeReduce(1) & cohideR(1) & solve(1) & QE,
+          cohideOnlyR(2) & skip //todo: need to unify modulo ODE reorder here
+        )
+
+    )
+
+    println(pr)
   }
 }

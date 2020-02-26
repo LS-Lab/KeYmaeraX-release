@@ -72,8 +72,28 @@ object ODELiveness {
     (amat,bvec,lhsvar)
   }
 
+  // helper that simplifies the precondition of vdg
+  private def simplifyPre(pr : ProvableSig, bnd : Term) : ProvableSig = {
+    val seq = pr.conclusion
+    val left = seq.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
+    val right = seq.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
+
+    val leftnew = left.replaceAt(PosInExpr(1::0::Nil), bnd)
+
+    proveBy( Imply(leftnew,right),
+      implyR(1) & cutR(left)(1) <(
+        implyRi & useAt(ineqLem,PosInExpr(1::Nil))(1) &
+          DifferentialTactics.Dconstify(
+            derive(1, PosInExpr(1 :: 1:: Nil)) &
+              DESystemCustom(1) & G(1) & DassignbCustom(1) & QE
+          )(1)
+        ,
+        cohideR(1) & by(pr)
+      ))
+  }
+
   // Helper that gets the appropriate VDG instance (already instantiated for the ghosts by renaming and friends)
-  private def getVDGinst(ghostODEs:DifferentialProgram) : (ProvableSig, ProvableSig) = {
+  def getVDGinst(ghostODEs:DifferentialProgram) : (ProvableSig, ProvableSig) = {
 
     val odels = DifferentialProduct.listify(ghostODEs).map {
       case AtomicODE(x,e) => (x,e)
@@ -97,8 +117,10 @@ object ODELiveness {
     val resimply = vdgimplyren(unif.usubst)
     val resylpmi = vdgylpmiren(unif.usubst)
 
-    //println(resimply,resylpmi)
-    (ElidingProvable(resimply), ElidingProvable(resylpmi))
+    // (||y||^2)' = 2y.g(x,yy)
+    val bnd = Times(Number(2), odels.map(ve => Times(ve._1.x,ve._2)).reduce(Plus.apply))
+
+    (simplifyPre(ElidingProvable(resimply),bnd), ElidingProvable(resylpmi))
   }
 
   /** Repeated use of DE system */
@@ -166,31 +188,22 @@ object ODELiveness {
     val goal = vdg.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
     val pre = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
 
-    // matches g,h
-    val unifpre1 = UnificationMatch(ineqLem.conclusion.succ(0).sub(PosInExpr(1::Nil)).get, pre).usubst
-    // matches f
-    val unifpre2 = UnificationMatch(ineqLem.conclusion.succ(0).sub(PosInExpr(0::1::1::0::Nil)).get, lhsInst).usubst
-    val unifpre = ineqLem(unifpre1)(unifpre2)
-
     val pr = proveBy(goal,
       cutR(pre)(1)
       <(
-        useAt(unifpre,PosInExpr(1::Nil))(1) & andR(1) <(
-          DifferentialTactics.Dconstify(
-            derive(1, PosInExpr(1 :: 1:: Nil)) &
-            DESystemCustom(1) & G(1) & DassignbCustom(1) & QE
-          )(1),
-          G(1) & by(bound)
-        ),
+        G(1) & cutR(bound.conclusion.succ(0))(1) <(
+          by(bound),
+          useAt(ineqLem1,PosInExpr(1::Nil))(1) & QE
+        ) ,
         by(vdg)
       ))
 
     pr
   }
 
-  private val ineqLem1 = proveBy("f()=g()&f()<=h() ==>  g()<=h()".asSequent,QE)
-  private val ineqLem = remember("[a_{|^@|};]f(||)=g(||) & [a_{|^@|};]f(||) <= h(||) -> [a_{|^@|};]g(||)<=h(||)".asFormula,
-    implyR(1) & useAt("[] split", PosInExpr(1::Nil))(-1) & monb & byUS(ineqLem1)).fact
+  private val ineqLem1 = proveBy("f_()=g_() -> f_()<=h_() ->  g_()<=h_()".asFormula,QE)
+  private val ineqLem = remember("[a_{|^@|};]f(||)=g(||) -> [a_{|^@|};]f(||) <= h(||) -> [a_{|^@|};]g(||)<=h(||)".asFormula,
+    implyR(1) & implyR(1) & andLi & useAt("[] split", PosInExpr(1::Nil))(-1) & monb & andL(-1) & implyRi & implyRi & byUS(ineqLem1)).fact
 
   /**
     * Given ODE, returns the global existence axiom <t'=1,x'=f(x)>t>p() (if it proves)
@@ -367,8 +380,6 @@ object ODELiveness {
     // should be called internally at top level box positions only
     // assert(pos.isTopLevel)
 
-    val SEMANTIC = true //checks compatibility semantically by default
-
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
       case _ => ??? //internal bug: throw new BelleThrowable("kDomD only applicable to diamond ODE in succedent")
@@ -379,7 +390,7 @@ object ODELiveness {
     val compatAsms = seq.ante.zipWithIndex.flatMap( fi =>
       fi._1 match {
         case Box(sys2:ODESystem,post) =>
-          if(sys.ode==sys2.ode) {
+          if(sys.ode==sys2.ode && !doms.contains(post)) { //ignoring existing postconditions in domain to line up with dC
             val pr = proveBy( Sequent(immutable.IndexedSeq(sys.constraint),immutable.IndexedSeq(sys2.constraint)), Idioms.?(QE) ) //todo: timeout
             if(pr.isProved)
               Some(sys2.constraint, pr, post, fi._2)
@@ -389,8 +400,7 @@ object ODELiveness {
         case _ => None
       })
 
-    // val compatAsms = matchingAsms.map()
-    // println("compatible asms: ",compatAsms)
+    //println("compatible asms: ",compatAsms)
 
     compatAsms.foldLeft((skip,0)) (
       (in,fp) => {
