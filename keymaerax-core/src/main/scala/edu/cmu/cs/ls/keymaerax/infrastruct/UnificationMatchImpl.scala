@@ -58,7 +58,6 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
         logger.trace("      try converse since " + e.getMessage)
         val u2 = unify(s2, t2)
         compose(unify(t1, Subst(u2)(s1)), u2)
-      //@todo incomplete: match [a;]p() -> [a;]p() with [x:=x+1;]y>0 -> [x:=x+1;]y>0  will fail since both pieces need to be unified and then combined subsequently. But that's okay for now
     }
   }
   protected override def unifies2(s1:Term, s2:Term, t1:Term, t2:Term): List[SubstRepl] = {
@@ -97,12 +96,12 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
   protected override def unifiesODE2(s1:DifferentialProgram, s2:DifferentialProgram, t1:DifferentialProgram, t2:DifferentialProgram): List[SubstRepl] = {
     val u1 = unifyODE(s1, t1)
     try {
-      compose(unifyODE(Subst(u1)(s2).asInstanceOf[DifferentialProgram], t2), u1)
+      compose(unifyODE(Subst(u1)(s2), t2), u1)
     } catch {
       case e: ProverException =>
         logger.trace("      try converse since " + e.getMessage)
         val u2 = unifyODE(s2, t2)
-        compose(unifyODE(t1, Subst(u2)(s1).asInstanceOf[DifferentialProgram]), u2)
+        compose(unifyODE(t1, Subst(u2)(s1)), u2)
     }
   }
 
@@ -180,14 +179,12 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
   }
   /**
     * Quickly compose patterns coming from fresh shapes by just concatenating them.
-    * If indeed the shape used fresh names that did not occur in the input, this fash composition is fine.
+    * If indeed the shape used fresh names that did not occur in the input, this fast composition is fine.
     * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
   //  after ++ renameAllIfNeedBe(after, before)
-  //  before ++ renameAllIfNeedBe(before, after)
-  // @todo: add semantic renamings from after to before and vice versa, then concatenate (check if correct)
-  renameAllIfNeedBe(after, before) ++ renameAllIfNeedBe(before, after)
+  renameAllIfNeedBe(after,before) ++ renameAllIfNeedBe(before, after)
 
   protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     if (true)
