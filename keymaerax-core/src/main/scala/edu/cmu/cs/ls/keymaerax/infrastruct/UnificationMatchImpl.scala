@@ -185,7 +185,9 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
   //  after ++ renameAllIfNeedBe(after, before)
-  before ++ renameAllIfNeedBe(before, after)
+  //  before ++ renameAllIfNeedBe(before, after)
+  // @todo: add semantic renamings from after to before and vice versa, then concatenate (check if correct)
+  renameAllIfNeedBe(after, before) ++ renameAllIfNeedBe(before, after)
 
   protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     if (true)
