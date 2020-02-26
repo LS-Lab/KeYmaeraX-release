@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 class ODEInvarianceTests extends TacticTestBase {
 
@@ -18,6 +19,14 @@ class ODEInvarianceTests extends TacticTestBase {
     //These bounds ought to be enough for all intents and purposes
     val cs = cauchy_schwartz_bound(5)
     val fs = frobenius_subord_bound(5)
+    cs shouldBe 'proved
+    fs._1 shouldBe 'proved
+    fs._2 shouldBe 'proved
+  }
+
+  it should "prove matrix and vector bounds (requires high stack size)" taggedAs IgnoreInBuildTest in withQE { _ =>
+    val cs = cauchy_schwartz_bound(6)
+    val fs = frobenius_subord_bound(6)
     cs shouldBe 'proved
     fs._1 shouldBe 'proved
     fs._2 shouldBe 'proved

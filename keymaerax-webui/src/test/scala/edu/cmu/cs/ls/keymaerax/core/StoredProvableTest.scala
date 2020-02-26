@@ -23,9 +23,9 @@ import scala.collection.immutable._
  */
 class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  val randomTrials = 100
-  val randomComplexity = 12 // 5 // 12
-  val tamperComplexity = 2
+  val randomTrials = 1000
+  val randomComplexity = 20
+  val tamperComplexity = 4
   val rand = new RandomFormula()
 
   "Stored Provable" should "be written and reread correctly (summary)" taggedAs(SummaryTest) in {test(10,4)}
