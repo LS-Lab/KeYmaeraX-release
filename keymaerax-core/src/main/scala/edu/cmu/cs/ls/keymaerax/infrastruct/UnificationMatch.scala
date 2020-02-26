@@ -12,30 +12,14 @@ import org.apache.logging.log4j.scala.Logging
 import scala.collection.immutable.{List, Nil}
 
 /**
-  * Unification/matching algorithm for tactics.
-  * `Unify(shape, input)` matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
-  * Matcher leaves `input` alone and only substitutes into `shape`, i.e., gives a single-sided matcher.
-  * @see [[Matcher]]
-  * @author Andre Platzer
-  */
-// 1 pass for semanticRenaming
-//object UnificationMatch extends UnificationMatchBase {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
-// 2 pass for semanticRenaming
-//object UnificationMatch extends UnificationMatchURenAboveUSubst {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
-// 2.5 pass for !semanticRenaming
-//object UnificationMatch extends UnificationMatchUSubstAboveURen
-// 1 pass for fresh cases of !semanticRenaming
-object UnificationMatch extends FreshUnificationMatch
-
-//@todo not general enough, limited to linear pattern matching only
-//object UnificationMatch extends LinearMatcher
-
-// 1.5 pass for fresh cases of !semanticRenaming
-//object UnificationMatch extends FreshPostUnificationMatch
-
-/**
   * `Matcher(shape, input)` matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
   * Matcher leaves `input` alone and only substitutes into `shape`, i.e., gives a single-sided matcher.
+  *
+  * The following notation is used to indicate that `u` is the unifier computed for matching input `t` against shape `s`:
+  * {{{
+  *   s = t | u
+  * }}}
+  * That is `u` is the result of calling `Matcher.apply(s,t)`.
   *
   * @example {{{
   *           val s = Matcher("p()&q()".asFormula, "x<=0 & x^2>=0".asFormula)
@@ -72,12 +56,15 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) {
   //@todo .distinct may slow things down. Necessary all the time?
   protected def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs.distinct)
 
-  /** A (generalized) substitution pair. */
+  /** A (generalized) substitution pair, which is either like a [[SubstitutionPair]] for uniform substitution
+    * or a pair of [[Variable]] for uniform renaming.
+    * @see [[SubstitutionPair]] */
   type SubstRepl = Tuple2[Expression,Expression]
-  /** Create a (generalized) substitution pair. */
+  /** Create a (generalized) substitution pair.
+    * @see [[SubstitutionPair]] */
   protected def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)
 
-  /** Identity substitution that does not change anything */
+  /** Identity substitution `{}` that does not change anything. */
   protected val id: List[SubstRepl] = Nil
 
 
@@ -264,20 +251,28 @@ trait BaseMatcher extends Matcher with Logging {
   */
 abstract class SchematicUnificationMatch extends BaseMatcher {
 
-  /** Composition of renaming substitution representations: compose(after, before) gives the representation of `after` performed after `before`.
+  /** Composition of renaming substitution representations: `compose(after, before)` gives the representation of `after` performed after `before`.
+    * {{{
+    *   s after t = {p(.)~>s(F) | (p(.)~>F) \in t}  ++  {(p(.)~>F) \in s | (p(.)~>G) \notin t for all G}
+    * }}}
     * @return a substitution that has the same effect as applying substitution `after` after applying substitution `before`. */
   protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl]
 
 
-  /** `unifies(s1,s2, t1,t2)` unifies the two expressions of shape (s2,s2) against the two inputs (t1,t2) by single-sided matching.
-    * Note: because this is for matching purposes, the unifier u1 is not applied to t2 on the right premise.
+  /** `unifies2(s1,s2, t1,t2)` unifies the two expressions of shape (s2,s2) against the two inputs (t1,t2) by single-sided matching.
+    * {{{
+    *   s1 = t1 | u1     u1(s2) = t2 | u2
+    *   ----------------------------------
+    *   (s1,s2) = (t1,t2)  | u2 after u1
+    * }}}
+    * @note For single-sided matching the unifier u1 is not applied to t2 on the right premise.
     */
   //@note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
-  protected def unifies(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl]
-  protected def unifies(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl]
-  protected def unifies(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl]
-  protected def unifies(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl]
-  protected def unifiesODE(s1:DifferentialProgram,s2:DifferentialProgram, t1:DifferentialProgram,t2:DifferentialProgram): List[SubstRepl]
+  protected def unifies2(s1:Expression, s2:Expression, t1:Expression, t2:Expression): List[SubstRepl]
+  protected def unifies2(s1:Term, s2:Term, t1:Term, t2:Term): List[SubstRepl]
+  protected def unifies2(s1:Formula, s2:Formula, t1:Formula, t2:Formula): List[SubstRepl]
+  protected def unifies2(s1:Program, s2:Program, t1:Program, t2:Program): List[SubstRepl]
+  protected def unifiesODE2(s1:DifferentialProgram, s2:DifferentialProgram, t1:DifferentialProgram, t2:DifferentialProgram): List[SubstRepl]
 
   // schematic unification
 
@@ -303,13 +298,13 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     case Neg(t)          => e2 match {case Neg(t2)          => unify(t,t2) case _ => ununifiable(e1,e2)}
     case Differential(t) => e2 match {case Differential(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
     // case o: BinaryCompositeTerm => e2 match {case o2: BinaryCompositeTerm if o2.reapply==o.reapply => unify(o.left,o.right, o2.left,o2.right) case _ => ununifiable(e1,e2)}
-    case Plus  (l, r) => e2 match {case Plus  (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Minus (l, r) => e2 match {case Minus (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Times (l, r) => e2 match {case Times (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Divide(l, r) => e2 match {case Divide(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Power (l, r) => e2 match {case Power (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Plus  (l, r) => e2 match {case Plus  (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Minus (l, r) => e2 match {case Minus (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Times (l, r) => e2 match {case Times (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Divide(l, r) => e2 match {case Divide(l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Power (l, r) => e2 match {case Power (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
     // unofficial
-    case Pair  (l, r) => e2 match {case Pair  (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Pair  (l, r) => e2 match {case Pair  (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
   }
 
 
@@ -334,31 +329,31 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     case True | False       => if (e1==e2) id else ununifiable(e1,e2)
 
     // homomorphic base cases
-    case Equal       (l, r) => e2 match {case Equal       (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case NotEqual    (l, r) => e2 match {case NotEqual    (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case GreaterEqual(l, r) => e2 match {case GreaterEqual(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Greater     (l, r) => e2 match {case Greater     (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case LessEqual   (l, r) => e2 match {case LessEqual   (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Less        (l, r) => e2 match {case Less        (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Equal       (l, r) => e2 match {case Equal       (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case NotEqual    (l, r) => e2 match {case NotEqual    (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case GreaterEqual(l, r) => e2 match {case GreaterEqual(l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Greater     (l, r) => e2 match {case Greater     (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case LessEqual   (l, r) => e2 match {case LessEqual   (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Less        (l, r) => e2 match {case Less        (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
 
     // homomorphic cases
     case Not(g)      => e2 match {case Not(g2)      => unify(g,g2) case _ => ununifiable(e1,e2)}
-    case And  (l, r) => e2 match {case And  (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Or   (l, r) => e2 match {case Or   (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Imply(l, r) => e2 match {case Imply(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Equiv(l, r) => e2 match {case Equiv(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case And  (l, r) => e2 match {case And  (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Or   (l, r) => e2 match {case Or   (l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Imply(l, r) => e2 match {case Imply(l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Equiv(l, r) => e2 match {case Equiv(l2,r2) => unifies2(l,r, l2,r2) case _ => ununifiable(e1,e2)}
 
     // NOTE DifferentialFormula in analogy to Differential
     case DifferentialFormula(g) => e2 match {case DifferentialFormula(g2) => unify(g,g2) case _ => ununifiable(e1,e2)}
 
     // pseudo-homomorphic cases
     //@todo join should be enough for the two unifiers in this case after they have been applied to the other side
-    case Forall(vars, g) if vars.length==1 => e2 match {case Forall(v2,g2) if v2.length==1 => unifies(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
-    case Exists(vars, g) if vars.length==1 => e2 match {case Exists(v2,g2) if v2.length==1 => unifies(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
+    case Forall(vars, g) if vars.length==1 => e2 match {case Forall(v2,g2) if v2.length==1 => unifies2(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
+    case Exists(vars, g) if vars.length==1 => e2 match {case Exists(v2,g2) if v2.length==1 => unifies2(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
 
     // homomorphic cases
-    case Box    (a, p)   => e2 match {case Box    (a2,p2) => unifies(a,p, a2,p2) case _ => ununifiable(e1,e2)}
-    case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unifies(a,p, a2,p2) case _ => ununifiable(e1,e2)}
+    case Box    (a, p)   => e2 match {case Box    (a2,p2) => unifies2(a,p, a2,p2) case _ => ununifiable(e1,e2)}
+    case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unifies2(a,p, a2,p2) case _ => ununifiable(e1,e2)}
   }
 
 
@@ -367,12 +362,12 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   protected def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
     case a: ProgramConst          => unifier(e1, e2)
     case a: SystemConst           => if (FormulaTools.dualFree(e2)) unifier(e1, e2) else throw new UnificationException(e1.toString, e2.toString, "hybrid games with duals not allowed for SystemConst")
-    case Assign(x, t)             => e2 match {case Assign(x2,t2)    => unifies(x,t, x2,t2) case _ => ununifiable(e1,e2)}
+    case Assign(x, t)             => e2 match {case Assign(x2,t2)    => unifies2(x,t, x2,t2) case _ => ununifiable(e1,e2)}
     case AssignAny(x)             => e2 match {case AssignAny(x2)    => unify(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                  => e2 match {case Test(f2)         => unify(f,f2) case _ => ununifiable(e1,e2)}
-    case ODESystem(a, h)          => e2 match {case ODESystem(a2,h2) => unifies(a,h, a2,h2) case _ => ununifiable(e1,e2)}
-    case Choice(a, b)             => e2 match {case Choice(a2,b2)    => unifies(a,b, a2,b2) case _ => ununifiable(e1,e2)}
-    case Compose(a, b)            => e2 match {case Compose(a2,b2)   => unifies(a,b, a2,b2) case _ => ununifiable(e1,e2)}
+    case ODESystem(a, h)          => e2 match {case ODESystem(a2,h2) => unifies2(a,h, a2,h2) case _ => ununifiable(e1,e2)}
+    case Choice(a, b)             => e2 match {case Choice(a2,b2)    => unifies2(a,b, a2,b2) case _ => ununifiable(e1,e2)}
+    case Compose(a, b)            => e2 match {case Compose(a2,b2)   => unifies2(a,b, a2,b2) case _ => ununifiable(e1,e2)}
     case Loop(a)                  => e2 match {case Loop(a2)         => unify(a,a2) case _ => ununifiable(e1,e2)}
     case Dual(a)                  => e2 match {case Dual(a2)         => unify(a,a2) case _ => ununifiable(e1,e2)}
     //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
@@ -383,8 +378,8 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     * @inheritdoc */
   protected def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstRepl] = e1 match {
     case c: DifferentialProgramConst => unifier(e1, e2)
-    case AtomicODE(xp, t)            => e2 match {case AtomicODE(xp2,t2) => unifies(xp,t, xp2,t2) case _ => ununifiable(e1,e2)}
-    case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unifiesODE(a,b, a2,b2) case _ => ununifiable(e1,e2)}
+    case AtomicODE(xp, t)            => e2 match {case AtomicODE(xp2,t2) => unifies2(xp,t, xp2,t2) case _ => ununifiable(e1,e2)}
+    case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unifiesODE2(a,b, a2,b2) case _ => ununifiable(e1,e2)}
   }
 
 
