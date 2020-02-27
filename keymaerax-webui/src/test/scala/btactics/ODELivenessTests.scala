@@ -100,15 +100,15 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   "compatibility" should "automatically match by compatibility" in withQE { _ =>
-    val seq = "[{x'=1 & x < 6}]x>1,[{x'=1 & x < 4}]x>4, [{v'=2,x'=1}]v<=5, [{v'=2,x'=1}]x+z<=5 ==> [{x'=1 & x < 5}]1+1=2".asSequent
+    //The first and last assumptions are compatible and can be automatically added
+    val seq = "[{x'=1 & x < 6}]x>1,[{x'=1 & x < 4}]x>4, [{v'=2,x'=1,a'=b}]v<=5, [{v'=2,x'=1}]x+z<=5 ==> [{x'=1,v'=2,a'=a^2+x+v^2 & x < 5}]1+1=2".asSequent
 
-    //First and last assumptions are compatible and can be automatically added
     val pr = proveBy(seq, compatCuts(1))
 
     println(pr)
 
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe " [{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  [{x'=1&(x < 5&x>1)&x+z<=5}]1+1=2".asSequent
+    pr.subgoals(0) shouldBe "[{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1,a'=b&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  [{x'=1,v'=2,a'=a^2+x+v^2&(x < 5&x>1)&x+z<=5}]1+1=2".asSequent
   }
 
   "odeReduce" should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
@@ -209,28 +209,29 @@ class ODELivenessTests extends TacticTestBase {
     val pr = proveBy(fml,
       implyR(1) &
 
-        // Wrap into tactic
-        cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
-        vDG("t'=1".asDifferentialProgram)(1) &
-        // same, actually p = 1
-        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
-
         //Keep compactness assumption around, wrap into tactic
-        cut("[{t'=1, u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
+        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
           skip,
           useAt("<> diamond",PosInExpr(1::Nil))(1) & prop
         ) &
 
         // cut some extra information that will get auto DC-ed in K<&>
-        cut("[{t'=1, u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) <(
+        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) <(
           skip,
-          hideL(-4) & cohideOnlyR(2) & ODE(1)
+          hideL(-2) & cohideOnlyR(2) & ODE(1)
         ) &
+
+        // Wrap into tactic
+        cut("\\exists t t=0".asFormula) <( existsL(-4) , cohideR(2) & QE) &
+        vDG("t'=1".asDifferentialProgram)(1) &
+        // same, actually p = 1
+        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-5) , cohideR(2) & QE) &
+
         // Not great
         kDomainDiamond("t > 2/3*p".asFormula)(1)
           <(
           skip,
-          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <( ODE(1), hideL(-5) & hideL(-4) & ODE(1)) //todo: ODE fix! ignore box stuff in antecedents
+          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <( ODE(1), hideL(-3) & hideL(-2) & ODE(1)) //todo: ODE fix! ignore box stuff in antecedents
           )
         &
 

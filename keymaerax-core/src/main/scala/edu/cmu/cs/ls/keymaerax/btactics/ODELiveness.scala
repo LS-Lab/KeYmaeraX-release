@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 
 import scala.collection.immutable
 import scala.collection.immutable.Nil
+import scala.collection.mutable.ListBuffer
 
 /**
   * Implements ODE tactics for liveness.
@@ -367,30 +368,33 @@ object ODELiveness {
   })
 
   // Tries to make the second ODE line up with the first one by deleting and reordering ODEs
-  private def compatODE(ode1: DifferentialProgram, ode2: DifferentialProgram, dom: Formula, post:Formula) : Option[BelleExpr] = {
+  // dom is the domain of the second ODE and post is the postcond of the first
+  private def compatODE(ode1: DifferentialProgram, ode2: DifferentialProgram, dom: Formula, post: Formula) : Option[BelleExpr] = {
     val ode1ls = DifferentialProduct.listify(ode1)
     val ode2ls = DifferentialProduct.listify(ode2)
 
-    //ODE2 must be at least a subset of ODE1
-    if(ode2ls.diff(ode1ls).nonEmpty) None
+    //ODE1 must be a subset of ODE2
+    if(ode1ls.diff(ode2ls).nonEmpty) None
     else {
-      // ODE1 can have some extras, which we can get rid of
-      val extra = ode1ls.diff(ode2ls)
+      // ODE2 can have some extras, which we can get rid of
+      val extra = ode2ls.diff(ode1ls)
       val extravars = extra.map(_.asInstanceOf[AtomicODE].xp.x)
 
       if(!StaticSemantics.freeVars(And(dom,post)).intersect(extravars.toSet).isEmpty)
         return None
 
-      val vars = extravars ++ (ode2ls.map(_.asInstanceOf[AtomicODE].xp.x))
+      val vars = extravars ++ (ode1ls.map(_.asInstanceOf[AtomicODE].xp.x))
 
-      //println(dom,post)
-      // The goal is to sort ODE1 into extra++ODE2
+      // The goal is to sort ODE2 into extra++ODE1
+      // Then add extra to ODE1
       Some(
-        AxiomaticODESolver.selectionSort(dom, post, ode1, vars, AntePosition(1)) &
+        AxiomaticODESolver.selectionSort(dom, post, ode2, vars, SuccPosition(1))
+          &
         (
           if(extra.isEmpty) skip
-          else vDG(extra.reduce(DifferentialProduct.apply))(1)
-        ))
+          else vDG(extra.reduce(DifferentialProduct.apply))(-1)
+        )
+      )
 
     }
   }
@@ -409,49 +413,55 @@ object ODELiveness {
     // should be called internally at top level box positions only
     // assert(pos.isTopLevel)
 
-    val (sys,post) = seq.sub(pos) match {
+    val (tarsys,tarpost) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => ??? //internal bug: throw new BelleThrowable("kDomD only applicable to diamond ODE in succedent")
+      case _ => ??? //should never happened
     }
 
-    val doms = FormulaTools.conjuncts(sys.constraint)
+    // Loop through compatible assumptions and track the effect of DC
+    var curdom = tarsys.constraint
+    var curdomls = FormulaTools.conjuncts(curdom)
 
-    val compatAsms = seq.ante.zipWithIndex.flatMap( fi =>
-      fi._1 match {
-        case Box(sys2:ODESystem,post2) =>
-          if(!doms.contains(post2)) { //ignoring existing postconditions in domain to line up with dC
-            compatODE(sys2.ode,sys.ode,sys2.constraint,post2) match {
-              case None => None
+    var ls = new ListBuffer[(Formula, ProvableSig, Formula, Int, BelleExpr)] ()
+
+    for (i <- seq.ante.indices) {
+      val asm = seq.ante(i)
+      asm match {
+        case Box(asmsys:ODESystem,asmpost) =>
+          if(!curdomls.contains(asmpost)) {
+            compatODE(asmsys.ode,tarsys.ode, curdom, asmpost) match {
+              case None => ()
               case Some(tac) => {
-                val pr = proveBy(Sequent(immutable.IndexedSeq(sys.constraint), immutable.IndexedSeq(sys2.constraint)), Idioms.?(QE)) //todo: timeout
-                if (pr.isProved)
-                  Some(sys2.constraint, pr, post2, fi._2, tac)
-                else None
+                val pr = proveBy(Sequent(immutable.IndexedSeq(curdom), immutable.IndexedSeq(asmsys.constraint)), Idioms.?(QE)) //todo: timeout?
+                if (pr.isProved) {
+                  ls += ((asmsys.constraint, pr, asmpost, i, tac))
+                  curdom = And(curdom, asmpost)
+                  curdomls = curdomls :+ asmpost
+                }
+                else ()
               }
             }
           }
-          else None
-        case _ => None
-      })
+        case _ => ()
+      }
+    }
 
-    //println("compatible asms: ",compatAsms)
+    //println("compatible asms: ", ls)
 
-    compatAsms.foldLeft((skip,0)) (
+    ls.foldLeft(skip) (
       (in,fp) => {
         val (dom,pr,f,i,tac) = (fp._1,fp._2,fp._3,fp._4,fp._5)
-        val ctr = in._2
-        (in._1 & dC(f)(pos) <(
+        in & dC(f)(pos) <(
           skip,
           cohideOnlyL(AntePosition(i+1)) & cohideOnlyR(pos) &
             //DebuggingTactics.print("before") &
             tac &
             //DebuggingTactics.print("after") &
             dR(dom)(1) <( closeId,
-            DifferentialTactics.diffWeakenG(1) & implyR(1) & ((andL(-1) & hideL(-2))*ctr) & by(pr) )
-        ), ctr+1)
+            DifferentialTactics.diffWeakenG(1) & implyR(1) & by(pr) )
+        )
       }
-
-    )._1
+    )
   })
 
   /** Implements K<&> rule
