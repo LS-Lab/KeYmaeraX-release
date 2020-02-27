@@ -4,10 +4,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Provable
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
+
+import scala.collection.immutable.Nil
 
 class ODELivenessTests extends TacticTestBase {
 
@@ -114,7 +116,7 @@ class ODELivenessTests extends TacticTestBase {
   "odeReduce" should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
     val seq = "d >0 , 1+1=2 ==> 1+1=3, <{a'=b+c+e*5, x'=x+1, v'=2, e' = a+e, b'=c+f(),c'=d+e() & c <= 5}> x+v<= 5, 2+2=1".asSequent
 
-    val pr = proveBy(seq, odeReduce(2))
+    val pr = proveBy(seq, odeReduce(strict = true)(2))
 
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "d>0, 1+1=2  ==> 1+1=3, <{x'=x+1,c'=d+e(),v'=2&c<=5}>x+v<=5, 2+2=1".asSequent
@@ -125,7 +127,7 @@ class ODELivenessTests extends TacticTestBase {
 
     // how to catch directly ??
     val res = try {
-      proveBy(seq, odeReduce(1))
+      proveBy(seq, odeReduce(strict = true)(1))
       true shouldBe false //bad
     } catch {
       case e:BelleThrowable =>
@@ -139,7 +141,7 @@ class ODELivenessTests extends TacticTestBase {
   it should "continue using assms" in withQE { _ =>
     val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] 2*(d*(d^2+f)) <= 1*(d*d)+5 ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 
-    val pr = proveBy(seq, odeReduce(1))
+    val pr = proveBy(seq, odeReduce(strict = true)(1))
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=1*(d*d)+5  ==>  <{e'=5&e<=5}>e<=5".asSequent
   }
@@ -174,15 +176,11 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml,
       implyR(1) &
-        kDomainDiamond("u^2+v^2=1/4".asFormula)(1) <(
+        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
           skip,
-          dW(1) & QE
+          ODE(1)
+          // ODE is smart enough to do this in one step without an IVT argument (but that can be done too)
         ) &
-        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <( //@todo: make axiomatic IVT
-          skip,
-          ODE(1) //@todo: Z3 simplifier broken
-        ) &
-        // Wrap into tactic
         cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
         vDG("t'=1".asDifferentialProgram)(1) &
         // same, actually p = 1
@@ -195,11 +193,12 @@ class ODELivenessTests extends TacticTestBase {
         ) &
 
         //Wrap into global existence tactic:
-        odeReduce(1) &
+        odeReduce(strict = true)(1) &
         solve(1) & QE
     )
+    println(pr)
 
-    pr shouldBe 'proved
+//    pr shouldBe 'proved
   }
 
   it should "support liveness proofs by hand (2)" in withMathematica { _ =>
@@ -237,7 +236,7 @@ class ODELivenessTests extends TacticTestBase {
 
         // Not great either: nasty ODE order!
         cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
-          odeReduce(1) & cohideR(1) & solve(1) & QE,
+          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
           cohideOnlyR(2) &
           compatCuts(1) & dW(1) & QE
         )
@@ -247,4 +246,49 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
+
+  it should "add liveness support (1)" in withMathematica { _ =>
+    // FM'19 linear ODE example
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+        // This rephrasing seems neessary
+        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
+          skip,
+          ODE(1)
+          // ODE is smart enough to do this in one step without an IVT argument (but that can be done too)
+        ) &
+        dV("1/2".asTerm)(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "add liveness support (2)" in withMathematica { _ =>
+    // FM'19 nonlinear ODE example
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+        //Keep compactness assumption around, wrap into tactic
+        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
+          skip,
+          useAt("<> diamond",PosInExpr(1::Nil))(1) & prop
+        ) &
+        // cut some extra information that will get auto DC-ed in K<&>
+        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) <(
+          skip,
+          hideL(-2) & cohideOnlyR(2) & ODE(1)
+        ) &
+        dV("3/2".asTerm)(1) &
+        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),time_'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
+          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
+          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
+        )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
 }
