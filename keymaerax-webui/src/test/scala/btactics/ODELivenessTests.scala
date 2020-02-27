@@ -304,4 +304,17 @@ class ODELivenessTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
+  it should "support higher derivatives" in withQE { _ =>
+    // note: postcondition x > j fails because of a renaming bug
+    val pr = proveBy("j > 0 ==> <{d'=c, x'=v, v'=a, a'=j, c'=-d}> x > 100".asSequent,
+      // Should be old(x), etc.
+      higherdV(List("x-100","v","a/2","j/6").map(_.asTerm))(1) &
+      // This is manual by design, although this is probably the main way to do it
+      dC("a>=2*coeff2+6*coeff3*timevar_".asFormula)(1) <( skip, dI('full)(1) ) &
+      dC("v>=coeff1+2*coeff2*timevar_+3*coeff3*timevar_^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
 }

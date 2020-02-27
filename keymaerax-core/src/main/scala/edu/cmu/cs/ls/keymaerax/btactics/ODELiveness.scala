@@ -599,7 +599,6 @@ object ODELiveness {
     }
   }
 
-
   /** Implements dV rule for atomic postconditions
     * The bottom two premises are auto-closed because of the need to Dconstify
     * The first one is partially auto-closed if odeReduce is able to prove global existence
@@ -634,7 +633,7 @@ object ODELiveness {
     }
 
     //support for old
-    val timevar = TacticHelper.freshNamedSymbol("time_".asVariable, seq)
+    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
 
     val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
 
@@ -733,5 +732,77 @@ object ODELiveness {
       )
   )
 
+  /** Implements higher dV series rule for atomic postconditions with less automation
+    * Given a series a_0, a_1, ... , a_n :
+    *
+    * G |- [t'=1, ODE&Q & p<0] p >= a_0 + a_1 t + a_2 t^2 + ... + a_n t^n
+    * G |- <t'=1, ODE & Q> a_0 + a_1 t + a_2 t^2 + ... + a_n t^n > 0
+    * ---- (higherdV >=)
+    * G |- <ODE & Q> p >= 0
+    *
+    * Note that domain constraint Q is kept around!
+    *
+    * @param bnds the lower bound on derivatives
+    * @return two subgoals, shown above
+    */
+  def higherdV(bnds: List[Term]): DependentPositionTactic = "higherdV" byWithInput (bnds,(pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel, "Higher dV is only applicable at a top-level succedent")
 
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("Higher dV only applicable to diamond ODE in succedent")
+    }
+
+    val (property, propt) = ineqNormalize(post)
+
+    val starter = propt match {
+      case None => skip
+      case Some(pr) => useAt(pr)(pos ++ PosInExpr(1::Nil))
+    }
+
+    //support for old
+    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
+    val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
+
+    // Introduces the time variable in a mildly gross way so that it is set to 0 initially
+    val timetac =
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+        vDG(timer)(pos)
+
+    val p = property.sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
+
+    //todo: directly support old(.) in term list instead of baking it in
+    //should coeff be baked in or not?
+    val coeff = TacticHelper.freshNamedSymbol("coeff".asVariable, seq)
+    val coefflist = (0 to bnds.length-1).map( i => Variable(coeff.name+i))
+    val coefftac = (bnds zip coefflist).map( bc => discreteGhost(bc._1,Some(bc._2))(pos) : BelleExpr).reduce(_ & _)
+
+    val series = coefflist.tail.zipWithIndex.foldLeft(coefflist.head:Term) { (h,fe) => Plus(h,Times(fe._1, Power(timevar, Number(fe._2+1)))) }
+
+    val ex = property match {
+      case Greater(_, _) => baseGExgt.fact
+      case GreaterEqual(_, _) => baseGExge.fact
+      case _ => ??? //impossible
+    }
+
+    starter & timetac & coefftac &
+    kDomainDiamond(property.asInstanceOf[ComparisonFormula].reapply(series,Number(0)))(pos) <(
+      odeReduce(strict=false)(pos) & Idioms.?(solve(pos) & QE),
+      dC(GreaterEqual(p,series))(pos) <(
+        DW(pos) & G(pos) & QE // might as well have usubst here
+        ,
+        skip
+      )
+    )
+//      discreteGhost(p, Some(oldp))(pos) &
+//      useAt(axren,PosInExpr(1::Nil))(pos) &
+//      andR(pos) < (
+//        ToolTactics.hideNonFOL & QE //G |- e() > 0
+//        ,
+//        andR(pos) <(
+//          odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(ex)), // existence
+//          compatCuts(pos) & dI('full)(pos)  // derivative lower bound
+//        )
+//      )
+  })
 }
