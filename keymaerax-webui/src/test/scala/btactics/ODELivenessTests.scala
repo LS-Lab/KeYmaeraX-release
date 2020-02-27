@@ -291,4 +291,17 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "work on simple examples (1)" in withQE { _ =>
+    val pr = proveBy("a>0 ==> <{x'=a}>x>=b()".asSequent,
+      dV("a".asTerm)(1))
+
+    val pr2 = proveBy("c=1 ==> a<=0 , <{x'=a+c}>x>=b()".asSequent,
+      dV("a".asTerm)(2))
+
+    println(pr)
+    println(pr2)
+    pr shouldBe 'proved
+    pr2 shouldBe 'proved
+  }
+
 }

@@ -646,11 +646,12 @@ object ODELiveness {
     val p = property.sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
     val oldp = TacticHelper.freshNamedSymbol("oldp".asVariable, seq)
 
+    val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
     val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,bnd)).usubst
 
     val ax = property match {
-      case Greater(_, _) => DVgt.fact(unify)
-      case GreaterEqual(_, _) => DVgeq.fact(unify)
+      case Greater(_, _) => DVgt.fact(unifODE) (unify)
+      case GreaterEqual(_, _) => DVgeq.fact(unifODE) (unify)
       case _ => ??? //impossible
     }
     val axren = ax //(URename(timevar,"t".asVariable,semantic=true))
