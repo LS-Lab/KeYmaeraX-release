@@ -42,6 +42,8 @@ class QETest extends TacticTestBase {
     import edu.cmu.cs.ls.keymaerax.core._
     def eq(n: Int) = Equal(Times(Number(n), t), (0 until n).map(_ => t).reduce(Plus))
     val n = 250
+    /** @note the reason behind this returning $Failed is triggered more directly by the
+      *       "expressions deeper than 256" test case in JLinkMathematicaLinkTests */
     qeTool.qe(eq(n)).fact.conclusion.succ(0).asInstanceOf[Equiv].right shouldBe True
   }
 
