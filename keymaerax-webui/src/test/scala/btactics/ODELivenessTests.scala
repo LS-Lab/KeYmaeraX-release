@@ -3,7 +3,7 @@ package btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.Provable
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -103,14 +103,14 @@ class ODELivenessTests extends TacticTestBase {
 
   "compatibility" should "automatically match by compatibility" in withQE { _ =>
     //The first and last assumptions are compatible and can be automatically added
-    val seq = "[{x'=1 & x < 6}]x>1,[{x'=1 & x < 4}]x>4, [{v'=2,x'=1,a'=b}]v<=5, [{v'=2,x'=1}]x+z<=5 ==> [{x'=1,v'=2,a'=a^2+x+v^2 & x < 5}]1+1=2".asSequent
+    val seq = "[{x'=1 & x < 6}]x>1,[{x'=1 & x < 4}]x>4, [{v'=2,x'=1,a'=b}]v<=5, [{v'=2,x'=1}]x+z<=5 ==> a > 0, [{x'=1,v'=2,a'=a^2+x+v^2 & x < 5}]1+1=2".asSequent
 
-    val pr = proveBy(seq, compatCuts(1))
+    val pr = proveBy(seq, compatCuts(2))
 
     println(pr)
 
     pr.subgoals.length shouldBe 1
-    pr.subgoals(0) shouldBe "[{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1,a'=b&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  [{x'=1,v'=2,a'=a^2+x+v^2&(x < 5&x>1)&x+z<=5}]1+1=2".asSequent
+    pr.subgoals(0) shouldBe "[{x'=1&x < 6}]x>1, [{x'=1&x < 4}]x>4, [{v'=2,x'=1,a'=b&true}]v<=5, [{v'=2,x'=1&true}]x+z<=5  ==>  a > 0, [{x'=1,v'=2,a'=a^2+x+v^2&(x < 5&x>1)&x+z<=5}]1+1=2".asSequent
   }
 
   "odeReduce" should "automatically delete irrelevant ODEs and stabilize" in withQE { _ =>
@@ -257,7 +257,6 @@ class ODELivenessTests extends TacticTestBase {
         kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
           skip,
           ODE(1)
-          // ODE is smart enough to do this in one step without an IVT argument (but that can be done too)
         ) &
         dV("1/2".asTerm)(1)
     )
@@ -271,18 +270,15 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml,
       implyR(1) &
-        //Keep compactness assumption around, wrap into tactic
-        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
-          skip,
-          useAt("<> diamond",PosInExpr(1::Nil))(1) & prop
-        ) &
+        //Keep compactness assumption around
+        saveBox(1) &
         // cut some extra information that will get auto DC-ed in K<&>
         cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) <(
           skip,
           hideL(-2) & cohideOnlyR(2) & ODE(1)
         ) &
         dV("3/2".asTerm)(1) &
-        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),time_'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
+        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),timevar_'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
           odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
           cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
         )
@@ -301,6 +297,92 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     println(pr2)
     pr shouldBe 'proved
+    pr2 shouldBe 'proved
+  }
+
+  it should "work on FM'15 Example 11" in withMathematica { _ =>
+    val X0 = "x2 > 0 & x1 >= -1/4 & x1 <= 1/4 & (x1^2+x2^2-1)^2<=1/30".asFormula
+    val XT = "x2 < 0 & x1 >= -1/4 & x1 <= 1/4 & (x1^2+x2^2-1)^2<=1/30".asFormula
+    val ode = "{x1'=x2-x1*(x1^2+x2^2-1), x2'=-x1-x2*(x1^2+x2^2-1)}".asDifferentialProgram
+    val dom = "x1<=2 & x1>=-2 & x2<=2 & x2>=-2".asFormula
+
+    val S1 = And(Not(XT), "x1 >= -1/4 & (x1^2+x2^2-1)^2<=1/30".asFormula)
+    val p1 = "-(x1 - 6/5)^2 + (x1 - x2 - 2)^2 +10".asTerm
+
+    val S2 = And(Not(X0), "x1 <= 1/4 & (x1^2+x2^2-1)^2<=1/30".asFormula)
+    val p2 = "-(-x1 - 6/5)^2 + (-x1 + x2 - 2)^2 +10".asTerm
+
+    val pr1 = proveBy( Imply(X0, Diamond(ODESystem(ode,dom),XT)) ,
+      implyR(1) &
+        // This part is an invariant, so cut it as context
+        cut(Box(ODESystem(ode,True),"(x1^2+x2^2-1)^2<=1/30".asFormula)) <(
+          skip,
+          cohideOnlyR(2) & ODE(1)
+        ) &
+        // Thanks to the invariant, the avoid constraint is trivial with compatible cuts
+        dDR(True)(1) <(
+          skip,
+          dW(1) & QE //or: ODE(1)
+        ) &
+        // Use a staging set that cannot be left without reaching the target
+        kDomainDiamond(Not(S1))(1) <(
+          skip,
+          dC("x1>=-1/4".asFormula)(1) <(
+            ODE(1),
+            ODE(1)
+          )
+        ) &
+        // Save the staging set as context
+        saveBox(1) &
+        // Use a progress function
+        kDomainDiamond(Less(p1, Number(0)))(1) <(
+          dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+          dW(1) & QE
+        ) &
+        // compact domain bound on Lie derivative
+        cut("[{x1'=x2-x1*(x1^2+x2^2-1),x2'=-x1-x2*(x1^2+x2^2-1),timevar_'=1&true}]2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula) <(
+          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
+          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
+        )
+    )
+
+    val pr2 = proveBy( Imply(XT, Diamond(ODESystem(ode,dom),X0)) ,
+      implyR(1) &
+        // This part is an invariant, so cut it as context
+        cut(Box(ODESystem(ode,True),"(x1^2+x2^2-1)^2<=1/30".asFormula)) <(
+          skip,
+          cohideOnlyR(2) & ODE(1)
+        ) &
+        // Thanks to the invariant, the avoid constraint is trivial with compatible cuts
+        dDR(True)(1) <(
+          skip,
+          dW(1) & QE //or: ODE(1)
+        ) &
+        // Use a staging set that cannot be left without reaching the target
+        kDomainDiamond(Not(S2))(1) <(
+          skip,
+          dC("x1<=1/4".asFormula)(1) <(
+            ODE(1),
+            ODE(1)
+          )
+        ) &
+        // Save the staging set as context
+        saveBox(1) &
+        // Use a progress function
+        kDomainDiamond(Less(p2, Number(0)))(1) <(
+          dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+          dW(1) & QE
+        ) &
+        // compact domain bound on Lie derivative
+        cut("[{x1'=x2-x1*(x1^2+x2^2-1),x2'=-x1-x2*(x1^2+x2^2-1),timevar_'=1&true}]2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula) <(
+          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
+          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
+        )
+    )
+
+    println(pr1)
+    println(pr2)
+    pr1 shouldBe 'proved
     pr2 shouldBe 'proved
   }
 

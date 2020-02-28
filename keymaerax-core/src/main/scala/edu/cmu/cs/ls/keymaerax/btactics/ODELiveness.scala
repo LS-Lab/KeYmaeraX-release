@@ -421,13 +421,12 @@ object ODELiveness {
     * ---
     * G, [x'=f(x)&A]B |- [x'=f(x)&Q]P
     */
-  def compatCuts : DependentPositionTactic = "ANON" by ((pos:Position, seq:Sequent) => {
-    // should be called internally at top level box positions only
-    // assert(pos.isTopLevel)
+  def compatCuts : DependentPositionTactic = "compatCuts" by ((pos:Position, seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "compatCuts is only applicable at a top-level succedent")
 
     val (tarsys,tarpost) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => ??? //should never happened
+      case _ => throw new BelleThrowable("compatCuts only applicable to box ODE in succedent")
     }
 
     // Loop through compatible assumptions and track the effect of DC
@@ -805,4 +804,26 @@ object ODELiveness {
 //        )
 //      )
   })
+
+  /** Saves a (negated) box version of the liveness postcondition.
+    * This is a helpful pattern because of compat cuts
+    *
+    * G, [ODE & Q]!P |- <ODE & Q> P
+    * ---- (saveBox)
+    * G |- <ODE & Q> P
+    */
+  def saveBox : DependentPositionTactic = "saveBox" by ((pos:Position, seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "saveBox is only applicable at a top-level succedent")
+
+    val (tarsys, tarpost) = seq.sub(pos) match {
+      case Some(Diamond(sys: ODESystem, post)) => (sys, post)
+      case _ => throw new BelleThrowable("saveBox only applicable to diamond ODE in succedent")
+    }
+
+    cut(Box(tarsys,Not(tarpost))) <(
+      skip,
+      useAt("<> diamond",PosInExpr(1::Nil))(pos) & notR(pos) & closeId
+    )
+  })
+
 }
