@@ -198,10 +198,10 @@ class ODELivenessTests extends TacticTestBase {
     )
     println(pr)
 
-//    pr shouldBe 'proved
+    pr shouldBe 'proved
   }
 
-  it should "support liveness proofs by hand (2)" in withMathematica { _ =>
+  it should "support liveness proofs by hand (2)" in withQE { _ =>
     // FM'19 nonlinear ODE example
     val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
 
@@ -264,7 +264,7 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "add liveness support (2)" in withMathematica { _ =>
+  it should "add liveness support (2)" in withQE { _ =>
     // FM'19 nonlinear ODE example
     val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
 
@@ -338,7 +338,8 @@ class ODELivenessTests extends TacticTestBase {
         kDomainDiamond(Less(p1, Number(0)))(1) <(
           dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
           dW(1) & QE
-        ) &
+        )
+        &
         // compact domain bound on Lie derivative
         cut("[{x1'=x2-x1*(x1^2+x2^2-1),x2'=-x1-x2*(x1^2+x2^2-1),timevar_'=1&true}]2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula) <(
           odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
@@ -386,6 +387,41 @@ class ODELivenessTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
+  it should "work on FM'15 Example 12" in withMathematica { _ =>
+    val X0 = "x2 - x1 < 0".asFormula
+    val XT = "x2 - x1 = 0".asFormula
+    val ode = "{x1'=-1, x2'=(x2-x1)^2}".asDifferentialProgram
+    val dom = "true".asFormula
+
+    val pr = proveBy( Imply(X0, Diamond(ODESystem(ode,dom),XT)) ,
+      implyR(1) &
+      kDomainDiamond("x2 - x1 >=0".asFormula)(1) <(
+        saveBox(1) &
+        dV("1".asTerm)(1) &
+        // Proving bound on derivative
+        //todo: cut needs to support old(.) directly
+        //todo: need more cut needs to support old(.) directly
+        cut("\\exists oldv oldv = x2-x1".asFormula) <(
+          existsL(-5),
+          cohideR(2) & QE
+        ) &
+          cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
+            skip,
+            cohideOnlyR(2) & hideL(-2) & ODE(1)
+        ) &
+        cut("[{x2'=(x2-x1)^2,x1'=-1,timevar_'=1&true}]2*(x2*(x2-x1)^2)<= oldv^2*(x2*x2)+oldv^2".asFormula) <(
+          odeReduce()(1) & cohideR(1) & solve(1) & QE,
+          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
+        )
+        ,
+        ODE(1)
+      )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   it should "support higher derivatives" in withQE { _ =>
     // note: postcondition x > j fails because of a renaming bug
     val pr = proveBy("j > 0 ==> <{d'=c, x'=v, v'=a, a'=j, c'=-d}> x > 100".asSequent,
@@ -394,6 +430,15 @@ class ODELivenessTests extends TacticTestBase {
       // This is manual by design, although this is probably the main way to do it
       dC("a>=2*coeff2+6*coeff3*timevar_".asFormula)(1) <( skip, dI('full)(1) ) &
       dC("v>=coeff1+2*coeff2*timevar_+3*coeff3*timevar_^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "support semialgebraic dV (FM'15, Ex 15)" in withMathematica { _ =>
+    val pr = proveBy("<{x1'=-x1,x2'=-x2}> (x1<=1 & x1>=-1 & x2<=1 &x2>=-1)".asFormula,
+      semialgdV("1".asTerm)(1)
     )
 
     println(pr)

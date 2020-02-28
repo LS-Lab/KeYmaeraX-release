@@ -263,7 +263,7 @@ object ODELiveness {
   }
 
   //Helper to remove a nonlinear ODE
-  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean) : DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
+  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr) : DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
 
     val vdgpre = getVDGinst(ode)._1
     val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
@@ -285,7 +285,7 @@ object ODELiveness {
       val finalrw = vdg(unif)
       val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
 
-      cutL(concl)(pos) <(skip,
+      cutL(concl)(pos) <( cont,
         cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & closeId
       )
     }
@@ -299,7 +299,7 @@ object ODELiveness {
       affineVDGprecond(ls.head)
     catch {
       case e : IllegalArgumentException =>
-        return removeODENonLin(ls.head,strict)(pos) & removeODEs(ls.tail,pos, strict)
+        return removeODENonLin(ls.head,strict,removeODEs(ls.tail,pos, strict))(pos)
     }
 
     useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)
@@ -652,7 +652,7 @@ object ODELiveness {
       case GreaterEqual(_, _) => DVgeq.fact(unifODE) (unify)
       case _ => ??? //impossible
     }
-    val axren = ax //(URename(timevar,"t".asVariable,semantic=true))
+    val axren = ax(URename(timevar,"t".asVariable,semantic=true))
 
     val ex = property match {
       case Greater(_, _) => baseGExgt.fact
@@ -663,72 +663,130 @@ object ODELiveness {
     starter & timetac &
     discreteGhost(p, Some(oldp))(pos) &
     useAt(axren,PosInExpr(1::Nil))(pos) &
-    andR(pos) < (
-      ToolTactics.hideNonFOL & QE //G |- e() > 0
-      ,
+    andR(pos) <(
       andR(pos) <(
-        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(ex)), // existence
-        compatCuts(pos) & dI('full)(pos)  // derivative lower bound
-      )
+      ToolTactics.hideNonFOL & QE, //G |- e() > 0
+      odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(ex))), // existence
+      compatCuts(pos) & dI('full)(pos)  // derivative lower bound
     )
+  })
+
+  // Semialgebraic dV
+  def semialgdV(bnd: Term): DependentPositionTactic = "semialgdV" byWithInput (bnd,(pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+    }
+
+    val (property, propt) = SimplifierV3.semiAlgNormalize(post)
+
+    val starter = propt match {
+      case None => skip
+      case Some(pr) => useAt(pr)(pos ++ PosInExpr(1::Nil))
+    }
+
+    //support for old
+    val timevar = TacticHelper.freshNamedSymbol("timevar_".asVariable, seq)
+
+    val timer = AtomicODE(DifferentialSymbol(timevar),Number(1))
+
+    // Introduces the time variable in a mildly gross way so that it is set to 0 initially
+    val timetac =
+      cut(Exists(List(timevar), Equal(timevar,Number(0)))) <( existsL('Llast), cohideR('Rlast) & QE) &
+        vDG(timer)(pos)
+
+    //Symbolic lower bound
+    val oldp = TacticHelper.freshNamedSymbol("oldp".asVariable, seq)
+
+    val oldpbound = Greater(Plus(oldp,Times(bnd, timevar)), Number(0))
+
+    def mkFml(fml: Formula) : Formula = {
+      fml match {
+        case Greater(p , _) => GreaterEqual(p, Plus(oldp,Times(bnd, timevar)))
+        case GreaterEqual(p , _) => GreaterEqual(p, Plus(oldp,Times(bnd, timevar)))
+        case And(l,r) => And(mkFml(l),mkFml(r))
+        case Or(l,r) => Or(mkFml(l),mkFml(r))
+        case _ => ??? //impossible thanks to normalization
+      }
+    }
+
+    val inv = mkFml(property)
+
+    starter & timetac &
+    cut(Exists(List(oldp),inv)) <(
+      existsL('Llast),
+      cohideR('Rlast) & QE //this should be a trivial QE question
+    ) &
+    kDomainDiamond(oldpbound)(pos) <(
+      useAt(exRWgt,PosInExpr(1::Nil))(pos)& andR(pos) <(
+        ToolTactics.hideNonFOL & QE,
+        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(baseGExgt)), // existence
+      ),
+      dC(inv)(pos) <(
+        DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
+        sAIclosedPlus()(1) //ODE(1) does a boxand split, which is specifically a bad idea here
+      )
+
+    )
+
   })
 
   /** some of these should morally be in DerivedAxioms but have weird dependencies */
   private lazy val baseGExge = remember("<{gextimevar_'=1}> (gextimevar_ >= p())".asFormula, solve(1) & QE & done, namespace)
   private lazy val baseGExgt = remember("<{gextimevar_'=1}> (gextimevar_ > p())".asFormula, solve(1) & QE & done, namespace)
 
-  private lazy val DVgeq = remember(
-    "e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e() & [{t'=1, c & q_(||) & f_(||) < 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) >= 0".asFormula,
-    implyR(1) & andL(-1) & andL(-2) &
-      kDomainDiamond("p(||) + e()* t >= 0".asFormula)(1) <(
-        hideL(-3) &
-          // Nasty moves but only done once so that's fine
-          cutR("<{t'=1,c&q_(||)}>(t>=-p(||)/e() & e() > 0)".asFormula)(1) <(
-            implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
-              cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e()&e()>0)) & e() > 0}](!t>=-p(||)/e())".asFormula)(1)<(
-                DW(1) & G(1) & prop,
-                equivifyR(1) & commuteEquivR(1) &
-                  useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
-              ) ,
-            cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e()&e()>0 ==> p()+e()*t>=0".asSequent,QE))
-          )
-        ,
-        //not sure why dC fails here
-        cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t >= 0)".asFormula)(1)<(
-          DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0  ==>  f_()>=0".asSequent,QE)),
-          equivifyR(1) & commuteEquivR(1) &
-            useAt("DC differential cut",PosInExpr(1::Nil))(1) &
-            useAt("! >=",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
-        )
+  private lazy val exRWgt = remember("e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t > 0".asFormula,
+    implyR(1) & andL(-1) &
+      cutR("<{t'=1,c&q_(||)}>(t>-p(||)/e() & e() > 0)".asFormula)(1) <(
+        implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
+          cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e()&e()>0)) & e() > 0}](!t>-p(||)/e())".asFormula)(1)<(
+            DW(1) & G(1) & prop,
+            equivifyR(1) & commuteEquivR(1) &
+              useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
+          ) ,
+        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e()&e()>0 ==> p()+e()*t>0".asSequent,QE))
       ),
     namespace
   )
 
-  private lazy val DVgt = remember (
-    "e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e() & [{t'=1, c & q_(||) & f_(||) <= 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) > 0".asFormula,
-    implyR(1) & andL(-1) & andL(-2) &
-      kDomainDiamond("p(||) + e()* t > 0".asFormula)(1) <(
-        hideL(-3) &
-          // Nasty moves but only done once so that's fine
-          cutR("<{t'=1,c&q_(||)}>(t>-p(||)/e() & e() > 0)".asFormula)(1) <(
-            implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
-              cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e()&e()>0)) & e() > 0}](!t>-p(||)/e())".asFormula)(1)<(
-                DW(1) & G(1) & prop,
-                equivifyR(1) & commuteEquivR(1) &
-                  useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
-              ) ,
-            cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e()&e()>0 ==> p()+e()*t>0".asSequent,QE))
-          )
-        ,
-        //kDomD will fail to add this automatically since not easily proved by DC
-        //not sure why dC fails though
-        cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t > 0)".asFormula)(1)<(
-          DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0  ==>  f_()>0".asSequent,QE)),
-          equivifyR(1) & commuteEquivR(1) &
-            useAt("DC differential cut",PosInExpr(1::Nil))(1) &
-            useAt("! >",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
-        )
-      )
+  private lazy val exRWge = remember("e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t >= 0".asFormula,
+    implyR(1) & andL(-1) &
+      cutR("<{t'=1,c&q_(||)}>(t>=-p(||)/e() & e() > 0)".asFormula)(1) <(
+        implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
+          cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e()&e()>0)) & e() > 0}](!t>=-p(||)/e())".asFormula)(1)<(
+            DW(1) & G(1) & prop,
+            equivifyR(1) & commuteEquivR(1) &
+              useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
+          ) ,
+        cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e()&e()>0 ==> p()+e()*t>=0".asSequent,QE))
+      ),
+    namespace
+  )
+
+  private lazy val DVgeq = remember(
+    "(e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) < 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) >= 0".asFormula,
+    implyR(1) & andL(-1) & useAt(exRWge.fact,PosInExpr(0::Nil))(-1) & implyRi &
+    useAt("K<&>",PosInExpr(1::Nil))(1) &
+    cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t >= 0)".asFormula)(1)<(
+      DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0  ==>  f_()>=0".asSequent,QE)),
+      equivifyR(1) & commuteEquivR(1) &
+        useAt("DC differential cut",PosInExpr(1::Nil))(1) &
+        useAt("! >=",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+    ), namespace
+  )
+
+  private lazy val DVgt = remember(
+    "(e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) <= 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) > 0".asFormula,
+    implyR(1) & andL(-1) & useAt(exRWgt.fact,PosInExpr(0::Nil))(-1) & implyRi &
+    useAt("K<&>",PosInExpr(1::Nil))(1) &
+    cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t > 0)".asFormula)(1)<(
+      DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0  ==>  f_()>0".asSequent,QE)),
+      equivifyR(1) & commuteEquivR(1) &
+        useAt("DC differential cut",PosInExpr(1::Nil))(1) &
+        useAt("! >",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+    ), namespace
   )
 
   /** Implements higher dV series rule for atomic postconditions with less automation
