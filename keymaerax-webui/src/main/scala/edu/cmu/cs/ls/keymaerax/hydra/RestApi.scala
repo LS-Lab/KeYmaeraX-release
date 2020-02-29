@@ -26,6 +26,7 @@ import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
 import StatusCodes._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
+import scala.annotation.tailrec
 import scala.language.postfixOps
 
 /**
@@ -85,9 +86,12 @@ object RestApi extends Logging {
     }
 
   def completeRequest(r: Request, t: SessionToken): StandardRoute = t match {
-    case NewlyExpiredToken(_) => complete(Unauthorized, Nil, s"Session $t expired")
+    case NewlyExpiredToken(_) =>
+      assert(!Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("true"), "Default user is not supposed to expire, but did.")
+      complete(Unauthorized, Nil, s"Session $t expired")
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
+      else if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("true")) complete(completeResponse(new ErrorResponse("Unexpected internal error: default user lacks permission; please reconfigure keymaerax.conf to USE_DEFAULT_USER=ask, restart KeYmaera X, and register an ordinary local login name.") :: Nil))
       else complete(Forbidden, Nil, s"Permission to this resource (${r.getClass.getCanonicalName}) is denied for session $t")
   }
 
@@ -143,7 +147,7 @@ object RestApi extends Logging {
               case Some(user) =>
                 // login default user and show models
                 SessionManager.defaultUserTokenKey = Some(SessionManager.add(user))
-                redirect("/dashboard.html?#/models", StatusCodes.TemporaryRedirect)
+                getFromResource("index_localhost.html") //@note auto-forwards to models
               case _ =>
                 // database does not know default user: first time use by a user with a fresh database, show license and
                 // ask for preferred user mode
@@ -168,7 +172,6 @@ object RestApi extends Logging {
   //region Users
 
   val users: Route = pathPrefix("user" / Segment / Segment / "mode" / Segment) { (username, password, mode) => {
-    implicit val sessionUser = None
     pathEnd {
       get {
         val request = new LoginRequest(database,username, password)
@@ -1323,15 +1326,24 @@ object SessionManager {
   def token(key: String): SessionToken = sessionMap.get(key) match {
     case Some((user, timeout)) =>
       if (new Date().before(timeout)) {
-        //@HACK need better way of mapping user levels to tokens
-        if (user.level == 0 || user.level == 1) ReadWriteToken(key, user.userName)
-        else if (user.level == 3) ReadonlyToken(key, user.userName)
-        else ???
+        createToken(key, user)
       } else {
         remove(key)
-        NewlyExpiredToken(key)
+        // on local host, recreate default user token
+        if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
+          Configuration.contains(Configuration.Keys.DEFAULT_USER)) {
+          createToken(key, user)
+        } else NewlyExpiredToken(key)
       }
     case None => EmptyToken()
+  }
+
+  /** Creates a token with token `key` representing `user`. */
+  private[this] def createToken(key: String, user: UserPOJO): SessionToken = {
+    //@HACK need better way of mapping user levels to tokens
+    if (user.level == 0 || user.level == 1) ReadWriteToken(key, user.userName)
+    else if (user.level == 3) ReadonlyToken(key, user.userName)
+    else ???
   }
 
   def add(user: UserPOJO): String = {
@@ -1353,10 +1365,17 @@ object SessionManager {
 
   private def timeoutDate : Date = {
     val c = Calendar.getInstance()
-    c.add(Calendar.DATE, 7)
+    val expiresIn =
+      // local user: sessions don't expire
+      if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains("true") &&
+        Configuration.contains(Configuration.Keys.DEFAULT_USER)) {
+        Int.MaxValue
+      } else 7
+    c.add(Calendar.DATE, expiresIn)
     c.getTime
   }
 
+  @tailrec
   private def generateToken(): String = {
     val random: SecureRandom = new SecureRandom()
     val bytes = Array[Byte](20)
