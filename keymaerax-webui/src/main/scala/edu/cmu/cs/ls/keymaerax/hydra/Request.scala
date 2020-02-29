@@ -2083,11 +2083,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             try {
               val proofSession = session(proofId).asInstanceOf[ProofSession]
               val tacticString = fullExpr(sequent)
-              // elaborate all variables to function/predicate symbols, but only auto-expand definitions when tactic asks for it
-              val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator), proofSession.defs,
-                expandAll =
-                  if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(tacticString).isDefined) true
-                  else false)
+              // elaborate all variables to function/predicate symbols, but never auto-expand
+              val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator), proofSession.defs, expandAll=false)
 
               val appliedExpr: BelleExpr = (pos, pos2, expr) match {
                 case (None, None, _: AtPosition[BelleExpr]) =>
