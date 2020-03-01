@@ -14,17 +14,22 @@ KeYmaera X features a minimal core of just about 1700 lines of code that isolate
 Installation
 ============
 The easiest way to run KeYmaera X is to download binaries 
-[keymaerax.jar](http://keymaerax.org/keymaerax.jar) and start from command line
+[keymaerax.jar](http://keymaerax.org/keymaerax.jar) and start from command line:
 
     java -jar keymaerax.jar
 
 First ensure that the following software is installed
 - [Java Development Kit JDK](https://java.com/download)
   (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended.)
-- [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
-  The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
-  Without active Mathematica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
+- Use any number of the following real arithmetic solvers:
+  - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
+    (version 10+ recommended. Previous versions may work but are only compatible with Java 1.6 and 1.7.
+    The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
+    Without active Mathematica, the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
+  - [Wolfram Engine](http://www.wolfram.com/engine)
+    free alternative that needs an active internet connection.
+  - [Z3 Solver](http://www.wolfram.com/engine)
+    is built-in but provides less functionality.
 
 See [more details on installation, usage, FAQ](http://keymaeraX.org/download.html)
 

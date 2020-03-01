@@ -111,8 +111,7 @@ angular.module('keymaerax.controllers').controller('AutoLoginCtrl',
     }
 
     $scope.login = function(username, password) {
-      $http.get("/user/" + username + "/" + password + "/mode/0")
-      .then(function(response) {
+      $http.get("/user/" + username + "/" + password + "/defaultLogin").then(function(response) {
         if (response.data.type == "LoginResponse") {
           if (response.data.success) {
             sessionService.setToken(response.data.sessionToken);
@@ -120,11 +119,17 @@ angular.module('keymaerax.controllers').controller('AutoLoginCtrl',
             sessionService.setUserAuthLevel(response.data.userAuthLevel);
             document.location.href = "/dashboard.html?#/models";
           } else {
-            $scope.processRegistration()
+            if (data.data.type == "error" && data.data.textStatus !== undefined &&
+                data.data.textStatus.startsWith("Unable to login user local.")) {
+              $scope.processRegistration();
+            }
           }
         }
       }).catch(function(data, status) {
-        $scope.processRegistration()
+        if (data.data.type == "error" && data.data.textStatus !== undefined &&
+            data.data.textStatus.startsWith("Unable to login user local.")) {
+          $scope.processRegistration();
+        }
       });
     }
 

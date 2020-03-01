@@ -99,6 +99,12 @@ private object MORE extends ExpectNonterminal("<more>") {override def toString =
  * val fml0 = parser("x!=5")
  * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
  * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+ * // parse only formulas
+ * val fml3 = parser.formulaParser("x>=0 -> [{x'=2}]x>=0")
+ * // parse only programs/games
+ * val prog1 = parser.programParser("x:=x+1;{x'=2}")
+ * // parse only terms
+ * val term1 = parser.termParser("x^2+2*x+1")
  * }}}
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser]]

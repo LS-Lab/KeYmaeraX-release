@@ -1,5 +1,4 @@
-==KeYmaera X: An aXiomatic Tactical Theorem Prover==
-====================================================
+=KeYmaera X: An aXiomatic Tactical Theorem Prover=
 
 [[http://keymaeraX.org/ KeYmaera X]] is a theorem prover for [[https://lfcps.org/logic/dL.html differential dynamic logic]] (dL), a logic for specifying and verifying properties of hybrid systems with mixed discrete and continuous dynamics. Reasoning about complicated hybrid systems requires support for sophisticated proof techniques, efficient computation, and a user interface that crystallizes salient properties of the system. KeYmaera X allows users to specify custom proof search techniques as tactics, execute tactics in parallel, and interface with partial proofs via an extensible user interface.
 
@@ -17,6 +16,14 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.core.Provable Provable]]` - Proof certificates transformed by rules/axioms
       - `[[edu.cmu.cs.ls.keymaerax.core.Rule Rule]]` - Proof rules as well as `[[edu.cmu.cs.ls.keymaerax.core.USubstOne USubst]]` for uniform substitutions and [[edu.cmu.cs.ls.keymaerax.core.URename renaming]]
       - `[[edu.cmu.cs.ls.keymaerax.core.StaticSemantics StaticSemantics]]` - Static semantics with free and bound variable analysis
+      - Instead of constructing dL expressions from constructors, it is easier to use the `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]`.
+
+  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
+
+      - [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter KeYmaeraXPrettyPrinter]]` - Pretty printer producing concrete KeYmaera X syntax
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]` - Parser reading concrete KeYmaera X syntax
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser KeYmaeraXArchiveParser]]` - Parser reading KeYmaera X model and proof archive `.kyx` files
 
   - `[[edu.cmu.cs.ls.keymaerax.infrastruct]]` - Prover infrastructure outside the kernel
       - `[[edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch UnificationMatch]]` - Unification algorithm
@@ -37,39 +44,34 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.btactics.DifferentialEquationCalculus DifferentialEquationCalculus]]` - Differential Equation Calculus for differential dynamic logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` - Unification-based uniform substitution calculus underlying the other calculi
 
-  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation for differential dynamic logic.
-
-      - [[http://keymaeraX.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter KeYmaeraXPrettyPrinter]]` - Pretty printer producing concrete KeYmaera X syntax
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser KeYmaeraXParser]]` - Parser reading concrete KeYmaera X syntax
-      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser KeYmaeraXArchiveParser]]` - Parser reading KeYmaera X model and proof archive `.kyx` files
-
   - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
-      - `[[edu.cmu.cs.ls.keymaerax.lemma.Lemma Lemma]]` - Lemmas that are Provables to be stored under a name, e.g., in files.
+      - `[[edu.cmu.cs.ls.keymaerax.lemma.Lemma Lemma]]` - Lemmas are [[edu.cmu.cs.ls.keymaerax.core.Provable Provables]] stored under a name, e.g., in files.
       - `[[edu.cmu.cs.ls.keymaerax.lemma.LemmaDB LemmaDB]]` - Lemma database stored in files or database etc.
 
-  - `[[edu.cmu.cs.ls.keymaerax.tools.qe]]` - Arithmetic back-ends
+  - `[[edu.cmu.cs.ls.keymaerax.tools.qe]]` - Real arithmetic back-end solvers
       - `[[edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaQETool MathematicaQETool]]` - Mathematica interface for real arithmetic.
       - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool Z3QETool]]` - Z3 interface for real arithmetic.
-  - `[[edu.cmu.cs.ls.keymaerax.tools.ext]]` - Extended back-ends for ODE solving, counterexamples, algebra, etc.
+  - `[[edu.cmu.cs.ls.keymaerax.tools.ext]]` - Extended back-ends for noncritical ODE solving, counterexamples, algebra, simplifiers, etc.
       - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica  Mathematica]]` - Mathematica interface for ODE solving, algebra, simplification, invariant generation, etc.
-      - `[[edu.cmu.cs.ls.keymaerax.tools.qe.Z3QETool Z3QETool]]` - Z3 interface for real arithmetic.
+      - `[[edu.cmu.cs.ls.keymaerax.tools.ext.Z3 Z3]]` - Z3 interface for real arithmetic including simplifiers.
     
+==Entry Points==
+
 Additional entry points and usage points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
 
   - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]` - Axiom indexing data structures for canonical proof strategies.
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]` - Axiom indexing data structures with keys and recursors for canonical proof strategies.
 
-  - `[[edu.cmu.cs.ls.keymaerax.bellerophon.UIIndex]]` - Index determining which canonical reasoning steps to display on User Interface..
+  - `[[edu.cmu.cs.ls.keymaerax.bellerophon.UIIndex]]` - Index determining which canonical reasoning steps to display on the KeYmaera X User Interface.
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]` - Registry for derived axioms and axiomatic proof rules.
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]` - Registry for derived axioms and axiomatic proof rules that are proved from the core.
 
 ==References==
 
-Full references on KeYmaera X are provided elsewhere [[http://keymaeraX.org/]]. The main references are the following:
+Full references on KeYmaera X are provided at [[http://keymaeraX.org/]]. The main references are the following:
 
 1. André Platzer. 
 [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]].
@@ -82,4 +84,5 @@ In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automa
 3. André Platzer.
 [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]].
 Springer, 2018.
+[[http://video.lfcps.org/ Videos]]
 

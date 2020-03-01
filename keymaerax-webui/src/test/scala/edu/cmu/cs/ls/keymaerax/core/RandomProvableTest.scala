@@ -52,7 +52,7 @@ class RandomProvableTest extends FlatSpec with Matchers {
 //    }
 //    if (dual) {
 //      for (i <- 1 to randomTrials) {
-//        import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
+//        import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 //        val e = Box(rand.nextProgram(randomComplexity), True)
 //        if (e.find(prg=>prg.isInstanceOf[Dual])==None)
 //          Provable.startProof(e)(DualFree(SuccPos(0)), 0) shouldBe 'proved

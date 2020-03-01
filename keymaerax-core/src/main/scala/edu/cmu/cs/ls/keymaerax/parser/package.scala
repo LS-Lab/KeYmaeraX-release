@@ -41,7 +41,7 @@ import edu.cmu.cs.ls.keymaerax.core.CoreException
  * {{{ PrettyPrinter: Expression => String}}}
  * [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]] implements the pretty-printer for the concrete syntax
  * of differential dynamic logic used in KeYmaera X.
- * A pretty-printer is essentially a function from differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]] to strings.
+ * A pretty-printer is an injective function from differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]] to strings.
  *
  * Printing formulas to strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.apply]]:
  * {{{
@@ -74,7 +74,7 @@ import edu.cmu.cs.ls.keymaerax.core.CoreException
  * {{{Parser: String => Expression}}}
  * [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]] implements the parser for the concrete syntax
  * of differential dynamic logic used in KeYmaera X.
- * A parser is essentially a function from input string to differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]].
+ * A parser is a function from input strings to differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]].
  *
  * Parsing formulas from strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]:
  * {{{

@@ -75,14 +75,19 @@ class UnificationMatchTest extends SystemTestBase {
       SubstitutionPair("p()".asFormula, "x^2+y>=0".asFormula) :: Nil))
   }
 
-  it should "unify \\forall x p(x) with \\forall x (!q(x)) " in {
+  it should "unify \\forall x p(x) with \\forall x (!q(x))" in {
     shouldUnify("\\forall x p(x)".asFormula, "\\forall x (!q(x))".asFormula, USubst(
       SubstitutionPair("p(.)".asFormula, "!q(.)".asFormula) :: Nil))
   }
 
-  it should "match \\forall x p(x) with \\forall x (!p(x)) " in {
+  it should "match \\forall x p(x) with \\forall x (!p(x))" in {
     shouldUnify("\\forall x p(x)".asFormula, "\\forall x (!p(x))".asFormula, USubst(
       SubstitutionPair("p(.)".asFormula, "!p(.)".asFormula) :: Nil))
+  }
+  it should "match" in {
+    shouldUnify("[a;]p() -> [a;]p()".asFormula, "[x:=x+1;]y>0 -> [x:=x+1;]y>0".asFormula, USubst(
+      SubstitutionPair("a;".asProgram, "x:=x+1;".asProgram) :: SubstitutionPair("p()".asFormula, "y>0".asFormula) :: Nil
+    ))
   }
 
   "Unification programs" should "unify [a;]x>=0 with [x:=x+5;]x>=0" in {

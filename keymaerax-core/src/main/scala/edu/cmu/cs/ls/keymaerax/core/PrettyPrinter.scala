@@ -13,7 +13,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 /**
-  * A pretty printer for differential dynamic logic is a function from Expressions to Strings.
+  * A pretty printer for differential dynamic logic is an injective function from Expressions to Strings.
   * This object manages the default pretty printer that KeYmaera X uses in [[Expression.prettyString]].
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser.PrettyPrinter]]
@@ -40,6 +40,7 @@ object PrettyPrinter extends (Expression => String) {
   /**
     * Set a new pretty printer to be used by all [[Expression]] types from now on.
     * @param printer the (deterministic, injective) pretty-printer to use in KeYmaera X from now on.
+    * @requires printer(e1)==printer(e2) => e1==e2
     */
   def setPrinter(printer: PrettyPrinter): Unit = {pp = printer}
 }

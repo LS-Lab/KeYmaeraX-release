@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.symbol
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.{int, symbol}
 
 /** Extended Mathematica operator specifications for non-soundness critical tools. */
 object ExtMathematicaOpSpec {
@@ -22,8 +22,6 @@ object ExtMathematicaOpSpec {
   val coefficientDomain = LiteralMathOpSpec(symbol("CoefficientDomain"))
 
   val rationals = LiteralMathOpSpec(symbol("Rationals"))
-
-  val placeholder = LiteralMathOpSpec(symbol("#"))
 
   //</editor-fold>
 
@@ -46,6 +44,10 @@ object ExtMathematicaOpSpec {
   val compoundExpression = NaryMathOpSpec(symbol("CompoundExpression"))
 
   val first = NaryMathOpSpec(symbol("First"))
+
+  val slot = UnaryMathOpSpec(symbol("Slot"))
+
+  val placeholder = slot(int(1))
 
   //</editor-fold>
 
