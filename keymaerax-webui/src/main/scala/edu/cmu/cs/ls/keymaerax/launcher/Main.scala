@@ -61,18 +61,25 @@ object Main {
       val keymaeraxjar: String = jarLocation
 
       val javaVersion = System.getProperty("java.version")
-      val javaMajorMinor :: legacyUpdateVersion :: Nil =
-        if (javaVersion.contains("_")) javaVersion.split("_").toList
-        else javaVersion :: "-1" :: Nil
-      val _ :: javaMajor :: javaMinor :: updateVersion :: Nil = {
-        val majorMinor = javaMajorMinor.split("\\.").toList
-        if (majorMinor.length == 1) "1" +: majorMinor :+ "0" :+ legacyUpdateVersion
-        else if (majorMinor.length == 2) majorMinor :+ "0" :+ legacyUpdateVersion
-        else if (Integer.parseInt(majorMinor.head) >= 9) "1" +: majorMinor //@note Java 9 onwards are of the shape 9.0.2
-        else majorMinor.take(3) :+ legacyUpdateVersion
+      val javaMajor :: javaMinor :: updateVersion :: Nil = try {
+        val javaMajorMinor :: legacyUpdateVersion :: Nil =
+          if (javaVersion.contains("_")) javaVersion.split("_").toList
+          else javaVersion :: "-1" :: Nil
+        val _ :: javaMajor :: javaMinor :: updateVersion :: Nil = {
+          val majorMinor = javaMajorMinor.split("\\.").toList
+          if (majorMinor.length == 1) "1" +: majorMinor :+ "0" :+ legacyUpdateVersion
+          else if (majorMinor.length == 2) majorMinor :+ "0" :+ legacyUpdateVersion
+          else if (Integer.parseInt(majorMinor.head) >= 9) "1" +: majorMinor //@note Java 9 onwards are of the shape 9.0.2
+          else majorMinor.take(3) :+ legacyUpdateVersion
+        }
+        Integer.parseInt(javaMajor) :: Integer.parseInt(javaMinor) :: Integer.parseInt(updateVersion) :: Nil
+      } catch  {
+        case _: Throwable =>
+          println(s"Unexpected Java version format $javaVersion. KeYmaera X requires at least Java version 1.8.0_111. If you experience problems, please double-check the Java version and restart KeYmaera X with the appropriate version.")
+          -1 :: -1 :: -1 :: Nil
       }
 
-      if (Integer.parseInt(javaMajor) < 8 || (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)) {
+      if (javaMajor >= 0 && javaMajor < 8 || (javaMajor == 8 && javaMinor == 0 && updateVersion < 111)) {
         println(s"KeYmaera X requires at least Java version 1.8.0_111, but was started with $javaVersion. Please update Java and restart KeYmaera X.")
       } else {
         val cmd = (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
