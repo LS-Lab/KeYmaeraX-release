@@ -185,15 +185,44 @@ class SetDefaultUserRequest(db: DBAbstraction, username: String, password: Strin
   }
 }
 
-class LoginRequest(db : DBAbstraction, username : String, password : String) extends Request with ReadRequest {
+class LocalLoginRequest(db: DBAbstraction, username: String, password: String) extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains ("true") && username == "local") {
+      Configuration.getOption(Configuration.Keys.DEFAULT_USER) match {
+        case Some(username) => db.getUser(username) match {
+          case Some(user) =>
+            val sessionToken = Some(SessionManager.add(user))
+            new LoginResponse(true, user, sessionToken) :: Nil
+          case None => new ErrorResponse("Unable to login default user " + username
+            + ". Please double-check default user name in keymaerax.conf, or change keymaerax.conf to USE_DEFAULT_USER=ask and register a new user.") :: Nil
+        }
+        case None => new ErrorResponse("Unable to login user " + username
+          + ". Please double-check default user name in keymaerax.conf, or change keymaerax.conf to USE_DEFAULT_USER=ask and register a new user.") :: Nil
+      }
+    } else {
+      val check = db.checkPassword(username, password)
+      db.getUser(username) match {
+        case Some(user) =>
+          val sessionToken =
+            if (check) Some(SessionManager.add(user))
+            else None
+          new LoginResponse(check, user, sessionToken) :: Nil
+        case None => new ErrorResponse("Unable to login user " + username
+          + ". Please double-check user name and password, or register a new user.") :: Nil
+      }
+    }
+  }
+}
+
+class LoginRequest(db: DBAbstraction, username: String, password: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val check = db.checkPassword(username, password)
     db.getUser(username) match {
       case Some(user) =>
         val sessionToken =
-          if(check) Some(SessionManager.add(user))
+          if (check) Some(SessionManager.add(user))
           else None
-        new LoginResponse(check, user, sessionToken) ::  Nil
+        new LoginResponse(check, user, sessionToken) :: Nil
       case None => new ErrorResponse("Unable to login user " + username
         + ". Please double-check user name and password, or register a new user.") :: Nil
     }

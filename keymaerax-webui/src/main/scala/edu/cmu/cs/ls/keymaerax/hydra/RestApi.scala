@@ -184,6 +184,15 @@ object RestApi extends Logging {
     }
   }}
 
+  val defaultLogin: Route = pathPrefix("user" / Segment / Segment / "defaultLogin") { (username, password) => {
+    pathEnd {
+      get {
+        val request = new LocalLoginRequest(database,username, password)
+        completeRequest(request, EmptyToken())
+      }
+    }
+  }}
+
   val setDefaultUser: Route = pathPrefix("user" / Segment / Segment / "setDefaultUser" / Segment) { (username, password, useDefault) => {
     pathEnd {
       post {
@@ -1194,6 +1203,7 @@ object RestApi extends Logging {
     extractdb          ::
     shutdown           ::
     users              ::
+    defaultLogin       ::
     setDefaultUser     ::
     cookie_echo        ::
     kyxConfig          ::

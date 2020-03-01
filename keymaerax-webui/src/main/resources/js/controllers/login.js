@@ -111,8 +111,7 @@ angular.module('keymaerax.controllers').controller('AutoLoginCtrl',
     }
 
     $scope.login = function(username, password) {
-      // on get request, mode is ignored
-      $http.get("/user/" + username + "/" + password + "/mode/undefined").then(function(response) {
+      $http.get("/user/" + username + "/" + password + "/defaultLogin").then(function(response) {
         if (response.data.type == "LoginResponse") {
           if (response.data.success) {
             sessionService.setToken(response.data.sessionToken);
