@@ -26,7 +26,7 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "correctly prove affine norm bound" in withQE { _ =>
-    val affnorm = (1 to 5).map(ODEInvariance.affine_norm_bound)
+    val affnorm = (1 to 4).map(ODEInvariance.affine_norm_bound)
     affnorm.exists(_.isProved == false) shouldBe false
   }
 
@@ -125,6 +125,7 @@ class ODELivenessTests extends TacticTestBase {
   it should "throw a helpful error when it gets stuck" in withQE { _ =>
     val seq = "==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 
+    //the [Exception] thrownBy ??? should have message ""
     // how to catch directly ??
     val res = try {
       proveBy(seq, odeReduce(strict = true)(1))
@@ -404,9 +405,9 @@ class ODELivenessTests extends TacticTestBase {
           existsL(-5),
           cohideR(2) & QE
         ) &
-          cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
-            skip,
-            cohideOnlyR(2) & hideL(-2) & ODE(1)
+        cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
+          skip,
+          cohideOnlyR(2) & hideL(-2) & ODE(1)
         ) &
         cut("[{x2'=(x2-x1)^2,x1'=-1,timevar_'=1&true}]2*(x2*(x2-x1)^2)<= oldv^2*(x2*x2)+oldv^2".asFormula) <(
           odeReduce()(1) & cohideR(1) & solve(1) & QE,
@@ -447,12 +448,12 @@ class ODELivenessTests extends TacticTestBase {
   it should "support semialgebraic dV (disjunctive)" in withMathematica { _ =>
     val pr = proveBy("v!=0 -> <{x'=v}> (x>100 | x < 100)".asFormula,
       implyR(1) &
-      //encode abs(v)
-      cut("\\exists absv (absv > 0 & absv^2 = v^2)".asFormula) <(
-        existsL(-2),
-        hideR(1) & QE
-      ) &
-      semialgdV("absv".asTerm)(1)
+        //encode abs(v)
+        cut("\\exists absv (absv = abs(v))".asFormula) < (
+          existsL(-2),
+          hideR(1) & QE
+        ) &
+        semialgdV("absv".asTerm)(1)
     )
 
     println(pr)
