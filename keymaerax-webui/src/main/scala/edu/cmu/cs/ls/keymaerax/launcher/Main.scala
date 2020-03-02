@@ -60,28 +60,13 @@ object Main {
       val java: String = javaLocation
       val keymaeraxjar: String = jarLocation
 
-      val javaVersion = System.getProperty("java.version")
-      val javaMajor :: javaMinor :: updateVersion :: Nil = try {
-        val javaMajorMinor :: legacyUpdateVersion :: Nil =
-          if (javaVersion.contains("_")) javaVersion.split("_").toList
-          else javaVersion :: "-1" :: Nil
-        val _ :: javaMajor :: javaMinor :: updateVersion :: Nil = {
-          val majorMinor = javaMajorMinor.split("\\.").toList
-          if (majorMinor.length == 1) "1" +: majorMinor :+ "0" :+ legacyUpdateVersion
-          else if (majorMinor.length == 2) majorMinor :+ "0" :+ legacyUpdateVersion
-          else if (Integer.parseInt(majorMinor.head) >= 9) "1" +: majorMinor //@note Java 9 onwards are of the shape 9.0.2
-          else majorMinor.take(3) :+ legacyUpdateVersion
-        }
-        Integer.parseInt(javaMajor) :: Integer.parseInt(javaMinor) :: Integer.parseInt(updateVersion) :: Nil
-      } catch  {
-        case _: Throwable =>
-          println(s"Unexpected Java version format $javaVersion. KeYmaera X requires at least Java version 1.8.0_111. If you experience problems, please double-check the Java version and restart KeYmaera X with the appropriate version.")
-          -1 :: -1 :: -1 :: Nil
-      }
-
-      if (javaMajor >= 0 && javaMajor < 8 || (javaMajor == 8 && javaMinor == 0 && updateVersion < 111)) {
-        println(s"KeYmaera X requires at least Java version 1.8.0_111, but was started with $javaVersion. Please update Java and restart KeYmaera X.")
+      val javaVersionCompatibility = javaVersion
+      if (javaVersionCompatibility._1 == Some(false)) {
+          exitWith("KeYmaera X requires at least Java Virtual Machine version 1.8.0_111. It was started with " + javaVersionCompatibility._2 + ". Please install compatible Java and restart KeYmaera X.")
       } else {
+        if (javaVersionCompatibility._1 == None) {
+          println("WARNING: Unexpected Java Version not known to be compatible: " + javaVersionCompatibility._2)
+        }
         val cmd = (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
           (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
         launcherLog("Restarting KeYmaera I with sufficient stack space\n" + cmd.mkString(" "))
@@ -168,7 +153,7 @@ object Main {
       }
       catch {
         case e: NumberFormatException => {
-          println("Warning: Could not parse the cache version file, cache contained: " + cacheVersion)
+          println("WARNING: Could not parse the cache version file, cache contained: " + cacheVersion)
           cacheVersionFile.delete()
           clearCache(cacheDirectory)
         }
@@ -200,7 +185,7 @@ object Main {
   private def deleteDirectory(f : File) : Boolean = {
     if(!f.isDirectory) {
       if(!f.delete()) {
-        println(s"Warning: could not delete ${f.getAbsolutePath}")
+        println(s"WARNING: could not delete ${f.getAbsolutePath}")
         false
       }
       else true
@@ -448,7 +433,8 @@ object Main {
     System.exit(proc.waitFor())
   }
 
-  private def exitWith(err : String) = {
+  /** Gracefully exit with an error message displayed to the user. */
+  private def exitWith(err : String): Nothing = {
     val message = "ERROR in loader :: See http://keymaeraX.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
     launcherLog(message)
     try {
@@ -461,10 +447,11 @@ object Main {
         case exc: java.lang.NoSuchMethodError =>
         case exc: Exception =>
     }
-    System.exit(-1)
+    System.exit(-3)
     ???
   }
 
+  /** The location of the Java Virtual Machine interpreter `java`. */
   lazy val javaLocation : String = {
     val javaHome = System.getProperty("java.home") + "/bin"
     val matchingFiles = new java.io.File(javaHome).listFiles(new FileFilter {
@@ -487,6 +474,44 @@ object Main {
   lazy val jarLocation : String = {
       new File(Main.getClass.getProtectionDomain.getCodeSource.getLocation.toURI.getPath).toString
   }
+
+  /**
+    * Identify whether the running Java Version is compatible with KeYmaera X.
+    * @return - Some(true) if compatible, along with the version string
+    *         - Some(false) if not compatible, along with the version string
+    *         - None if compatibility unknown, along with the best guess of a version string
+    */
+  private def javaVersion: (Option[Boolean],String) = {
+    val javaVersion: String = try {
+      System.getProperty("java.version")
+    } catch {
+      case e: IllegalArgumentException => println("Java does not reveal its version: " + e); return (None, "<unknown>")
+      case e: NullPointerException     => println("Java does not reveal its version: " + e); return (None, "<unknown>")
+      case e: SecurityException => println("Java does not reveal its version because a SecurityManager interferred: " + e); return (None, "<unknown>")
+    }
+    try {
+      val javaMajorMinor :: legacyUpdateVersion :: Nil =
+        if (javaVersion.contains("_")) javaVersion.split("_").toList
+        else javaVersion :: "-1" :: Nil
+      val _ :: javaMajor :: javaMinor :: updateVersion :: Nil = {
+        val majorMinor: List[String] = javaMajorMinor.split("\\.").toList
+        if (majorMinor.length == 1) "1" +: majorMinor :+ "0" :+ legacyUpdateVersion
+        else if (majorMinor.length == 2) majorMinor :+ "0" :+ legacyUpdateVersion
+        else if (Integer.parseInt(majorMinor.head) >= 9) "1" +: majorMinor //@note Java 9 onwards are of the shape 9.0.2
+        else majorMinor.take(3) :+ legacyUpdateVersion
+      }
+      if (Integer.parseInt(javaMajor) < 8 || (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)) {
+        return (Some(false), javaVersion)
+      } else {
+        return (Some(true), javaVersion)
+      }
+    } catch {
+      case e: MatchError => (None, javaVersion)
+      case e: NumberFormatException => (None, javaVersion)
+    }
+  }
+
+
 
   def launcherLog(s : String, isError:Boolean = false) = {
     val prefix = if(isError) "[launcher][ERROR] " else "[launcher] "

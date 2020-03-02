@@ -146,6 +146,7 @@ object KeYmaeraX {
   }
   var LAUNCH: Boolean = false
 
+  /** main function to start KeYmaera X from command line. Other entry points exist but this one is best for command line interfaces. */
   def main(args: Array[String]): Unit = {
     if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
       println(help)
