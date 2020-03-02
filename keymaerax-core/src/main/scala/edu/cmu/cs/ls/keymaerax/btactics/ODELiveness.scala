@@ -714,19 +714,24 @@ object ODELiveness {
 
     val inv = mkFml(property)
 
+    // Pre-unify to avoid Dconstify
+    val unifODE = UnificationMatch("{c &q_(||)}".asProgram, sys).usubst
+    val unify = UnificationMatch("p(||) + e()".asTerm, Plus(oldp,bnd)).usubst
+
+    val axren = exRWgt.fact(unifODE)(unify)(URename(timevar,"t".asVariable,semantic=true))
+
     starter & timetac &
     cut(Exists(List(oldp),inv)) <(
       existsL('Llast),
       cohideR('Rlast) & QE //this should be a trivial QE question
     ) &
     kDomainDiamond(oldpbound)(pos) <(
-      useAt(exRWgt,PosInExpr(1::Nil))(pos)& andR(pos) <(
+      useAt(axren,PosInExpr(1::Nil))(pos)& andR(pos) <(
         ToolTactics.hideNonFOL & QE,
-        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(baseGExgt)), // existence
-      ),
+        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(baseGExgt)) ), // existence
       dC(inv)(pos) <(
         DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
-        sAIclosedPlus()(1) //ODE(1) does a boxand split, which is specifically a bad idea here
+        DifferentialTactics.DconstV(pos) & sAIclosed(pos) //ODE does a boxand split, which is specifically a bad idea here
       )
 
     )

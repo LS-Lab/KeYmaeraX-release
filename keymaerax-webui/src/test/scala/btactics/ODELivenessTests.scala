@@ -400,7 +400,6 @@ class ODELivenessTests extends TacticTestBase {
         dV("1".asTerm)(1) &
         // Proving bound on derivative
         //todo: cut needs to support old(.) directly
-        //todo: need more cut needs to support old(.) directly
         cut("\\exists oldv oldv = x2-x1".asFormula) <(
           existsL(-5),
           cohideR(2) & QE
@@ -439,6 +438,21 @@ class ODELivenessTests extends TacticTestBase {
   it should "support semialgebraic dV (FM'15, Ex 15)" in withMathematica { _ =>
     val pr = proveBy("<{x1'=-x1,x2'=-x2}> (x1<=1 & x1>=-1 & x2<=1 &x2>=-1)".asFormula,
       semialgdV("1".asTerm)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "support semialgebraic dV (disjunctive)" in withMathematica { _ =>
+    val pr = proveBy("v!=0 -> <{x'=v}> (x>100 | x < 100)".asFormula,
+      implyR(1) &
+      //encode abs(v)
+      cut("\\exists absv (absv > 0 & absv^2 = v^2)".asFormula) <(
+        existsL(-2),
+        hideR(1) & QE
+      ) &
+      semialgdV("absv".asTerm)(1)
     )
 
     println(pr)
