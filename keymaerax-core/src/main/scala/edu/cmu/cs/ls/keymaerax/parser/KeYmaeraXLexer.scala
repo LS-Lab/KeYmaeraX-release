@@ -313,7 +313,7 @@ private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
 }
 private object TOOL_VALUE_PAT {
   // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
-  def regexp: Regex = "\"{4}(([^\"]|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
+  def regexp: Regex = "\"{4}(([^\"]*|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
 //  def regexp = "\"([^\"]*)\"".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }

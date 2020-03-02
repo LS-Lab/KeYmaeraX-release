@@ -216,4 +216,25 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     t.join()
     compAfterRestart shouldBe Some("5".asTerm)
   }
+
+  "expressions deeper than 256" should "evaluate both as strings and expressions" taggedAs IgnoreInBuildTest in withMathematica { mathematica =>
+    val lnkMethod = PrivateMethod[MathematicaLink]('link)
+    val mlMethod = PrivateMethod[KernelLink]('ml)
+    val ml = mathematica.invokePrivate(lnkMethod()).asInstanceOf[JLinkMathematicaLink].invokePrivate(mlMethod())
+    val x = MathematicaOpSpec.symbol("x")
+    val deepExpression = (0 until 256).map(_ => x).reduce(MathematicaOpSpec.plus(_, _))
+    val res1 = ml.synchronized {
+      ml.evaluate(deepExpression.toString)
+      ml.waitForAnswer()
+      ml.getExpr
+    }
+    val res2 = ml.synchronized {
+      ml.evaluate(deepExpression)
+      ml.waitForAnswer()
+      ml.getExpr
+    }
+    res2.toString shouldBe "Times[256, x]"
+    res1.toString shouldBe "Times[256, x]"
+  }
+
 }

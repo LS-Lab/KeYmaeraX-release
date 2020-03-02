@@ -77,6 +77,19 @@ class UnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     res shouldBe 'proved
   }
 
+  it should "correctly unify lists of ODEs with semantic renaming" ignore withMathematica { qeTool =>
+
+    val odeU = "y' = f(||), z'=g(||)".asDifferentialProgram
+    val odeT = "a' = a+b, b'=b-a".asDifferentialProgram
+
+    // Gives: FastUSubstAboveRen{(f(||)~>y+b), (g(||)~>z-y);y~~>a, z~~>b}
+    // This is incorrect because the semantic renaming is done only partially
+    val res = UnificationMatch(odeU,odeT)
+    // One possible answer is: FastUSubstAboveRen{(f(||)~>y+z), (g(||)~>z-y);y~~>a, z~~>b}
+    // which cannot be accessed in this package so no direct test
+    // todo: Fixed on liveness branch
+  }
+
   //Various kinds of CEating
   "UnifyUSCalculus" should "rewrite implications" in withMathematica { qeTool =>
     val impl = proveBy(" F_()^2 = 0 -> F_() = 0 ".asFormula,QE)

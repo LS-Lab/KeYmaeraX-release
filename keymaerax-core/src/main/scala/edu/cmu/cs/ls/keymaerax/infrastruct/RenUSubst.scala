@@ -93,9 +93,9 @@ object RenUSubst {
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
   * @see [[USubstRen]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.TermAugmentor.~>()]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor.~>()]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ProgramAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
   */
 sealed trait RenUSubst extends (Expression => Expression) {
   /** The (distinct) list of replacements that this RenUSubst performs by uniform renaming or uniform substitution, respectively. */
@@ -114,9 +114,9 @@ sealed trait RenUSubst extends (Expression => Expression) {
 
   /** A renaming substitution pair for a renaming uniform substitution.
     * @see [[edu.cmu.cs.ls.keymaerax.core.SubstitutionPair]]
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.TermAugmentor.~>()]]
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor.~>()]]
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ProgramAugmentor.~>()]] */
+    * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
+    * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
+    * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]] */
   type RenUSubstRepl = (Expression,Expression)
 
   // projections
@@ -295,9 +295,9 @@ final class FastUSubstAboveURen(private[infrastruct] val subsDefsInput: immutabl
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.TermAugmentor.~>()]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor.~>()]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ProgramAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.TermAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor.~>()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.ProgramAugmentor.~>()]]
   */
 abstract class RenUSubstBase(private[infrastruct] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst {
   /** Renaming part, with identity renaming no-ops filtered out. */
