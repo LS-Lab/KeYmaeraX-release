@@ -1809,9 +1809,15 @@ private object DifferentialTactics extends Logging {
   }
 
   //Keeps equalities in domain constraint
-  private[btactics] def domainEqualities(f:Formula) : List[Term] = {
+  //dropFuncs drops all equalities involving (non-constant) function symbols
+  private[btactics] def domainEqualities(f:Formula, dropFuncs:Boolean = true) : List[Term] = {
     flattenConjunctions(f).flatMap{
-      case Equal(l,r) => Some(Minus(l,r))
+      case Equal(l,r) => {
+        val sig = StaticSemantics.signature(Equal(l,r))
+        if(dropFuncs && !sig.exists(e => e.isInstanceOf[Function] && e.asInstanceOf[Function].sort != Unit))
+          Some(Minus(l, r))
+        else None
+      }
       case _ => None
     }
   }

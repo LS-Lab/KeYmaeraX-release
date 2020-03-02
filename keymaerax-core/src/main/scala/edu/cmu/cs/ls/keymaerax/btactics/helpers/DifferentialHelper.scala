@@ -344,9 +344,17 @@ object DifferentialHelper {
         Plus(derive(l,odes),derive(r,odes))
       case Minus(l,r) => // (l-r)' = l'-r'
         Minus(derive(l,odes),derive(r,odes))
-      case FuncOf(_,Nothing) => //(c())'=0
+      case FuncOf(_,Nothing) =>
         Number(0)
-      case _ => ??? //Unimplemented stuff should never be derived
+      //case FuncOf(_,args) =>
+      //  //note: this handles both
+      //  // (c())'=0 and
+      //  // (f(x,y))' where x,y do not appear in the ODEs
+      //  if (StaticSemantics.freeVars(args).intersect(odes.keySet.map(_.asInstanceOf[Variable])).isEmpty)
+      //    Number(0)
+      //  else throw new IllegalArgumentException("Unable to derive function applied to non-constant arguments: "+t)
+      case _ =>  throw new IllegalArgumentException("Unable to derive: "+t)
+      //Unimplemented stuff should never be derived
     }
   }
 
