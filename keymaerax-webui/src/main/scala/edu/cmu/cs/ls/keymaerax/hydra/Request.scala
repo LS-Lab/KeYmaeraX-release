@@ -193,10 +193,10 @@ class LocalLoginRequest(db: DBAbstraction, username: String, password: String) e
           case Some(user) =>
             val sessionToken = Some(SessionManager.add(user))
             new LoginResponse(true, user, sessionToken) :: Nil
-          case None => new ErrorResponse("Unable to login default user " + username
+          case None => DefaultLoginErrorResponse("Unable to login user " + username
             + ". Please double-check default user name in keymaerax.conf, or change keymaerax.conf to USE_DEFAULT_USER=ask and register a new user.") :: Nil
         }
-        case None => new ErrorResponse("Unable to login user " + username
+        case None => DefaultLoginErrorResponse("Unable to login user " + username
           + ". Please double-check default user name in keymaerax.conf, or change keymaerax.conf to USE_DEFAULT_USER=ask and register a new user.") :: Nil
       }
     } else {

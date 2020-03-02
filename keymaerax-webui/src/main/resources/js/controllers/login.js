@@ -119,15 +119,13 @@ angular.module('keymaerax.controllers').controller('AutoLoginCtrl',
             sessionService.setUserAuthLevel(response.data.userAuthLevel);
             document.location.href = "/dashboard.html?#/models";
           } else {
-            if (data.data.type == "error" && data.data.textStatus !== undefined &&
-                data.data.textStatus.startsWith("Unable to login user local.")) {
+            if (data.data.type == "error" && data.data.triggerRegistration) {
               $scope.processRegistration();
             }
           }
         }
       }).catch(function(data, status) {
-        if (data.data.type == "error" && data.data.textStatus !== undefined &&
-            data.data.textStatus.startsWith("Unable to login user local.")) {
+        if (data.data.type == "error" && data.data.triggerRegistration) {
           $scope.processRegistration();
         }
       });
