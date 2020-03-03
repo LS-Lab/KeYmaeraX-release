@@ -906,6 +906,8 @@ object ODELiveness {
     * G |-[ODE & R & p>=0 & !P] p>0 //must stay in interior of domain except by possibly exiting exactly at the end
     * ---- (closedRefine)
     * G |- <ODE & p>=0> P
+    *
+    * @todo: succeeds but probably unexpectedly when Q is not closed. Best to error instead.
     */
   def closedRef(target: Formula): DependentPositionTactic = "closedRef" byWithInput (target,(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "closedRef is only applicable at a top-level succedent")

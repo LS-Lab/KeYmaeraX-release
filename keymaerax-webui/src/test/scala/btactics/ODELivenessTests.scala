@@ -553,8 +553,6 @@ class ODELivenessTests extends TacticTestBase {
               QE,
               ODE(1)
             )
-
-            // This needs some topological refinement in order to do without solving
           )
         )
       )
@@ -563,5 +561,35 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
+
+  "cor" should "refine a closed domain" in withQE { _ =>
+    val seq = "x^2+y^2=1/2 ==> <{x'=x, y'=y & -1 <= x & x <= 1 & -1 <=y & y<=1}> (x=1|y=1|x=-1|y=-1)".asSequent
+
+    val pr = proveBy(seq,
+      // Helpful cut that is used twice
+      cut("[{x'=x,y'=y&true&!(x=1|y=1|x=-1|y=-1)}](x<1&y<1&x>-1&y>-1)".asFormula) <(
+        skip,
+        hideR(1) & ODE(1)
+      ) &
+      closedRef("true".asFormula)(1) <(
+        skip,
+        hideL(-2) & QE, // initial circle is in the interior
+        dW(1) & QE //using compatible cut
+      ) &
+      kDomainDiamond("x^2+y^2 > 2".asFormula)(1) <(
+        skip,
+        dW(1) & QE //using compatible cut
+      ) &
+      // Another helpful cut (could be just old(.) for the RHS)
+      cut("[{x'=x,y'=y}](x^2+y^2 >= 1/2)".asFormula) <(
+        dV("1".asTerm)(1),
+        hideL(-2) & hideR(1) & ODE(1)
+      )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
 
 }
