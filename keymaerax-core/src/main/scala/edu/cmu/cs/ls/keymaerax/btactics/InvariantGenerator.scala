@@ -181,30 +181,19 @@ object InvariantGenerator extends Logging {
   lazy val pegasusCandidates: Generator[GenProduct] = pegasus(includeCandidates=true)
   def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
-      def strictInequality(fml: Formula): Boolean = {
-        FormulaTools.atomicFormulas(fml).exists({
-          case _: Less => true
-          case _: Greater => true
-          case _: NotEqual => true
-          case _ => false
-        })
-      }
-
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
-          def pegasusInvs =
-            tool.invgen(ode, sequent.ante :+ Not(sequent.succ.patch(pos.index0, Nil, 1).filter(_.isFOL).reduceRightOption(Or).getOrElse(False)), post)
-          def conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
-            case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
-            case Right(r) => r.length > 1 && r.map(_._1).exists(strictInequality)
-          }).map({
-            case Left(l) => Right((l.map(_._1).reduce(And), "Unknown") :: Nil)
-            case Right(r) => Right((r.map(_._1).reduce(And), "Unknown") :: Nil)
-          })
-          def invs: Stream[GenProduct] =
+          lazy val pegasusInvs: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = {
+            val succFmls = sequent.succ.patch(pos.index0, Nil, 1).filter(_.isFOL)
+            val assumptions =
+              if (succFmls.isEmpty) sequent.ante
+              else sequent.ante :+ Not(succFmls.reduceRight(Or))
+            tool.invgen(ode, assumptions, post)
+          }
+          lazy val invs: Stream[GenProduct] =
             if (includeCandidates) {
-              (pegasusInvs ++ conjunctiveCandidates).toStream.flatMap({
+              pegasusInvs.toStream.flatMap({
                 case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
                 case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
               })
