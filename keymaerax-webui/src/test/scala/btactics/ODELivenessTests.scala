@@ -459,4 +459,100 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
+
+  it should "prove RAL goal reachability" in withQE { _ =>
+    val seq = "v>0, vl<=v, v<=vh, a=0, eps>0, k*eps^2-2*eps < k*(x^2+y^2)-2*x, k*(x^2+y^2)-2*x < k*eps^2-2*eps, y>0 ==> <{x'=-v*k*y, y'=v*(k*x-1), v'=0 & v>=0}>( x^2+y^2<=eps^2 & (vl<=v & v<=vh) )".asSequent
+
+    val pr = proveBy(seq,
+      // todo: replace with old
+      cut("\\exists oldv (oldv = v)".asFormula) < (
+        existsL('Llast),
+        hideR(1) & QE
+      ) &
+      // known invariants: v stays constant, and robot always on annulus
+      cut("[{x'=-v*k*y, y'=v*(k*x-1), v'=0}]( v=oldv & k*eps^2-2*eps < k*(x^2+y^2)-2*x & k*(x^2+y^2)-2*x < k*eps^2-2*eps) ".asFormula) <(
+        skip,
+        hideR(1) & ODE(1)
+      ) &
+      // dDR gets rid of domain constraint easily thanks to builtin compatible cuts
+      dDR(True)(1) <(
+        skip,
+        dW(1) & QE
+      ) &
+      // K<&> simplifies postcondition again thanks to builtin compatible cuts
+      kDomainDiamond("x^2+y^2<=eps^2".asFormula)(1) <(
+        skip,
+        dW(1) & QE
+      ) &
+      // todo: replace with old
+      cut("\\exists oldhalfy (oldhalfy = y/2)".asFormula) < (
+        existsL('Llast),
+        hideL('Llast) & hideR(1) & QE
+      ) &
+      // As long as the goal is not yet reached, y will stay positive
+      cut("[{x'=-v*k*y,y'=v*(k*x-1),v'=0&!x^2+y^2<=eps^2}] y > oldhalfy".asFormula)<(
+        skip,
+        hideR(1) & compatCuts(1) & ODE(1) //compatCuts super useful here
+      ) &
+      dV("2*oldv*oldhalfy".asTerm)(1)
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove RAL velocity bounds" in withMathematica { _ =>
+    // abridged proof
+    val seq = "v>=0, 0<vl, vl<vh, A>0, B>0 ==> \\exists a ( (a <= A & -B <= a) & <{x'=-v*k*y, y'=v*(k*x-1), v'=a & v>=0}>( vl<=v & v<=vh ))".asSequent
+
+    val pr = proveBy(seq,
+      // Trichotomy
+      cut("v < vl|vl<=v&v<=vh|vh < v".asFormula) <(
+        skip,
+        hideR(1) & QE
+      ) &
+      orL('Llast) <(
+        // v < vl, pick a = A
+        existsR("A".asTerm)(1) & andR(1) <( QE,
+          kDomainDiamond("v >= vl".asFormula)(1) <(
+            skip,
+            ODE(1) //note the slightly tricky refinement here (using IVT)
+          ) &
+          dDR(True)(1) <(
+            skip,
+            ODE(1)
+          ) &
+          dV("A".asTerm)(1)
+        ),
+        orL('Llast) <(
+          //a=0 this should be proved using DX instead of this
+          existsR("0".asTerm)(1) & andR(1) <( QE,
+            odeReduce()(1) & solve(1) & QE
+//            dDR(True)(1) <(
+//              skip,
+//              ODE(1)
+//            ) &
+//            kDomainDiamond("true".asFormula)(1) <(
+//              skip,
+//              skip
+//            )
+          ),
+          //a=-B this should be proved using some topological refinement instead of this
+          existsR("-B".asTerm)(1) & andR(1) <( QE,
+            odeReduce()(1) & solve(1) & QE
+            // This needs some topological refinement in order to do without solving
+//            kDomainDiamond("v <= vh".asFormula)(1) <(
+//              skip,
+//              ODE(1) //note the slightly tricky refinement here (using IVT)
+//            )
+          )
+        )
+      )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+
 }
