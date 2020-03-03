@@ -18,9 +18,8 @@ class ProofCheckerTests extends TacticTestBase {
   "assign" should "substitute" in withMathematica { _ =>
     val vx = Variable("x")
     val vy = Variable("y")
-    val pv = 0
     val G = Context(List(Equal(vx, Number(1))))
-    val M = DAssignI(Assign(vx, Plus(vx, Number(2))), vy, Hyp(0))
+    val M = DAssignI(Assign(vx, Plus(vx, Number(2))), Hyp(0), Some(vy))
     a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
   }
 

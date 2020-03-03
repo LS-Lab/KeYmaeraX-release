@@ -14,7 +14,29 @@ object ProofChecker {
 
   private def qeValid(p:Formula): Boolean = false
 
-  //def variable
+  //TODO
+  def ghostVar(explicit:Option[Variable], base:Variable, freshIn:List[Expression]): Variable = {
+    explicit match {
+      case Some(x) => x
+      case None => base
+    }
+  }
+
+  //TODO
+  def ghostVars(explicit:Option[List[Variable]], base:List[Variable], freshIn:List[Expression]): List[Variable] = {
+    explicit match {
+      case Some(x) => x
+      case None => base
+    }
+  }
+  //TODO
+  def solve(ode: ODESystem, sol:Option[List[Term]]):List[Term] = {
+    sol match {
+      case Some(x) => x
+      case None => List()
+    }
+  }
+
   def apply(G: Context, M: Proof): Formula = {
     val Context(con) = G
      M match {
@@ -28,7 +50,8 @@ object ProofChecker {
       case DTestER(child) =>
         val Diamond(Test(_),q) = apply(G,child)
         q
-      case DAssignI(Assign(x,f), y, child) =>
+      case DAssignI(Assign(x,f), child, yOpt) =>
+        val y = ghostVar(yOpt, x, List(f))
         val ren = URename(x,y)
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
@@ -39,26 +62,30 @@ object ProofChecker {
         val Diamond(Assign(xx,ff),pp) = apply(G, child)
         assert(xx == x && ff == f)
         SubstitutionHelper.replaceFree(pp)(x,f)
-      case DRandomI(Assign(x,f), y, child) =>
+      case DRandomI(Assign(x,f), child, yOpt) =>
+        val y = ghostVar(yOpt, x, List(f))
         val ren = URename(x,y)
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
         val P = apply(d, child)
         Diamond(AssignAny(x), P)
-      case DRandomE(x, y, left, right) =>
+      case DRandomE(left, right, yOpt) =>
         //TODO: Assert y fresh and doesnt escape scope
         val Exists(List(x),q) = apply(G,left)
+        val y = ghostVar(yOpt, x, List())
         val P = apply(G.rename(x,y).extend(q),right)
         P
-      case ExistsI(Assign(x,f), y:Variable, child: Proof) =>
+      case ExistsI(Assign(x,f), child: Proof, yOpt:Option[Variable]) =>
+        val y = ghostVar(yOpt,x,List(f))
         val ren = URename(x,y)
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
         val P = apply(d, child)
         Exists(List(x), P)
-      case  ExistsE(x:Variable, y:Variable, left: Proof, right: Proof)  =>
+      case  ExistsE(left: Proof, right: Proof, yOpt:Option[Variable])  =>
         //TODO: Assert y fresh and doesnt escape scope
         val Diamond(AssignAny(x),q) = apply(G,left)
+        val y = ghostVar(yOpt, x, List())
         val P = apply(G.rename(x,y).extend(q),right)
         P
       case DComposeI(child) =>
@@ -67,10 +94,10 @@ object ProofChecker {
       case DComposeE(child) =>
         val Diamond(Compose(a,b),p) = apply(G,child)
         Diamond(a,Diamond(b,p))
-      case DChoiceIL(b,child) =>
+      case DChoiceIL(child,b) =>
         val Diamond(a,p) = apply(G,child)
         Diamond(Choice(a,b),p)
-      case DChoiceIR(a,child) =>
+      case DChoiceIR(child,a) =>
         val Diamond(b,p) = apply(G,child)
         Diamond(Choice(a,b),p)
       case DChoiceE(child, left, right) =>
@@ -79,7 +106,7 @@ object ProofChecker {
         val qq = apply(G.extend(Diamond(b,p)),right)
         require(pp == qq)
         pp
-      case DStop(a,child) =>
+      case DStop(child,a) =>
         val p = apply(G,child)
         Diamond(Loop(a),p)
       case DGo(child) =>
@@ -110,7 +137,7 @@ object ProofChecker {
       case DV(f, g, d, const, dur, rate, post) =>
         ???
 
-      case BTestI(p, fml, child) =>
+      case BTestI(fml, child) =>
         val p1 = apply(G.extend(fml),child)
         Box(Test(fml),p1)
       case BTestE(left, right) =>
@@ -118,7 +145,8 @@ object ProofChecker {
         val p2 = apply(G,right)
         assert(p == p2)
         q
-      case BAssignI(Assign(x,f), y, child) =>
+      case BAssignI(Assign(x,f), child, yOpt) =>
+        val y = ghostVar(yOpt,x,List(f))
         val ren = URename(x,y)
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
@@ -129,13 +157,15 @@ object ProofChecker {
         val Box(Assign(xx,ff),pp) = apply(G, child)
         assert(xx == x && ff == f)
         SubstitutionHelper.replaceFree(pp)(x,f)
-      case BRandomI(x, y, child) =>
+      case BRandomI(x, child, yOpt) =>
+        val y = ghostVar(yOpt,x,List())
         val pp = apply(G.rename(x,y), child)
         Box(AssignAny(x),pp)
       case BRandomE(child, f) =>
         val Box(AssignAny(x),pp) = apply(G,child)
         SubstitutionHelper.replaceFree(pp)(x,f)
-      case ForallI(x:Variable, y:Variable, child: Proof) =>
+      case ForallI(x:Variable, child: Proof, yOpt:Variable) =>
+        val y = ghostVar(yOpt, x, List())
         val pp = apply(G.rename(x,y), child)
         Forall(List(x),pp)
       case ForallE(child: Proof, f:Term) =>
@@ -153,13 +183,13 @@ object ProofChecker {
         assert(p == q)
         Box(Choice(a,b),p)
       case BChoiceEL(child) =>
-        val Box(Choice(a,b),p) = apply(G,child)
+        val Box(Choice(a,_),p) = apply(G,child)
         Box(a,p)
       case BChoiceER(child) =>
-        val Box(Choice(a,b),p) = apply(G,child)
+        val Box(Choice(_,b),p) = apply(G,child)
         Box(b,p)
         // TODO: Better consistency in rename across rules
-      case BRepeatI( pre, step, post) =>
+      case BRepeatI(pre, step, post) =>
         val j1 = apply(G,pre)
         val Box(a,j2) = apply(Context(List(j1)), step)
         assert(j1 == j2)
@@ -176,10 +206,12 @@ object ProofChecker {
       case BDualE(child) =>
         val Box(Dual(a),p) = apply(G,child)
         Diamond(a,p)
-      case BSolve(ode, ys, sol, s, t, dc, post) =>
+      case BSolve(ode, post, s, t, solsOpt, ysOpt) =>
+        val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
+        val sol = solve(ode, solsOpt)
+        val ys = ghostVars(ysOpt, xs, List(ode))
         // TODO: assert solution
         // TODO: assert freshness
-        val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val xys = xs.zip(ys)
         val sols = xs.zip(sol)
         val asgn = sols.map({case (x,e) => Assign(x,e)}).fold[Program](Test(True))(Compose)
@@ -189,10 +221,12 @@ object ProofChecker {
         val Diamond(asgns,p1) = apply(g.extend(And(GreaterEqual(t,Number(0)),dcFml)), post)
         assert(asgn == tasgn)
         Box(ode,p1)
-      case DW(ode, child) =>
+      case DW(ode, child, ysOpt) =>
+        val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
+        val ys = ghostVars(ysOpt, xs, List(ode))
         val p1 = apply(G.extend(ode.constraint),child)
         Box(ode,p1)
-      case DC(inv, left, right) =>
+      case DC(left, right) =>
         val Box(ODESystem(ode,con),p) = apply(G,left)
         val Box(ODESystem(ode1,And(con1,p1)),q) = apply(G,right)
         assert(ode == ode1 && con1 == con && p1 == p)
@@ -203,20 +237,22 @@ object ProofChecker {
         val Box(ode,dp) = apply(G,step)
         assert(dp == deriveFormula(p))
         ???
-      case DG(y, y0, a, b, child) =>
+      case DG(Assign(y, y0), Plus(Times(a,yy), b), child) =>
         //@TODO: freshness
+        assert(yy == y)
         val Box(Compose(Assign(xy,e),ODESystem(DifferentialProduct(AtomicODE(xp,xe),c),con)),pp) = apply(G,child)
         assert(y == xy && xp == DifferentialSymbol(xy) && e == y0 && xe == Plus(Times(a,xy),b))
         Box(ODESystem(c,con),pp)
+      case _ : DG => ???
       case AndI(left, right) =>
         val p = apply(G,left)
         val q = apply(G,right)
         And(p,q)
       case AndEL(child) =>
-        val And(p,q) = apply(G,child)
+        val And(p,_) = apply(G,child)
         p
       case AndER(child) =>
-        val And(p,q) = apply(G,child)
+        val And(_,q) = apply(G,child)
         q
       case OrIL(other, child) =>
         val p = apply(G,child)
@@ -251,7 +287,7 @@ object ProofChecker {
       case EquivER(child, assump) =>
         val Equiv(p,q) = apply(G,child)
         val qq = apply(G,assump)
-        assert(q == q)
+        assert(q == qq)
         p
       case NotI(p, child) =>
         val False = apply(G.extend(p),child)
