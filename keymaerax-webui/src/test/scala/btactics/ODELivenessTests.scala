@@ -171,6 +171,18 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals(1) shouldBe "a()>0, [{x'=x,v'=v&true}]v>=0, v=1  ==>  [{x'=x,v'=v&(x>100&v<=5)&v>=0}]v>=0".asSequent
   }
 
+  "ddx" should "prove diamonds that are true in the beginning" in withQE { _ =>
+    val fml = "<{x'=x^2,v'=v^3+x+v+v+a()+b+c & b*x^2<= v+c+a()}>x+v<=a()".asFormula
+
+    val pr = proveBy(fml,
+      dDX(1)
+    )
+
+    println(pr)
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe "==> b*x^2<=v+c+a()&x+v<=a()".asSequent
+  }
+
   "liveness" should "support liveness proofs by hand (1)" in withMathematica { _ =>
     // FM'19 linear ODE example
     val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
@@ -525,26 +537,24 @@ class ODELivenessTests extends TacticTestBase {
           dV("A".asTerm)(1)
         ),
         orL('Llast) <(
-          //a=0 this should be proved using DX instead of this
-          existsR("0".asTerm)(1) & andR(1) <( QE,
-            odeReduce()(1) & solve(1) & QE
-//            dDR(True)(1) <(
-//              skip,
-//              ODE(1)
-//            ) &
-//            kDomainDiamond("true".asFormula)(1) <(
-//              skip,
-//              skip
-//            )
-          ),
-          //a=-B this should be proved using some topological refinement instead of this
+          //a=0
+          dDX(1, 0::1::Nil) & QE,
+          // In this easy case, solve would do it after removing extra ODEs
+          //existsR("0".asTerm)(1) & andR(1) <( QE,
+          // odeReduce()(1) & solve(1) & QE
+          //a=-B
           existsR("-B".asTerm)(1) & andR(1) <( QE,
-            odeReduce()(1) & solve(1) & QE
+            kDomainDiamond("v <= vh".asFormula)(1) <(
+              skip,
+              ODE(1) //note the slightly tricky refinement here (using IVT)
+            ) &
+            closedRef("true".asFormula)(1) <(
+              dV("B".asTerm)(1),
+              QE,
+              ODE(1)
+            )
+
             // This needs some topological refinement in order to do without solving
-//            kDomainDiamond("v <= vh".asFormula)(1) <(
-//              skip,
-//              ODE(1) //note the slightly tricky refinement here (using IVT)
-//            )
           )
         )
       )
@@ -553,6 +563,5 @@ class ODELivenessTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
-
 
 }

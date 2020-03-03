@@ -889,4 +889,39 @@ object ODELiveness {
     )
   })
 
+  /** ODE diamond is true if domain and postcondition was already true initially
+    *
+    * G |- Q & P
+    * ----
+    * G |- <x'=f(x)&Q>P
+    *
+    * @return see rule above
+    */
+  def dDX : DependentPositionTactic = useAt("DX diamond differential skip")
+
+  /** Refinement for a closed domain constraint (e.g. Q = p>=0)
+    *
+    * G |- <ODE & R> P
+    * G |- p>0 //must start in interior of domain
+    * G |-[ODE & R & p>=0 & !P] p>0 //must stay in interior of domain except by possibly exiting exactly at the end
+    * ---- (closedRefine)
+    * G |- <ODE & p>=0> P
+    */
+  def closedRef(target: Formula): DependentPositionTactic = "closedRef" byWithInput (target,(pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "closedRef is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("closedRef only applicable to diamond ODE in succedent")
+    }
+
+    saveBox(pos) & dDR(target)(pos) < (
+      // Remove the saveBox to reduce clutter
+      hideL('Llast),
+      DifferentialTactics.dCClosure()(pos)<(
+        hideL('Llast) & skip , compatCuts(pos) & hideL('Llast) )
+    )
+  })
+
+
 }
