@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.cdgl
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.Proof._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 
 case class ProofException(msg: String) extends Exception {}
 
@@ -40,28 +41,38 @@ object ProofChecker {
   def apply(G: Context, M: Proof): Formula = {
     val Context(con) = G
      M match {
-      case DTestI(left, right) =>
-        val P = apply(G, left)
-        val Q = apply(G, right)
-        Diamond(Test(P),Q)
-      case DTestEL(child) =>
-        val Diamond(Test(p),_) = apply(G,child)
-        p
-      case DTestER(child) =>
-        val Diamond(Test(_),q) = apply(G,child)
-        q
-      case DAssignI(Assign(x,f), child, yOpt) =>
-        val y = ghostVar(yOpt, x, List(f))
-        val ren = URename(x,y)
-        val g = ren(f)
-        val d = G.rename(x,y).extend(Equal(x,g))
-        val P = apply(d, child)
-        Diamond(Assign(x,f), P)
-      case DAssignE(Assign(x,f), child) =>
-        // TODO: Make sound
-        val Diamond(Assign(xx,ff),pp) = apply(G, child)
-        assert(xx == x && ff == f)
-        SubstitutionHelper.replaceFree(pp)(x,f)
+       case Triv() => True
+       case DTestI(left, right) =>
+         val P = apply(G, left)
+         val Q = apply(G, right)
+         Diamond(Test(P),Q)
+       case DTestEL(child) =>
+         apply(G,child) match {
+           case Diamond(Test(p),_) => p
+           case p => throw ProofException(s"[?]EL not applicable to formula ${p}")
+         }
+       case DTestER(child) =>
+         apply(G,child) match {
+           case Diamond(Test(_),q) => q
+           case p => throw ProofException(s"[?]ER not applicable to formula ${p}")
+         }
+       case DAssignI(asgn@Assign(x,f), child, yOpt) =>
+         val y = ghostVar(yOpt, x, List(f))
+         val ren = URename(x,y)
+         val g = ren(f)
+         val d = G.rename(x,y).extend(Equal(x,g))
+         val P = apply(d, child)
+         val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv).toSet
+         if (vars.contains(y)) {
+           throw ProofException(s"Ghost variable ${y} not fresh")
+         }
+         Diamond(Assign(x,f), P)
+      case DAssignE(child) =>
+        apply(G, child) match {
+          case Diamond(Assign(x,f),pp) => SubstitutionHelper.replaceFree(pp)(x, f)
+          case p => throw ProofException(s"[:=]E not applicable to formula $p")
+        }
+
       case DRandomI(Assign(x,f), child, yOpt) =>
         val y = ghostVar(yOpt, x, List(f))
         val ren = URename(x,y)
@@ -145,67 +156,104 @@ object ProofChecker {
         val p2 = apply(G,right)
         assert(p == p2)
         q
-      case BAssignI(Assign(x,f), child, yOpt) =>
+      case BAssignI(asgn@Assign(x,f), child, yOpt) =>
         val y = ghostVar(yOpt,x,List(f))
         val ren = URename(x,y)
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
         val P = apply(d, child)
+        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv).toSet
+        if (vars.contains(y)) {
+          throw ProofException(s"Ghost variable ${y} not fresh")
+        }
         Box(Assign(x,f), P)
-      case BAssignE(Assign(x,f), child) =>
-        // TODO: Make sound
-        val Box(Assign(xx,ff),pp) = apply(G, child)
-        assert(xx == x && ff == f)
-        SubstitutionHelper.replaceFree(pp)(x,f)
+      case BAssignE(child) =>
+        apply(G, child) match {
+          case Box(Assign(x,f),pp) =>
+            SubstitutionHelper.replaceFree(pp)(x,f)
+          case p => throw ProofException(s"Rule [:=]E does not apply to formula $p")
+        }
       case BRandomI(x, child, yOpt) =>
         val y = ghostVar(yOpt,x,List())
         val pp = apply(G.rename(x,y), child)
         Box(AssignAny(x),pp)
       case BRandomE(child, f) =>
-        val Box(AssignAny(x),pp) = apply(G,child)
-        SubstitutionHelper.replaceFree(pp)(x,f)
-      case ForallI(x:Variable, child: Proof, yOpt:Variable) =>
+        apply(G,child) match {
+          case Box(AssignAny(x),pp) => SubstitutionHelper.replaceFree(pp)(x,f)
+          case p => throw ProofException(s"Rule [:*]E does not apply to formula $p")
+        }
+      case ForallI(x, child, yOpt) =>
         val y = ghostVar(yOpt, x, List())
         val pp = apply(G.rename(x,y), child)
         Forall(List(x),pp)
       case ForallE(child: Proof, f:Term) =>
-        val Forall(List(x),pp) = apply(G,child)
-        SubstitutionHelper.replaceFree(pp)(x,f)
+        apply(G,child) match {
+          case Forall(List(x),pp) => SubstitutionHelper.replaceFree(pp)(x,f)
+          case p => throw ProofException(s"Rule forallE does not apply to formula $p")
+        }
       case BComposeI(child) =>
-        val Box(a,Box(b,p)) = apply(G,child)
-        Box(Compose(a,b),p)
+        apply(G,child) match {
+          case Box(a,Box(b,p)) => Box(Compose(a,b),p)
+          case p => throw ProofException(s"Rule [;]I does not apply to formula $p")
+        }
       case BComposeE(child) =>
-        val Box(Compose(a,b),p) = apply(G,child)
-        Box(a,Box(b,p))
+        apply(G,child) match {
+          case Box(Compose(a,b),p) => Box(a,Box(b,p))
+          case p => throw ProofException(s"Rule [;]E does not apply to formula $p")
+        }
       case BChoiceI(left, right) =>
-        val Box(a,p) = apply(G,left)
-        val Box(b,q) = apply(G,right)
-        assert(p == q)
-        Box(Choice(a,b),p)
+        apply(G,left) match {
+          case Box(a,p) =>
+            apply(G,right) match {
+              case Box(b,q) =>
+                if (p != q) throw ProofException(s"Conjunct postconditions $p and $q differ in [++]I")
+                else Box(Choice(a,b),p)
+              case r =>throw ProofException(s"Rule [++]I not applicable with right conjunct $r")
+            }
+          case l => throw ProofException(s"Rule [++]I not applicable with left conjunct $l")
+        }
       case BChoiceEL(child) =>
-        val Box(Choice(a,_),p) = apply(G,child)
-        Box(a,p)
+        apply(G,child) match {
+          case Box(Choice(a,_),p) => Box(a,p)
+          case p => throw ProofException(s"Rule [++]EL not applicable to formula $p")
+        }
       case BChoiceER(child) =>
-        val Box(Choice(_,b),p) = apply(G,child)
-        Box(b,p)
-        // TODO: Better consistency in rename across rules
+        apply(G,child) match {
+          case Box(Choice(_,b),p) => Box(b,p)
+          case p => throw ProofException(s"Rule [++]ER not applicable to formula $p")
+        }
+       // TODO: Better consistency in rename across rules
       case BRepeatI(pre, step, post) =>
         val j1 = apply(G,pre)
-        val Box(a,j2) = apply(Context(List(j1)), step)
-        assert(j1 == j2)
-        apply(Context(List(j1)), post)
+        apply(Context(List(j1)), step) match {
+          case Box(a,j2) =>
+            if(j1 != j2) {
+              throw ProofException(s"Inconsistent invariants $j1 and $j2 in [*]I")
+            } else {
+              apply(Context(List(j1)), post)
+            }
+          case p => throw ProofException(s"Rule [*]I not applicable to formula $p")
+        }
       case BRepeatEL(child) =>
-        val Box(Loop(_),p) = apply(G, child)
-        p
+        apply(G, child) match {
+          case Box(Loop(_),p) => p
+          case p => throw ProofException(s"Rule [*]EL not applicable to formula $p")
+        }
       case BRepeatER(child) =>
-        val Box(Loop(a),p) = apply(G,child)
-        Box(a,Box(Loop(a),p))
+        apply(G,child) match {
+          case Box(Loop(a),p) => Box(a,Box(Loop(a),p))
+          case p => throw ProofException(s"Rule [*]ER not applicable to formula $p")
+        }
       case BDualI(child) =>
-        val Diamond(a,p) = apply(G,child)
-        Box(Dual(a),p)
+        apply(G,child) match {
+          case Diamond(a,p) => Box(Dual(a),p)
+          case p => throw ProofException(s"Rule [d]I not applicable to formula $p")
+        }
       case BDualE(child) =>
-        val Box(Dual(a),p) = apply(G,child)
-        Diamond(a,p)
+        apply(G,child) match {
+          case Box(Dual(a), p) => Diamond(a, p)
+          case p => throw ProofException(s"Rule [d]E not applicable to formula $p")
+        }
       case BSolve(ode, post, s, t, solsOpt, ysOpt) =>
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val sol = solve(ode, solsOpt)
@@ -218,10 +266,16 @@ object ProofChecker {
         val tasgn = Compose(Assign(t,s), asgn)
         val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
         val dcFml = Forall(List(s),Imply(And(LessEqual(Number(0),s),LessEqual(s,t)),Diamond(asgn,ode.constraint)))
-        val Diamond(asgns,p1) = apply(g.extend(And(GreaterEqual(t,Number(0)),dcFml)), post)
-        assert(asgn == tasgn)
-        Box(ode,p1)
+        apply(g.extend(And(GreaterEqual(t,Number(0)),dcFml)), post) match {
+          case Diamond(asgns, p1) =>
+            if (asgn != tasgn)
+              throw ProofException(s"Assignments $asgn and $tasgn mismatch in [']")
+            else
+              Box(ode, p1)
+          case p => throw ProofException(s"Rule ['] not applicable to subgoal $p")
+        }
       case DW(ode, child, ysOpt) =>
+        //TODO: rename
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))
         val p1 = apply(G.extend(ode.constraint),child)
@@ -234,9 +288,15 @@ object ProofChecker {
       case DI(pre, step) =>
         val p = apply(G,pre)
         // TODO: Context
-        val Box(ode,dp) = apply(G,step)
-        assert(dp == deriveFormula(p))
-        ???
+        apply(G,step) match {
+          case Box(ode,dp) =>
+            val df = deriveFormula(p)
+            if (dp != df) {
+              throw ProofException(s"Subgoal in DI should be derivative $df, was $dp")
+            }
+            ???
+          case p => throw ProofException(s"Rule DI not applicable to formula $p")
+        }
       case DG(Assign(y, y0), Plus(Times(a,yy), b), child) =>
         //@TODO: freshness
         assert(yy == y)
@@ -249,11 +309,15 @@ object ProofChecker {
         val q = apply(G,right)
         And(p,q)
       case AndEL(child) =>
-        val And(p,_) = apply(G,child)
-        p
+        apply(G,child) match {
+          case And(p,_) => p
+          case p => throw ProofException(s"Rule ^EL not applicable to subgoal $p")
+        }
       case AndER(child) =>
-        val And(_,q) = apply(G,child)
-        q
+        apply(G,child) match {
+          case And(_,q) => q
+          case p => throw ProofException(s"Rule ^ER not applicable to subgoal $p")
+        }
       case OrIL(other, child) =>
         val p = apply(G,child)
         Or(p,other)
@@ -261,57 +325,105 @@ object ProofChecker {
         val q = apply(G,child)
         Or(other,q)
       case OrE(child, left, right) =>
-        val Or(p,q) = apply(G,child)
-        val r1 = apply(G.extend(p),left)
-        val r2 = apply(G.extend(q),right)
-        assert(r1 == r2)
-        r1
+        apply(G,child) match {
+          case Or(p,q) =>
+            val r1 = apply(G.extend(p),left)
+            val r2 = apply(G.extend(q),right)
+            if(r1 != r2)
+              throw ProofException(s"Postconditions $r1 and $r2 do not match in rule |E")
+            else
+              r1
+          case p => throw ProofException("Rule |E not applicable to subgoal $p")
+        }
       case ImplyI(fml, child) =>
         val q = apply(G.extend(fml),child)
         Imply(fml,q)
       case ImplyE(left, right) =>
-        val Imply(p1,q) = apply(G,left)
-        val p2 = apply(G,right)
-        assert(p1 == p2)
-        q
+        apply(G,left) match {
+          case Imply(p1,q) =>
+            val p2 = apply(G,right)
+            if(p1 != p2)
+              throw ProofException(s"Assumption $p1 and $p2 mismatch in ->E")
+            else
+              q
+          case p => throw ProofException(s"Rule ->E not applicable to formula $p")
+        }
       case EquivI(Equiv(p,q), left, right) =>
         val q1 = apply(G.extend(p),left)
         val p1 = apply(G.extend(q),right)
-        assert(p1 == p && q1 == q)
-        Equiv(p,q)
+        if (p1 != p) {
+          throw ProofException(s"Left formula $p1 does not match $p in <->I")
+        } else if (q1 != q) {
+          throw ProofException(s"Right formula $q1 does not match $q in <->I")
+        } else
+          Equiv(p,q)
       case EquivEL(child, assump) =>
-        val Equiv(p,q) = apply(G,child)
-        val pp = apply(G,assump)
-        assert(p == pp)
-        q
+        apply(G,child) match {
+          case Equiv(p,q) =>
+            val pp = apply(G,assump)
+            if(p != pp) {
+              throw ProofException(s"Assumption $pp does not match expected $p in <->EL")
+            } else {
+              q
+            }
+          case p => throw ProofException(s"Rule <->EL not applicable to subgoal $p")
+        }
       case EquivER(child, assump) =>
-        val Equiv(p,q) = apply(G,child)
-        val qq = apply(G,assump)
-        assert(q == qq)
-        p
+        apply(G,child) match {
+          case Equiv(p,q) =>
+            val qq = apply(G,assump)
+            if (q != qq) {
+              throw ProofException(s"Assumption $qq does not match expected $q in <->EL")
+            } else {
+              p
+            }
+          case p => throw ProofException(s"Rule <->ER not applicable to subgoal $p")
+        }
       case NotI(p, child) =>
-        val False = apply(G.extend(p),child)
-        Not(p)
+        apply(G.extend(p),child) match {
+          case False => Not(p)
+          case p => throw ProofException(s"Rule !I not applicable to subgoal $p")
+        }
       case NotE(left, right) =>
-        val Not(p) = apply(G,left)
-        val pp = apply(G,right)
-        assert(p == pp)
-        False
-      case Hyp(p) => G(p)
-      case Mon(left,right) =>
-        // @TODO: Better context extending
         apply(G,left) match {
+          case Not(p) =>
+            val pp = apply(G,right)
+            if (p != pp) {
+              throw ProofException(s"Rule !E needed $p to contradict ${Not(p)}, got $pp")
+            }
+            False
+          case p => throw ProofException(s"Rule !E not applicable to subgoal $p")
+        }
+      case FalseE(child, fml) =>
+        apply(G,child) match {
+          case False => fml
+          case p => throw ProofException(s"Rule falseE not applicable to subgoal $p")
+        }
+      case Hyp(p) =>
+        if(G.contains(p)) G(p)
+        else throw ProofException(s"Proof variable $p undefined in rule hyp with context $G")
+      case Mon(left,right) =>
+        val p = apply(G,left)
+        // @TODO: Better context extending
+        p match {
           case Box(a,p) =>
             val q = apply(Context(List(p)), right)
             Box(a,q)
           case Diamond(a,p) =>
             val q = apply(Context(List(p : Formula)), right)
             Diamond(a,q)
+          case _ =>
+            throw ProofException(s"Montonicity not applicable to non-modal formula ${p}")
         }
       case QE(q, child) =>
-         val p = apply(G,child)
-         assert(qeValid(Imply(p,q)))
-         q
+        val p = apply(G,child)
+        if(!Imply(p,q).isFOL) {
+          throw ProofException(s"QE formula ${p}->${q} was not FOL")
+        }
+        if(qeValid(Imply(p,q)))
+          q
+        else
+          throw ProofException(s"QE formula ${Imply(p,q)} not valid")
     }
   }
 }

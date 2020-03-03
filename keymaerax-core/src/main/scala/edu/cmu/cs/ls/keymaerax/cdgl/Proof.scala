@@ -12,11 +12,11 @@ object Proof {
 }
 
 final case class Context(c:List[Formula]) {
-  def asIndexedSeq: immutable.IndexedSeq[Formula] =
-    c.to[immutable.IndexedSeq]
+  def contains(x:ProofVariable):Boolean = c.length > x
+  def asIndexedSeq: immutable.IndexedSeq[Formula] = c.to[immutable.IndexedSeq]
   def asSequent: Sequent = Sequent(this.asIndexedSeq, immutable.IndexedSeq())
   def entails(f:Formula): Sequent = {
-    new Sequent(c.toIndexedSeq, immutable.IndexedSeq(f))
+    Sequent(c.toIndexedSeq, immutable.IndexedSeq(f))
   }
   def rename(what: Variable, repl: Variable): Context = {
     Context.ofSequent(UniformRenaming(what,repl)(this.asSequent).head)
@@ -24,8 +24,11 @@ final case class Context(c:List[Formula]) {
   def extend(P:Formula): Context = {
     Context(P :: c)
   }
+  def freevars:SetLattice[Variable] =
+    c.map(StaticSemantics(_).fv).foldLeft[SetLattice[Variable]](SetLattice.bottom)({case (acc,fv) => fv ++ acc })
   def apply(p:ProofVariable): Formula = c(p)
 }
+
 object Context {
   def empty: Context = Context(List())
   def ofSequent(seq: Sequent): Context = {
@@ -71,7 +74,7 @@ case class DAssignI(e:Assign, child: Proof, y:Option[Variable]) extends Proof {}
  * ----------------------------------------------
  * G |- <:=^-1>(M): p(f)
  */
-case class DAssignE(e:Assign, child: Proof) extends Proof {}
+case class DAssignE(child: Proof) extends Proof {}
 
 /* G_x^y, p:(x=f_x^y) |- M: P
  * ----------------------------------------------
@@ -190,7 +193,7 @@ case class BAssignI(e:Assign, child: Proof, y:Option[Variable] = None) extends P
  * ----------------------------------------------
  * G |- [:=^-1](M): p(f)
  */
-case class BAssignE(e:Assign, child: Proof) extends Proof {}
+case class BAssignE(child: Proof) extends Proof {}
 
 /* G |- G_x^y |- M:P
  * ----------------------------------------------
@@ -399,6 +402,12 @@ case class NotI(p:Formula, child:Proof) extends Proof {}
  * G |- (M N): False
  */
 case class NotE(left:Proof, right:Proof) extends Proof {}
+
+/* G |- M: False
+ * ----------------------------------------------
+ * G |- abort[P] M: P
+ */
+case class FalseE(child:Proof, fml:Formula) extends Proof {}
 
 /*       *
  * ----------------------------------------------
