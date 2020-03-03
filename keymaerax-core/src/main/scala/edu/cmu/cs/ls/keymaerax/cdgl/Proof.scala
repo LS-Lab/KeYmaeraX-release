@@ -35,6 +35,12 @@ final case class Judgement(ante: Context, succ: Formula) {}
 
 sealed trait Proof {}
 
+/*                 *
+ *  -------------------------------
+ *   G |-  (): True
+ */
+case class Triv() extends Proof {}
+
 /* G |- M: P   G |- N: Q
  * ----------------------------------------------
  * G |- <M,N>: <?P>Q
