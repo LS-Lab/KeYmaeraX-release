@@ -151,9 +151,9 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
   override def apply(e: MExpr): Either[KExpr,NamedSymbol] = convert(e)
 }
 
-object PegasusM2KConverter extends UncheckedBaseM2KConverter {
-  private def diffSatResult: BinaryMathOpSpec = new BinaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
-    override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 &&
+object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
+  private def diffSatResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+    override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 3 &&
       MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
       e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("DiffSat")
   }
@@ -183,6 +183,9 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
     *         ...
     *       },
     *       Proved -> <bool>
+    *     },
+    *     Meta -> {
+    *       Timing -> { What -> Duration, ... }
     *     }
     *   }
     * }}}
@@ -300,7 +303,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter {
         )
       ))
     }
-
+    logger.debug("Pegasus raw result: " + e)
     And(convertResultType(e.args()(0)), convertResult(e.args()(1)))
   }
 

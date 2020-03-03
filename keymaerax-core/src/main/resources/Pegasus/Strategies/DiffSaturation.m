@@ -23,13 +23,14 @@ FormatResult::usage="FormatResult[inv,cuts,proved]
 	Formats the result in diff sat result into the right format.
 	inv = the generated invariant,
 	cuts = list of cuts building that invariant,
+	timings = list of time measurements for executing parts of this strategy,
 	proved = whether this invariant proves the given problem."
 
 
 Begin["`Private`"]
 
 
-FormatResult[inv_, cuts_List, proved_]:=Module[{formatcuts},
+FormatResult[inv_, cuts_List, timings_List, proved_]:=Module[{formatcuts},
 formatcuts = Map[ {#[[1]], Symbol["Hint"] -> #[[2]]} & ,cuts];
 {
 	Symbol["ResultType"] -> Symbol["DiffSat"],
@@ -37,7 +38,10 @@ formatcuts = Map[ {#[[1]], Symbol["Hint"] -> #[[2]]} & ,cuts];
 		Symbol["Invariant"] -> inv,
 		Symbol["Cuts"] -> formatcuts,
 		Symbol["Proved"] -> proved
-	}	
+	},
+	Symbol["Meta"] -> {
+		Symbol["Timing"] -> timings
+	}
 }
 ]
 
@@ -71,7 +75,7 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 polyList,invlist,cuts,cutlist,strat,hint,
 curproblem,subproblem,deps,curdep,timeoutmultiplier,
-constvars,constasms,invs},
+constvars,constasms,invs,timingList},
 
 (* Bring symbolic parameters into the dynamics *)
 Print["Input Problem: ", problem];
@@ -90,7 +94,7 @@ post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
 Print["Postcondition (simplify): ", post];
 If[TrueQ[post],
 	Print["Postcondition trivally implied by domain constraint. Returning."];
-	Throw[FormatResult[True, {}, True]]
+	Throw[FormatResult[True, {}, {}, True]]
 	];
 
 deps=If[OptionValue[DiffSat,UseDependencies],
@@ -100,6 +104,7 @@ deps=If[OptionValue[DiffSat,UseDependencies],
 
 invlist=True;
 cutlist={};
+timingList={};
 
 (* For each depednency *)
 Do[
@@ -115,21 +120,24 @@ subproblem = Dependency`FilterVars[curproblem,curdep];
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
 (*Print[subproblem];*)
-invs = TimeConstrained[
+timedInvs = AbsoluteTiming[TimeConstrained[
 	Block[{res},
 	res = strat[subproblem];
 	If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
 	res]//DeleteDuplicates,
 	OptionValue[StrategyTimeout],
 	Print["Strategy timed out after: ",OptionValue[StrategyTimeout]];
-	{True}];
+	{True}]];
+Print["Strategy ",ToString[strat]," duration: ",timedInvs[[1]]];
+AppendTo[timingList,Symbol[ToString[strat]]->timedInvs[[1]]];
+invs=timedInvs[[2]];
 
 (* Simplify invariant w.r.t. the domain constraint *)
 cuts=Map[Assuming[And[evoConst,constasms], FullSimplify[#, Reals]]&, invs];
 
 inv=cuts//.{List->And};
 
-Print["Extracted (simplified) invariant(s): ", inv]
+Print["Extracted (simplified) invariant(s): ", inv];
 
 (* Needs something like this?
  ecvoConst=And[evoConst,inv[[1]]]; *)
@@ -145,21 +153,27 @@ post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 
-invImpliesPost=Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars];
+timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
+Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
+AppendTo[timingList,Symbol["InvCheck"]->timedInvImpliesPost[[1]]];
+invImpliesPost=timedInvImpliesPost[[2]];
 If[TrueQ[invImpliesPost],
 	Print["Generated invariant implies postcondition. Returning."];
 	If[OptionValue[MinimizeCuts],
 		Print["Reducing input cutlist: ", invlist, cutlist];
-		cutlist=ReduceCuts[cutlist,problem];
+		timedCutlist=AbsoluteTiming[ReduceCuts[cutlist,problem]];
+		Print["Reducing cuts duration: ", timedCutlist[[1]]];
+		AppendTo[timingList, Symbol["ReduceCuts"]->timedCutlist[[1]]];
+		cutlist=timedCutlist[[2]];
 		invlist=Map[#[[1]]&,cutlist]/.List->And;
 		];
-	Throw[FormatResult[invlist,cutlist, True]]
+	Throw[FormatResult[invlist, cutlist, timingList, True]]
 ]
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
 
 (* Throw whatever invariant was last computed *)
-Throw[FormatResult[invlist,cutlist, False]];
+Throw[FormatResult[invlist, cutlist, timingList, False]];
 ]]
 
 
