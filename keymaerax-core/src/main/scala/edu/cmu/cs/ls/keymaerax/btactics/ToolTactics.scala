@@ -68,12 +68,15 @@ private object ToolTactics {
     val splittingQE =
       ArithmeticSimplification.smartHide & Idioms.?(onAll(orL('L) | andR('R)))*3 & onAll(plainQE & done)
 
-    Idioms.doIf(!_.isProved)(
-      assertT(_.isFOL, "QE on FOL only") &
-      allTacticChase()(notL, andL, notR, implyR, orR, allR) &
-        Idioms.doIf(!_.isProved)(
-          close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE))
-      )
+    AnonymousLemmas.cacheTacticResult(
+      Idioms.doIf(!_.isProved)(
+        assertT(_.isFOL, "QE on FOL only") &
+        allTacticChase()(notL, andL, notR, implyR, orR, allR) &
+          Idioms.doIf(!_.isProved)(
+            close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE))
+        ),
+      "qecache/" + qeTool.getClass.getSimpleName
+    )
   })
 
   /** Hides duplicate formulas (expensive because needs to sort positions). */
