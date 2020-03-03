@@ -20,7 +20,7 @@ class ProofCheckerTests extends TacticTestBase {
     val vy = Variable("y")
     val pv = 0
     val G = Context(List(Equal(vx, Number(1))))
-    val M = DAssignI(Assign(vx, Plus(vx, Number(2))), vy, pv, Hyp(0))
+    val M = DAssignI(Assign(vx, Plus(vx, Number(2))), vy, Hyp(0))
     a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
   }
 

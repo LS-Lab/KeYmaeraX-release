@@ -7,6 +7,7 @@ import scala.collection.immutable
 
 
 object Proof {
+  // de Bruijn indices
   type ProofVariable = Int
 }
 
@@ -20,7 +21,7 @@ final case class Context(c:List[Formula]) {
   def rename(what: Variable, repl: Variable): Context = {
     Context.ofSequent(UniformRenaming(what,repl)(this.asSequent).head)
   }
-  def extend(p: ProofVariable, P:Formula): Context = {
+  def extend(P:Formula): Context = {
     Context(P :: c)
   }
   def apply(p:ProofVariable): Formula = c(p)
@@ -63,7 +64,7 @@ case class DTestER(child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- <x:=f_x^y in p. M> : <x:=f>P
  */
-case class DAssignI(e:Assign, y:Variable, p:ProofVariable, child: Proof) extends Proof {}
+case class DAssignI(e:Assign, y:Variable, child: Proof) extends Proof {}
 
 /* G |- M: <x:=f>p(x)
  * ----------------------------------------------
@@ -75,13 +76,13 @@ case class DAssignE(e:Assign, child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- <x :* f_x^y in p. M> : <x:=*>P
  */
-case class DRandomI(e:Assign, y:Variable, p:ProofVariable, child: Proof) extends Proof {}
+case class DRandomI(e:Assign, y:Variable, child: Proof) extends Proof {}
 
 /* G |- M: <x:=f>p(x)   G_x^y, p(x) |- N: Q
  * ----------------------------------------------
  * G |-  (unpack_x^y = M in N) : Q
  */
-case class DRandomE(x:Variable, y:Variable, p:ProofVariable, left: Proof, right: Proof) extends Proof {}
+case class DRandomE(x:Variable, y:Variable, left: Proof, right: Proof) extends Proof {}
 
 /* G |- M: <a><b>P
  * ----------------------------------------------
@@ -111,7 +112,7 @@ case class DChoiceIR(other:Program, child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- (case A of l=>B | r=>C): Q
  */
-case class DChoiceE(l:ProofVariable, r:ProofVariable, child:Proof, left:Proof, right:Proof) extends Proof {}
+case class DChoiceE(child:Proof, left:Proof, right:Proof) extends Proof {}
 
 /* G |- M: P
  * ----------------------------------------------
@@ -130,7 +131,7 @@ case class DGo(child: Proof) extends Proof {}
  * ------------------------------------------------------------------------
  * G |- for_{met,metz}(A;mv.B;C): <a*>Q
  */
-case class DRepeatI(metric: Term, metz:Term, mx:BaseVariable, variant: Formula, m:ProofVariable, v:ProofVariable, init: Proof, step: Proof, post: Proof) extends Proof {}
+case class DRepeatI(metric: Term, metz:Term, mx:BaseVariable, init: Proof, step: Proof, post: Proof) extends Proof {}
 // FP
 
 /* G |- A: <a*>P   x:P |- B: Q   x:<a>Q |- C:Q
@@ -182,7 +183,7 @@ case class BTestE(left:Proof, right:Proof) extends Proof {}
  * ----------------------------------------------
  * G |- [x:=f_x^y in p. M] : [x:=f]P
  */
-case class BAssignI(e:Assign, y:Variable, p:ProofVariable, child: Proof) extends Proof {}
+case class BAssignI(e:Assign, y:Variable, child: Proof) extends Proof {}
 
 /* G |- M: [x:=f]p(x)
  * ----------------------------------------------
@@ -236,7 +237,7 @@ case class BChoiceER(child: Proof) extends Proof {}
  * ---------------------------------------------------------
  * G |- (A rep[ys] x:J. B in C): [a*]Q
  */
-case class BRepeatI(J:ProofVariable, pre: Proof, step: Proof, post: Proof) extends Proof {}
+case class BRepeatI(pre: Proof, step: Proof, post: Proof) extends Proof {}
 
 /* G |- M: [a*]P
  * ----------------------------------------------
@@ -273,7 +274,7 @@ case class BSolve(ode:ODESystem, ys:List[Variable], sols:List[Term], s:Variable,
  * ----------------------------------------------
  * G |- DW[ys](x.M): [x'=f & Q]P
  */
-case class DW(ode:ODESystem, p:ProofVariable, child: Proof) extends Proof {}
+case class DW(ode:ODESystem, child: Proof) extends Proof {}
 
 /* G |- M:[x'=f&Q]R   G |- N:[x'=f&(Q&R)]P
  * ----------------------------------------------
@@ -312,13 +313,13 @@ case class ForallE(child: Proof, f:Term) extends Proof {}
  * ----------------------------------------------
  * G |- <x = f_x^y in p. M> : \exists x, P
  */
-case class ExistsI(e:Assign, y:Variable, p:ProofVariable, child: Proof) extends Proof {}
+case class ExistsI(e:Assign, y:Variable, pchild: Proof) extends Proof {}
 
 /* G |- M: (exists x, p(x))   G_x^y, p(x) |- N: Q
  * ----------------------------------------------
  * G |- (unpack_x^y = M in N) : Q
  */
-case class ExistsE(x:Variable, y:Variable, p:ProofVariable, left: Proof, right: Proof) extends Proof {}
+case class ExistsE(x:Variable, y:Variable, left: Proof, right: Proof) extends Proof {}
 
 /* G |- M: P   G |- N:Q
  * ----------------------------------------------
@@ -354,13 +355,13 @@ case class OrIR(other: Formula, child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- (case A of l=>B | r=>C): R
  */
-case class OrE(l:ProofVariable, r:ProofVariable, child:Proof, left:Proof, right:Proof) extends Proof {}
+case class OrE(child:Proof, left:Proof, right:Proof) extends Proof {}
 
 /* G,x:P |- M:Q
  * ----------------------------------------------
  * G |- (fn x:P => M): (P -> Q)
  */
-case class ImplyI(p:ProofVariable, fml:Formula, child:Proof) extends Proof {}
+case class ImplyI(fml:Formula, child:Proof) extends Proof {}
 
 /* G |- M: (P -> Q)   G |- N: P
  * ----------------------------------------------
@@ -372,7 +373,7 @@ case class ImplyE(left:Proof, right:Proof) extends Proof {}
  * ----------------------------------------------
  * G |- (M,N)[x:P,Q]
  */
-case class EquivI(vx:ProofVariable, p:Formula, q:Formula, left:Proof, right:Proof) extends Proof {}
+case class EquivI(fml:Equiv, left:Proof, right:Proof) extends Proof {}
 
 /* G |- M: (P <-> Q)   G |- N: P
  * ----------------------------------------------
@@ -390,7 +391,7 @@ case class EquivER(child:Proof, assump:Proof) extends Proof {}
  * ----------------------------------------------
  * G |- (fn x:P => M): !P
  */
-case class NotI(vx:ProofVariable, p:Formula, child:Proof) extends Proof {}
+case class NotI(p:Formula, child:Proof) extends Proof {}
 
 /* G |- M: !P   G |- N: P
  * ----------------------------------------------
@@ -409,7 +410,7 @@ case class Hyp(p:ProofVariable) extends Proof {}
  * ----------------------------------------------
  * G |-  (M o x:J. N)[ys] : [a]Q
  */
-case class Mon(left: Proof, vx: ProofVariable, right: Proof) extends Proof {}
+case class Mon(left: Proof, right: Proof) extends Proof {}
 
 /* G |- M: Q
  * ---------------------------------------------- (Q -> P is valid first-order arithmetic)
