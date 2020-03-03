@@ -23,9 +23,9 @@ class ProofCheckerTests extends TacticTestBase {
     a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
   }
 
-  "QE" should "allow valid first-order arithemtic" in withMathematica { _ =>
-    val M = QE(GreaterEqual(Variable("x"), Number(0)), Triv())
-    ProofChecker(Context(List()), M) shouldBe GreaterEqual(Variable("x"), Number(0))
+  "QE" should "allow valid first-order arithmetic" in withMathematica { _ =>
+    val M = QE(GreaterEqual(Times(Variable("x"),Variable("x")), Number(0)), Triv())
+    ProofChecker(Context(List()), M) shouldBe GreaterEqual(Times(Variable("x"),Variable("x")), Number(0))
   }
 
   "QE" should "reject modal formulas" in withMathematica { _ =>

@@ -1,19 +1,43 @@
 package edu.cmu.cs.ls.keymaerax.cdgl
 
+import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.Proof._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 
 case class ProofException(msg: String) extends Exception {}
 
 object ProofChecker {
-
   private def deriveFormula(p:Formula): Formula = {
     ???
   }
 
-  private def qeValid(p:Formula): Boolean = false
+  private def isConjunctive(p:Formula): Boolean = {
+    p match {
+      case True | _ : Less | _ : LessEqual | _ : Equal | _ : NotEqual | _ : Greater | _ : GreaterEqual => true
+      case And(p,q) => isConjunctive(p) && isConjunctive(q)
+      case Forall(xs, f) => isConjunctive(f)
+      case _ => false
+    }
+  }
+
+  private def qeValid(p:Formula): Boolean = {
+    val t:QETacticTool = ToolProvider.provider.qeTool().get
+    val (pre, post) = p match {
+      case Imply(p, q) => (p, q)
+      case p => (True, p)
+    }
+    val fact = t.qe(Imply(pre, post)).fact
+    val conclusion = fact.conclusion
+    val isFormula = conclusion.ante.isEmpty && conclusion.succ.length == 1
+    fact.conclusion.succ.headOption match {
+      case Some(Equiv(_,True)) => isFormula && isConjunctive(pre) && isConjunctive(post) && fact.isProved
+      case _ => false
+    }
+  }
 
   //TODO
   def ghostVar(explicit:Option[Variable], base:Variable, freshIn:List[Expression]): Variable = {
@@ -40,33 +64,33 @@ object ProofChecker {
 
   def apply(G: Context, M: Proof): Formula = {
     val Context(con) = G
-     M match {
-       case Triv() => True
-       case DTestI(left, right) =>
-         val P = apply(G, left)
-         val Q = apply(G, right)
-         Diamond(Test(P),Q)
-       case DTestEL(child) =>
-         apply(G,child) match {
-           case Diamond(Test(p),_) => p
-           case p => throw ProofException(s"[?]EL not applicable to formula ${p}")
-         }
-       case DTestER(child) =>
-         apply(G,child) match {
-           case Diamond(Test(_),q) => q
-           case p => throw ProofException(s"[?]ER not applicable to formula ${p}")
-         }
-       case DAssignI(asgn@Assign(x,f), child, yOpt) =>
-         val y = ghostVar(yOpt, x, List(f))
-         val ren = URename(x,y)
-         val g = ren(f)
-         val d = G.rename(x,y).extend(Equal(x,g))
-         val P = apply(d, child)
-         val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv).toSet
-         if (vars.contains(y)) {
-           throw ProofException(s"Ghost variable ${y} not fresh")
-         }
-         Diamond(Assign(x,f), P)
+    M match {
+      case Triv() => True
+      case DTestI(left, right) =>
+        val P = apply(G, left)
+        val Q = apply(G, right)
+        Diamond(Test(P),Q)
+      case DTestEL(child) =>
+        apply(G,child) match {
+          case Diamond(Test(p),_) => p
+          case p => throw ProofException(s"[?]EL not applicable to formula ${p}")
+        }
+      case DTestER(child) =>
+        apply(G,child) match {
+          case Diamond(Test(_),q) => q
+          case p => throw ProofException(s"[?]ER not applicable to formula ${p}")
+        }
+      case DAssignI(asgn@Assign(x,f), child, yOpt) =>
+        val y = ghostVar(yOpt, x, List(f))
+        val ren = URename(x,y)
+        val g = ren(f)
+        val d = G.rename(x,y).extend(Equal(x,g))
+        val P = apply(d, child)
+        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv).toSet
+        if (vars.contains(y)) {
+          throw ProofException(s"Ghost variable ${y} not fresh")
+        }
+        Diamond(Assign(x,f), P)
       case DAssignE(child) =>
         apply(G, child) match {
           case Diamond(Assign(x,f),pp) => SubstitutionHelper.replaceFree(pp)(x, f)
@@ -222,7 +246,7 @@ object ProofChecker {
           case Box(Choice(_,b),p) => Box(b,p)
           case p => throw ProofException(s"Rule [++]ER not applicable to formula $p")
         }
-       // TODO: Better consistency in rename across rules
+      // TODO: Better consistency in rename across rules
       case BRepeatI(pre, step, post) =>
         val j1 = apply(G,pre)
         apply(Context(List(j1)), step) match {
