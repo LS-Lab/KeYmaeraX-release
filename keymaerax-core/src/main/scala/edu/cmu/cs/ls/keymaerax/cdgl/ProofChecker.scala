@@ -98,75 +98,114 @@ object ProofChecker {
         }
 
       case DRandomI(Assign(x,f), child, yOpt) =>
-        val y = ghostVar(yOpt, x, List(f))
-        val ren = URename(x,y)
-        val g = ren(f)
-        val d = G.rename(x,y).extend(Equal(x,g))
-        val P = apply(d, child)
+        val y = ghostVar(yOpt, x, f :: G.asList)
+        val f1 = URename(x,y)(f)
+        val G1 = G.rename(x,y).extend(Equal(x,f1))
+        val P = apply(G1, child)
         Diamond(AssignAny(x), P)
       case DRandomE(left, right, yOpt) =>
-        //TODO: Assert y fresh and doesnt escape scope
-        val Exists(List(x),q) = apply(G,left)
-        val y = ghostVar(yOpt, x, List())
-        val P = apply(G.rename(x,y).extend(q),right)
-        P
+        apply(G,left) match {
+          case Diamond(AssignAny(x),q) =>
+            val y = ghostVar(yOpt, x, q :: G.asList)
+            val G1 = G.rename(x,y).extend(q)
+            val p = apply(G1, right)
+            if (!StaticSemantics(p).fv.intersect(Set(x,y)).isEmpty) {
+              throw ProofException(s"Postcondition $p cannot mention $x or $y in rule <:*>E")
+            } else p
+          case p => throw ProofException(s"Rule <:*>E not applicable to formula $p")
+        }
       case ExistsI(Assign(x,f), child: Proof, yOpt:Option[Variable]) =>
-        val y = ghostVar(yOpt,x,List(f))
-        val ren = URename(x,y)
-        val g = ren(f)
-        val d = G.rename(x,y).extend(Equal(x,g))
-        val P = apply(d, child)
+        val y = ghostVar(yOpt,x, f :: G.asList)
+        val f1 = URename(x,y)(f)
+        val G1 = G.rename(x,y).extend(Equal(x,f1))
+        val P = apply(G1, child)
         Exists(List(x), P)
       case  ExistsE(left: Proof, right: Proof, yOpt:Option[Variable])  =>
-        //TODO: Assert y fresh and doesnt escape scope
-        val Diamond(AssignAny(x),q) = apply(G,left)
-        val y = ghostVar(yOpt, x, List())
-        val P = apply(G.rename(x,y).extend(q),right)
-        P
+        apply(G,left) match {
+          case Exists(List(x),q) =>
+            val y = ghostVar(yOpt, x, q :: G.asList)
+            val G1 = G.rename(x,y).extend(q)
+            val p = apply(G1, right)
+            if (!StaticSemantics(p).fv.intersect(Set(x,y)).isEmpty) {
+              throw ProofException(s"Postcondition $p cannot mention $x or $y in rule <:*>E")
+            } else p
+          case p => throw ProofException(s"Rule <:*>E not applicable to subgoal $p")
+        }
       case DComposeI(child) =>
-        val Diamond(a,Diamond(b,p)) = apply(G,child)
-        Diamond(Compose(a,b),p)
+        apply(G,child) match {
+          case Diamond(a,Diamond(b,p)) => Diamond(Compose(a,b),p)
+          case p => throw ProofException(s"Rule <;>I not applicable to subgoal $p")
+        }
       case DComposeE(child) =>
-        val Diamond(Compose(a,b),p) = apply(G,child)
-        Diamond(a,Diamond(b,p))
+        apply(G,child) match {
+          case Diamond(Compose(a,b),p) => Diamond(a,Diamond(b,p))
+          case p => throw ProofException(s"Rule <;>E not applicable to subgoal $p")
+        }
       case DChoiceIL(child,b) =>
-        val Diamond(a,p) = apply(G,child)
-        Diamond(Choice(a,b),p)
+        apply(G,child) match {
+          case Diamond(a,p) => Diamond(Choice(a,b),p)
+          case p => throw ProofException(s"Rule <++>IL not applicable to subgoal $p")
+        }
+
       case DChoiceIR(child,a) =>
-        val Diamond(b,p) = apply(G,child)
-        Diamond(Choice(a,b),p)
+        apply(G,child) match {
+          case Diamond(b,p) => Diamond(Choice(a,b),p)
+          case p => throw ProofException(s"Rule <++>IR not applicable to subgoal $p")
+        }
       case DChoiceE(child, left, right) =>
-        val Diamond(Choice(a,b),p) = apply(G,child)
-        val pp = apply(G.extend(Diamond(a,p)),left)
-        val qq = apply(G.extend(Diamond(b,p)),right)
-        require(pp == qq)
-        pp
+        apply(G,child) match {
+          case Diamond(Choice(a,b),p) =>
+            val pp = apply(G.extend(Diamond(a,p)),left)
+            val qq = apply(G.extend(Diamond(b,p)),right)
+            if(pp != qq) {
+              throw ProofException(s"Postconditions $pp and $qq do not match in <++>E")
+            }
+            pp
+          case p => throw ProofException(s"Rule <++>E not applicable to subgoal $p")
+        }
       case DStop(child,a) =>
         val p = apply(G,child)
         Diamond(Loop(a),p)
       case DGo(child) =>
-        val Diamond(a,Diamond(Loop(b),p)) = apply(G,child)
-        assert(a == b)
-        Diamond(Loop(a),p)
+        apply(G,child) match {
+          case Diamond(a,Diamond(Loop(b),p)) =>
+            if(a != b)
+              throw ProofException(s"Programs $a and $b do not match in <*>G")
+            Diamond(Loop(a),p)
+          case p => throw ProofException(s"Rule <*>G not applicable to subgoal $p")
+        }
       case DRepeatI(metric, metz, mx, init, step, post) =>
         //val met0 = BaseVariable(mx.name, Some(mx.index.map(i => i+ 1).getOrElse(0)))
         val variant = apply(G,init)
-        val Diamond(a,p2) = apply(Context(List(And(Equal(mx,metric), Greater(metric,metz)), variant)), step)
-        val p3 = apply(Context(List(Equal(metric,metz),variant)),post)
-        assert(p2 == And(variant, Greater(metz, metric)))
-        Diamond(Loop(a), p3)
+        apply(Context(List(And(Equal(mx,metric), Greater(metric,metz)), variant)), step) match {
+          case Diamond(a,p2) =>
+            val p3 = apply(Context(List(Equal(metric,metz),variant)),post)
+            val expectedPost = And(variant, Greater(metz, metric))
+            if(p2 != expectedPost)
+              throw ProofException(s"Rule <*>I expected inductive step postcondition $expectedPost, got $p2")
+            Diamond(Loop(a), p3)
+          case p => throw ProofException(s"Rule <*>I not applicable to subgoal $p")
+        }
       case DRepeatE(child, post, step) =>
-        val Diamond(Loop(a),p) = apply(G,child)
-        val p1 = apply(Context(List(p)),post)
-        val p2 = apply(Context(List(Diamond(a,p1))),step)
-        assert(p2 == p1)
-        p1
+        apply(G,child) match {
+          case Diamond(Loop(a),p) =>
+            val p1 = apply(Context(List(p)),post)
+            val p2 = apply(Context(List(Diamond(a,p1))),step)
+            if(p1 != p2)
+              throw ProofException(s"Rule <*>E postconditions $p1 and $p2 did not match")
+            p1
+          case p => throw ProofException(s"Rule <*>E not applicable to subgoal $p")
+        }
       case DDualI(child) =>
-        val Box(a,p) = apply(G,child)
-        Diamond(Dual(a),p)
+        apply(G,child) match {
+          case Box(a,p) => Diamond(Dual(a),p)
+          case p => throw ProofException(s"Rule <d>I not applicable to subgoal $p")
+        }
       case DDualE(child) =>
-        val Diamond(Dual(a),p) = apply(G,child)
-        Box(a,p)
+        apply(G,child) match {
+          case Diamond(Dual(a),p) => Box(a,p)
+          case p => throw ProofException(s"Rule <d>E not applicable to subgoal $p")
+        }
       case DSolve(ode, ys, sol, dur, s, t, dc, post) =>
         ???
       case DV(f, g, d, const, dur, rate, post) =>
@@ -176,10 +215,14 @@ object ProofChecker {
         val p1 = apply(G.extend(fml),child)
         Box(Test(fml),p1)
       case BTestE(left, right) =>
-        val Box(Test(p),q) = apply(G,left)
-        val p2 = apply(G,right)
-        assert(p == p2)
-        q
+        apply(G,left) match {
+          case Box(Test(p1),q) =>
+            val p2 = apply(G,right)
+            if(p1 != p2)
+              throw ProofException(s"Assumption $p2 does not match expected $p1 in [?]E")
+            q
+          case p => throw ProofException(s"Rule [?]E not applicable to subogal $p")
+        }
       case BAssignI(asgn@Assign(x,f), child, yOpt) =>
         val y = ghostVar(yOpt,x,List(f))
         val ren = URename(x,y)
@@ -292,8 +335,8 @@ object ProofChecker {
         val dcFml = Forall(List(s),Imply(And(LessEqual(Number(0),s),LessEqual(s,t)),Diamond(asgn,ode.constraint)))
         apply(g.extend(And(GreaterEqual(t,Number(0)),dcFml)), post) match {
           case Diamond(asgns, p1) =>
-            if (asgn != tasgn)
-              throw ProofException(s"Assignments $asgn and $tasgn mismatch in [']")
+            if (asgns != tasgn)
+              throw ProofException(s"Assignments $asgns and $tasgn mismatch in [']")
             else
               Box(ode, p1)
           case p => throw ProofException(s"Rule ['] not applicable to subgoal $p")
@@ -302,7 +345,7 @@ object ProofChecker {
         //TODO: rename
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))
-        val p1 = apply(G.extend(ode.constraint),child)
+        val p1 = apply(G.renames(xs,ys).extend(ode.constraint),child)
         Box(ode,p1)
       case DC(left, right) =>
         val Box(ODESystem(ode,con),p) = apply(G,left)
@@ -323,11 +366,22 @@ object ProofChecker {
         }
       case DG(Assign(y, y0), Plus(Times(a,yy), b), child) =>
         //@TODO: freshness
-        assert(yy == y)
-        val Box(Compose(Assign(xy,e),ODESystem(DifferentialProduct(AtomicODE(xp,xe),c),con)),pp) = apply(G,child)
-        assert(y == xy && xp == DifferentialSymbol(xy) && e == y0 && xe == Plus(Times(a,xy),b))
-        Box(ODESystem(c,con),pp)
-      case _ : DG => ???
+        if (y != yy) {
+          throw ProofException("Variables $y and $yy should be equal in ")
+        }
+        apply(G,child) match {
+          case Box(Compose(Assign(xy,e),ODESystem(DifferentialProduct(AtomicODE(xp,xe),c),con)),pp) =>
+            if (y != xy) {
+              throw ProofException(s"Expected $y and $xy equal in DG subgoal")
+            } else if (xp != DifferentialSymbol(xy)) {
+              throw ProofException(s"Expected $xp and ${DifferentialSymbol(xy)} equal in DG subgoal")
+            } else if (e != y0) {
+              throw ProofException(s"Expected $e and $y0 equal in DG subgoal")
+            } else if (xe == Plus(Times(a,xy),b)) {
+              throw ProofException(s"Expected $xe and ${Plus(Times(a,xy),b)} equal in DG subgoal")
+            } else Box(ODESystem(c,con),pp)
+        }
+      case DG(e,_,_) => throw ProofException(s"Expected ghost term $e to have shape (f*y)+g in DG")
       case AndI(left, right) =>
         val p = apply(G,left)
         val q = apply(G,right)
@@ -357,7 +411,7 @@ object ProofChecker {
               throw ProofException(s"Postconditions $r1 and $r2 do not match in rule |E")
             else
               r1
-          case p => throw ProofException("Rule |E not applicable to subgoal $p")
+          case p => throw ProofException(s"Rule |E not applicable to subgoal $p")
         }
       case ImplyI(fml, child) =>
         val q = apply(G.extend(fml),child)

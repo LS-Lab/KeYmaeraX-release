@@ -14,12 +14,16 @@ object Proof {
 final case class Context(c:List[Formula]) {
   def contains(x:ProofVariable):Boolean = c.length > x
   def asIndexedSeq: immutable.IndexedSeq[Formula] = c.to[immutable.IndexedSeq]
+  def asList: List[Formula] = c
   def asSequent: Sequent = Sequent(this.asIndexedSeq, immutable.IndexedSeq())
   def entails(f:Formula): Sequent = {
     Sequent(c.toIndexedSeq, immutable.IndexedSeq(f))
   }
   def rename(what: Variable, repl: Variable): Context = {
     Context.ofSequent(UniformRenaming(what,repl)(this.asSequent).head)
+  }
+  def renames(whats: List[Variable], repls: List[Variable]): Context = {
+    whats.zip(repls).foldLeft[Context](this)({case (acc,(x,y)) => acc.rename(x,y)})
   }
   def extend(P:Formula): Context = {
     Context(P :: c)
