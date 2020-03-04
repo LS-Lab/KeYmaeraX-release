@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="KeYmaera&#160;X Prover User Interface">
     <meta name="author" content="Logical Systems Lab, Carnegie Mellon University">
-    <link rel="icon" href="../../favicon.ico">
 
     <title>KeYmaera&#160;X Prover</title>
 
@@ -40,20 +39,18 @@
     </div>
 </div>
 
-<noscript>
-  <br/>
-  <br/>
-  <b style="font-size: x-large; color: darkred;">Error: Using the KeYmaera&#160;X user interface requires enabling JavaScript in your browser!</b>
-  <br/>
-  <br/>
-</noscript>
-
 <!-- Main jumbotron for a primary message or call to action -->
 <div class="jumbotron">
     <div class="container">
         <h1>KeYmaera&#160;X</h1>
         <p>An aXiomatic Tactical Theorem Prover for Hybrid Systems</p>
         <p><i class="fa fa-spinner fa-spin"></i> Starting</p>
+<noscript>
+  <div class="alert alert-danger" style="font-size: large"><b>Error:</b> Using the KeYmaera&#160;X user interface requires enabling <b>JavaScript</b> in your browser!</div>
+</noscript>
+<script type="text/javascript"><!--
+  if (!navigator.cookieEnabled) document.write('<div class="alert alert-danger" style="font-size: large"><b>Error:</b> Using the KeYmaera&#160;X user interface requires enabling <b>Cookies</b> in your browser!</div>')
+  --></script>
     </div>
 </div>
 
@@ -63,7 +60,7 @@
             <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b><a class="text-danger" target="blank_" href="http://keymaeraX.org/">new version {{latestVersion}} is now available from KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(no network).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>
-            <i class="fa fa-copyright"></i> Carnegie Mellon University, <a href="https://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a> 2014-2019 </p>
+            <i class="fa fa-copyright"></i> <a href="https://www.ls.cs.cmu.edu/" target="_blank">Carnegie Mellon University, Logical Systems Lab</a> 2014-2020 </p>
     </div>
 </div>
 

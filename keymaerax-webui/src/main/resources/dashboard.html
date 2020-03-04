@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="KeYmaera&#160;X Prover User Interface">
     <meta name="author" content="Logical Systems Lab, Carnegie Mellon University">
-    <link rel="icon" href="../../favicon.ico">
 
     <title>KeYmaera&#160;X Prover</title>
 
@@ -117,6 +116,13 @@
 </div>
 
 <div class="container">
+
+<noscript>
+  <div class="alert alert-danger" style="font-size: large"><b>Error:</b> Using the KeYmaera&#160;X user interface requires enabling <b>JavaScript</b> in your browser!</div>
+</noscript>
+<script type="text/javascript"><!--
+  if (!navigator.cookieEnabled) document.write('<div class="alert alert-danger" style="font-size: large"><b>Error:</b> Using the KeYmaera&#160;X user interface requires enabling <b>Cookies</b> in your browser!<br/> After enabling Cookies, restart the  KeYmaera&#160;X user interface</div>')
+  --></script>
 
 <div ng-controller="ToolStatus">
     <div class="alert alert-warning" role="alert"
