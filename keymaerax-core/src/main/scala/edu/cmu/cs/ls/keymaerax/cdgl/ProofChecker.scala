@@ -464,17 +464,18 @@ object ProofChecker {
           case Box(Dual(a), p) => Diamond(a, p)
           case p => throw ProofException(s"Rule [d]E not applicable to formula $p")
         }
+      // TODO: all freshness checks
       case BSolve(ode, post, child, s, t, ysOpt) =>
+        val tvar = ghostVar(None, t, G.asList)
+        val t0 = if(t == tvar) Number(0) else tvar
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))
-        // TODO: assert solution
-        // TODO: assert freshness
-        val xys = xs.zip(ys)
+        val xys = (if (t == tvar) Nil else List((t,tvar))) ++ xs.zip(ys)
         val sols = solve(t, xys, ode)
         val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
         val con = ((t,s)::sols).foldLeft[Formula](ode.constraint)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
-        val dcFml = Forall(List(s),Imply(And(LessEqual(Number(0),s),LessEqual(s,t)),con))
-        val p = apply(g.extend(GreaterEqual(t,Number(0))).extend(dcFml), child)
+        val dcFml = Forall(List(s),Imply(And(LessEqual(t0,s),LessEqual(s,t)),con))
+        val p = apply(g.extend(GreaterEqual(t,t0)).extend(dcFml), child)
         val sub = sols.foldLeft[Formula](post)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
         if(sub != p) {
             throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p")

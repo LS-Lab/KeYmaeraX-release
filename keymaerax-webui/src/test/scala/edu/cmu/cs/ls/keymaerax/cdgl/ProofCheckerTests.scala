@@ -74,6 +74,13 @@ class ProofCheckerTests extends TacticTestBase {
     ProofChecker(G,M) shouldBe Box(ode,post)
   }
 
+  "box solve" should "reject unsound time variable reference" in withMathematica { _ =>
+    val ode = ODESystem(AtomicODE(DifferentialSymbol(Variable("t")),Number(1)))
+    val post = GreaterEqual(Variable("t"),Number(0))
+    val M = BSolve(ode, post, QE(GreaterEqual(Variable("t"),Number(0)),Hyp(1)))
+    val G = Context(List(Equal(Variable("t"),Number(-2))))
+    a[ProofException] shouldBe thrownBy(ProofChecker(G,M))
+  }
   "QE" should "allow valid first-order arithmetic" in withMathematica { _ =>
     val M = QE(GreaterEqual(Times(Variable("x"),Variable("x")), Number(0)), Triv())
     ProofChecker(Context(List()), M) shouldBe GreaterEqual(Times(Variable("x"),Variable("x")), Number(0))
