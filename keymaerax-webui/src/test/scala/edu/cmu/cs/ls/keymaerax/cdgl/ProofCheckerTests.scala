@@ -1,3 +1,11 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Tests for CdGL natural deduction proof terms and proof checking.
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
@@ -54,6 +62,18 @@ class ProofCheckerTests extends TacticTestBase {
     ProofChecker(G,M) shouldBe Box(ode,post)
   }
 
+  "box solve" should "support explicit time variable" in withMathematica { _ =>
+    val ode = ODESystem(DifferentialProduct(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("t")),Number(1)),AtomicODE(DifferentialSymbol(Variable("v")),Variable("a"))),AtomicODE(DifferentialSymbol(Variable("x")),Variable("v"))))
+    val post = GreaterEqual(Plus(Variable("x"),Variable("t")),Number(0))
+    val M = BSolve(ode,post,QE(
+      GreaterEqual(Plus(Plus(Plus(Times(Variable("a"),Divide(Power(Variable("t"),Number(2)),Number(2)))
+        ,Times(Variable("v",Some(0)),Variable("t"))),Variable("x",Some(0))), Variable("t"))
+        , Number(0))
+      , AndI(Hyp(5),AndI(Hyp(4),AndI(Hyp(3),AndI(Hyp(2),Hyp(1)))))))
+    val G = Context(List(Equal(Variable("t"),Number(0)),GreaterEqual(Variable("x"),Number(0)),GreaterEqual(Variable("v"),Number(0)),GreaterEqual(Variable("a"),Number(0))))
+    ProofChecker(G,M) shouldBe Box(ode,post)
+  }
+
   "QE" should "allow valid first-order arithmetic" in withMathematica { _ =>
     val M = QE(GreaterEqual(Times(Variable("x"),Variable("x")), Number(0)), Triv())
     ProofChecker(Context(List()), M) shouldBe GreaterEqual(Times(Variable("x"),Variable("x")), Number(0))
@@ -68,6 +88,7 @@ class ProofCheckerTests extends TacticTestBase {
     val M = QE(Greater(Variable("x"), Number(0)), Triv())
     a[ProofException] shouldBe thrownBy(ProofChecker(Context(List()), M))
   }
+
   "QE" should "use context" in withMathematica { _ =>
     val f = Greater(Variable("x"), Number(0))
     val M = QE(f, Hyp(0))

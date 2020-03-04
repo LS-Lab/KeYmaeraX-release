@@ -1,24 +1,40 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Main CdGL proof-checking algorithm.
+  * @note Soundness-critical
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl
 
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper.{atomicOdes, sortAtomicOdes}
 import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.cdgl.Proof._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal._
-import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 
+/**
+  * Raised when a proof term does not proof check
+  * @param msg Description of error
+  */
 case class ProofException(msg: String) extends Exception {
   override def toString:String = msg
 }
 
+/**
+  * Checks proof terms.
+  * @see [[ProofChecker.apply]]
+  */
 object ProofChecker {
+  /** @return simplified differential of formula [[p]] */
   private def deriveFormula(p:Formula): Formula = {
     ???
   }
 
+  /** @return whether [[p]] contains only conjunctions and universals over comparisons */
   private def isConjunctive(p:Formula): Boolean = {
     p match {
       case True | _ : Less | _ : LessEqual | _ : Equal | _ : NotEqual | _ : Greater | _ : GreaterEqual => true
@@ -28,22 +44,34 @@ object ProofChecker {
     }
   }
 
+  /** @param p formula of first-order constructive arithmetic
+    * @return whether formula is constructively valid */
   private def qeValid(p:Formula): Boolean = {
     val t:QETacticTool = ToolProvider.provider.qeTool().get
     val (pre, post) = p match {
       case Imply(p, q) => (p, q)
       case p => (True, p)
     }
+    // Is formula classically valid?
     val fact = t.qe(Imply(pre, post)).fact
     val conclusion = fact.conclusion
     val isFormula = conclusion.ante.isEmpty && conclusion.succ.length == 1
     fact.conclusion.succ.headOption match {
+      // If formula is conjunctive, then classical and constructive truth agree
       case Some(Equiv(_,True)) => isFormula && isConjunctive(pre) && isConjunctive(post) && fact.isProved
       case _ => false
     }
   }
 
+  // Map recording the maximum index, if any, with which each base or differential variable has appeared so far
   type Indices = Map[Either[String,String],Option[Int]]
+
+  /**
+    * Traverse expression and record indices with which each varable appears
+    * @param init Indices of variables seen so far
+    * @param e Expression in which to collect variable references
+    * @return Index map including occurrences in e
+    */
   private def collectVars(init:Indices, e:Expression):Indices = {
     var acc:Indices = init
     val etf =
@@ -75,10 +103,12 @@ object ProofChecker {
     }
     acc
   }
+  /** Collect variable occurrences in list of expressions */
   private def collectVars(es:List[Expression]):Indices = {
     es.foldLeft[Indices](Map())(collectVars)
   }
 
+  /** @return whether x is a fresh variable given the occurrences of map */
   private def freshIn(x:Variable, map:Indices):Boolean = {
     x match {
       case BaseVariable(name,ind,sort) =>
@@ -99,6 +129,7 @@ object ProofChecker {
     }
   }
 
+  /** @return x_i for some i which makes x_i fresh in map */
   private def freshOf(x:Variable, map:Indices):Variable = {
     x match {
       case BaseVariable(name,ind,sort) =>
@@ -116,6 +147,12 @@ object ProofChecker {
     }
   }
 
+  /** @param explicit Optional, explicit variable annotation
+    * @param base Base variable which can be reindexed to find ghost
+    * @param taboos Expressions in which ghost must be fresh
+    * @return ghost variable fresh in taboos, either [[explicit]] or renaming of [[base]].
+    * @throws [[ProofException]] if [[explicit]] ghost is not fresh
+    *  */
   def ghostVar(explicit:Option[Variable], base:Variable, taboos:List[Expression]): Variable = {
     val map:Indices = collectVars(taboos)
     explicit match {
@@ -129,21 +166,41 @@ object ProofChecker {
     }
   }
 
-  def ghostVars(explicit:Option[List[Variable]], base:List[Variable], freshIn:List[Expression]): List[Variable] = {
+  /** @param explicit Optional, explicit variable annotations
+    * @param base Base variables which can be reindexed to find ghost
+    * @param taboos Expressions in which ghosts must be fresh
+    * @return ghost variables fresh in taboos, either [[explicit]] or renamings of [[base]].
+    * @throws [[ProofException]] if [[explicit]] ghosts are not fresh
+    *  */
+  def ghostVars(explicit:Option[List[Variable]], base:List[Variable], taboos:List[Expression]): List[Variable] = {
     val xys:List[(Option[Variable],Variable)] = explicit match {
       case None => base.map((None,_))
       case Some(xs) => xs.zip(base).map({case(x,y) => (Some(x),y)})
     }
-    xys.map({case (x,y) => ghostVar(x,y,freshIn)})
+    xys.map({case (x,y) => ghostVar(x,y,taboos)})
   }
 
-  //TODO: what do if t'=1 already
+  //TODO: what do if t'=1 already and t!=0 initially
+  /**
+    * Solves an ODE
+    * @param tvar Variable for time
+    * @param xys Renamings for bound variables of ODE
+    * @param ode ODE to solve
+    * @return solution terms for each bound variable of ODE
+    */
   def solve(tvar:Variable, xys:List[(Variable,Variable)], ode: ODESystem): List[(Variable,Term)] = {
     val initialConditions = xys.toMap
     val solutions = Integrator(initialConditions, tvar, ode)
     solutions.map({case Equal(x:Variable,f) => (x,f) case p => throw ProofException(s"Solve expected $p to have shape x=f")})
   }
 
+  /**
+    * Checks whether G |- M : P for some P
+    * @param G Context in which to check term
+    * @param M Term to check
+    * @return Unique P such that G |- M : P, if any
+    * @throws [[ProofException]] if M does not check in context G
+    */
   def apply(G: Context, M: Proof): Formula = {
     val Context(con) = G
     M match {
@@ -414,14 +471,11 @@ object ProofChecker {
         // TODO: assert freshness
         val xys = xs.zip(ys)
         val sols = solve(t, xys, ode)
-        //val sols = xs.zip(sol)
         val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
         val con = ((t,s)::sols).foldLeft[Formula](ode.constraint)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
         val dcFml = Forall(List(s),Imply(And(LessEqual(Number(0),s),LessEqual(s,t)),con))
         val p = apply(g.extend(GreaterEqual(t,Number(0))).extend(dcFml), child)
         val sub = sols.foldLeft[Formula](post)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
-        // expected:  a*(t^2/2)+(a*t+v)*t+x>=0
-        // got:      a*(t^2/2)+(v_0*t+x_0)>=0
         if(sub != p) {
             throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p")
         }

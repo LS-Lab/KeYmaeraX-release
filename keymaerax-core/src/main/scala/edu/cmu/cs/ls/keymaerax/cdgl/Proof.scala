@@ -1,3 +1,16 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+/**
+  * Forward natural deduction proof terms for CdGL. Proof variables for assumptions are represented with de Bruijn indices.
+  * The conclusion of a proof term is an output of the proof checker, which often requires formula (and program) annotations
+  * in proof terms. To promote lexical scope, binding connectives rename in the context rather than weakening.
+  * Variables used for renaming are optional arguments to proof terms, which can be inferred if not given explicitly.
+  * In typical natural-deduction style, premisses mention as few connectives as possible
+  * @note Soundness-critical
+  * @author Brandon Bohrer
+  */
 package edu.cmu.cs.ls.keymaerax.cdgl
 
 import edu.cmu.cs.ls.keymaerax.cdgl.Proof._
@@ -11,37 +24,67 @@ object Proof {
   type ProofVariable = Int
 }
 
+/**
+  * A context is a conjunction of assumption formulas. Variable references proceed from the head of the list and binding
+  * rules introduce assumptions at the head, i.e., assumption 0 is the first element and the most recently added.
+  * @param c List of assumptions
+  */
 final case class Context(c:List[Formula]) {
+  /** Returns whether context contains proof variable */
   def contains(x:ProofVariable):Boolean = c.length > x
+
+  /** returns IndexedSeq containing same elements */
   def asIndexedSeq: immutable.IndexedSeq[Formula] = c.to[immutable.IndexedSeq]
+
+  /** returns List containing same elements */
   def asList: List[Formula] = c
+
+  /** returns Sequent with same assumptions and empty succedent */
   def asSequent: Sequent = Sequent(this.asIndexedSeq, immutable.IndexedSeq())
+
+  /** returns Sequent with same assumptions and given succedent */
   def entails(f:Formula): Sequent = {
     Sequent(c.toIndexedSeq, immutable.IndexedSeq(f))
   }
+
+  /** Apply single renaming to all assumptions */
   def rename(what: Variable, repl: Variable): Context = {
     Context.ofSequent(UniformRenaming(what,repl)(this.asSequent).head)
   }
+
+  /** Apply all renamings to all assumptions */
   def renames(whats: List[Variable], repls: List[Variable]): Context = {
     whats.zip(repls).foldLeft[Context](this)({case (acc,(x,y)) => acc.rename(x,y)})
   }
+
+  /** Add assumption P to context */
   def extend(P:Formula): Context = {
     Context(P :: c)
   }
+
+  /** All variables which appear free in some assumption */
   def freevars:SetLattice[Variable] =
     c.map(StaticSemantics(_).fv).foldLeft[SetLattice[Variable]](SetLattice.bottom)({case (acc,fv) => fv ++ acc })
+
+  /** Retrieve assumption formula for given variable index */
   def apply(p:ProofVariable): Formula = c(p)
 }
 
 object Context {
+  /** Returns true iff context contains no assumptions */
   def empty: Context = Context(List())
+  /** Context corresponding to antecedent of sequent */
   def ofSequent(seq: Sequent): Context = {
     Context(seq.ante.toList)
   }
 }
 
+/** Judgement G |- P  is a context G with a single succedent formula P */
 final case class Judgement(ante: Context, succ: Formula) {}
 
+/**
+  * CdGL forward proof terms
+  */
 sealed trait Proof {}
 
 /*                 *
@@ -133,7 +176,6 @@ case class DStop(child: Proof, other:Program) extends Proof {}
  * G |- (go M): <a*>P
  */
 case class DGo(child: Proof) extends Proof {}
-// TODO: Less args. Variant unnecessary
 
 /* G |- A:J   m:met0=met>metz,v:J |- <a>(J & met<metz)  m:met=metz,v:J |- Q
  * ------------------------------------------------------------------------
