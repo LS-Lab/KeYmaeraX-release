@@ -245,7 +245,7 @@ case class BChoiceER(child: Proof) extends Proof {}
  * ---------------------------------------------------------
  * G |- (A rep[ys] x:J. B in C): [a*]Q
  */
-case class BRepeatI(pre: Proof, step: Proof, post: Proof) extends Proof {}
+case class BRepeatI(pre: Proof, step: Proof, post: Proof, a:Program, ys: Option[List[Variable]]) extends Proof {}
 
 /* G |- M: [a*]P
  * ----------------------------------------------
@@ -294,7 +294,7 @@ case class DC(left: Proof, right: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- DI(M,N): [x'=f & Q]P
  */
-case class DI(pre: Proof, step: Proof) extends Proof {}
+case class DI(ode: ODESystem, pre: Proof, step: Proof, ys:Option[List[Variable]]) extends Proof {}
 
 /* G, y=y0 |- M: [x'=f,y'=a(y)+b&Q]P
  * ----------------------------------------------
@@ -424,7 +424,7 @@ case class Hyp(p:ProofVariable) extends Proof {}
  * ----------------------------------------------
  * G |-  (M o x:J. N)[ys] : [a]Q
  */
-case class Mon(left: Proof, right: Proof) extends Proof {}
+case class Mon(left: Proof, right: Proof, ys:Option[List[Variable]]) extends Proof {}
 
 /* G |- M: Q
  * ---------------------------------------------- (Q -> P is valid first-order arithmetic)

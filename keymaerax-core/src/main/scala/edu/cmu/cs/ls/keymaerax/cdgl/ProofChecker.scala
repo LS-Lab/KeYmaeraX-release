@@ -81,7 +81,7 @@ object ProofChecker {
           case p => throw ProofException(s"[?]ER not applicable to formula ${p}")
         }
       case DAssignI(asgn@Assign(x,f), child, yOpt) =>
-        val y = ghostVar(yOpt, x, List(f))
+        val y = ghostVar(yOpt, x, f :: G.asList)
         val ren = URename(x,y)
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
@@ -289,13 +289,17 @@ object ProofChecker {
           case Box(Choice(_,b),p) => Box(b,p)
           case p => throw ProofException(s"Rule [++]ER not applicable to formula $p")
         }
-      // TODO: Better consistency in rename across rules
-      case BRepeatI(pre, step, post) =>
+      case BRepeatI(pre, step, post, a1, ysOpt) =>
         val j1 = apply(G,pre)
-        apply(Context(List(j1)), step) match {
-          case Box(a,j2) =>
-            if(j1 != j2) {
-              throw ProofException(s"Inconsistent invariants $j1 and $j2 in [*]I")
+        val xs = StaticSemantics(a1).bv.toSet.toList
+        val ys = ghostVars(ysOpt, xs, a1 :: G.asList)
+        val G1 = G.renames(xs,ys).extend(j1)
+        apply(G1, step) match {
+          case Box(a2,j2) =>
+            if(a1 != a2) {
+              throw ProofException(s"Programs $a1 and $a2 in [*]I must be the same")
+            } else if(j1 != j2) {
+              throw ProofException(s"Invariants $j1 and $j2 in [*]I must be the same")
             } else {
               apply(Context(List(j1)), post)
             }
@@ -342,7 +346,6 @@ object ProofChecker {
           case p => throw ProofException(s"Rule ['] not applicable to subgoal $p")
         }
       case DW(ode, child, ysOpt) =>
-        //TODO: rename
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))
         val p1 = apply(G.renames(xs,ys).extend(ode.constraint),child)
@@ -352,22 +355,25 @@ object ProofChecker {
         val Box(ODESystem(ode1,And(con1,p1)),q) = apply(G,right)
         assert(ode == ode1 && con1 == con && p1 == p)
         Box(ODESystem(ode,con),q)
-      case DI(pre, step) =>
+      case DI(ode1, pre, step, ysOpt) =>
         val p = apply(G,pre)
-        // TODO: Context
-        apply(G,step) match {
-          case Box(ode,dp) =>
+        val xs = StaticSemantics(ode1).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
+        val ys = ghostVars(ysOpt, xs, ode1 :: G.asList)
+        val G1 = G.renames(xs,ys).extend(ode1.constraint)
+        apply(G1,step) match {
+          case Box(ode2,dp) =>
             val df = deriveFormula(p)
-            if (dp != df) {
+            if (ode1 != ode2) {
+              throw ProofException(s"ODEs $ode1 and $ode2 in DI should be equal")
+            } else if (dp != df) {
               throw ProofException(s"Subgoal in DI should be derivative $df, was $dp")
             }
             ???
           case p => throw ProofException(s"Rule DI not applicable to formula $p")
         }
       case DG(Assign(y, y0), Plus(Times(a,yy), b), child) =>
-        //@TODO: freshness
         if (y != yy) {
-          throw ProofException("Variables $y and $yy should be equal in ")
+          throw ProofException(s"Variables $y and $yy should be equal in DG")
         }
         apply(G,child) match {
           case Box(Compose(Assign(xy,e),ODESystem(DifferentialProduct(AtomicODE(xp,xe),c),con)),pp) =>
@@ -379,6 +385,10 @@ object ProofChecker {
               throw ProofException(s"Expected $e and $y0 equal in DG subgoal")
             } else if (xe == Plus(Times(a,xy),b)) {
               throw ProofException(s"Expected $xe and ${Plus(Times(a,xy),b)} equal in DG subgoal")
+            } else if (StaticSemantics(pp).fv.++(StaticSemantics(a).++(StaticSemantics(b)
+                .++(StaticSemantics(con).fv.++(StaticSemantics(y0).++(G.freevars)))))
+              .toSet.intersect(Set(y,DifferentialSymbol(y))).nonEmpty) {
+              throw ProofException(s"Variable $y needs to be fresh in DG")
             } else Box(ODESystem(c,con),pp)
         }
       case DG(e,_,_) => throw ProofException(s"Expected ghost term $e to have shape (f*y)+g in DG")
@@ -480,15 +490,20 @@ object ProofChecker {
       case Hyp(p) =>
         if(G.contains(p)) G(p)
         else throw ProofException(s"Proof variable $p undefined in rule hyp with context $G")
-      case Mon(left,right) =>
+      case Mon(left,right,ysOpt) =>
         val p = apply(G,left)
-        // @TODO: Better context extending
         p match {
           case Box(a,p) =>
-            val q = apply(Context(List(p)), right)
+            val xs = StaticSemantics(a).bv.toSet.toList
+            val ys = ghostVars(ysOpt, xs, a :: G.asList)
+            val G1 = G.renames(xs,ys).extend(p)
+            val q = apply(G1, right)
             Box(a,q)
           case Diamond(a,p) =>
-            val q = apply(Context(List(p : Formula)), right)
+            val xs = StaticSemantics(a).bv.toSet.toList
+            val ys = ghostVars(ysOpt, xs, a :: G.asList)
+            val G1 = G.renames(xs,ys).extend(p)
+            val q = apply(G1, right)
             Diamond(a,q)
           case _ =>
             throw ProofException(s"Montonicity not applicable to non-modal formula ${p}")
