@@ -1,14 +1,18 @@
 package edu.cmu.cs.ls.keymaerax.cdgl
 
-import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper.{atomicOdes, sortAtomicOdes}
+import edu.cmu.cs.ls.keymaerax.btactics.{Integrator, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.cdgl.Proof._
-import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 
-case class ProofException(msg: String) extends Exception {}
+case class ProofException(msg: String) extends Exception {
+  override def toString:String = msg
+}
 
 object ProofChecker {
   private def deriveFormula(p:Formula): Formula = {
@@ -39,26 +43,111 @@ object ProofChecker {
     }
   }
 
-  //TODO
-  def ghostVar(explicit:Option[Variable], base:Variable, freshIn:List[Expression]): Variable = {
-    explicit match {
-      case Some(x) => x
-      case None => base
+  type Indices = Map[Either[String,String],Option[Int]]
+  private def collectVars(init:Indices, e:Expression):Indices = {
+    var acc:Indices = init
+    val etf =
+      new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          e match {
+            case BaseVariable(x, ind, kind) =>
+              (acc.get(Left(x)), ind) match {
+                case (None, _) => acc = acc.+((Left(x), ind))
+                case (Some(Some(i)), Some(j)) => acc = acc.+((Left(x), Some(Math.max(i,j))))
+                case (Some(_), _) => acc = acc.+((Left(x), ind))
+              }
+            case DifferentialSymbol(BaseVariable(x, ind, kind)) =>
+              (acc.get(Right(x)), ind) match {
+                case (None, _) => acc = acc.+((Right(x), ind))
+                case (Some(Some(i)), Some(j)) => acc = acc.+((Right(x), Some(Math.max(i,j))))
+                case (Some(_), _) => acc = acc.+((Right(x), ind))
+              }
+            case _ => ()
+          }
+          Left(None)
+        }
+      }
+    e match {
+      case e: Program => ExpressionTraversal.traverse(etf, e)
+      case e: Term => ExpressionTraversal.traverse(etf, e)
+      case e: Formula => ExpressionTraversal.traverse(etf, e)
+      case _ => throw ProofException("Unexpected expression in ghostVars")
+    }
+    acc
+  }
+  private def collectVars(es:List[Expression]):Indices = {
+    es.foldLeft[Indices](Map())(collectVars)
+  }
+
+  private def freshIn(x:Variable, map:Indices):Boolean = {
+    x match {
+      case BaseVariable(name,ind,sort) =>
+        (map.get(Left(name)),ind) match {
+          case (None,_) => true
+          case (Some(None),Some(_)) => true
+          case (Some(Some(i)), Some(j)) => i < j
+          case _ => false
+        }
+      case DifferentialSymbol(BaseVariable(name,ind,sort)) =>
+        (map.get(Right(name)),ind) match {
+          case (None,_) => true
+          case (Some(None),Some(_)) => true
+          case (Some(Some(i)), Some(j)) => i < j
+          case _ => false
+        }
+
     }
   }
 
-  //TODO
-  def ghostVars(explicit:Option[List[Variable]], base:List[Variable], freshIn:List[Expression]): List[Variable] = {
-    explicit match {
-      case Some(x) => x
-      case None => base
+  private def freshOf(x:Variable, map:Indices):Variable = {
+    x match {
+      case BaseVariable(name,ind,sort) =>
+        map.get(Left(name)) match {
+          case None => x
+          case Some(None) => BaseVariable(name,Some(0),sort)
+          case Some(Some(i)) => BaseVariable(name,Some(i+1),sort)
+        }
+      case DifferentialSymbol(BaseVariable(name,ind,sort)) =>
+        map.get(Right(name)) match {
+          case None => x
+          case Some(None) => DifferentialSymbol(BaseVariable(name,Some(0),sort))
+          case Some(Some(i)) => DifferentialSymbol(BaseVariable(name,Some(i+1),sort))
+        }
     }
   }
-  //TODO
-  def solve(ode: ODESystem, sol:Option[List[Term]]):List[Term] = {
+
+  def ghostVar(explicit:Option[Variable], base:Variable, taboos:List[Expression]): Variable = {
+    val map:Indices = collectVars(taboos)
+    explicit match {
+      case Some(x) =>
+        if (freshIn(x,map)) {
+          x
+        } else {
+          throw ProofException(s"Proof term specified ghost variable $x which was not fresh in $taboos")
+        }
+      case None => freshOf(base,map)
+    }
+  }
+
+  def ghostVars(explicit:Option[List[Variable]], base:List[Variable], freshIn:List[Expression]): List[Variable] = {
+    val xys:List[(Option[Variable],Variable)] = explicit match {
+      case None => base.map((None,_))
+      case Some(xs) => xs.zip(base).map({case(x,y) => (Some(x),y)})
+    }
+    xys.map({case (x,y) => ghostVar(x,y,freshIn)})
+  }
+
+  //TODO: implement
+  //TODO: what do if t'=1 already
+  def solve(tvar:Variable, xys:List[(Variable,Variable)], ode: ODESystem, sol:Option[List[Term]]):List[Term] = {
     sol match {
       case Some(x) => x
-      case None => List()
+      case None =>
+        val vars = StaticSemantics(ode).bv.toSet.++(Set(tvar)).toList.filter(_.isInstanceOf[Variable]).toList
+        val initialConditions = vars.map(x => (x,x)).toMap
+        val solutions = Integrator(initialConditions, tvar, ode)
+        solutions.map({case Equal(_,f) =>
+          xys.foldLeft(f)({case (acc, (x,y)) => URename(x,y)(acc)})})
     }
   }
 
@@ -206,7 +295,7 @@ object ProofChecker {
           case Diamond(Dual(a),p) => Box(a,p)
           case p => throw ProofException(s"Rule <d>E not applicable to subgoal $p")
         }
-      case DSolve(ode, ys, sol, dur, s, t, dc, post) =>
+      case DSolve(ode, post, child, dc, ys, sol, dur, s, t) =>
         ???
       case DV(f, g, d, const, dur, rate, post) =>
         ???
@@ -325,26 +414,23 @@ object ProofChecker {
           case Box(Dual(a), p) => Diamond(a, p)
           case p => throw ProofException(s"Rule [d]E not applicable to formula $p")
         }
-      case BSolve(ode, post, s, t, solsOpt, ysOpt) =>
+      case BSolve(ode, post, child, s, t, solsOpt, ysOpt) =>
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
-        val sol = solve(ode, solsOpt)
         val ys = ghostVars(ysOpt, xs, List(ode))
         // TODO: assert solution
         // TODO: assert freshness
         val xys = xs.zip(ys)
+        val sol = solve(t, xys, ode, solsOpt)
         val sols = xs.zip(sol)
-        val asgn = sols.map({case (x,e) => Assign(x,e)}).fold[Program](Test(True))(Compose)
-        val tasgn = Compose(Assign(t,s), asgn)
         val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
-        val dcFml = Forall(List(s),Imply(And(LessEqual(Number(0),s),LessEqual(s,t)),Diamond(asgn,ode.constraint)))
-        apply(g.extend(And(GreaterEqual(t,Number(0)),dcFml)), post) match {
-          case Diamond(asgns, p1) =>
-            if (asgns != tasgn)
-              throw ProofException(s"Assignments $asgns and $tasgn mismatch in [']")
-            else
-              Box(ode, p1)
-          case p => throw ProofException(s"Rule ['] not applicable to subgoal $p")
+        val con = ((t,s)::sols).foldLeft[Formula](ode.constraint)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
+        val dcFml = Forall(List(s),Imply(And(LessEqual(Number(0),s),LessEqual(s,t)),con))
+        val p = apply(g.extend(GreaterEqual(t,Number(0))).extend(dcFml), child)
+        val sub = sols.foldLeft[Formula](post)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
+        if(sub != p) {
+            throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p")
         }
+        Box(ode, post)
       case DW(ode, child, ysOpt) =>
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))

@@ -23,6 +23,14 @@ class ProofCheckerTests extends TacticTestBase {
     a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
   }
 
+  "box solve" should "solve constant 1D ODE" in withMathematica { _ =>
+    val ode = ODESystem(AtomicODE(DifferentialSymbol(Variable("x")),Number(2)))
+    val post = GreaterEqual(Variable("x"),Number(0))
+    val M = BSolve(ode,post,QE(GreaterEqual(Plus(Times(Number(2),Variable("t")),Variable("x",Some(0))),Number(0)), AndI(Hyp(1),Hyp(2))))
+    val G = Context(List(GreaterEqual(Variable("x"),Number(0))))
+    ProofChecker(G,M) shouldBe Box(ode,post)
+  }
+
   "QE" should "allow valid first-order arithmetic" in withMathematica { _ =>
     val M = QE(GreaterEqual(Times(Variable("x"),Variable("x")), Number(0)), Triv())
     ProofChecker(Context(List()), M) shouldBe GreaterEqual(Times(Variable("x"),Variable("x")), Number(0))
