@@ -191,16 +191,16 @@ object InvariantGenerator extends Logging {
               else sequent.ante :+ Not(succFmls.reduceRight(Or))
             tool.invgen(ode, assumptions, post)
           }
-          lazy val invs: Stream[GenProduct] =
+          lazy val invs: Seq[GenProduct] =
             if (includeCandidates) {
-              pegasusInvs.toStream.flatMap({
+              pegasusInvs.flatMap({
                 case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
                 case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
               })
             } else {
-              pegasusInvs.toStream.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
-          invs.distinct
+          invs.toStream.distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
