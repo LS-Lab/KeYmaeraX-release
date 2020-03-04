@@ -275,7 +275,7 @@ case class BDualE(child: Proof) extends Proof {}
  * --------------------------------------------------------------------  sol solves x'=f&Q on [0,dur], s and t fresh
  * G |- BS[x'=f&Q,ys,sol,t,s](M,N): [x'=f&Q]P
  */
-case class BSolve(ode:ODESystem, post:Formula, child:Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), sols:Option[List[Term]]=None, ys:Option[List[Variable]]=None) extends Proof {}
+case class BSolve(ode:ODESystem, post:Formula, child:Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
 
 
 /* G_xs^ys, x:Q |- M: P

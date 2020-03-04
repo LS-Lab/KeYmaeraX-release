@@ -137,18 +137,11 @@ object ProofChecker {
     xys.map({case (x,y) => ghostVar(x,y,freshIn)})
   }
 
-  //TODO: implement
   //TODO: what do if t'=1 already
-  def solve(tvar:Variable, xys:List[(Variable,Variable)], ode: ODESystem, sol:Option[List[Term]]):List[Term] = {
-    sol match {
-      case Some(x) => x
-      case None =>
-        val vars = StaticSemantics(ode).bv.toSet.++(Set(tvar)).toList.filter(_.isInstanceOf[Variable]).toList
-        val initialConditions = vars.map(x => (x,x)).toMap
-        val solutions = Integrator(initialConditions, tvar, ode)
-        solutions.map({case Equal(_,f) =>
-          xys.foldLeft(f)({case (acc, (x,y)) => URename(x,y)(acc)})})
-    }
+  def solve(tvar:Variable, xys:List[(Variable,Variable)], ode: ODESystem): List[(Variable,Term)] = {
+    val initialConditions = xys.toMap
+    val solutions = Integrator(initialConditions, tvar, ode)
+    solutions.map({case Equal(x:Variable,f) => (x,f) case p => throw ProofException(s"Solve expected $p to have shape x=f")})
   }
 
   def apply(G: Context, M: Proof): Formula = {
@@ -414,19 +407,21 @@ object ProofChecker {
           case Box(Dual(a), p) => Diamond(a, p)
           case p => throw ProofException(s"Rule [d]E not applicable to formula $p")
         }
-      case BSolve(ode, post, child, s, t, solsOpt, ysOpt) =>
+      case BSolve(ode, post, child, s, t, ysOpt) =>
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))
         // TODO: assert solution
         // TODO: assert freshness
         val xys = xs.zip(ys)
-        val sol = solve(t, xys, ode, solsOpt)
-        val sols = xs.zip(sol)
+        val sols = solve(t, xys, ode)
+        //val sols = xs.zip(sol)
         val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
         val con = ((t,s)::sols).foldLeft[Formula](ode.constraint)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
         val dcFml = Forall(List(s),Imply(And(LessEqual(Number(0),s),LessEqual(s,t)),con))
         val p = apply(g.extend(GreaterEqual(t,Number(0))).extend(dcFml), child)
         val sub = sols.foldLeft[Formula](post)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
+        // expected:  a*(t^2/2)+(a*t+v)*t+x>=0
+        // got:      a*(t^2/2)+(v_0*t+x_0)>=0
         if(sub != p) {
             throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p")
         }
