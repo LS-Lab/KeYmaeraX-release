@@ -102,8 +102,6 @@ class ProofCheckerTests extends TacticTestBase {
     ProofChecker(G,M) shouldBe Box(ode,post)
   }
 
-  //val pre =
-  // QE(GreaterEqual(Plus(Times(Number(2),Variable("t")),Variable("x",Some(0))),Number(0)), AndI(Hyp(1),Hyp(2)))
   "diamond solve" should "solve constant ODE" in withMathematica { _ =>
     val ode = ODESystem(AtomicODE(DifferentialSymbol(Variable("x")),Number(2)))
     val dur = Number(3)
@@ -114,6 +112,41 @@ class ProofCheckerTests extends TacticTestBase {
       QE(GreaterEqual(Plus(Times(Number(2),dur),Variable("x",Some(0))),Number(6)), Hyp(0)))
     val G = Context(List(GreaterEqual(Variable("x"),Number(0))))
     ProofChecker(G,M) shouldBe Diamond(ode,post)
+  }
+
+  "DV" should "vary 1D ODE" in withMathematica { _ =>
+    val (x,t) = (Variable("x"), Variable("t"))
+    val ode = ODESystem(AtomicODE(DifferentialSymbol(x),Number(1)), LessEqual(x, Number(3)))
+    val tode = ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode.ode),ode.constraint)
+    val post = GreaterEqual(Times(Number(2),x),Number(5))
+    val d = Number(3)
+    val v = Number(2)
+    val G = Context(List(Equal(x,Number(0))))
+    val f = Minus(Times(Number(2),x),Number(5))
+    val const = QE(And(GreaterEqual(d,Number(0)),GreaterEqual(f,Neg(Times(d,v)))),
+       Hyp(0))
+    ProofChecker(G,const) shouldBe And(GreaterEqual(d,Number(0)), GreaterEqual(f,Neg(Times(d,v))))
+
+    //   G,t=0 |- B: <t'=1,x'=f&Q>t>=d
+    val dsPost = GreaterEqual(t,d)
+    val dur = DSolve(tode,dsPost,
+      QE(GreaterEqual(d,Number(0)),Triv()),
+      QE(LessEqual(Plus(Times(Number(1),d),Variable("x",Some(0))),Number(3)), AndI(Hyp(2),AndI(Hyp(0),Hyp(1)))),
+      QE(GreaterEqual(d,d), Hyp(0))) // GreaterEqual(Minus(Times(Number(2),d),Number(5))
+    ProofChecker(G.extend(Equal(t,Number(0))),dur) shouldBe Diamond(tode,GreaterEqual(t,d))
+
+    // G |- C: [x'=f&Q](f' >= v)
+    val xsol = Plus(Times(Number(1),t),Variable("x",Some(0)))
+    val fdiff = Minus(Plus(Times(Number(0),x),Times(Number(2),Number(1))),Number(0))
+    val fdiffSub = Minus(Plus(Times(Number(0),xsol),Times(Number(2),Number(1))),Number(0))
+    val bsPost = GreaterEqual(fdiff,v)
+    val rate = BSolve(ode,bsPost,QE(GreaterEqual(fdiffSub,v),AndI(Hyp(1),Hyp(2))))
+    ProofChecker(G, rate) shouldBe Box(ode, GreaterEqual(fdiff,Number(2)))
+
+    val Mpost = QE(post, Hyp(0))
+    val M = DV(const, dur, rate, Mpost)
+    val p = Diamond(ode,post)
+    ProofChecker(G,M) shouldBe p
   }
 
   "QE" should "allow valid first-order arithmetic" in withMathematica { _ =>

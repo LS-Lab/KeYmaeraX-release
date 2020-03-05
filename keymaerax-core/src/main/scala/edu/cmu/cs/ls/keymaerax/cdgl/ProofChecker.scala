@@ -21,8 +21,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers._
   * Raised when a proof term does not proof check
   * @param msg Description of error
   */
-case class ProofException(msg: String) extends Exception {
-  override def toString:String = msg
+case class ProofException(msg: String, context:Context=Context.empty) extends Exception {
+  override def toString:String =
+    if(context.asList.isEmpty)
+      msg
+    else
+      s"Msg: $msg\nContext: $context"
 }
 
 /**
@@ -404,21 +408,64 @@ object ProofChecker {
               throw ProofException(s"<'> requires admissible duration $dur")
             }
             val dcFml = apply(g.extend(And(LessEqual(Number(0),s),LessEqual(s,dur))), dc)
-            val expectedDC = ((t,s)::sols).foldRight[Formula](ode.constraint)({ case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
+            val expectedDC = ((t,dur)::sols).foldRight[Formula](ode.constraint)({ case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
             if(dcFml != expectedDC) {
-              throw ProofException(s"<'> with constraint $post expected constraint $expectedDC, got $dcFml")
+              throw ProofException(s"<'> DC step with constraint ${ode.constraint} expected constraint $expectedDC, got $dcFml")
             }
             val postSub = apply(g, child)
             val expectedSub = ((t,dur)::sols).foldRight[Formula](post)({case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
             if(postSub != expectedSub) {
-              throw ProofException(s"<'> with postcondition $post expected subgoal postcondition $expectedSub, got $postSub")
+              throw ProofException(s"<'> Post step with postcondition $post expected subgoal postcondition $expectedSub, got $postSub")
             }
             Diamond(ode, post)
           case p => throw ProofException(s"<'> duration must be proven >= 0, had $p instead")
         }
-      case DV(f, g, d, const, dur, rate, post) =>
-        ???
-
+        /* G |- A: d>=0 & f >= -dv
+         * G,t=0 |- B: <t'=1,x'=f&Q>t>=d
+         * G |- C: [x'=f&Q](f' >= v)
+         * G_xs^ys, f>=0 |- D: P
+         * ---------------------------------------------- d,v constant
+         * G |- DV[f,g,d,eps,v](A,B,C,D): <x'=f&Q>P
+         */
+//        case class DV(const:Proof, dur:Proof, rate:Proof, post:Proof) extends Proof {}
+      case DV(const, dur, rate, post,tvar,ysOpt) =>
+        // TODO: side conditions
+        apply(G, const) match {
+          case And(GreaterEqual(d1,n1: Number),GreaterEqual(f, Neg(Times(d2,v1)))) =>
+            if(d1 != d2)
+              throw ProofException(s"Durations $d1 and $d2 must be equal in DV")
+            else if (n1.value != 0)
+              throw ProofException(s"Expected duration >=0 in DV, got $n1")
+            apply(G.extend(Equal(tvar,Number(0))), dur) match {
+              case Diamond(ODESystem(tode@DifferentialProduct(AtomicODE(DifferentialSymbol(t1),one:Number),ode1),q1),td@GreaterEqual(t2,d3)) =>
+                if(t1 != tvar || one.value != 1) {
+                  throw ProofException(s"DV expected ODE shape $tvar'=1,x'=f, got $tode")
+                } else if (t2 != tvar || d3 != d1) {
+                  throw ProofException(s"DV expected second postcondition t>=d, got $td")
+                }
+                apply(G,rate) match {
+                  case Box(ODESystem(ode2,q2),GreaterEqual(fdiff, v2)) =>
+                    val map = DifferentialHelper.atomicOdes(ode1).map({case AtomicODE(DifferentialSymbol(x),f) => (x,f)}).toMap
+                    val xs = StaticSemantics(ode1).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
+                    val ys = ghostVars(ysOpt, xs, ode1 :: G.asList)
+                    val G1 = G.renames(xs,ys).extend(GreaterEqual(f,Number(0)))
+                    val fdiffExpected = deriveTerm(f,map)
+                    if(ode1 != ode2) {
+                      throw ProofException(s"ODEs $ode1 and $ode2 must match in DV")
+                    } else if (q1 != q2) {
+                      throw ProofException(s"Constraints $q1 and $q2 must match in DV")
+                    } else if (v1 != v2) {
+                      throw ProofException(s"Rates $v1 and $v2 must match in DV")
+                    } else if (fdiff != fdiffExpected) {
+                      throw ProofException(s"DV expected derivative of $f,i.e.,  $fdiffExpected, got $fdiff")
+                    }
+                    Diamond(ODESystem(ode1,q1),apply(G1,post))
+                  case p => throw ProofException(s"Third DV subgoal must be shape <x'=f&Q>f'>=0, was $p")
+                }
+              case p =>  throw ProofException(s"Second DV subgoal must be shape <t'=1,x'=f&Q>t>=d, was $p")
+            }
+          case p => throw ProofException(s"First DV subgoal must be shape d>=0 & v>=0 & f>=-dv, was $p")
+        }
       case BTestI(fml, child) =>
         val p1 = apply(G.extend(fml),child)
         Box(Test(fml),p1)
@@ -714,12 +761,12 @@ object ProofChecker {
       case QE(q, child) =>
         val p = apply(G,child)
         if(!Imply(p,q).isFOL) {
-          throw ProofException(s"QE formula ${p}->${q} was not FOL")
+          throw ProofException(s"QE formula ${p}->${q} was not FOL", G)
         }
         if(qeValid(Imply(p,q)))
           q
         else
-          throw ProofException(s"QE formula ${Imply(p,q)} not valid")
+          throw ProofException(s"QE formula ${Imply(p,q)} not valid", G)
     }
   }
 }
