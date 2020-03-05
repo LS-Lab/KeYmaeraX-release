@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr, Subs
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal._
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
+import edu.cmu.cs.ls.keymaerax.btactics.helpers._
 
 /**
   * Raised when a proof term does not proof check
@@ -30,8 +31,46 @@ case class ProofException(msg: String) extends Exception {
   */
 object ProofChecker {
   /** @return simplified differential of formula [[p]] */
-  private def deriveFormula(p:Formula): Formula = {
-    ???
+  private def deriveFormula(p:Formula, map:Map[Variable,Term]): Formula = {
+    p match {
+      case And(p,q) => And(deriveFormula(p,map),deriveFormula(q,map))
+      case Or(p,q) => And(deriveFormula(p,map),deriveFormula(q,map))
+      case Exists(List(x),p) => Forall(List(x),deriveFormula(p,map))
+      case Forall(List(x),p) => Forall(List(x),deriveFormula(p,map))
+      case Equal(f,g) => Equal(deriveTerm(f,map),deriveTerm(g,map))
+      case NotEqual(f,g) => Equal(deriveTerm(f,map),deriveTerm(g,map))
+      case Less(f,g) => LessEqual(deriveTerm(f,map),deriveTerm(g,map))
+      case LessEqual(f,g) => LessEqual(deriveTerm(f,map),deriveTerm(g,map))
+      case Greater(f,g) => GreaterEqual(deriveTerm(f,map),deriveTerm(g,map))
+      case GreaterEqual(f,g) => GreaterEqual(deriveTerm(f,map),deriveTerm(g,map))
+      case p => throw ProofException(s"Derivative of $p not supported")
+    }
+  }
+
+  /** @return simplified differential of term [[f]] */
+  private def deriveTerm(e:Term, map:Map[Variable,Term]): Term = {
+    e match {
+      case _ : Number => Number(0)
+      case x : BaseVariable =>
+        map.get(x) match {
+          case Some(f) => f
+          case None => Number(0)
+        }
+      case dx : DifferentialSymbol => throw ProofException(s"Double differential ($dx)' not supported")
+      case Plus(f,g) => Plus(deriveTerm(f,map),deriveTerm(g,map))
+      case Times(f,g) => Plus(Times(deriveTerm(f,map),g), Times(f,deriveTerm(g,map)))
+      case Divide(f,g) => Divide(Minus(Times(deriveTerm(f,map),g),Times(f,deriveTerm(g,map))),Power(g,Number(2)))
+      case Power(f,n: Number) =>
+        if(n.value == 0)
+          throw ProofException("Cannot derive f^0")
+        else
+          Times(Times(n,Power(f,Number(n.value-1))),deriveTerm(f,map))
+      case _ : Power => throw ProofException("Must simplify power to f^n before deriving")
+      case Neg(f) => Neg(deriveTerm(f,map))
+      case Minus(f,g) => Minus(deriveTerm(f,map),deriveTerm(g,map))
+      case Pair(f,g) => Pair(deriveTerm(f,map),deriveTerm(g,map))
+      case p => throw ProofException(s"Derivative of $p not supported")
+    }
   }
 
   /** @return whether [[p]] contains only conjunctions and universals over comparisons */
@@ -180,18 +219,20 @@ object ProofChecker {
     xys.map({case (x,y) => ghostVar(x,y,taboos)})
   }
 
-  //TODO: what do if t'=1 already and t!=0 initially
   /**
     * Solves an ODE
     * @param tvar Variable for time
     * @param xys Renamings for bound variables of ODE
     * @param ode ODE to solve
     * @return solution terms for each bound variable of ODE
+    * @throws [[ProofException]] if ode is not integrable
     */
   def solve(tvar:Variable, xys:List[(Variable,Variable)], ode: ODESystem): List[(Variable,Term)] = {
-    val initialConditions = xys.toMap
-    val solutions = Integrator(initialConditions, tvar, ode)
-    solutions.map({case Equal(x:Variable,f) => (x,f) case p => throw ProofException(s"Solve expected $p to have shape x=f")})
+    try {
+      val initialConditions = xys.toMap
+      val solutions = Integrator(initialConditions, tvar, ode)
+      solutions.map({ case Equal(x: Variable, f) => (x, f) case p => throw ProofException(s"Solve expected $p to have shape x=f") })
+    } catch {case e : Exception => throw ProofException(s"ODE $ode not integrable")}
   }
 
   /**
@@ -345,8 +386,36 @@ object ProofChecker {
           case Diamond(Dual(a),p) => Box(a,p)
           case p => throw ProofException(s"Rule <d>E not applicable to subgoal $p")
         }
-      case DSolve(ode, post, child, dc, ys, sol, dur, s, t) =>
-        ???
+      case DSolve(ode, post, durPos, dc, child, s, t, ysOpt) =>
+        // @TODO: Test side conditions
+        val tvar = ghostVar(None, t, G.asList)
+        //val t0 = if(t == tvar) Number(0) else tvar
+        val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
+        val ys = ghostVars(ysOpt, xs, List(ode))
+        val xys = (if (t == tvar) Nil else List((t,tvar))) ++ xs.zip(ys)
+        val sols = solve(t, xys, ode)
+        val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
+        apply(G, durPos) match {
+          case GreaterEqual(dur,n: Number) =>
+            if (n.value != 0) {
+              throw ProofException(s"<'> duration must be proven >= 0, had ${n.value} instead")
+            }
+            if(StaticSemantics(dur).intersect(StaticSemantics(ode).bv.+(t).+(s).++(ys)).toSet.nonEmpty) {
+              throw ProofException(s"<'> requires admissible duration $dur")
+            }
+            val dcFml = apply(g.extend(And(LessEqual(Number(0),s),LessEqual(s,dur))), dc)
+            val expectedDC = ((t,s)::sols).foldRight[Formula](ode.constraint)({ case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
+            if(dcFml != expectedDC) {
+              throw ProofException(s"<'> with constraint $post expected constraint $expectedDC, got $dcFml")
+            }
+            val postSub = apply(g, child)
+            val expectedSub = ((t,dur)::sols).foldRight[Formula](post)({case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
+            if(postSub != expectedSub) {
+              throw ProofException(s"<'> with postcondition $post expected subgoal postcondition $expectedSub, got $postSub")
+            }
+            Diamond(ode, post)
+          case p => throw ProofException(s"<'> duration must be proven >= 0, had $p instead")
+        }
       case DV(f, g, d, const, dur, rate, post) =>
         ???
 
@@ -497,15 +566,13 @@ object ProofChecker {
         val ys = ghostVars(ysOpt, xs, ode1 :: G.asList)
         val G1 = G.renames(xs,ys).extend(ode1.constraint)
         apply(G1,step) match {
-          case Box(ode2,dp) =>
-            val df = deriveFormula(p)
-            if (ode1 != ode2) {
-              throw ProofException(s"ODEs $ode1 and $ode2 in DI should be equal")
-            } else if (dp != df) {
+          case dp =>
+            val map = DifferentialHelper.atomicOdes(ode1.ode).map({case AtomicODE(DifferentialSymbol(x),f) => (x,f)}).toMap
+            val df = deriveFormula(p,map)
+            if (dp != df) {
               throw ProofException(s"Subgoal in DI should be derivative $df, was $dp")
             }
-            ???
-          case p => throw ProofException(s"Rule DI not applicable to formula $p")
+            Box(ode1,p)
         }
       case DG(Assign(y, y0), Plus(Times(a,yy), b), child) =>
         if (y != yy) {

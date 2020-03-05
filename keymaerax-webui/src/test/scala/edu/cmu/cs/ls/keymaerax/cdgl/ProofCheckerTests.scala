@@ -81,6 +81,41 @@ class ProofCheckerTests extends TacticTestBase {
     val G = Context(List(Equal(Variable("t"),Number(-2))))
     a[ProofException] shouldBe thrownBy(ProofChecker(G,M))
   }
+
+  "box solve" should "reject non-integrable ODE" in withMathematica { _ =>
+    val ode = ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Variable("y")),AtomicODE(DifferentialSymbol(Variable("y")),Neg(Variable("x")))))
+    val post = Equal(Plus(Times(Variable("x"),Variable("x")),Times(Variable("y"),Variable("y"))),Number(1))
+    val M = BSolve(ode, post, QE(post,AndI(Hyp(1),AndI(Hyp(2),Hyp(3)))))
+    val G = Context(List(Equal(Variable("x"),Number(0)),Equal(Variable("y"),Number(1))))
+    a[ProofException] shouldBe thrownBy(ProofChecker(G,M))
+  }
+
+  "DI" should "prove circle ODE" in withMathematica { _ =>
+    val ode = ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Variable("y")),AtomicODE(DifferentialSymbol(Variable("y")),Neg(Variable("x")))))
+    val (x,y) = (Variable("x"),Variable("y"))
+    val post = Equal(Plus(Times(x,x),Times(y,y)),Number(1))
+    val diff = Equal(Plus(Plus(Times(y,x),Times(x,y)),Plus(Times(Neg(x),y),Times(y,Neg(x)))), Number(0))
+    val pre = QE(post,AndI(Hyp(0),Hyp(1)))
+    val child = QE(diff, AndI(Hyp(0),AndI(Hyp(1),Hyp(2))))
+    val M = DI(ode,pre,child)
+    val G = Context(List(Equal(Variable("x"),Number(0)),Equal(Variable("y"),Number(1))))
+    ProofChecker(G,M) shouldBe Box(ode,post)
+  }
+
+  //val pre =
+  // QE(GreaterEqual(Plus(Times(Number(2),Variable("t")),Variable("x",Some(0))),Number(0)), AndI(Hyp(1),Hyp(2)))
+  "diamond solve" should "solve constant ODE" in withMathematica { _ =>
+    val ode = ODESystem(AtomicODE(DifferentialSymbol(Variable("x")),Number(2)))
+    val dur = Number(3)
+    val post = GreaterEqual(Variable("x"),Number(6))
+    val M = DSolve(ode,post,
+      QE(GreaterEqual(dur,Number(0)),Triv()),
+      QE(True,Triv()),
+      QE(GreaterEqual(Plus(Times(Number(2),dur),Variable("x",Some(0))),Number(6)), Hyp(0)))
+    val G = Context(List(GreaterEqual(Variable("x"),Number(0))))
+    ProofChecker(G,M) shouldBe Diamond(ode,post)
+  }
+
   "QE" should "allow valid first-order arithmetic" in withMathematica { _ =>
     val M = QE(GreaterEqual(Times(Variable("x"),Variable("x")), Number(0)), Triv())
     ProofChecker(Context(List()), M) shouldBe GreaterEqual(Times(Variable("x"),Variable("x")), Number(0))

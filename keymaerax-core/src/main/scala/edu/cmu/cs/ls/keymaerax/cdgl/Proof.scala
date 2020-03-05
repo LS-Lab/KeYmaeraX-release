@@ -202,11 +202,11 @@ case class DDualI(child: Proof) extends Proof {}
  */
 case class DDualE(child: Proof) extends Proof {}
 
-/* G_xs^ys, 0<=s<=dur |- M: Q_xs^sol(s)   G_xs^ys, 0<=dur |- N: P_xs^sol(dur)
+/* G |- dur >= 0   G_xs^ys, 0<=s<=dur |- M: Q_xs^sol(s)   G_xs^ys |- N: P_xs^sol(dur)
  * ----------------------------------------------  sol solves x'=f&Q on [0,dur], s and t fresh
  * G |- DS[x'=f&Q,ys,sol,dur,s](M,N): <x'=f&Q>P
  */
-case class DSolve(ode:ODESystem, post:Formula, dc:Proof, child:Proof, ys:Option[List[Variable]]=None,sol:Option[List[Term]]=None, dur:Term, s:Variable=Variable("s"), t:Variable=Variable("t")) extends Proof {}
+case class DSolve(ode:ODESystem, post:Formula, durPos:Proof, dc:Proof, child:Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
 
 /* G |- A: d>0 & v>0 & f-g >= -dv
  * G |- B: <t:=0><x'=f,t'=1&Q>t>=d
@@ -317,7 +317,7 @@ case class BDualE(child: Proof) extends Proof {}
  * --------------------------------------------------------------------  sol solves x'=f&Q on [0,dur], s and t fresh
  * G |- BS[x'=f&Q,ys,sol,t,s](M,N): [x'=f&Q]P
  */
-case class BSolve(ode:ODESystem, post:Formula, child:Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
+case class BSolve(ode:ODESystem, post:Formula, child: Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
 
 
 /* G_xs^ys, x:Q |- M: P
@@ -336,7 +336,7 @@ case class DC(left: Proof, right: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- DI(M,N): [x'=f & Q]P
  */
-case class DI(ode: ODESystem, pre: Proof, step: Proof, ys:Option[List[Variable]]) extends Proof {}
+case class DI(ode: ODESystem, pre: Proof, step: Proof, ys:Option[List[Variable]]=None) extends Proof {}
 
 /* G, y=y0 |- M: [x'=f,y'=a(y)+b&Q]P
  * ----------------------------------------------
