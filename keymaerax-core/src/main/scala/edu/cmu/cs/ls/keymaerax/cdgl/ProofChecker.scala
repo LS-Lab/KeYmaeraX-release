@@ -270,7 +270,7 @@ object ProofChecker {
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
         val P = apply(d, child)
-        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv).toSet
+        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv + x).toSet
         if (vars.contains(y)) {
           throw ProofException(s"Ghost variable ${y} not fresh")
         }
@@ -280,12 +280,14 @@ object ProofChecker {
           case Diamond(Assign(x,f),pp) => SubstitutionHelper.replaceFree(pp)(x, f)
           case p => throw ProofException(s"[:=]E not applicable to formula $p")
         }
-
       case DRandomI(Assign(x,f), child, yOpt) =>
         val y = ghostVar(yOpt, x, f :: G.asList)
         val f1 = URename(x,y)(f)
         val G1 = G.rename(x,y).extend(Equal(x,f1))
         val P = apply(G1, child)
+        if (StaticSemantics(P).fv.contains(y)) {
+          throw ProofException(s"Postcondition $P must not mention ghost $y in <:*>I")
+        }
         Diamond(AssignAny(x), P)
       case DRandomE(left, right, yOpt) =>
         apply(G,left) match {
@@ -303,6 +305,9 @@ object ProofChecker {
         val f1 = URename(x,y)(f)
         val G1 = G.rename(x,y).extend(Equal(x,f1))
         val P = apply(G1, child)
+        if (StaticSemantics(P).fv.contains(y)) {
+          throw ProofException(s"Postcondition $P must not mention ghost $y in existsI")
+        }
         Exists(List(x), P)
       case  ExistsE(left: Proof, right: Proof, yOpt:Option[Variable])  =>
         apply(G,left) match {
@@ -392,11 +397,12 @@ object ProofChecker {
         }
       case DSolve(ode, post, durPos, dc, child, s, t, ysOpt) =>
         // @TODO: Test side conditions
-        val tvar = ghostVar(None, t, G.asList)
-        //val t0 = if(t == tvar) Number(0) else tvar
+        val tOld = ghostVar(None, t, ode :: G.asList)
+        val sOld = ghostVar(None, s, t :: tOld :: ode :: G.asList)
+        val t0 = if(t == tOld) Number(0) else tOld
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))
-        val xys = (if (t == tvar) Nil else List((t,tvar))) ++ xs.zip(ys)
+        val xys = (if (t == tOld) Nil else List((t,tOld))) ++ (if (s == sOld) Nil else List((s,sOld))) ++ xs.zip(ys)
         val sols = solve(t, xys, ode)
         val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
         apply(G, durPos) match {
@@ -404,13 +410,14 @@ object ProofChecker {
             if (n.value != 0) {
               throw ProofException(s"<'> duration must be proven >= 0, had ${n.value} instead")
             }
-            if(StaticSemantics(dur).intersect(StaticSemantics(ode).bv.+(t).+(s).++(ys)).toSet.nonEmpty) {
+            if(StaticSemantics(dur).intersect(StaticSemantics(ode).bv.+(t).+(s).+(tOld).+(sOld).++(ys)).toSet.nonEmpty) {
               throw ProofException(s"<'> requires admissible duration $dur")
             }
-            val dcFml = apply(g.extend(And(LessEqual(Number(0),s),LessEqual(s,dur))), dc)
-            val expectedDC = ((t,dur)::sols).foldRight[Formula](ode.constraint)({ case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
+            val G2 = g.extend(And(LessEqual(Number(0),s),LessEqual(s,dur)))
+            val dcFml = apply(G2, dc)
+            val expectedDC = ((t,s)::sols).foldRight[Formula](ode.constraint)({ case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
             if(dcFml != expectedDC) {
-              throw ProofException(s"<'> DC step with constraint ${ode.constraint} expected constraint $expectedDC, got $dcFml")
+              throw ProofException(s"<'> DC step with constraint ${ode.constraint} expected constraint $expectedDC, got $dcFml", G2)
             }
             val postSub = apply(g, child)
             val expectedSub = ((t,dur)::sols).foldRight[Formula](post)({case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
@@ -427,21 +434,25 @@ object ProofChecker {
          * ---------------------------------------------- d,v constant
          * G |- DV[f,g,d,eps,v](A,B,C,D): <x'=f&Q>P
          */
-//        case class DV(const:Proof, dur:Proof, rate:Proof, post:Proof) extends Proof {}
-      case DV(const, dur, rate, post,tvar,ysOpt) =>
+      case DV(const, dur, rate, post,t,ysOpt) =>
         // TODO: side conditions
+        val tOld = ghostVar(None, t, G.asList)
+        val t0 = if(t == tOld) Number(0) else tOld
         apply(G, const) match {
           case And(GreaterEqual(d1,n1: Number),GreaterEqual(f, Neg(Times(d2,v1)))) =>
             if(d1 != d2)
               throw ProofException(s"Durations $d1 and $d2 must be equal in DV")
             else if (n1.value != 0)
               throw ProofException(s"Expected duration >=0 in DV, got $n1")
-            apply(G.extend(Equal(tvar,Number(0))), dur) match {
-              case Diamond(ODESystem(tode@DifferentialProduct(AtomicODE(DifferentialSymbol(t1),one:Number),ode1),q1),td@GreaterEqual(t2,d3)) =>
-                if(t1 != tvar || one.value != 1) {
-                  throw ProofException(s"DV expected ODE shape $tvar'=1,x'=f, got $tode")
-                } else if (t2 != tvar || d3 != d1) {
-                  throw ProofException(s"DV expected second postcondition t>=d, got $td")
+            val G1 = G.rename(t,tOld).extend(Equal(t,t0))
+            apply(G1, dur) match {
+              case Diamond(ODESystem(tode@DifferentialProduct(AtomicODE(DifferentialSymbol(t1),one:Number),ode1),q1),td@GreaterEqual(Minus(t2,tInit),d3)) =>
+                if(t1 != t || one.value != 1) {
+                  throw ProofException(s"DV expected ODE shape $t'=1,x'=f, got $tode", G1)
+                } else if (t2 != t || d3 != d1) {
+                  throw ProofException(s"DV expected second postcondition t>=d, got $td", G1)
+                } else if (tInit != t0) {
+                  throw ProofException(s"DV expected initial time $t0, got $tInit", G1)
                 }
                 apply(G,rate) match {
                   case Box(ODESystem(ode2,q2),GreaterEqual(fdiff, v2)) =>
@@ -479,12 +490,12 @@ object ProofChecker {
           case p => throw ProofException(s"Rule [?]E not applicable to subogal $p")
         }
       case BAssignI(asgn@Assign(x,f), child, yOpt) =>
-        val y = ghostVar(yOpt,x,List(f))
+        val y = ghostVar(yOpt,x,f :: G.asList)
         val ren = URename(x,y)
         val g = ren(f)
         val d = G.rename(x,y).extend(Equal(x,g))
         val P = apply(d, child)
-        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv).toSet
+        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv + x).toSet
         if (vars.contains(y)) {
           throw ProofException(s"Ghost variable ${y} not fresh")
         }
@@ -496,8 +507,11 @@ object ProofChecker {
           case p => throw ProofException(s"Rule [:=]E does not apply to formula $p")
         }
       case BRandomI(x, child, yOpt) =>
-        val y = ghostVar(yOpt,x,List())
+        val y = ghostVar(yOpt,x,G.asList)
         val pp = apply(G.rename(x,y), child)
+        if (StaticSemantics(pp).fv.contains(y)) {
+          throw ProofException(s"Ghost variable ${y} not fresh in $pp in rule [:*]I")
+        }
         Box(AssignAny(x),pp)
       case BRandomE(child, f) =>
         apply(G,child) match {
@@ -505,8 +519,11 @@ object ProofChecker {
           case p => throw ProofException(s"Rule [:*]E does not apply to formula $p")
         }
       case ForallI(x, child, yOpt) =>
-        val y = ghostVar(yOpt, x, List())
+        val y = ghostVar(yOpt, x, G.asList)
         val pp = apply(G.rename(x,y), child)
+        if(StaticSemantics(pp).fv.contains(y)) {
+          throw ProofException(s"Ghost variable ${y} not fresh in $pp in rule forallI")
+        }
         Forall(List(x),pp)
       case ForallE(child: Proof, f:Term) =>
         apply(G,child) match {
@@ -547,7 +564,7 @@ object ProofChecker {
       case BRepeatI(pre, step, post, a1, ysOpt) =>
         val j1 = apply(G,pre)
         val xs = StaticSemantics(a1).bv.toSet.toList
-        val ys = ghostVars(ysOpt, xs, a1 :: G.asList)
+        val ys = ghostVars(ysOpt, xs, j1 :: a1 :: G.asList)
         val G1 = G.renames(xs,ys).extend(j1)
         apply(G1, step) match {
           case Box(a2,j2) =>
@@ -555,9 +572,12 @@ object ProofChecker {
               throw ProofException(s"Programs $a1 and $a2 in [*]I must be the same")
             } else if(j1 != j2) {
               throw ProofException(s"Invariants $j1 and $j2 in [*]I must be the same")
-            } else {
-              apply(Context(List(j1)), post)
             }
+            val pp = apply(G1, post)
+            if(!StaticSemantics(pp).fv.intersect(ys.toSet).isEmpty) {
+              throw ProofException(s"Ghost variable not fresh ")
+            }
+            Box(Loop(a1),pp)
           case p => throw ProofException(s"Rule [*]I not applicable to formula $p")
         }
       case BRepeatEL(child) =>
@@ -582,35 +602,54 @@ object ProofChecker {
         }
       // TODO: all freshness checks
       case BSolve(ode, post, child, s, t, ysOpt) =>
-        val tvar = ghostVar(None, t, G.asList)
-        val t0 = if(t == tvar) Number(0) else tvar
+        val tOld = ghostVar(None, t, G.asList)
+        val sOld = ghostVar(None, s, t :: tOld :: G.asList)
+        val t0 = if(t == tOld) Number(0) else tOld
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
         val ys = ghostVars(ysOpt, xs, List(ode))
-        val xys = (if (t == tvar) Nil else List((t,tvar))) ++ xs.zip(ys)
+        val xys = (if (t == tOld) Nil else List((t,tOld))) ++ (if (s == sOld) Nil else List((s,sOld))) ++ xs.zip(ys)
         val sols = solve(t, xys, ode)
         val g = xys.foldLeft(G)({case (acc, (x,y)) => acc.rename(x,y)})
         val con = ((t,s)::sols).foldLeft[Formula](ode.constraint)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
         val dcFml = Forall(List(s),Imply(And(LessEqual(t0,s),LessEqual(s,t)),con))
-        val p = apply(g.extend(GreaterEqual(t,t0)).extend(dcFml), child)
+        val G1 = g.extend(GreaterEqual(t,t0)).extend(dcFml)
+        val p = apply(G1, child)
         val sub = sols.foldLeft[Formula](post)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
         if(sub != p) {
-            throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p")
+            throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p", G1)
         }
         Box(ode, post)
       case DW(ode, child, ysOpt) =>
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
-        val ys = ghostVars(ysOpt, xs, List(ode))
-        val p1 = apply(G.renames(xs,ys).extend(ode.constraint),child)
+        val ys = ghostVars(ysOpt, xs, ode :: G.asList)
+        val G1 = G.renames(xs,ys).extend(ode.constraint)
+        val p1 = apply(G1,child)
+        if (!StaticSemantics(p1).fv.intersect(ys.toSet).isEmpty) {
+          throw ProofException(s"Ghost variable not fresh in postcondition $p1 in DW", G1)
+        }
         Box(ode,p1)
       case DC(left, right) =>
-        val Box(ODESystem(ode,con),p) = apply(G,left)
-        val Box(ODESystem(ode1,And(con1,p1)),q) = apply(G,right)
-        assert(ode == ode1 && con1 == con && p1 == p)
-        Box(ODESystem(ode,con),q)
+        apply(G,left) match {
+          case Box(ODESystem(ode,con),p) =>
+            apply(G,right) match {
+              case Box(ODESystem(ode1,And(con1,p1)),q) =>
+                if (ode != ode1) {
+                  throw ProofException(s"DC expects ODEs $ode and $ode1 to match")
+                } else if (con1 != con) {
+                  throw ProofException(s"DC expects constraint $con to match conjunct $con1")
+                } else if (p1 != p) {
+                  throw ProofException(s"DC expects postconditions $p and $p1 to match")
+                }
+                Box(ODESystem(ode,con),q)
+              case p => throw ProofException(s"DC does not apply to right premiss $p")
+            }
+          case p => throw ProofException(s"DC does not apply to left premiss $p")
+        }
+
       case DI(ode1, pre, step, ysOpt) =>
         val p = apply(G,pre)
         val xs = StaticSemantics(ode1).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
-        val ys = ghostVars(ysOpt, xs, ode1 :: G.asList)
+        val ys = ghostVars(ysOpt, xs, p :: ode1 :: G.asList)
         val G1 = G.renames(xs,ys).extend(ode1.constraint)
         apply(G1,step) match {
           case dp =>
@@ -618,6 +657,9 @@ object ProofChecker {
             val df = deriveFormula(p,map)
             if (dp != df) {
               throw ProofException(s"Subgoal in DI should be derivative $df, was $dp")
+            }
+            if (!StaticSemantics(dp).fv.intersect(ys.toSet).isEmpty) {
+              throw ProofException(s"Ghost variable not fresh in postcondition $dp in DI")
             }
             Box(ode1,p)
         }
@@ -745,15 +787,21 @@ object ProofChecker {
         p match {
           case Box(a,p) =>
             val xs = StaticSemantics(a).bv.toSet.toList
-            val ys = ghostVars(ysOpt, xs, a :: G.asList)
+            val ys = ghostVars(ysOpt, xs, p :: a :: G.asList)
             val G1 = G.renames(xs,ys).extend(p)
             val q = apply(G1, right)
+            if(!StaticSemantics(q).fv.intersect(ys.toSet).isEmpty) {
+              throw ProofException(s"Ghost variable not fresh in postcondition $q in monotonicity")
+            }
             Box(a,q)
           case Diamond(a,p) =>
             val xs = StaticSemantics(a).bv.toSet.toList
-            val ys = ghostVars(ysOpt, xs, a :: G.asList)
+            val ys = ghostVars(ysOpt, xs, p :: a :: G.asList)
             val G1 = G.renames(xs,ys).extend(p)
             val q = apply(G1, right)
+            if(!StaticSemantics(q).fv.intersect(ys.toSet).isEmpty) {
+              throw ProofException(s"Ghost variable not fresh in postcondition $q in monotonicity")
+            }
             Diamond(a,q)
           case _ =>
             throw ProofException(s"Montonicity not applicable to non-modal formula ${p}")

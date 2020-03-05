@@ -105,6 +105,8 @@ class ProofCheckerTests extends TacticTestBase {
   "diamond solve" should "solve constant ODE" in withMathematica { _ =>
     val ode = ODESystem(AtomicODE(DifferentialSymbol(Variable("x")),Number(2)))
     val dur = Number(3)
+    val t0 = Number(0)
+    val tNow = Plus(t0, dur)
     val post = GreaterEqual(Variable("x"),Number(6))
     val M = DSolve(ode,post,
       QE(GreaterEqual(dur,Number(0)),Triv()),
@@ -115,25 +117,27 @@ class ProofCheckerTests extends TacticTestBase {
   }
 
   "DV" should "vary 1D ODE" in withMathematica { _ =>
-    val (x,t) = (Variable("x"), Variable("t"))
+    val (x,t,s) = (Variable("x"), Variable("t"), Variable("s"))
     val ode = ODESystem(AtomicODE(DifferentialSymbol(x),Number(1)), LessEqual(x, Number(3)))
     val tode = ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode.ode),ode.constraint)
     val post = GreaterEqual(Times(Number(2),x),Number(5))
-    val d = Number(3)
+    val t0 = Number(0)
+    val dr = Number(3)
+    val tNow = Minus(dr,t0)
     val v = Number(2)
     val G = Context(List(Equal(x,Number(0))))
     val f = Minus(Times(Number(2),x),Number(5))
-    val const = QE(And(GreaterEqual(d,Number(0)),GreaterEqual(f,Neg(Times(d,v)))),
+    val const = QE(And(GreaterEqual(dr,Number(0)),GreaterEqual(f,Neg(Times(dr,v)))),
        Hyp(0))
-    ProofChecker(G,const) shouldBe And(GreaterEqual(d,Number(0)), GreaterEqual(f,Neg(Times(d,v))))
+    ProofChecker(G,const) shouldBe And(GreaterEqual(dr,Number(0)), GreaterEqual(f,Neg(Times(dr,v))))
 
     //   G,t=0 |- B: <t'=1,x'=f&Q>t>=d
-    val dsPost = GreaterEqual(t,d)
+    val dsPost = GreaterEqual(Minus(t,t0),dr)
     val dur = DSolve(tode,dsPost,
-      QE(GreaterEqual(d,Number(0)),Triv()),
-      QE(LessEqual(Plus(Times(Number(1),d),Variable("x",Some(0))),Number(3)), AndI(Hyp(2),AndI(Hyp(0),Hyp(1)))),
-      QE(GreaterEqual(d,d), Hyp(0))) // GreaterEqual(Minus(Times(Number(2),d),Number(5))
-    ProofChecker(G.extend(Equal(t,Number(0))),dur) shouldBe Diamond(tode,GreaterEqual(t,d))
+      QE(GreaterEqual(dr,Number(0)),Triv()),
+      QE(LessEqual(Plus(Times(Number(1),s),Variable("x",Some(0))),Number(3)), AndI(Hyp(2),AndI(Hyp(0),Hyp(1)))),
+      QE(GreaterEqual(tNow,dr), Hyp(0)))
+    ProofChecker(G.extend(Equal(t,Number(0))),dur) shouldBe Diamond(tode,GreaterEqual(Minus(t,Number(0)),dr))
 
     // G |- C: [x'=f&Q](f' >= v)
     val xsol = Plus(Times(Number(1),t),Variable("x",Some(0)))
