@@ -128,8 +128,9 @@ class ProofCheckerTests extends TacticTestBase {
     val G = Context(List(Equal(x,Number(0))))
     val f = Minus(Times(Number(2),x),Number(5))
     val const = QE(And(GreaterEqual(dr,Number(0)),GreaterEqual(f,Neg(Times(dr,v)))),
-       Hyp(0))
-    ProofChecker(G,const) shouldBe And(GreaterEqual(dr,Number(0)), GreaterEqual(f,Neg(Times(dr,v))))
+       AndI(Hyp(1),Hyp(0)))
+    val G1 = G.rename(t,Variable("t",Some(0))).extend(Equal(t,t0))
+    ProofChecker(G1,const) shouldBe And(GreaterEqual(dr,Number(0)), GreaterEqual(f,Neg(Times(dr,v))))
 
     //   G,t=0 |- B: <t'=1,x'=f&Q>t>=d
     val dsPost = GreaterEqual(Minus(t,t0),dr)

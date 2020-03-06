@@ -427,24 +427,16 @@ object ProofChecker {
             Diamond(ode, post)
           case p => throw ProofException(s"<'> duration must be proven >= 0, had $p instead")
         }
-        /* G |- A: d>=0 & f >= -dv
-         * G,t=0 |- B: <t'=1,x'=f&Q>t>=d
-         * G |- C: [x'=f&Q](f' >= v)
-         * G_xs^ys, f>=0 |- D: P
-         * ---------------------------------------------- d,v constant
-         * G |- DV[f,g,d,eps,v](A,B,C,D): <x'=f&Q>P
-         */
       case DV(const, dur, rate, post,t,ysOpt) =>
-        // TODO: side conditions
         val tOld = ghostVar(None, t, G.asList)
         val t0 = if(t == tOld) Number(0) else tOld
-        apply(G, const) match {
+        val G1 = G.rename(t,tOld).extend(Equal(t,t0))
+        apply(G1, const) match {
           case And(GreaterEqual(d1,n1: Number),GreaterEqual(f, Neg(Times(d2,v1)))) =>
             if(d1 != d2)
               throw ProofException(s"Durations $d1 and $d2 must be equal in DV")
             else if (n1.value != 0)
               throw ProofException(s"Expected duration >=0 in DV, got $n1")
-            val G1 = G.rename(t,tOld).extend(Equal(t,t0))
             apply(G1, dur) match {
               case Diamond(ODESystem(tode@DifferentialProduct(AtomicODE(DifferentialSymbol(t1),one:Number),ode1),q1),td@GreaterEqual(Minus(t2,tInit),d3)) =>
                 if(t1 != t || one.value != 1) {
@@ -453,24 +445,32 @@ object ProofChecker {
                   throw ProofException(s"DV expected second postcondition t>=d, got $td", G1)
                 } else if (tInit != t0) {
                   throw ProofException(s"DV expected initial time $t0, got $tInit", G1)
+                } else if (!StaticSemantics(d1).intersect(StaticSemantics(tode).bv.+(tOld)).isEmpty) {
+                  throw ProofException(s"DV duration $d1 must not mention time variables $t, $tOld or bound variables of $tode")
+                } else if (!StaticSemantics(v1).intersect(StaticSemantics(tode).bv.+(tOld)).isEmpty) {
+                  throw ProofException(s"DV rate $v1 must be constant with respect to time $t, $tOld and bound variables of $tode")
                 }
                 apply(G,rate) match {
-                  case Box(ODESystem(ode2,q2),GreaterEqual(fdiff, v2)) =>
-                    val map = DifferentialHelper.atomicOdes(ode1).map({case AtomicODE(DifferentialSymbol(x),f) => (x,f)}).toMap
-                    val xs = StaticSemantics(ode1).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
-                    val ys = ghostVars(ysOpt, xs, ode1 :: G.asList)
-                    val G1 = G.renames(xs,ys).extend(GreaterEqual(f,Number(0)))
-                    val fdiffExpected = deriveTerm(f,map)
-                    if(ode1 != ode2) {
-                      throw ProofException(s"ODEs $ode1 and $ode2 must match in DV")
-                    } else if (q1 != q2) {
-                      throw ProofException(s"Constraints $q1 and $q2 must match in DV")
-                    } else if (v1 != v2) {
-                      throw ProofException(s"Rates $v1 and $v2 must match in DV")
-                    } else if (fdiff != fdiffExpected) {
-                      throw ProofException(s"DV expected derivative of $f,i.e.,  $fdiffExpected, got $fdiff")
-                    }
-                    Diamond(ODESystem(ode1,q1),apply(G1,post))
+                case Box(ODESystem(ode2,q2),GreaterEqual(fdiff, v2)) =>
+                  val map = DifferentialHelper.atomicOdes(ode1).map({case AtomicODE(DifferentialSymbol(x),f) => (x,f)}).toMap
+                  val xs = StaticSemantics(ode1).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
+                  val ys = ghostVars(ysOpt, xs, v1 :: d1 :: q1 :: f :: ode1 :: G.asList)
+                  val G1 = G.renames(xs,ys).extend(GreaterEqual(f,Number(0)))
+                  val fdiffExpected = deriveTerm(f,map)
+                  if(ode1 != ode2) {
+                    throw ProofException(s"ODEs $ode1 and $ode2 must match in DV")
+                  } else if (q1 != q2) {
+                    throw ProofException(s"Constraints $q1 and $q2 must match in DV")
+                  } else if (v1 != v2) {
+                    throw ProofException(s"Rates $v1 and $v2 must match in DV")
+                  } else if (fdiff != fdiffExpected) {
+                    throw ProofException(s"DV expected derivative of $f,i.e., $fdiffExpected, got $fdiff")
+                  }
+                  val p = apply(G1,post)
+                  if (!StaticSemantics(p).fv.intersect(ys.toSet.+(tOld)).isEmpty) {
+                    throw ProofException(s"Ghost variables not fresh in postcondition in DV")
+                  }
+                  Diamond(ODESystem(ode1,q1),p)
                   case p => throw ProofException(s"Third DV subgoal must be shape <x'=f&Q>f'>=0, was $p")
                 }
               case p =>  throw ProofException(s"Second DV subgoal must be shape <t'=1,x'=f&Q>t>=d, was $p")

@@ -208,13 +208,14 @@ case class DDualE(child: Proof) extends Proof {}
  */
 case class DSolve(ode:ODESystem, post:Formula, durPos:Proof, dc:Proof, child:Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
 
-/* G |- A: d>=0 & f >= -dv
+/* G,t=0 |- A: d>=0 & f >= -dv
  * G,t=0 |- B: <x'=f,t'=1&Q>t>=d
  * G |- C: [x'=f&Q](f' >= v)
  * G_xs^ys, f>=0 |- D: P
- * ---------------------------------------------- d,v constant
+ * ---------------------------------------------- d,v constant, t,ys fresh
  * G |- DV[f,g,d,eps,v](A,B,C,D): <x'=f&Q>P
  */
+// TODO: Careful about assumption t=0 in premiss A
 case class DV(const:Proof, dur:Proof, rate:Proof, post:Proof,t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
 
 /* G, x:P |- M:Q
