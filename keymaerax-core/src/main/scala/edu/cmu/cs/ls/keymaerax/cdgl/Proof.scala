@@ -29,9 +29,9 @@ object Proof {
   * rules introduce assumptions at the head, i.e., assumption 0 is the first element and the most recently added.
   * @param c List of assumptions
   */
-final case class Context(c:List[Formula]) {
+final case class Context(c: List[Formula]) {
   /** Returns whether context contains proof variable */
-  def contains(x:ProofVariable):Boolean = c.length > x
+  def contains(x: ProofVariable): Boolean = c.length > x
 
   /** returns IndexedSeq containing same elements */
   def asIndexedSeq: immutable.IndexedSeq[Formula] = c.to[immutable.IndexedSeq]
@@ -43,31 +43,31 @@ final case class Context(c:List[Formula]) {
   def asSequent: Sequent = Sequent(this.asIndexedSeq, immutable.IndexedSeq())
 
   /** returns Sequent with same assumptions and given succedent */
-  def entails(f:Formula): Sequent = {
+  def entails(f: Formula): Sequent = {
     Sequent(c.toIndexedSeq, immutable.IndexedSeq(f))
   }
 
   /** Apply single renaming to all assumptions */
   def rename(what: Variable, repl: Variable): Context = {
-    Context.ofSequent(UniformRenaming(what,repl)(this.asSequent).head)
+    Context.ofSequent(UniformRenaming(what, repl)(this.asSequent).head)
   }
 
   /** Apply all renamings to all assumptions */
   def renames(whats: List[Variable], repls: List[Variable]): Context = {
-    whats.zip(repls).foldLeft[Context](this)({case (acc,(x,y)) => acc.rename(x,y)})
+    whats.zip(repls).foldLeft[Context](this)({case (acc, (x, y)) => acc.rename(x, y)})
   }
 
   /** Add assumption P to context */
-  def extend(P:Formula): Context = {
-    Context(P :: c)
+  def extend(P: Formula): Context = {
+    Context(P : : c)
   }
 
   /** All variables which appear free in some assumption */
-  def freevars:SetLattice[Variable] =
-    c.map(StaticSemantics(_).fv).foldLeft[SetLattice[Variable]](SetLattice.bottom)({case (acc,fv) => fv ++ acc })
+  def freevars: SetLattice[Variable] =
+    c.map(StaticSemantics(_).fv).foldLeft[SetLattice[Variable]](SetLattice.bottom)({case (acc, fv) => fv ++ acc })
 
   /** Retrieve assumption formula for given variable index */
-  def apply(p:ProofVariable): Formula = c(p)
+  def apply(p: ProofVariable): Formula = c(p)
 }
 
 object Context {
@@ -95,7 +95,7 @@ case class Triv() extends Proof {}
 
 /* G |- M: P   G |- N: Q
  * ----------------------------------------------
- * G |- <M,N>: <?P>Q
+ * G |- <M, N>: <?P>Q
  */
 case class DTestI(left: Proof, right: Proof) extends Proof {}
 
@@ -111,29 +111,29 @@ case class DTestEL(child: Proof) extends Proof {}
  */
 case class DTestER(child: Proof) extends Proof {}
 
-/* G_x^y, p:(x=f_x^y) |- M: P
+/* G_x^y, p: (x=f_x^y) |- M: P
  * ----------------------------------------------
- * G |- <x:=f_x^y in p. M> : <x:=f>P
+ * G |- <x: =f_x^y in p. M> : <x: =f>P
  */
-case class DAssignI(e:Assign, child: Proof, y:Option[Variable]) extends Proof {}
+case class DAssignI(e: Assign, child: Proof, y: Option[Variable]) extends Proof {}
 
-/* G |- M: <x:=f>p(x)
+/* G |- M: <x: =f>p(x)
  * ----------------------------------------------
- * G |- <:=^-1>(M): p(f)
+ * G |- <: =^-1>(M): p(f)
  */
 case class DAssignE(child: Proof) extends Proof {}
 
-/* G_x^y, p:(x=f_x^y) |- M: P
+/* G_x^y, p: (x=f_x^y) |- M: P
  * ----------------------------------------------
- * G |- <x :* f_x^y in p. M> : <x:=*>P
+ * G |- <x : * f_x^y in p. M> : <x: =*>P
  */
-case class DRandomI(e:Assign, child: Proof, y:Option[Variable]) extends Proof {}
+case class DRandomI(e: Assign, child: Proof, y: Option[Variable]) extends Proof {}
 
-/* G |- M: <x:=f>p(x)   G_x^y, p(x) |- N: Q
+/* G |- M: <x: =f>p(x)   G_x^y, p(x) |- N: Q
  * ----------------------------------------------
  * G |-  (unpack_x^y = M in N) : Q
  */
-case class DRandomE(left: Proof, right: Proof, y:Option[Variable] = None) extends Proof {}
+case class DRandomE(left: Proof, right: Proof, y: Option[Variable] = None) extends Proof {}
 
 /* G |- M: <a><b>P
  * ----------------------------------------------
@@ -151,25 +151,25 @@ case class DComposeE(child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- injL[b](M): <a++b>P
  */
-case class DChoiceIL(child: Proof, other:Program) extends Proof {}
+case class DChoiceIL(child: Proof, other: Program) extends Proof {}
 
 /* G |- M: <b>P
  * ----------------------------------------------
  * G |- injR[a](M): <a++b>P
  */
-case class DChoiceIR(child: Proof, other:Program) extends Proof {}
+case class DChoiceIR(child: Proof, other: Program) extends Proof {}
 
-/* G |- A: <a++b>P   G,l:<a>P |- B:Q   G,r:<b>P |- C:Q
+/* G |- A: <a++b>P   G, l: <a>P |- B: Q   G, r: <b>P |- C: Q
  * ----------------------------------------------
  * G |- (case A of l=>B | r=>C): Q
  */
-case class DChoiceE(child:Proof, left:Proof, right:Proof) extends Proof {}
+case class DChoiceE(child: Proof, left: Proof, right: Proof) extends Proof {}
 
 /* G |- M: P
  * ----------------------------------------------
  * G |- stop[a](M): <a*>P
  */
-case class DStop(child: Proof, other:Program) extends Proof {}
+case class DStop(child: Proof, other: Program) extends Proof {}
 
 /* G |- M: <a><a*>P
  * ----------------------------------------------
@@ -177,16 +177,16 @@ case class DStop(child: Proof, other:Program) extends Proof {}
  */
 case class DGo(child: Proof) extends Proof {}
 
-/* G |- A:J   m:met0=met>metz,v:J |- <a>(J & met<metz)  m:met=metz,v:J |- Q
+/* G |- A: J   m: met0=met>metz, v: J |- <a>(J & met<metz)  m: met=metz, v: J |- Q
  * ------------------------------------------------------------------------
- * G |- for_{met,metz}(A;mv.B;C): <a*>Q
+ * G |- for_{met, metz}(A;mv.B;C): <a*>Q
  */
-case class DRepeatI(metric: Term, metz:Term, mx:BaseVariable, init: Proof, step: Proof, post: Proof) extends Proof {}
+case class DRepeatI(metric: Term, metz: Term, mx: BaseVariable, init: Proof, step: Proof, post: Proof) extends Proof {}
 // FP
 
-/* G |- A: <a*>P   x:P |- B: Q   x:<a>Q |- C:Q
+/* G |- A: <a*>P   x: P |- B: Q   x: <a>Q |- C: Q
  * ----------------------------------------------
- * G |- FP(A,x.B,x.C): Q
+ * G |- FP(A, x.B, x.C): Q
  */
 case class DRepeatE(child: Proof, post: Proof, step: Proof) extends Proof {}
 
@@ -203,55 +203,55 @@ case class DDualI(child: Proof) extends Proof {}
 case class DDualE(child: Proof) extends Proof {}
 
 /* G |- dur >= 0   G_xs^ys, 0<=s<=dur |- M: Q_xs^sol(s)   G_xs^ys |- N: P_xs^sol(dur)
- * ----------------------------------------------  sol solves x'=f&Q on [0,dur], s and t fresh
- * G |- DS[x'=f&Q,ys,sol,dur,s](M,N): <x'=f&Q>P
+ * ----------------------------------------------  sol solves x'=f&Q on [0, dur], s and t fresh
+ * G |- DS[x'=f&Q, ys, sol, dur, s](M, N): <x'=f&Q>P
  */
-case class DSolve(ode:ODESystem, post:Formula, durPos:Proof, dc:Proof, child:Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
+case class DSolve(ode: ODESystem, post: Formula, durPos: Proof, dc: Proof, child: Proof, s: Variable=Variable("s"), t: Variable=Variable("t"), ys: Option[List[Variable]]=None) extends Proof {}
 
-/* G,t=0 |- A: d>=0 & f >= -dv
- * G,t=0 |- B: <x'=f,t'=1&Q>t>=d
+/* G, t=0 |- A: d>=0 & f >= -dv
+ * G, t=0 |- B: <x'=f, t'=1&Q>t>=d
  * G |- C: [x'=f&Q](f' >= v)
  * G_xs^ys, f>=0 |- D: P
- * ---------------------------------------------- d,v constant, t,ys fresh
- * G |- DV[f,g,d,eps,v](A,B,C,D): <x'=f&Q>P
+ * ---------------------------------------------- d, v constant, t, ys fresh
+ * G |- DV[f, g, d, eps, v](A, B, C, D): <x'=f&Q>P
  */
-case class DV(const:Proof, dur:Proof, rate:Proof, post:Proof,t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
+case class DV(const: Proof, dur: Proof, rate: Proof, post: Proof, t: Variable=Variable("t"), ys: Option[List[Variable]]=None) extends Proof {}
 
-/* G, x:P |- M:Q
+/* G, x: P |- M: Q
  * ----------------------------------------------
- * G |- (fn x:P => M): [?P]Q
+ * G |- (fn x: P => M): [?P]Q
  */
-case class BTestI(fml:Formula, child:Proof) extends Proof {}
+case class BTestI(fml: Formula, child: Proof) extends Proof {}
 
-/* G |- M: [?P]Q   G|- N:P
+/* G |- M: [?P]Q   G|- N: P
  * ----------------------------------------------
  * G |- (M N): Q
  */
-case class BTestE(left:Proof, right:Proof) extends Proof {}
+case class BTestE(left: Proof, right: Proof) extends Proof {}
 
-/* G_x^y, p:(x=f_x^y) |- M: P
+/* G_x^y, p: (x=f_x^y) |- M: P
  * ----------------------------------------------
- * G |- [x:=f_x^y in p. M] : [x:=f]P
+ * G |- [x: =f_x^y in p. M] : [x: =f]P
  */
-case class BAssignI(e:Assign, child: Proof, y:Option[Variable] = None) extends Proof {}
+case class BAssignI(e: Assign, child: Proof, y: Option[Variable] = None) extends Proof {}
 
-/* G |- M: [x:=f]p(x)
+/* G |- M: [x: =f]p(x)
  * ----------------------------------------------
- * G |- [:=^-1](M): p(f)
+ * G |- [: =^-1](M): p(f)
  */
 case class BAssignE(child: Proof) extends Proof {}
 
-/* G |- G_x^y |- M:P
+/* G |- G_x^y |- M: P
  * ----------------------------------------------
- * G |- (fn x^y => M): [x:=*]P
+ * G |- (fn x^y => M): [x: =*]P
  */
-case class BRandomI(x:Variable, child: Proof, y:Option[Variable] = None) extends Proof {}
+case class BRandomI(x: Variable, child: Proof, y: Option[Variable] = None) extends Proof {}
 
-/* G |- M: [x:=*]p(x)
+/* G |- M: [x: =*]p(x)
  * ----------------------------------------------
  * G |- (M f): p(f)
  */
-case class BRandomE(child: Proof, f:Term) extends Proof {}
+case class BRandomE(child: Proof, f: Term) extends Proof {}
 
 /* G |- M: [a][b]P
  * ----------------------------------------------
@@ -267,7 +267,7 @@ case class BComposeE(child: Proof) extends Proof {}
 
 /* G |- M: [a]P   G |- N: [b]P
  * ----------------------------------------------
- * G |- [M,N]: [a++b]P
+ * G |- [M, N]: [a++b]P
  */
 case class BChoiceI(left: Proof, right: Proof) extends Proof {}
 
@@ -283,11 +283,11 @@ case class BChoiceEL(child: Proof) extends Proof {}
  */
 case class BChoiceER(child: Proof) extends Proof {}
 
-/* G |- A: J   G_xs^ys,x:J |- B: [a]J   G_xs^ys,x:J |- C:Q
+/* G |- A: J   G_xs^ys, x: J |- B: [a]J   G_xs^ys, x: J |- C: Q
  * ---------------------------------------------------------
- * G |- (A rep[ys] x:J. B in C): [a*]Q
+ * G |- (A rep[ys] x: J. B in C): [a*]Q
  */
-case class BRepeatI(pre: Proof, step: Proof, post: Proof, a:Program, ys: Option[List[Variable]]) extends Proof {}
+case class BRepeatI(pre: Proof, step: Proof, post: Proof, a: Program, ys: Option[List[Variable]]) extends Proof {}
 
 /* G |- M: [a*]P
  * ----------------------------------------------
@@ -314,66 +314,66 @@ case class BDualI(child: Proof) extends Proof {}
 case class BDualE(child: Proof) extends Proof {}
 
 /*  G_xs^ys, 0<=t, (\forall 0<=s<=t, Q_xs^sol(dur)) |- N: P_xs^sol(dur)
- * --------------------------------------------------------------------  sol solves x'=f&Q on [0,dur], s and t fresh
- * G |- BS[x'=f&Q,ys,sol,t,s](M,N): [x'=f&Q]P
+ * --------------------------------------------------------------------  sol solves x'=f&Q on [0, dur], s and t fresh
+ * G |- BS[x'=f&Q, ys, sol, t, s](M, N): [x'=f&Q]P
  */
-case class BSolve(ode:ODESystem, post:Formula, child: Proof, s:Variable=Variable("s"), t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
+case class BSolve(ode: ODESystem, post: Formula, child: Proof, s: Variable=Variable("s"), t: Variable=Variable("t"), ys: Option[List[Variable]]=None) extends Proof {}
 
 
-/* G_xs^ys, x:Q |- M: P
+/* G_xs^ys, x: Q |- M: P
  * ----------------------------------------------
  * G |- DW[ys](x.M): [x'=f & Q]P
  */
-case class DW(ode:ODESystem, child: Proof, ys:Option[List[Variable]]) extends Proof {}
+case class DW(ode: ODESystem, child: Proof, ys: Option[List[Variable]]) extends Proof {}
 
-/* G |- M:[x'=f&Q]R   G |- N:[x'=f&(Q&R)]P
+/* G |- M: [x'=f&Q]R   G |- N: [x'=f&(Q&R)]P
  * ----------------------------------------------
- * G |- DC(M,N): [x'=f&Q]P
+ * G |- DC(M, N): [x'=f&Q]P
  */
 case class DC(left: Proof, right: Proof) extends Proof {}
 
 /* G |- M: P   G_xs^ys |- N: (P)'_x'^f
  * ----------------------------------------------
- * G |- DI(M,N): [x'=f & Q]P
+ * G |- DI(M, N): [x'=f & Q]P
  */
-case class DI(ode: ODESystem, pre: Proof, step: Proof, ys:Option[List[Variable]]=None) extends Proof {}
+case class DI(ode: ODESystem, pre: Proof, step: Proof, ys: Option[List[Variable]]=None) extends Proof {}
 
-/* G, y=y0 |- M: [x'=f,y'=a(y)+b&Q]P
+/* G, y=y0 |- M: [x'=f, y'=a(y)+b&Q]P
  * ----------------------------------------------
- * G |- DG[y,y0,a,b](M): [x'=f]P
+ * G |- DG[y, y0, a, b](M): [x'=f]P
  */
 case class DG(init: Assign, rhs: Plus, child: Proof) extends Proof {}
 
 
 
-/* G_x^y |- M:P
+/* G_x^y |- M: P
  * ----------------------------------------------
  * G |- (fn x^y => M): (\forall x, P)
  */
-case class ForallI(x:Variable, child: Proof, y:Option[Variable]) extends Proof {}
+case class ForallI(x: Variable, child: Proof, y: Option[Variable]) extends Proof {}
 
 /* G |- M: (\forall x, p(x))
  * ----------------------------------------------
  * G |- (M f): p(f)
  */
-case class ForallE(child: Proof, f:Term) extends Proof {}
+case class ForallE(child: Proof, f: Term) extends Proof {}
 
 
-/* G_x^y, p:(x=f_x^y) |- M: P
+/* G_x^y, p: (x=f_x^y) |- M: P
  * ----------------------------------------------
  * G |- <x = f_x^y in p. M> : \exists x, P
  */
-case class ExistsI(e:Assign, child: Proof, y:Option[Variable]) extends Proof {}
+case class ExistsI(e: Assign, child: Proof, y: Option[Variable]) extends Proof {}
 
 /* G |- M: (exists x, p(x))   G_x^y, p(x) |- N: Q
  * ----------------------------------------------
  * G |- (unpack_x^y = M in N) : Q
  */
-case class ExistsE(left: Proof, right: Proof, y:Option[Variable]) extends Proof {}
+case class ExistsE(left: Proof, right: Proof, y: Option[Variable]) extends Proof {}
 
-/* G |- M: P   G |- N:Q
+/* G |- M: P   G |- N: Q
  * ----------------------------------------------
- * G |- (M,N): P & Q
+ * G |- (M, N): P & Q
  */
 case class AndI(left: Proof, right: Proof) extends Proof {}
 
@@ -401,75 +401,75 @@ case class OrIL(other: Formula, child: Proof) extends Proof {}
  */
 case class OrIR(other: Formula, child: Proof) extends Proof {}
 
-/* G |- A:(P|Q)   G,l:P |- B:R    G,r:Q |- C:R
+/* G |- A: (P|Q)   G, l: P |- B: R    G, r: Q |- C: R
  * ----------------------------------------------
  * G |- (case A of l=>B | r=>C): R
  */
-case class OrE(child:Proof, left:Proof, right:Proof) extends Proof {}
+case class OrE(child: Proof, left: Proof, right: Proof) extends Proof {}
 
-/* G,x:P |- M:Q
+/* G, x: P |- M: Q
  * ----------------------------------------------
- * G |- (fn x:P => M): (P -> Q)
+ * G |- (fn x: P => M): (P -> Q)
  */
-case class ImplyI(fml:Formula, child:Proof) extends Proof {}
+case class ImplyI(fml: Formula, child: Proof) extends Proof {}
 
 /* G |- M: (P -> Q)   G |- N: P
  * ----------------------------------------------
  * G |- (M N): Q
  */
-case class ImplyE(left:Proof, right:Proof) extends Proof {}
+case class ImplyE(left: Proof, right: Proof) extends Proof {}
 
-/* G,x:P |- M: Q   G,x:Q |- N:P
+/* G, x: P |- M: Q   G, x: Q |- N: P
  * ----------------------------------------------
- * G |- (M,N)[x:P,Q]
+ * G |- (M, N)[x: P, Q]
  */
-case class EquivI(fml:Equiv, left:Proof, right:Proof) extends Proof {}
+case class EquivI(fml: Equiv, left: Proof, right: Proof) extends Proof {}
 
 /* G |- M: (P <-> Q)   G |- N: P
  * ----------------------------------------------
  * G |- (projL(M) N): Q
  */
-case class EquivEL(child:Proof, assump:Proof) extends Proof {}
+case class EquivEL(child: Proof, assump: Proof) extends Proof {}
 
 /* G |- M: (P <-> Q)   G |- N: Q
  * ----------------------------------------------
  * G |- (projR(M) N): P
  */
-case class EquivER(child:Proof, assump:Proof) extends Proof {}
+case class EquivER(child: Proof, assump: Proof) extends Proof {}
 
-/* G, x:P |- M: False
+/* G, x: P |- M: False
  * ----------------------------------------------
- * G |- (fn x:P => M): !P
+ * G |- (fn x: P => M): !P
  */
-case class NotI(p:Formula, child:Proof) extends Proof {}
+case class NotI(p: Formula, child: Proof) extends Proof {}
 
 /* G |- M: !P   G |- N: P
  * ----------------------------------------------
  * G |- (M N): False
  */
-case class NotE(left:Proof, right:Proof) extends Proof {}
+case class NotE(left: Proof, right: Proof) extends Proof {}
 
 /* G |- M: False
  * ----------------------------------------------
  * G |- abort[P] M: P
  */
-case class FalseE(child:Proof, fml:Formula) extends Proof {}
+case class FalseE(child: Proof, fml: Formula) extends Proof {}
 
 /*       *
  * ----------------------------------------------
- * G,x:P |- x:P
+ * G, x: P |- x: P
  */
-case class Hyp(p:ProofVariable) extends Proof {}
+case class Hyp(p: ProofVariable) extends Proof {}
 
 
-/* G |- M: [a]J   G_xs^ys, x:J |- N:Q
+/* G |- M: [a]J   G_xs^ys, x: J |- N: Q
  * ----------------------------------------------
- * G |-  (M o x:J. N)[ys] : [a]Q
+ * G |-  (M o x: J. N)[ys] : [a]Q
  */
-case class Mon(left: Proof, right: Proof, ys:Option[List[Variable]]) extends Proof {}
+case class Mon(left: Proof, right: Proof, ys: Option[List[Variable]]) extends Proof {}
 
 /* G |- M: Q
  * ---------------------------------------------- (Q -> P is valid first-order arithmetic)
  * G |- QE[P](M) : P
  */
-case class QE(p:Formula, child: Proof) extends Proof {}
+case class QE(p: Formula, child: Proof) extends Proof {}
