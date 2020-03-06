@@ -30,6 +30,11 @@ object Proof {
   * @param c List of assumptions
   */
 final case class Context(c: List[Formula]) {
+  override def toString: String = {
+    val s = c.map(_.prettyString).foldRight("")((s,acc) => s + "," + acc)
+    s
+  }
+
   /** Returns whether context contains proof variable */
   def contains(x: ProofVariable): Boolean = c.length > x
 
@@ -77,10 +82,44 @@ object Context {
   def ofSequent(seq: Sequent): Context = {
     Context(seq.ante.toList)
   }
+
 }
 
 /** Judgement G |- P  is a context G with a single succedent formula P */
 final case class Judgement(ante: Context, succ: Formula) {}
+
+/** An effectively-well-found convergence metric used for Angelic loop convergence reasoning <*> */
+sealed trait Metric {
+  /** @param xs Free variables of context, variant, and postcondition
+    * @return true if metric is admissible */
+  def isAdmissible(xs: Set[Variable]): Boolean
+
+  /** Formula which holds when the metric has converged */
+  def isZero: Formula
+
+  /** Formula which holds when the metric has not converged */
+  def nonZero: Formula
+
+  /** Formula which expresses that the metric has decreased in the given iteration */
+  def decreased: Formula
+
+  /** Formula which remembers initial metric value in ghost variable(s) */
+  def ghost: Formula
+}
+
+/** Constant metric requires real scalar term [[t]] to decrease by at least positive constant [[n]] each iteration, and
+  * stores previous metric value in [[theGhost]].
+  * Termination condition [[isZero]] is inequational because [[t]] is permitted to become negative */
+case class ConstantMetric(t: Term, n : Number, theGhost: Variable) extends Metric {
+  if (n.value <= 0) {
+    throw ProofException(s"Constant metric needs positive increment, got ${n.value}")
+  }
+  def isAdmissible(xs: Set[Variable]): Boolean = !xs.contains(theGhost)
+  def nonZero: Formula = Greater(t, Number(0))
+  def isZero: Formula = LessEqual(t, Number(0))
+  def decreased: Formula = GreaterEqual(theGhost,Plus(t,n))
+  def ghost:Formula = Equal(theGhost, t)
+}
 
 /**
   * CdGL forward proof terms
@@ -181,8 +220,8 @@ case class DGo(child: Proof) extends Proof {}
  * ------------------------------------------------------------------------
  * G |- for_{met, metz}(A;mv.B;C): <a*>Q
  */
-case class DRepeatI(metric: Term, metz: Term, mx: BaseVariable, init: Proof, step: Proof, post: Proof) extends Proof {}
-// FP
+// etric: Term, metz: Term, mx: BaseVariable
+case class DRepeatI(m:Metric, init: Proof, step: Proof, post: Proof) extends Proof {}
 
 /* G |- A: <a*>P   x: P |- B: Q   x: <a>Q |- C: Q
  * ----------------------------------------------
@@ -473,3 +512,13 @@ case class Mon(left: Proof, right: Proof, ys: Option[List[Variable]] = None) ext
  * G |- QE[P](M) : P
  */
 case class QE(p: Formula, child: Proof) extends Proof {}
+
+/*           *
+ * ------------------------------  (k > 0)
+ * G |-  f > g \/ f < g + k
+ */
+// @TODO: Generalize to terms k such that G |- k > 0
+case class ConstSplit(f: Term, g: Term, k: Number) extends Proof {
+  if(k.value <= 0)
+    throw ProofException(s"ConstSplit expects positive k, got ${k.value}")
+}

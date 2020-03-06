@@ -23,10 +23,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers._
   */
 case class ProofException(msg: String, context: Context=Context.empty) extends Exception {
   override def toString: String =
-    if (context.asList.isEmpty)
+    if (context.asList.isEmpty) {
       msg
-    else
-      s"Msg: $msg\nContext: $context"
+    } else {
+      val ctxt = context.toString()
+      s"Message: $msg\nContext: $ctxt"
+    }
 }
 
 /**
@@ -374,16 +376,18 @@ object ProofChecker {
             Diamond(Loop(a), p)
           case p => throw ProofException(s"Rule <*>G not applicable to subgoal $p", G)
         }
-      case DRepeatI(metric, metz, mx, init, step, post) =>
+      case DRepeatI(metric, init, step, post) =>
         val variant = apply(G, init)
-        apply(Context(List(And(Equal(mx, metric), Greater(metric, metz)), variant)), step) match {
+        apply(Context(List(And(metric.ghost, metric.nonZero), variant)), step) match {
           case Diamond(a, p2) =>
-            val p3 = apply(Context(List(Equal(metric, metz), variant)), post)
-            val expectedPost = And(variant, Greater(mx, metric))
+            val p3 = apply(Context(List(metric.isZero, variant)), post)
+            val expectedPost = And(variant, Or(metric.isZero,metric.decreased))
+            val taboos = (variant :: p3 :: G.asList).foldLeft[SetLattice[Variable]](SetLattice.bottom)({
+              case (acc,f) => acc.++(StaticSemantics(f).fv)})
             if (p2 != expectedPost) {
               throw ProofException(s"Rule <*>I expected inductive step postcondition $expectedPost, got $p2", G)
-            } else if (!freshIn(mx, p3 :: metric :: metz :: variant :: G.asList)) {
-              throw ProofException(s"Metric ghost $mx must be free in <*>I", G)
+            } else if (!metric.isAdmissible(taboos.toSet)) {
+              throw ProofException(s"Metric $metric must be admissible in <*>I", G)
             }
             Diamond(Loop(a), p3)
           case p => throw ProofException(s"Rule <*>I not applicable to subgoal $p", G)
@@ -832,6 +836,8 @@ object ProofChecker {
           q
         else
           throw ProofException(s"QE formula ${Imply(p, q)} not valid", G)
+      case ConstSplit(f: Term, g: Term, k: Number) =>
+        Or(Greater(f,g),Less(f,Plus(g,k)))
     }
   }
 }

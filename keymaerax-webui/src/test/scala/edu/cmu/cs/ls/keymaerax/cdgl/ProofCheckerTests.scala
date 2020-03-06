@@ -168,9 +168,9 @@ class ProofCheckerTests extends TacticTestBase {
     ProofChecker(G,M) shouldBe Box(Loop(a),post)
   }
 
-  // TODO: Need well-founded comparisons in drepeatI
   "<*>I" should "induct" in withMathematica { _ =>
     val (x, y, mx) = (Variable("x"), Variable("y"), Variable("met"))
+    val metric = ConstantMetric(y, Number(1), mx)
     val G = Context(List(Equal(x, Number(10)), Equal(y, Number(20))))
     val fx = Minus(x,Number(1))
     val fy = Minus(y,Number(2))
@@ -178,28 +178,35 @@ class ProofCheckerTests extends TacticTestBase {
     val a2 = Assign(y,fy)
     val a = Compose(a1,a2)
     val j = Equal(y,Times(x,Number(2)))
-    val metric = x
-    val metz = Number(0)
-    val post = Equal(y, Number(0))
-    val M = DRepeatI(metric,metz,mx,
+    val post = LessEqual(x, Number(0))
+    val M = DRepeatI(metric,
       QE(j, AndI(Hyp(0), Hyp(1))),
-      DComposeI(DAssignI(a1,DAssignI(a2, QE(And(j,Greater(mx,metric)),AndI(Hyp(0),AndI(Hyp(1),AndI(Hyp(2),Hyp(3)))))))),
-      QE(post, AndI(Hyp(0),Hyp(1))))
+      DComposeI(
+        DAssignI(a1,
+        DAssignI(a2,
+          AndI(QE(j, AndI(AndI(AndI(Hyp(0),Hyp(1)), Hyp(2)),Hyp(3)))
+            ,OrE(ConstSplit(Variable("y",Some(0)), Number(1), Number(0.5)),
+              // progress
+               OrIR(metric.isZero, QE(metric.decreased, AndI(Hyp(1),Hyp(3))))
+              // finish
+              ,OrIL(metric.decreased, QE(metric.isZero, AndI(Hyp(0),Hyp(1)))) // AndI(Hyp(2), AndI(Hyp(3),Hyp(4)))))
+            )
+          ))))
+      , QE(post, AndI(Hyp(0),Hyp(1))))
     ProofChecker(G,M) shouldBe Diamond(Loop(a),post)
   }
 
   "<*>I" should "reject ill-founded metric" in withMathematica { _ =>
     val (x, mx) = (Variable("x"), Variable("met"))
+    val metric = ConstantMetric(x, Number(1), mx)
     val G = Context(List(Equal(x, Number(10))))
     val fx = Divide(x,Number(2))
     val a1 = Assign(x,fx)
     val j = GreaterEqual(x, Number(0))
-    val metric = x
-    val metz = Number(0)
     val post = Equal(x, Number(0))
-    val M = DRepeatI(metric,metz,mx,
-      QE(j, Hyp(0)) ,
-      DAssignI(a1, QE(And(j, Greater(mx, metric)), AndI(Hyp(0),AndI(Hyp(1), Hyp(2))))),
+    val M = DRepeatI(metric,
+      QE(j, Hyp(0)),
+      DAssignI(a1, QE(And(j, Or(metric.isZero,metric.decreased)), AndI(Hyp(0),AndI(Hyp(1), Hyp(2))))),
       QE(post, AndI(Hyp(0),Hyp(1))))
     a[ProofException] shouldBe thrownBy(ProofChecker(G,M))
   }
