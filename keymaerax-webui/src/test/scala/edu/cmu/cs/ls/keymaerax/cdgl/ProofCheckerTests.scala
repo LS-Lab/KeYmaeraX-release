@@ -154,6 +154,57 @@ class ProofCheckerTests extends TacticTestBase {
     ProofChecker(G, M) shouldBe p
   }
 
+  "[*]I" should "induct" in withMathematica { _ =>
+    val x = Variable("x")
+    val nz = Number(0)
+    val G = Context(List(Equal(x,nz)))
+    val f = Divide(x,Number(2))
+    val j = GreaterEqual(x,nz)
+    val post = GreaterEqual(x, Number(-1))
+    val a = Assign(x,f)
+    val M = BRepeatI(QE(j,Hyp(0)),
+      BAssignI(a,QE(j, AndI(Hyp(0),Hyp(1)))),
+      QE(post,Hyp(0)), a)
+    ProofChecker(G,M) shouldBe Box(Loop(a),post)
+  }
+
+  // TODO: Need well-founded comparisons in drepeatI
+  "<*>I" should "induct" in withMathematica { _ =>
+    val (x, y, mx) = (Variable("x"), Variable("y"), Variable("met"))
+    val G = Context(List(Equal(x, Number(10)), Equal(y, Number(20))))
+    val fx = Minus(x,Number(1))
+    val fy = Minus(y,Number(2))
+    val a1 = Assign(x,fx)
+    val a2 = Assign(y,fy)
+    val a = Compose(a1,a2)
+    val j = Equal(y,Times(x,Number(2)))
+    val metric = x
+    val metz = Number(0)
+    val post = Equal(y, Number(0))
+    val M = DRepeatI(metric,metz,mx,
+      QE(j, AndI(Hyp(0), Hyp(1))),
+      DComposeI(DAssignI(a1,DAssignI(a2, QE(And(j,Greater(mx,metric)),AndI(Hyp(0),AndI(Hyp(1),AndI(Hyp(2),Hyp(3)))))))),
+      QE(post, AndI(Hyp(0),Hyp(1))))
+    ProofChecker(G,M) shouldBe Diamond(Loop(a),post)
+  }
+
+  "<*>I" should "reject ill-founded metric" in withMathematica { _ =>
+    val (x, mx) = (Variable("x"), Variable("met"))
+    val G = Context(List(Equal(x, Number(10))))
+    val fx = Divide(x,Number(2))
+    val a1 = Assign(x,fx)
+    val j = GreaterEqual(x, Number(0))
+    val metric = x
+    val metz = Number(0)
+    val post = Equal(x, Number(0))
+    val M = DRepeatI(metric,metz,mx,
+      QE(j, Hyp(0)) ,
+      DAssignI(a1, QE(And(j, Greater(mx, metric)), AndI(Hyp(0),AndI(Hyp(1), Hyp(2))))),
+      QE(post, AndI(Hyp(0),Hyp(1))))
+    a[ProofException] shouldBe thrownBy(ProofChecker(G,M))
+  }
+
+
   "QE" should "allow valid first-order arithmetic" in withMathematica { _ =>
     val M = QE(GreaterEqual(Times(Variable("x"), Variable("x")), Number(0)), Triv())
     ProofChecker(Context(List()), M) shouldBe GreaterEqual(Times(Variable("x"), Variable("x")), Number(0))
@@ -173,6 +224,29 @@ class ProofCheckerTests extends TacticTestBase {
     val f = Greater(Variable("x"), Number(0))
     val M = QE(f, Hyp(0))
     ProofChecker(Context(List(f)), M) shouldBe f
+  }
+
+  // Propostional tests
+  val (p, q) = (UnitPredicational("P", AnyArg), UnitPredicational("Q", AnyArg))
+
+  "^" should "check" in withMathematica { _ =>
+    val G = Context(List(p, q))
+    ProofChecker(G, AndI(Hyp(0), Hyp(1))) shouldBe And(p,q)
+  }
+
+  "->" should "check" in withMathematica { _ =>
+    val G = Context(List(q))
+    ProofChecker(G, ImplyI(p, Hyp(1))) shouldBe Imply(p,q)
+  }
+
+  "|" should "check" in withMathematica { _ =>
+    val G = Context(List(p))
+    ProofChecker(G, OrIL(q, Hyp(0))) shouldBe Or(p,q)
+  }
+
+  "<->" should "check" in withMathematica { _ =>
+    ProofChecker(Context(List(Imply(p,q),Imply(q,p))),
+      EquivI(Equiv(p,q), ImplyE(Hyp(1),Hyp(0)), ImplyE(Hyp(2),Hyp(0)))) shouldBe Equiv(p,q)
   }
 
 }
