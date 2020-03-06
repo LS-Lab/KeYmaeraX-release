@@ -147,12 +147,12 @@ object ProofChecker {
     acc
   }
   /** Collect variable occurrences in list of expressions */
-  private def collectVars(es:List[Expression]):Indices = {
+  private def collectVars(es: List[Expression]): Indices = {
     es.foldLeft[Indices](Map())(collectVars)
   }
 
   /** @return whether x is a fresh variable given the occurrences of map */
-  private def freshIn(x:Variable, map:Indices):Boolean = {
+  private def freshIn(x: Variable, map: Indices): Boolean = {
     x match {
       case BaseVariable(name,ind,sort) =>
         (map.get(Left(name)),ind) match {
@@ -170,6 +170,17 @@ object ProofChecker {
         }
 
     }
+  }
+
+  /** @return whether x is fresh in all es */
+  private def freshIn(x:Variable, taboos: List[Expression]): Boolean = {
+    val map:Indices = collectVars(taboos)
+    freshIn(x, map)
+  }
+
+  /** @return whether all xs fresh in all es */
+  private def freshIn(xs:List[Variable], taboos: List[Expression]): Boolean = {
+    xs.forall(freshIn(_,taboos))
   }
 
   /** @return x_i for some i which makes x_i fresh in map */
@@ -363,15 +374,17 @@ object ProofChecker {
             Diamond(Loop(a),p)
           case p => throw ProofException(s"Rule <*>G not applicable to subgoal $p", G)
         }
-      // TODO: freshness check for metric
       case DRepeatI(metric, metz, mx, init, step, post) =>
         val variant = apply(G,init)
         apply(Context(List(And(Equal(mx,metric), Greater(metric,metz)), variant)), step) match {
           case Diamond(a,p2) =>
             val p3 = apply(Context(List(Equal(metric,metz),variant)),post)
-            val expectedPost = And(variant, Greater(metz, metric))
-            if (p2 != expectedPost)
+            val expectedPost = And(variant, Greater(mx, metric))
+            if (p2 != expectedPost) {
               throw ProofException(s"Rule <*>I expected inductive step postcondition $expectedPost, got $p2", G)
+            } else if (!freshIn(mx, p3 :: metric :: metz :: variant :: G.asList)) {
+              throw ProofException(s"Metric ghost $mx must be free in <*>I", G)
+            }
             Diamond(Loop(a), p3)
           case p => throw ProofException(s"Rule <*>I not applicable to subgoal $p", G)
         }
