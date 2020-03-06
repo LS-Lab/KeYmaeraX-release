@@ -215,7 +215,6 @@ case class DSolve(ode:ODESystem, post:Formula, durPos:Proof, dc:Proof, child:Pro
  * ---------------------------------------------- d,v constant, t,ys fresh
  * G |- DV[f,g,d,eps,v](A,B,C,D): <x'=f&Q>P
  */
-// TODO: Careful about assumption t=0 in premiss A
 case class DV(const:Proof, dur:Proof, rate:Proof, post:Proof,t:Variable=Variable("t"), ys:Option[List[Variable]]=None) extends Proof {}
 
 /* G, x:P |- M:Q
