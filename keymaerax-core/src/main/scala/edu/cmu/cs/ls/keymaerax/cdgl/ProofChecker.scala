@@ -396,7 +396,6 @@ object ProofChecker {
           case p => throw ProofException(s"Rule <d>E not applicable to subgoal $p")
         }
       case DSolve(ode, post, durPos, dc, child, s, t, ysOpt) =>
-        // @TODO: Test side conditions
         val tOld = ghostVar(None, t, ode :: G.asList)
         val sOld = ghostVar(None, s, t :: tOld :: ode :: G.asList)
         val t0 = if(t == tOld) Number(0) else tOld
@@ -423,6 +422,9 @@ object ProofChecker {
             val expectedSub = ((t,dur)::sols).foldRight[Formula](post)({case ((x,f),acc) => SubstitutionHelper.replaceFree(acc)(x,f)})
             if(postSub != expectedSub) {
               throw ProofException(s"<'> Post step with postcondition $post expected subgoal postcondition $expectedSub, got $postSub")
+            }
+            if(!StaticSemantics(post).fv.intersect((s :: tOld :: sOld :: ys).toSet).isEmpty) {
+              throw ProofException(s"<'> ghost variables must be fresh in postcondition $post")
             }
             Diamond(ode, post)
           case p => throw ProofException(s"<'> duration must be proven >= 0, had $p instead")
@@ -600,7 +602,6 @@ object ProofChecker {
           case Box(Dual(a), p) => Diamond(a, p)
           case p => throw ProofException(s"Rule [d]E not applicable to formula $p")
         }
-      // TODO: all freshness checks
       case BSolve(ode, post, child, s, t, ysOpt) =>
         val tOld = ghostVar(None, t, G.asList)
         val sOld = ghostVar(None, s, t :: tOld :: G.asList)
@@ -616,7 +617,10 @@ object ProofChecker {
         val p = apply(G1, child)
         val sub = sols.foldLeft[Formula](post)({case (acc,(x,f)) => SubstitutionHelper.replaceFree(acc)(x,f)})
         if(sub != p) {
-            throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p", G1)
+          throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p", G1)
+        }
+        if(!StaticSemantics(post).fv.intersect(ys.toSet.+(tOld).+(sOld).+(s)).isEmpty) {
+          throw ProofException(s"['] ghost variables must be fresh in postcondition $post", G1)
         }
         Box(ode, post)
       case DW(ode, child, ysOpt) =>
