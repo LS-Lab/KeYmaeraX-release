@@ -697,20 +697,19 @@ object ProofChecker {
             }
             Box(ode1, p)
         }
-      case DG(Assign(y, y0), Plus(Times(a, yy), b), child) =>
+      // G, y=y0 |- M: [x'=f, y'=a(y)+b&Q]P
+      case DG(Assign(y, y0), rhs@Plus(Times(a, yy), b), child) =>
         if (y != yy) {
           throw ProofException(s"Variables $y and $yy should be equal in DG", G)
         }
-        apply(G, child) match {
-          case Box(Compose(Assign(xy, e), ODESystem(DifferentialProduct(AtomicODE(xp, xe), c), con)), pp) =>
-            if (y != xy) {
-              throw ProofException(s"Expected $y and $xy equal in DG subgoal", G)
-            } else if (xp != DifferentialSymbol(xy)) {
-              throw ProofException(s"Expected $xp and ${DifferentialSymbol(xy)} equal in DG subgoal", G)
-            } else if (e != y0) {
-              throw ProofException(s"Expected $e and $y0 equal in DG subgoal", G)
-            } else if (xe == Plus(Times(a, xy), b)) {
-              throw ProofException(s"Expected $xe and ${Plus(Times(a, xy), b)} equal in DG subgoal", G)
+        apply(G.extend(Equal(y,y0)), child) match {
+          case Box(ODESystem(DifferentialProduct(AtomicODE(yp, ye), c), con), pp) =>
+            if (yp != DifferentialSymbol(y)) {
+              throw ProofException(s"Expected $yp and ${DifferentialSymbol(y)} equal in DG subgoal", G)
+            } else if (ye != rhs) {
+              throw ProofException(s"Expected $ye and $rhs equal in DG subgoal", G)
+            } else if (ye != Plus(Times(a, yy), b)) {
+              throw ProofException(s"Expected $ye and ${Plus(Times(a, yy), b)} equal in DG subgoal", G)
             } else if (StaticSemantics(pp).fv.++(StaticSemantics(a).++(StaticSemantics(b)
                 .++(StaticSemantics(con).fv.++(StaticSemantics(y0).++(G.freevars)))))
               .toSet.intersect(Set(y, DifferentialSymbol(y))).nonEmpty) {

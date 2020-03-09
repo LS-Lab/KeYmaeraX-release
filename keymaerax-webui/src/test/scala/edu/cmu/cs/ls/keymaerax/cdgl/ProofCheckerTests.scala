@@ -49,6 +49,24 @@ class ProofCheckerTests extends TacticTestBase {
     ProofChecker(G, M) shouldBe Box(ode1, post)
   }
 
+  "DG" should "ghost its x's" in withMathematica { _ =>
+    val (x, y) = (Variable("x"), Variable("y"))
+    val (dx, dy) = (DifferentialSymbol(x), DifferentialSymbol(y))
+    val rhs = Plus(Times(Divide(Number(1), Number(2)),y), Number(0))
+    val dp1 = AtomicODE(dx, Neg(x))
+    val dp2 = DifferentialProduct(AtomicODE(dy, rhs), dp1)
+    val post = Greater(x, Number(0))
+    val j = Equal(Times(x, Power(y, Number(2))), Number(1))
+    val (ode1, ode2, ode3) = (ODESystem(dp1), ODESystem(dp2), ODESystem(dp2, And(True, j)))
+    val dj = ProofChecker.deriveFormula(j, dp2)
+    val G = Context(List(post))
+    val M = DG(Assign(y, Power(Divide(Number(1), x)
+      , Divide(Number(1), Number(2)))), rhs
+      , DC(DI(ode2, QE(j, AndI(Hyp(0), Hyp(1))), QE(dj, Triv()))
+        , DW(ode3, QE(post, Hyp(0)))))
+    ProofChecker(G, M) shouldBe Box(ode1, post)
+  }
+
   "box solve" should "solve constant 1D ODE" in withMathematica { _ =>
     val ode = ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(2)))
     val post = GreaterEqual(Variable("x"), Number(0))
