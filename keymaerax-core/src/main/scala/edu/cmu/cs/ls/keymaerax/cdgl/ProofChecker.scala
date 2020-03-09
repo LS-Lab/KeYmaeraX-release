@@ -36,7 +36,7 @@ case class ProofException(msg: String, context: Context=Context.empty) extends E
   * @see [[ProofChecker.apply]]
   */
 object ProofChecker {
-  /** @return simplified differential of formula [[p]] */
+  /** @return compute differential of formula [[p]] */
   private def deriveFormula(p: Formula, map: Map[Variable, Term]): Formula = {
     p match {
       case And(p, q) => And(deriveFormula(p, map), deriveFormula(q, map))
@@ -53,7 +53,13 @@ object ProofChecker {
     }
   }
 
-  /** @return simplified differential of term [[f]] */
+  /** @return compute differential of formula [[p]] */
+  def deriveFormula(p: Formula, ode: DifferentialProgram): Formula = {
+    val map = DifferentialHelper.atomicOdes(ode).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
+    deriveFormula(p, map)
+  }
+
+    /** @return compute differential of term [[f]] */
   private def deriveTerm(e: Term, map: Map[Variable, Term]): Term = {
     e match {
       case _ : Number => Number(0)
@@ -79,6 +85,12 @@ object ProofChecker {
     }
   }
 
+  /** @return compute differential of term [[f]] */
+  def deriveTerm(e: Term, ode: DifferentialProgram): Term = {
+    val map = DifferentialHelper.atomicOdes(ode).map({case AtomicODE(DifferentialSymbol(x), f) => (x, f)}).toMap
+    deriveTerm(e, map)
+  }
+
   /** @return whether [[p]] contains only conjunctions and universals over comparisons */
   private def isConjunctive(p: Formula): Boolean = {
     p match {
@@ -88,6 +100,7 @@ object ProofChecker {
       case _ => false
     }
   }
+
 
   /** @param p formula of first-order constructive arithmetic
     * @return whether formula is constructively valid */
@@ -832,12 +845,12 @@ object ProofChecker {
         if (!Imply(p, q).isFOL) {
           throw ProofException(s"QE formula ${p}->${q} was not FOL", G)
         }
-        if (qeValid(Imply(p, q)))
+        if (qeValid(Imply(p, q))) {
           q
-        else
+        } else {
           throw ProofException(s"QE formula ${Imply(p, q)} not valid", G)
-      case ConstSplit(f: Term, g: Term, k: Number) =>
-        Or(Greater(f,g),Less(f,Plus(g,k)))
+        }
+      case ConstSplit(f: Term, g: Term, k: Number) => Or(Greater(f,g),Less(f,Plus(g,k)))
     }
   }
 }

@@ -30,6 +30,25 @@ class ProofCheckerTests extends TacticTestBase {
     a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
   }
 
+  "DC+DW" should "solve double integrator" in withMathematica { _ =>
+    val (x, v, a) = (Variable("x"), Variable("v"), Variable("a"))
+    val j1 = GreaterEqual(v, Number(0))
+    val j2 = GreaterEqual(x, Number(0))
+    val dp = DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), a))
+    val dj1 = ProofChecker.deriveFormula(j1, dp)
+    val dj2 = ProofChecker.deriveFormula(j2, dp)
+    val ode1 = ODESystem(dp, True)
+    val ode2 = ODESystem(dp, And(True, j1))
+    val ode3 = ODESystem(dp, And(And (True, j1), j2))
+    val post = GreaterEqual(Variable("x"), Number(-1))
+    val M =
+      DC(DI(ode1, QE(j1, Hyp(1)), QE(dj1, Hyp(3)))
+      , DC(DI(ode2, QE(j2, Hyp(0)), QE(dj2, Hyp(0)))
+        , DW(ode3, QE(post, AndI(AndI(AndI(Hyp(0), Hyp(1)), Hyp(2)), Hyp(3))))))
+    val G = Context(List(GreaterEqual(Variable("x"), Number(0)), GreaterEqual(Variable("v"), Number(0)), GreaterEqual(Variable("a"), Number(0))))
+    ProofChecker(G, M) shouldBe Box(ode1, post)
+  }
+
   "box solve" should "solve constant 1D ODE" in withMathematica { _ =>
     val ode = ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(2)))
     val post = GreaterEqual(Variable("x"), Number(0))
