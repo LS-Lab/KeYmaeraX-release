@@ -311,8 +311,8 @@ object ProofChecker {
         val f1 = URename(x, y)(f)
         val G1 = G.rename(x, y).extend(Equal(x, f1))
         val P = apply(G1, child)
-        if (StaticSemantics(P).fv.contains(y)) {
-          throw ProofException(s"Postcondition $P must not mention ghost $y in <: *>I", G1)
+        if (x != y && StaticSemantics(P).fv.contains(y)) {
+          throw ProofException(s"Postcondition $P must not mention ghost $y in <:*>I", G1)
         }
         Diamond(AssignAny(x), P)
       case DRandomE(left, right, yOpt) =>
@@ -324,14 +324,14 @@ object ProofChecker {
             if (!StaticSemantics(p).fv.intersect(Set(x, y)).isEmpty) {
               throw ProofException(s"Postcondition $p cannot mention $x or $y in rule <: *>E", G1)
             } else p
-          case p => throw ProofException(s"Rule <: *>E not applicable to formula $p", G)
+          case p => throw ProofException(s"Rule <:*>E not applicable to formula $p", G)
         }
       case ExistsI(Assign(x, f), child: Proof, yOpt: Option[Variable]) =>
         val y = ghostVar(yOpt, x, f :: G.asList)
         val f1 = URename(x, y)(f)
         val G1 = G.rename(x, y).extend(Equal(x, f1))
         val P = apply(G1, child)
-        if (StaticSemantics(P).fv.contains(y)) {
+        if (x != y && StaticSemantics(P).fv.contains(y)) {
           throw ProofException(s"Postcondition $P must not mention ghost $y in existsI", G1)
         }
         Exists(List(x), P)

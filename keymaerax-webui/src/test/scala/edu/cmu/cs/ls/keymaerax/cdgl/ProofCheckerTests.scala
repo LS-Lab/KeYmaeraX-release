@@ -30,6 +30,45 @@ class ProofCheckerTests extends TacticTestBase {
     a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
   }
 
+  "[:*]" should "rename" in withMathematica { _ =>
+    val x = Variable("x")
+    val p = Equal(x, Number(0))
+    val M = BRandomI(x, QE(p, Hyp(0)))
+    val G = Context(List(p))
+    a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
+  }
+
+  "[:*]" should "remember other variables" in withMathematica { _ =>
+    val (x, y) = (Variable("x"), Variable("y"))
+    val (p1, p2, p3) = (Equal(x, Number(0)), Equal(y, Number(1)), GreaterEqual(Power(y, Number(2)), x))
+    val M = BRandomI(y, QE(p3, Hyp(1)))
+    val G = Context(List(p2, p1))
+    ProofChecker(G, M) shouldBe  Box(AssignAny(y), p3)
+  }
+
+  "<:*>" should "exist" in withMathematica { _ =>
+    val (x, y) = (Variable("x"), Variable("y"))
+    val a = Assign(x, Plus(y, Number(1)))
+    val M = DRandomI(a, QE(Greater(x, y), Hyp(0)))
+    ProofChecker(Context.empty, M) shouldBe Diamond(AssignAny(x), Greater(x, y))
+  }
+
+  "<:*>" should "ghost" in withMathematica { _ =>
+    val (x, y) = (Variable("x"), Variable("y"))
+    val (p1, p2) = (Equal(x, y), Greater(x, y))
+    val a = Assign(x, Plus(x, Number(1)))
+    val M = DRandomI(a, QE(p2, AndI(Hyp(0), Hyp(1))))
+    ProofChecker(Context(List(p1)), M) shouldBe Diamond(AssignAny(x), p2)
+  }
+
+  "<:*>" should "ban bad ghosts" in withMathematica { _ =>
+    val (x, x0, y) = (Variable("x"), Variable("x", Some(0)), Variable("y"))
+    val (p1, p2) = (Equal(x, y), GreaterEqual(x0, y))
+    val a1 = Assign(x, Plus(x, Number(1)))
+    val M = DRandomI(a1, QE(p2, AndI(Hyp(0), Hyp(1))))
+    a[ProofException] shouldBe thrownBy(ProofChecker(Context(List(p1)), M))
+  }
+
   "mon" should "simplify choices" in withMathematica { _ =>
     val (x, x0) = (Variable("x"), Variable("x", Some(0)))
     val (a1, a2) = (Assign(x, Plus(x, Number(1))), Assign(x, Minus(x, Number(1))))
@@ -304,4 +343,42 @@ class ProofCheckerTests extends TacticTestBase {
       EquivI(Equiv(p,q), ImplyE(Hyp(1),Hyp(0)), ImplyE(Hyp(2),Hyp(0)))) shouldBe Equiv(p,q)
   }
 
+  "forall" should "rename" in withMathematica { _ =>
+    val x = Variable("x")
+    val p = Equal(x, Number(0))
+    val M = ForallI(x, QE(p, Hyp(0)))
+    val G = Context(List(p))
+    a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
+  }
+
+  "forall" should "remember other variables" in withMathematica { _ =>
+    val (x, y) = (Variable("x"), Variable("y"))
+    val (p1, p2, p3) = (Equal(x, Number(0)), Equal(y, Number(1)), GreaterEqual(Power(y, Number(2)), x))
+    val M = ForallI(y, QE(p3, Hyp(1)))
+    val G = Context(List(p2, p1))
+    ProofChecker(G, M) shouldBe  Forall(List(y), p3)
+  }
+
+  "exists" should "exist" in withMathematica { _ =>
+    val (x, y) = (Variable("x"), Variable("y"))
+    val a = Assign(x, Plus(y, Number(1)))
+    val M = ExistsI(a, QE(Greater(x, y), Hyp(0)))
+    ProofChecker(Context.empty, M) shouldBe Exists(List(x), Greater(x, y))
+  }
+
+  "exists" should "ghost" in withMathematica { _ =>
+    val (x, y) = (Variable("x"), Variable("y"))
+    val (p1, p2) = (Equal(x, y), Greater(x, y))
+    val a = Assign(x, Plus(x, Number(1)))
+    val M = ExistsI(a, QE(p2, AndI(Hyp(0), Hyp(1))))
+    ProofChecker(Context(List(p1)), M) shouldBe Exists(List(x), p2)
+  }
+
+  "exists" should "ban bad ghosts" in withMathematica { _ =>
+    val (x, x0, y) = (Variable("x"), Variable("x", Some(0)), Variable("y"))
+    val (p1, p2) = (Equal(x, y), GreaterEqual(x0, y))
+    val a1 = Assign(x, Plus(x, Number(1)))
+    val M = DRandomI(a1, QE(p2, AndI(Hyp(0), Hyp(1))))
+    a[ProofException] shouldBe thrownBy(ProofChecker(Context(List(p1)), M))
+  }
 }
