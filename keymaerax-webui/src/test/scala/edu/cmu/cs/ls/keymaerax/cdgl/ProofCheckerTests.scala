@@ -30,6 +30,17 @@ class ProofCheckerTests extends TacticTestBase {
     a[ProofException] shouldBe thrownBy(ProofChecker(G, M))
   }
 
+  "mon" should "simplify choices" in withMathematica { _ =>
+    val (x, x0) = (Variable("x"), Variable("x", Some(0)))
+    val (a1, a2) = (Assign(x, Plus(x, Number(1))), Assign(x, Minus(x, Number(1))))
+    val a = Compose(a1, a2)
+    val (p1, p2) = (Equal(x, x0), Equal(x, Plus(x0, Number(1))))
+    val G = Context(List(p1))
+    val M = BComposeI(Mon(BAssignI(a1, QE(p2, AndI(Hyp(0), Hyp(1))))
+      , BAssignI(a2, QE(p1, AndI(Hyp(0), Hyp(1))))))
+    ProofChecker(G, M) shouldBe Box(a, p1)
+  }
+
   "DC+DW" should "solve double integrator" in withMathematica { _ =>
     val (x, v, a) = (Variable("x"), Variable("v"), Variable("a"))
     val j1 = GreaterEqual(v, Number(0))
