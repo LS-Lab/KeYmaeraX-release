@@ -193,11 +193,9 @@ class LocalLoginRequest(db: DBAbstraction, username: String, password: String) e
           case Some(user) =>
             val sessionToken = Some(SessionManager.add(user))
             new LoginResponse(true, user, sessionToken) :: Nil
-          case None => DefaultLoginErrorResponse("Unable to login user " + username
-            + ". Please double-check default user name in keymaerax.conf, or change keymaerax.conf to USE_DEFAULT_USER=ask and register a new user.") :: Nil
+          case None => DefaultLoginResponse(triggerRegistration = true) :: Nil
         }
-        case None => DefaultLoginErrorResponse("Unable to login user " + username
-          + ". Please double-check default user name in keymaerax.conf, or change keymaerax.conf to USE_DEFAULT_USER=ask and register a new user.") :: Nil
+        case None => DefaultLoginResponse(triggerRegistration = true) :: Nil
       }
     } else {
       val check = db.checkPassword(username, password)
@@ -1405,9 +1403,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
           val generator = new ConfigurableGenerator[GenProduct]()
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
             generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
-          val defsGenerator = new ConfigurableGenerator[Expression]()
           val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
-          problem.defs.substs.foreach(sp => defsGenerator.products += (sp.what -> (sp.repl::Nil)))
           session += proofId -> ProofSession(proofId, generator, problem.defs)
           TactixLibrary.invGenerator = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
@@ -2199,8 +2195,10 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(_) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
         val proofSession = session(proofId).asInstanceOf[ProofSession]
+        //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
         val tactic =
           if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
+          else if ("""US\([^)]*\)""".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
           else BelleParser.parseWithInvGen(t, None, proofSession.defs, expandAll = true) // backwards compatibility
 
         def atomic(name: String): String = {

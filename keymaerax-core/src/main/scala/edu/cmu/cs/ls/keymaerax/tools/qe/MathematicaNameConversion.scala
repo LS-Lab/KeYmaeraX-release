@@ -33,8 +33,8 @@ private[tools] object MathematicaNameConversion {
     */
   def toMathematica(ns: NamedSymbol): MExpr = {
     val name: String = ns match {
-      case Function(_, _, _, _, true) => throw new ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
-      case DifferentialSymbol(_) => throw new ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
+      case Function(_, _, _, _, true) => throw ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
+      case DifferentialSymbol(_) => throw ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ => maskName(ns)
     }
     MathematicaOpSpec.symbol(name)
@@ -101,8 +101,8 @@ private[tools] object MathematicaNameConversion {
 
     //@solution (name conflicts): symmetric name conversion in unmaskName, contract disjointNames in KeYmaeraToMathematica and MathematicaToKeYmaera
     ns match {
-      case Function(_, _, _, _, true) => throw new ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
-      case DifferentialSymbol(_) => throw new ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
+      case Function(_, _, _, _, true) => throw ConversionException("Name conversion of interpreted function symbols not allowed: " + ns.name)
+      case DifferentialSymbol(_) => throw ConversionException("Name conversion of differential symbols not allowed: " + ns.toString)
       case _ =>
         assert(ns.name.count(c => c == '_') <= 1, "At most one _ in names")
         val identifier = ns.name.replaceAllLiterally("_", UNDERSCORE_REPL)
@@ -133,6 +133,6 @@ private[tools] object MathematicaNameConversion {
           //@note not stripPrefix, it is .substring with a redundant .startsWith already guaranteed by .indexOf+.splitAt
           (name, Some(Integer.parseInt(index.substring(INDEX_SEP.length))))
       }
-    } else throw new ConversionException("Name conversion of unprefixed (" + NAMESPACE_PREFIX + ") names not allowed: " + uscoreMaskedName)
+    } else throw ConversionException("Name conversion of unprefixed (" + NAMESPACE_PREFIX + ") names not allowed: " + uscoreMaskedName)
   }
 }

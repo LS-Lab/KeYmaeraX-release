@@ -69,7 +69,7 @@ object Main {
         }
         val cmd = (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
           (if (args.map(_.stripPrefix("-")).intersect(KeYmaeraX.Modes.modes.toList).isEmpty) "-ui" :: Nil else Nil)
-        launcherLog("Restarting KeYmaera I with sufficient stack space\n" + cmd.mkString(" "))
+        launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
     } else if (args.contains("-ui")) {
