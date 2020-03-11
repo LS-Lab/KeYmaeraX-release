@@ -90,9 +90,16 @@ final case class Judgement(ante: Context, succ: Formula) {}
 
 /** An effectively-well-found convergence metric used for Angelic loop convergence reasoning <*> */
 sealed trait Metric {
-  /** @param xs Free variables of context, variant, and postcondition
+  /** Witness of admissibility */
+  def witness: Proof
+
+  /** @param fact Result of checking witness. */
+  def setFact(fact: Formula): Unit
+
+  /** @param boundTaboo bound variables of loop body
+    * @param freeTaboo Free variables of context, variant, and postcondition
     * @return true if metric is admissible */
-  def isAdmissible(xs: Set[Variable]): Boolean
+  def isAdmissible(boundTaboo: Set[Variable], freeTaboo: Set[Variable]): Boolean
 
   /** Formula which holds when the metric has converged */
   def isZero: Formula
@@ -110,15 +117,23 @@ sealed trait Metric {
 /** Constant metric requires real scalar term [[t]] to decrease by at least positive constant [[n]] each iteration, and
   * stores previous metric value in [[theGhost]].
   * Termination condition [[isZero]] is inequational because [[t]] is permitted to become negative */
-case class ConstantMetric(t: Term, n : Number, theGhost: Variable) extends Metric {
-  if (n.value <= 0) {
-    throw ProofException(s"Constant metric needs positive increment, got ${n.value}")
-  }
-  def isAdmissible(xs: Set[Variable]): Boolean = !xs.contains(theGhost)
+case class ConstantMetric(t: Term, theGhost: Variable, child: Proof) extends Metric {
+  var n: Option[Term] = None
+  def witness: Proof = child
+  def setFact(fact: Formula): Unit =
+    fact match {
+      case Greater(theN, nz : Number) =>
+        if(nz.value != 0)
+          throw ProofException("Metric witness conclusion must have shape k>0")
+        n = Some(theN)
+      case p => throw ProofException("Metric witness conclusion must have shape k>0")
+    }
+  def isAdmissible(boundTaboo: Set[Variable], freeTaboo: Set[Variable]): Boolean =
+    StaticSemantics(n.get).intersect(boundTaboo).isEmpty && !freeTaboo.contains(theGhost)
   def nonZero: Formula = Greater(t, Number(0))
   def isZero: Formula = LessEqual(t, Number(0))
-  def decreased: Formula = GreaterEqual(theGhost,Plus(t,n))
-  def ghost:Formula = Equal(theGhost, t)
+  def decreased: Formula = GreaterEqual(theGhost, Plus(t, n.get))
+  def ghost: Formula = Equal(theGhost, t)
 }
 
 /**
@@ -190,13 +205,13 @@ case class DComposeE(child: Proof) extends Proof {}
  * ----------------------------------------------
  * G |- injL[b](M): <a++b>P
  */
-case class DChoiceIL(child: Proof, other: Program) extends Proof {}
+case class DChoiceIL(other: Program, child: Proof) extends Proof {}
 
 /* G |- M: <b>P
  * ----------------------------------------------
  * G |- injR[a](M): <a++b>P
  */
-case class DChoiceIR(child: Proof, other: Program) extends Proof {}
+case class DChoiceIR(other: Program, child: Proof) extends Proof {}
 
 /* G |- A: <a++b>P   G, l: <a>P |- B: Q   G, r: <b>P |- C: Q
  * ----------------------------------------------
@@ -513,12 +528,8 @@ case class Mon(left: Proof, right: Proof, ys: Option[List[Variable]] = None) ext
  */
 case class QE(p: Formula, child: Proof) extends Proof {}
 
-/*           *
+/*           G |- k > 0
  * ------------------------------  (k > 0)
  * G |-  f > g \/ f < g + k
  */
-// @TODO: Generalize to terms k such that G |- k > 0
-case class ConstSplit(f: Term, g: Term, k: Number) extends Proof {
-  if(k.value <= 0)
-    throw ProofException(s"ConstSplit expects positive k, got ${k.value}")
-}
+case class Compare(f: Term, g: Term, kPos: Proof) extends Proof {}

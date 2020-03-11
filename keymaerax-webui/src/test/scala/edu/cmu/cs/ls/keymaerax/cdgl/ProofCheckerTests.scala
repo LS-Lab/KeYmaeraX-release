@@ -10,8 +10,6 @@ package edu.cmu.cs.ls.keymaerax.cdgl
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
 @UsualTest
@@ -257,7 +255,7 @@ class ProofCheckerTests extends TacticTestBase {
 
   "<*>I" should "induct" in withMathematica { _ =>
     val (x, y, mx) = (Variable("x"), Variable("y"), Variable("met"))
-    val metric = ConstantMetric(y, Number(1), mx)
+    val metric = ConstantMetric(y, mx, QE(GreaterEqual(Number(1), Number(0)), Triv()))
     val G = Context(List(Equal(x, Number(10)), Equal(y, Number(20))))
     val fx = Minus(x,Number(1))
     val fy = Minus(y,Number(2))
@@ -272,7 +270,7 @@ class ProofCheckerTests extends TacticTestBase {
         DAssignI(a1,
         DAssignI(a2,
           AndI(QE(j, AndI(AndI(AndI(Hyp(0),Hyp(1)), Hyp(2)),Hyp(3)))
-            ,OrE(ConstSplit(Variable("y",Some(0)), Number(1), Number(0.5)),
+            ,OrE(TermTactics.compareConstant(Variable("y",Some(0)), Number(1), Number(0.5)),
               // progress
                OrIR(metric.isZero, QE(metric.decreased, AndI(Hyp(1),Hyp(3))))
               // finish
@@ -285,7 +283,7 @@ class ProofCheckerTests extends TacticTestBase {
 
   "<*>I" should "reject ill-founded metric" in withMathematica { _ =>
     val (x, mx) = (Variable("x"), Variable("met"))
-    val metric = ConstantMetric(x, Number(1), mx)
+    val metric = ConstantMetric(x, mx, QE(Greater(Number(1), Number(0)), Triv()))
     val G = Context(List(Equal(x, Number(10))))
     val fx = Divide(x,Number(2))
     val a1 = Assign(x,fx)

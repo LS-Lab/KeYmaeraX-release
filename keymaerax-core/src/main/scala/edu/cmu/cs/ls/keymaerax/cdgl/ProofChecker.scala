@@ -296,9 +296,9 @@ object ProofChecker {
         val f1 = ren(f)
         val G1 = G.rename(x, y).extend(Equal(x, f1))
         val P = apply(G1, child)
-        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv + x).toSet
-        if (vars.contains(y)) {
-          throw ProofException(s"Ghost variable ${y} not fresh", G1)
+        val vars = (G.freevars ++ StaticSemantics(asgn).fv ++ StaticSemantics(P).fv).toSet
+        if (x != y && vars.contains(y)) {
+          throw ProofException(s"Ghost variable ${y} not fresh in <:=>I", G1)
         }
         Diamond(Assign(x, f), P)
       case DAssignE(child) =>
@@ -356,13 +356,13 @@ object ProofChecker {
           case Diamond(Compose(a, b), p) => Diamond(a, Diamond(b, p))
           case p => throw ProofException(s"Rule <;>E not applicable to subgoal $p", G)
         }
-      case DChoiceIL(child, b) =>
+      case DChoiceIL(b, child) =>
         apply(G, child) match {
           case Diamond(a, p) => Diamond(Choice(a, b), p)
           case p => throw ProofException(s"Rule <++>IL not applicable to subgoal $p", G)
         }
 
-      case DChoiceIR(child, a) =>
+      case DChoiceIR(a, child) =>
         apply(G, child) match {
           case Diamond(b, p) => Diamond(Choice(a, b), p)
           case p => throw ProofException(s"Rule <++>IR not applicable to subgoal $p", G)
@@ -391,6 +391,8 @@ object ProofChecker {
         }
       case DRepeatI(metric, init, step, post) =>
         val variant = apply(G, init)
+        val fact = apply(G, metric.witness)
+        metric.setFact(fact)
         apply(Context(List(And(metric.ghost, metric.nonZero), variant)), step) match {
           case Diamond(a, p2) =>
             val p3 = apply(Context(List(metric.isZero, variant)), post)
@@ -399,7 +401,7 @@ object ProofChecker {
               case (acc,f) => acc.++(StaticSemantics(f).fv)})
             if (p2 != expectedPost) {
               throw ProofException(s"Rule <*>I expected inductive step postcondition $expectedPost, got $p2", G)
-            } else if (!metric.isAdmissible(taboos.toSet)) {
+            } else if (!metric.isAdmissible(StaticSemantics(a).bv.toSet, taboos.toSet)) {
               throw ProofException(s"Metric $metric must be admissible in <*>I", G)
             }
             Diamond(Loop(a), p3)
@@ -527,9 +529,9 @@ object ProofChecker {
         val f1 = ren(f)
         val G1 = G.rename(x, y).extend(Equal(x, f1))
         val P = apply(G1, child)
-        val vars = (G.freevars ++ StaticSemantics(P).fv ++ StaticSemantics(asgn).fv + x).toSet
-        if (vars.contains(y)) {
-          throw ProofException(s"Ghost variable ${y} not fresh", G)
+        val vars = (G.freevars ++ StaticSemantics(asgn).fv ++ StaticSemantics(P).fv).toSet
+        if (x != y && vars.contains(y)) {
+          throw ProofException(s"Ghost variable ${y} not fresh in [:=]I", G)
         }
         Box(Assign(x, f), P)
       case BAssignE(child) =>
@@ -541,8 +543,8 @@ object ProofChecker {
       case BRandomI(x, child, yOpt) =>
         val y = ghostVar(yOpt, x, G.asList)
         val pp = apply(G.rename(x, y), child)
-        if (StaticSemantics(pp).fv.contains(y)) {
-          throw ProofException(s"Ghost variable ${y} not fresh in $pp in rule [: *]I", G)
+        if (y != x && StaticSemantics(pp).fv.contains(y)) {
+          throw ProofException(s"Ghost variable ${y} not fresh in $pp in rule [:*]I", G)
         }
         Box(AssignAny(x), pp)
       case BRandomE(child, f) =>
@@ -595,15 +597,15 @@ object ProofChecker {
         }
       case BRepeatI(pre, step, post, a1, ysOpt) =>
         val j1 = apply(G, pre)
-        val xs = StaticSemantics(a1).bv.toSet.toList
+        val xs = StaticSemantics(a1).bv.toSet.toList.filter(_.isInstanceOf[BaseVariable])
         val ys = ghostVars(ysOpt, xs, j1 :: a1 :: G.asList)
         val G1 = G.renames(xs, ys).extend(j1)
         apply(G1, step) match {
           case Box(a2, j2) =>
             if (a1 != a2) {
-              throw ProofException(s"Programs $a1 and $a2 in [*]I must be the same", G1)
+              throw ProofException(s"Expected program $a1 and actual $a2 in [*]I must be the same", G1)
             } else if (j1 != j2) {
-              throw ProofException(s"Invariants $j1 and $j2 in [*]I must be the same", G1)
+              throw ProofException(s"Base case invariant $j1 and inductive step invariant $j2 in [*]I must be the same", G1)
             }
             val pp = apply(G1, post)
             if (!StaticSemantics(pp).fv.intersect(ys.toSet).isEmpty) {
@@ -637,7 +639,7 @@ object ProofChecker {
         val sOld = ghostVar(None, s, t :: tOld :: G.asList)
         val t0 = if (t == tOld) Number(0) else tOld
         val xs = StaticSemantics(ode).bv.toSet.toList.filter({case _ : BaseVariable => true case _ => false}: (Variable => Boolean))
-        val ys = ghostVars(ysOpt, xs, List(ode))
+        val ys = ghostVars(ysOpt, xs, ode :: G.asList)
         val xys = (if (t == tOld) Nil else List((t, tOld))) ++ (if (s == sOld) Nil else List((s, sOld))) ++ xs.zip(ys)
         val sols = solve(t, xys, ode)
         val g = xys.foldLeft(G)({case (acc, (x, y)) => acc.rename(x, y)})
@@ -649,7 +651,9 @@ object ProofChecker {
         if (sub != p) {
           throw ProofException(s"['] with postcondition $post expected subgoal postcondition $sub, got $p", G1)
         }
-        if (!StaticSemantics(post).fv.intersect(ys.toSet.+(tOld).+(sOld).+(s)).isEmpty) {
+        val free = StaticSemantics(post).fv
+        val taboos = ys.toSet.+(tOld).+(sOld).+(s)
+        if (!free.intersect(taboos).isEmpty) {
           throw ProofException(s"['] ghost variables must be fresh in postcondition $post", G1)
         }
         Box(ode, post)
@@ -849,7 +853,15 @@ object ProofChecker {
         } else {
           throw ProofException(s"QE formula ${Imply(p, q)} not valid", G)
         }
-      case ConstSplit(f: Term, g: Term, k: Number) => Or(Greater(f,g),Less(f,Plus(g,k)))
+      case Compare (f: Term, g: Term, child: Proof) =>
+        apply(G, child) match {
+          case Greater(k, n: Number) =>
+            if (n.value != 0) {
+              throw ProofException(s"Compare expects subgoal k > 0, got k > $n", G)
+            }
+            Or(Greater(f,g),Less(f,Plus(g,k)))
+          case p =>throw ProofException(s"Compare expects subgoal k > 0, got $p", G)
+        }
     }
   }
 }
