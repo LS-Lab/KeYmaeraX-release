@@ -75,12 +75,17 @@ FormatDDC[p_, branches_List]:=Module[{},
 
 
 FormatTriv[reason_Integer]:=Module[{ilist},
-(* The master list of reasons *)
+(* The master list of reasons
+	======= WARNING =======
+	REMEMBER TO PUT COMMAS AFTER EACH ENTRY OR YOU WILL END UP WITH WEIRD ERRORS.
+	ALSO MAKE SURE TO PROPAGATE ORDER CHANGES THROUGHOUT PEGASUS
+	======= WARNING =======
+*)
 ilist={
 	Symbol["PreInv"], (* 1: precondition already invariant *)
 	Symbol["PostInv"], (* 2: postcondition already invariant *)
 	Symbol["PreDomFalse"], (* 3: precondition & domain implies False (subsubmed in 1, but can be more specific where possible) *)
-	Symbol["DomImpPost"]   (* 4: domain implies postcondition immediately *)
+	Symbol["DomImpPost"],   (* 4: domain implies postcondition immediately *)
 	Symbol["PreNoImpPost"] (* 5: precondition does not imply postcondition, so problem is trivially false *)
 };
 If[Length[ilist]<reason || reason <=0,

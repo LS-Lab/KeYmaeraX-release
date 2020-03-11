@@ -9,6 +9,7 @@ Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifi
 Needs["LZZ`",FileNameJoin[{Directory[],"Primitives","LZZ.m"}]] (* LZZ *)
 Needs["DiffSaturation`",FileNameJoin[{Directory[],"Strategies","DiffSaturation.m"}]] (* Diff Sat *)
 Needs["Helper`",FileNameJoin[{Directory[],"Strategies","Helper.m"}]] (* Diff Sat *)
+Needs["Format`",FileNameJoin[{Directory[],"Strategies","Format.m"}]] (* Formatting *)
 
 
 BeginPackage["Pegasus`"];
@@ -69,18 +70,15 @@ constvars lists parameters for the problem and constQ are
 constvars and constQ are automatically generated if not present";
 
 If[Length[prob]!=3 && Length[prob]!=4,
-	Print[ERRSTR];
-	Throw[DiffSaturation`FormatResult[False,{},False]]
+	Throw[Format`FormatErr[ERRSTR]]
 	];
 
 If[Length[prob[[2]]]!=3,
-	Print[ERRSTR];
-	Throw[DiffSaturation`FormatResult[False,{},False]]
+	Throw[Format`FormatErr[ERRSTR]]
 	];
 
 If[Length[prob[[2]][[1]]]!=Length[prob[[2]][[2]]]||Length[prob[[2]]]==0,
-	Print[ERRSTR];
-	Throw[DiffSaturation`FormatResult[False,{},False]]
+	Throw[Format`FormatErr[ERRSTR]]
 	];
 
 If[Length[prob]==3,
@@ -97,7 +95,7 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
   preImpliesPost=Primitives`CheckSemiAlgInclusion[And[pre,constQ,evoConst], post, Join[constvars,vars]];
   If[ Not[TrueQ[preImpliesPost]], 
     Print["Precondition does not even imply postcondition! Nothing to do."];
-	Throw[DiffSaturation`FormatResult[False,{},False]], 
+	Throw[Format`FormatTriv[5]], 
     Print["Precondition implies postcondition. Proceeding."]
     ];
 
@@ -105,7 +103,7 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
   postInvariant=LZZ`InvSFast[post, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[postInvariant], 
     Print["Postcondition is an invariant! Nothing to do."];
-	Throw[DiffSaturation`FormatResult[post,{ {post,Symbol["Unkown"]} },True]],  
+	Throw[Format`FormatTriv[2]],
     Print["Postcondition is (probably) not an invariant. Inv check gave: ", postInvariant,". Proceeding."]
     ];
 
@@ -113,7 +111,7 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
   preInvariant=LZZ`InvSFast[pre, Join[f,Table[0,{i,Length[constvars]}]] , Join[vars,constvars], And[evoConst,constQ]];
   If[ TrueQ[preInvariant], 
     Print["Precondition is an invariant! Nothing to do."];
-	Throw[DiffSaturation`FormatResult[pre,{ {pre,Symbol["Unkown"]} },True]],  
+	Throw[Format`FormatTriv[1]],
     Print["Precondition is (probably) not an invariant. Inv check gave: ",preInvariant,". Proceeding."]];
 ], OptionValue[InvGen,SanityCheckTimeout]]];
 
