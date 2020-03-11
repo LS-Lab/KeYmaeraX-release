@@ -51,7 +51,8 @@ If[OptionValue[HeuInvariants, Timeout] > 0,
 TimeConstrained[Block[{},
 polys = DeleteDuplicates[Join[
 	QualAbsPolynomials`SummandFactors[problem],
-	QualAbsPolynomials`SFactorList[problem]
+	QualAbsPolynomials`SFactorList[problem],
+	QualAbsPolynomials`ProblemFactors[problem]
 	(*,
 	QualAbsPolynomials`ProblemFactorsWithLie[problem],
 	QualAbsPolynomials`PhysicalQuantities[problem],

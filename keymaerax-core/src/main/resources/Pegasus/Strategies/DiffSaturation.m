@@ -48,12 +48,19 @@ cutlist[[added]]
 ]
 
 
+FullSimplifyReals[fml_]:=Module[{vars,varsreals},
+vars = Cases[fml,_Symbol,Infinity];
+varsreals=Map[# \[Element] Reals&,vars];
+FullSimplify[fml,varsreals]
+]
+
+
 DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 {pre,f,vars,evoConst,post,preImpliesPost,
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 polyList,invlist,cuts,cutlist,strat,hint,
 curproblem,subproblem,deps,curdep,timeoutmultiplier,
-constvars,constasms,invs,timingList},
+constvars,constasms,invs,timingList,curvars},
 
 (* Bring symbolic parameters into the dynamics *)
 Print["Input Problem: ", problem];
@@ -68,7 +75,7 @@ strategies = {
 (* TODO: explicitly use the constvars and constasms below!! *)
 { pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
 
-post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
+post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
 Print["Postcondition (simplify): ", post];
 If[TrueQ[post],
 	Print["Postcondition trivally implied by domain constraint. Returning."];
@@ -93,7 +100,8 @@ Do[
 Print["Trying strategy: ",ToString[strat]," ",hint];
 
 curproblem = {pre,{f,vars,evoConst},post};
-subproblem = Dependency`FilterVars[curproblem, Join[curdep,constvars]];
+curvars=Join[curdep,constvars];
+subproblem = Dependency`FilterVars[curproblem, curvars];
 
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
@@ -111,7 +119,7 @@ AppendTo[timingList,Symbol[ToString[strat]]->timedInvs[[1]]];
 invs=timedInvs[[2]];
 
 (* Simplify invariant w.r.t. the domain constraint *)
-cuts=Map[Assuming[And[evoConst,constasms], FullSimplify[#, Reals]]&, invs];
+cuts=Map[Assuming[And[evoConst,constasms], FullSimplifyReals[#]]&, invs];
 
 inv=cuts//.{List->And};
 
@@ -128,7 +136,7 @@ If[TrueQ[inv], (*Print["Skipped"]*),
 	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
 	evoConst=And[evoConst,inv]];
 
-post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
+post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 
