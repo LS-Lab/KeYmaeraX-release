@@ -80,7 +80,8 @@ ilist={
 	Symbol["PreInv"], (* 1: precondition already invariant *)
 	Symbol["PostInv"], (* 2: postcondition already invariant *)
 	Symbol["PreDomFalse"], (* 3: precondition & domain implies False (subsubmed in 1, but can be more specific where possible) *)
-	Symbol["PreNoImpPost"] (* 4: precondition does not imply postcondition, so problem is trivially false *)
+	Symbol["DomImpPost"]   (* 4: domain implies postcondition immediately *)
+	Symbol["PreNoImpPost"] (* 5: precondition does not imply postcondition, so problem is trivially false *)
 };
 If[Length[ilist]<reason || reason <=0,
 	Return[FormatErr["Incorrect index to FormatTriv (expected 1 <= reason <= " <> ToString[Length[ilist]], True]]];

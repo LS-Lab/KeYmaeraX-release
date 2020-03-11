@@ -8,6 +8,7 @@
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 Needs["Dependency`",FileNameJoin[{Directory[],"Primitives","Dependency.m"}]]
 Needs["GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
+Needs["Format`",FileNameJoin[{Directory[],"Strategies","Format.m"}]]
 
 
 BeginPackage["DiffSaturation`"];
@@ -19,31 +20,8 @@ StrategyTimeout controls how each sub-strategy call takes *)
 DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem";
 Options[DiffSat]= {UseDependencies -> True,StrategyTimeout->Infinity, MinimizeCuts->True};
 
-FormatResult::usage="FormatResult[inv,cuts,proved]
-	Formats the result in diff sat result into the right format.
-	inv = the generated invariant,
-	cuts = list of cuts building that invariant,
-	timings = list of time measurements for executing parts of this strategy,
-	proved = whether this invariant proves the given problem."
-
 
 Begin["`Private`"]
-
-
-FormatResult[inv_, cuts_List, timings_List, proved_]:=Module[{formatcuts},
-formatcuts = Map[ {#[[1]], Symbol["Hint"] -> #[[2]]} & ,cuts];
-{
-	Symbol["ResultType"] -> Symbol["DiffSat"],
-	Symbol["Result"] -> {
-		Symbol["Invariant"] -> inv,
-		Symbol["Cuts"] -> formatcuts,
-		Symbol["Proved"] -> proved
-	},
-	Symbol["Meta"] -> {
-		Symbol["Timing"] -> timings
-	}
-}
-]
 
 
 ReduceCuts[cutlist_List, problem_]:=Module[{pre,f,vars,evoConst,post,constvars,constasms,i,added,rest,cuts},
@@ -94,7 +72,7 @@ post=Assuming[And[evoConst,constasms], FullSimplify[post, Reals]];
 Print["Postcondition (simplify): ", post];
 If[TrueQ[post],
 	Print["Postcondition trivally implied by domain constraint. Returning."];
-	Throw[FormatResult[True, {}, {}, True]]
+	Throw[Format`FormatTriv[4]]
 	];
 
 deps=If[OptionValue[DiffSat,UseDependencies],
@@ -142,7 +120,8 @@ Print["Extracted (simplified) invariant(s): ", inv];
 (* Needs something like this?
  ecvoConst=And[evoConst,inv[[1]]]; *)
 (* Implementation sanity check *)
-If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
+If[Not[ListQ[cuts]],
+	Throw[Format`FormatErr["DiffSat did not produce a list of cuts: "<>ToString[cuts],True]]];
 
 If[TrueQ[inv], (*Print["Skipped"]*),
 	invlist=And[invlist,inv];
@@ -167,13 +146,13 @@ If[TrueQ[invImpliesPost],
 		cutlist=timedCutlist[[2]];
 		invlist=Map[#[[1]]&,cutlist]/.List->And;
 		];
-	Throw[FormatResult[invlist, cutlist, timingList, True]]
+	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]]
 ]
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
 
 (* Throw whatever invariant was last computed *)
-Throw[FormatResult[invlist, cutlist, timingList, False]];
+Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]];
 ]]
 
 
