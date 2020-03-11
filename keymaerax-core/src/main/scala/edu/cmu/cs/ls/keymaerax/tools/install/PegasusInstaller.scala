@@ -44,6 +44,7 @@ object PegasusInstaller extends Logging {
         "Primitives/TransitionRelation.m" ::
         "Strategies/DarbouxDDC.m" ::
         "Strategies/DiffSaturation.m" ::
+        "Strategies/Format.m" ::
         "Strategies/Generic.m" ::
         "Strategies/GenericNonLinear.m" ::
         "Strategies/Helper.m" ::
