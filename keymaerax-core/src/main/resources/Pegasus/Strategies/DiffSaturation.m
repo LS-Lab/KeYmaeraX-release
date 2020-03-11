@@ -93,7 +93,7 @@ Do[
 Print["Trying strategy: ",ToString[strat]," ",hint];
 
 curproblem = {pre,{f,vars,evoConst},post};
-subproblem = Dependency`FilterVars[curproblem,curdep];
+subproblem = Dependency`FilterVars[curproblem, Join[curdep,constvars]];
 
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
