@@ -86,7 +86,8 @@ ConstTerm[P_]:=ConstTerm[P,Variables[P]]
 
 
 (* Lie derivative of P w.r.t. ODEs *)
-Lf[P_,vf_List,vars_List] := Grad[P,vars].vf;
+Lf[P_,vf_List,vars_List,domain_] := FullSimplify[Grad[P,vars].vf, And[domain, Map[#\[Element]Reals&,vars/.{List->And}]]];
+Lf[P_,vf_List,vars_List] := Lf[P,vf,vars,True];
 
 
 (* Upper, lower and nearest rational bounds of a number, nearest 10^-precision *)
