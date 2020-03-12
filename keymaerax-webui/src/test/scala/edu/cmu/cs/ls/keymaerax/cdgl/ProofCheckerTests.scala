@@ -255,7 +255,8 @@ class ProofCheckerTests extends TacticTestBase {
 
   "<*>I" should "induct" in withMathematica { _ =>
     val (x, y, mx) = (Variable("x"), Variable("y"), Variable("met"))
-    val metric = ConstantMetric(y, mx, QE(GreaterEqual(Number(1), Number(0)), Triv()))
+    val metric = ConstantMetric(y, mx, QE(Greater(Number(1), Number(0)), Triv()))
+    metric.setFact(Greater(Number(1), Number(0)))
     val G = Context(List(Equal(x, Number(10)), Equal(y, Number(20))))
     val fx = Minus(x,Number(1))
     val fy = Minus(y,Number(2))
@@ -284,6 +285,7 @@ class ProofCheckerTests extends TacticTestBase {
   "<*>I" should "reject ill-founded metric" in withMathematica { _ =>
     val (x, mx) = (Variable("x"), Variable("met"))
     val metric = ConstantMetric(x, mx, QE(Greater(Number(1), Number(0)), Triv()))
+    metric.setFact(Greater(Number(1), Number(0)))
     val G = Context(List(Equal(x, Number(10))))
     val fx = Divide(x,Number(2))
     val a1 = Assign(x,fx)
