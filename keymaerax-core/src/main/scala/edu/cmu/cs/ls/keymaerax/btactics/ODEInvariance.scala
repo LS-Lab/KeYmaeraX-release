@@ -1656,7 +1656,7 @@ object ODEInvariance {
 
   private lazy val trichotomy = remember("f_()=0 | (f_() > 0 | f_() < 0)".asFormula, QE, namespace)
 
-  def diffDivConquer(p : Term) : DependentPositionTactic = "diffDivConquer" by ((pos:Position,seq:Sequent) => {
+  def diffDivConquer(p : Term, cofactor : Option[Term] = None) : DependentPositionTactic = "diffDivConquer" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "DDC only applicable in top-level succedent")
 
     val (ode,dom,post) = seq.sub(pos) match {
@@ -1665,16 +1665,20 @@ object ODEInvariance {
     }
 
     val zero = Number(0)
+    val dbx = cofactor match {
+      case None => dgDbxAuto(pos)
+      case Some(cof) => dgDbx(cof)(pos)
+    }
 
     cutR(Or(Equal(p,zero),Or(Greater(p,zero),Less(p,zero))))(pos) <(
       cohideR(pos) &byUS(trichotomy),
       implyR(pos) & orL('Llast) <(
         /* p = 0*/
-        dC(Equal(p,zero))(pos) <(skip, dgDbxAuto(pos)),
+        dC(Equal(p,zero))(pos) <(skip, dbx),
         /* p > 0 | p < 0 */
         orL('Llast) <(
-          dC(Greater(p,zero))(pos) <(skip, dgDbxAuto(pos)),
-          dC(Less(p,zero))(pos) <(skip, dgDbxAuto(pos))
+          dC(Greater(p,zero))(pos) <(skip, dbx),
+          dC(Less(p,zero))(pos) <(skip, dbx)
         )
       )
     )

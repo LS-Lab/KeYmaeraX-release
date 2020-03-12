@@ -623,5 +623,27 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "try boundness" in withQE { _ =>
+    val fml = "a*r^2+b*r+c = 0 & (v-r=0 | v-r < 0 & a*v0^2+b*v0+c > 0 | a*v0^2+b*v0+c < 0 & v-r > 0 ) & v=v0 -> [{v' = a*v^2+b*v+c}] v^2 <= v0^2+r^2".asFormula
+    val pr = proveBy(fml,
+      implyR(1) & cut("\\exists d \\exists e \\forall v a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula) <(
+        existsL('Llast) & existsL('Llast) &
+        dC("a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula)(1) <(
+          ODEInvariance.diffDivConquer("v-r".asTerm, Some("d*v+e".asTerm))(1)
+          <(
+            dW(1) & QE,
+            // Should just do DDC manually to avoid this cut
+            cut("a*v0^2+b*v0+c < 0".asFormula) <( dC("v<=v0".asFormula)(1) <(dW(1) & QE, ODE(1)), cohideOnlyR(2) & QE),
+            cut("a*v0^2+b*v0+c > 0".asFormula) <( dC("v>=v0".asFormula)(1) <(dW(1) & QE, ODE(1)), cohideOnlyR(2) & QE),
+          )
+          , ODE(1)
+        ),
+        cohideOnlyR(2) & QE
+      )
+    )
+
+    println(pr)
+  }
+
 
 }
