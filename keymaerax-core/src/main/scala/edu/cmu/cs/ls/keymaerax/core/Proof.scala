@@ -738,7 +738,7 @@ object Provable {
     * Schema returns two Provables, one for each direction of the differential ghost axiom.
     * This reduces duplication of code constructing the ghost vectors.
     * {{{
-    *   [{c{|y_|},y_'=g(||)&q(|y_|)}] (||y_||^2)' <= a(|y_|) ||y_||^2 + b(|y_|)
+    *   [{c{|y_|},y_'=g(||)&q(|y_|)}] (||y_||^2) <= f(|y_|)
     *   -> ( [{c{|y_|},y_'=g(||)&q(|y_|)}]p(|y_|) -> [{c{|y_|}&q(|y_|)}]p(|y_|) )
     *
     *   [{c{|y_|}&q(|y_|)}]p(|y_|) -> [{c{|y_|},y_'=g(||)&q(|y_|)}]p(|y_|)
@@ -768,14 +768,14 @@ object Provable {
 
     // The squared norm of the vector ||y__1, y__2, ..., y__dim||^2
     val sqnorm = ghosts.tail.foldLeft( Times(ghosts.head,ghosts.head):Term)( (f,e) => Plus(f, Times(e,e)))
-    val cofA = UnitFunctional("a_",Except(ghosts),Real)
-    val cofB = UnitFunctional("b_",Except(ghosts),Real)
-    // The norm bound required of the ghost ODEs (||y_||^2)' <= a(|y_|)||y_||^2 + b(|y_|)
-    val normBound = LessEqual( Differential(sqnorm) , Plus(Times(cofA,sqnorm), cofB) )
+    // The bounding term f(|y__1,y__2,...,y__dim|)^2
+    val cofF = UnitFunctional("f_",Except(ghosts),Real)
+    // The norm bound required of the ghost ODEs (||y_||^2) <= f(|y_|)
+    val normBound = LessEqual(sqnorm,cofF)
 
     val DGimply =
       Imply(
-      // [{c{|y_|},y_'=g(||)&q(|y_|)}] (||y_||^2)' <= a(|y_|) ||y_||^2 + b(|y_|) ->
+      // [{c{|y_|},y_'=g(||)&q(|y_|)}] (||y_||^2)' <= f(|y_|) ->
       Box(ODESystem(extODE,domain),normBound),
       // [{c{|y_|},y_'=g(||)&q(|y_|)}]p(|y_|) -> [{c{|y_|}&q(|y_|)}]p(|y_|)
       Imply(Box(ODESystem(extODE,domain),post), Box(ODESystem(baseODE,domain),post))
