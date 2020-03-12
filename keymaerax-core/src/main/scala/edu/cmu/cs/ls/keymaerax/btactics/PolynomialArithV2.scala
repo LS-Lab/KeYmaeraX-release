@@ -88,7 +88,9 @@ object PolynomialArithV2 {
     }
   }
 
-  def impliesElim(PsQ: ProvableSig, Ps: Seq[ProvableSig]) : ProvableSig = {
+  def impliesElim(PsQ: ProvableSig, Ps: Seq[ProvableSig]) : ProvableSig =
+  if (Ps.length == 0) PsQ
+  else {
     val conj = Ps.map(P => P.conclusion.succ(0)).reduceRight(And)
     val conjPrv = Ps.dropRight(1).foldLeft(ProvableSig.startProof(conj)){(prv, P) =>
       prv(AndRight(SuccPos(0)), 0)(P, 0)
@@ -410,7 +412,29 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
   val timesBranch3 = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_()*u_() + u_()*v1_() + m_()*u_() + u_()*v2_() + r_()*u_() = sum_()) ->" +
     "t_() * u_() = sum_()").asFormula, QE & done)
 
-
+  // Lemmas for Power
+  lazy val powerZero = rememberAny(("1 = one_() -> t_() ^ 0 = one_()").asFormula, QE & done)
+  lazy val powerOne = rememberAny(("t_() = s_() -> t_() ^ 1 = s_()").asFormula, QE & done)
+  val powerEven = rememberAny(("((n_() = 2*m_() <-> true) & t_()^m_() = p_() & p_()*p_() = r_()) ->" +
+    "t_() ^ n_() = r_()").asFormula,
+    implyR(1) & andL(-1) & andL(-2) &
+      useAt(DerivedAxioms.equivTrue, PosInExpr(0::Nil))(-1) &
+      eqL2R(-1)(1) & hideL(-1) &
+      cutR("t_() ^ (2*m_()) = (t_()^m_())^2".asFormula)(1) & Idioms.<(
+      QE & done,
+      implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
+    )
+  )
+  val powerOdd = rememberAny(("((n_() = 2*m_() + 1 <-> true) & t_()^m_() = p_() & p_()*p_()*t_() = r_()) ->" +
+    "t_() ^ n_() = r_()").asFormula,
+    implyR(1) & andL(-1) & andL(-2) &
+      useAt(DerivedAxioms.equivTrue, PosInExpr(0::Nil))(-1) &
+      eqL2R(-1)(1) & hideL(-1) &
+      cutR("t_() ^ (2*m_() + 1) = (t_()^m_())^2*t_()".asFormula)(1) & Idioms.<(
+      QE & done,
+      implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
+    )
+  )
 
   /**
     * 2-3 Tree for monomials, keeping track of proofs.
@@ -679,6 +703,35 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
         sum.updatePrv(newPrv)
     }
 
+    def ^(n: Int) : Polynomial = n match {
+      case 0 =>
+        One.updatePrv(useDirectly(powerZero, IndexedSeq(("t_", lhs), ("one_", One.rhs)), Seq(One.prv)))
+      case 1 =>
+        this.updatePrv(useDirectly(powerOne, IndexedSeq(("t_", lhs), ("s_", rhs)), Seq(prv)))
+      case n =>
+        if (n >= 0) {
+          if (n % 2 == 0) {
+            val m = n / 2
+            val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
+            val p = this^(m)
+            val r = p.forgetPrv*p.forgetPrv
+            val newPrv = useDirectly(powerEven,
+              Seq(("n_", Number(n)), ("m_", Number(m)), ("t_", lhs), ("p_", p.rhs), ("r_", r.rhs)),
+              Seq(mPrv, p.prv, r.prv))
+            r.updatePrv(newPrv)
+          } else {
+            val m = n / 2
+            val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
+            val p = this^(m)
+            val r = p.forgetPrv*p.forgetPrv*this
+            val newPrv = useDirectly(powerOdd,
+              Seq(("n_", Number(n)), ("m_", Number(m)), ("t_", lhs), ("p_", p.rhs), ("r_", r.rhs)),
+              Seq(mPrv, p.prv, r.prv))
+            r.updatePrv(newPrv)
+          }
+        } else throw new IllegalArgumentException("negative power unsupported by PolynomialArithV2")
+    }
+
   }
 
   val varLemmas = (0 until vars.length).map(i => proveBy(Equal(Power(vars(i), "i_()".asTerm),
@@ -704,6 +757,8 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       Some(rationalLemma(substAny("n_", Number(num))++substAny("d_", Number(denum)))))
   def Const(num: BigDecimal) : Polynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), (0 until vars.length).map(_ => 0), None), Empty(None),
     Some(constLemma(substAny("n_", Number(num)))))
+
+  val One : Polynomial = Const(1)
 
   case class Empty(prvO: Option[ProvableSig]) extends Polynomial {
     val defaultPrv = zez

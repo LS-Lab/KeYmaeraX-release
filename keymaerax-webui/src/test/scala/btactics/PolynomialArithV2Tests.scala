@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.SlowTest
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
 
 import scala.collection.immutable._
@@ -198,6 +199,20 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val res = (x(1) + x(2) + y(1) + y(2) + y(3)) * m
     res.prv.conclusion.succ(0) shouldBe ("(x^1+x^2+y^1+y^2+y^3)*(3/4*(x^1*y^2*f()^3*1))=" +
       "0+3/4*(x^3*y^2*f()^3*1)+0+3/4*(x^2*y^2*f()^3*1)+(0+3/4*(x^1*y^5*f()^3*1)+0)+3/4*(x^1*y^4*f()^3*1)+(0+3/4*(x^1*y^3*f()^3*1)+0)").asFormula
+  }
+
+  it should "power" in withMathematica { _ =>
+    import pa4._
+    val x = Var(0, 1)
+    val y = Var(1, 1)
+    val pp = new KeYmaeraXPrettierPrinter(100)
+    ((x + y)^0).rhs shouldBe "0+1/1*(1*1*1*1)+0".asTerm
+    ((x + y)^1).rhs shouldBe "0+1/1*(x^1*1*1*1)+0+1/1*(1*y^1*1*1)+0".asTerm
+    ((x + y)^2).rhs shouldBe "0+1/1*(x^2*1*1*1)+0+2/1*(x^1*y^1*1*1)+(0+1/1*(1*y^2*1*1)+0)".asTerm
+    ((x + y)^3).rhs shouldBe "0+1/1*(x^3*1*1*1)+0+3/1*(x^2*y^1*1*1)+(0+3/1*(x^1*y^2*1*1)+0+1/1*(1*y^3*1*1)+0)".asTerm
+    ((x + y)^4).rhs shouldBe "0+1/1*(x^4*1*1*1)+0+4/1*(x^3*y^1*1*1)+(0+6/1*(x^2*y^2*1*1)+0)+4/1*(x^1*y^3*1*1)+(0+1/1*(1*y^4*1*1)+0)".asTerm
+    ((x + y)^5).rhs shouldBe "0+1/1*(x^5*1*1*1)+0+5/1*(x^4*y^1*1*1)+(0+10/1*(x^3*y^2*1*1)+0)+10/1*(x^2*y^3*1*1)+(0+5/1*(x^1*y^4*1*1)+0+1/1*(1*y^5*1*1)+0)".asTerm
+    ((x + y)^6).rhs shouldBe "0+1/1*(x^6*1*1*1)+0+6/1*(x^5*y^1*1*1)+(0+15/1*(x^4*y^2*1*1)+0)+20/1*(x^3*y^3*1*1)+(0+15/1*(x^2*y^4*1*1)+0+6/1*(x^1*y^5*1*1)+(0+1/1*(1*y^6*1*1)+0))".asTerm
   }
 
   it should "work with many variables" in withMathematica { _ =>
