@@ -118,13 +118,8 @@ class ExampleGameTests extends TacticTestBase {
 
   // @TODO: Implement modular arithmetic and implement Nim example
   "nim" should "be safe" in withMathematica { _ =>
-
   }
 
   it should "be live" in withMathematica { _ =>
-
   }
-
-
-
 }

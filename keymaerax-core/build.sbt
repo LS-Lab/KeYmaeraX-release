@@ -29,6 +29,8 @@ libraryDependencies += "io.spray" %% "spray-json" % "1.3.4"
 
 libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
 
+libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
+
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////
