@@ -12,7 +12,8 @@ Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m
 Needs["QualAbsPolynomials`",FileNameJoin[{Directory[],"Primitives","QualAbsPolynomials.m"}]]
 Needs["DarbouxDDC`",FileNameJoin[{Directory[],"Strategies","DarbouxDDC.m"}]]
 Needs["InvariantExtractor`",FileNameJoin[{Directory[],"Strategies","InvariantExtractor.m"}]]
-Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]] 
+Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]]
+Needs["PreservedState`",FileNameJoin[{Directory[],"Primitives","PreservedState.m"}]]
 
 
 BeginPackage[ "GenericNonLinear`"];
@@ -22,6 +23,8 @@ BeginPackage[ "GenericNonLinear`"];
 SummandFacts::usage="SummandFactors[problem_List]";
 *)
 
+(* Returns invariants generated from pre *)
+PreservedState::usage="PreservedState[problem_List]";
 (* Returns invariants generated using first integrals *)
 FirstIntegrals::usage="FirstIntegrals[problem_List,degree]";
 (* Returns invariants generated using Darboux polynomials *)
@@ -35,6 +38,7 @@ BarrierCert::usage="BarrierCert[problem_List]";
 	Deg \[Rule] -1 means run with default heuristic for choosing the degree
 	The default values are configured assuming a 2 minute timeout
 *)
+Options[PreservedState]= {Timeout -> 10};
 Options[HeuInvariants]= {Timeout -> 20};
 Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
 Options[DbxPoly]= {Deg -> -1, Timeout -> 40};
@@ -43,6 +47,19 @@ Options[BarrierCert]= {Deg -> -1, Timeout -> Infinity};
 
 Begin["`Private`"];
 
+
+PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
+	{pre, { vf, vars, Q }, post} = problem;
+	If[OptionValue[PreservedState, Timeout] > 0,
+		TimeConstrained[Block[{},
+			polys = DeleteDuplicates[
+				PreservedState`PreservedPre[vf,vars,pre,Q]
+			];
+			InvariantExtractor`DWC[problem,polys,{}][[2]]
+		], OptionValue[PreservedState,Timeout],
+			{}],
+		Print["PreservedState skipped."]; {}]
+]
 
 HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
 {pre, { vf, vars, Q }, post} = problem;

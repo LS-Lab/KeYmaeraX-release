@@ -35,6 +35,9 @@ IsRealPolynomial::usage="IsRealPolynomial[poly] Returns true if poly is in R[x] 
 IsRatPolynomial::usage="IsRatPolynomial[poly] Returns true if poly is in R[x] with rational coefficients"
 IsConcretePolynomial::usage="IsConcretePolynomial[poly, vars] returns true if the variables of poly are a subset of vars and false otherwise";
 
+Conjuncts::usage="Conjuncts[formula] returns the conjuncts of the formula, or the formula itself if it is atomic."
+GtGeqLhs::usage="GtGeqLhs[formula] returns the left-hand side lhs of formulas lhs>0 or lhs>=0."
+
 CheckSemiAlgInclusion::usage="CheckSemiAlgInclusion[s_,t_,vars_List] checks if t implies s universally on vars"
 
 InstantiateParameters::usage="InstantiateParameters[poly,vars,val] instantiates any symbolic parameter in a polynomial (not in vars) to val"
@@ -67,6 +70,15 @@ IsConcretePolynomial[poly_,vars_List]:=Module[{pvars=Variables[poly]},
   SubsetQ[vars,pvars]
 ]
 
+Conjuncts[formula_] := Module[{}, formula /. {
+  And[a_, b_] :>
+      Join[{Conjuncts[a]} // Flatten, {Conjuncts[b]} // Flatten]
+}]
+
+GtGeqLhs[formula_] := Module[{}, formula /. {
+  Greater[a_, 0] :> a,
+  GreaterEqual[a_, 0] :> a
+}]
 
 (* Instantiating symbolic parameters in polynomials *)
 InstantiateParameters[poly_,vars_List,val_]:=poly/.Map[Rule[#, val]&,Complement[Variables[poly],vars] ]
