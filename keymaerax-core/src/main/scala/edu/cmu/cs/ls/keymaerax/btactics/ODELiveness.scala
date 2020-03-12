@@ -437,27 +437,36 @@ object ODELiveness {
 
     val vdgpre = getVDGinst(ode)._1
     val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
-
     // the concrete vdg instance
     val vdg = vdgpre(vdgsubst)
-
     val vdgasm = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
 
+    val ddgpre = getDDGinst(ode)
+    val ddgsubst = UnificationMatch(ddgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
+    // the concrete ddg instance
+    val ddg = ddgpre(ddgsubst)
+    val ddgasm = ddg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get
+
+
     // check for an assumption in the context
-    val ind = seq.ante.indexWhere( f => UnificationMatch.unifiable(vdgasm,f).isDefined )
+    val ind = seq.ante.toStream.map( f =>
+      UnificationMatch.unifiable(vdgasm,f) match {
+        case None => (UnificationMatch.unifiable(ddgasm, f),false)
+        case Some(res) => (Some(res),true)
+      }
+    ).collectFirst { case (Some(p),b) => (p,b) }
 
-    if(ind == -1) {
-      if (strict) throw new BelleThrowable("odeReduce failed to autoremove: " + ode + ". Try to add an assumption of this form to the antecedents: " + vdgasm)
-      else skip
-    }
-    else {
-      val unif = UnificationMatch(vdgasm,seq.ante(ind)).usubst
-      val finalrw = vdg(unif)
-      val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
+    ind match {
+      case None =>
+        if (strict) throw new BelleThrowable("odeReduce failed to autoremove: " + ode + ". Try to add an assumption to the antecedents of either this form: " + vdgasm +" or this form: " + ddgasm)
+        else skip
+      case Some((unif,b)) =>
+        val finalrw = if(b) vdg(unif.usubst) else ddg(unif.usubst)
+        val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
 
-      cutL(concl)(pos) <( cont,
-        cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & closeId
-      )
+        cutL(concl)(pos) <( cont,
+          cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & closeId
+        )
     }
   })
 

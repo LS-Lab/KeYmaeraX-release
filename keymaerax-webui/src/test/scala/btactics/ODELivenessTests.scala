@@ -159,12 +159,19 @@ class ODELivenessTests extends TacticTestBase {
         println(e.getMessage)
         true
         // it should have this error:
-        //"because odeReduce failed to autoremove: {d'=d^2+f}. Try to add an assumption of this form to the antecedents: [{d'=d^2+f,f'=f,e'=5&e<=5}]d*d<=f_(|d|)"
+        //"because odeReduce failed to autoremove: {d'=d^2+f}. Try to add an assumption to the antecedents of either this form: [{d'=d^2+f,f'=f,e'=5&e<=5}]d*d<=f_(|d|) or this form: [{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=a_(|y_,z_,d|)*(d*d)+b_(|y_,z_,d|)"
     }
   }
 
-  // todo: support different assumption format
-  it should "continue using assms" in withQE { _ =>
+  it should "continue using assms (format 1)" in withQE { _ =>
+    val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] d*d <= f*e ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
+
+    val pr = proveBy(seq, odeReduce(strict = true)(1))
+    pr.subgoals.length shouldBe 1
+    pr.subgoals(0) shouldBe "[{d'=d^2+f,f'=f,e'=5&e<=5}]d*d<=f*e  ==>  <{e'=5&e<=5}>e<=5".asSequent
+  }
+
+  it should "continue using assms (format 2)" in withQE { _ =>
     val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] 2*(d*(d^2+f)) <= 1*(d*d)+5 ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 
     val pr = proveBy(seq, odeReduce(strict = true)(1))
