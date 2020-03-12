@@ -14,10 +14,25 @@ import scala.collection.immutable.Nil
 class ODELivenessTests extends TacticTestBase {
 
   //todo: move
-  "vdg" should "unify ODEs correctly" in withQE { _ =>
+  "vdg" should "return raw VDGs" in withQE { _ =>
+    val ax = (1 to 4).map(Provable.vectorialDG)
+    println(ax)
+
+    ax(0)._1.conclusion shouldBe "==> [{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]y__1*y__1<=f_(|y__1|)->[{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]p(|y__1|)->[{c{|y__1|}&q(|y__1|)}]p(|y__1|)".asSequent
+    ax(0)._2.conclusion shouldBe "==> [{c{|y__1|}&q(|y__1|)}]p(|y__1|)->[{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]p(|y__1|)".asSequent
+    //TODO: write some additional tests when parsing for list taboos is supported
+  }
+
+  it should "return raw DDGs" in withMathematica { _ =>
+    val ax = (1 to 1).map(getDDG)
+    println(ax)
+    //TODO: write some additional tests when parsing for list taboos is supported
+  }
+
+  it should "unify ODEs correctly" in withQE { _ =>
       val ax = ElidingProvable(Provable.vectorialDG(2)._1)
       val pr = proveBy(
-        ("[{y'=z,z'=-y,x'=1 & x <= 5}](y*y+z*z)' <= x*(y*y+z*z) + x^2 ->" +
+        ("[{y'=z,z'=-y,x'=1 & x <= 5}](y*y+z*z) <= x^2 ->" +
           "([{x'=1 & x <= 5}]x >= 5 <- [{y'=z,z'=-y,x'=1 & x <= 5}]x>=5)").asFormula,
         byUS(ax)
       )
@@ -28,6 +43,27 @@ class ODELivenessTests extends TacticTestBase {
   it should "correctly prove affine norm bound" in withQE { _ =>
     val affnorm = (1 to 4).map(ODEInvariance.affine_norm_bound)
     affnorm.exists(_.isProved == false) shouldBe false
+  }
+
+  it should "get instantiated vdg" in withQE { _ =>
+    val vdginst = getVDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
+    println(vdginst)
+
+    //todo: parsing support
+    // vdginst._1 shouldBe 'proved
+    // vdginst._1.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]v*v+z*z<=f_(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
+
+    // vdginst._2 shouldBe 'proved
+    // vdginst._2.conclusion shouldBe "==> [{c{|v,z|}&q(|v,z|)}]p(|v,z|)->[{v'=v^2+z,z'=v*y+z,c{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
+  }
+
+  it should "get instantiated ddg" in withQE { _ =>
+    val ddginst = getDDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
+    println(ddginst)
+
+    //todo: parsing support
+    // ddginst shouldBe 'proved
+    // ddginst.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]2*(v*(v^2+z)+z*(v*y+z))<=a_(|y_,z_,v,z|)*(v*v+z*z)+b_(|y_,z_,v,z|)->[{v'=v^2+z,z'=v*y+z,c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)->[{c{|y_,z_,v,z|}&q(|y_,z_,v,z|)}]p(|y_,z_,v,z|)".asSequent
   }
 
   it should "vDG on left and right of sequent" in withQE { _ =>
@@ -45,18 +81,6 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals.length shouldBe 1
     pr.subgoals(0) shouldBe
     "[{a'=a^2+b^3+x+y+100,z'=100&true}]z=1, <{b'=a*b+b*a+1,c'=b+c,a'=x+y+z&true}>a=1 ==> <{z'=z^100*y,y'=z*y^2,x'=1&true}>1+1=3, [{z'=y*a*z+a+b+w,w'=w+z,y'=2&true}]1+1=0".asSequent
-  }
-
-  it should "get instantiated vdg" in withQE { _ =>
-    val vdginst = getVDGinst("v'=v^2+z,z'=v*y+z".asDifferentialProgram)
-    println(vdginst)
-
-    //todo: parsing support
-    //vdginst._1 shouldBe 'proved
-    //vdginst._1.conclusion shouldBe "==> [{v'=v^2+z,z'=v*y+z,dummy_{|v,z|}&q(|v,z|)}]2*(v*(v^2+z)+z*(v*y+z))<=a_(|v,z|)*(v*v+z*z)+b_(|v,z|)->[{v'=v^2+z,z'=v*y+z,dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)->[{dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
-
-    //vdginst._2 shouldBe 'proved
-    //vdginst._2.conclusion shouldBe "==> [{dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)->[{v'=v^2+z,z'=v*y+z,dummy_{|v,z|}&q(|v,z|)}]p(|v,z|)".asSequent
   }
 
   "GEx" should "identity affine form for an ODE" in withQE { _ =>
@@ -135,10 +159,11 @@ class ODELivenessTests extends TacticTestBase {
         println(e.getMessage)
         true
         // it should have this error:
-        //"because odeReduce failed to autoremove: {d'=d^2+f}. Try to add an assumption of this form to the antecedents: [{d'=d^2+f,f'=f,e'=5&e<=5}]2*(d*(d^2+f))<=a_(|d|)*(d*d)+b_(|d|)"
+        //"because odeReduce failed to autoremove: {d'=d^2+f}. Try to add an assumption of this form to the antecedents: [{d'=d^2+f,f'=f,e'=5&e<=5}]d*d<=f_(|d|)"
     }
   }
 
+  // todo: support different assumption format
   it should "continue using assms" in withQE { _ =>
     val seq = "[{d'=d^2+f,f'=f,e'=5&e<=5}] 2*(d*(d^2+f)) <= 1*(d*d)+5 ==> <{a'=b,b'=c,c'=d,d'=d^2+f,f'=f,e'=5 & e <= 5}> e<= 5".asSequent
 

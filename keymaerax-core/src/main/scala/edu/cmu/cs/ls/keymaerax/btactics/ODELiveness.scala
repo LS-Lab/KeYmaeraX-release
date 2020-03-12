@@ -74,27 +74,142 @@ object ODELiveness {
     (amat,bvec,lhsvar)
   }
 
-  // helper that simplifies the precondition of vdg
-  private def simplifyPre(pr : ProvableSig, bnd : Term) : ProvableSig = {
-    val seq = pr.conclusion
-    val left = seq.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
-    val right = seq.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
-
-    val leftnew = left.replaceAt(PosInExpr(1::0::Nil), bnd)
-
-    proveBy( Imply(leftnew,right),
-      implyR(1) & cutR(left)(1) <(
-        implyRi & useAt(ineqLem,PosInExpr(1::Nil))(1) &
-          DifferentialTactics.Dconstify(
-            derive(1, PosInExpr(1 :: 1:: Nil)) &
-              DESystemCustom(1) & G(1) & DassignbCustom(1) & QE
-          )(1)
+  // Versions of scalar DG that drop quantifiers for ease of substitution
+  // todo: these should probably be the core statement of the axiom rather than splitting into two each time.
+  private lazy val dgb =
+    remember("[{c{|y_|}&q(|y_|)}]p(|y_|) <-> [{c{|y_|},y_'=a(|y_|)*y_+b(|y_|)&q(|y_|)}]p(|y_|)".asFormula,
+      equivR(1) <(
+        useAt("DG inverse differential ghost",PosInExpr(0::Nil))(-1) &
+          useAt(", commute")(-1, 0::Nil) & implyRi &
+          byUS("all eliminate y")
         ,
-        cohideR(1) & by(pr)
-      ))
+        useAt("DG differential ghost",PosInExpr(0::Nil))(1) &
+          useAt("exists eliminate y",PosInExpr(1::Nil))(1) & closeId
+      ),
+      namespace
+    )
+
+  private lazy val dgd =
+    remember("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> <{c{|y_|},y_'=a(|y_|)*y_+b(|y_|)&q(|y_|)}>p(|y_|)".asFormula,
+      equivR(1) <(
+        useAt("<> diamond",PosInExpr(1::Nil))(1) &
+          useAt("<> diamond",PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & commuteEquivR(1) & byUS(dgb),
+        useAt("<> diamond",PosInExpr(1::Nil))(1) &
+          useAt("<> diamond",PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & byUS(dgb),
+      ),
+      namespace
+    )
+
+  private lazy val getDDGhelperLemma =
+    remember("[a_{|^@|};]d(||)=a(||)*z(||)+b(||) -> [a_{|^@|};]c(||) <= a(||)*f(||)+b(||) -> [a_{|^@|};]d(||)-c(||)>=a(||)*(z(||)-f(||))".asFormula,
+    implyR(1) & implyR(1) & andLi & useAt("[] split", PosInExpr(1::Nil))(-1) &
+      monb & andL(-1) & implyRi()(AntePosition(2),SuccPosition(1)) & implyRi &
+      byUS(proveBy("d()=a()*z()+b()->c()<=a()*f()+b()->d()-c()>=a()*(z()-f())".asFormula,QE)),
+      namespace
+    )
+
+  // Turns a raw vectorial (bounded) DG instance into a raw DDG instance
+  def getDDG(dim : Int) : ProvableSig = {
+
+    // Note: because we need to "free up" one ghost variable, this duplicates a lot of core functionality
+    val ghostvar = BaseVariable("z_")
+
+    // Also need to "free up" the ghost variable used by dbx internally..
+    val dbxghostvar = BaseVariable("y_")
+
+    // The list of variables y__1, y__2, ..., y__dim
+    val ghosts = (1 to dim).map( i => BaseVariable("y_", Some(i)))
+    // The list of RHS g1(||), g2(||), ..., gdim(||)
+    // @todo: UnitFunctionals may need an index argument
+    val ghostRHSs = (1 to dim).map( i => UnitFunctional("g"+i,Except(dbxghostvar::ghostvar::Nil),Real))
+    // The list ghost ODEs y__1'=g1(||), y__2'=g2(||), ..., y__dim'=gdim(||)
+    val ghostODEList = (ghosts zip ghostRHSs).map{ case (y,rhs) => AtomicODE(DifferentialSymbol(y), rhs) }
+    // The list of ghost ODEs as a single ODE
+    val ghostODEs = ghostODEList.reduce(DifferentialProduct.apply)
+
+    // The base ODE c{|y_|}
+    val baseODE = DifferentialProgramConst("c",Except(dbxghostvar +: ghostvar +: ghosts))
+    // The base ODE extended with ghost ODEs
+    val extODE = DifferentialProduct(ghostODEs,baseODE)
+    val domain = UnitPredicational("q",Except(dbxghostvar +: ghostvar +: ghosts))
+    val post = UnitPredicational("p",Except(dbxghostvar +: ghostvar +: ghosts))
+
+    // The squared norm of the vector ||y__1, y__2, ..., y__dim||^2
+    val sqnorm = ghosts.tail.foldLeft( Times(ghosts.head,ghosts.head):Term)( (f,e) => Plus(f, Times(e,e)))
+    val cofA = UnitFunctional("a_",Except(dbxghostvar +: ghostvar +: ghosts),Real)
+    val cofB = UnitFunctional("b_",Except(dbxghostvar +: ghostvar +: ghosts),Real)
+    val cofF = UnitFunctional("f_",Except(ghosts),Real)
+    // The norm bound required of the ghost ODEs (||y_||^2)' <= a(|y_|)||y_||^2 + b(|y_|)
+    val normBound = LessEqual( Differential(sqnorm) , Plus(Times(cofA,sqnorm), cofB) )
+
+    val DDGimply =
+      Imply(
+        // [{c{|y_|},y_'=g(||)&q(|y_|)}] (||y_||^2)' <= f(|y_|) ->
+        Box(ODESystem(extODE,domain),normBound),
+        // [{c{|y_|},y_'=g(||)&q(|y_|)}]p(|y_|) -> [{c{|y_|}&q(|y_|)}]p(|y_|)
+        Imply(Box(ODESystem(extODE,domain),post), Box(ODESystem(baseODE,domain),post))
+      )
+
+    val unifA = UnificationMatch.unifiable("a(|z_|) + b(|z_|)".asTerm, Plus(cofA,cofB)).get.usubst
+    // The extra urename frees up y_
+    val dgbU = dgb.fact(URename(dbxghostvar,ghostvar,semantic=true))(unifA)
+
+    val vdgrawimply = ElidingProvable(Provable.vectorialDG(dim)._1)
+    val unifB = UnificationMatch.unifiable(cofF, ghostvar).get.usubst
+    val vdg = vdgrawimply(unifB)
+    // Turn c{|y_1,...y_n|} into c{|y_1,...,y_n|}
+
+    // y > ||y_||^2 greater makes it easier to use with dbxgt
+    val inv = Greater(Minus(ghostvar,sqnorm),Number(0))
+
+    //g(|y_|) is the cofactor from darbouxGt
+    val unifC = UnificationMatch.unifiable("g(|y_|)".asTerm, cofA).get.usubst
+    val dbx = DerivedAxioms.darbouxGt.fact(unifC)
+
+    val unifD = UnificationMatch.unifiable("c".asDifferentialProgram,extODE).get.usubst
+    val commute = ElidingProvable(Provable.axioms(", commute")(unifD))
+
+    //TODO: change to "remember" when parsing is supported
+    val pr = proveBy(Imply(inv,DDGimply),
+      implyR(1) &
+        implyR(1) &
+        useAt(dgbU)(-2) &
+        useAt(dgbU)(1,0::Nil) &
+        useAt(dgbU)(1,1::Nil) &
+        useAt(vdg,PosInExpr(1::Nil))(1) &
+        generalize(inv)(1) <(
+          implyRi & useAt(dbx,PosInExpr(1::Nil))(1) &
+          useAt("-' derive minus")(1,1::0::Nil) &
+          implyRi &
+          useAt(getDDGhelperLemma,PosInExpr(1::Nil))(1) &
+          useAt("x' derive var")(1,1::0::Nil) &
+          useAt(commute,PosInExpr(0::Nil))(1) &
+          useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
+          G(1) & DassignbCustom(1) &
+          byUS("= reflexive")
+        ,
+        QE))
+    //, namespace).fact
+
+    val pr2 = proveBy(DDGimply,
+      cut(Exists(ghostvar::Nil,inv)) <(
+        skip,
+        cohideR(2) & QE
+      )
+    )
+
+    //existsL does something crazy, so explicitly call Skolemize instead
+    val pr3 = proveBy(pr2(Skolemize(AntePos(0)), 0),
+      implyRi & byUS(pr))
+
+    pr3
   }
 
-  // Helper that gets the appropriate VDG instance (already instantiated for the ghosts by renaming and friends)
+  /** Helper that gets the appropriate VDG instance (already instantiated for the ghosts and ODE by renaming and friends)
+    *
+    * @param ghostODEs the ghost ODEs
+    * @return both directions of VDG instantiated for the ghost ODEs (everything else is left uninstantiated)
+    */
   def getVDGinst(ghostODEs:DifferentialProgram) : (ProvableSig, ProvableSig) = {
 
     val odels = DifferentialProduct.listify(ghostODEs).map {
@@ -114,25 +229,80 @@ object ODELiveness {
 
     // Now do the substitution part
     val odeimplyren = vdgimplyren.conclusion.succ(0).sub(PosInExpr(0::0::0::Nil)).get
-    val unif = UnificationMatch.unifiable(odeimplyren, DifferentialProduct(ghostODEs,DifferentialProgramConst("dummy_",Except(lhs)))).get
+    val unif = UnificationMatch.unifiable(odeimplyren, DifferentialProduct(ghostODEs, DifferentialProgramConst("c",Except(lhs)))).get
 
     val resimply = vdgimplyren(unif.usubst)
     val resylpmi = vdgylpmiren(unif.usubst)
 
+    (ElidingProvable(resimply), ElidingProvable(resylpmi))
+  }
+
+  /** Helper that gets the appropriate DDG instance (already instantiated for the ghosts by renaming and friends)
+    * This helps simplify the (y^2)' term away
+    *
+    * @param ghostODEs the ghosts to add to the ODE
+    * @return DDG instantiated for the particular boxode question
+    */
+  def getDDGinst(ghostODEs:DifferentialProgram) : ProvableSig = {
+
+    val odels = DifferentialProduct.listify(ghostODEs).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => throw new IllegalArgumentException("list of ghost ODEs should all be atomic, found: "+ghostODEs)
+    }
+    val ghostlist = DifferentialProduct.listify(ghostODEs)
+    val dim = ghostlist.length
+    val ddgraw = getDDG(dim)
+
+    // @TODO: this very manually applies the uniform renaming part, since it's not automated elsewhere yet (?)
+    // would also be much cleaner if one could access the renaming part more easily.
+    val ghosts = (1 to dim).map( i => BaseVariable("y_", Some(i)))
+    val lhs = odels.map(_._1.x)  // variables in the ODE
+    val ddgren = (lhs zip ghosts).foldLeft(ddgraw)( (acc,bv) => acc(URename(bv._1,bv._2,semantic=true)) )
+
+    // Now do the substitution part
+    val oderen = ddgren.conclusion.succ(0).sub(PosInExpr(1::0::0::0::Nil)).get
+    val boxren = ddgren.conclusion.succ(0).sub(PosInExpr(1::1::1::Nil)).get
+    val unif = UnificationMatch.unifiable(oderen, DifferentialProduct(ghostODEs, DifferentialProgramConst("c",Except("y_".asVariable +: "z_".asVariable +: lhs)))).get.usubst
+
+    val res = ddgren(unif)
+
     // (||y||^2)' = 2y.g(x,yy)
     val bnd = Times(Number(2), odels.map(ve => Times(ve._1.x,ve._2)).reduce(Plus.apply))
 
-    (simplifyPre(ElidingProvable(resimply),bnd), ElidingProvable(resylpmi))
+    val concl = res.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
+    val pre = res.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
+
+    simplifyPre(res,bnd, dim)
   }
 
-  /** Repeated use of DE system */
+  // helper that simplifies the precondition of ddg
+  private def simplifyPre(pr : ProvableSig, bnd : Term, length : Int) : ProvableSig = {
+    val seq = pr.conclusion
+    val left = seq.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
+    val right = seq.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
+
+    val leftnew = left.replaceAt(PosInExpr(1::0::Nil), bnd)
+
+    proveBy( Imply(leftnew,right),
+      implyR(1) & cutR(left)(1) <(
+        implyRi & useAt(ineqLem,PosInExpr(1::Nil))(1) &
+          DifferentialTactics.Dconstify(
+            derive(1, PosInExpr(1 :: 1:: Nil)) &
+            (DESystemCustom(1) * length) & G(1) & DassignbCustom(1) & QE
+          )(1)
+        ,
+        cohideR(1) & by(pr)
+      ))
+  }
+
+  /** Single use of DE system */
   //todo: copied and tweaked from DifferentialTactics
   private lazy val DESystemCustom: DependentPositionTactic = new DependentPositionTactic("DE system step") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) => {
           val ax = Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,x,semantic=true))
-          useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos) & DESystemCustom(pos)
+          useAt(ElidingProvable(ax), PosInExpr(0::Nil))(pos)
         }
         case _ => skip
       }
@@ -154,7 +324,7 @@ object ODELiveness {
   }
 
   // returns the diff ghost instantiated and discharged
-  private def affineVDGprecond(ghostODEs:DifferentialProgram) : ProvableSig = {
+  private def affineVDGprecond(ghostODEs:DifferentialProgram, boxode:Formula=True) : ProvableSig = {
 
     //@note: throws IllegalArgumentException if affine form fails
     val (a,b,x) = affine_form(ghostODEs)
@@ -178,17 +348,17 @@ object ODELiveness {
     // lipsM should always be 1 thanks to the way affine_norm_bound is proved
     val lipsM = bound.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get
 
-    val vdgpre = getVDGinst(ghostODEs)._1
+    val ddgpre = getDDGinst(ghostODEs)
 
-    val lipsLsub = vdgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::0::0::Nil)).get
-    val lipsMsub = vdgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::1::Nil)).get
+    val lipsLsub = ddgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::0::0::Nil)).get
+    val lipsMsub = ddgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::1::Nil)).get
 
     val lipsLunif = UnificationMatch.unifiable(lipsLsub,lipsL).get.usubst
     val lipsMunif = UnificationMatch.unifiable(lipsMsub,lipsM).get.usubst
-    val vdg = (vdgpre(lipsLunif))(lipsMunif)
+    val ddg = (ddgpre(lipsLunif))(lipsMunif)
 
-    val goal = vdg.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
-    val pre = vdg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
+    val goal = ddg.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
+    val pre = ddg.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Formula]
 
     val pr = proveBy(goal,
       cutR(pre)(1)
@@ -197,7 +367,7 @@ object ODELiveness {
           by(bound),
           useAt(ineqLem1,PosInExpr(1::Nil))(1) & QE
         ) ,
-        by(vdg)
+        by(ddg)
       ))
 
     pr
@@ -924,6 +1094,7 @@ object ODELiveness {
         hideL('Llast) & skip , compatCuts(pos) & hideL('Llast) )
     )
   })
+
 
 
 }
