@@ -17,9 +17,14 @@ import org.scalatest.LoneElement._
 class PolynomialArithV2Tests extends TacticTestBase {
 
   lazy val pa4 = new PolynomialArithV2("x,y,f(),g()".split(',').map(_.asTerm).toIndexedSeq)
+  lazy val pa20 = new PolynomialArithV2("x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19".split(',').map(_.asTerm).toIndexedSeq)
 
   "Initialization" should "initialize four Variables" in withMathematica { _ =>
     pa4
+  }
+
+  "it" should "initialize twenty Variables" in withMathematica { _ =>
+    pa20
   }
 
   "Coefficient" should "construct" in withMathematica { _ =>
@@ -195,6 +200,17 @@ class PolynomialArithV2Tests extends TacticTestBase {
       "0+3/4*(x^3*y^2*f()^3*1)+0+3/4*(x^2*y^2*f()^3*1)+(0+3/4*(x^1*y^5*f()^3*1)+0)+3/4*(x^1*y^4*f()^3*1)+(0+3/4*(x^1*y^3*f()^3*1)+0)").asFormula
   }
 
+  it should "work with many variables" in withMathematica { _ =>
+    import pa20._
+    def x(i: Int, p: Int) = Var(i, p)
+    val a = (Const(3)*x(19, 2) + Const(5)*x(0, 4) + x(1, 2) + Const(123)*x(10, 3))*(x(17, 1) + x(5, 2) + x(15, 7))
+    val b = (x(17, 2) + x(0, 3)*x(15, 4))*(x(0, 1)*x(15,3) + x(3, 2) + x(1, 8))
+    println(a.treeSketch)
+    println(b.treeSketch)
+    println((a+b).treeSketch)
+
+  }
+
   var time = System.nanoTime()
   def tic() = {
     time = System.nanoTime()
@@ -219,6 +235,9 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
       if(!skipPA1) {
         PolynomialArith.normalise(res.lhs, false)
+        toc("  Time for PolynomialArith(skip_proofs=false)")
+        PolynomialArith.normalise(res.lhs, false)
+        toc("  Time for PolynomialArith(skip_proofs=false)")
       }
       toc("  Time for PolynomialArith(skipped)          ")
 
