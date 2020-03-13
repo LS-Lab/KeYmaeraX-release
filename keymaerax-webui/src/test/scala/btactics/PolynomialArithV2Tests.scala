@@ -247,8 +247,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     def x(i: Int, p: Int) = Var(i, p)
     val a = (Const(3)*x(19, 2) + Const(5)*x(0, 4) + x(1, 2) + Const(123)*x(10, 3))*(x(17, 1) + x(5, 2) + x(15, 7))
     val b = (x(17, 2) + x(0, 3)*x(15, 4))*(x(0, 1)*x(15,3) + x(3, 2) + x(1, 8))
-    a.treeSketch shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, [., -x^1, .]]]".asTerm
-    b.treeSketch shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, {., x^1, ., -y^1, .}]]".asTerm
+    a.treeSketch shouldBe "{[[., 5 x0^4 x5^2, .], 5 x0^4 x15^7, [., 5 x0^4 x17^1, .]], x1^2 x5^2, [[., x1^2 x15^7, .], x1^2 x17^1, [., 123 x5^2 x10^3, .]], 3 x5^2 x19^2, [[., 123 x10^3 x15^7, .], 123 x10^3 x17^1, {., 3 x15^7 x19^2, ., 3 x17^1 x19^2, .}]}"
+    b.treeSketch shouldBe "{[., x0^4 x15^7, .], x0^3 x1^8 x15^4, [., x0^3 x3^2 x15^4, .], x0^1 x15^3 x17^2, {., x1^8 x17^2, ., x3^2 x17^2, .}}"
   }
 
   var time = System.nanoTime()

@@ -428,6 +428,9 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
   val minusBranch3 = rememberAny(("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() - l_() - v1_() - m_() - v2_() - r_() = sum_()) ->" +
     "t_() - s_() = sum_()").asFormula, QE & done)
 
+  // Lemmas for Minus Monomial
+  val plusMinus = rememberAny("t_() + (-x_()) = s_() -> t_() - x_() = s_()".asFormula, QE & done)
+
   // Lemmas for Times Monomial
   val monTimesZero = rememberAny("t_() = 0 -> t_() * x_() = 0".asFormula, QE & done)
   val monTimesBranch2 = rememberAny(
@@ -640,7 +643,6 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       case Sprout(s) => s
     }
 
-    val plusMinus = rememberAny("t_() + (-x_()) = s_() -> t_() - x_() = s_()".asFormula, QE & done)
     def -(m: Monomial) : Polynomial = {
       val res = this + (-(m.forgetPrv))
       res.updatePrv(useDirectly(plusMinus, Seq(("t_", lhs), ("x_", m.lhs), ("s_", res.rhs)), Seq(res.prv)))
