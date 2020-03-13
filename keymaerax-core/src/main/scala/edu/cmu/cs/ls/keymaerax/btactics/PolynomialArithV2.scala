@@ -292,7 +292,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
 
     def powersString: String = {
       val sep = " " // nicer than "*" ?
-      (if (coeff.num.compareTo(1) == 0 && coeff.denum.compareTo(1) == 0) ""
+      (if (coeff.num.compareTo(1) == 0 && coeff.denum.compareTo(1) == 0 && powers.exists(_ > 0)) ""
         else if (coeff.num.compareTo(-1) == 0 && coeff.denum.compareTo(1) == 0) "-"
         else coeff.rhsString + sep) +
         (0 until vars.length).flatMap(i => if (powers(i)>0) Some(Power(vars(i), Number(powers(i)))) else None).mkString(sep)

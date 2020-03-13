@@ -215,13 +215,13 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val x = Var(0, 1)
     val y = Var(1, 1)
     val pp = new KeYmaeraXPrettierPrinter(100)
-    ((x + y)^0).rhs shouldBe "0+1/1*(1*1*1*1)+0".asTerm
-    ((x + y)^1).rhs shouldBe "0+1/1*(x^1*1*1*1)+0+1/1*(1*y^1*1*1)+0".asTerm
-    ((x + y)^2).rhs shouldBe "0+1/1*(x^2*1*1*1)+0+2/1*(x^1*y^1*1*1)+(0+1/1*(1*y^2*1*1)+0)".asTerm
-    ((x + y)^3).rhs shouldBe "0+1/1*(x^3*1*1*1)+0+3/1*(x^2*y^1*1*1)+(0+3/1*(x^1*y^2*1*1)+0+1/1*(1*y^3*1*1)+0)".asTerm
-    ((x + y)^4).rhs shouldBe "0+1/1*(x^4*1*1*1)+0+4/1*(x^3*y^1*1*1)+(0+6/1*(x^2*y^2*1*1)+0)+4/1*(x^1*y^3*1*1)+(0+1/1*(1*y^4*1*1)+0)".asTerm
-    ((x + y)^5).rhs shouldBe "0+1/1*(x^5*1*1*1)+0+5/1*(x^4*y^1*1*1)+(0+10/1*(x^3*y^2*1*1)+0)+10/1*(x^2*y^3*1*1)+(0+5/1*(x^1*y^4*1*1)+0+1/1*(1*y^5*1*1)+0)".asTerm
-    ((x + y)^6).rhs shouldBe "0+1/1*(x^6*1*1*1)+0+6/1*(x^5*y^1*1*1)+(0+15/1*(x^4*y^2*1*1)+0)+20/1*(x^3*y^3*1*1)+(0+15/1*(x^2*y^4*1*1)+0+6/1*(x^1*y^5*1*1)+(0+1/1*(1*y^6*1*1)+0))".asTerm
+    ((x + y)^0).treeSketch shouldBe "[., 1 , .]"
+    ((x + y)^1).treeSketch shouldBe "{., x^1, ., y^1, .}"
+    ((x + y)^2).treeSketch shouldBe "[[., x^2, .], 2 x^1 y^1, [., y^2, .]]"
+    ((x + y)^3).treeSketch shouldBe "[[., x^3, .], 3 x^2 y^1, {., 3 x^1 y^2, ., y^3, .}]"
+    ((x + y)^4).treeSketch shouldBe "{[., x^4, .], 4 x^3 y^1, [., 6 x^2 y^2, .], 4 x^1 y^3, [., y^4, .]}"
+    ((x + y)^5).treeSketch shouldBe "{[., x^5, .], 5 x^4 y^1, [., 10 x^3 y^2, .], 10 x^2 y^3, {., 5 x^1 y^4, ., y^5, .}}"
+    ((x + y)^6).treeSketch shouldBe "[[[., x^6, .], 6 x^5 y^1, [., 15 x^4 y^2, .]], 20 x^3 y^3, [[., 15 x^2 y^4, .], 6 x^1 y^5, [., y^6, .]]]"
   }
 
   it should "negate" in withMathematica { _ =>
