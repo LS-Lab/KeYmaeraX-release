@@ -12,19 +12,28 @@ A naive implementation for selecting invariants from the pre state conditions of
 Begin["`Private`"];
 
 PreservedPre[vf_List, vars_List, pre_, domain_] :=
-    Module[{normalized, conjuncts, preserved, polys},
-     normalized = Primitives`CNFNormalizeGtGeq[pre];
-     conjuncts = Primitives`Conjuncts[pre];
+    Module[{normalized, disjuncts, conjunctLists, conjuncts, preserved, polys, poly},
+     (*pre is in disjunctive normal form, see Dependency`FilterVars*)
+     disjuncts = Primitives`Disjuncts[pre];
+     disjuncts = If[ListQ[disjuncts], disjuncts, { disjuncts }];
+     conjunctLists = Map[Primitives`Conjuncts, disjuncts];
+     Print["Filtering conjuncts ", conjunctLists];
      preserved = {};
-     Do[If[TrueQ[TimeConstrained[LZZ`InvSFast[f, vf, vars, domain], 1, False]],
-       AppendTo[preserved, f], Null], {f, conjuncts}];
-     (*Scan[If[
-      TimeConstrained[LZZ`InvSFast[#, vf, vars, domain], 1, False],
-      AppendTo[preserved, #], Null] &, normalized];*)
-     (*Extracting left-hand sides since invariant extractor expects polynomials, not formulas*)
-     polys = Map[Primitives`GtGeqLhs,preserved];
-     (*TODO: Filter duplicate left-hand sides due to equalities*)
-     Return[polys]
+     Do[
+         p = {};
+         Do[If[TimeConstrained[LZZ`InvSFast[f, vf, vars, domain], 1, False],
+             AppendTo[p, f], Null], {f, conjuncts}];
+         AppendTo[preserved, p]
+         ,
+         {conjuncts, conjunctLists}
+     ];
+     Print["Preserved ", preserved];
+     (* TODO interfaces are not ideal: want original precondition in (not DNF) and write formulas out *)
+     (* Extract left-hand sides since invariant extractor expects polynomials, not formulas *)
+     polys = Map[Primitives`GtGeqLhs, preserved//DeleteDuplicates];
+     (* Map disjunction p1>0&p2>=0 | p3>=0 | p4>=0 to Max[Min[p1,p2],p3,p4] *)
+     poly = { Fold[Max, If[Length[polys] > 1, Map[Fold[Min, #] &, polys], polys]] }//Flatten;
+     Return[poly]
     ]
 
 End[]
