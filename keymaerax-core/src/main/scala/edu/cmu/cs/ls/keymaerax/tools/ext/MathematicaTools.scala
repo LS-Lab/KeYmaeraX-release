@@ -159,6 +159,12 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
       e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("DiffSat")
   }
 
+  private def trivialResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+    override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 &&
+      MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
+      e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("Trivial")
+  }
+
   private def errorResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
     override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 &&
       MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
@@ -172,6 +178,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
     if (MathematicaOpSpec.ltrue.applies(e))   True
     else if (MathematicaOpSpec.lfalse.applies(e))  False
     else if (diffSatResult.applies(e)) convertDiffSatResult(e)
+    else if (trivialResult.applies(e)) convertTrivialResult(e)
     else if (errorResult.applies(e)) convertErrorResult(e)
     else if (list.applies(e)) convertFormulaTermList(e)
     else super.convert(e)
@@ -316,6 +323,46 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
   }
 
   /**
+    * Encodes a trivial result in a formula.
+    * {{{
+    *   { ResultType -> Trivial,
+    *     Result -> Reason
+    * }}}
+    * We encode them in a single conjunction of the shape
+    * {{{
+    *   ResultType=DiffSat & Result=Reason
+    * }}}
+    * @param e The trivial result.
+    * @return The result encoded in a formula.
+    */
+  private def convertTrivialResult(e: MExpr): Expression = {
+    assert(trivialResult.applies(e), "Expected applicable Mathematica expression")
+
+    def resultType: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean =
+        super.applies(e) && e.args()(0) == symbol("ResultType") && e.args()(1) == symbol("DiffSat")
+    }
+
+    def result: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Result") && e.args()(1).symbolQ
+    }
+
+    /** Converts {{{ResultType->Trivial}}} into {{{ResultType=Trivial}}}. */
+    def convertResultType(e: MExpr): Formula = {
+      require(resultType.applies(e), "Expected a rule 'ResultType -> Trivial', but got " + e)
+      Equal(Variable("ResultType"), Variable("Trivial"))
+    }
+
+    /** Converts Result->{ ... } */
+    def convertResult(e: MExpr): Formula = {
+      require(result.applies(e), "Expected Result-><...>")
+      Equal(Variable("Result"), Variable(e.args()(1).asString))
+    }
+
+    And(convertResultType(e.args()(0)), convertResult(e.args()(1)))
+  }
+
+  /**
     * Converts an error result into an exception.
     * {{{
     *   { ResultType -> Error,
@@ -356,7 +403,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
   }
 
   /** Extracts the list of (invariant,hint) and a proved/candidate indicator from the Pegasus result formula
-    * @see [[convertDiffSatResult]]
+    * @see [[convertDiffSatResult]], [[convertTrivialResult]]
     */
   def extractResult(result: Expression): (immutable.Seq[(Formula, String)], Formula) = {
     def extractCuts(cuts: Formula): immutable.Seq[(Formula, String)] = cuts match {
@@ -381,7 +428,10 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
         }
         case _ => throw ConversionException("Expected Result <-> length(list)=3 & ..., but got " + result.prettyString)
       }
-      case _ => throw ConversionException("Expected ResultType=DiffSat & ..., but got " + result.prettyString)
+      case And(Equal(BaseVariable("ResultType", None, Real), BaseVariable("Trivial", None, Real)), result) => result match {
+        case Equal(BaseVariable("Result", None, Real), BaseVariable(reason, _, _)) => ((True, reason) :: Nil, True)
+      }
+      case _ => throw ConversionException("Expected ResultType=[DiffSat|Trivial] & ..., but got " + result.prettyString)
     }
   }
 
