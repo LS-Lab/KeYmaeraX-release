@@ -190,6 +190,15 @@ class PolynomialArithV2Tests extends TacticTestBase {
     res.treeSketch shouldBe "{[., x^2, .], x^1, [., y^3, .], 2 y^2, [., y^1, .]}"
   }
 
+  it should "cover all cases of subtract Polynomial" in withMathematica { _ =>
+    import pa4._
+    val pp = new KeYmaeraXPrettierPrinter(100)
+    def x(i: Int) = Var(0, i)
+    def y(i: Int) = Var(1, i)
+    val res = y(2) - (x(1) - x(2) - y(1) - y(2) - y(3))
+    res.treeSketch shouldBe "{[., x^2, .], -x^1, [., y^3, .], 2 y^2, [., y^1, .]}"
+  }
+
   it should "multiply with monomials" in withMathematica { _ =>
     import pa4._
     val pp = new KeYmaeraXPrettierPrinter(100)
@@ -223,15 +232,23 @@ class PolynomialArithV2Tests extends TacticTestBase {
     (-tree).treeSketch shouldBe "[{[., -x^9, .], -x^8, [., -x^7, .], -x^6, [., -x^5, .]}, -x^4, [[., -x^3, .], -x^2, [., -x^1, .]]]"
   }
 
+  it should "subtract Monomials" in withMathematica { _ =>
+    import pa4._
+    def x(i: Int) = Var(0, i)
+    val tree = (1 until 10).map(x).reduce(_ + _)
+    val m1 = Monomial(Coefficient(2, 1), IndexedSeq(1, 0, 0, 0))
+    val m2 = Monomial(Coefficient(1, 1), IndexedSeq(0, 1, 0, 0))
+    println((tree-m1).treeSketch)
+    println((tree-m2).treeSketch)
+
+  }
   it should "work with many variables" in withMathematica { _ =>
     import pa20._
     def x(i: Int, p: Int) = Var(i, p)
     val a = (Const(3)*x(19, 2) + Const(5)*x(0, 4) + x(1, 2) + Const(123)*x(10, 3))*(x(17, 1) + x(5, 2) + x(15, 7))
     val b = (x(17, 2) + x(0, 3)*x(15, 4))*(x(0, 1)*x(15,3) + x(3, 2) + x(1, 8))
-    println(a.treeSketch)
-    println(b.treeSketch)
-    println((a+b).treeSketch)
-
+    a.treeSketch shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, [., -x^1, .]]]".asTerm
+    b.treeSketch shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, {., x^1, ., -y^1, .}]]".asTerm
   }
 
   var time = System.nanoTime()

@@ -421,6 +421,13 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
   val plusBranch3 = rememberAny(("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() + l_() + v1_() + m_() + v2_() + r_() = sum_()) ->" +
     "t_() + s_() = sum_()").asFormula, QE & done)
 
+  // Lemmas for Minus
+  val minusEmpty = rememberAny(("t_() = s_() & u_() = 0 -> t_() - u_() = s_()").asFormula, QE & done)
+  val minusBranch2 = rememberAny(("(s_() = l_() + v_() + r_() & t_() - l_() - v_() - r_() = sum_()) ->" +
+    "t_() - s_() = sum_()").asFormula, QE & done)
+  val minusBranch3 = rememberAny(("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() - l_() - v1_() - m_() - v2_() - r_() = sum_()) ->" +
+    "t_() - s_() = sum_()").asFormula, QE & done)
+
   // Lemmas for Times Monomial
   val monTimesZero = rememberAny("t_() = 0 -> t_() * x_() = 0".asFormula, QE & done)
   val monTimesBranch2 = rememberAny(
@@ -633,6 +640,12 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       case Sprout(s) => s
     }
 
+    val plusMinus = rememberAny("t_() + (-x_()) = s_() -> t_() - x_() = s_()".asFormula, QE & done)
+    def -(m: Monomial) : Polynomial = {
+      val res = this + (-(m.forgetPrv))
+      res.updatePrv(useDirectly(plusMinus, Seq(("t_", lhs), ("x_", m.lhs), ("s_", res.rhs)), Seq(res.prv)))
+    }
+
     private[PolynomialArithV2] def updatePrv(prv2: ProvableSig) : Polynomial = {
       this match {
         case Empty(_) => Empty(Some(prv2))
@@ -668,6 +681,36 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
             ("r_", right.rhs),
             ("sum_", sum.rhs)
           ), Seq(other.prv, sum.prv))
+        sum.updatePrv(newPrv)
+    }
+
+    def -(other: Polynomial) : Polynomial = other match {
+      case Empty(_) =>
+        val newPrv = useDirectly(minusEmpty, Seq(("t_", lhs), ("s_", rhs), ("u_", other.lhs)), Seq(prv, other.prv))
+        updatePrv(newPrv)
+      case Branch2(left, value, right, _) =>
+        val sum = this - left.forgetPrv - value.forgetPrv - right.forgetPrv
+        val newPrv = useDirectly(minusBranch2, IndexedSeq(
+          ("t_", lhs),
+          ("s_", other.lhs),
+          ("l_", left.rhs),
+          ("v_", value.rhs),
+          ("r_", right.rhs),
+          ("sum_", sum.rhs)
+        ), Seq(other.prv, sum.prv))
+        sum.updatePrv(newPrv)
+      case Branch3(left, value1, mid, value2, right, _) =>
+        val sum = this - left.forgetPrv - value1.forgetPrv - mid.forgetPrv - value2.forgetPrv - right.forgetPrv
+        val newPrv = useDirectly(minusBranch3, IndexedSeq(
+          ("t_", lhs),
+          ("s_", other.lhs),
+          ("l_", left.rhs),
+          ("v1_", value1.rhs),
+          ("m_", mid.rhs),
+          ("v2_", value2.rhs),
+          ("r_", right.rhs),
+          ("sum_", sum.rhs)
+        ), Seq(other.prv, sum.prv))
         sum.updatePrv(newPrv)
     }
 
