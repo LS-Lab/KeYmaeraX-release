@@ -215,6 +215,14 @@ class PolynomialArithV2Tests extends TacticTestBase {
     ((x + y)^6).rhs shouldBe "0+1/1*(x^6*1*1*1)+0+6/1*(x^5*y^1*1*1)+(0+15/1*(x^4*y^2*1*1)+0)+20/1*(x^3*y^3*1*1)+(0+15/1*(x^2*y^4*1*1)+0+6/1*(x^1*y^5*1*1)+(0+1/1*(1*y^6*1*1)+0))".asTerm
   }
 
+  it should "negate" in withMathematica { _ =>
+    import pa4._
+    def x(i: Int) = Var(0, i)
+    val tree = (1 until 10).map(x).reduce(_ + _)
+    tree.treeSketch    shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, [., x^1, .]]]"
+    (-tree).treeSketch shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, [., x^1, .]]]"
+  }
+
   it should "work with many variables" in withMathematica { _ =>
     import pa20._
     def x(i: Int, p: Int) = Var(i, p)

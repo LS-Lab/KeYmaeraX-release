@@ -116,17 +116,19 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
   val constC = constR("c_")
 
 
-  val constLn = constR("ln")
-  val constLd = constR("ld")
-  val constRn = constR("rn")
-  val constRd = constR("rd")
+  val constLn = constR("ln_")
+  val constLd = constR("ld_")
+  val constRn = constR("rn_")
+  val constRd = constR("rd_")
   val coefficientTimesPrv = rememberAny(
-    ("(l() = ln()/ld() & r() = rn()/rd() & ((ln()*rn() = pn() & ld()*rd()=pd() & ld() != 0 & rd() != 0)<-> true)) ->" +
-      "l()*r() = pn()/pd()").asFormula, QE & done)
-
+    ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rn_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
+      "l_()*r_() = pn_()/pd_()").asFormula, QE & done)
   val coefficientPlusPrv = rememberAny(
-    ("(l() = ln()/ld() & r() = rn()/rd() & ((ln()*rd() + rn()*ld() = pn() & ld()*rd()=pd() & ld() != 0 & rd() != 0)<-> true)) ->" +
-      "l()+r() = pn()/pd()").asFormula, QE & done)
+    ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rd_() + rn_()*ld_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
+      "l_()+r_() = pn_()/pd_()").asFormula, QE & done)
+  val coefficientNegPrv = rememberAny(
+    ("(x_() = xn_()/xd_() & ((-xn_()=nxn_() & xd_() != 0)<-> true)) ->" +
+      "-x_() = nxn_()/xd_()").asFormula, QE & done)
 
   /**
   * prv: lhs = rhs
@@ -151,18 +153,31 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     })
     val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs@Divide(n, d)) => (eq, lhs, rhs) }
 
+    def unary_- : Coefficient = {
+      val negPrv = ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(Neg(numN), Number(-num)), NotEqual(denumN, Number(0))))
+      Coefficient(-num, denum, Some(useDirectly(coefficientNegPrv,
+        Seq(
+          ("x_", lhs),
+          ("xn_", numN),
+          ("xd_", denumN),
+          ("nxn_", Number(-num))
+        ),
+        Seq(prv, negPrv)
+      )))
+    }
+
     def +(that: Coefficient) : Coefficient = {
       val numRes = num*that.denum + that.num*denum
       val denumRes = denum*that.denum
       val inst = Seq(
-        ("ln", numN),
-          ("ld", denumN),
-          ("rn", that.numN),
-          ("rd", that.denumN),
-          ("l", lhs),
-          ("r", that.lhs),
-          ("pn", Number(numRes)),
-          ("pd", Number(denumRes)))
+        ("ln_", numN),
+          ("ld_", denumN),
+          ("rn_", that.numN),
+          ("rd_", that.denumN),
+          ("l_", lhs),
+          ("r_", that.lhs),
+          ("pn_", Number(numRes)),
+          ("pd_", Number(denumRes)))
       val numericPrv = ProvableSig.proveArithmetic(BigDecimalQETool,
         List(
           Equal(Plus(Times(numN, that.denumN), Times(that.numN, denumN)), Number(numRes)),
@@ -179,14 +194,14 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       val numRes = num*that.num
       val denumRes = denum*that.denum
       val inst = Seq(
-        ("ln", numN),
-          ("ld", denumN),
-          ("rn", that.numN),
-          ("rd", that.denumN),
-          ("l", lhs),
-          ("r", that.lhs),
-          ("pn", Number(numRes)),
-          ("pd", Number(denumRes)))
+        ("ln_", numN),
+          ("ld_", denumN),
+          ("rn_", that.numN),
+          ("rd_", that.denumN),
+          ("l_", lhs),
+          ("r_", that.lhs),
+          ("pn_", Number(numRes)),
+          ("pd_", Number(denumRes)))
       val numericPrv = ProvableSig.proveArithmetic(BigDecimalQETool,
         List(
           Equal(Times(numN, that.numN), Number(numRes)),
@@ -204,6 +219,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
   val timesIdentity = rememberAny("f_()*1 = f_()".asFormula, QE & done)
 
   val plusTimes = rememberAny("l_() = a_()*b_() & r_() = c_()*b_() & a_() + c_() = d_() -> l_() + r_() = d_()*b_()".asFormula, QE & done)
+  val negTimes = rememberAny("l_() = a_()*b_() & -a_() = c_() -> -l_() = c_()*b_()".asFormula, QE & done)
 
   private val maxDegree = 20
   private def powerLemmaFormula(i: Int, j: Int) = {
@@ -330,6 +346,13 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       Monomial(newCoeff, newPowers, Some(newPrv))
     }
 
+    def unary_- : Monomial = {
+      val newCoeff = -(coeff.forgetPrv)
+      val newPrv = useDirectly(negTimes, Seq(("l_", lhs), ("a_", coeff.rhs), ("b_", rhs.right), ("c_", newCoeff.rhs)),
+        Seq(prv, newCoeff.prv))
+      Monomial(newCoeff, powers, Some(newPrv))
+    }
+
     // TODO: weird signature for addition...
     def +(that: Monomial): Option[Monomial] = if (that.powers == powers) Some {
       val newCoeff = coeff.forgetPrv + that.coeff.forgetPrv
@@ -435,6 +458,14 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
     )
   )
+
+  // Lemmas for negation
+  val negateEmpty = rememberAny("t_() = 0 -> -t_() = 0".asFormula, QE & done)
+  val negateBranch2 = rememberAny(("(t_() = l_() + v_() + r_() & -l_() = nl_() & -v_() = nv_() & -r_() = nr_()) ->" +
+    "-t_() = nl_() + nv_() + nr_()").asFormula, QE & done)
+  val negateBranch3 = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & -l_() = nl_() & -v1_() = nv1_() & -m_() = nm_() & -v2_() = nv2_() & -r_() = nr_()) ->" +
+    "-t_() = nl_() + nv1_() + nm_() + nv2_() + nr_()").asFormula, QE & done)
+
 
   /**
     * 2-3 Tree for monomials, keeping track of proofs.
@@ -732,6 +763,45 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
         } else throw new IllegalArgumentException("negative power unsupported by PolynomialArithV2")
     }
 
+    // negation
+    def unary_- : Polynomial = this match {
+      case Empty(_) => Empty(Some(useDirectly(negateEmpty, Seq(("t_", lhs)), Seq(prv))))
+      case Branch2(l, v, r, _) =>
+        val nl = -(l.forgetPrv)
+        val nv = -(v.forgetPrv)
+        val nr = -(r.forgetPrv)
+        val newPrv = useDirectly(negateBranch2, Seq(
+          ("t_", lhs),
+          ("l_", l.rhs),
+          ("v_", v.rhs),
+          ("r_", r.rhs),
+          ("nl_", nl.rhs),
+          ("nv_", nv.rhs),
+          ("nr_", nr.rhs),
+        ), Seq(prv, nl.prv, nv.prv, nr.prv))
+        Branch2(nl, nv, nr, Some(newPrv))
+      case Branch3(l, v1, m, v2, r, _) =>
+        val nl = -(l.forgetPrv)
+        val nv1 = -(v1.forgetPrv)
+        val nm = -(m.forgetPrv)
+        val nv2 = -(v2.forgetPrv)
+        val nr = -(r.forgetPrv)
+        val newPrv = useDirectly(negateBranch3, Seq(
+          ("t_", lhs),
+          ("l_", l.rhs),
+          ("v1_", v1.rhs),
+          ("m_", m.rhs),
+          ("v2_", v2.rhs),
+          ("r_", r.rhs),
+          ("nl_", nl.rhs),
+          ("nv1_", nv1.rhs),
+          ("nm_", nm.rhs),
+          ("nv2_", nv2.rhs),
+          ("nr_", nr.rhs),
+        ), Seq(prv, nl.prv, nv1.prv, nm.prv, nv2.prv, nr.prv))
+        Branch3(nl, nv1, nm, nv2, nr, Some(newPrv))
+    }
+
   }
 
   val varLemmas = (0 until vars.length).map(i => proveBy(Equal(Power(vars(i), "i_()".asTerm),
@@ -741,9 +811,11 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
 
   // Constructors
   def Var(index: Int, power: Int) : Polynomial =
-    Branch2(Empty(None), Monomial(Coefficient(1, 1),
-      (0 until vars.length).map(i => if (i == index) power else 0)), Empty(None), Some(
-        varLemmas(index)(USubst(Seq(SubstitutionPair(constR("i_"), Number(power)))))))
+    if(power == 0) ???
+    else
+      Branch2(Empty(None), Monomial(Coefficient(1, 1),
+        (0 until vars.length).map(i => if (i == index) power else 0)), Empty(None), Some(
+          varLemmas(index)(USubst(Seq(SubstitutionPair(constR("i_"), Number(power)))))))
   def Var(index: Int) : Polynomial = Var(index, 1)
 
   val constLemma = rememberAny(
