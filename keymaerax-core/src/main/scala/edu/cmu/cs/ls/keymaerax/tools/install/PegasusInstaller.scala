@@ -39,6 +39,7 @@ object PegasusInstaller extends Logging {
         "Primitives/Linear.m" ::
         "Primitives/LinearAlgebraicInvariants.m" ::
         "Primitives/LZZ.m" ::
+        "Primitives/PreservedState.m" ::
         "Primitives/Primitives.m" ::
         "Primitives/QualAbsPolynomials.m" ::
         "Primitives/TransitionRelation.m" ::
