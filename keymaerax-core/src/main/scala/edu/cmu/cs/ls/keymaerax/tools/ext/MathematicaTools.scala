@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
@@ -158,6 +159,12 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
       e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("DiffSat")
   }
 
+  private def errorResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+    override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 &&
+      MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
+      e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("Error")
+  }
+
   override def k2m: K2MConverter[KExpr] = null
   override def apply(e: MExpr): KExpr = convert(e)
 
@@ -165,6 +172,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
     if (MathematicaOpSpec.ltrue.applies(e))   True
     else if (MathematicaOpSpec.lfalse.applies(e))  False
     else if (diffSatResult.applies(e)) convertDiffSatResult(e)
+    else if (errorResult.applies(e)) convertErrorResult(e)
     else if (list.applies(e)) convertFormulaTermList(e)
     else super.convert(e)
   }
@@ -305,6 +313,46 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
     }
     logger.debug("Pegasus raw result: " + e)
     And(convertResultType(e.args()(0)), convertResult(e.args()(1)))
+  }
+
+  /**
+    * Converts an error result into an exception.
+    * {{{
+    *   { ResultType -> Error,
+    *     Result -> {
+    *       ErrorString -> <string>,
+    *       InternalError -> <string>
+    *     }
+    *   }
+    * }}}
+    * We throw an exception.
+    * @param e The error result.
+    * @return Never returns, throws an exception.
+    * @throws ToolExternalException always (unless inapplicable conversion)
+    */
+  private def convertErrorResult(e: MExpr): Expression = {
+    require(errorResult.applies(e), "Expected applicable Mathematica expression")
+
+    /** Converts Result->{ ... } */
+    def convertResult(e: MExpr): Expression = {
+      def errorString: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+        override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("ErrorString")
+      }
+      def internalError: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+        override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("InternalError")
+      }
+      def result: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+        override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Result") &&
+          e.args()(1).listQ && e.args()(1).args.length == 2 &&
+          errorString.applies(e.args()(1).args()(0)) && internalError.applies(e.args()(1).args()(1))
+      }
+
+      require(result.applies(e), "Expected a result list of 2 rules: { ErrorString -> <...>, InternalError -> <...>")
+      val errorMessage = e.args()(1).args()(0)
+      throw new ToolExternalException(errorMessage.args()(1).asString(), null) {}
+    }
+
+    convertResult(e.args()(1))
   }
 
   /** Extracts the list of (invariant,hint) and a proved/candidate indicator from the Pegasus result formula
