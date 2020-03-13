@@ -143,6 +143,9 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     lazy val defaultPrv = equalReflex(Divide(numN, denumN))
     val prv = prvO.getOrElse(defaultPrv)
     def forgetPrv = Coefficient(num, denum, Some(defaultPrv))
+    def rhsString = if (num.compareTo(0) == 0) "0"
+    else if (denum.compareTo(1) == 0) num.toString
+    else num.toString + "/" + denum.toString
 
     assert(prv.subgoals.isEmpty)
     assert(prv.conclusion.ante.isEmpty)
@@ -287,8 +290,13 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       Times(coeff, (0 until vars.length).map(variablePower(powers)).reduceLeft(Times))
     }
 
-    def powersString: String =
-      (0 until vars.length).map(i => if (powers(i)>0) (Power(vars(i), Number(powers(i)))).toString else "").mkString
+    def powersString: String = {
+      val sep = " " // nicer than "*" ?
+      (if (coeff.num.compareTo(1) == 0 && coeff.denum.compareTo(1) == 0) ""
+        else if (coeff.num.compareTo(-1) == 0 && coeff.denum.compareTo(1) == 0) "-"
+        else coeff.rhsString + sep) +
+        (0 until vars.length).flatMap(i => if (powers(i)>0) Some(Power(vars(i), Number(powers(i)))) else None).mkString(sep)
+    }
 
     lazy val defaultPrv = equalReflex(monomialTerm(coeff.rhs, powers))
     def forgetPrv = Monomial(coeff, powers, Some(defaultPrv))

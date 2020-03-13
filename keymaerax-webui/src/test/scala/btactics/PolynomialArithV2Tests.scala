@@ -158,27 +158,27 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val res2 = res1 + x(4) // sprout in left of 2-Node
     res2.treeSketch shouldBe "{., x^4, ., x^2, .}"
     val res2u = res2 + x(4) // update in left of 3-Node
-    res2u.treeSketch shouldBe "{., x^4, ., x^2, .}"
+    res2u.treeSketch shouldBe "{., 2 x^4, ., x^2, .}"
     val res2v = res2u + x(2) // update in right of 3-Node
-    res2v.treeSketch shouldBe "{., x^4, ., x^2, .}"
-    val res3 = res2u + x(8)  // sprout in left of 3-Node
-    res3.treeSketch shouldBe "[[., x^8, .], x^4, [., x^2, .]]"
+    res2v.treeSketch shouldBe "{., 2 x^4, ., 2 x^2, .}"
+    val res3 = res2v + x(8)  // sprout in left of 3-Node
+    res3.treeSketch shouldBe "[[., x^8, .], 2 x^4, [., 2 x^2, .]]"
     val res4 = res3 + x(8) // update value of 2-Node
-    res4.treeSketch shouldBe "[[., x^8, .], x^4, [., x^2, .]]"
+    res4.treeSketch shouldBe "[[., 2 x^8, .], 2 x^4, [., 2 x^2, .]]"
     val res5 = res4 + x(5) // sprout in right of 2-Node
-    res5.treeSketch shouldBe "[{., x^8, ., x^5, .}, x^4, [., x^2, .]]"
+    res5.treeSketch shouldBe "[{., 2 x^8, ., x^5, .}, 2 x^4, [., 2 x^2, .]]"
     val res6 = res5 + x(2) // stay in right of 2-Node (after an update)
-    res6.treeSketch shouldBe "[{., x^8, ., x^5, .}, x^4, [., x^2, .]]"
+    res6.treeSketch shouldBe "[{., 2 x^8, ., x^5, .}, 2 x^4, [., 3 x^2, .]]"
     val res7 = res6 + x(7) // sprout in mid of 3-Node
-    res7.treeSketch shouldBe "{[., x^8, .], x^7, [., x^5, .], x^4, [., x^2, .]}"
+    res7.treeSketch shouldBe "{[., 2 x^8, .], x^7, [., x^5, .], 2 x^4, [., 3 x^2, .]}"
     val res8 = res7 + x(8) // stay in left of 3-node (after an update)
-    res8.treeSketch shouldBe "{[., x^8, .], x^7, [., x^5, .], x^4, [., x^2, .]}"
+    res8.treeSketch shouldBe "{[., 3 x^8, .], x^7, [., x^5, .], 2 x^4, [., 3 x^2, .]}"
     val res9 = res8 + x(5) // stay in mid of 3-node (after an update)
-    res9.treeSketch shouldBe "{[., x^8, .], x^7, [., x^5, .], x^4, [., x^2, .]}"
+    res9.treeSketch shouldBe "{[., 3 x^8, .], x^7, [., 2 x^5, .], 2 x^4, [., 3 x^2, .]}"
     val res10 = res9 + x(3) // stay in right of 3-node (after a sprout)
-    res10.treeSketch shouldBe "{[., x^8, .], x^7, [., x^5, .], x^4, {., x^3, ., x^2, .}}"
+    res10.treeSketch shouldBe "{[., 3 x^8, .], x^7, [., 2 x^5, .], 2 x^4, {., x^3, ., 3 x^2, .}}"
     val res11 = res10 + x(1) // sprout in right of 3-node
-    res11.treeSketch shouldBe "[[[., x^8, .], x^7, [., x^5, .]], x^4, [[., x^3, .], x^2, [., x^1, .]]]"
+    res11.treeSketch shouldBe "[[[., 3 x^8, .], x^7, [., 2 x^5, .]], 2 x^4, [[., x^3, .], 3 x^2, [., x^1, .]]]"
   }
 
   it should "cover all cases of add Polynomial" in withMathematica { _ =>
@@ -187,7 +187,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     def x(i: Int) = Var(0, i)
     def y(i: Int) = Var(1, i)
     val res = y(2) + (x(1) + x(2) + y(1) + y(2) + y(3))
-    res.treeSketch shouldBe "{[., x^2, .], x^1, [., y^3, .], y^2, [., y^1, .]}"
+    res.treeSketch shouldBe "{[., x^2, .], x^1, [., y^3, .], 2 y^2, [., y^1, .]}"
   }
 
   it should "multiply with monomials" in withMathematica { _ =>
@@ -220,7 +220,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     def x(i: Int) = Var(0, i)
     val tree = (1 until 10).map(x).reduce(_ + _)
     tree.treeSketch    shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, [., x^1, .]]]"
-    (-tree).treeSketch shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, [., x^1, .]]]"
+    (-tree).treeSketch shouldBe "[{[., -x^9, .], -x^8, [., -x^7, .], -x^6, [., -x^5, .]}, -x^4, [[., -x^3, .], -x^2, [., -x^1, .]]]"
   }
 
   it should "work with many variables" in withMathematica { _ =>
