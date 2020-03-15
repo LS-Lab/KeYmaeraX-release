@@ -623,7 +623,16 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try boundness" in withQE { _ =>
+  "univariate" should "automatically odeReduce univariate" in withQE { _ =>
+    val fml = "k > 0 & v > 0 -> <{x'=v, v' = -k* v^3 -v^2 - v + 1, y'=y, t'=1}> t > 1000".asFormula
+
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "try boundedness" in withQE { _ =>
     val fml = "a*r^2+b*r+c = 0 & (v-r=0 | v-r < 0 & a*v0^2+b*v0+c > 0 | a*v0^2+b*v0+c < 0 & v-r > 0 ) & v=v0 -> [{v' = a*v^2+b*v+c}] v^2 <= v0^2+r^2".asFormula
     val pr = proveBy(fml,
       implyR(1) & cut("\\exists d \\exists e \\forall v a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula) <(

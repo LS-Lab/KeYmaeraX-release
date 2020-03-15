@@ -432,6 +432,97 @@ object ODELiveness {
     Some(res)
   }
 
+  // Helper to remove a nonlinear univariate ODE that is in the head position at the given position
+  // This is a bit different from the others in that it needs to inspect the current sequent in order to remove the
+  // univariate ODE
+  private def removeODEUnivariate(ode : List[DifferentialProgram], cont:BelleExpr): DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("removeODEUnivariate only applicable to box ODE in antedent")
+    }
+
+    if(!(ode.length>=1 && ode.head.isInstanceOf[AtomicODE]))
+      throw new IllegalArgumentException("ODE must be univariate")
+
+    val uode = ode.head.asInstanceOf[AtomicODE]
+
+    val x = uode.xp.x
+    val rhs = uode.e
+
+    val deg = ToolTactics.varDegree(rhs,x)
+    val coeff1 = (1 to (deg-1)).map(i => Variable("coeff", Some(i)))
+    val tmls = coeff1.zipWithIndex.map( bi => Times(bi._1, Power(x, Number(bi._2+1))))
+    val tm = tmls.foldLeft(Variable("coeff", Some(0)):Term)( (e,b) => Plus(e,b))
+    val coeffs = Variable("coeff",Some(0)) +: coeff1
+
+    val rootvar = Variable("root_")
+    val oldvar = Variable("initx_")
+    val rootrhs = rhs.replaceFree(x, rootvar)
+    val zero = Number(0)
+
+    val req = Equal(rootrhs, zero) // r' = 0
+    val d1 = Equal(Minus(x,rootvar),zero) //v-r = 0
+    val pless = Less(Minus(x,rootvar),zero)
+    val d2 = And(pless, Greater(rhs,zero))  //v-r < 0 & rhs > 0
+    val pgreater = Greater(Minus(x,rootvar),zero)
+    val d3 = And(pgreater, Less(rhs,zero))  //v-r > 0 & rhs < 0
+
+    val precond : Formula = Exists(rootvar::Nil, And(req, Or(d1, Or(d2,d3))))
+
+    val starter = proveBy( Sequent(seq.ante, seq.succ :+ precond), ToolTactics.hideNonFOL & QE)
+
+    if(!starter.isProved)
+      throw new BelleThrowable("Initial conditions insufficient for global existence on variable: "+x)
+
+    // Forcing darboux format
+    val inv = Equal(rhs,Times(Minus(x,rootvar),tm))
+    val dbxforce = coeffs.foldLeft(Forall(x::Nil,inv): Formula)( (v,e) => Exists(e::Nil,v))
+
+    // The main tactic that discharges the splitting
+    val splittac =
+      //First, separate out a root
+      cut(dbxforce) <(
+      (existsL('Llast) * coeffs.length),
+      cohideOnlyR('Rlast) & cohideOnlyL(-2) & QE) &
+      dC(inv)(1) <(
+        hideL('Llast) & orL(-3) <(
+          //v=r case
+          dC(d1)(1) <(
+            DifferentialTactics.diffWeakenG(1) & QE, //could be done manually with US instead of QE
+            DifferentialTactics.dgDbx(tm)(1)) //maybe can be made faster
+          ,
+          orL(-3) <(
+            // p < 0
+            andL(-3) &
+            dC(pless)(1) <(
+              DifferentialTactics.DconstV(1) & dC(GreaterEqual(x,oldvar))(1) <( DifferentialTactics.diffWeakenG(1) & QE, DifferentialTactics.dgBarrier(1)),
+              DifferentialTactics.dgDbx(tm)(1)) //maybe can be made faster
+            ,
+            dC(pgreater)(1) <(
+              DifferentialTactics.DconstV(1) & dC(LessEqual(x,oldvar))(1) <( DifferentialTactics.diffWeakenG(1) & QE,  DifferentialTactics.dgBarrier(1)),
+              DifferentialTactics.dgDbx(tm)(1)) //maybe can be made faster
+          )
+        ),
+        DifferentialTactics.DconstV(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & andL(-2) & allL(-2) & closeId
+      )
+
+    val tac = cut(precond)<(
+      existsL('Llast) &
+        cut(Exists(oldvar::Nil,Equal(x,oldvar))) <( existsL('Llast) & exhaustiveEqL2R('Llast), cohideR('Rlast) & QE) &
+        andL(-(seq.ante.length+1)) &
+        cut(Box(sys, LessEqual( Times(x,x), Plus( Times(oldvar,oldvar), Times(rootvar,rootvar)) ) )) <(
+          (hideL(-(seq.ante.length+1)) * 3) & removeODENonLin(uode,true, hideL(-(seq.ante.length+1)) & cont)(pos),
+          // From here, we don't need any extra information
+          (hideL(-1) * seq.ante.length) &
+          cohideOnlyR('Rlast) & splittac
+        )
+        ,
+      by(starter))
+
+    tac
+  })
+
   //Helper to remove a nonlinear ODE
   private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr) : DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
 
@@ -478,7 +569,13 @@ object ODELiveness {
       affineVDGprecond(ls.head)
     catch {
       case e : IllegalArgumentException =>
-        return removeODENonLin(ls.head,strict,removeODEs(ls.tail,pos, strict))(pos)
+        // If it is a univariate ODE just remove it
+        try return removeODEUnivariate(ls,removeODEs(ls.tail,pos, strict))(pos)
+        catch {
+          case e: IllegalArgumentException =>
+            //Otherwise try the nonlinear case
+            return removeODENonLin(ls.head,strict,removeODEs(ls.tail,pos, strict))(pos)
+        }
     }
 
     useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)

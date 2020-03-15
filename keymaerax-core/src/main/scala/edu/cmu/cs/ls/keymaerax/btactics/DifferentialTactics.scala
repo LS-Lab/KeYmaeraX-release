@@ -1392,8 +1392,11 @@ private object DifferentialTactics extends Logging {
     // First cut in the barrier property, then use dgdbx on it
     // Barrier condition is checked first to make it fail faster
     val pre = diffCut(barrierFml)(pos) < (
-      skip, /* diffWeakenG faster but loses assumptions*/ dW(pos) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
-    ) & starter
+        skip, /* diffWeakenG faster but loses assumptions*/
+        //todo: Not sure why dW sometimes fails here
+        (dW(pos) | diffWeakenG(pos)) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
+    ) &
+    starter
 
     // Same as dgDbx but bypasses extra checks since we already know
     /** The ghost variable */
