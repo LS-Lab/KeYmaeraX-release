@@ -63,6 +63,9 @@ object Configuration {
       object DiffSaturation {
         val MINIMIZE_CUTS = "PEGASUS_DIFFSAT_MINIMIZE_CUTS"
       }
+      object PreservedStateHeuristic {
+        val TIMEOUT = "PEGASUS_PRESERVEDSTATE_TIMEOUT"
+      }
       object HeuristicInvariants {
         val TIMEOUT = "PEGASUS_HEURISTICS_TIMEOUT"
       }
@@ -160,6 +163,9 @@ object Configuration {
     def sanityTimeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.SANITY_TIMEOUT).getOrElse(default)
     object DiffSaturation {
       def minimizeCuts(default: Boolean = true): Boolean = get[Boolean](Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS).getOrElse(default)
+    }
+    object PreservedStateHeuristic {
+      def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT).getOrElse(default)
     }
     object HeuristicInvariants {
       def timeout(default: Int = 0): Int = get[Int](Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT).getOrElse(default)

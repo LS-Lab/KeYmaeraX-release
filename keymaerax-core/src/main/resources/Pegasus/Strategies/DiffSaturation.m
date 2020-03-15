@@ -66,6 +66,7 @@ constvars,constasms,invs,timingList,curvars},
 Print["Input Problem: ", problem];
 
 strategies = {
+	{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"]},
 	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"]},
 	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"]},
 	{GenericNonLinear`DbxPoly, Symbol["kyx`Darboux"]},

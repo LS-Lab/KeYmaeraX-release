@@ -57,6 +57,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val options = compoundExpression(
       setOptions(psymbol("InvGen"),
         rule(psymbol("SanityCheckTimeout"), timeoutExpr(Configuration.Pegasus.sanityTimeout()))),
+      setOptions(gnlsymbol("PreservedState"),
+        rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.PreservedStateHeuristic.timeout()))),
       setOptions(gnlsymbol("HeuInvariants"),
         rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.HeuristicInvariants.timeout()))),
       setOptions(gnlsymbol("FirstIntegrals"),
