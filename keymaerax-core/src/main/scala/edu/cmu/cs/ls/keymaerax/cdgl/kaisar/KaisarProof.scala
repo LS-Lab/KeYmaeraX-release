@@ -9,6 +9,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import KaisarProof._
+import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core._
 
 object KaisarProof {
@@ -41,11 +42,9 @@ case class Have(x: Ident, f: Formula, just: Method) extends Statement
 case class Show(phi: Formula, proof: Method) extends Statement
 case class Match(pat: Expression, e: Expression) extends Statement
 case class LetFun(x: Ident, arg: Ident, e: Expression) extends Statement
-case class Note(x: Variable, proof: ProofTerm) extends Statement
+case class Note(x: Ident, proof: ProofTerm) extends Statement
 case class Label(st: TimeIdent) extends Statement
 case class Block(ss: List[Statement]) extends Statement
-case class Step(r: RuleSpec) extends Statement
-case class Invariant(ip: List[InvariantStep]) extends Statement
 case class BoxChoice(left: List[Statement], right: List[Statement]) extends Statement
 case class DiamondLeft(ss: List[Statement]) extends Statement
 case class DiamondRight(ss: List[Statement]) extends Statement
@@ -53,33 +52,23 @@ case class PatternMatch(pats: List[(Expression, List[Statement])]) extends State
 // For debugging
 case class PrintGoal(msg: String) extends Statement
 
-//case class Ghost(gvar: Variable, gterm: Term, ginv: Formula, x0: Term, pre: SP, inv: SP, tail: IP) extends IP
-//case class Finally(tail: SP) extends IP
-sealed trait InvariantStep
-case class Inv(x: Variable, fml: Formula, pre: Proof, inv: Proof) extends InvariantStep
+sealed trait InvariantStep extends RuleSpec
+case class Invariant(x: Ident, fml: Formula, inv: Proof) extends InvariantStep
 case class Ghost(ghost: Assign) extends InvariantStep
+case class For(vj: Ident, j: Formula, m: Ident, init: Term, decr: Term) extends RuleSpec
 
-/*
-case class RBMid(x: Variable, fml: Formula) extends RuleSpec
-case class RBAbbrev(xphi: Variable, x: Variable, theta: Term) extends RuleSpec
-case class RDMid(fml: Formula) extends RuleSpec
-case class RIdent(x: String) extends RuleSpec
- */
-sealed trait RuleSpec {}
+sealed trait RuleSpec extends Statement
 trait BoxRule extends RuleSpec {}
 trait DiamondRule extends RuleSpec {}
 
 case class Modify(hp: Assign) extends RuleSpec
-
 case class Assume(x: Ident, f: Formula) extends BoxRule
 case class Assert(x: Ident, f: Formula, child: Method) extends DiamondRule
 case class BAssignAny(x: Variable) extends BoxRule
-case class BSolve(t: Variable, fmlT: Formula, dc: Variable, fmlDC: Formula, sols: List[(Variable, Formula)]) extends BoxRule
+case class BSolve(ode: DifferentialProgram, vdc: Ident, dc: Formula, vdur: Ident) extends BoxRule
 case class DAssignAny(x: Variable, xVal: Term) extends DiamondRule
-case class DSolve(t: Variable, fmlT: Formula, dc: Variable, fmlDC: Formula, sols: List[(Variable, Formula)]) extends DiamondRule
-
-
-
+case class DSolve(ode: DifferentialProgram, vdc: Ident, dcProof: Proof, vdur: Ident, durProof: Proof) extends DiamondRule
+case class Yield() extends RuleSpec
 
 // History records hr
 /*abstract class HistChange
@@ -96,4 +85,12 @@ case class HCRename(baseName: BaseVariable, permName: BaseVariable, defn: Option
 }
 
 case class HCTimeStep(ts: TimeName) extends HistChange*/
+/*
+case class RBMid(x: Variable, fml: Formula) extends RuleSpec
+case class RBAbbrev(xphi: Variable, x: Variable, theta: Term) extends RuleSpec
+case class RDMid(fml: Formula) extends RuleSpec
+case class RIdent(x: String) extends RuleSpec
+ */
+//case class Ghost(gvar: Variable, gterm: Term, ginv: Formula, x0: Term, pre: SP, inv: SP, tail: IP) extends IP
+//case class Finally(tail: SP) extends IP
 
