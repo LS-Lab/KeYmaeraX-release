@@ -467,15 +467,15 @@ object ODELiveness {
     val rootrhs = rhs.replaceFree(x, rootvar)
     val zero = Number(0)
 
+    // Set up the precondition
     val req = Equal(rootrhs, zero) // r' = 0
-    val d1 = Equal(Minus(x,rootvar),zero) //v-r = 0
-    val pless = Less(Minus(x,rootvar),zero)
-    val d2 = And(pless, Greater(rhs,zero))  //v-r < 0 & rhs > 0
-    val pgreater = Greater(Minus(x,rootvar),zero)
-    val d3 = And(pgreater, Less(rhs,zero))  //v-r > 0 & rhs < 0
+    val disj0 = Equal(Minus(x,rootvar),zero) //v-r = 0
+    val pleq = LessEqual(Minus(x,rootvar),zero) //v-r <= 0
+    val disj1 = And(pleq , Greater(rhs,zero)) //v-r <= 0 & rhs > 0
+    val pgeq = GreaterEqual(Minus(x,rootvar),zero) //v-r >= 0
+    val disj2 = And(pgeq, Less(rhs,zero))  //v-r >= 0 & rhs < 0
 
-    val precond : Formula = Exists(rootvar::Nil, And(req, Or(d1, Or(d2,d3))))
-
+    val precond : Formula = Exists(rootvar::Nil, And(req, Or(disj0,Or(disj1,disj2))))
     val starter = proveBy( Sequent(seq.ante, seq.succ :+ precond), ToolTactics.hideNonFOL & QE)
 
     if(!starter.isProved) {
@@ -488,33 +488,28 @@ object ODELiveness {
 
     // The main tactic that discharges the splitting
     val splittac =
-      //First, separate out a root
-      cut(dbxforce) <(
-      (existsL('Llast) * coeffs.length),
-      cohideOnlyR('Rlast) & cohideOnlyL(-2) & QE) &
-      dC(inv)(1) <(
-        hideL('Llast) & orL(-3) <(
-          //v=r case
-          dC(d1)(1) <(
-            DifferentialTactics.diffWeakenG(1) & QE, //could be done manually with US instead of QE
-            DifferentialTactics.dgDbx(tm)(1)) //maybe can be made faster
-          ,
-          orL(-3) <(
-            // p < 0
-            andL(-3) &
-            dC(pless)(1) <(
-              DifferentialTactics.DconstV(1) & dC(GreaterEqual(x,oldvar))(1) <( DifferentialTactics.diffWeakenG(1) & QE, DifferentialTactics.dgBarrier(1)),
-              DifferentialTactics.dgDbx(tm)(1)) //maybe can be made faster
-            ,
-            dC(pgreater)(1) <(
-              DifferentialTactics.DconstV(1) & dC(LessEqual(x,oldvar))(1) <( DifferentialTactics.diffWeakenG(1) & QE,  DifferentialTactics.dgBarrier(1)),
-              DifferentialTactics.dgDbx(tm)(1)) //maybe can be made faster
+      orL(-3) <(
+        //v=r case
+        dC(disj0)(1) <(
+          DifferentialTactics.diffWeakenG(1) & QE, //could be done manually with US instead of QE
+          dRI(1)) //maybe can be made faster
+        ,
+        orL(-3) < (
+          andL(-3) &
+          DifferentialTactics.DconstV(1) & dC(pleq)(1) <(
+            dC(GreaterEqual(x,oldvar))(1) <( DifferentialTactics.diffWeakenG(1) & QE, DifferentialTactics.dgBarrier(1)),
+            ODEInvariance.sAIclosed(1)
+          ),
+          andL(-3) &
+            DifferentialTactics.DconstV(1) & dC(pgeq)(1) <(
+            dC(LessEqual(x,oldvar))(1) <( DifferentialTactics.diffWeakenG(1) & QE,  DifferentialTactics.dgBarrier(1)),
+            ODEInvariance.sAIclosed(1)
           )
-        ),
-        DifferentialTactics.DconstV(1) & DifferentialTactics.diffWeakenG(1) & implyR(1) & andL(-1) & andL(-2) & allL(-2) & closeId
+        )
       )
 
-    val tac = cut(precond)<(
+    val tac =
+      cut(precond)<(
       existsL('Llast) &
         cut(Exists(oldvar::Nil,Equal(x,oldvar))) <( existsL('Llast) & exhaustiveEqL2R('Llast), cohideR('Rlast) & QE) &
         andL(-(seq.ante.length+1)) &

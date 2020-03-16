@@ -623,8 +623,7 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  // Note: very slow on Z3 because of existential questions
-  "univariate" should "automatically odeReduce univariate" in withMathematica { _ =>
+  "univariate" should "automatically odeReduce univariate" in withQE { _ =>
     val fml = "b() > 0 & k > 0 & v > 0 -> <{x'=v, v' = -k* v^3 -v^2 - b() * v + 1, y'=y, t'=1}> t > 1000".asFormula
 
     val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
@@ -657,10 +656,19 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "work on a hard symbolic case" in withQE { _ =>
-    val fml = "a > 0 & b() < 0 & x<= a/2 & x>= b()/2 -> <{x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
+    val fml = "a > 0 & b() < 0 & x<= a& x>= b()-> <{x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
 
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1))
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
     println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "work with interleaved cases" in withQE { _ =>
+    val fml = "a > 0 & b() < 0 & x<= a& x>= b()& y^2 = 0 -> <{k'=z+x+k,  y'=y*(y-a)*(y-b()),z'=x+z, x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
+
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
   }
 
   it should "try manual univariate boundedness proof" in withQE { _ =>
@@ -684,6 +692,5 @@ class ODELivenessTests extends TacticTestBase {
 
     println(pr)
   }
-
 
 }
