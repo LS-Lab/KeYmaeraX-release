@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tools.ext.PlotConverter
 import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
@@ -211,9 +212,18 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     case i: Map[String, Any] => i.values.mkString(",")
   }
 
-  it should "generate invariants" in withMathematicaMatlab { tool => setTimeouts(tool) {
+  it should "output plots" in withMathematica { _ =>
+    entries.foreach(e => {
+      val (model, defs) = parseStripHints(e.model)
+      println(edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.string(e.name).toString + "\n" + PlotConverter(defs.exhaustiveSubst(model)).toString)
+    })
+  }
+
+  it should "generate invariants with default DiffSat strategy" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
+      Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
@@ -225,7 +235,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       writer.write(
         "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n")
       writer.close()
-      entries.filter(_.name == "Arrowsmith Place Fig_3_5e page 79").foreach(e => {
+
+      entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
 
@@ -239,9 +250,70 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
   }
 
-  it should "generate invariants with Barrier only" ignore withMathematicaMatlab { tool => setTimeouts(tool) {
+  it should "generate invariants with default DiffSat strategy, no cut minimize" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
+      Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0",
+      Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
+      Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "-1",
+      Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "false")
+    ) {
+      val filename = "_invgen_saturate_nocutminimize_proofhints.csv"
+      val writer = new PrintWriter(benchmarkName + filename)
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n")
+      writer.close()
+      entries.foreach(e => {
+        val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
+        try {
+
+          val result = runInvGen(e.name, e.model, matlab=true)
+          writer.write(result.toCsv(infoPrinter) + "\r\n")
+        } finally {
+          writer.close()
+        }
+      })
+    }
+  }
+  }
+
+  it should "generate invariants with DiffSat strategy without heuristics" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(
+      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
+      Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
+      Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "-1",
+      Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true")
+    ) {
+      val filename = "_invgen_saturate_noheuristics_proofhints.csv"
+      val writer = new PrintWriter(benchmarkName + filename)
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n")
+      writer.close()
+      entries.foreach(e => {
+        val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
+        try {
+
+          val result = runInvGen(e.name, e.model, matlab=true)
+          writer.write(result.toCsv(infoPrinter) + "\r\n")
+        } finally {
+          writer.close()
+        }
+      })
+    }
+  }
+  }
+
+  it should "generate invariants with Barrier only" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(
+      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "0", /* disable */
@@ -270,6 +342,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   it should "generate invariants with Darboux only" in withMathematica { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "-1",
@@ -282,7 +355,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
         "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n")
       writer.close()
       writer.close()
-      entries.takeRight(1).foreach(e => {
+      entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
           val result = runInvGen(e.name, e.model, matlab=false)
@@ -295,9 +368,10 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
   }
 
-  it should "generate invariants with invariant heuristics (summands) only" ignore withMathematica { tool => setTimeouts(tool) {
+  it should "generate invariants with invariant heuristics (summands) only" in withMathematica { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "-1",
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "0", /* disable */
@@ -324,9 +398,10 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
   }
 
-  it should "generate invariants with first integrals only" ignore withMathematica { tool => setTimeouts(tool) {
+  it should "generate invariants with first integrals only" in withMathematica { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "-1",
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "0", /* disable */
@@ -358,15 +433,15 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
         val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))
         println(s"Generating invariants $name")
         val invGenStart = System.currentTimeMillis()
-        val candidates = InvariantGenerator.pegasusCandidates(seq, SuccPos(0)).toList
+        val candidates = InvariantGenerator.pegasusInvariants(seq, SuccPos(0)).toList
         val invGenEnd = System.currentTimeMillis()
-        println(s"Done generating (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
+        println(s"Done generating in ${invGenEnd-invGenStart}ms (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
         Some((candidates, invGenStart, invGenEnd))
       case _ => None
     }
   }
 
-  private def runInvGen(name: String, modelContent: String, matlab: Boolean) = {
+  private def runInvGen(name: String, modelContent: String, matlab: Boolean): BenchmarkResult = {
     if (genCheck) {
       beforeEach()
       if (matlab) withMathematicaMatlab(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
