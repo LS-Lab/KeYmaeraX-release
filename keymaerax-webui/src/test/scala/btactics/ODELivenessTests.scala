@@ -623,8 +623,9 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "univariate" should "automatically odeReduce univariate" in withQE { _ =>
-    val fml = "k > 0 & v > 0 -> <{x'=v, v' = -k* v^3 -v^2 - v + 1, y'=y, t'=1}> t > 1000".asFormula
+  // Note: very slow on Z3 because of existential questions
+  "univariate" should "automatically odeReduce univariate" in withMathematica { _ =>
+    val fml = "b() > 0 & k > 0 & v > 0 -> <{x'=v, v' = -k* v^3 -v^2 - b() * v + 1, y'=y, t'=1}> t > 1000".asFormula
 
     val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
 
@@ -632,7 +633,37 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try boundedness" in withQE { _ =>
+  it should "not try univariate removal when inapplicable (1)" in withQE { _ =>
+    val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=a^2*v, t'=1}> t > 1000".asFormula
+
+    // In this case, the univariate reduction should never fire
+    // and things should fallback to the nonlinear case
+    val pr = proveBy(fml, prop & odeReduce()(1))
+    println(pr)
+
+    // should throw this error
+    // "because odeReduce failed to autoremove: {a'=a^2*v,v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]a*a+v*v<=f_(|a,v|) or this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]2*(a*(a^2*v)+v*(-v^2*a))<=a_(|y_,z_,a,v|)*(a*a+v*v)+b_(|y_,z_,a,v|)"
+  }
+
+  it should "not try univariate removal when inapplicable (2)" in withQE { _ =>
+    val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=1, t'=1}> t > 1000".asFormula
+
+    // In this case, the univariate reduction should never fire
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1))
+    println(pr)
+
+    // should throw this error
+    // "because odeReduce failed to autoremove: {v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{v'=-v^2*a,a'=1,t'=1&true}]v*v<=f_(|v|) or this form: [{v'=-v^2*a,a'=1,t'=1&true}]2*(v*(-v^2*a))<=a_(|y_,z_,v|)*(v*v)+b_(|y_,z_,v|)"
+  }
+
+  it should "work on a hard symbolic case" in withQE { _ =>
+    val fml = "a > 0 & b() < 0 & x<= a/2 & x>= b()/2 -> <{x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
+
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1))
+    println(pr)
+  }
+
+  it should "try manual univariate boundedness proof" in withQE { _ =>
     val fml = "a*r^2+b*r+c = 0 & (v-r=0 | v-r < 0 & a*v0^2+b*v0+c > 0 | a*v0^2+b*v0+c < 0 & v-r > 0 ) & v=v0 -> [{v' = a*v^2+b*v+c}] v^2 <= v0^2+r^2".asFormula
     val pr = proveBy(fml,
       implyR(1) & cut("\\exists d \\exists e \\forall v a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula) <(

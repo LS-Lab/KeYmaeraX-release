@@ -432,23 +432,29 @@ object ODELiveness {
     Some(res)
   }
 
-  // Helper to remove a nonlinear univariate ODE that is in the head position at the given position
-  // This is a bit different from the others in that it needs to inspect the current sequent in order to remove the
-  // univariate ODE
+  // Helper to remove a nonlinear univariate ODE.
+  // This is a bit different from the others in that it needs to inspect the current sequent in order to
+  // correctly remove the univariate ODE. Thus, it throws BelleThrowables for errors
   private def removeODEUnivariate(ode : List[DifferentialProgram], cont:BelleExpr): DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("removeODEUnivariate only applicable to box ODE in antedent")
+      case _ => throw new BelleThrowable("removeODEUnivariate only applicable to box ODE")
     }
 
-    if(!(ode.length>=1 && ode.head.isInstanceOf[AtomicODE]))
-      throw new IllegalArgumentException("ODE must be univariate")
+    if(!ode.head.isInstanceOf[AtomicODE])
+      throw new BelleThrowable("removeODEUnivariate only applies to univariate ODE")
 
     val uode = ode.head.asInstanceOf[AtomicODE]
 
     val x = uode.xp.x
     val rhs = uode.e
+
+    val deps = StaticSemantics.freeVars(rhs).-(x).intersect(StaticSemantics.boundVars(sys))
+
+    if(!deps.isEmpty)
+      // This is not a proper univariate case, forward to the nonlinear tactic instead
+       throw new BelleThrowable("removeODEUnivariate only applies to univariate ODE (independent of subsequent ODEs). Found incorrect dependencies on variables: "+deps)
 
     val deg = ToolTactics.varDegree(rhs,x)
     val coeff1 = (1 to (deg-1)).map(i => Variable("coeff", Some(i)))
@@ -472,8 +478,9 @@ object ODELiveness {
 
     val starter = proveBy( Sequent(seq.ante, seq.succ :+ precond), ToolTactics.hideNonFOL & QE)
 
-    if(!starter.isProved)
+    if(!starter.isProved) {
       throw new BelleThrowable("Initial conditions insufficient for global existence on variable: "+x)
+    }
 
     // Forcing darboux format
     val inv = Equal(rhs,Times(Minus(x,rootvar),tm))
@@ -568,14 +575,10 @@ object ODELiveness {
     val vdg = try
       affineVDGprecond(ls.head)
     catch {
-      case e : IllegalArgumentException =>
-        // If it is a univariate ODE just remove it
-        try return removeODEUnivariate(ls,removeODEs(ls.tail,pos, strict))(pos)
-        catch {
-          case e: IllegalArgumentException =>
-            //Otherwise try the nonlinear case
-            return removeODENonLin(ls.head,strict,removeODEs(ls.tail,pos, strict))(pos)
-        }
+      case e : IllegalArgumentException => {
+        // If it is a univariate ODE just remove it, otherwise fallback to nonlinear
+        return removeODEUnivariate(ls, removeODEs(ls.tail, pos, strict))(pos) | removeODENonLin(ls.head, strict, removeODEs(ls.tail, pos, strict))(pos)
+      }
     }
 
     useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)
