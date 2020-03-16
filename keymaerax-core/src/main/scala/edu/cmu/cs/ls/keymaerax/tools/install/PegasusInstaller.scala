@@ -31,12 +31,12 @@ object PegasusInstaller extends Logging {
 
     val pegasusResourcePath = "/Pegasus/"
     val pegasusResourceNames =
-      "Primitives/BarrierCertificates.m" ::
+        "Primitives/BarrierCertificates.m" ::
+        "Primitives/ConicAbstractions.m" ::
         "Primitives/DarbouxPolynomials.m" ::
         "Primitives/Dependency.m" ::
         "Primitives/DiscreteAbstraction.m" ::
         "Primitives/FirstIntegrals.m" ::
-        "Primitives/Linear.m" ::
         "Primitives/LinearAlgebraicInvariants.m" ::
         "Primitives/LZZ.m" ::
         "Primitives/PreservedState.m" ::
@@ -50,6 +50,7 @@ object PegasusInstaller extends Logging {
         "Strategies/GenericNonLinear.m" ::
         "Strategies/Helper.m" ::
         "Strategies/InvariantExtractor.m" ::
+        "Strategies/Linear.m" ::
         "Strategies/OneDimensional.m" ::
         "Classifier.m" ::
         "Pegasus.m" ::
