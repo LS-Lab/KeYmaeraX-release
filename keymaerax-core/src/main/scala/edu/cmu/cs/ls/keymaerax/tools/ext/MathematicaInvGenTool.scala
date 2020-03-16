@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ConversionException
 import edu.cmu.cs.ls.keymaerax.tools.install.PegasusInstaller
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
@@ -40,7 +41,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   /** @inheritdoc */
   override def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
-    timeout = Configuration.Pegasus.invGenTimeout(-1)
+    timeout = -1 // reap must be outermost, so do not set tool timeout (which is automatically translated to timeconstrained), but instead use commandTimeout in timeConstrained below
+    val commandTimeout = Configuration.Pegasus.invGenTimeout(-1)
 
     val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
     val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)):_*)
@@ -74,13 +76,31 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
         rule(dssymbol("MinimizeCuts"), bool(Configuration.Pegasus.DiffSaturation.minimizeCuts())))
     )
 
+    val reap = UnaryMathOpSpec(symbol("Reap"))
+    val timeConstrained = BinaryMathOpSpec(symbol("TimeConstrained"))
+    val set = BinaryMathOpSpec(symbol("Set"))
+    val mIf = NaryMathOpSpec(symbol("If"))
+    val part = BinaryMathOpSpec(symbol("Part"))
+
     val pegasusMain = Configuration.Pegasus.mainFile("Pegasus.m")
     //@note quiet suppresses messages, since translated into Exception in command runner
     val command = quiet(compoundExpression(
       setPathsCmd,
       needs(string(PEGASUS_NAMESPACE), string(pegasusMain)),
       options,
-      applyFunc(psymbol("InvGen"))(problem))
+      // without intermediate result extraction: applyFunc(psymbol("InvGen"))(problem)
+      compoundExpression(
+        set(
+          symbol("reaped"),
+          reap(timeConstrained(applyFunc(psymbol("InvGen"))(problem), int(commandTimeout))))
+        ),
+        //If[Unequal[Part[reaped, 1], $Aborted], Part[reaped, 1], Part[Part[reaped, 2], -1]]
+        mIf(
+          unequal(part(symbol("reaped"), int(1)), aborted.op),
+          part(symbol("reaped"), int(1)),
+          part(part(part(symbol("reaped"), int(2)), int(1)), int(-1))
+        )
+      )
     )
 
     try {

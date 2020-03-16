@@ -141,6 +141,8 @@ post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 
+Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]];
+
 timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
 Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
 AppendTo[timingList,Symbol["InvCheck"]->timedInvImpliesPost[[1]]];
