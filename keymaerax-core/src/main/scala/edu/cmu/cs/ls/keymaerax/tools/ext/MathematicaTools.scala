@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
@@ -150,6 +150,33 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
   override def k2m: K2MConverter[Either[KExpr, NamedSymbol]] = null
   override private[tools] def convert(e: MExpr): Either[KExpr,NamedSymbol] = Left(baseConverter.convert(e))
   override def apply(e: MExpr): Either[KExpr,NamedSymbol] = convert(e)
+}
+
+object PlotConverter extends UncheckedBaseK2MConverter {
+  override def apply(e: KExpr): MExpr = e match {
+    case Imply(pre, Box(ODESystem(ode, domain), post)) =>
+      val primedVars = DifferentialHelper.getPrimedVariables(ode)
+      val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => apply(o.e)):_*)
+
+      val show = NaryMathOpSpec(symbol("Show"))
+      val regionPlot = NaryMathOpSpec(symbol("RegionPlot"))
+      val streamPlot = NaryMathOpSpec(symbol("StreamPlot"))
+      val regions = primedVars.map(v => list(apply(v), int(-5), int(5)))
+
+      val plotPoints = rule(symbol("PlotPoints"), int(100))
+      val postPlotStyle = rule(symbol("PlotStyle"), list(symbol("Red"), UnaryMathOpSpec(symbol("Opacity"))(double(0.5))))
+      val prePlotStyle = rule(symbol("PlotStyle"), list(symbol("Green"), UnaryMathOpSpec(symbol("Opacity"))(double(0.5))))
+      val domainPlotStyle = rule(symbol("PlotStyle"), list(symbol("Blue"), UnaryMathOpSpec(symbol("Opacity"))(double(0.5))))
+
+      val prePlot = regionPlot((list(apply(pre)) +: (regions :+ prePlotStyle :+ plotPoints)): _*)
+      val vfPlot = streamPlot((vectorField +: regions): _*)
+      val domainPlot = regionPlot((list(apply(domain)) +: (regions :+ domainPlotStyle :+ plotPoints)): _*)
+      val postPlot = regionPlot((list(apply(Not(post))) +: (regions :+ postPlotStyle :+ plotPoints)): _*)
+
+      if (domain != True) show(prePlot, vfPlot, domainPlot, postPlot)
+      else show(prePlot, vfPlot, postPlot)
+    case _ => super.apply(e)
+  }
 }
 
 object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
