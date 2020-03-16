@@ -84,7 +84,10 @@ Print["HeuInvariants skipped."]; {}]
 ]
 
 
-FirstIntegrals[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat,uppers,lowers,bound},
+FirstIntegrals[problem_List, opts:OptionsPattern[]]:=Module[{
+	pre,post,vf,vars,Q,
+	fIs,maxminVs,deg,
+	rat,uppers,lowers,bound},
 {pre, { vf, vars, Q }, post} = problem;
 
 (* Heuristic *)
@@ -110,10 +113,14 @@ lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs];
 (*Print["First integrals:",fIs];
 Print[uppers,lowers]; *)
 
-maxVs=Flatten[MapThread[If[#2==Infinity,{},{#1<=#2}] &, {fIs,uppers}]];
-minVs=Flatten[MapThread[If[#2==-Infinity,{},{#1>=#2}] &, {fIs,lowers}]];
+maxminVs=Flatten[MapThread[
+  (* If the upper and lower bound are the same and non-infinity, return the equality *)
+  If[#2==#3&&#2!=Infinity,{#1==#2},
+    (* Else return the two bounds separately*)
+    {If[#2==Infinity,{},{#1<=#2}], If[#3==-Infinity,{},{#1>=#3}]}] &,
+  {fIs,uppers,lowers}]];
 
-Union[maxVs,minVs]
+maxminVs
 ], OptionValue[FirstIntegrals,Timeout],
 {}],
 Print["FirstIntegrals skipped."]; {}]

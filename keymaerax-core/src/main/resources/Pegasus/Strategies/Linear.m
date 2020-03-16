@@ -1,16 +1,16 @@
 (* ::Package:: *)
 
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
-Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m"}]] 
+Needs["GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]] 
 
 
-BeginPackage[ "Linear`"]
+BeginPackage[ "Linear`"];
 
 
 LinearMethod::usage="LinearMethod[problem_List]"
 Options[LinearMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->2};
 PlanarConstantMethod::usage="ConstantMethod[problem_List]"
-LinearClass::usage="LinearClass[matrix]"
+LinearClass::usage="LinearClass[matrix] determines the class of problem from the given system matrix"
 
 
 Begin["`Private`"]
@@ -60,9 +60,10 @@ Expand[vars.LM.vars]
 LinearMethod[problem_List, opts:OptionsPattern[]]:=Module[{
 pre, vf, vars, evoConst, post,
 M,rats,FIDeg,ratPrecision,
-initConnectedComponents,class
+initConnectedComponents,class,res,invs
 },
 {pre,{vf,vars,evoConst},post}=problem;
+(* Doesn't work for affine *)
 M=Grad[vf, vars];
 
 (* Process options *)
@@ -72,54 +73,43 @@ ratPrecision=If[TrueQ[OptionValue[RationalPrecision]>0],OptionValue[RationalPrec
 
 (* Compute the connected components of the initial set *)
 initConnectedComponents=CylindricalDecomposition[pre,vars,"Components"];
-
-class=LinearClass[M]/.{
-"Centre" :> Block[{
-  FIs=FirstIntegrals`FuncIndep[FirstIntegrals`FindFirstIntegrals[FIDeg, vars, vf],vars],
-  maxFns,minFns,maxmin},
-  Print["Linear Centre"];
-  maxFns = Map[#[[1]]-Primitives`UpperRatCoeffs[MaxValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{FIs, initConnectedComponents}] ];
-  minFns = Map[#[[1]]-Primitives`LowerRatCoeffs[MinValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{FIs, initConnectedComponents}] ];
-  maxmin = Transpose[{maxFns, minFns}];
-  Flatten[maxmin]
-  (*Map[And[#[[1]]\[LessEqual]0,#[[2]]\[GreaterEqual]0]&,maxmin] /. List \[Rule] Or*)
+class = LinearClass[M];
+Print["Linear problem class: ",class];
+res=class/.{
+"Centre" :> Block[{},
+  GenericNonLinear`FirstIntegrals[problem, "Deg"->FIDeg]
 ],
 "Stable":> Block[{LyapunovFn,Krasovskii,
   separatrices=EigenspacePolys[M, vars],
   maximise,minimise,maxFns,minFns,maxmin},
-  Print["Linear Stable"];
   LyapunovFn=LyapunovIdentity[M,vars];
   Krasovskii=vf.vf; 
   maximise={LyapunovFn, Krasovskii};
-  maxFns = Map[#[[1]]-Primitives`UpperRatCoeffs[MaxValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{maximise, initConnectedComponents}] ];
+  maxFns = Map[#[[1]]-Primitives`UpperRatCoeffs[MaxValue[#,vars],vars,ratPrecision] &, Tuples[{maximise, initConnectedComponents}] ];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
-  Union[separatrices, maxFns]
+  InvariantExtractor`DWC[problem,Union[separatrices, maxFns],{}][[2]]
 ],
 "Unstable":> Block[{LyapunovFn,Krasovskii,
   separatrices=EigenspacePolys[M, vars],
   minimise,minFns},
-  Print["Linear Unstable"];
   LyapunovFn=LyapunovIdentity[-M,vars];
   Krasovskii=(-vf).(-vf); 
   minimise={LyapunovFn, Krasovskii};
   minFns = Map[#[[1]]-Primitives`LowerRatCoeffs[MinValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{minimise, initConnectedComponents}] ];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
-  Union[separatrices, minFns]
+  InvariantExtractor`DWC[problem,Union[separatrices, minFns],{}][[2]]
 ],
 "Other":> Block[{
-  FIs=FirstIntegrals`FuncIndep[FirstIntegrals`FindFirstIntegrals[FIDeg, vars, vf],vars],
   (* Compute the linear forms of the invariant sub-spaces *)
   separatrices=EigenspacePolys[M, vars],
   ls,maxFns,minFns,maxmin},
-  Print["Linear Other"];
-  maxFns = Map[#[[1]]-Primitives`UpperRatCoeffs[MaxValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{FIs, initConnectedComponents}] ];
-  minFns = Map[#[[1]]-Primitives`LowerRatCoeffs[MinValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{FIs, initConnectedComponents}] ];
-  maxmin = Transpose[{maxFns, minFns}];
+  fis=GenericNonLinear`FirstIntegrals[problem, "Deg"->FIDeg];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
-  Union[maxmin,separatrices]//Flatten
+  invs=InvariantExtractor`DWC[problem,separatrices,{}][[2]];
+  Union[fis,invs]
 ]
 };
-class
+res
 ]
 
 
