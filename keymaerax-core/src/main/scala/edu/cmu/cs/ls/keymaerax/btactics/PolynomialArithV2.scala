@@ -28,14 +28,15 @@ import scala.collection.immutable._
   * A power product is represented densely as a list of exponents
   *
   * All data-structures maintain a proof of
-  *  input term = normal form of representation
+  *  input term = representation of data structure as Term
   *
-  * the normal form of a 3-Node (l, v1, m, v2, r) is "l + v1 + m + v2 + r"
-  * the normal form of a 2-Node (l, v, r) is "l + v + r"
-  * the normal form of a monomial (c, pp) is "c * pp"
-  * the normal form of a coefficient (num, denum) is "num / denum"
-  * the normal form of a power product [e1, ..., en] is "x1^e1 * ... * xn ^ en",
-  *   where instead of "x^0", we write "1" in order to avoid trouble with 0^0, i.e., nonzero-assumptions on x or the like
+  * Representations of data structures (recursively applied on rhs):
+  *   - 3-Node (l, v1, m, v2, r) is "l + v1 + m + v2 + r"
+  *   - 2-Node (l, v, r) is "l + v + r"
+  *   - monomial (c, pp) is "c * pp"
+  *   - coefficient (num, denum) is "num / denum"
+  *   - power product [e1, ..., en] is "x1^e1 * ... * xn ^ en",
+  *     where instead of "x^0", we write "1" in order to avoid trouble with 0^0, i.e., nonzero-assumptions on x or the like
   *
   * All operations on the representations update the proofs accordingly.
   *
@@ -216,6 +217,18 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       val prvRes = useDirectly(coefficientTimesPrv, inst, Seq(prv, that.prv, numericPrv))
       Coefficient(numRes, denumRes, Some(prvRes))
     }
+
+    /** normalized to a nicer output form, i.e., simplify rhs with
+      *   0 / d = 0
+      *   n / 1 = n
+      * */
+    def normalized : (ProvableSig, Term) = if (num.compareTo(0) == 0) {
+      (useDirectly(normalizeCoeff0, Seq(("c_", lhs), ("d_", denumN)), Seq(prv)), Number(0))
+    } else if (denum.compareTo(1) == 0) {
+      (useDirectly(normalizeCoeff1, Seq(("c_", lhs), ("n_", numN)), Seq(prv)), numN)
+    } else {
+      (prv, rhs)
+    }
   }
 
   val identityTimes = rememberAny("1*f_() = f_()".asFormula, QE & done)
@@ -282,68 +295,72 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
   /**
     * prv: lhs = rfhs
     * lhs: input term (arbitrary, trace of construction)
-    * rhs: normalized form of `coeff*vars^powers`
+    * rhs: representation of `coeff*vars^powers`
     * */
   case class Monomial(coeff: Coefficient, powers: IndexedSeq[Int], prvO: Option[ProvableSig] = None) extends Ordered[Monomial] {
 
-    def monomialTerm(coeff: Term, powers: IndexedSeq[Int]) : Term = {
-      Times(coeff, (0 until vars.length).map(variablePower(powers)).reduceLeft(Times))
-    }
+    def powersTerm: Term = (0 until vars.length).map(variablePower(powers)).reduceLeft(Times)
+
+    def monomialTerm(coeff: Term): Term = Times(coeff, powersTerm)
 
     def powersString: String = {
       val sep = " " // nicer than "*" ?
       (if (coeff.num.compareTo(1) == 0 && coeff.denum.compareTo(1) == 0 && powers.exists(_ > 0)) ""
-        else if (coeff.num.compareTo(-1) == 0 && coeff.denum.compareTo(1) == 0) "-"
-        else coeff.rhsString + sep) +
-        (0 until vars.length).flatMap(i => if (powers(i)>0) Some(Power(vars(i), Number(powers(i)))) else None).mkString(sep)
+      else if (coeff.num.compareTo(-1) == 0 && coeff.denum.compareTo(1) == 0) "-"
+      else coeff.rhsString + sep) +
+        (0 until vars.length).flatMap(i => if (powers(i) > 0) Some(Power(vars(i), Number(powers(i)))) else None).mkString(sep)
     }
 
-    lazy val defaultPrv = equalReflex(monomialTerm(coeff.rhs, powers))
+    lazy val defaultPrv = equalReflex(monomialTerm(coeff.rhs))
+
     def forgetPrv = Monomial(coeff, powers, Some(defaultPrv))
+
     // @note detour for "dependent" default argument
     val prv = prvO.getOrElse(defaultPrv)
 
     // @todo: finish proof!
     //assert(prv.subgoals.isEmpty)
     assert(prv.conclusion.ante.isEmpty)
-    assert(prv.conclusion.succ.length==1)
+    assert(prv.conclusion.succ.length == 1)
     assert(prv.conclusion.succ(0) match {
-      case Equal(_, rhs) => rhs == monomialTerm(coeff.rhs, powers)
+      case Equal(_, rhs) => rhs == monomialTerm(coeff.rhs)
       case _ => false
     })
-    val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs@(Times(_, _))) => (eq, lhs, rhs) }
+    val (eq, lhs, rhs) = prv.conclusion.succ(0) match {
+      case eq@Equal(lhs, rhs@(Times(_, _))) => (eq, lhs, rhs)
+    }
 
-    private def solvePowers(prv: ProvableSig, i: Int) : ProvableSig = {
+    private def solvePowers(prv: ProvableSig, i: Int): ProvableSig = {
       prv.subgoals(i).succ(0) match {
         case And(_, _) =>
-          solvePowers(solvePowers(prv(AndRight(SuccPos(0)), i), i+1), i)
+          solvePowers(solvePowers(prv(AndRight(SuccPos(0)), i), i + 1), i)
         case Equal(Times(Number(_), f), _) =>
           // 1 * f = f
-          prv(identityTimes(USubst(SubstitutionPair(constF, f)::Nil)), i)
+          prv(identityTimes(USubst(SubstitutionPair(constF, f) :: Nil)), i)
         case Equal(Times(f, Number(_)), _) =>
           // f * 1 = f
-          prv(timesIdentity(USubst(SubstitutionPair(constF, f)::Nil)), i)
+          prv(timesIdentity(USubst(SubstitutionPair(constF, f) :: Nil)), i)
         case Equal(Times(Power(x, Number(n)), Power(_, Number(m))), _) =>
           // _^i * _^j = _^(i+j)
-          prv(powerLemma(n.toIntExact, m.toIntExact)(USubst(SubstitutionPair(constX, x)::Nil)), i)
+          prv(powerLemma(n.toIntExact, m.toIntExact)(USubst(SubstitutionPair(constX, x) :: Nil)), i)
         case e =>
           ???
       }
     }
 
-    def *(that: Monomial) : Monomial = {
+    def *(that: Monomial): Monomial = {
       val newCoeff = coeff.forgetPrv * that.coeff.forgetPrv
       val newPowers = (powers, that.powers).zipped.map(_ + _)
       // TODO: just use a match for simplicity?
       val inst = Seq(("l_", lhs),
-          ("r_", that.lhs),
-          ("cl_", coeff.rhs),
-          ("cr_", that.coeff.rhs),
-          ("c0_", newCoeff.rhs)
-        ) ++
-          (0 until vars.length).map(i => (mkConstN("xl", i), variablePower(powers)(i))) ++
-          (0 until vars.length).map(i => (mkConstN("xr", i), variablePower(that.powers)(i))) ++
-          (0 until vars.length).map(i => (mkConstN("x", i), variablePower(newPowers)(i)))
+        ("r_", that.lhs),
+        ("cl_", coeff.rhs),
+        ("cr_", that.coeff.rhs),
+        ("c0_", newCoeff.rhs)
+      ) ++
+        (0 until vars.length).map(i => (mkConstN("xl", i), variablePower(powers)(i))) ++
+        (0 until vars.length).map(i => (mkConstN("xr", i), variablePower(that.powers)(i))) ++
+        (0 until vars.length).map(i => (mkConstN("x", i), variablePower(newPowers)(i)))
       val monomialTimesLemmaInst = monomialTimesLemma(substOfInst(inst))
       val powersFml = monomialTimesLemmaInst.conclusion.succ(0) match {
         case Imply(And(_, And(_, And(_, powersFml))), _) => powersFml
@@ -373,7 +390,8 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     // reverse lexicographic ordering, TODO: why not thats?
     override def compare(that: Monomial): Int = {
       val l = vars.length
-      def compareAt(i: Int) : Int =
+
+      def compareAt(i: Int): Int =
         if (i >= l) 0
         else {
           val c = powers(i).compare(that.powers(i))
@@ -382,6 +400,75 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
         }
       // note *reverse*
       -compareAt(0)
+    }
+
+    def normalizePowers(c: Coefficient, t: Term): (ProvableSig, Term) = t match {
+      case Times(ps, Number(n)) =>
+        //assert((n.compareTo(1) == 0))
+        val (cpsPrv, cps) = normalizePowers(c, ps)
+        (useDirectly(normalizePowersR1, Seq(("c_", c.lhs), ("ps_", ps), ("cps_", cps)), Seq(cpsPrv)), cps)
+      case Times(ps, t@Power(v, Number(n))) =>
+        val (cpsPrv, cps) = normalizePowers(c, ps)
+        if (n.compareTo(1) == 0) {
+          (useDirectly(normalizePowersRV, Seq(("c_", c.lhs), ("ps_", ps), ("cps_", cps), ("v_", v)), Seq(cpsPrv)), Times(cps, v))
+        } else {
+          (useDirectly(normalizePowersRP, Seq(("c_", c.lhs), ("ps_", ps), ("cps_", cps), ("t_", t)), Seq(cpsPrv)), Times(cps, t))
+        }
+      case Number(n) =>
+        //assert((n.compareTo(1) == 0))
+        val (cdPrv, d) = c.normalized
+        (useDirectly(normalizePowersC1, Seq(("c_", c.lhs), ("d_", d)), Seq(cdPrv)), d)
+      case Power(v, Number(n)) =>
+        val (cdPrv, d) = c.normalized
+        if (c.num.compareTo(1) == 0 && c.denum.compareTo(1) == 0) {
+          // c = 1
+          if (n.compareTo(1) == 0) {
+            (useDirectly(normalizePowers1V, Seq(("c_", c.lhs), ("v_", v)), Seq(cdPrv)), v)
+          } else {
+            (useDirectly(normalizePowers1R, Seq(("c_", c.lhs), ("t_", t)), Seq(cdPrv)), t)
+          }
+        } else {
+          // c = d
+          if (n.compareTo(1) == 0) {
+            (useDirectly(normalizePowersCV, Seq(("c_", c.lhs), ("d_", d), ("v_", v)), Seq(cdPrv)), Times(d, v))
+          } else {
+            (useDirectly(normalizePowersCP, Seq(("c_", c.lhs), ("d_", d), ("t_", t)), Seq(cdPrv)), Times(d, t))
+          }
+        }
+    }
+
+    /**
+      * normalized: normalize coefficient, rewrite product of rhs with
+      *   1 * x = x
+      *   x * 1 = 1
+      *   x ^ 1 = x
+      * */
+    def normalized : ProvableSig = {
+      val (cnPrv, cn) = coeff.forgetPrv.normalized
+      if (coeff.num.compareTo(0) == 0)
+        useDirectly(normalizeMonom0, Seq(
+          ("x_", lhs),
+          ("c_", coeff.rhs),
+          ("ps_", powersTerm)), Seq(prv, cnPrv))
+      else if (coeff.num.compareTo(0) > 0) {
+        val (cpsPrv, cps) = normalizePowers(coeff.forgetPrv, powersTerm)
+        useDirectly(normalizeMonomCS, Seq(
+          ("x_", lhs),
+          ("c_", coeff.rhs),
+          ("ps_", powersTerm),
+          ("cps_", cps)
+        ), Seq(prv, cpsPrv))
+      } else {
+        val m = -coeff.forgetPrv
+        val (cpsPrv, cps) = normalizePowers(m.forgetPrv, powersTerm)
+        useDirectly(normalizeMonomNCS, Seq(
+          ("x_", lhs),
+          ("c_", coeff.rhs),
+          ("m_", m.rhs),
+          ("ps_", powersTerm),
+          ("cps_", cps)
+        ), Seq(prv, m.prv, cpsPrv))
+      }
     }
   }
 
@@ -484,6 +571,110 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
   val negateBranch3 = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & -l_() = nl_() & -v1_() = nv1_() & -m_() = nm_() & -v2_() = nv2_() & -r_() = nr_()) ->" +
     "-t_() = nl_() + nv1_() + nm_() + nv2_() + nr_()").asFormula, QE & done)
 
+
+  // Lemmas for normalization
+  val normalizeCoeff0 = rememberAny("(c_() = 0 / d_() ) -> c_() = 0".asFormula, QE & done)
+  val normalizeCoeff1 = rememberAny("(c_() = n_() / 1 ) -> c_() = n_()".asFormula, QE & done)
+
+  val normalizeMonom0 = rememberAny("(x_() = c_() * ps_() & c_() = 0) -> x_() = 0".asFormula, QE & done)
+  val normalizeMonomCS = rememberAny(("(x_() = c_() * ps_() & c_() * ps_() = cps_()) ->" +
+    "x_() = cps_()").asFormula, QE & done)
+  val normalizeMonomNCS = rememberAny(("(x_() = c_() * ps_() & -c_() = m_() & m_() * ps_() = cps_()) ->" +
+    "x_() = -cps_()").asFormula, QE & done)
+
+  val normalizePowers1V = rememberAny("(c_() = 1) -> c_() * v_()^1 = v_()".asFormula, QE & done)
+  val normalizePowers1R = rememberAny("(c_() = 1) -> c_() * t_() = t_()".asFormula, QE & done)
+  val normalizePowersC1 = rememberAny("(c_() = d_()) -> c_() * 1 = d_()".asFormula, QE & done)
+  val normalizePowersCV = rememberAny("(c_() = d_()) -> c_() * v_()^1 = d_()*v_()".asFormula, QE & done)
+  val normalizePowersCP = rememberAny("(c_() = d_()) -> c_() * t_() = d_()*t_()".asFormula, QE & done)
+  val normalizePowersR1 = rememberAny("(c_() * ps_() = cps_()) -> c_() * (ps_() * 1) = cps_()".asFormula, QE & done)
+  val normalizePowersRV = rememberAny("(c_() * ps_() = cps_()) -> c_() * (ps_() * v_()^1) = cps_() * v_()".asFormula, QE & done)
+  val normalizePowersRP = rememberAny("(c_() * ps_() = cps_()) -> c_() * (ps_() * t_()) = cps_() * t_()".asFormula, QE & done)
+
+  val normalizeBranch2 = rememberAny(("(t_() = l_() + v_() + r_() & l_() = ln_() & v_() = vn_() & r_() = rn_()) ->" +
+    "t_() = ln_() + vn_() + rn_()").asFormula, QE & done)
+  val normalizeBranch3 = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = ln_() & v1_() = v1n_() & m_() = mn_() & v2_() = v2n_() & r_() = rn_()) ->" +
+    "t_() = ln_() + v1n_() + mn_() + v2n_() + rn_()").asFormula, QE & done)
+
+  val reassocRight0 = rememberAny((
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = 0   &" +
+      "l_() = ll_()" +
+      ") ->" +
+      "t_() = ll_()").asFormula, QE & done)
+  val reassocRightPlus = rememberAny((
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = rs_() + rr_() &" +
+      "l_() + rs_() = lrs_()" +
+      ") ->" +
+      "t_() = lrs_() + rr_()").asFormula, QE & done)
+  val reassocLeft0RightConst = rememberAny((
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = c_() &" +
+      "l_() = 0" +
+      ") ->" +
+      "t_() = c_()").asFormula, QE & done)
+  val reassocRightConst = rememberAny((
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = c_() &" +
+      "l_() = ll_()" +
+      ") ->" +
+      "t_() = ll_() + c_()").asFormula, QE & done)
+
+  def rhsOf(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].right
+  def lhsOf(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].left
+  /** drop parentheses of a sum of terms on the rhs of prv to the left, e.g.,
+    * t = a + (b + c) ~~> t = a + b + c
+    * */
+  def reassoc(prv: ProvableSig) : ProvableSig = rhsOf(prv) match {
+    case Plus(l, r) =>
+      val rPrv = reassoc(equalReflex(r))
+      rhsOf(rPrv) match {
+        case Number(n) if n.compareTo(0) == 0 =>
+          val llPrv = reassoc(equalReflex(l))
+          useDirectly(reassocRight0, Seq(
+            ("t_", lhsOf(prv)),
+            ("l_", l),
+            ("r_", r),
+            ("ll_", rhsOf(llPrv))
+          ), Seq(prv, rPrv, llPrv))
+        case Plus(rs, rr) =>
+          val lrsPrv = reassoc(equalReflex(Plus(l, rs)))
+          useDirectly (reassocRightPlus, Seq(
+            ("t_", lhsOf(prv)),
+            ("l_", l),
+            ("r_", r),
+            ("rs_", rs),
+            ("rr_", rr),
+            ("lrs_", rhsOf(lrsPrv))
+          ), Seq(prv, rPrv, lrsPrv))
+        case c =>
+          val llPrv = reassoc(equalReflex(l))
+          rhsOf(llPrv) match {
+            case Number(n) if n.compareTo(0) == 0 =>
+              useDirectly (reassocLeft0RightConst, Seq(
+                ("t_", lhsOf(prv)),
+                ("l_", l),
+                ("r_", r),
+                ("c_", c)
+              ), Seq(prv, rPrv, llPrv))
+            case ll =>
+              useDirectly (reassocRightConst, Seq(
+                ("t_", lhsOf(prv)),
+                ("l_", l),
+                ("r_", r),
+                ("c_", c),
+                ("ll_", ll)
+              ), Seq(prv, rPrv, llPrv))
+          }
+      }
+    case _ =>
+      prv
+  }
 
   /**
     * 2-3 Tree for monomials, keeping track of proofs.
@@ -855,6 +1046,41 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
         Branch3(nl, nv1, nm, nv2, nr, Some(newPrv))
     }
 
+
+    /** only normalize monomials, keep 0s and binary tree association */
+    def normalizedMonomials: ProvableSig = this match {
+      case Empty(_) => prv
+      case Branch2(l, v, r, _) =>
+        val lnPrv = l.forgetPrv.normalizedMonomials
+        val vnPrv = v.forgetPrv.normalized
+        val rnPrv = r.forgetPrv.normalizedMonomials
+        useDirectly(normalizeBranch2,
+          Seq(
+            ("t_", lhs),
+            ("l_", l.rhs), ("v_", v.rhs), ("r_", r.rhs),
+            ("ln_", rhsOf(lnPrv)), ("vn_", rhsOf(vnPrv)), ("rn_", rhsOf(rnPrv))
+          ),
+          Seq(prv, lnPrv, vnPrv, rnPrv))
+      case Branch3(l, v1, m, v2, r, _) =>
+        val lnPrv = l.forgetPrv.normalizedMonomials
+        val v1nPrv = v1.forgetPrv.normalized
+        val mnPrv = m.forgetPrv.normalizedMonomials
+        val v2nPrv = v2.forgetPrv.normalized
+        val rnPrv = r.forgetPrv.normalizedMonomials
+        useDirectly(normalizeBranch3,
+          Seq(
+            ("t_", lhs),
+            ("l_", l.rhs), ("v1_", v1.rhs), ("m_", m.rhs), ("v2_", v2.rhs), ("r_", r.rhs),
+            ("ln_", rhsOf(lnPrv)), ("v1n_", rhsOf(v1nPrv)), ("mn_", rhsOf(mnPrv)), ("v2n_", rhsOf(v2nPrv)), ("rn_", rhsOf(rnPrv))
+          ),
+          Seq(prv, lnPrv, v1nPrv, mnPrv, v2nPrv, rnPrv))
+    }
+
+    /** normalized to nicer rhs: drop 0 for empty leaves, normalized monomials, reassociated
+      * e.g., t = (0 + a + 0) + b + (0 + c + 0 + d + 0) ~~> t = a + b + c + d
+      * */
+    def normalized: ProvableSig = reassoc(normalizedMonomials)
+
   }
 
   val varLemmas = (0 until vars.length).map(i => proveBy(Equal(Power(vars(i), "i_()".asTerm),
@@ -878,7 +1104,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, (0 until vars.length).map(_ => Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)),
     QE & done)
   def Const(num: BigDecimal, denum: BigDecimal) : Polynomial =
-    Branch2(Empty(None), Monomial(Coefficient(num, 1, None), (0 until vars.length).map(_ => 0), None), Empty(None),
+    Branch2(Empty(None), Monomial(Coefficient(num, denum, None), (0 until vars.length).map(_ => 0), None), Empty(None),
       Some(rationalLemma(substAny("n_", Number(num))++substAny("d_", Number(denum)))))
   def Const(num: BigDecimal) : Polynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), (0 until vars.length).map(_ => 0), None), Empty(None),
     Some(constLemma(substAny("n_", Number(num)))))
