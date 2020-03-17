@@ -86,13 +86,13 @@ If[TrueQ[post],
 deps=If[OptionValue[DiffSat,UseDependencies],
 	Join[Dependency`VariableDependencies[{pre, { f, vars, evoConst }, post}],{vars}],
 	{vars}
-	];
+	]//DeleteDuplicates;
 
 invlist=True;
 cutlist={};
 timingList={};
 
-(* For each depednency *)
+(* For each dependency *)
 Do[
 (* For each strategy *)
 Print["Using dependencies: ",curdep];
