@@ -81,6 +81,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val set = BinaryMathOpSpec(symbol("Set"))
     val mIf = NaryMathOpSpec(symbol("If"))
     val part = BinaryMathOpSpec(symbol("Part"))
+    val failureQ = UnaryMathOpSpec(symbol("FailureQ"))
 
     val pegasusMain = Configuration.Pegasus.mainFile("Pegasus.m")
     //@note quiet suppresses messages, since translated into Exception in command runner
@@ -94,11 +95,10 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
           symbol("reaped"),
           reap(timeConstrained(applyFunc(psymbol("InvGen"))(problem), int(commandTimeout))))
         ),
-        //If[Unequal[Part[reaped, 1], $Aborted], Part[reaped, 1], Part[Part[reaped, 2], -1]]
         mIf(
-          unequal(part(symbol("reaped"), int(1)), aborted.op),
-          part(symbol("reaped"), int(1)),
-          part(part(part(symbol("reaped"), int(2)), int(1)), int(-1))
+          failureQ(part(symbol("reaped"), int(1))),
+          part(part(part(symbol("reaped"), int(2)), int(1)), int(-1)),
+          part(symbol("reaped"), int(1))
         )
       )
     )
