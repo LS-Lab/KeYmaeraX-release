@@ -28,10 +28,16 @@ FilterTrue[formula_] :=  Module[{},formula/.{
 	{}        :>  True
 }];
 
+FilterFalse[formula_] :=  Module[{},formula/.{
+	{}        :>  False
+}];
+
 
 FilterDrop[formula_]:=Module[{},formula/.{
-  HoldPattern[And[a__]] :>And@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&]),
-  HoldPattern[Or[a__]] :>Or@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&])
+  HoldPattern[And[a__]] :> And@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&]),
+  HoldPattern[Or[a__]]  :> Or@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&]),
+	(* filter empty postconditions to False; avoids that DW check succeeds from empty domain constraints (True->True) and discards invariant candidates. *)
+  HoldPattern[{}]       :> False
  }];
 
 
@@ -46,7 +52,7 @@ If[Not[IntersectingQ[fvars,vars]],
 	Return[problem]];
 prefil = FilterAtom[pre//Primitives`DNFNormalizeGtGeq,fvars]//FilterTrue;
 Qfil = FilterAtom[Q//Primitives`DNFNormalizeGtGeq,fvars]//FilterTrue;
-postfil = (FilterAtom[post//Primitives`DNFNormalizeGtGeq,fvars]//FilterDrop)/.{ {} :> False };
+postfil = (FilterAtom[post//Primitives`DNFNormalizeGtGeq,fvars]//FilterDrop)//FilterFalse;
 {ffil,varsfil}=Transpose[Select[Transpose[{f,vars}],MemberQ[fvars,#[[2]]]&]];
 
 Return[{prefil,{ffil,varsfil,Qfil},postfil}];
