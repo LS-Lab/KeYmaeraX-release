@@ -120,7 +120,7 @@ AppendTo[timingList,Symbol[ToString[strat]]->timedInvs[[1]]];
 invs=timedInvs[[2]];
 
 (* Simplify invariant w.r.t. the domain constraint *)
-cuts=Map[Assuming[And[evoConst,constasms], FullSimplifyReals[#]]&, invs];
+cuts=Map[Assuming[And[evoConst,constasms], FullSimplifyReals[#]]&, invs]//DeleteDuplicates;
 
 inv=cuts//.{List->And};
 
@@ -141,7 +141,7 @@ post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 
-If[invlist != {True}, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
+If[Length[cutlist] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
 
 timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
 Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
