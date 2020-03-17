@@ -141,7 +141,7 @@ post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 
-Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]];
+If[invlist != {True}, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
 
 timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
 Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
@@ -161,6 +161,8 @@ If[TrueQ[invImpliesPost],
 ]
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
+
+Print["Returning last generated candidate"];
 
 (* Throw whatever invariant was last computed *)
 Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]];
