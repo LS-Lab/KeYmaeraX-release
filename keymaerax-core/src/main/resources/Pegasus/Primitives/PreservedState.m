@@ -13,8 +13,8 @@ Begin["`Private`"];
 
 PreservedPre[vf_List, vars_List, pre_, domain_] :=
     Module[{normalized, disjuncts, conjunctLists, conjuncts, preserved, polys, poly},
-     (*pre is in disjunctive normal form, see Dependency`FilterVars*)
-     disjuncts = Primitives`Disjuncts[pre];
+     (*pre is usually in disjunctive normal form, see Dependency`FilterVars, but redo if called from somewhere else not in that form *)
+     disjuncts = Primitives`Disjuncts[Primitives`DNFNormalizeGtGeq[pre]];
      disjuncts = If[ListQ[disjuncts], disjuncts, { disjuncts }];
      conjunctLists = Map[Primitives`Conjuncts, disjuncts];
      Print["Filtering conjuncts ", conjunctLists];
