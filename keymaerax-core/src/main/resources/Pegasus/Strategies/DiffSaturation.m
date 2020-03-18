@@ -54,6 +54,67 @@ varsreals=Map[# \[Element] Reals&,vars];
 FullSimplify[fml,varsreals]
 ]
 
+RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_,
+	problem_, pre_, f_, vars_,
+	inout_List]:=Module[
+	{ (* copy of arguments *)
+		timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post,
+		(* module internal *)
+		timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
+{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} = inout;
+timedInvs = AbsoluteTiming[TimeConstrained[
+	Block[{res},
+		res = strat[{pre,{f,vars,evoConst},post}];
+		If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
+		res]//DeleteDuplicates,
+	stratTimeout,
+	Print["Strategy timed out after: ", stratTimeout];
+	{True}]];
+Print["Strategy ",ToString[strat]," duration: ",timedInvs[[1]]];
+AppendTo[timingList,Symbol[ToString[strat]]->timedInvs[[1]]];
+invs=timedInvs[[2]];
+
+(* Simplify invariant w.r.t. the domain constraint *)
+cuts=Map[Assuming[And[evoConst,constasms], FullSimplifyReals[#]]&, invs]//DeleteDuplicates;
+
+inv=cuts//.{List->And};
+
+Print["Extracted (simplified) invariant(s): ", inv];
+
+If[Not[ListQ[cuts]],
+	Throw[Format`FormatErr["DiffSat did not produce a list of cuts: "<>ToString[cuts],True]]];
+
+If[TrueQ[inv], Print["Skipping trivial true"],
+	invlist=And[invlist,inv];
+	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
+	evoConst=And[evoConst,inv]];
+
+post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
+Print["Cuts: ",cutlist];
+Print["Evo: ",evoConst," Post: ",post];
+
+Print["InvList ", invlist];
+If[Length[cutlist] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
+
+timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
+Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
+AppendTo[timingList,Symbol["InvCheck"]->timedInvImpliesPost[[1]]];
+invImpliesPost=timedInvImpliesPost[[2]];
+If[TrueQ[invImpliesPost],
+	Print["Generated invariant implies postcondition. Returning."];
+	If[minimizeCuts,
+		Print["Reducing input cutlist: ", invlist, cutlist];
+		timedCutlist=AbsoluteTiming[ReduceCuts[cutlist,problem]];
+		Print["Reducing cuts duration: ", timedCutlist[[1]]];
+		AppendTo[timingList, Symbol["ReduceCuts"]->timedCutlist[[1]]];
+		cutlist=timedCutlist[[2]];
+		invlist=Map[#[[1]]&,cutlist]/.List->And;
+	];
+	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]]
+];
+(* Return the modified arguments *)
+{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}
+]
 
 DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 {pre,f,vars,evoConst,post,preImpliesPost,
@@ -92,6 +153,12 @@ invlist=True;
 cutlist={};
 timingList={};
 
+(* Fast check: extract from initial conditions *)
+{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
+    RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
+			problem, pre, f, vars,
+			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}];
+
 (* For each dependency *)
 Do[
 (* For each strategy *)
@@ -107,58 +174,12 @@ subproblem = Dependency`FilterVars[curproblem, curvars];
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
 (*Print[subproblem];*)
-timedInvs = AbsoluteTiming[TimeConstrained[
-	Block[{res},
-	res = strat[subproblem];
-	If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
-	res]//DeleteDuplicates,
-	OptionValue[StrategyTimeout],
-	Print["Strategy timed out after: ",OptionValue[StrategyTimeout]];
-	{True}]];
-Print["Strategy ",ToString[strat]," duration: ",timedInvs[[1]]];
-AppendTo[timingList,Symbol[ToString[strat]]->timedInvs[[1]]];
-invs=timedInvs[[2]];
 
-(* Simplify invariant w.r.t. the domain constraint *)
-cuts=Map[Assuming[And[evoConst,constasms], FullSimplifyReals[#]]&, invs]//DeleteDuplicates;
+{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
+		RunStrat[strat, hint, OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
+			subproblem, pre, f, vars,
+			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}]
 
-inv=cuts//.{List->And};
-
-Print["Extracted (simplified) invariant(s): ", inv];
-
-(* Needs something like this?
- ecvoConst=And[evoConst,inv[[1]]]; *)
-(* Implementation sanity check *)
-If[Not[ListQ[cuts]],
-	Throw[Format`FormatErr["DiffSat did not produce a list of cuts: "<>ToString[cuts],True]]];
-
-If[TrueQ[inv], (*Print["Skipped"]*),
-	invlist=And[invlist,inv];
-	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
-	evoConst=And[evoConst,inv]];
-
-post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
-Print["Cuts: ",cutlist];
-Print["Evo: ",evoConst," Post: ",post];
-
-If[Length[cutlist] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
-
-timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
-Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
-AppendTo[timingList,Symbol["InvCheck"]->timedInvImpliesPost[[1]]];
-invImpliesPost=timedInvImpliesPost[[2]];
-If[TrueQ[invImpliesPost],
-	Print["Generated invariant implies postcondition. Returning."];
-	If[OptionValue[MinimizeCuts],
-		Print["Reducing input cutlist: ", invlist, cutlist];
-		timedCutlist=AbsoluteTiming[ReduceCuts[cutlist,problem]];
-		Print["Reducing cuts duration: ", timedCutlist[[1]]];
-		AppendTo[timingList, Symbol["ReduceCuts"]->timedCutlist[[1]]];
-		cutlist=timedCutlist[[2]];
-		invlist=Map[#[[1]]&,cutlist]/.List->And;
-		];
-	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]]
-]
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
 
