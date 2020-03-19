@@ -6,7 +6,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.SlowTest
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
 
 import scala.collection.immutable._
@@ -351,6 +352,60 @@ class PolynomialArithV2Tests extends TacticTestBase {
     for (i <- 0 until n)
       timesIdentity(USubst(Seq(SubstitutionPair(f, v))))
     toc("USubst()")
+  }
+
+  "proveBy with useAt and useFor" should "be slower than useDirectly" taggedAs SlowTest in withMathematica { _ =>
+    import PolynomialArithV2._
+    val add0 = rememberAny("x_() = 0 -> (x_() + 0 = 0)".asFormula, QE & done)
+    val xvar = "x_(||)".asTerm
+
+    def lhs(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].left
+    def add0UseDirectly(prv: ProvableSig) = {
+      useDirectly(add0, Seq(("x_", lhs(prv))), Seq(prv))
+    }
+    def add0UseAt(prv: ProvableSig) = {
+      val x = lhs(prv)
+      TactixLibrary.proveBy(Equal(Plus(x, Number(0)), Number(0)),
+        usePrvAt(add0(USubst(Seq(SubstitutionPair(xvar, x)))), PosInExpr(1::Nil))(1) & by(prv)
+      )
+    }
+    def add0UseAtMatch(prv: ProvableSig) = {
+      val x = lhs(prv)
+      TactixLibrary.proveBy(Equal(Plus(x, Number(0)), Number(0)),
+        usePrvAt(add0, PosInExpr(1::Nil))(1) & by(prv)
+      )
+    }
+    def add0UseFor(prv: ProvableSig) = {
+      val x = lhs(prv)
+      useFor(add0(USubst(Seq(SubstitutionPair(xvar, x)))), PosInExpr(0::Nil))(SuccPosition(1))(prv)
+    }
+    def add0UseForMatch(prv: ProvableSig) = {
+      val x = lhs(prv)
+      useFor(add0, PosInExpr(0::Nil))(SuccPosition(1))(prv)
+    }
+    val prv0 = proveBy("0 = 0".asFormula, QE & done)
+    def test(n: Int, msg: String, stepProvable: ProvableSig => ProvableSig) = {
+      var prv = prv0
+      tic()
+      prv = prv0
+      for (i <- 0 until n) {
+        prv = stepProvable(prv)
+      }
+      toc(msg + " - " + n)
+    }
+    val ns = Seq(100, 200, 400, 800, 1600, 3200)
+    def testMore(msg: String, stepProvable: ProvableSig => ProvableSig) = {
+      for (n <- ns)
+        test(n, msg, stepProvable)
+    }
+    for (i <- 0 until 4) {
+      println("\nTest " + i)
+      testMore("useDirectly", add0UseDirectly)
+      testMore("useAt", add0UseAt)
+      testMore("useAt(match)", add0UseAtMatch)
+      testMore("useFor", add0UseFor)
+      testMore("useFor(match)", add0UseForMatch)
+    }
   }
 
 }
