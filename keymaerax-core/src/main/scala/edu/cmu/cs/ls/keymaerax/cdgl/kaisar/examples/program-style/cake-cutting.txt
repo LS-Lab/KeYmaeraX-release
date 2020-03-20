@@ -14,7 +14,7 @@ theorem cake-demon =
  } else (xc: x < 0.5 + k){
    a := x; d := y;
  }
- [?goal: (d >= 0.5) using a d xc kPos.]
+ [?goal: (d >= 0.5) using a d xc kPos]
 
 refines cake-demon (k > 0 -> [cake] d >= 0.5).
 
