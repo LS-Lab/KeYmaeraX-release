@@ -28,7 +28,10 @@ Options[DWC]= {
 	SimplifyInvariant->DoNotSimplify,
 	Smallest->False,
 	WorkingPrecision -> \[Infinity],
-	Timeout-> \[Infinity]};
+	Timeout-> \[Infinity],
+	SufficiencyTimeout -> 0,
+	DWTimeout -> 0
+};
 
 DWC[problem_List, A0_List, cuts_List, opts:OptionsPattern[]]:=
 DWC[precond, postcond, system, A0, cuts]=Catch[
@@ -46,10 +49,23 @@ SIMPLIFY=OptionValue[SimplifyInvariant]/.{FullSimplify-> FullSimplify, Simplify 
 USEDW=Not[TrueQ[OptionValue[Smallest]/.{True->True, _->False}]];
 
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
-If[TrueQ[Reduce[ForAll[vars,Not[H0 && pre]],vars,Reals]], Throw[{False, cuts}] ]; 
+If[OptionValue[SufficiencyTimeout] > 0,
+	Print["Sufficiency check ", H0, " overlaps ", pre];
+	If[TrueQ[TimeConstrained[Reduce[Not[Exists[vars,H0 && pre],vars,Reals]]], OptionValue[SufficiencyTimeout], False],
+		Print["No overlap ", H0, " with ", pre]; Throw[{False, cuts}] ]
+	,
+	Print["Sufficiency check skipped"]
+];
 
 (* DW check *)
-If[USEDW && TrueQ[Reduce[ForAll[vars,Implies[H0, post]],vars,Reals]], Print["DW"]; Throw[{H0, cuts}] ]; 
+If[USEDW && OptionValue[DWTimeout] > 0,
+	If[TrueQ[TimeConstrained[Reduce[ForAll[vars,Implies[H0, post]],vars,Reals]], DWTimeout, False],
+		Print["DW"]; Throw[{H0, cuts}] ]
+	,
+	Print["DW check skipped"]
+];
+
+Print["Simplifying"];
 
 (* Main loop *)
 Do[p=SIMPLIFY[A0[[i]],H0]; 

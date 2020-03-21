@@ -81,6 +81,11 @@ object Configuration {
         val TIMEOUT = "PEGASUS_BARRIER_TIMEOUT"
         val DEGREE = "PEGASUS_BARRIER_DEGREE"
       }
+      object InvariantExtractor {
+        val TIMEOUT = "PEGASUS_INVARIANTEXTRACTOR_TIMEOUT"
+        val SUFFICIENCY_TIMEOUT = "PEGASUS_INVARIANTEXTRACTOR_SUFFICIENCY_TIMEOUT"
+        val DW_TIMEOUT = "PEGASUS_INVARIANTEXTRACTOR_DW_TIMEOUT"
+      }
     }
     val MATHEMATICA_MEMORY_LIMIT = "MATHEMATICA_MEMORY_LIMIT"
   }
@@ -181,6 +186,11 @@ object Configuration {
     object Barrier {
       def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Barrier.TIMEOUT).getOrElse(default)
       def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Barrier.DEGREE).getOrElse(default)
+    }
+    object InvariantExtractor {
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.TIMEOUT).getOrElse(default)
+      def sufficiencyTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT).getOrElse(default)
+      def dwTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT).getOrElse(default)
     }
   }
 
