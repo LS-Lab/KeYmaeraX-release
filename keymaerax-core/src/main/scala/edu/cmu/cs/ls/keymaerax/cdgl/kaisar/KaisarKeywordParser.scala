@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
 
-object KaisarParser {
+object KaisarKeywordParser {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
   "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
     "or", "print", "for")
@@ -76,9 +76,9 @@ object KaisarParser {
     "domain" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~
     "duration" ~ ws ~ ident)).map({case (dp, vdc, dcFml, vdur) => BSolve(dp, vdc, dcFml, vdur)})
 
-  def bsolve[_: P]: P[BSolve] = (("solve" ~ ws ~ differentialProgram ~ ws ~
+  /*def bsolve[_: P]: P[BSolve] = (("solve" ~ ws ~ differentialProgram ~ ws ~
     "domain" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~
-    "duration" ~ ws ~ ident)).map({case (dp, vdc, dcFml, vdur) => BSolve(dp, vdc, dcFml, vdur)})
+    "duration" ~ ws ~ ident)).map({case (dp, vdc, dcFml, vdur) => BSolve(dp, vdc, dcFml, vdur)})*/
 
   def dsolve[_: P]: P[DSolve] = (("solve" ~ ws ~ differentialProgram ~ ws ~
     "domain" ~ ws ~ ident ~ ws ~ "=" ~ ws ~ proof ~ ws ~
@@ -100,6 +100,6 @@ object KaisarParser {
   def proof[_: P]: P[Proof] = statement.rep.map({ss: Seq[Statement] => Proof(ss.toList)})
 }
 
-class KaisarParser {
+class KaisarKeywordParser {
 
 }

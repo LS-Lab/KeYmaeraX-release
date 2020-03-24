@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import fastparse._
 
 @UsualTest
-class KaisarParserTests extends TacticTestBase {
+class KaisarKeywordParserTests extends TacticTestBase {
   val whitespaces = List(
      ""
     , " "
@@ -25,7 +25,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "whitespace" should "parse" in withMathematica { _ =>
-    val parsed = whitespaces.map({s: String => parse(s, KaisarParser.ws(_))})
+    val parsed = whitespaces.map({s: String => parse(s, KaisarKeywordParser.ws(_))})
     parsed
   }
 
@@ -36,7 +36,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "parseable idents" should "parse" in withMathematica { _ =>
-    val parsed = idents.map({s: String => parse(s, KaisarParser.ident(_))})
+    val parsed = idents.map({s: String => parse(s, KaisarKeywordParser.ident(_))})
     parsed
   }
 
@@ -47,7 +47,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "parseable literals" should "parse" in withMathematica { _ =>
-    val parsed = literals.map({s: String => parse(s, KaisarParser.literal(_))})
+    val parsed = literals.map({s: String => parse(s, KaisarKeywordParser.literal(_))})
     parsed
   }
 
@@ -57,7 +57,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "parseable formulas" should "parse" in withMathematica { _ =>
-    val parsed = formulas.map({s: String => parse(s, KaisarParser.formula(_))})
+    val parsed = formulas.map({s: String => parse(s, KaisarKeywordParser.formula(_))})
     parsed
   }
 
@@ -69,7 +69,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "reserved words" should "parse" in withMathematica { _ =>
-    val parsed = reserved.map({s: String => parse(s, KaisarParser.reserved(_))})
+    val parsed = reserved.map({s: String => parse(s, KaisarKeywordParser.reserved(_))})
     parsed
   }
 
@@ -80,7 +80,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "parseable proofTerms" should "parse" in withMathematica { _ =>
-    val parsed = proofTerms.map({s: String => parse(s, KaisarParser.proofTerm(_))})
+    val parsed = proofTerms.map({s: String => parse(s, KaisarKeywordParser.proofTerm(_))})
     parsed
   }
 
@@ -90,7 +90,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "parseable methods" should "parse" in withMathematica { _ =>
-    val parsed = methods.map({s: String => parse(s, KaisarParser.method(_))})
+    val parsed = methods.map({s: String => parse(s, KaisarKeywordParser.method(_))})
     parsed
   }
 
@@ -102,7 +102,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "parseable statements" should "parse" in withMathematica { _ =>
-    val parsed = statements.map({s: String => parse(s, KaisarParser.statement(_))})
+    val parsed = statements.map({s: String => parse(s, KaisarKeywordParser.statement(_))})
     parsed
   }
 
@@ -112,7 +112,7 @@ class KaisarParserTests extends TacticTestBase {
   )
 
   "parseable proofs" should "parse" in withMathematica { _ =>
-    val parsed = proofs.map({s: String => parse(s, KaisarParser.proof(_))})
+    val parsed = proofs.map({s: String => parse(s, KaisarKeywordParser.proof(_))})
     parsed
   }
 }
