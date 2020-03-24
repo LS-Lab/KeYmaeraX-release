@@ -29,7 +29,9 @@ PreservedState::usage="PreservedState[problem_List]";
 (* Returns invariants generated using first integrals *)
 FirstIntegrals::usage="FirstIntegrals[problem_List,degree]";
 (* Returns invariants generated using Darboux polynomials *)
-DbxPoly::usage="DbxPoly[problem_List,degree]";
+DbxPoly::usage="DbxPoly[problem_List]";
+(* Returns invariants and intermediate candidates generated using Darboux polynomials *)
+DbxPolyIntermediate::usage="DbxPoly[problem_List]";
 (* Returns invariants generated from heuristics *)
 HeuInvariants::usage="Heuristics[problem_List,degree]";
 (* Returns invariants generated from barrier certificate *)
