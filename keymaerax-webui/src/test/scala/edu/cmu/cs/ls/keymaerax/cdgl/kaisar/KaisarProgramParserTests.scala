@@ -104,5 +104,63 @@ class KaisarProgramParserTests extends TacticTestBase {
     p("(x - y)*x/y-x+y+-x^x", ep.term(_)) shouldBe Minus(Divide(Times(Minus(vx, vy), vx), vy), Plus(Plus(vx, vy), Neg(Power(vx, vx))))
   }
   // programs
+  "program parser" should "parse assignment" in {
+    val asgn = parse("x := x + x;", ep.assign(_))
+    val prog = parse("x := x + x;", ep.program(_))
+    val x = asgn
+    p("x := x + x;", ep.program(_)) shouldBe Assign(vx, Plus(vx, vx))
+  }
+
+  it should "parse differential assignment" in {
+    p("x' := x + x;", ep.program(_)) shouldBe Assign(dx, Plus(vx, vx))
+  }
+
+  it should "parse random assignment" in {
+    p("x' := *;", ep.program(_)) shouldBe AssignAny(dx)
+  }
+
+  it should "parse singleton ode" in {
+    p("x' = 5;", ep.program(_)) shouldBe ODESystem(AtomicODE(dx, Number(5)))
+  }
+
+  it should "parse ode product" in {
+    p("x' = 5, y' = 2;", ep.program(_)) shouldBe ODESystem(DifferentialProduct(AtomicODE(dx, Number(5)), AtomicODE(dy, Number(2))))
+  }
+
+  it should "parse ode with constraint" in {
+    p("x' = 5, y' = 2 & x = y;", ep.program(_)) shouldBe ODESystem(DifferentialProduct(AtomicODE(dx, Number(5)), AtomicODE(dy, Number(2))), Equal(vx, vy))
+  }
+
+  it should "parse ode with constraint with conjunction" in {
+    p("x' = 5, y' = 2 & x = y & y = x;", ep.program(_)) shouldBe ODESystem(DifferentialProduct(AtomicODE(dx, Number(5)), AtomicODE(dy, Number(2))),
+      And(Equal(vx, vy), Equal(vy, vx)))
+  }
+
+  it should "parse dual" in {
+    p("x' =5;^d", ep.program(_)) shouldBe Dual(ODESystem(AtomicODE(dx, Number(5))))
+  }
+
+  it should "parse loop" in {
+    p("x := 5;*", ep.program(_)) shouldBe Loop(Assign(vx, Number(5)))
+  }
+
+  it should "parse compose" in {
+    p("x := 5; x:= 2;", ep.program(_)) shouldBe Compose(Assign(vx, Number(5)), Assign(vx, Number(2)))
+  }
+
+  it should "parse braces" in {
+    p("{x:=1; y:=2;} ++ {y:=5; x:= *;} y:=5; y:=4;", ep.program(_)) shouldBe
+      Choice(Compose(Assign(vx, Number(1)), Assign(vy, Number(2)))
+        , Compose(Compose(Assign(vy, Number(5)), AssignAny(vx)), Compose(Assign(vy, Number(5)), Assign(vy, Number(4)))))
+  }
+
+  it should "parse choice" in {
+    p("x:=*; ++ ?x=x;", ep.program(_)) shouldBe Choice(AssignAny(vx), Test(Equal(vx, vx)))
+  }
+
+  it should "associate choice" in {
+    p("x:=1; ++ x:=2; ++ x:=3;", ep.program(_)) shouldBe Choice(Assign(vx, Number(1)), Choice(Assign(vx, Number(2)), Assign(vx, Number(3))))
+  }
+
   // formulas
 }
