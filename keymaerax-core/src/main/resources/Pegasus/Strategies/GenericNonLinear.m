@@ -10,6 +10,7 @@
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m"}]]
 Needs["QualAbsPolynomials`",FileNameJoin[{Directory[],"Primitives","QualAbsPolynomials.m"}]]
+Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolynomials.m"}]]
 Needs["DarbouxDDC`",FileNameJoin[{Directory[],"Strategies","DarbouxDDC.m"}]]
 Needs["InvariantExtractor`",FileNameJoin[{Directory[],"Strategies","InvariantExtractor.m"}]]
 Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]]
@@ -128,6 +129,7 @@ Print["FirstIntegrals skipped."]; {}]
 ]
 
 
+(* Darboux polynomials: exhaust until timeout, return all found ones. *)
 DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys,deg},
 {pre, { vf, vars, Q }, post} = problem;
 
@@ -138,7 +140,7 @@ deg = If[OptionValue[DbxPoly,Deg] < 0,
 
 If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
-(* Spend 3/4 time budget on polynomial finding *)
+(* Spend 1/2 time budget on polynomial finding *)
 polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout]*1/2, deg];
 InvariantExtractor`DWC[problem,polys,{}][[2]]
 ], OptionValue[DbxPoly,Timeout],
@@ -147,6 +149,56 @@ Print["DbxPoly skipped."]; {}]
 
 ]
 
+(* Darboux polynomials: sowing intermediate results and checking whether done before increasing degree. *)
+DbxPolyIntermediate[problem_List] := Module[{pre,post,vf,vars,Q,polys,allPolys,allPolysI,invs,deg,timeout,dbxResult},
+	{pre, { vf, vars, Q }, post} = problem;
+
+	(* Heuristic *)
+	deg = If[OptionValue[DbxPoly,Deg] < 0,
+		Max[10-Length[vars],1],
+		OptionValue[DbxPoly, Deg]];
+
+	If[OptionValue[DbxPoly, Timeout] > 0,
+		dbxResult = Reap[TimeConstrained[Block[{},
+			Catch[
+				invs = {};
+				allPolys = {};
+				(* Spend 1/2 on polynomial finding, 1/2 on invariant extraction and checking *)
+				(* upgrade to Mathematica 12.1: consider TimeRemaining[] to balance degrees *)
+				For[i=1,i<=deg,i++,
+					Print["Degree: ", i];
+					timeout = OptionValue[DbxPoly, Timeout](*/deg*);
+					polys = TimeConstrained[DarbouxPolynomials`DbxDefault[{vf, vars, Q}, i], timeout/2, {}];
+					Print["Polys: ", polys];
+					allPolysI = Union[allPolys, polys];
+					If[allPolysI != allPolys,
+						allPolys = allPolysI;
+						Print["Generated Darboux polynomials: ", polys, " at degree ", i];
+						TimeConstrained[
+							invs = Union[invs, InvariantExtractor`DWC[problem, polys, {}][[2]]];
+							Print["Extracted Darboux invariants: ", invs];
+							If[Length[invs]>0,
+								If[TrueQ[Primitives`CheckSemiAlgInclusion[And[Q, And@@invs], post, vars]],
+									Throw[invs],
+									Sow[invs]
+								]
+							],
+							timeout/2
+						]
+						,
+						Print["No new invariants"]
+					]
+				]
+			]
+		], OptionValue[DbxPoly,Timeout]]];
+		If[FailureQ[dbxResult[[1]]],
+			If[Length[dbxResult[[2]]]>0, dbxResult[[2]][[1]][[-1]], {}],
+			dbxResult[[1]]
+		]
+		,
+		Print["DbxPoly skipped."]; {}
+	]
+]
 
 (* Round to precisions 2,4,6,8 *)
 RoundPolys[p_,vars_]:=Module[{cr},

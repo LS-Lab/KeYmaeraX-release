@@ -130,7 +130,7 @@ strategies = {
 	{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"]},
 	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"]},
 	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"]},
-	{GenericNonLinear`DbxPoly, Symbol["kyx`Darboux"]},
+	{GenericNonLinear`DbxPolyIntermediate, Symbol["kyx`Darboux"]},
 	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"]}
 };
 
