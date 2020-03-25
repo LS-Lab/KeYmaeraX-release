@@ -54,9 +54,7 @@ varsreals=Map[# \[Element] Reals&,vars];
 FullSimplify[fml,varsreals]
 ]
 
-RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_,
-	problem_, pre_, f_, vars_,
-	inout_List]:=Module[
+RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, problem_, vars_, inout_List]:=Module[
 	{ (* copy of arguments *)
 		timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post,
 		(* module internal *)
@@ -64,7 +62,7 @@ RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_,
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} = inout;
 timedInvs = AbsoluteTiming[TimeConstrained[
 	Block[{res},
-		res = strat[{pre,{f,vars,evoConst},post}];
+		res = strat[problem];
 		If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
 		res]//DeleteDuplicates,
 	stratTimeout,
@@ -156,7 +154,7 @@ timingList={};
 (* Fast check: extract from initial conditions *)
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
     RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
-			problem, pre, f, vars,
+			problem, vars,
 			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}];
 
 (* For each dependency *)
@@ -177,7 +175,7 @@ subproblem = Dependency`FilterVars[curproblem, curvars];
 
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
 		RunStrat[strat, hint, OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
-			subproblem, pre, f, vars,
+			subproblem, vars,
 			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}]
 
 ,{strathint, strategies}(* End Do loop *)]
