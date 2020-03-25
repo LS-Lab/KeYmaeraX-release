@@ -3,10 +3,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[         0,          0]
-NotebookDataLength[      8140,        167]
-NotebookOptionsPosition[      7483,        144]
-NotebookOutlinePosition[      7816,        159]
-CellTagsIndexPosition[      7773,        156]
+NotebookDataLength[      7977,        163]
+NotebookOptionsPosition[      7393,        140]
+NotebookOutlinePosition[      7746,        156]
+CellTagsIndexPosition[      7703,        153]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -92,7 +92,7 @@ Cell[BoxData[
    3.787675977439219*^9}, {3.7876765557992153`*^9, 3.787676568781945*^9}, {
    3.789532051892702*^9, 3.789532061961115*^9}, {3.789541872648282*^9, 
    3.78954188397153*^9}},
- CellLabel->"In[2]:=",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5"],
+ CellLabel->"In[1]:=",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5"],
 
 Cell[BoxData[{
  RowBox[{
@@ -130,21 +130,18 @@ Cell[BoxData[{
     RowBox[{"x2", ",", 
      RowBox[{"x1", "+", "x3"}], ",", "x1", ",", 
      RowBox[{"x1", "*", "x2"}], ",", "x3", ",", "x1"}], "}"}], ",", " ", 
-   RowBox[{"{", "}"}]}], "]"}]}], "Input",
+   RowBox[{"{", "}"}], ",", "False"}], "]"}]}], "Input",
  CellChangeTimes->{{3.787676160199877*^9, 3.787676204588243*^9}, {
   3.787678564529091*^9, 3.787678575157386*^9}, {3.789541813578326*^9, 
   3.789541814540267*^9}, {3.7895418891764383`*^9, 3.789541898879603*^9}, {
   3.789542061593565*^9, 3.789542119862904*^9}, {3.7895423075510473`*^9, 
-  3.789542398994603*^9}},
- CellLabel->"In[64]:=",ExpressionUUID->"b00056b4-f280-44ba-91b2-7e2c0c723c35"],
-
-Cell[BoxData[""], "Input",
- CellChangeTimes->{{3.787677032662599*^9, 
-  3.7876770351377*^9}},ExpressionUUID->"c2098783-f788-4b6f-af0e-0701b4f73408"]
+  3.789542398994603*^9}, {3.794141482568725*^9, 3.7941414834633207`*^9}},
+ CellLabel->"In[2]:=",ExpressionUUID->"b00056b4-f280-44ba-91b2-7e2c0c723c35"]
 },
 WindowSize->{960, 1025},
 WindowMargins->{{Automatic, 0}, {0, Automatic}},
-FrontEndVersion->"11.3 for Linux x86 (64-bit) (March 6, 2018)",
+FrontEndVersion->"11.3 for Mac OS X x86 (32-bit, 64-bit Kernel) (March 5, \
+2018)",
 StyleDefinitions->"Default.nb"
 ]
 (* End of Notebook Content *)
@@ -158,10 +155,9 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[400, 13, 5318, 81, 94, "Input",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5",
+Cell[400, 13, 5318, 81, 89, "Input",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5",
  InitializationCell->True],
-Cell[5721, 96, 1607, 42, 78, "Input",ExpressionUUID->"b00056b4-f280-44ba-91b2-7e2c0c723c35"],
-Cell[7331, 140, 148, 2, 31, "Input",ExpressionUUID->"c2098783-f788-4b6f-af0e-0701b4f73408"]
+Cell[5721, 96, 1668, 42, 73, "Input",ExpressionUUID->"b00056b4-f280-44ba-91b2-7e2c0c723c35"]
 }
 ]
 *)

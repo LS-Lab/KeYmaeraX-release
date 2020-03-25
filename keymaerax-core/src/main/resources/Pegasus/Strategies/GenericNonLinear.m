@@ -58,7 +58,7 @@ PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
 			polys = DeleteDuplicates[
 				PreservedState`PreservedPre[vf,vars,pre,Q]
 			];
-			InvariantExtractor`DWC[problem,polys,{}][[2]]
+			InvariantExtractor`DWC[problem,polys,{},False][[2]]
 		], OptionValue[PreservedState,Timeout],
 			{}],
 		Print["PreservedState skipped."]; {}]
@@ -78,8 +78,8 @@ polys = DeleteDuplicates[Join[
 	QualAbsPolynomials`PhysicalQuantities[problem],
 	*)
 	]];
-(*res=Map[InvariantExtractor`DWC[problem,{#},{}]&,polys];*)
-InvariantExtractor`DWC[problem,polys,{}][[2]]
+(*res=Map[InvariantExtractor`DWC[problem,{#},{},False]&,polys];*)
+InvariantExtractor`DWC[problem,polys,{},False][[2]]
 ], OptionValue[HeuInvariants,Timeout],
 {}],
 Print["HeuInvariants skipped."]; {}]
@@ -144,7 +144,7 @@ If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
 (* Spend 1/2 time budget on polynomial finding *)
 polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout]*1/2, deg];
-InvariantExtractor`DWC[problem,polys,{}][[2]]
+InvariantExtractor`DWC[problem,polys,{},False][[2]]
 ], OptionValue[DbxPoly,Timeout],
 {}],
 Print["DbxPoly skipped."]; {}]
@@ -177,7 +177,7 @@ DbxPolyIntermediate[problem_List] := Module[{pre,post,vf,vars,Q,polys,allPolys,a
 						allPolys = allPolysI;
 						Print["Generated Darboux polynomials: ", polys, " at degree ", i];
 						TimeConstrained[
-							invs = Union[invs, InvariantExtractor`DWC[problem, polys, {}][[2]]];
+							invs = Union[invs, InvariantExtractor`DWC[problem, polys, {}, False][[2]]];
 							Print["Extracted Darboux invariants: ", invs];
 							If[Length[invs]>0,
 								If[TrueQ[Primitives`CheckSemiAlgInclusion[And[Q, And@@invs], post, vars]],
@@ -223,7 +223,7 @@ CheckAbort[
 TimeConstrained[Block[{},
 polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
 polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
-InvariantExtractor`DWC[problem,polys,{}][[2]]
+InvariantExtractor`DWC[problem,polys,{},False][[2]]
 ], OptionValue[BarrierCert,Timeout],
 MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]]
 ,

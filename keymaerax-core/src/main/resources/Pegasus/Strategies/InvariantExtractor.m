@@ -6,8 +6,9 @@ Needs["LZZ`",FileNameJoin[{Directory[],"Primitives","LZZ.m"}]]
 
 BeginPackage["InvariantExtractor`"];
 
-DWC::usage="DWC[precond_, postcond_, system_List, H0_List, A0_List]
-    Iteratively refine evolution constraint using differential cuts before computing the abstraction."
+DWC::usage="DWC[problem_List, A0_List, cuts_List, useFirstRoundDW_]
+    Iteratively refine evolution constraint using differential cuts before computing the abstraction.
+    Set useFirstRoundDW to false when other checks in the strategy redundantly check for it (DiffSat does)."
 (*
 DWCLZR::usage="DCLoop[precond_, postcond_, system_List, H0_List, A0_List] 
     Iteratively refine evolution constraint using differential cuts before computing the abstraction."
@@ -33,8 +34,8 @@ Options[DWC]= {
 	DWTimeout -> 0
 };
 
-DWC[problem_List, A0_List, cuts_List, opts:OptionsPattern[]]:=
-DWC[precond, postcond, system, A0, cuts]=Catch[
+DWC[problem_List, A0_List, cuts_List, useFirstRoundDW_, opts:OptionsPattern[]]:=
+DWC[precond, postcond, system, A0, cuts, useFirstRoundDW]=Catch[
 Module[{pre,post,GT,EQ,LT,p,f,vars,H0},
 
 {pre,{f,vars,H0},post} = problem;
@@ -46,7 +47,7 @@ SetOptions[DWC,
 	WorkingPrecision-> OptionValue[WorkingPrecision] ];
 
 SIMPLIFY=OptionValue[SimplifyInvariant]/.{FullSimplify-> FullSimplify, Simplify -> Simplify, _ -> DoNotSimplify};
-USEDW=Not[TrueQ[OptionValue[Smallest]/.{True->True, _->False}]];
+USEDW=And[useFirstRoundDW, Not[TrueQ[OptionValue[Smallest]/.{True->True, _->False}]]];
 
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
 If[OptionValue[SufficiencyTimeout] > 0,
@@ -57,7 +58,7 @@ If[OptionValue[SufficiencyTimeout] > 0,
 	Print["Sufficiency check skipped"]
 ];
 
-(* DW check *)
+(* DW check: should be disabled on the very first call, because it is often redundant to checks outside the extractor. *)
 If[USEDW && OptionValue[DWTimeout] > 0,
 	If[TrueQ[TimeConstrained[Reduce[ForAll[vars,Implies[H0, post]],vars,Reals], OptionValue[DWTimeout], False]],
 		Print["DW"]; Throw[{H0, cuts}] ]
@@ -74,31 +75,31 @@ Print["Trying: ",p];
 (* DC check 0 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p==0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p==0, f, vars, H0]]),
 Print["DC on ", p==0];
-Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p==0), Reals]},post}, Delete[A0,i], Join[cuts,{p==0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p==0), Reals]},post}, Delete[A0,i], Join[cuts,{p==0}], True]]
 ];
 
 (* DC strict check 1 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p>0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>0, f, vars, H0]]),
 Print["DC on ", p>0];
-Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>0), Reals]},post}, Delete[A0,i], Join[cuts,{p>0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>0), Reals]},post}, Delete[A0,i], Join[cuts,{p>0}], True]]
 ];
 
 (* DC strict check 2 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<0, f, vars, H0]]),
 Print["DC on ", p<0];
-Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<0), Reals]},post}, Delete[A0,i], Join[cuts,{p<0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<0), Reals]},post}, Delete[A0,i], Join[cuts,{p<0}], True]]
 ];
 
 (* DC nonstrict check 1 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
-Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]},post}, Delete[A0,i], Join[cuts,{p>=0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]},post}, Delete[A0,i], Join[cuts,{p>=0}], True]]
 ];
 
 (* DC nonstrict check 2 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && pre, p<=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
-Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]},post}, Delete[A0,i], Join[cuts,{p<=0}]]]
+Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]},post}, Delete[A0,i], Join[cuts,{p<=0}], True]]
 ];
 
  (*DDC check  *)

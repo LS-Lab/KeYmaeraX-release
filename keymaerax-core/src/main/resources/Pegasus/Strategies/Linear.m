@@ -87,7 +87,7 @@ res=class/.{
   maximise={LyapunovFn, Krasovskii};
   maxFns = Map[#[[1]]-Primitives`UpperRatCoeffs[MaxValue[#,vars],vars,ratPrecision] &, Tuples[{maximise, initConnectedComponents}] ];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
-  InvariantExtractor`DWC[problem,Union[separatrices, maxFns],{}][[2]]
+  InvariantExtractor`DWC[problem,Union[separatrices, maxFns],{},False][[2]]
 ],
 "Unstable":> Block[{LyapunovFn,Krasovskii,
   separatrices=EigenspacePolys[M, vars],
@@ -97,7 +97,7 @@ res=class/.{
   minimise={LyapunovFn, Krasovskii};
   minFns = Map[#[[1]]-Primitives`LowerRatCoeffs[MinValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{minimise, initConnectedComponents}] ];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
-  InvariantExtractor`DWC[problem,Union[separatrices, minFns],{}][[2]]
+  InvariantExtractor`DWC[problem,Union[separatrices, minFns,False],{}][[2]]
 ],
 "Other":> Block[{
   (* Compute the linear forms of the invariant sub-spaces *)
@@ -105,7 +105,7 @@ res=class/.{
   ls,maxFns,minFns,maxmin},
   fis=GenericNonLinear`FirstIntegrals[problem, "Deg"->FIDeg];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
-  invs=InvariantExtractor`DWC[problem,separatrices,{}][[2]];
+  invs=InvariantExtractor`DWC[problem,separatrices,{},False][[2]];
   Union[fis,invs]
 ]
 };
