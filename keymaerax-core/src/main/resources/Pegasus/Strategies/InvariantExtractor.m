@@ -51,7 +51,7 @@ USEDW=Not[TrueQ[OptionValue[Smallest]/.{True->True, _->False}]];
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
 If[OptionValue[SufficiencyTimeout] > 0,
 	Print["Sufficiency check ", H0, " overlaps ", pre];
-	If[TrueQ[TimeConstrained[Reduce[Not[Exists[vars,H0 && pre],vars,Reals]]], OptionValue[SufficiencyTimeout], False],
+	If[TrueQ[TimeConstrained[Reduce[Not[Exists[vars,H0 && pre],vars,Reals]], OptionValue[SufficiencyTimeout], False]],
 		Print["No overlap ", H0, " with ", pre]; Throw[{False, cuts}] ]
 	,
 	Print["Sufficiency check skipped"]
@@ -59,7 +59,7 @@ If[OptionValue[SufficiencyTimeout] > 0,
 
 (* DW check *)
 If[USEDW && OptionValue[DWTimeout] > 0,
-	If[TrueQ[TimeConstrained[Reduce[ForAll[vars,Implies[H0, post]],vars,Reals]], DWTimeout, False],
+	If[TrueQ[TimeConstrained[Reduce[ForAll[vars,Implies[H0, post]],vars,Reals], OptionValue[DWTimeout], False]],
 		Print["DW"]; Throw[{H0, cuts}] ]
 	,
 	Print["DW check skipped"]
