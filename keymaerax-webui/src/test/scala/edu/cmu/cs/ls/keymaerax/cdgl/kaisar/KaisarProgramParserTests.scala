@@ -19,11 +19,7 @@ import fastparse._
 @UsualTest
 class KaisarProgramParserTests extends TacticTestBase {
   val ep = ExpressionParser
-  /*def parse[T](input: ParserInputSource,
-               parser: P[_] => P[T],
-               verboseFailures: Boolean = false,
-               startIndex: Int = 0,
-               instrument: Instrument = null): Parsed[T] = {*/
+
   def p[T](s: String, parser: P[_] => P[T]): T = parse(s, parser).asInstanceOf[Success[T]].value
   val (vx, vy) = (Variable("x"), Variable("y"))
   val (dx, dy) = (DifferentialSymbol(vx), DifferentialSymbol(vy))
@@ -163,4 +159,23 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   // formulas
+  "formula parser" should "parse equal" in {
+    p("x=y", ep.formula(_)) shouldBe Equal(vx, vy)
+  }
+
+  it should "respect | and & precedence" in {
+    p("x=0&y=0 | x=1&y=1", ep.formula(_)) shouldBe Or(And(Equal(vx, Number(0)), Equal(vy, Number(0))), And(Equal(vx, Number(1)),Equal(vy, Number(1))))
+  }
+
+  it should "respect [] precedence" in {
+    p("x=0 & [x:=1;]x=1 & x=2", ep.formula(_)) shouldBe And(Equal(vx, Number(0)), And(Box(Assign(vx, Number(1)), Equal(vx, Number(1))), Equal(vx, Number(2))))
+  }
+
+  it should "respect forall precedence" in {
+    p("x=0 & \\forall x x=x & x = 1", ep.formula(_)) shouldBe(And(Equal(vx, Number(0)), And(Forall(List(vx), Equal(vx, vx)), Equal(vx, Number(1)))))
+  }
+
+  it should "make imply tighter than equiv" in {
+    p("x=0 -> x=1 <-> x=2 -> x=5", ep.formula(_)) shouldBe Equiv(Imply(Equal(vx,Number(0)), Equal(vx, Number(1))), Imply(Equal(vx, Number(2)), Equal(vx, Number(5))))
+  }
 }

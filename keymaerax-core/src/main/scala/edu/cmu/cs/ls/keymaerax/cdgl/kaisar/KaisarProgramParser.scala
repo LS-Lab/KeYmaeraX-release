@@ -21,7 +21,12 @@ private object ParserCommon {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
     "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
     "or", "print", "for")
-  def identString[_: P]: P[String] = CharIn("a-zA-Z'").rep(1).!.filter(!reservedWords.contains(_))
+  def identString[_: P]: P[String] = {
+    // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
+    // locally import "no whitespace" so that identifiers cannot contain spaces.
+    import NoWhitespace._
+    CharIn("a-zA-Z'").rep(1).!.filter(s  => !reservedWords.contains(s))
+  }
   def reserved[_: P]: P[String]  = CharIn("a-zA-Z'").rep(1).!.filter(reservedWords.contains)
   def ws[_ : P]: P[Unit] = P((" " | "\n").rep)
   def wsNonempty[_ : P]: P[Unit] = P((" " | "\n").rep(1))
@@ -115,7 +120,9 @@ object ExpressionParser {
       case (x: AtomicODE, xs: Seq[AtomicODE], None) =>
         val odes: Seq[DifferentialProgram] = xs.+:(x)
         ODESystem(odes.reduce[DifferentialProgram]({case (l, r) => DifferentialProduct(l, r)}))
-      case (x, Seq(), None) => x
+      case (x, Seq(), None) =>
+        val y = x
+        x
     }) ~ ((P("*") | P("^d")).!.rep)).map({case (atom: Program, posts: Seq[String]) =>
       posts.foldLeft[Program](atom)({case (acc, "*") => Loop(acc) case (acc, "^d") => Dual(acc)})
     })
@@ -134,29 +141,36 @@ object ExpressionParser {
 
 
   // !P  P & Q   P | Q   P -> Q   P <-> Q   [a]P  <a>P  f ~ g \forall \exists
-  def not[_: P]: P[Not] = ("!" ~ ws ~ formula).map(f => Not(f))
-  def and[_: P]: P[And] = (formula ~ ws ~ "&" ~ ws ~ formula).map({case (l, r) => And(l, r)})
-  def or[_: P]: P[Or] = (formula ~ ws ~ "|" ~ ws ~ formula).map({case (l, r) => Or(l, r)})
-  def imply[_: P]: P[Imply] = (formula ~ ws ~ "->" ~ ws ~ formula).map({case (l, r) => Imply(l, r)})
-  def equiv[_: P]: P[Equiv] = (formula ~ ws ~ "<->" ~ ws ~ formula).map({case (l, r) => Equiv(l ,r)})
-  def box[_: P]: P[Box] = (("[" ~ ws ~ program ~ ws ~ "]" ~ ws ~ formula)).map({case (l, r) => Box(l ,r)})
-  def diamond[_: P]: P[Diamond] = ("<" ~ ws ~ program ~ ws ~ ">" ~ ws ~ formula).map({case (l, r) => Diamond(l, r)})
-  def forall[_: P]: P[Forall] = ("\\forall" ~ ws ~ variable ~ ws ~ formula).map({case (x, p) => Forall(List(x), p)})
-  def exists[_: P]: P[Exists] = ("\\exists" ~ ws ~ variable ~ ws ~ formula).map({case (x, p) => Exists(List(x), p)})
+  def infixTerminal[_: P]: P[Formula] =
+    (term ~ ("<=" | "<" | "=" | "!=" | ">" | ">=").! ~ term).map({
+      case (l, "<=", r) => LessEqual(l, r)
+      case (l, "<", r) => Less(l, r)
+      case (l, "=", r) => Equal(l, r)
+      case (l, "!=", r) => NotEqual(l, r)
+      case (l, ">", r) => Greater(l, r)
+      case (l, ">=", r) => GreaterEqual(l, r)
+    })
+
+  def parenFormula[_: P]: P[Formula] = ("(" ~ formula ~ ")")
   def verum[_: P]: P[AtomicFormula] = P("true").map(_ => True)
   def falsum[_: P]: P[AtomicFormula] = P("false").map(_ => False)
-  def parenFormula[_: P]: P[Formula] = ("(" ~ ws ~ formula ~ ws ~ ")")
+  def not[_: P]: P[Formula] = ("!" ~ prefixTerminal).map(f => Not(f))
+  def forall[_: P]: P[Formula] = ("\\forall" ~ variable  ~ prefixTerminal).map({case (x, p) => Forall(List(x), p)})
+  def exists[_: P]: P[Formula] = ("\\exists" ~ variable  ~ prefixTerminal).map({case (x, p) => Exists(List(x), p)})
+  def box[_: P]: P[Formula] = (("[" ~ program  ~ "]" ~ prefixTerminal)).map({case (l, r) => Box(l ,r)})
+  def diamond[_: P]: P[Formula] = ("<"  ~ program  ~ ">"  ~ prefixTerminal).map({case (l, r) => Diamond(l, r)})
 
-  def lessEqual[_: P]: P[LessEqual] = (term ~ ws ~ "<=" ~ ws ~ term).map({case (l, r) => LessEqual(l, r)})
-  def less[_: P]: P[Less] = (term ~ ws ~ "<" ~ ws ~ term).map({case (l, r) => Less(l, r)})
-  def equal[_: P]: P[Equal] = (term ~ ws ~ "=" ~ ws ~ term).map({case (l, r) => Equal(l, r)})
-  def notEqual[_: P]: P[NotEqual] = (term ~ ws ~ "!=" ~ ws ~ term).map({case (l, r) => NotEqual(l, r)})
-  def greater[_: P]: P[Greater] = (term ~ ws ~ ">" ~ ws ~ term).map({case (l, r) => Greater(l, r)})
-  def greaterEqual[_: P]: P[GreaterEqual] = (term ~ ws ~ ">=" ~ ws ~ term).map({case (l, r) => GreaterEqual(l, r)})
+  def prefixTerminal[_: P]: P[Formula] = parenFormula | verum | falsum | not | forall | exists | box | diamond | infixTerminal
 
-  def formula[_: P]: P[Formula] =
-    (not  | equal | and | or | imply | equiv | box | diamond | forall | exists | parenFormula | verum | falsum |
-      lessEqual | less | notEqual | greater | greaterEqual)
+  def and[_: P]: P[Formula] = (prefixTerminal ~ ("&"  ~ prefixTerminal).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(And)})
+  def or[_: P]: P[Formula] = (and ~ ("|"  ~ and).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Or)})
+  def imply[_: P]: P[Formula] = (or ~ ("->"  ~ or).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Imply)})
+  def equiv[_: P]: P[Formula] = (imply ~ ("<->"  ~ imply).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Equiv)})
+
+
+  def formula[_: P]: P[Formula] = equiv
+/*    (not  | equal | and | or | imply | equiv | box | diamond | forall | exists | parenFormula | verum | falsum |
+      )*/
 
   def expression[_: P]: P[Expression] = term | program | formula
 }
