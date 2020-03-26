@@ -154,7 +154,7 @@ timingList={};
 (* Fast check: extract from initial conditions *)
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
     RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
-			problem, vars,
+			{ pre, { f, vars, evoConst }, post }, vars,
 			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}];
 
 (* For each dependency *)
