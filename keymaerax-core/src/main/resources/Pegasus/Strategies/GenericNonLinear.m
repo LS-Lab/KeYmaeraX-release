@@ -55,9 +55,7 @@ PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
 	{pre, { vf, vars, Q }, post} = problem;
 	If[OptionValue[PreservedState, Timeout] > 0,
 		TimeConstrained[Block[{},
-			polys = DeleteDuplicates[
-				PreservedState`PreservedPre[vf,vars,pre,Q]
-			];
+			polys = PreservedState`PreservedPre[vf,vars,pre,Q]//DeleteDuplicates;
 			InvariantExtractor`DWC[problem,polys,{},False][[2]]
 		], OptionValue[PreservedState,Timeout],
 			{}],
