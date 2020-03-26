@@ -92,7 +92,7 @@ Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 
 Print["InvList ", invlist];
-If[Length[cutlist] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
+If[Length[cuts] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
 
 timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
 Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
@@ -114,7 +114,7 @@ If[TrueQ[invImpliesPost],
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}
 ]
 
-DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
+DiffSat[problem_List, collectedCuts_List:{}, opts:OptionsPattern[]]:=Catch[Module[
 {pre,f,vars,evoConst,post,preImpliesPost,
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 polyList,invlist,cuts,cutlist,strat,hint,
@@ -148,12 +148,13 @@ deps=If[OptionValue[DiffSat,UseDependencies],
 	]//DeleteDuplicates;
 
 invlist=True;
-cutlist={};
+cutlist=collectedCuts;
 timingList={};
 
 (* Fast check: extract from initial conditions *)
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
-    RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
+    RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
+			OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 			{ pre, { f, vars, evoConst }, post }, vars,
 			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}];
 
@@ -181,10 +182,15 @@ subproblem = Dependency`FilterVars[curproblem, curvars];
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
 
-Print["Returning last generated candidate"];
+Print["Recursing into DiffSat with candidates so far as seeds."];
 
-(* Throw whatever invariant was last computed *)
-Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]];
+(* Not yet done, repeat with candidates so far as seeds, if any (as collected by cutlist and evoConst) *)
+If[Length[cutlist] > Length[collectedCuts],
+	DiffSat[{ pre, { f, vars, evoConst }, post, {constvars, constasms}}, cutlist],
+	(* Throw whatever invariant was last computed *)
+	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]]
+]
+
 ]]
 
 
