@@ -221,7 +221,7 @@ CheckAbort[
 TimeConstrained[Block[{},
 polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
 polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
-InvariantExtractor`DWC[problem,polys,{},False][[2]]
+InvariantExtractor`DWC[problem,polys,{},False,False][[2]]
 ], OptionValue[BarrierCert,Timeout],
 MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]]
 ,
