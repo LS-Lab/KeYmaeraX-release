@@ -29,15 +29,15 @@ FilterTrue[formula_] :=  Module[{},formula/.{
 }];
 
 FilterFalse[formula_] :=  Module[{},formula/.{
-	{}        :>  False
+	{}   :> False,
+	(* filter literal True to False; avoids that DW check succeeds from empty domain constraints (True->True) and discards invariant candidates. *)
+	True :> False
 }];
 
 
 FilterDrop[formula_]:=Module[{},formula/.{
   HoldPattern[And[a__]] :> And@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&]),
-  HoldPattern[Or[a__]]  :> Or@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&]),
-	(* filter empty postconditions to False; avoids that DW check succeeds from empty domain constraints (True->True) and discards invariant candidates. *)
-  HoldPattern[{}]       :> False
+  HoldPattern[Or[a__]]  :> Or@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&])
  }];
 
 
