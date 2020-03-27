@@ -76,6 +76,7 @@ object Configuration {
       object Darboux {
         val TIMEOUT = "PEGASUS_DARBOUX_TIMEOUT"
         val DEGREE = "PEGASUS_DARBOUX_DEGREE"
+        val STAGGERED = "PEGASUS_DARBOUX_STAGGERED"
       }
       object Barrier {
         val TIMEOUT = "PEGASUS_BARRIER_TIMEOUT"
@@ -182,6 +183,7 @@ object Configuration {
     object Darboux {
       def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Darboux.TIMEOUT).getOrElse(default)
       def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Darboux.DEGREE).getOrElse(default)
+      def staggered(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.Darboux.STAGGERED).getOrElse(default)
     }
     object Barrier {
       def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Barrier.TIMEOUT).getOrElse(default)

@@ -60,6 +60,7 @@ RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, problem_, vars_, inout_Lis
 		(* module internal *)
 		timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} = inout;
+
 timedInvs = AbsoluteTiming[TimeConstrained[
 	Block[{res},
 		res = strat[problem];
@@ -115,12 +116,22 @@ If[TrueQ[invImpliesPost],
 ]
 ]
 
-DiffSat[problem_List, collectedCuts_List:{}, opts:OptionsPattern[]]:=Catch[Module[
+DiffSat[problem_List, collectedCuts_List:{}, iteration_:1, opts:OptionsPattern[]]:=Catch[Module[
 {pre,f,vars,evoConst,post,preImpliesPost,
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 polyList,invlist,cuts,cutlist,strat,hint,
 curproblem,subproblem,deps,curdep,timeoutmultiplier,
 constvars,constasms,invs,timingList,curvars},
+
+(* Staggered Darboux: adapt degree by iteration *)
+If[TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]],
+	SetOptions[GenericNonLinear`DbxPoly, CurDeg ->
+     If[OptionValue[GenericNonLinear`DbxPoly, MaxDeg] < 0,
+			 iteration,
+			 Min[OptionValue[GenericNonLinear`DbxPoly, MaxDeg], iteration]]]
+	,
+	SetOptions[GenericNonLinear`DbxPoly, CurDeg -> OptionValue[GenericNonLinear`DbxPoly, MaxDeg]]
+];
 
 (* Bring symbolic parameters into the dynamics *)
 Print["Input Problem: ", problem];
@@ -215,12 +226,18 @@ Module[{timedStratResult, duration, unusedBudget},
 (* End For loop *)]
 ,{curdep,deps}(* End Do loop *)];
 
-Print["Recursing into DiffSat with candidates so far as seeds."];
+If[Length[cutlist] > Length[collectedCuts],
+	SetOptions[GenericNonLinear`DbxPoly, StartDeg -> 1],
+	SetOptions[GenericNonLinear`DbxPoly, StartDeg -> iteration+1]
+];
 
 (* Not yet done, repeat with candidates so far as seeds, if any (as collected by cutlist and evoConst) *)
-If[Length[cutlist] > Length[collectedCuts],
-	DiffSat[{ pre, { f, vars, evoConst }, post, {constvars, constasms}}, cutlist],
+If[Length[cutlist] > Length[collectedCuts] ||
+		(TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]] && OptionValue[GenericNonLinear`DbxPoly, StartDeg] <= OptionValue[GenericNonLinear`DbxPoly, MaxDeg]),
+	Print["Recursing into DiffSat with candidates so far as seeds."];
+	DiffSat[{ pre, { f, vars, evoConst }, post, {constvars, constasms}}, cutlist, iteration+1],
 	(* Throw whatever invariant was last computed *)
+	Print["No new insights, exiting with last computed invariant."];
 	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]]
 ]
 

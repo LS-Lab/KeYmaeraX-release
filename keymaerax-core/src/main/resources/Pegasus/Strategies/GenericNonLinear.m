@@ -44,7 +44,7 @@ BarrierCert::usage="BarrierCert[problem_List]";
 Options[PreservedState]= {Timeout -> 10};
 Options[HeuInvariants]= {Timeout -> 20};
 Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
-Options[DbxPoly]= {Deg -> -1, Timeout -> 30};
+Options[DbxPoly]= {StartDeg -> 1, MaxDeg -> -1, Staggered -> False, CurDeg -> -1, Timeout -> 30};
 Options[BarrierCert]= {Deg -> -1, Timeout -> Infinity};
 
 
@@ -134,9 +134,9 @@ DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys,deg},
 {pre, { vf, vars, Q }, post} = problem;
 
 (* Heuristic *)
-deg = If[OptionValue[DbxPoly,Deg] < 0,
+deg = If[OptionValue[DbxPoly,MaxDeg] < 0,
 		Max[10-Length[vars],1],
-		OptionValue[DbxPoly, Deg]];
+	OptionValue[DbxPoly,MaxDeg]];
 
 If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
@@ -154,9 +154,14 @@ DbxPolyIntermediate[problem_List] := Module[{pre,post,vf,vars,Q,polys,allPolys,a
 	{pre, { vf, vars, Q }, post} = problem;
 
 	(* Heuristic *)
-	deg = If[OptionValue[DbxPoly,Deg] < 0,
-		Max[10-Length[vars],1],
-		OptionValue[DbxPoly, Deg]];
+	If[OptionValue[DbxPoly,MaxDeg] < 0,
+		(* Set maximum degree, picked up by others (e.g., DiffSat) to decide whether to recurse. *)
+		SetOptions[DbxPoly,MaxDeg -> Max[10-Length[vars],1]]];
+	deg = If[OptionValue[DbxPoly,CurDeg] < 0,
+		OptionValue[DbxPoly,MaxDeg],
+		Min[OptionValue[DbxPoly,MaxDeg], OptionValue[DbxPoly,CurDeg]]];
+
+	Print["Darboux degrees: ", OptionValue[DbxPoly,StartDeg], "-", deg];
 
 	If[OptionValue[DbxPoly, Timeout] > 0,
 		dbxResult = Reap[TimeConstrained[Block[{},
@@ -165,7 +170,7 @@ DbxPolyIntermediate[problem_List] := Module[{pre,post,vf,vars,Q,polys,allPolys,a
 				allPolys = {};
 				(* Spend 1/2 on polynomial finding, 1/2 on invariant extraction and checking *)
 				(* upgrade to Mathematica 12.1: consider TimeRemaining[] to balance degrees *)
-				For[i=1,i<=deg,i++,
+				For[i=OptionValue[DbxPoly,StartDeg],i<=deg,i++,
 					Print["Degree: ", i];
 					timeout = OptionValue[DbxPoly, Timeout](*/deg*);
 					polys = TimeConstrained[DarbouxPolynomials`DbxDefault[{vf, vars, Q}, i], timeout/2, {}];
