@@ -1051,8 +1051,8 @@ object DerivationInfo {
     new TwoPositionTacticInfo("implyRi", "implyRi", _ => SequentCalculus.implyRi()),
     new PositionTacticInfo("implyL"
       , RuleDisplayInfo(("→L", "->L"), (List("P→Q","&Gamma;"),List("&Delta;")),
-        List((List("&Gamma;","P"),List("&Delta;")),
-          (List("&Gamma;"),List("Q","&Delta;"))))
+        List((List("&Gamma;"),List("&Delta;","P")),
+          (List("Q","&Gamma;"),List("&Delta;"))))
       , {case () => SequentCalculus.implyL}),
     new PositionTacticInfo("equivL"
       , RuleDisplayInfo(("↔L", "<->L"), (List("P↔Q","&Gamma;"),List("&Delta;")),

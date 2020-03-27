@@ -6,7 +6,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.SlowTest
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
 
 import scala.collection.immutable._
@@ -251,6 +252,36 @@ class PolynomialArithV2Tests extends TacticTestBase {
     b.treeSketch shouldBe "{[., x0^4 x15^7, .], x0^3 x1^8 x15^4, [., x0^3 x3^2 x15^4, .], x0^1 x15^3 x17^2, {., x1^8 x17^2, ., x3^2 x17^2, .}}"
   }
 
+  "Normalization" should "normalize Coefficients" in withMathematica { _ =>
+    import pa4._
+    Coefficient(0, 1, None).normalized._1.conclusion.succ(0) shouldBe "0/1=0".asFormula
+    Coefficient(1, 1, None).normalized._1.conclusion.succ(0) shouldBe "1/1=1".asFormula
+    Coefficient(2, 1, None).normalized._1.conclusion.succ(0) shouldBe "2/1=2".asFormula
+    Coefficient(1, 2, None).normalized._1.conclusion.succ(0) shouldBe "1/2=1/2".asFormula
+    Coefficient(-2, 1, None).normalized._1.conclusion.succ(0) shouldBe "-2/1=-2".asFormula
+    Coefficient(-1, 2, None).normalized._1.conclusion.succ(0) shouldBe "-1/2=-1/2".asFormula
+    Coefficient(-1, 1, None).normalized._1.conclusion.succ(0) shouldBe "-1/1=-1".asFormula
+  }
+
+  it should "normalize monomials" in withMathematica { _ =>
+    import pa4._
+    Monomial(Coefficient(2, 1, None), IndexedSeq(2, 1, 2, 0)).normalized.conclusion.succ(0) shouldBe "2/1*(x^2*y^1*f()^2*1)=2*x^2*y*f()^2".asFormula
+    Monomial(Coefficient(1, 1, None), IndexedSeq(2, 1, 2, 0)).normalized.conclusion.succ(0) shouldBe "1/1*(x^2*y^1*f()^2*1)=x^2*y*f()^2".asFormula
+    Monomial(Coefficient(0, 1, None), IndexedSeq(2, 1, 2, 0)).normalized.conclusion.succ(0) shouldBe "0/1*(x^2*y^1*f()^2*1)=0".asFormula
+    Monomial(Coefficient(-1, 1, None), IndexedSeq(2, 1, 2, 0)).normalized.conclusion.succ(0) shouldBe "(-1)/1*(x^2*y^1*f()^2*1)=-x^2*y*f()^2".asFormula
+    Monomial(Coefficient(2, 1, None), IndexedSeq(0, 1, 0, 0)).normalized.conclusion.succ(0) shouldBe "2/1*(1*y^1*1*1)=2*y".asFormula
+    Monomial(Coefficient(2, 1, None), IndexedSeq(1, 0, 0, 0)).normalized.conclusion.succ(0) shouldBe "2/1*(x^1*1*1*1)=2*x".asFormula
+    Monomial(Coefficient(1, 1, None), IndexedSeq(1, 0, 0, 0)).normalized.conclusion.succ(0) shouldBe "1/1*(x^1*1*1*1)=x".asFormula
+  }
+
+  it should "normalize monomials in a polynomial" in withMathematica { _ =>
+    import pa4._
+    val p = (0 until 5).map(i => Const((i % 3) - 2) * Var(i % 2, i % 3 + 1)).reduceLeft(_ + _) ^ 2
+    p.normalized shouldBe 'proved
+    p.normalized.conclusion.succ(0) shouldBe
+      "(-2*x^1+-1*y^2+0*x^3+-2*y^1+-1*x^2)^2=x^4+4*x^3+2*x^2*y^2+4*x^2*y+4*x^2+4*x*y^2+8*x*y+1*y^4+4*y^3+4*y^2".asFormula
+  }
+
   var time = System.nanoTime()
   def tic() = {
     time = System.nanoTime()
@@ -322,4 +353,59 @@ class PolynomialArithV2Tests extends TacticTestBase {
       timesIdentity(USubst(Seq(SubstitutionPair(f, v))))
     toc("USubst()")
   }
+
+  "proveBy with useAt and useFor" should "be slower than useDirectly" taggedAs SlowTest in withMathematica { _ =>
+    import PolynomialArithV2._
+    val add0 = rememberAny("x_() = 0 -> (x_() + 0 = 0)".asFormula, QE & done)
+    val xvar = "x_(||)".asTerm
+
+    def lhs(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].left
+    def add0UseDirectly(prv: ProvableSig) = {
+      useDirectly(add0, Seq(("x_", lhs(prv))), Seq(prv))
+    }
+    def add0UseAt(prv: ProvableSig) = {
+      val x = lhs(prv)
+      TactixLibrary.proveBy(Equal(Plus(x, Number(0)), Number(0)),
+        usePrvAt(add0(USubst(Seq(SubstitutionPair(xvar, x)))), PosInExpr(1::Nil))(1) & by(prv)
+      )
+    }
+    def add0UseAtMatch(prv: ProvableSig) = {
+      val x = lhs(prv)
+      TactixLibrary.proveBy(Equal(Plus(x, Number(0)), Number(0)),
+        usePrvAt(add0, PosInExpr(1::Nil))(1) & by(prv)
+      )
+    }
+    def add0UseFor(prv: ProvableSig) = {
+      val x = lhs(prv)
+      useFor(add0(USubst(Seq(SubstitutionPair(xvar, x)))), PosInExpr(0::Nil))(SuccPosition(1))(prv)
+    }
+    def add0UseForMatch(prv: ProvableSig) = {
+      val x = lhs(prv)
+      useFor(add0, PosInExpr(0::Nil))(SuccPosition(1))(prv)
+    }
+    val prv0 = proveBy("0 = 0".asFormula, QE & done)
+    def test(n: Int, msg: String, stepProvable: ProvableSig => ProvableSig) = {
+      var prv = prv0
+      tic()
+      prv = prv0
+      for (i <- 0 until n) {
+        prv = stepProvable(prv)
+      }
+      toc(msg + " - " + n)
+    }
+    val ns = Seq(100, 200, 400, 800, 1600, 3200)
+    def testMore(msg: String, stepProvable: ProvableSig => ProvableSig) = {
+      for (n <- ns)
+        test(n, msg, stepProvable)
+    }
+    for (i <- 0 until 4) {
+      println("\nTest " + i)
+      testMore("useDirectly", add0UseDirectly)
+      testMore("useAt", add0UseAt)
+      testMore("useAt(match)", add0UseAtMatch)
+      testMore("useFor", add0UseFor)
+      testMore("useFor(match)", add0UseForMatch)
+    }
+  }
+
 }
