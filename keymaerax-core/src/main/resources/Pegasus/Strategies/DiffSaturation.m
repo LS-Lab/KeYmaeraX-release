@@ -108,10 +108,11 @@ If[TrueQ[invImpliesPost],
 		cutlist=timedCutlist[[2]];
 		invlist=Map[#[[1]]&,cutlist]/.List->And;
 	];
-	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]]
-];
-(* Return the modified arguments *)
-{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}
+	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]],
+	(* Continue search, return the modified arguments *)
+	Print["Generated invariant not yet sufficient. Continuing."];
+	{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}
+]
 ]
 
 DiffSat[problem_List, collectedCuts_List:{}, opts:OptionsPattern[]]:=Catch[Module[
@@ -124,13 +125,16 @@ constvars,constasms,invs,timingList,curvars},
 (* Bring symbolic parameters into the dynamics *)
 Print["Input Problem: ", problem];
 
-strategies = {
-	{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"]},
-	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"]},
-	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"]},
-	{GenericNonLinear`DbxPolyIntermediate, Symbol["kyx`Darboux"]},
-	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"]}
-};
+(* {method, proof hint, options namespace}; keep only activated ones with a timeout > 0 *)
+strategies = Select[{
+	{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], GenericNonLinear`PreservedState},
+	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants},
+	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"], GenericNonLinear`FirstIntegrals},
+	{GenericNonLinear`DbxPolyIntermediate, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly},
+	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert}
+}, (OptionValue[Last[#], Timeout] > 0)&];
+
+Print["Activated strategies: ", strategies];
 
 (* TODO: explicitly use the constvars and constasms below!! *)
 { pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
@@ -162,8 +166,8 @@ timingList={};
 Do[
 (* For each strategy *)
 Print["Using dependencies: ",curdep];
-Do[
-{strat,hint}=strathint;
+For[i=1, i<=Length[strategies], i++,
+{strat,hint,optionsNamespace}=strategies[[i]];
 Print["Trying strategy: ",ToString[strat]," ",hint];
 
 curproblem = {pre,{f,vars,evoConst},post};
@@ -174,12 +178,41 @@ subproblem = Dependency`FilterVars[curproblem, curvars];
 (* Compute polynomials for the algebraic decomposition of the state space *)
 (*Print[subproblem];*)
 
-{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
+Module[{timedStratResult, duration, unusedBudget},
+	Print["Method timeout: ", OptionValue[optionsNamespace, Timeout]];
+
+	timedStratResult = AbsoluteTiming[
 		RunStrat[strat, hint, OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 			subproblem, vars,
 			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}]
+	];
 
-,{strathint, strategies}(* End Do loop *)]
+	duration = timedStratResult[[1]];
+	Print["Method duration: ", duration];
+	unusedBudget = Max[0, OptionValue[optionsNamespace, Timeout] - duration];
+	Print["Unused budget: ", unusedBudget];
+
+	(* Distribute unused budget evenly among the remaining methods (evenly among all if last before recursing).
+	 * Assumes that strategies contains only activated ones with Timeout > 0. *)
+	If[i < Length[strategies],
+		Do[
+			SetOptions[remaining[[3]], Timeout -> OptionValue[remaining[[3]], Timeout] + unusedBudget/(Length[strategies]-i)];
+			Print["Modified timeouts: ", ToString[remaining[[1]]], " -> ", OptionValue[remaining[[3]], Timeout]];
+			,
+			{remaining, Drop[strategies,i]}
+		],
+		Do[
+			SetOptions[remaining[[3]], Timeout -> unusedBudget/Length[strategies]];
+			Print["Modified timeouts: ", ToString[remaining[[1]]], " -> ", OptionValue[remaining[[3]], Timeout]];
+			,
+			{remaining, strategies}
+		]
+	];
+
+	{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} = timedStratResult[[2]]
+]
+
+(* End For loop *)]
 ,{curdep,deps}(* End Do loop *)];
 
 Print["Recursing into DiffSat with candidates so far as seeds."];
