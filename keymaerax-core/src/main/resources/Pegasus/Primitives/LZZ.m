@@ -123,11 +123,9 @@ Resolve[ForAll[vars,Cond2 && Cond3], Reals]
 InvSDI[S_, f_List, vars_List, H_]:=InfS[S, f, vars,H]=Module[{
 processedS=Primitives`DNFNormalizeLtLeq[S],cond},
 cond = processedS/.{
-Or->And,
-LessEqual[p_,0]:> LessEqual[Primitives`Lf[p,f,vars,H],0], 
+LessEqual[p_,0]:>LessEqual[Primitives`Lf[p,f,vars,H],0], 
 Equal[p_,0]:> Equal[Primitives`Lf[p,f,vars,H],0], 
 Less[p_,0]:>LessEqual[Primitives`Lf[p,f,vars,H],0]};
-Print[cond];
 Resolve[ForAll[vars,cond], Reals]
 ]
 

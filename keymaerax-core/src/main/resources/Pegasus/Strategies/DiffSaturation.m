@@ -18,7 +18,7 @@ BeginPackage["DiffSaturation`"];
 SanityTimeout controls how long internal sanity check QE calls take.
 StrategyTimeout controls how each sub-strategy call takes *)
 DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem";
-Options[DiffSat]= {UseDependencies -> True,StrategyTimeout->Infinity, MinimizeCuts->True};
+Options[DiffSat]= {UseDependencies -> True, StrategyTimeout->Infinity, UseDI->True, MinimizeCuts->True};
 
 
 Begin["`Private`"]
@@ -48,21 +48,25 @@ cutlist[[added]]
 ]
 
 
+
+
 FullSimplifyReals[fml_]:=Module[{vars,varsreals},
 vars = Cases[fml,_Symbol,Infinity];
 varsreals=Map[# \[Element] Reals&,vars];
 FullSimplify[fml,varsreals]
 ]
 
-RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, problem_, vars_, inout_List]:=Module[
+
+RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, subproblem_, vars_, inout_List]:=Module[
 	{ (* copy of arguments *)
-		timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post,
+		timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem,
 		(* module internal *)
 		timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
-{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} = inout;
+
+{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem} = inout;
 timedInvs = AbsoluteTiming[TimeConstrained[
 	Block[{res},
-		res = strat[problem];
+		res = strat[subproblem];
 		If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
 		res]//DeleteDuplicates,
 	stratTimeout,
@@ -94,10 +98,29 @@ Print["Evo: ",evoConst," Post: ",post];
 Print["InvList ", invlist];
 If[Length[cuts] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, False]]];
 
+(* Check that postcondition is a DI. If so, add it to the invariant list
+	TODO: extend with other options, like InvS or InvSFast?
+*)
+If[OptionValue[DiffSat,UseDI] && Not[TrueQ[post]],
+	Block[{isDI},
+	isDI = AbsoluteTiming[LZZ`InvSDI[post,subproblem[[2]][[1]], subproblem[[2]][[2]], And[evoConst,constasms]]];
+	Print["DI inv check duration: ", isDI[[1]]];
+    AppendTo[timingList,Symbol["InvCheck"]->isDI[[1]]];
+	If[TrueQ[isDI[[2]]],
+		Print["Postcondition proves by DI."];
+		invlist=And[invlist,post];
+		cutlist=Join[cutlist,{{post, Symbol["kyx`Unknown"] (*Symbol["kyx`DI"] *)}}];
+		evoConst=And[evoConst,post];
+		post=True
+	]
+	]	
+];
+
 timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
 Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
 AppendTo[timingList,Symbol["InvCheck"]->timedInvImpliesPost[[1]]];
 invImpliesPost=timedInvImpliesPost[[2]];
+
 If[TrueQ[invImpliesPost],
 	Print["Generated invariant implies postcondition. Returning."];
 	If[minimizeCuts,
@@ -135,6 +158,7 @@ strategies = {
 (* TODO: explicitly use the constvars and constasms below!! *)
 { pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
 
+Print["consts: ",constasms];
 post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
 Print["Postcondition (simplify): ", post];
 If[TrueQ[post],
@@ -156,7 +180,7 @@ timingList={};
     RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
 			OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 			{ pre, { f, vars, evoConst }, post }, vars,
-			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}];
+			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}];
 
 (* For each dependency *)
 Do[
@@ -177,7 +201,7 @@ subproblem = Dependency`FilterVars[curproblem, curvars];
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
 		RunStrat[strat, hint, OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 			subproblem, vars,
-			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}]
+			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post,problem}]
 
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
