@@ -137,12 +137,12 @@ If[TrueQ[invImpliesPost],
 ]
 ]
 
-DiffSat[problem_List, collectedCuts_List:{}, iteration_:1, opts:OptionsPattern[]]:=Catch[Module[
-{pre,f,vars,evoConst,post,preImpliesPost,
+DiffSat[problem_List, collectedResults_List:{{},{}}, iteration_:1, opts:OptionsPattern[]]:=Catch[Module[
+{pre,f,vars,origEvo,post,preImpliesPost,
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 polyList,invlist,cuts,cutlist,strat,hint,
 curproblem,subproblem,deps,curdep,timeoutmultiplier,
-constvars,constasms,invs,timingList,curvars},
+constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst},
 
 (* Staggered Darboux: adapt degree by iteration *)
 If[TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]],
@@ -169,7 +169,10 @@ strategies = Select[{
 Print["Activated strategies: ", strategies];
 
 (* TODO: explicitly use the constvars and constasms below!! *)
-{ pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
+{ pre, { f, vars, origEvo }, post, {constvars,constasms}} = problem;
+
+{ collectedCuts, evoConst } = collectedResults;
+evoConst = evoConst/.{{} -> origEvo};
 
 Print["consts: ",constasms];
 post=Assuming[And[evoConst,constasms], FullSimplifyReals[post]];
@@ -257,7 +260,7 @@ If[Length[cutlist] > Length[collectedCuts],
 If[Length[cutlist] > Length[collectedCuts] ||
 		(TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]] && OptionValue[GenericNonLinear`DbxPoly, StartDeg] <= OptionValue[GenericNonLinear`DbxPoly, MaxDeg]),
 	Print["Recursing into DiffSat with candidates so far as seeds."];
-	DiffSat[{ pre, { f, vars, evoConst }, post, {constvars, constasms}}, cutlist, iteration+1],
+	DiffSat[problem, { cutlist, evoConst }, iteration+1],
 	(* Throw whatever invariant was last computed *)
 	Print["No new insights, exiting with last computed invariant."];
 	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]]
