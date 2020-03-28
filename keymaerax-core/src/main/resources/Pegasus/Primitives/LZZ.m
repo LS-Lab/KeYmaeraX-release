@@ -13,6 +13,7 @@ IvInfS::usage="IvInfS[S,f,vars,domain] Same as InfS except for -f instead of f";
 InvS::usage="InvS[S,f,vars,H] LZZ decision procedure determining continuous invariance of semi-algebaic set S 
 under the flow of a polynomial vector field f with evolution constraint H.";
 InvSFast::usage="InvSFast[S,f,vars,H] Same as InvS but does not run the full check. Sound but incomplete.";
+InvSDI::usage="InvSDI[S,f,vars,H] Same as InvS but runs a pure DI check, which is highly incomplete but fast.";
 
 
 Begin["`Private`"];
@@ -110,12 +111,24 @@ Resolve[ForAll[vars, Cond2 && Cond3], Reals]
 ]
 
 
-InvSFast[S_, f_List, vars_List, H_]:=InvS[S, f, vars, H]=Module[{
+InvSFast[S_, f_List, vars_List, H_]:=InvSFast[S, f, vars, H]=Module[{
 (* TODO: this could also use 'fast' InfS/IvInfS e.g. that truncates at given rank *)
 Cond2 = Implies[S && H , InfS[S,f,vars,H]],
 Cond3 = Implies[Not[S] && H, Not[IvInfS[S,f,vars,H]]]
 },
 Resolve[ForAll[vars,Cond2 && Cond3], Reals]
+]
+
+
+InvSDI[S_, f_List, vars_List, H_]:=InfS[S, f, vars,H]=Module[{
+processedS=Primitives`DNFNormalizeLtLeq[S],cond},
+cond = processedS/.{
+Or->And,
+LessEqual[p_,0]:> LessEqual[Primitives`Lf[p,f,vars,H],0], 
+Equal[p_,0]:> Equal[Primitives`Lf[p,f,vars,H],0], 
+Less[p_,0]:>LessEqual[Primitives`Lf[p,f,vars,H],0]};
+Print[cond];
+Resolve[ForAll[vars,cond], Reals]
 ]
 
 
