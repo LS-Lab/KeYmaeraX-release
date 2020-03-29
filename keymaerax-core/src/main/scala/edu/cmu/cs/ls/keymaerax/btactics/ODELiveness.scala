@@ -888,9 +888,10 @@ object ODELiveness {
     * Note that domain constraint Q is kept around!
     *
     * @param bnd the lower bound on derivatives
+    * @param manual whether to try closing automatically
     * @return closes (or partially so)
     */
-  def dV(bnd: Term): DependentPositionTactic = "dV" byWithInput (bnd,(pos: Position, seq:Sequent) => {
+  def dV(bnd: Term, manual:Boolean = false): DependentPositionTactic = "dV" byWithInput (bnd,(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -937,11 +938,86 @@ object ODELiveness {
     starter & timetac &
     discreteGhost(p, Some(oldp))(pos) &
     useAt(axren,PosInExpr(1::Nil))(pos) &
-    andR(pos) <(
+    (
+      if(manual) skip
+      else
       andR(pos) <(
-      ToolTactics.hideNonFOL & QE, //G |- e() > 0
-      odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(ex))), // existence
-      compatCuts(pos) & dI('full)(pos)  // derivative lower bound
+        andR(pos) <(
+        ToolTactics.hideNonFOL & QE, //G |- e() > 0
+        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(ex))), // existence
+        compatCuts(pos) & dI('full)(pos)  // derivative lower bound
+      )
+    )
+  })
+
+  def dVAuto: DependentPositionTactic = "dV" by ((pos: Position, seq:Sequent) => {
+    require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+    }
+
+    val odels = DifferentialProduct.listify(sys.ode).map {
+      case AtomicODE(x,e) => (x,e)
+      case _ => throw new BelleThrowable("dVAuto only applicable to concrete ODEs")
+    }
+
+    val eps = TacticHelper.freshNamedSymbol("epsilon_".asVariable, seq)
+    val bvs = odels.map(_._1.x)
+
+    // e > 0
+    val eg0 = Greater(eps,Number(0))
+    // p' >= e
+    val lie = post match {
+      case Greater(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(l,r),None),eps)
+      case GreaterEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(l,r),None),eps)
+      case Less(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
+      case LessEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
+      case _ => throw new BelleThrowable("dVAuto expects only atomic inequality (>,>=,<,<=) in succedent")
+    }
+
+    // (Q & p < 0 -> p' >= e)
+    // val liecheck = Imply(And(sys.constraint,Not(post)),lie)
+    //\\exists e (e > 0 & \\forall x (Q & p < 0 -> p' >= e))
+    // val qe = Exists(eps::Nil, bvs.foldRight(And(eg0,liecheck):Formula)( (v,f) => Forall(v::Nil,f)))
+    // val pr = proveBy(seq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
+
+    // This more accurately finds the compatible cuts by simulating it in action
+    val prpre = proveBy(seq, dV(Number(0),true)(pos) & andR(pos) <(skip, compatCuts(pos)))
+    val dom = prpre.subgoals(1).sub(pos++PosInExpr(0::1::Nil)).get.asInstanceOf[Formula]
+    // (dom (with compat cuts) -> p' >= e)
+    val liecheck = Imply(dom,lie)
+    val quantliecheck = bvs.foldRight(liecheck:Formula)( (v,f) => Forall(v::Nil,f))
+    //\\exists e (e > 0 & \\forall x (dom -> p' >= e))
+    val qe = Exists(eps::Nil, And(eg0,quantliecheck))
+
+    val pr = proveBy(seq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
+
+    if(!pr.isProved)
+      throw new BelleThrowable("dVAuto failed to prove arithmetic condition: " + qe)
+
+    cutR(qe)(pos) <(
+      by(pr),
+      implyR(pos) & existsL('Llast) & andL('Llast) & dV(eps,true)(pos) &
+        andR(pos) <(
+          andR(pos) <(
+            closeId,
+            odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & (byUS(baseGExge)|byUS(baseGExgt)))), // existence
+          compatCuts(pos) &
+            dR(lie,false)(pos) <(
+                  cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI('full)(1),
+            // add the quantified assumption manually
+            dC(quantliecheck)(pos) <(
+              DifferentialTactics.diffWeakenG(pos) & implyR(1) & andL(-1) & (allL('Llast)*bvs.length) & implyL('Llast) <(
+                closeId,
+                closeId
+              )
+              ,
+              V(pos) & closeId
+            )
+          )  // derivative lower bound
+        )
     )
   })
 

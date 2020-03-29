@@ -333,11 +333,48 @@ class ODELivenessTests extends TacticTestBase {
   }
 
   it should "work on simple examples (1)" in withQE { _ =>
-    val pr = proveBy("a>0 ==> <{x'=a}>x>=b()".asSequent,
+    val pr = proveBy("a>0 ==> <{x'=a,y'=z}>x>=b()".asSequent,
       dV("a".asTerm)(1))
 
-    val pr2 = proveBy("c=1 ==> a<=0 , <{x'=a+c}>x>=b()".asSequent,
+    val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent,
       dV("a".asTerm)(2))
+
+    println(pr)
+    println(pr2)
+    pr shouldBe 'proved
+    pr2 shouldBe 'proved
+  }
+
+  it should "work on simple examples (1) symbolically" in withQE { _ =>
+    val pr = proveBy("a>0 ==> <{x'=a,y'=z}>x>=b()".asSequent,
+      cutR("\\exists e (e > 0 & \\forall x \\forall y (a >= e))".asFormula)(1) <(
+        QE,
+        implyR(1) & existsL('Llast) & dV("e".asTerm)(1)
+      )
+    )
+
+    val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent,
+      cutR("\\exists e (e > 0 & \\forall y \\forall x (a+c >= e))".asFormula)(2) <(
+        QE,
+        implyR(2) & existsL('Llast) & dV("e".asTerm)(2)
+      )
+    )
+
+    println(pr)
+    println(pr2)
+    pr shouldBe 'proved
+    pr2 shouldBe 'proved
+  }
+
+  it should "work on simple examples (1) automatically" in withQE { _ =>
+
+    val pr = proveBy("a>0 ==> <{x'=a,y'=z}>x>=b()".asSequent,
+      dVAuto(1)
+    )
+
+    val pr2 = proveBy("c=1 ==> a<=0 , <{y'=z,x'=a+c}>x>=b()".asSequent,
+      dVAuto(2)
+    )
 
     println(pr)
     println(pr2)
@@ -381,13 +418,14 @@ class ODELivenessTests extends TacticTestBase {
         saveBox(1) &
         // Use a progress function
         kDomainDiamond(Less(p1, Number(0)))(1) <(
-          dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+          //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+          dVAuto(1),
           dW(1) & QE
         )
         &
         // compact domain bound on Lie derivative
         cut("[{x1'=x2-x1*(x1^2+x2^2-1),x2'=-x1-x2*(x1^2+x2^2-1),timevar_'=1&true}]2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula) <(
-          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
+          odeReduce(strict = true)(1) & solve(1) & cohideOnlyL(-4) & QE,
           cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
         )
     )
@@ -416,12 +454,13 @@ class ODELivenessTests extends TacticTestBase {
         saveBox(1) &
         // Use a progress function
         kDomainDiamond(Less(p2, Number(0)))(1) <(
-          dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+          //dV("0.1".asTerm)(1), //0.1 arbitrarily chosen here...
+          dVAuto(1),
           dW(1) & QE
         ) &
         // compact domain bound on Lie derivative
         cut("[{x1'=x2-x1*(x1^2+x2^2-1),x2'=-x1-x2*(x1^2+x2^2-1),timevar_'=1&true}]2*(x1*(x2-x1*(x1^2+x2^2-1))+x2*(-x1-x2*(x1^2+x2^2-1)))<=0*(x1*x1+x2*x2)+10000".asFormula) <(
-          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
+          odeReduce(strict = true)(1) & solve(1) & cohideOnlyL(-4) & QE,
           cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
         )
     )
@@ -442,11 +481,13 @@ class ODELivenessTests extends TacticTestBase {
       implyR(1) &
       kDomainDiamond("x2 - x1 >=0".asFormula)(1) <(
         saveBox(1) &
-        dV("1".asTerm)(1) &
+        // dV("1".asTerm)(1) &
+        dVAuto(1) &
         // Proving bound on derivative
         //todo: cut needs to support old(.) directly
+        hideL(-4) &
         cut("\\exists oldv oldv = x2-x1".asFormula) <(
-          existsL(-5),
+          existsL(-6),
           cohideR(2) & QE
         ) &
         cut("[{x1'=-1,x2'=(x2-x1)^2,timevar_'=1&true}](x2-x1>=oldv)".asFormula) <(
@@ -454,7 +495,7 @@ class ODELivenessTests extends TacticTestBase {
           cohideOnlyR(2) & hideL(-2) & ODE(1)
         ) &
         cut("[{x2'=(x2-x1)^2,x1'=-1,timevar_'=1&true}]2*(x2*(x2-x1)^2)<= oldv^2*(x2*x2)+oldv^2".asFormula) <(
-          odeReduce()(1) & cohideR(1) & solve(1) & QE,
+          odeReduce()(1) & hideL(-7) &  hideL(-7) &  hideL(-2) & solve(1) & QE,
           cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
         )
         ,
@@ -538,7 +579,8 @@ class ODELivenessTests extends TacticTestBase {
         skip,
         hideR(1) & compatCuts(1) & ODE(1) //compatCuts super useful here
       ) &
-      dV("2*oldv*oldhalfy".asTerm)(1)
+      // dV("2*oldv*oldhalfy".asTerm)(1)
+      dVAuto(1)
     )
 
     println(pr)
@@ -566,7 +608,8 @@ class ODELivenessTests extends TacticTestBase {
             skip,
             ODE(1)
           ) &
-          dV("A".asTerm)(1)
+          // dV("A".asTerm)(1)
+          dVAuto(1)
         ),
         orL('Llast) <(
           //a=0
@@ -581,7 +624,8 @@ class ODELivenessTests extends TacticTestBase {
               ODE(1) //note the slightly tricky refinement here (using IVT)
             ) &
             closedRef("true".asFormula)(1) <(
-              dV("B".asTerm)(1),
+              //dV("B".asTerm)(1),
+              dVAuto(1),
               QE,
               ODE(1)
             )
@@ -614,7 +658,8 @@ class ODELivenessTests extends TacticTestBase {
       ) &
       // Another helpful cut (could be just old(.) for the RHS)
       cut("[{x'=x,y'=y}](x^2+y^2 >= 1/2)".asFormula) <(
-        dV("1".asTerm)(1),
+        // dV("1".asTerm)(1),
+        dVAuto(1),
         hideL(-2) & hideR(1) & ODE(1)
       )
     )
