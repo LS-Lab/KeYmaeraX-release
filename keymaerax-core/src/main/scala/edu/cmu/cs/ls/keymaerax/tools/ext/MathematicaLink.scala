@@ -344,7 +344,7 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
   }
 
   def cancel(): Boolean = {
-    ml.abortEvaluation()
+    if (ml != null) ml.abortEvaluation()
     true
   }
 
