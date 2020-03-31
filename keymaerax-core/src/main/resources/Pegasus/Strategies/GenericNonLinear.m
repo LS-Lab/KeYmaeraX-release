@@ -44,7 +44,7 @@ BarrierCert::usage="BarrierCert[problem_List]";
 Options[PreservedState]= {Timeout -> 10};
 Options[HeuInvariants]= {Timeout -> 20};
 Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
-Options[DbxPoly]= {StartDeg -> 1, MaxDeg -> -1, Staggered -> False, CurDeg -> -1, Timeout -> 30};
+Options[DbxPoly]= {StartDeg -> 1, EndDeg -> -1, Staggered -> False, CurDeg -> -1, Timeout -> 30};
 Options[BarrierCert]= {Deg -> -1, Timeout -> Infinity};
 
 
@@ -134,9 +134,9 @@ DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys,deg},
 {pre, { vf, vars, Q }, post} = problem;
 
 (* Heuristic *)
-deg = If[OptionValue[DbxPoly,MaxDeg] < 0,
+deg = If[OptionValue[DbxPoly,EndDeg] < 0,
 		Max[10-Length[vars],1],
-	OptionValue[DbxPoly,MaxDeg]];
+	OptionValue[DbxPoly,EndDeg]];
 
 If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
@@ -154,12 +154,12 @@ DbxPolyIntermediate[problem_List] := Module[{pre,post,vf,vars,Q,polys,allPolys,a
 	{pre, { vf, vars, Q }, post} = problem;
 
 	(* Heuristic *)
-	If[OptionValue[DbxPoly,MaxDeg] < 0,
+	If[OptionValue[DbxPoly,EndDeg] < 0,
 		(* Set maximum degree, picked up by others (e.g., DiffSat) to decide whether to recurse. *)
-		SetOptions[DbxPoly,MaxDeg -> Max[10-Length[vars],1]]];
+		SetOptions[DbxPoly,EndDeg -> Max[10-Length[vars],1]]];
 	deg = If[OptionValue[DbxPoly,CurDeg] < 0,
-		OptionValue[DbxPoly,MaxDeg],
-		Min[OptionValue[DbxPoly,MaxDeg], OptionValue[DbxPoly,CurDeg]]];
+		OptionValue[DbxPoly,EndDeg],
+		Min[OptionValue[DbxPoly,EndDeg], OptionValue[DbxPoly,CurDeg]]];
 
 	Print["Darboux degrees: ", OptionValue[DbxPoly,StartDeg], "-", deg];
 

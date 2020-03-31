@@ -48,8 +48,6 @@ cutlist[[added]]
 ]
 
 
-
-
 FullSimplifyReals[fml_]:=Module[{vars,varsreals},
 vars = Cases[fml,_Symbol,Infinity];
 varsreals=Map[# \[Element] Reals&,vars];
@@ -142,7 +140,7 @@ DiffSat[problem_List, collectedResults_List:{{},{}}, iteration_:1, opts:OptionsP
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 polyList,invlist,cuts,cutlist,strat,hint,
 curproblem,subproblem,deps,curdep,timeoutmultiplier,
-constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst},
+constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,optionsNamespace},
 
 (* Staggered Darboux: adapt degree by iteration *)
 If[TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]],
