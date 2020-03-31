@@ -50,7 +50,7 @@ object PegasusInstaller extends Logging {
         "Strategies/GenericNonLinear.m" ::
         "Strategies/Helper.m" ::
         "Strategies/InvariantExtractor.m" ::
-        "Strategies/Linear.m" ::
+        "Strategies/GenericLinear.m" ::
         "Strategies/OneDimensional.m" ::
         "Classifier.m" ::
         "Pegasus.m" ::
