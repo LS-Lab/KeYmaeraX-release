@@ -145,11 +145,11 @@ constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,optionsNamesp
 (* Staggered Darboux: adapt degree by iteration *)
 If[TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]],
 	SetOptions[GenericNonLinear`DbxPoly, CurDeg ->
-     If[OptionValue[GenericNonLinear`DbxPoly, MaxDeg] < 0,
+     If[OptionValue[GenericNonLinear`DbxPoly, EndDeg] < 0,
 			 iteration,
-			 Min[OptionValue[GenericNonLinear`DbxPoly, MaxDeg], iteration]]]
+			 Min[OptionValue[GenericNonLinear`DbxPoly, EndDeg], iteration]]]
 	,
-	SetOptions[GenericNonLinear`DbxPoly, CurDeg -> OptionValue[GenericNonLinear`DbxPoly, MaxDeg]]
+	SetOptions[GenericNonLinear`DbxPoly, CurDeg -> OptionValue[GenericNonLinear`DbxPoly, EndDeg]]
 ];
 
 (* Bring symbolic parameters into the dynamics *)
@@ -256,7 +256,7 @@ If[Length[cutlist] > Length[collectedCuts],
 
 (* Not yet done, repeat with candidates so far as seeds, if any (as collected by cutlist and evoConst) *)
 If[Length[cutlist] > Length[collectedCuts] ||
-		(TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]] && OptionValue[GenericNonLinear`DbxPoly, StartDeg] <= OptionValue[GenericNonLinear`DbxPoly, MaxDeg]),
+		(TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]] && OptionValue[GenericNonLinear`DbxPoly, StartDeg] <= OptionValue[GenericNonLinear`DbxPoly, EndDeg]),
 	Print["Recursing into DiffSat with candidates so far as seeds."];
 	DiffSat[problem, { cutlist, evoConst }, iteration+1],
 	(* Throw whatever invariant was last computed *)
