@@ -162,14 +162,13 @@ Print["Input Problem: ", problem];
 		1 means linear only.
 		2 means nonlinear only. *)
 strategies = Select[{
+	{GenericLinear`LinearMethod, Symbol["kyx`Unknown"] (*Symbol["kyx`LinearMethod"]*), GenericLinear`LinearMethod, 1},
+	{GenericLinear`FirstIntegralsLin, Symbol["kyx`FirstIntegral"] (*Symbol["kyx`FirstIntegralsLin"]*), GenericLinear`FirstIntegralsLin, 1},
 	{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], GenericNonLinear`PreservedState, 0},
 	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
 	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"], GenericNonLinear`FirstIntegrals, 2},
 	{GenericNonLinear`DbxPolyIntermediate, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
-	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0},
-	{GenericLinear`LinearMethod, Symbol["kyx`LinearMethod"], GenericLinear`LinearMethod, 1},
-	(*{GenericLinear`FirstIntegralsLin, Symbol["kyx`FirstIntegralsLin"], GenericLinear`FirstIntegralsLin, 1}*)
-}, (OptionValue[#[[3]], Timeout] > 0)&];
+	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0}}, (OptionValue[#[[3]], Timeout] > 0)&];
 
 Print["Activated strategies: ", strategies];
 

@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      6109,        165]
-NotebookOptionsPosition[      5515,        148]
-NotebookOutlinePosition[      5848,        163]
-CellTagsIndexPosition[      5805,        160]
+NotebookDataLength[      7865,        219]
+NotebookOptionsPosition[      7117,        200]
+NotebookOutlinePosition[      7510,        216]
+CellTagsIndexPosition[      7467,        213]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -144,12 +144,65 @@ Cell[BoxData[
    "]"}]}]], "Input",
  CellChangeTimes->{{3.791578426146194*^9, 3.7915784267869864`*^9}, {
   3.7929267915125628`*^9, 3.7929267947977753`*^9}},
- CellLabel->"In[5]:=",ExpressionUUID->"ddca5133-5e72-46fc-851d-4dbedef66178"]
+ CellLabel->"In[5]:=",ExpressionUUID->"ddca5133-5e72-46fc-851d-4dbedef66178"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"x", "-", "2"}], ")"}], "^", "2"}], "+", 
+        RowBox[{"y", "^", "2"}]}], "\[LessEqual]", 
+       RowBox[{"1", "/", "5"}]}], "||", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"x", "+", "2"}], ")"}], "^", "2"}], "+", 
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"y", "-", "2"}], ")"}], "^", "2"}]}], "\[LessEqual]", 
+       RowBox[{"1", "/", "3"}]}]}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"-", "4"}], " ", "y"}], ",", "x"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"x", ",", "y"}], "}"}], ",", "True"}], "}"}], ",", 
+     RowBox[{
+      RowBox[{"y", "\[LessEqual]", "4"}], "&&", 
+      RowBox[{"y", "\[GreaterEqual]", 
+       RowBox[{"-", "4"}]}], "&&", 
+      RowBox[{"Not", "[", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"x", "^", "2"}], "+", 
+         RowBox[{"y", "^", "2"}]}], "\[LessEqual]", 
+        RowBox[{"1", "/", "3"}]}], "]"}]}]}], "}"}]}], ";"}], "\n", 
+ RowBox[{"res", "=", 
+  RowBox[{"DiffSat", "[", 
+   RowBox[{"Join", "[", 
+    RowBox[{"prob", ",", 
+     RowBox[{"{", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", "}"}], ",", "True"}], "}"}], "}"}]}], "]"}], 
+   "]"}]}]}], "Input",
+ CellChangeTimes->{{3.7946287035968037`*^9, 3.794628720204877*^9}},
+ CellLabel->"In[3]:=",ExpressionUUID->"d9ef4461-cf01-4fd4-bdf4-b84f2d6b9ff1"]
 },
-WindowSize->{960, 1025},
+WindowSize->{960., 767.25},
 WindowMargins->{{Automatic, 0}, {0, Automatic}},
-FrontEndVersion->"11.3 for Linux x86 (64-bit) (March 6, 2018)",
-StyleDefinitions->"Default.nb"
+FrontEndVersion->"12.1 for Linux x86 (64-bit) (March 18, 2020)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"02ee4122-c3e5-4726-8c83-6e1404bdaecb"
 ]
 (* End of Notebook Content *)
 
@@ -162,11 +215,12 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[558, 20, 1700, 34, 94, "Input",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8",
+Cell[558, 20, 1700, 34, 87, "Input",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8",
  InitializationCell->True],
-Cell[2261, 56, 322, 7, 31, "Input",ExpressionUUID->"a7d5b96c-a2fb-45b5-acf4-6fdb184e9f3d"],
-Cell[2586, 65, 1152, 28, 170, "Input",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"],
-Cell[3741, 95, 1770, 51, 101, "Input",ExpressionUUID->"ddca5133-5e72-46fc-851d-4dbedef66178"]
+Cell[2261, 56, 322, 7, 29, "Input",ExpressionUUID->"a7d5b96c-a2fb-45b5-acf4-6fdb184e9f3d"],
+Cell[2586, 65, 1152, 28, 154, "Input",ExpressionUUID->"601f8a8c-69f5-4275-b872-89db339ead28"],
+Cell[3741, 95, 1770, 51, 92, "Input",ExpressionUUID->"ddca5133-5e72-46fc-851d-4dbedef66178"],
+Cell[5514, 148, 1599, 50, 71, "Input",ExpressionUUID->"d9ef4461-cf01-4fd4-bdf4-b84f2d6b9ff1"]
 }
 ]
 *)
