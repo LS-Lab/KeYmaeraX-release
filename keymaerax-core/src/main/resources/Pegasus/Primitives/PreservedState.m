@@ -16,7 +16,7 @@ PreservedPre[vf_List, vars_List, pre_, domain_] :=
      (*pre is usually in disjunctive normal form, see Dependency`FilterVars, but redo if called from somewhere else not in that form *)
      disjuncts = Primitives`Disjuncts[Primitives`DNFNormalizeGtGeq[pre]];
      disjuncts = If[ListQ[disjuncts], disjuncts, { disjuncts }];
-     conjunctLists = Map[Primitives`Conjuncts, disjuncts];
+     conjunctLists = Map[({# /. {And->List}}//Flatten)&, disjuncts];
      Print["Filtering conjuncts ", conjunctLists];
      preserved = {};
      Do[
