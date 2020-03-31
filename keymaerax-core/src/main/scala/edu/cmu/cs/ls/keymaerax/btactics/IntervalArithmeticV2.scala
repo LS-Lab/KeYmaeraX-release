@@ -911,6 +911,68 @@ object IntervalArithmeticV2 {
     }
   }
 
+  /** prove formula of the following shape
+    * context |- \forall i1 i2 ((l1 <= i1 & i1 <= u1 & l2 <= i2 & i2 <= u2) -> (l <= op(i1, i2) & op(i1, i2) <= u))
+    * */
+  def proveBinop(qeTool: => QETacticTool)(prec: Int)(context: IndexedSeq[Formula])(op: (Term, Term) => Term)(l1: Term, u1: Term)(l2: Term, u2: Term) : (ProvableSig, Term, Term) = {
+    val i1 = BaseVariable("i1_")
+    val i2 = BaseVariable("i2_")
+    val assms = IndexedSeq((l1, i1), (i1, u1), (l2, i2), (i2, u2)).map{case(l, u)=>LessEqual(l, u)}
+    val t = op(i1, i2)
+    // @todo: could be more efficient in caching bounds for context
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap())(Seq(t))
+    val lPrv = lowers(t)
+    val uPrv = uppers(t)
+    val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
+    val u = uPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].right
+    val fml =
+      Forall(Seq(i1), Forall(Seq(i2),
+        Imply(
+          assms.reduceRight(And),
+          And(LessEqual(l, t), LessEqual(t, u))
+        )
+      ))
+    val offset = context.length
+    (ProvableSig.startProof(Sequent(context, IndexedSeq(fml))).
+      apply(Skolemize(SuccPos(0)), 0).
+      apply(Skolemize(SuccPos(0)), 0).
+      apply(ImplyRight(SuccPos(0)), 0).
+      apply(AndLeft(AntePos(offset + 0)), 0).
+      apply(AndLeft(AntePos(offset + 1)), 0).
+      apply(AndLeft(AntePos(offset + 2)), 0).
+      apply(AndRight(SuccPos(0)), 0).
+      apply(uPrv, 1).
+      apply(lPrv, 0), l, u)
+  }
+
+  /** prove formula of the following shape
+    * context |- \forall i1 ((l1 <= i1 & i1 <= u1) -> (l <= op(i1) & op(i1) <= u))
+    * */
+  def proveUnop(qeTool: => QETacticTool)(prec: Int)(context: IndexedSeq[Formula])(op: Term => Term)(l1: Term, u1: Term) : (ProvableSig, Term, Term) = {
+    val i1 = BaseVariable("i1_")
+    val assms = IndexedSeq((l1, i1), (i1, u1)).map{case(l, u)=>LessEqual(l, u)}
+    val t = op(i1)
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap())(Seq(t))
+    val lPrv = lowers(t)
+    val uPrv = uppers(t)
+    val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
+    val u = uPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].right
+    val fml = Forall(Seq(i1),
+      Imply(
+        assms.reduceRight(And),
+        And(LessEqual(l, t), LessEqual(t, u))
+      ))
+    val offset = context.length
+    (ProvableSig.startProof(Sequent(context, IndexedSeq(fml))).
+      apply(Skolemize(SuccPos(0)), 0).
+      apply(ImplyRight(SuccPos(0)), 0).
+      apply(AndLeft(AntePos(offset + 0)), 0).
+      apply(AndRight(SuccPos(0)), 0).
+      apply(uPrv, 1).
+      apply(lPrv, 0),
+      l, u)
+  }
+
   /** Tactics appear to be a bit slow */
   object Slow {
 
