@@ -28,6 +28,14 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
   val tamperComplexity = 4
   val rand = new RandomFormula()
 
+  "Future-compatible Stored Provable" should "already support block quantifiers" in {
+    val pr = Provable.startProof(Forall(Variable("x")::Variable("y")::Nil, True)) (Skolemize(new SuccPos(0)), 0) (CloseTrue(new SuccPos(0)), 0)
+    pr shouldBe 'proved
+    val str = Provable.toStorageString(pr)
+    val readagain = Provable.fromStorageString(str)
+    readagain shouldBe pr
+  }
+
   "Stored Provable" should "be written and reread correctly (summary)" taggedAs(SummaryTest) in {test(10,4)}
   it should "be written and reread correctly (usual)" taggedAs(UsualTest) in {test(100,8)}
   it should "be written and reread correctly (slow)" taggedAs(SlowTest) in {test(randomTrials,randomComplexity)}
