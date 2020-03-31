@@ -2,15 +2,23 @@
 
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 Needs["GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]] 
+Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m"}]]
+Needs["LinearAlgebraicInvariants`", FileNameJoin[{Directory[],"Primitives","LinearAlgebraicInvariants.m"}]]
 
 
-BeginPackage[ "Linear`"];
+BeginPackage[ "GenericLinear`"];
 
 
 LinearMethod::usage="LinearMethod[problem_List]"
-Options[LinearMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->2};
-PlanarConstantMethod::usage="ConstantMethod[problem_List]"
+(* PlanarConstantMethod::usage="ConstantMethod[problem_List]" *)
+FirstIntegralsLin::usage ="FirstIntegralsLin[problem_list]"
+
 LinearClass::usage="LinearClass[matrix] determines the class of problem from the given system matrix"
+
+(* Options and defaults for each of these methods *)
+Options[LinearMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->2, Timeout -> 10};
+(* Options[PlanarConstantMethod]= {Timeout -> 20}; *)
+Options[FirstIntegralsLin]= {Timeout -> 10};
 
 
 Begin["`Private`"]
@@ -27,12 +35,6 @@ True, "Other"]
 
 EigenspacePolys[M_List,vars_List]:=Module[{},
 Map[Rest[#].vars&,Select[Eigensystem[Transpose[M]]//Transpose,Element[First[#],Reals] &]]//Flatten
-]
-
-
-FirstIntegrals[M_List,vars_List,deg_Integer?NonNegative]:=Module[{},
-(* Compute functionally independent first integrals up to given degree *)
-FirstIntegralGen`FuncIndep[FirstIntegralGen`FindFirstIntegrals[deg, vars, M.vars],vars]
 ]
 
 
@@ -60,7 +62,7 @@ Expand[vars.LM.vars]
 LinearMethod[problem_List, opts:OptionsPattern[]]:=Module[{
 pre, vf, vars, evoConst, post,
 M,rats,FIDeg,ratPrecision,
-initConnectedComponents,class,res,invs
+initConnectedComponents,class,res,invs,fIs
 },
 {pre,{vf,vars,evoConst},post}=problem;
 (* Doesn't work for affine *)
@@ -97,23 +99,25 @@ res=class/.{
   minimise={LyapunovFn, Krasovskii};
   minFns = Map[#[[1]]-Primitives`LowerRatCoeffs[MinValue[#,vars]/.{Infinity -> 0,-Infinity -> 0},vars,ratPrecision] &, Tuples[{minimise, initConnectedComponents}] ];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
-  InvariantExtractor`DWC[problem,Union[separatrices, minFns,False],{}][[2]]
+  InvariantExtractor`DWC[problem,Union[separatrices, minFns],{},False][[2]]
 ],
 "Other":> Block[{
   (* Compute the linear forms of the invariant sub-spaces *)
   separatrices=EigenspacePolys[M, vars],
   ls,maxFns,minFns,maxmin},
-  fis=GenericNonLinear`FirstIntegrals[problem, "Deg"->FIDeg];
+  fIs=GenericNonLinear`FirstIntegrals[problem, "Deg"->FIDeg];
+  Print[fIs];
   separatrices=If[rats,Map[Primitives`UpperRatCoeffs[#,vars,ratPrecision]&, separatrices], separatrices];
   invs=InvariantExtractor`DWC[problem,separatrices,{},False][[2]];
-  Union[fis,invs]
+  Print["sep: ",separatrices];
+  Union[fIs,invs]
 ]
 };
 res
 ]
 
 
-Options[PlanarConstantMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->1};
+(* Options[PlanarConstantMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->1};
 PlanarConstantMethod[Init_, Postcond_, System_List, opts:OptionsPattern[]]:=Module[{
 rats,FIDeg,ratPrecision,upperRat,lowerRat,initConnectedComponents,FIs,maximise,minimise,
 maxFns,minFns,partitioning,
@@ -144,6 +148,45 @@ minFns = Map[#[[1]]-lowerRat[MinValue[#,statevars]/.{Infinity -> 0,-Infinity -> 
 Print[Union[ maxFns, minFns]];
 partitioning=Union[ maxFns, minFns];
 partitioning
+] *)
+
+
+(* doesn't seem particularly useful *)
+FirstIntegralsLin[problem_List, opts:OptionsPattern[]]:=Module[{
+pre, vf, vars, evoConst, post,
+rat,bound,upperRat,lowerRat,fIs,uppers,lowers,
+maxminVs,
+},
+{pre,{vf,vars,evoConst},post}=problem;
+
+rat = 5;
+bound=10^8;
+
+(* Create rationalization function wrappers *)
+upperRat[num_]:=If[TrueQ[Element[num,Reals] && num < bound],Primitives`UpperRat[num, rat], Infinity];
+lowerRat[num_]:=If[TrueQ[Element[num,Reals] && num > -bound],Primitives`LowerRat[num, rat], -Infinity];
+
+If[OptionValue[FirstIntegralsLin, Timeout] > 0,
+TimeConstrained[Block[{},
+(* Compute functionally independent first integrals up to given degree *)
+fIs=Primitives`FuncIndep[FirstIntegrals`FindLinSysIntegrals[{vf, vars, evoConst}],vars];
+Print[fIs];
+(* upper and lower bounds on the FIs
+todo: NMaxValue instead? Needs extra LZZ check: it doesn't give the real max/mins sometimes! *)
+uppers = Map[upperRat[MaxValue[{#,pre},vars]]&,fIs];
+lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs];
+
+maxminVs=Flatten[MapThread[
+  (* If the upper and lower bound are the same and non-infinity, return the equality *)
+  If[#2==#3&&#2!=Infinity,{#1==#2},
+    (* Else return the two bounds separately*)
+    {If[#2==Infinity,{},{#1<=#2}], If[#3==-Infinity,{},{#1>=#3}]}] &,
+  {fIs,uppers,lowers}]];
+
+maxminVs
+], OptionValue[FirstIntegralsLin,Timeout],
+{}],
+Print["FirstIntegralsLin skipped."]; {}]
 ]
 
 

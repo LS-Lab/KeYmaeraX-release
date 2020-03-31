@@ -7,8 +7,10 @@
 
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 Needs["Dependency`",FileNameJoin[{Directory[],"Primitives","Dependency.m"}]]
+Needs["GenericLinear`",FileNameJoin[{Directory[],"Strategies","GenericLinear.m"}]]
 Needs["GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
 Needs["Format`",FileNameJoin[{Directory[],"Strategies","Format.m"}]]
+Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]]
 
 
 BeginPackage["DiffSaturation`"];
@@ -46,8 +48,6 @@ For[i=1,i<=Length[cutlist],i++,
 
 cutlist[[added]]
 ]
-
-
 
 
 FullSimplifyReals[fml_]:=Module[{vars,varsreals},
@@ -138,33 +138,37 @@ If[TrueQ[invImpliesPost],
 ]
 
 DiffSat[problem_List, collectedResults_List:{{},{}}, iteration_:1, opts:OptionsPattern[]]:=Catch[Module[
-{pre,f,vars,origEvo,post,preImpliesPost,
+{i,pre,f,vars,origEvo,post,preImpliesPost,
 postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
-polyList,invlist,cuts,cutlist,strat,hint,
+polyList,invlist,cuts,cutlist,strat,hint,isLinear,
 curproblem,subproblem,deps,curdep,timeoutmultiplier,
-constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst},
+constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,optionsNamespace},
 
 (* Staggered Darboux: adapt degree by iteration *)
 If[TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]],
 	SetOptions[GenericNonLinear`DbxPoly, CurDeg ->
-     If[OptionValue[GenericNonLinear`DbxPoly, MaxDeg] < 0,
+     If[OptionValue[GenericNonLinear`DbxPoly, EndDeg] < 0,
 			 iteration,
-			 Min[OptionValue[GenericNonLinear`DbxPoly, MaxDeg], iteration]]]
+			 Min[OptionValue[GenericNonLinear`DbxPoly, EndDeg], iteration]]]
 	,
-	SetOptions[GenericNonLinear`DbxPoly, CurDeg -> OptionValue[GenericNonLinear`DbxPoly, MaxDeg]]
+	SetOptions[GenericNonLinear`DbxPoly, CurDeg -> OptionValue[GenericNonLinear`DbxPoly, EndDeg]]
 ];
 
 (* Bring symbolic parameters into the dynamics *)
 Print["Input Problem: ", problem];
 
-(* {method, proof hint, options namespace}; keep only activated ones with a timeout > 0 *)
+(* {method, proof hint, linear/nonlinear flag, options namespace}; keep only activated ones with a timeout > 0 *)
+(* For the flag, 0 means the strategy should be tried for both linear and nonlinear systems.  
+		1 means linear only.
+		2 means nonlinear only. *)
 strategies = Select[{
-	{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], GenericNonLinear`PreservedState},
-	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants},
-	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"], GenericNonLinear`FirstIntegrals},
-	{GenericNonLinear`DbxPolyIntermediate, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly},
-	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert}
-}, (OptionValue[Last[#], Timeout] > 0)&];
+	{GenericLinear`LinearMethod, Symbol["kyx`Unknown"] (*Symbol["kyx`LinearMethod"]*), GenericLinear`LinearMethod, 1},
+	{GenericLinear`FirstIntegralsLin, Symbol["kyx`FirstIntegral"] (*Symbol["kyx`FirstIntegralsLin"]*), GenericLinear`FirstIntegralsLin, 1},
+	{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], GenericNonLinear`PreservedState, 0},
+	{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
+	{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"], GenericNonLinear`FirstIntegrals, 2},
+	{GenericNonLinear`DbxPolyIntermediate, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
+	{GenericNonLinear`BarrierCert, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0}}, (OptionValue[#[[3]], Timeout] > 0)&];
 
 Print["Activated strategies: ", strategies];
 
@@ -203,16 +207,21 @@ Do[
 (* For each strategy *)
 Print["Using dependencies: ",curdep];
 For[i=1, i<=Length[strategies], i++,
-{strat,hint,optionsNamespace}=strategies[[i]];
+{strat,hint,optionsNamespace,isLinear}=strategies[[i]];
 Print["Trying strategy: ",ToString[strat]," ",hint];
 
 curproblem = {pre,{f,vars,evoConst},post};
 curvars=Join[curdep,constvars];
 subproblem = Dependency`FilterVars[curproblem, curvars];
 
+(* Filter out inappropriate strategies based on linear/nonlinear classification *)
+If[isLinear == 1 && Classifier`LinearSystemQ[f, vars] == False, Print["Problem is nonlinear but strategy is designed for linear systems, moving on"]; Continue[]];
+If[isLinear == 2 && Classifier`LinearSystemQ[f, vars] == True, Print["Problem is linear but strategy is designed for nonlinear systems, moving on"]; Continue[]];
+
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
 (*Print[subproblem];*)
+
 
 Module[{timedStratResult, duration, unusedBudget},
 	Print["Method timeout: ", OptionValue[optionsNamespace, Timeout]];
@@ -258,7 +267,7 @@ If[Length[cutlist] > Length[collectedCuts],
 
 (* Not yet done, repeat with candidates so far as seeds, if any (as collected by cutlist and evoConst) *)
 If[Length[cutlist] > Length[collectedCuts] ||
-		(TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]] && OptionValue[GenericNonLinear`DbxPoly, StartDeg] <= OptionValue[GenericNonLinear`DbxPoly, MaxDeg]),
+		(TrueQ[OptionValue[GenericNonLinear`DbxPoly, Staggered]] && OptionValue[GenericNonLinear`DbxPoly, StartDeg] <= OptionValue[GenericNonLinear`DbxPoly, EndDeg]),
 	Print["Recursing into DiffSat with candidates so far as seeds."];
 	DiffSat[problem, { cutlist, evoConst }, iteration+1],
 	(* Throw whatever invariant was last computed *)
