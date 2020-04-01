@@ -32,6 +32,8 @@ FirstIntegrals::usage="FirstIntegrals[problem_List,degree]";
 DbxPoly::usage="DbxPoly[problem_List]";
 (* Returns invariants and intermediate candidates generated using Darboux polynomials *)
 DbxPolyIntermediate::usage="DbxPoly[problem_List]";
+(* Returns a heuristic end degree, if endDeg<0, returns endDeg otherwise. *)
+DbxPolyEndDegree::usage="DbxPolyEndDegree[problem_List, endDeg_]"
 (* Returns invariants generated from heuristics *)
 HeuInvariants::usage="Heuristics[problem_List,degree]";
 (* Returns invariants generated from barrier certificate *)
@@ -130,14 +132,8 @@ Print["FirstIntegrals skipped."]; {}]
 
 
 (* Darboux polynomials: exhaust until timeout, return all found ones. *)
-DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,polys,deg},
+DbxPoly[problem_List, endDeg_] := Module[{pre,post,vf,vars,Q,polys,deg},
 {pre, { vf, vars, Q }, post} = problem;
-
-(* Heuristic *)
-deg = If[OptionValue[DbxPoly,EndDeg] < 0,
-		Max[10-Length[vars],1],
-	OptionValue[DbxPoly,EndDeg]];
-
 If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
 (* Spend 1/2 time budget on polynomial finding *)
@@ -149,19 +145,17 @@ Print["DbxPoly skipped."]; {}]
 
 ]
 
+(* Returns a heuristic end degree if endDeg<0, returns endDeg otherwise *)
+DbxPolyEndDegree[problem_List, endDeg_] := Module[{pre, vf, vars, Q, post},
+	{pre, { vf, vars, Q }, post} = problem;
+	If[endDeg < 0, Max[10-Length[vars],1], endDeg]
+]
+
 (* Darboux polynomials: sowing intermediate results and checking whether done before increasing degree. *)
-DbxPolyIntermediate[problem_List] := Module[{pre,post,vf,vars,Q,polys,allPolys,allPolysI,invs,deg,timeout,dbxResult},
+DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,vars,Q,polys,allPolys,allPolysI,invs,deg,timeout,dbxResult},
 	{pre, { vf, vars, Q }, post} = problem;
 
-	(* Heuristic *)
-	If[OptionValue[DbxPoly,EndDeg] < 0,
-		(* Set maximum degree, picked up by others (e.g., DiffSat) to decide whether to recurse. *)
-		SetOptions[DbxPoly,EndDeg -> Max[10-Length[vars],1]]];
-	deg = If[OptionValue[DbxPoly,CurDeg] < 0,
-		OptionValue[DbxPoly,EndDeg],
-		Min[OptionValue[DbxPoly,EndDeg], OptionValue[DbxPoly,CurDeg]]];
-
-	Print["Darboux degrees: ", OptionValue[DbxPoly,StartDeg], "-", deg];
+	Print["Darboux degrees: ", startDeg, "-", endDeg];
 
 	If[OptionValue[DbxPoly, Timeout] > 0,
 		dbxResult = Reap[TimeConstrained[Block[{},
@@ -170,9 +164,9 @@ DbxPolyIntermediate[problem_List] := Module[{pre,post,vf,vars,Q,polys,allPolys,a
 				allPolys = {};
 				(* Spend 1/2 on polynomial finding, 1/2 on invariant extraction and checking *)
 				(* upgrade to Mathematica 12.1: consider TimeRemaining[] to balance degrees *)
-				For[i=OptionValue[DbxPoly,StartDeg],i<=deg,i++,
+				For[i=startDeg,i<=endDeg,i++,
 					Print["Degree: ", i];
-					timeout = OptionValue[DbxPoly, Timeout](*/deg*);
+					timeout = OptionValue[DbxPoly, Timeout](*/endDeg*);
 					polys = TimeConstrained[DarbouxPolynomials`DbxDefault[{vf, vars, Q}, i], timeout/2, {}];
 					Print["Polys: ", polys];
 					allPolysI = Union[allPolys, polys];
@@ -212,21 +206,19 @@ If[Length[cr] > 0,Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]
 ,{}]]
 
 
-BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS,polys,deg},
+BarrierCert[problem_List, maxDeg_]:=Catch[Module[{pre,post,vf,vars,Q,polySOS,polys,deg},
 {pre, { vf, vars, Q }, post} = problem;
 If[pre===True,Return[{}]];
 If[post===False,Return[{}]];
 
-deg= If[OptionValue[BarrierCert,Deg] < 0,
-		10,
-		OptionValue[BarrierCert, Deg]];
+deg= If[maxDeg < 0, 10, maxDeg];
 			
 If[OptionValue[BarrierCert, Timeout] > 0,
 CheckAbort[
 TimeConstrained[Block[{},
 polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
 polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
-InvariantExtractor`DWC[problem,polys,{},False,False][[2]]
+InvariantExtractor`DWC[problem,polys,{},False,False,{"<","<="}][[2]]
 ], OptionValue[BarrierCert,Timeout],
 MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]]
 ,
