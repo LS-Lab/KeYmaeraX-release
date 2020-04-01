@@ -102,7 +102,8 @@ If[Length[cuts] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, Fals
 *)
 If[OptionValue[DiffSat,UseDI] && Not[TrueQ[post]],
 	Block[{isDI},
-	isDI = AbsoluteTiming[LZZ`InvSDI[post,subproblem[[2]][[1]], subproblem[[2]][[2]], And[evoConst,constasms]]];
+	(* Must call InvSDI with the original problem ODE and vars *)
+	isDI = AbsoluteTiming[LZZ`InvSDI[post,problem[[2]][[1]], problem[[2]][[2]], And[evoConst,constasms]]];
 	Print["DI inv check duration: ", isDI[[1]]];
     AppendTo[timingList,Symbol["InvCheck"]->isDI[[1]]];
 	If[TrueQ[isDI[[2]]],
