@@ -74,7 +74,7 @@ FIDeg=If[TrueQ[OptionValue[FirstIntegralDegree]>0],OptionValue[FirstIntegralDegr
 ratPrecision=If[TrueQ[OptionValue[RationalPrecision]>0],OptionValue[RationalPrecision],10];
 
 (* Compute the connected components of the initial set *)
-initConnectedComponents=CylindricalDecomposition[pre,vars,"Components"];
+initConnectedComponents=CylindricalDecomposition[Rationalize[pre],vars,"Components"];
 class = LinearClass[M];
 Print["Linear problem class: ",class];
 res=class/.{
