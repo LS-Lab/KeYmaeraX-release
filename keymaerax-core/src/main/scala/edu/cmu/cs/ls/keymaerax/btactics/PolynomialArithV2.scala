@@ -47,6 +47,10 @@ object PolynomialArithV2 {
       * */
     trait Polynomial {
       val term: Term
+      // term = some internal representation
+      val representation: ProvableSig
+      // term = some nicer internal representation
+      def prettyRepresentation: ProvableSig
 
       // result.term = term + other.term
       def +(other: Polynomial) : Polynomial
@@ -788,6 +792,7 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
 
   sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
+    val representation = prv
     def forgetPrv: TreePolynomial
     def treeSketch: String
     lazy val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs) => (eq, lhs, rhs) }
@@ -1189,6 +1194,8 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
       * e.g., t = (0 + a + 0) + b + (0 + c + 0 + d + 0) ~~> t = a + b + c + d
       * */
     def normalized: ProvableSig = reassoc(normalizedMonomials)
+
+    def prettyRepresentation: ProvableSig = normalized
 
     def zeroTest: Option[ProvableSig] = {
       val normalizedPrv = normalized

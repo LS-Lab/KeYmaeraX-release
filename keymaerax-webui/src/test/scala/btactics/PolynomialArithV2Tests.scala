@@ -17,6 +17,35 @@ import org.scalatest.LoneElement._
   * @author Fabian Immler
   */
 class PolynomialArithV2Tests extends TacticTestBase {
+  import PolynomialArithV2._
+
+  "PolynomialRing" should "be the interface to work with this library" in withMathematica { _ =>
+    val ring = PolynomialRing("x,y,z".split(',').map(_.asTerm).toIndexedSeq)
+    import ring._
+    val aT = "(-x + 2/3*y - 4*z^3)^4".asTerm
+    val bT = ("x^4 -216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2" +
+      "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
+      "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6" +
+      "- 13824/81*y*z^9+256*z^12").asTerm
+    val a = ofTerm(aT)
+    val b = ofTerm(bT)
+    val prv = (a - b).zeroTest.get
+    prv shouldBe 'proved
+    prv.conclusion.ante shouldBe 'empty
+    prv.conclusion.succ.loneElement shouldBe Equal(Minus(aT, bT), Number(0))
+  }
+
+  it should "implicitly construct an appropriate polynomial ring" in withMathematica { _ =>
+    val aT = "(-x + 2/3*y - 4*z^3)^4".asTerm
+    val bT = ("x^4 -216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2" +
+      "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
+      "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6" +
+      "- 13824/81*y*z^9+256*z^12").asTerm
+    val prv = PolynomialArithV2.isZero(Minus(aT, bT)).get
+    prv shouldBe 'proved
+    prv.conclusion.ante shouldBe 'empty
+    prv.conclusion.succ.loneElement shouldBe Equal(Minus(aT, bT), Number(0))
+  }
 
   lazy val pa4 = new TwoThreeTreePolynomialRing("x,y,f(),g()".split(',').map(_.asTerm).toIndexedSeq)
   lazy val pa20 = new TwoThreeTreePolynomialRing("x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19".split(',').map(_.asTerm).toIndexedSeq)
