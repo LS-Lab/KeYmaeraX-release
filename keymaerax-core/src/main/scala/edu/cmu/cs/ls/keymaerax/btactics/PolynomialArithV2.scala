@@ -17,34 +17,111 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import scala.collection.immutable._
 
 /**
-  * Polynomial Arithmetic
+  * Polynomial Arithmetic.
   *
-  * Constructed for a given List of variables (e.g., Seq(x1, ..., xn)).
   * Computations are carried out fairly efficiently in a distributive representation.
+  * Computations are certifying:
+  *   - the internal data structures maintain a proof that the constructed term equals the distributive representation
   *
-  * A polynomial is represented as a set of monomials stored in a 2-3 Tree, the ordering is lexicographic
-  * A monomial is represented as a coefficient and a power-product.
-  * A coefficient is represented as a pair of BigDecimals for num/denum.
-  * A power product is represented densely as a list of exponents
+  * The main interface is that of a [[PolynomialRing]]
   *
-  * All data-structures maintain a proof of
-  *  input term = representation of data structure as Term
-  *
-  * Representations of data structures (recursively applied on rhs):
-  *   - 3-Node (l, v1, m, v2, r) is "l + v1 + m + v2 + r"
-  *   - 2-Node (l, v, r) is "l + v + r"
-  *   - monomial (c, pp) is "c * pp"
-  *   - coefficient (num, denum) is "num / denum"
-  *   - power product [e1, ..., en] is "x1^e1 * ... * xn ^ en",
-  *     where instead of "x^0", we write "1" in order to avoid trouble with 0^0, i.e., nonzero-assumptions on x or the like
-  *
-  * All operations on the representations update the proofs accordingly.
-  *
-  * @author Fabian Immler.
+  * @author Fabian Immler
   */
-
 object PolynomialArithV2 {
 
+  /**
+    * Polynomial Ring in a given sequence of [[variables]] (e.g., Seq(x1, ..., xn)).
+    *
+    * - interface that describes [[Polynomial]]s and operations on them
+    * - constructors for Polynomials from constant numbers, variables, and recursively from terms
+    * */
+  trait PolynomialRing {
+
+    val variables: IndexedSeq[Term]
+
+    /**
+      * Interface to [[Polynomial]]s:
+      * - a [[term]] that keeps track of how the Polynomial was constructed
+      * - arithmetic
+      * - test for zero
+      * */
+    trait Polynomial {
+      val term: Term
+
+      // result.term = term + other.term
+      def +(other: Polynomial) : Polynomial
+
+      // result.term = term - other.term
+      def -(other: Polynomial) : Polynomial
+
+      // result.term = term * other.term
+      def *(other: Polynomial) : Polynomial
+
+      // result.term = -term
+      def unary_- : Polynomial
+
+      // result.term = term ^ n
+      def ^(n: Int) : Polynomial
+
+      // Some(term = 0)
+      def zeroTest : Option[ProvableSig]
+
+    }
+
+    // result.term = n
+    def Const(n: BigDecimal) : Polynomial
+
+    // result.term = num/denum
+    def Const(num: BigDecimal, denum: BigDecimal) : Polynomial
+
+    // result.term = vars(index) ^ n
+    def Var(index: Int, n: Int) : Polynomial
+
+    // result.term = vars(index)
+    def Var(index: Int) : Polynomial
+
+    private val indices = variables.zipWithIndex.toMap
+
+    // result.term = t
+    def ofTerm(t: Term) : Polynomial = t match {
+      case Plus(a, b)  => ofTerm(a) + ofTerm(b)
+      case Minus(a, b) => ofTerm(a) - ofTerm(b)
+      case Times(a, b) => ofTerm(a) * ofTerm(b)
+      case Neg(a)      => -ofTerm(a)
+      case Power(a, Number(i)) if i.isValidInt && i >= 0 => ofTerm(a) ^ i.toIntExact
+      case Divide(Number(num), Number(denum)) if denum != 0 => Const(num, denum)
+      case Number(n) => Const(n)
+      case t => indices.get(t) match {
+        case Some(i) => Var(i)
+        case None => throw new IllegalArgumentException("Term not element of variables\nterm = " + t + "\nvariables = " + variables)
+      }
+    }
+
+  }
+
+  /** construct a Polynomial ring in a given sequence of variables */
+  def PolynomialRing(variables: IndexedSeq[Term]) : PolynomialRing = TwoThreeTreePolynomialRing(variables)
+
+  /** Test for zero, returns a provable if "term = 0" can be proved using Polynomial arithmetic.
+    * Computes in a polynomial ring in all non-polynomial-arithmetic subterms.
+    * */
+  def isZero(term: Term) : Option[ProvableSig] = {
+    def symbols(t: Term) : Seq[Term] = t match {
+      case Plus(a, b)  => symbols(a) ++ symbols(b)
+      case Minus(a, b) => symbols(a) ++ symbols(b)
+      case Times(a, b) => symbols(a) ++ symbols(b)
+      case Neg(a)      => symbols(a)
+      case Power(a, Number(i)) if i.isValidInt && i >= 0 => symbols(a)
+      case Divide(Number(num), Number(denum)) if denum != 0 => Seq()
+      case Number(n) => Seq()
+      case t => Seq(t)
+    }
+    PolynomialRing(symbols(term).distinct.toIndexedSeq).ofTerm(term).zeroTest
+  }
+
+}
+
+object PolynomialArithV2Helpers {
   // TODO: move somewhere reasonable
   def constR(name: String) = FuncOf(Function(name, None, Unit, Real), Nothing)
   def anyR(name: String) = UnitFunctional(name, AnyArg, Real)
@@ -53,7 +130,7 @@ object PolynomialArithV2 {
   def usePrvAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic = useAt(fact, key)
   def usePrvFor(fact: ProvableSig, key: PosInExpr): ForwardPositionTactic = useFor(fact, key)
 
-  private def substAny(s: String, t: Term) = USubst(Seq(SubstitutionPair(anyR(s), t)))
+  def substAny(s: String, t: Term) = USubst(Seq(SubstitutionPair(anyR(s), t)))
 
   def anyArgify(prv: ProvableSig) = {
     require(prv.isProved)
@@ -94,14 +171,14 @@ object PolynomialArithV2 {
   }
 
   def impliesElim(PsQ: ProvableSig, Ps: Seq[ProvableSig]) : ProvableSig =
-  if (Ps.length == 0) PsQ
-  else {
-    val conj = Ps.map(P => P.conclusion.succ(0)).reduceRight(And)
-    val conjPrv = Ps.dropRight(1).foldLeft(ProvableSig.startProof(conj)){(prv, P) =>
-      prv(AndRight(SuccPos(0)), 0)(P, 0)
-    }(Ps.last, 0)
-    impliesElim(PsQ, conjPrv)
-  }
+    if (Ps.length == 0) PsQ
+    else {
+      val conj = Ps.map(P => P.conclusion.succ(0)).reduceRight(And)
+      val conjPrv = Ps.dropRight(1).foldLeft(ProvableSig.startProof(conj)){(prv, P) =>
+        prv(AndRight(SuccPos(0)), 0)(P, 0)
+      }(Ps.last, 0)
+      impliesElim(PsQ, conjPrv)
+    }
 
   def rememberAny(fml: Formula, be: BelleExpr) = anyArgify(remember(fml, be).fact)
 
@@ -109,10 +186,32 @@ object PolynomialArithV2 {
     assert(prv.subgoals.length==1, "require one subgoal byExact")
     prv.apply(assm, 0)
   }
+
 }
 
-case class PolynomialArithV2(vars: IndexedSeq[Term]) {
-  import PolynomialArithV2._
+/**
+* A polynomial is represented as a set of monomials stored in a 2-3 Tree, the ordering is lexicographic
+* A monomial is represented as a coefficient and a power-product.
+* A coefficient is represented as a pair of BigDecimals for num/denum.
+* A power product is represented densely as a list of exponents
+*
+* All data-structures maintain a proof of
+*  input term = representation of data structure as Term
+*
+* Representations of data structures (recursively applied on rhs):
+*   - 3-Node (l, v1, m, v2, r) is "l + v1 + m + v2 + r"
+*   - 2-Node (l, v, r) is "l + v + r"
+*   - monomial (c, pp) is "c * pp"
+*   - coefficient (num, denum) is "num / denum"
+*   - power product [e1, ..., en] is "x1^e1 * ... * xn ^ en",
+*     where instead of "x^0", we write "1" in order to avoid trouble with 0^0, i.e., nonzero-assumptions on x or the like
+*
+* All operations on the representations update the proofs accordingly.
+*
+*/
+case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends PolynomialArithV2.PolynomialRing {
+  import PolynomialArithV2Helpers._
+
 
   val constL = constR("l_")
   val constR_ = constR("r_")
@@ -268,17 +367,17 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     val l = constL
     val cl = constCl
     def xl(i: Int) = mkConst("xl", i)
-    val xls = (0 until vars.length).map(xl)
+    val xls = (0 until variables.length).map(xl)
     val r = constR_
     val cr = constCr
     def xr(i: Int) = mkConst("xr", i)
-    val xrs = (0 until vars.length).map(xr)
+    val xrs = (0 until variables.length).map(xr)
 
     val c = mkConst("c", 0)
     def x(i: Int) = mkConst("x", i)
-    val xs = (0 until vars.length).map(x)
+    val xs = (0 until variables.length).map(x)
 
-    val powersAssm = (0 until vars.length).map(i => Equal(Times(xl(i), xr(i)), x(i))).reduceRight(And)
+    val powersAssm = (0 until variables.length).map(i => Equal(Times(xl(i), xr(i)), x(i))).reduceRight(And)
     val assms = Seq(
       Equal(l, Times(cl, xls.reduceLeft(Times))),
       Equal(r, Times(cr, xrs.reduceLeft(Times))),
@@ -290,7 +389,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
 
   def variablePower(powers: Int => Int)(i: Int) = {
     val p = powers(i)
-    if (p > 0) Power(vars(i), Number(p)) else Number(1)
+    if (p > 0) Power(variables(i), Number(p)) else Number(1)
   }
 
   val constF = anyR("f_")
@@ -303,7 +402,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     * */
   case class Monomial(coeff: Coefficient, powers: IndexedSeq[Int], prvO: Option[ProvableSig] = None) extends Ordered[Monomial] {
 
-    def powersTerm: Term = (0 until vars.length).map(variablePower(powers)).reduceLeft(Times)
+    def powersTerm: Term = (0 until variables.length).map(variablePower(powers)).reduceLeft(Times)
 
     def monomialTerm(coeff: Term): Term = Times(coeff, powersTerm)
 
@@ -312,7 +411,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       (if (coeff.num.compareTo(1) == 0 && coeff.denum.compareTo(1) == 0 && powers.exists(_ > 0)) ""
       else if (coeff.num.compareTo(-1) == 0 && coeff.denum.compareTo(1) == 0) "-"
       else coeff.rhsString + sep) +
-        (0 until vars.length).flatMap(i => if (powers(i) > 0) Some(Power(vars(i), Number(powers(i)))) else None).mkString(sep)
+        (0 until variables.length).flatMap(i => if (powers(i) > 0) Some(Power(variables(i), Number(powers(i)))) else None).mkString(sep)
     }
 
     lazy val defaultPrv = equalReflex(monomialTerm(coeff.rhs))
@@ -362,9 +461,9 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
         ("cr_", that.coeff.rhs),
         ("c0_", newCoeff.rhs)
       ) ++
-        (0 until vars.length).map(i => (mkConstN("xl", i), variablePower(powers)(i))) ++
-        (0 until vars.length).map(i => (mkConstN("xr", i), variablePower(that.powers)(i))) ++
-        (0 until vars.length).map(i => (mkConstN("x", i), variablePower(newPowers)(i)))
+        (0 until variables.length).map(i => (mkConstN("xl", i), variablePower(powers)(i))) ++
+        (0 until variables.length).map(i => (mkConstN("xr", i), variablePower(that.powers)(i))) ++
+        (0 until variables.length).map(i => (mkConstN("x", i), variablePower(newPowers)(i)))
       val monomialTimesLemmaInst = monomialTimesLemma(substOfInst(inst))
       val powersFml = monomialTimesLemmaInst.conclusion.succ(0) match {
         case Imply(And(_, And(_, And(_, powersFml))), _) => powersFml
@@ -393,7 +492,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
 
     // reverse lexicographic ordering, TODO: why not thats?
     override def compare(that: Monomial): Int = {
-      val l = vars.length
+      val l = variables.length
 
       def compareAt(i: Int): Int =
         if (i >= l) 0
@@ -684,15 +783,15 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     * 2-3 Tree for monomials, keeping track of proofs.
     * */
   sealed trait Growth
-  case class Stay(p: Polynomial) extends Growth
+  case class Stay(p: TreePolynomial) extends Growth
   case class Sprout(sprout: Branch2) extends Growth
-  // Inner node, i.e., one with content
 
-  sealed trait Polynomial {
+  sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
-    def forgetPrv: Polynomial
+    def forgetPrv: TreePolynomial
     def treeSketch: String
     lazy val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs) => (eq, lhs, rhs) }
+    lazy val term = lhs
 
     def lookup(x: Monomial) : Option[Monomial] = this match {
       case Empty(_) => None
@@ -833,17 +932,17 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
             }
         }
     }
-    def +(m: Monomial) : Polynomial = insert(m) match {
+    def +(m: Monomial) : TreePolynomial = insert(m) match {
       case Stay(p) => p
       case Sprout(s) => s
     }
 
-    def -(m: Monomial) : Polynomial = {
+    def -(m: Monomial) : TreePolynomial = {
       val res = this + (-(m.forgetPrv))
       res.updatePrv(useDirectly(plusMinus, Seq(("t_", lhs), ("x_", m.lhs), ("s_", res.rhs)), Seq(res.prv)))
     }
 
-    private[PolynomialArithV2] def updatePrv(prv2: ProvableSig) : Polynomial = {
+    private[TwoThreeTreePolynomialRing] def updatePrv(prv2: ProvableSig) : TreePolynomial = {
       this match {
         case Empty(_) => Empty(Some(prv2))
         case Branch2(l, v, m, _) => Branch2(l, v, m, Some(prv2))
@@ -851,11 +950,11 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       }
     }
 
-    def +(other: Polynomial) : Polynomial = other match {
-      case Empty(_) =>
+    def +(other: Polynomial) : TreePolynomial = other match {
+      case other @ Empty(_) =>
         val newPrv = useDirectly(plusEmpty, Seq(("t_", lhs), ("s_", rhs), ("u_", other.lhs)), Seq(prv, other.prv))
         updatePrv(newPrv)
-      case Branch2(left, value, right, _) =>
+      case other @ Branch2(left, value, right, _) =>
         val sum = this + left.forgetPrv + value.forgetPrv + right.forgetPrv
         val newPrv = useDirectly(plusBranch2, IndexedSeq(
             ("t_", lhs),
@@ -866,7 +965,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
             ("sum_", sum.rhs)
           ), Seq(other.prv, sum.prv))
         sum.updatePrv(newPrv)
-      case Branch3(left, value1, mid, value2, right, _) =>
+      case other @ Branch3(left, value1, mid, value2, right, _) =>
         val sum = this + left.forgetPrv + value1.forgetPrv + mid.forgetPrv + value2.forgetPrv + right.forgetPrv
         val newPrv = useDirectly(plusBranch3, IndexedSeq(
             ("t_", lhs),
@@ -879,13 +978,14 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
             ("sum_", sum.rhs)
           ), Seq(other.prv, sum.prv))
         sum.updatePrv(newPrv)
+      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
     }
 
-    def -(other: Polynomial) : Polynomial = other match {
-      case Empty(_) =>
+    def -(other: Polynomial) : TreePolynomial = other match {
+      case other @ Empty(_) =>
         val newPrv = useDirectly(minusEmpty, Seq(("t_", lhs), ("s_", rhs), ("u_", other.lhs)), Seq(prv, other.prv))
         updatePrv(newPrv)
-      case Branch2(left, value, right, _) =>
+      case other @ Branch2(left, value, right, _) =>
         val sum = this - left.forgetPrv - value.forgetPrv - right.forgetPrv
         val newPrv = useDirectly(minusBranch2, IndexedSeq(
           ("t_", lhs),
@@ -896,7 +996,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
           ("sum_", sum.rhs)
         ), Seq(other.prv, sum.prv))
         sum.updatePrv(newPrv)
-      case Branch3(left, value1, mid, value2, right, _) =>
+      case other @ Branch3(left, value1, mid, value2, right, _) =>
         val sum = this - left.forgetPrv - value1.forgetPrv - mid.forgetPrv - value2.forgetPrv - right.forgetPrv
         val newPrv = useDirectly(minusBranch3, IndexedSeq(
           ("t_", lhs),
@@ -909,9 +1009,10 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
           ("sum_", sum.rhs)
         ), Seq(other.prv, sum.prv))
         sum.updatePrv(newPrv)
+      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
     }
 
-    def *(x: Monomial) : Polynomial = this match {
+    def *(x: Monomial) : TreePolynomial = this match {
       case Empty(_) =>
         val newPrv = useDirectly(monTimesZero, Seq(("t_", lhs), ("x_", x.lhs)), Seq(prv))
         Empty(Some(newPrv))
@@ -952,37 +1053,41 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
         Branch3(lx, v1x, mx, v2x, rx, Some(newPrv))
     }
 
-    def *(other: Polynomial) : Polynomial = this match {
-      case Empty(_) =>
-        val newPrv = useDirectly(timesEmpty, Seq(("t_", lhs), ("u_", other.lhs)), Seq(prv))
-        updatePrv(newPrv)
-      case Branch2(left, value, right, _) =>
-        val sum = (left.forgetPrv * other) + (other * value.forgetPrv) + (right.forgetPrv * other)
-        val newPrv = useDirectly(timesBranch2, IndexedSeq(
-            ("t_", lhs),
-            ("u_", other.lhs),
-            ("l_", left.rhs),
-            ("v_", value.rhs),
-            ("r_", right.rhs),
-            ("sum_", sum.rhs)
-          ), Seq(prv, sum.prv))
-        sum.updatePrv(newPrv)
-      case Branch3(left, value1, mid, value2, right, _) =>
-        val sum = (left.forgetPrv * other) + (other * value1.forgetPrv) + (mid.forgetPrv * other) + (other * value2.forgetPrv) + (right.forgetPrv * other)
-        val newPrv = useDirectly(timesBranch3, IndexedSeq(
-            ("t_", lhs),
-            ("u_", other.lhs),
-            ("l_", left.rhs),
-            ("v1_", value1.rhs),
-            ("m_", mid.rhs),
-            ("v2_", value2.rhs),
-            ("r_", right.rhs),
-            ("sum_", sum.rhs)
-          ), Seq(prv, sum.prv))
-        sum.updatePrv(newPrv)
+    def *(other: Polynomial): TreePolynomial = other match {
+      case other: TreePolynomial =>
+        this match {
+          case Empty(_) =>
+            val newPrv = useDirectly(timesEmpty, Seq(("t_", lhs), ("u_", other.lhs)), Seq(prv))
+            updatePrv(newPrv)
+          case Branch2(left, value, right, _) =>
+            val sum = (left.forgetPrv * other) + (other * value.forgetPrv) + (right.forgetPrv * other)
+            val newPrv = useDirectly(timesBranch2, IndexedSeq(
+              ("t_", lhs),
+              ("u_", other.lhs),
+              ("l_", left.rhs),
+              ("v_", value.rhs),
+              ("r_", right.rhs),
+              ("sum_", sum.rhs)
+            ), Seq(prv, sum.prv))
+            sum.updatePrv(newPrv)
+          case Branch3(left, value1, mid, value2, right, _) =>
+            val sum = (left.forgetPrv * other) + (other * value1.forgetPrv) + (mid.forgetPrv * other) + (other * value2.forgetPrv) + (right.forgetPrv * other)
+            val newPrv = useDirectly(timesBranch3, IndexedSeq(
+              ("t_", lhs),
+              ("u_", other.lhs),
+              ("l_", left.rhs),
+              ("v1_", value1.rhs),
+              ("m_", mid.rhs),
+              ("v2_", value2.rhs),
+              ("r_", right.rhs),
+              ("sum_", sum.rhs)
+            ), Seq(prv, sum.prv))
+            sum.updatePrv(newPrv)
+        }
+      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
     }
 
-    def ^(n: Int) : Polynomial = n match {
+    def ^(n: Int) : TreePolynomial = n match {
       case 0 =>
         One.updatePrv(useDirectly(powerZero, IndexedSeq(("t_", lhs), ("one_", One.rhs)), Seq(One.prv)))
       case 1 =>
@@ -1012,7 +1117,7 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
     }
 
     // negation
-    def unary_- : Polynomial = this match {
+    def unary_- : TreePolynomial = this match {
       case Empty(_) => Empty(Some(useDirectly(negateEmpty, Seq(("t_", lhs)), Seq(prv))))
       case Branch2(l, v, r, _) =>
         val nl = -(l.forgetPrv)
@@ -1085,56 +1190,73 @@ case class PolynomialArithV2(vars: IndexedSeq[Term]) {
       * */
     def normalized: ProvableSig = reassoc(normalizedMonomials)
 
+    def zeroTest: Option[ProvableSig] = {
+      val normalizedPrv = normalized
+      rhsOf(normalizedPrv) match {
+        case Number(n) if n.compareTo(0) == 0 =>
+          Some(normalizedPrv)
+        case _ => None
+      }
+    }
+
   }
 
-  val varLemmas = (0 until vars.length).map(i => proveBy(Equal(Power(vars(i), "i_()".asTerm),
+  val varPowerLemmas = (0 until variables.length).map(i => proveBy(Equal(Power(variables(i), "i_()".asTerm),
     Seq(Number(0), Times("1/1".asTerm,
-      (0 until vars.length).map(j =>
-        if (i == j) Power(vars(i), "i_()".asTerm) else Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)), QE & done))
+      (0 until variables.length).map(j =>
+        if (i == j) Power(variables(i), "i_()".asTerm) else Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)), QE & done))
 
   // Constructors
-  def Var(index: Int, power: Int) : Polynomial =
+  def Var(index: Int, power: Int) : TreePolynomial =
     if(power == 0) ???
     else
       Branch2(Empty(None), Monomial(Coefficient(1, 1),
-        (0 until vars.length).map(i => if (i == index) power else 0)), Empty(None), Some(
-          varLemmas(index)(USubst(Seq(SubstitutionPair(constR("i_"), Number(power)))))))
-  def Var(index: Int) : Polynomial = Var(index, 1)
+        (0 until variables.length).map(i => if (i == index) power else 0)), Empty(None), Some(
+          varPowerLemmas(index)(USubst(Seq(SubstitutionPair(constR("i_"), Number(power)))))))
+
+  val varLemmas = (0 until variables.length).map(i => proveBy(Equal(variables(i),
+    Seq(Number(0), Times("1/1".asTerm,
+      (0 until variables.length).map(j =>
+        if (i == j) Power(variables(i), Number(1)) else Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)), QE & done))
+  def Var(index: Int) : TreePolynomial =
+    Branch2(Empty(None), Monomial(Coefficient(1, 1), (0 until variables.length).map(i => if (i == index) 1 else 0)), Empty(None), Some(
+      varLemmas(index)))
+
 
   val constLemma = rememberAny(
-    Equal("n_()".asTerm, Seq(Number(0), Times(Divide(constR("n_"), Number(1)), (0 until vars.length).map(_ => Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)),
+    Equal("n_()".asTerm, Seq(Number(0), Times(Divide(constR("n_"), Number(1)), (0 until variables.length).map(_ => Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)),
     QE & done)
   val rationalLemma = rememberAny(
-    Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, (0 until vars.length).map(_ => Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)),
+    Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, (0 until variables.length).map(_ => Number(1)).reduceLeft(Times)), Number(0)).reduceLeft(Plus)),
     QE & done)
-  def Const(num: BigDecimal, denum: BigDecimal) : Polynomial =
-    Branch2(Empty(None), Monomial(Coefficient(num, denum, None), (0 until vars.length).map(_ => 0), None), Empty(None),
+  def Const(num: BigDecimal, denum: BigDecimal) : TreePolynomial =
+    Branch2(Empty(None), Monomial(Coefficient(num, denum, None), (0 until variables.length).map(_ => 0), None), Empty(None),
       Some(rationalLemma(substAny("n_", Number(num))++substAny("d_", Number(denum)))))
-  def Const(num: BigDecimal) : Polynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), (0 until vars.length).map(_ => 0), None), Empty(None),
+  def Const(num: BigDecimal) : TreePolynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), (0 until variables.length).map(_ => 0), None), Empty(None),
     Some(constLemma(substAny("n_", Number(num)))))
 
-  val One : Polynomial = Const(1)
+  val One : TreePolynomial = Const(1)
 
-  case class Empty(prvO: Option[ProvableSig]) extends Polynomial {
+  case class Empty(prvO: Option[ProvableSig]) extends TreePolynomial {
     val defaultPrv = zez
     val prv = prvO.getOrElse(defaultPrv)
     override def forgetPrv = Empty(None)
     override def treeSketch: String = "."
   }
-  case class Branch2(left: Polynomial, value: Monomial, right: Polynomial, prvO: Option[ProvableSig]) extends Polynomial {
+  case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus))
     // @note detour for "dependent" default argument
     val prv = prvO.getOrElse(defaultPrv)
 
-    override def forgetPrv: Polynomial = Branch2(left, value, right, None)
+    override def forgetPrv: TreePolynomial = Branch2(left, value, right, None)
     override def treeSketch: String = "[" + left.treeSketch + ", " + value.powersString + ", " + right.treeSketch + "]"
   }
-  case class Branch3(left: Polynomial, value1: Monomial, mid: Polynomial, value2: Monomial, right: Polynomial, prvO: Option[ProvableSig]) extends Polynomial {
+  case class Branch3(left: TreePolynomial, value1: Monomial, mid: TreePolynomial, value2: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus))
     // @note detour for "dependent" default argument
     val prv = prvO.getOrElse(defaultPrv)
 
-    override def forgetPrv: Polynomial = Branch3(left, value1, mid, value2, right, None)
+    override def forgetPrv: TreePolynomial = Branch3(left, value1, mid, value2, right, None)
     override def treeSketch: String = "{" + left.treeSketch + ", " + value1.powersString + ", " + mid.treeSketch + ", " + value2.powersString + ", " + right.treeSketch + "}"
   }
 

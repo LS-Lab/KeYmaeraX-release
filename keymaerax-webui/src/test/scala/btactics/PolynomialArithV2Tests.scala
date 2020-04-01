@@ -18,8 +18,8 @@ import org.scalatest.LoneElement._
   */
 class PolynomialArithV2Tests extends TacticTestBase {
 
-  lazy val pa4 = new PolynomialArithV2("x,y,f(),g()".split(',').map(_.asTerm).toIndexedSeq)
-  lazy val pa20 = new PolynomialArithV2("x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19".split(',').map(_.asTerm).toIndexedSeq)
+  lazy val pa4 = new TwoThreeTreePolynomialRing("x,y,f(),g()".split(',').map(_.asTerm).toIndexedSeq)
+  lazy val pa20 = new TwoThreeTreePolynomialRing("x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19".split(',').map(_.asTerm).toIndexedSeq)
 
   "Initialization" should "initialize four Variables" in withMathematica { _ =>
     pa4
@@ -294,9 +294,9 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
   "Timing" should "compare multiply with polynomials" taggedAs SlowTest in withMathematica { _ =>
     import pa4._
-    def timeMethods(msg: String, eval:()=>Polynomial, skipPA1: Boolean = false) : Polynomial = {
+    def timeMethods(msg: String, eval:()=>TreePolynomial, skipPA1: Boolean = false) : TreePolynomial = {
       println(msg)
-      val ringsLib = new RingsLibrary(pa4.vars)
+      val ringsLib = new RingsLibrary(pa4.variables)
       tic()
       val res = eval()
       toc("  Time for PolynomialArithV2                 ")
@@ -355,7 +355,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   "proveBy with useAt and useFor" should "be slower than useDirectly" taggedAs SlowTest in withMathematica { _ =>
-    import PolynomialArithV2._
+    import PolynomialArithV2Helpers._
     val add0 = rememberAny("x_() = 0 -> (x_() + 0 = 0)".asFormula, QE & done)
     val xvar = "x_(||)".asTerm
 
