@@ -41,7 +41,8 @@ object PolynomialArithV2 {
 
     /**
       * Interface to [[Polynomial]]s:
-      * - a [[term]] that keeps track of how the Polynomial was constructed
+      * - a [[term]] that keeps track of how the polynomial was constructed
+      * - a proof for the internal [[representation]] of the polynomial
       * - arithmetic
       * - test for zero
       * */
@@ -78,10 +79,10 @@ object PolynomialArithV2 {
     // result.term = num/denum
     def Const(num: BigDecimal, denum: BigDecimal) : Polynomial
 
-    // result.term = vars(index) ^ n
+    // result.term = variables(index) ^ n
     def Var(index: Int, n: Int) : Polynomial
 
-    // result.term = vars(index)
+    // result.term = variables(index)
     def Var(index: Int) : Polynomial
 
     private val indices = variables.zipWithIndex.toMap
