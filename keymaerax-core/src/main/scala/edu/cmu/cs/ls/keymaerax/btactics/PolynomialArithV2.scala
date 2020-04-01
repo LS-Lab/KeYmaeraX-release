@@ -48,9 +48,9 @@ object PolynomialArithV2 {
       * */
     trait Polynomial {
       val term: Term
-      // term = some internal representation
+      // proof of "term = some internal representation"
       val representation: ProvableSig
-      // term = some nicer internal representation
+      // proof of "term = some internal representation"
       def prettyRepresentation: ProvableSig
 
       // result.term = term + other.term
@@ -68,7 +68,7 @@ object PolynomialArithV2 {
       // result.term = term ^ n
       def ^(n: Int) : Polynomial
 
-      // Some(term = 0)
+      // Some(proof of "term = 0")
       def zeroTest : Option[ProvableSig]
 
     }
