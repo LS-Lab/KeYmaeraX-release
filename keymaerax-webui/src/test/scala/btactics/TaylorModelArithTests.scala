@@ -36,6 +36,18 @@ class TaylorModelArithTests extends TacticTestBase {
     println(tm1 + tm2)
   }
 
+  it should "subtract" in withMathematica { qeTool =>
+    import ta3._
+    import ta3.polynomialRing._
+    val x0 = ofTerm("x0()".asTerm)
+    val y0 = ofTerm("y0()".asTerm)
+    val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
+    val tm2 = TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
+    println(tm1)
+    println(tm2)
+    println(tm1 - tm2)
+  }
+
   it should "multiply" in withMathematica { qeTool =>
     import ta3._
     import ta3.polynomialRing._

@@ -50,6 +50,15 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       ") ->" +
       "\\exists err_ (elem1_() + elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
 
+  val minusPrv = AnonymousLemmas.remember(
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
+      "poly1_() - poly2_() = poly_() &" +
+      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
+      "  (l_() <= i1_ - i2_ & i1_ - i2_ <= u_())))" +
+      ") ->" +
+      "\\exists err_ (elem1_() - elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
+
   val timesPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
@@ -97,6 +106,26 @@ class TaylorModelArith(context: IndexedSeq[Formula],
         ("u_", u)
       ), Seq(prv, other.prv, weakenWithContext(newPoly.representation), weakenWithContext(newIvlPrv)))
       TM(Plus(elem, other.elem), (poly + other.poly).resetTerm, l, u, newPrv)
+    }
+
+    def -(other: TM) : TM = {
+      val newPoly = poly.resetTerm - other.poly.resetTerm
+
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(prec)(IndexedSeq())(Minus)(lower, upper)(other.lower, other.upper)
+      val newPrv = useDirectlyConst(weakenWithContext(minusPrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", rhsOf(poly.representation)),
+        ("l1_", lower),
+        ("u1_", upper),
+        ("elem2_", other.elem),
+        ("poly2_", rhsOf(other.poly.representation)),
+        ("l2_", other.lower),
+        ("u2_", other.upper),
+        ("poly_", rhsOf(newPoly.representation)),
+        ("l_", l),
+        ("u_", u)
+      ), Seq(prv, other.prv, weakenWithContext(newPoly.representation), weakenWithContext(newIvlPrv)))
+      TM(Minus(elem, other.elem), (poly - other.poly).resetTerm, l, u, newPrv)
     }
 
     def *(other: TM) : TM = {
