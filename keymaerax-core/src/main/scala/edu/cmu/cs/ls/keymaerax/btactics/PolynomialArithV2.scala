@@ -194,6 +194,9 @@ object PolynomialArithV2Helpers {
     prv.apply(assm, 0)
   }
 
+  def rhsOf(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].right
+  def lhsOf(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].left
+
 }
 
 /**
@@ -735,8 +738,6 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
       ") ->" +
       "t_() = ll_() + c_()").asFormula, QE & done)
 
-  def rhsOf(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].right
-  def lhsOf(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].left
   /** drop parentheses of a sum of terms on the rhs of prv to the left, e.g.,
     * t = a + (b + c) ~~> t = a + b + c
     * */
