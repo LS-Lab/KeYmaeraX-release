@@ -439,6 +439,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
           case And(cutFml, Equal(BaseVariable("Hint", None, _), BaseVariable(hint, None, _))) => (cutFml, hint)
           case r => throw ConversionException("Expected formula & Hint=<hint>, but got " + r.prettyString)
         })
+      case Equal(LIST_LENGTH, Number(numCuts)) if numCuts == 0 => immutable.Seq.empty
       case _ => throw ConversionException("Expected length(list)=n & ..., but got " + cuts.prettyString)
     }
 
@@ -450,7 +451,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
                    Equiv(PredOf(Function("Proved", None, _, _, _), Nothing), proved))) =>
             val extractedCuts = extractCuts(cuts)
             if (extractedCuts.length > 1) (extractCuts(cuts) :+ (invariant, "Unknown"), proved)
-            else (extractCuts(cuts), proved) //@note invariant is identical to the single cut
+            else (extractCuts(cuts), proved) //@note invariant is identical to the single/non-existent cut
           case _ => throw ConversionException("Expected (Invariant <-> ...) & (Cuts <-> ...) & (Proved <-> ...), but got " + resultElements.prettyString)
         }
         case _ => throw ConversionException("Expected Result <-> length(list)=3 & ..., but got " + result.prettyString)
