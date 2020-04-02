@@ -45,7 +45,7 @@ TimeConstrained[
 			]*)
 		],
 			Print["Skipped: ",cuts[[i]]];
-			skipped=Join[skipped,{i}]
+			AppendTo[skipped,{i}]
 			(*Print["INFO: ",rest,f,vars,And[evoConst,constasms],LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]*)
 			(* skip *),
 			added=Join[added,{i}];
