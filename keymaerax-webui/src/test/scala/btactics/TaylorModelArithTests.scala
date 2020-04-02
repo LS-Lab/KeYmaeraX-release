@@ -109,6 +109,20 @@ class TaylorModelArithTests extends TacticTestBase {
     println(tm1^3)
   }
 
+  it should "exact" in withMathematica { qeTool =>
+    import ta3._
+    import ta3.polynomialRing._
+    val a = ofTerm("x0()".asTerm)
+    val b = ofTerm("1".asTerm)
+    val c = ofTerm("1/3".asTerm)
+    val tmA = Exact(a)
+    val tmB = Exact(b)
+    val tmC = Exact(c)
+    println(tmA)
+    println(tmB)
+    println(tmC)
+  }
+
   it should "form Horner" in withMathematica { qeTool =>
     import ta3._
     import ta3.polynomialRing._

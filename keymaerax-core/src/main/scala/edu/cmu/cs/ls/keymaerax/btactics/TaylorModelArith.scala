@@ -124,6 +124,11 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       ") ->" +
       "\\exists err_ (-elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
 
+  val exactPrv = AnonymousLemmas.remember(
+    ("elem_() = poly_() ->" +
+    "\\exists err_ (elem_() = poly_() + err_ & 0 <= err_ & err_ <= 0)").asFormula, QE & done
+  )
+
   val ringVars = vars.map(ringsLib.toRing).toList
   // proof of "poly.term = horner form"
   def toHorner(poly: Polynomial) : ProvableSig  = {
@@ -306,6 +311,14 @@ class TaylorModelArith(context: IndexedSeq[Formula],
   def TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, be: BelleExpr): TM = {
     TM(elem, poly, lower, upper,
       proveBy(Sequent(context, IndexedSeq(tmFormula(elem, poly, lower, upper))), be & done))
+  }
+
+  def Exact(elem: Polynomial): TM = {
+    val newPrv = useDirectlyConst(weakenWithContext(exactPrv.fact),
+      Seq(("elem_", elem.term), ("poly_", rhsOf(elem.representation))),
+      Seq(weakenWithContext(elem.representation))
+    )
+    TM(elem.term, elem, Number(0), Number(0), newPrv)
   }
 
 }
