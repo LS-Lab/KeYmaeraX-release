@@ -26,27 +26,39 @@ Options[DiffSat]= {UseDependencies -> True, StrategyTimeout->Infinity, UseDI->Tr
 Begin["`Private`"]
 
 
-ReduceCuts[cutlist_List, problem_]:=Module[{pre,f,vars,evoConst,post,constvars,constasms,i,added,rest,cuts},
+ReduceCuts[cutlist_List, problem_, timeout_]:=Module[{pre,f,vars,evoConst,post,constvars,constasms,i,added,skipped,rest,cuts},
 
 { pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
 cuts=Map[#[[1]]&,cutlist];
 added={};
+skipped={};
 
-For[i=1,i<=Length[cutlist],i++,
-	rest=Drop[cuts,i]/.List->And;
-	If[TrueQ[
-	And[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms,rest], post, vars],
-	LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]
-	],
-		Print["Skipped: ",cuts[[i]]]
-		(*Print["INFO: ",rest,f,vars,And[evoConst,constasms],LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]*)
-		(* skip *),
-		added=Join[added,{i}];
-		evoConst=And[evoConst,cuts[[i]]]
+TimeConstrained[
+	For[i=1,i<=Length[cutlist],i++,
+		rest=Drop[cuts,i]/.List->And;
+		If[TrueQ[
+			(*TimeConstrained[*)
+				And[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms,rest], post, vars],
+						LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]
+			(*5,*) (* TODO configuration *)
+			(*	False
+			]*)
+		],
+			Print["Skipped: ",cuts[[i]]];
+			skipped=Join[skipped,{i}]
+			(*Print["INFO: ",rest,f,vars,And[evoConst,constasms],LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]*)
+			(* skip *),
+			added=Join[added,{i}];
+			evoConst=And[evoConst,cuts[[i]]]
+		];
 	];
-];
-
-cutlist[[added]]
+	cutlist[[added]]
+	,
+	timeout
+	,
+	Print["Timeout reduceCuts: ", skipped];
+	Delete[cutlist, skipped]
+]
 ]
 
 
@@ -123,18 +135,11 @@ invImpliesPost=timedInvImpliesPost[[2]];
 
 If[TrueQ[invImpliesPost],
 	Print["Generated invariant implies postcondition. Returning."];
-	If[minimizeCuts,
-		Print["Reducing input cutlist: ", invlist, cutlist];
-		timedCutlist=AbsoluteTiming[ReduceCuts[cutlist,problem]];
-		Print["Reducing cuts duration: ", timedCutlist[[1]]];
-		AppendTo[timingList, Symbol["ReduceCuts"]->timedCutlist[[1]]];
-		cutlist=timedCutlist[[2]];
-		invlist=Map[#[[1]]&,cutlist]/.List->And;
-	];
-	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]],
+	{True, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}}
+	,
 	(* Continue search, return the modified arguments *)
 	Print["Generated invariant not yet sufficient. Continuing."];
-	{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}
+	{False, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}}
 ]
 ]
 
@@ -143,7 +148,7 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 		postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
 		polyList,invlist,cuts,cutlist,strat,hint,isLinear,
 		curproblem,subproblem,deps,curdep,timeoutmultiplier,
-		constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,optionsNamespace},
+		constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,genDone,optionsNamespace},
 
 	(* Bring symbolic parameters into the dynamics *)
 	Print["Input Problem: ", problem];
@@ -184,12 +189,23 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 	cutlist={};
 	timingList={};
 
-	(* Fast check: extract from initial conditions *)
-	{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
-			RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
-				OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
-				{ pre, { f, vars, evoConst }, post }, vars,
-				{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}];
+	If[Length[deps] > 1,
+		(* Fast check: extract from initial conditions, but only when more than a single dependency cluster *)
+		{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} =
+				RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
+					OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
+					{ pre, { f, vars, evoConst }, post }, vars,
+					{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}];
+
+		If[TrueQ[genDone],
+			Print["Generated invariant implies postcondition. Returning."];
+			If[OptionValue[MinimizeCuts],
+				Print["Reducing input cutlist: ", invlist, cutlist];
+				invlist=Map[#[[1]]&,cutlist]/.List->And;
+			];
+			Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]]
+		]
+	];
 
 	(* For each dependency *)
 	Do[
@@ -207,7 +223,7 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 			(* Compute polynomials for the algebraic decomposition of the state space *)
 			(*Print[subproblem];*)
 
-			Module[{timedStratResult, duration, unusedBudget},
+			Module[{timedStratResult, duration, unusedBudget, timedCutlist, minimizeBudget},
 				Print["Method timeout: ", OptionValue[optionsNamespace, Timeout]];
 
 				timedStratResult = AbsoluteTiming[
@@ -219,9 +235,13 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 				duration = timedStratResult[[1]];
 				Print["Method duration: ", duration];
 				unusedBudget = Max[0, OptionValue[optionsNamespace, Timeout] - duration];
-				Print["Unused budget: ", unusedBudget];
+				(*Print["Unused budget in ", i, ": ", unusedBudget, " distributing shares of ", unusedBudget/(Length[strategies]-i), " to ", Length[strategies]-i, " remaining strategies"];*)
+				(* Same timeout may occur multiple times: reduce by duration before increasing by share of unused budget *)
+				SetOptions[strategies[[i]][[3]], Timeout -> 0];
+				(*Do[Print["Budget before redistributing: ", s, " -> ", OptionValue[s, Timeout]], {s, Map[#[[3]]&,strategies]//DeleteDuplicates}];*)
+				(*Print["Total remaining budget before: ", Total[Map[OptionValue[#,Timeout]&,Map[#[[3]]&,strategies]//DeleteDuplicates]] + unusedBudget];*)
 
-				(* Distribute unused budget evenly among the remaining methods (evenly among all if last before recursing).
+				(* Distribute unused budget evenly among the remaining methods.
          * Assumes that strategies contains only activated ones with Timeout > 0. *)
 				If[i < Length[strategies],
 					Do[
@@ -231,18 +251,57 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 						{remaining, Drop[strategies,i]}
 					],
 					Do[
-						SetOptions[remaining[[3]], Timeout -> unusedBudget/Length[strategies]];
-						Print["Modified timeouts: ", ToString[remaining[[1]]], " -> ", OptionValue[remaining[[3]], Timeout]];
+						SetOptions[s[[3]], Timeout -> OptionValue[s[[3]], Timeout] + unusedBudget/Length[strategies]];
+						Print["Modified timeouts: ", ToString[s[[1]]], " -> ", OptionValue[s[[3]], Timeout]];
 						,
-						{remaining, strategies}
+						{s, strategies}
+					]
+				];
+				(*Do[Print["Budget after redistributing: ", s, " -> ", OptionValue[s, Timeout]], {s, Map[#[[3]]&,strategies]//DeleteDuplicates}];*)
+				minimizeBudget = Total[Map[OptionValue[#, Timeout]&, Map[#[[3]]&, strategies]//DeleteDuplicates]];
+				Print["Total remaining budget after: ", minimizeBudget];
+
+				{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} = timedStratResult[[2]];
+				If[TrueQ[genDone],
+					Print["Cutminimize budget: ", minimizeBudget];
+					Print["Generated invariant implies postcondition. Returning."];
+					If[OptionValue[MinimizeCuts] && minimizeBudget>0,
+						Print["Reducing input cutlist: ", invlist, cutlist];
+						timedCutlist=AbsoluteTiming[ReduceCuts[cutlist, problem, minimizeBudget]];
+						Print["Reducing cuts duration: ", timedCutlist[[1]]];
+						AppendTo[timingList, Symbol["ReduceCuts"]->timedCutlist[[1]]];
+						cutlist=timedCutlist[[2]];
+						invlist=Map[#[[1]]&,cutlist]/.List->And;
+					];
+					Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]]
+					,
+					(* not fully done yet, but perhaps cluster done? *)
+					Module[{subpre,subf,subvars,subh,subpost,clusterDone},
+						{subpre,{subf,subvars,subh},subpost} = subproblem;
+						clusterDone = Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], subpost, subvars];
+						Print["Cluster done: ", clusterDone];
+						If[clusterDone, Break[]]
 					]
 				];
 
-				{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} = timedStratResult[[2]]
+				If[minimizeBudget <= 0, Abort[]]
 			]
 
-			(* End For loop *)]
-		,{curdep,deps}(* End Do loop *)];
+		(* End For loop *)
+		];
+
+		(* Redistribute for next dependencies cluster *)
+		Module[{remainingBudget},
+			remainingBudget = Total[Map[OptionValue[#,Timeout]&,Map[#[[3]]&,strategies]//DeleteDuplicates]];
+			Do[
+				SetOptions[s[[3]], Timeout -> remainingBudget/Length[strategies]];
+				Print["Modified timeouts: ", ToString[s[[1]]], " -> ", OptionValue[s[[3]], Timeout]];
+				,
+				{s, strategies}
+			]
+		]
+		,
+		{curdep,deps}(* End Do loop *)];
 
 ]]
 
@@ -329,7 +388,7 @@ If[isLinear == 2 && Classifier`LinearSystemQ[f, vars] == True, Print["Problem is
 (*Print[subproblem];*)
 
 
-Module[{timedStratResult, duration, unusedBudget},
+Module[{timedStratResult, duration, unusedBudget, genDone},
 	Print["Method timeout: ", OptionValue[optionsNamespace, Timeout]];
 
 	timedStratResult = AbsoluteTiming[
@@ -360,7 +419,19 @@ Module[{timedStratResult, duration, unusedBudget},
 		]
 	];
 
-	{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} = timedStratResult[[2]]
+	{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} = timedStratResult[[2]];
+	If[TrueQ[genDone],
+		Print["Generated invariant implies postcondition. Returning."];
+		If[minimizeCuts,
+			Print["Reducing input cutlist: ", invlist, cutlist];
+			timedCutlist=AbsoluteTiming[ReduceCuts[cutlist,problem]];
+			Print["Reducing cuts duration: ", timedCutlist[[1]]];
+			AppendTo[timingList, Symbol["ReduceCuts"]->timedCutlist[[1]]];
+			cutlist=timedCutlist[[2]];
+			invlist=Map[#[[1]]&,cutlist]/.List->And;
+		];
+		Throw[Format`FormatDiffSat[invlist, cutlist, timingList, True]]
+	]
 ]
 
 (* End For loop *)]
