@@ -157,6 +157,10 @@ object PolynomialArithV2Helpers {
     val prv2 = prv(substOfInst(inst))
     impliesElim(prv2, assms)
   }
+  def useDirectlyConst(prv: ProvableSig, inst: Seq[(String, Term)], assms: Seq[ProvableSig]) : ProvableSig = {
+    val prv2 = prv(USubst(inst.map { case (a, b) => SubstitutionPair(constR(a), b) }))
+    impliesElim(prv2, assms)
+  }
 
   // G |- P->Q   G |- P
   // ---------
