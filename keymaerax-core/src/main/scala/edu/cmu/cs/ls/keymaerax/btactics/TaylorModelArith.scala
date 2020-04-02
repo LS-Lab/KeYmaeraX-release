@@ -85,6 +85,36 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & existsL(-1) & allL("err_".asTerm)(-4) &
       existsR("rem_() + 2 * err_ * poly1_() + err_^2".asTerm)(1) & QE & done
   )
+  val powerOne = AnonymousLemmas.remember((
+    "(\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_()))" +
+    " ->" +
+    "\\exists err_ (elem1_()^1 = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())").asFormula, QE & done)
+
+  val powerEven = AnonymousLemmas.remember((
+    "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ ((elem1_()^m_())^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "(n_() = 2*m_() <-> true)" +
+      ")" +
+      "->" +
+      "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2 = elem1_()^(2*m_())".asFormula) & Idioms.<(
+      eqL2R(-4)(-2) & hideL(-4) & useAt(DerivedAxioms.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
+      cohideR(2) & QE & done
+    )
+  )
+
+  val powerOdd = AnonymousLemmas.remember((
+    "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ ((elem1_()^m_())^2*elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "(n_() = 2*m_() + 1 <-> true)" +
+      ")" +
+      "->" +
+      "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2*elem1_() = elem1_()^(2*m_() + 1)".asFormula) & Idioms.<(
+      eqL2R(-4)(-2) & hideL(-4) & useAt(DerivedAxioms.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
+      cohideR(2) & QE & done
+    )
+  )
 
   val negPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
@@ -220,7 +250,55 @@ class TaylorModelArith(context: IndexedSeq[Formula],
         weakenWithContext(polyLow.representation),
         weakenWithContext(hornerPrv),
         newIvlPrv))
-      TM(Power(elem, Number(2)), (poly^2).resetTerm, l, u, newPrv)
+      TM(Power(elem, Number(2)), (polyLow).resetTerm, l, u, newPrv)
+    }
+
+    def ^(n: Int) : TM = n match {
+      case 1 =>
+        val newPrv = useDirectlyConst(weakenWithContext(powerOne.fact), Seq(
+          ("elem1_", elem),
+          ("poly1_", rhsOf(poly.representation)),
+          ("l1_", lower),
+          ("u1_", upper)),
+          Seq(prv))
+        TM(Power(elem, Number(1)), poly.resetTerm, lower, upper, newPrv)
+      case n if n>0 && n%2 == 0 =>
+        val m = n / 2
+        val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
+        val p = (this^(m)).square
+        val newPrv =
+          useDirectlyConst(weakenWithContext(powerEven.fact), Seq(
+            ("elem1_", elem),
+            ("poly1_", rhsOf(poly.representation)),
+            ("l1_", lower),
+            ("u1_", upper),
+            ("m_", Number(m)),
+            ("n_", Number(n)),
+            ("l_", p.lower),
+            ("u_", p.upper),
+            ("poly_", rhsOf(p.poly.representation))
+          ),
+            Seq(prv, p.prv, weakenWithContext(mPrv)))
+        TM(Power(elem, Number(n)), p.poly.resetTerm, p.lower, p.upper, newPrv)
+      case n if n>0 =>
+        val m = n / 2
+        val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
+        val p = (this^m).square * this
+        val newPrv =
+          useDirectlyConst(weakenWithContext(powerOdd.fact), Seq(
+            ("elem1_", elem),
+            ("poly1_", rhsOf(poly.representation)),
+            ("l1_", lower),
+            ("u1_", upper),
+            ("m_", Number(m)),
+            ("n_", Number(n)),
+            ("l_", p.lower),
+            ("u_", p.upper),
+            ("poly_", rhsOf(p.poly.representation))
+          ),
+            Seq(prv, p.prv, weakenWithContext(mPrv)))
+        TM(Power(elem, Number(n)), p.poly.resetTerm, p.lower, p.upper, newPrv)
+      case _ => throw new IllegalArgumentException("Taylor model ^ n requires n > 0, not n = " + n)
     }
 
   }
