@@ -52,6 +52,8 @@ object PolynomialArithV2 {
       def representation: ProvableSig
       // proof of "term = some internal representation"
       def prettyRepresentation: ProvableSig
+      // resetTerm.term = some internal representation
+      def resetTerm : Polynomial
 
       // result.term = term + other.term
       def +(other: Polynomial) : Polynomial
@@ -795,6 +797,8 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
     val prv: ProvableSig
     def representation: ProvableSig = prv
     def forgetPrv: TreePolynomial
+    def resetTerm: Polynomial = forgetPrv
+
     def treeSketch: String
     lazy val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs) => (eq, lhs, rhs) }
     lazy val term = lhs
