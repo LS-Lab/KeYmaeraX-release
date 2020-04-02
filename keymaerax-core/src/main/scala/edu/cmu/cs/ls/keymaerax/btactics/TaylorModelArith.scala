@@ -73,6 +73,14 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       existsR("rem_() + err__0 * poly2_() + err_ * poly1_() + err__0 * err_".asTerm)(1) & QE & done
   )
 
+  val negPrv = AnonymousLemmas.remember(
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "-poly1_() = poly_() &" +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= -i1_ & -i1_ <= u_())))" +
+      ") ->" +
+      "\\exists err_ (-elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
+
   val ringVars = vars.map(ringsLib.toRing).toList
   // proof of "poly.term = horner form"
   def toHorner(poly: Polynomial) : ProvableSig  = {
@@ -161,6 +169,21 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(Times(elem, other.elem), polyLow.resetTerm, l, u, newPrv)
     }
 
+    def unary_- : TM = {
+      val newPoly = -poly.resetTerm
+
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(prec)(Neg)(lower, upper)
+      val newPrv = useDirectlyConst(weakenWithContext(negPrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", rhsOf(poly.representation)),
+        ("l1_", lower),
+        ("u1_", upper),
+        ("poly_", rhsOf(newPoly.representation)),
+        ("l_", l),
+        ("u_", u)
+      ), Seq(prv, weakenWithContext(newPoly.representation), weakenWithContext(newIvlPrv)))
+      TM(Neg(elem), (-poly).resetTerm, l, u, newPrv)
+    }
   }
 
   def TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, be: BelleExpr): TM = {
