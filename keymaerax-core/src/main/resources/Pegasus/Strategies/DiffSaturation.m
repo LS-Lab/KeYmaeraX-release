@@ -284,7 +284,7 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 					]
 				];
 
-				If[minimizeBudget <= 0, Abort[]]
+				If[minimizeBudget <= 0, Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]]]
 			]
 
 		(* End For loop *)
@@ -301,7 +301,10 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 			]
 		]
 		,
-		{curdep,deps}(* End Do loop *)];
+		{curdep,deps}
+		(* End Do loop *)
+	];
+	Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]]
 
 ]]
 
