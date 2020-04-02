@@ -191,8 +191,14 @@ DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,var
 			]
 		], OptionValue[DbxPoly,Timeout]]];
 		If[FailureQ[dbxResult[[1]]],
-			If[Length[dbxResult[[2]]]>0, dbxResult[[2]][[1]][[-1]], {}],
-			dbxResult[[1]]
+			(* Failure, timeout etc.: return last intermediate result, if any *)
+			If[Length[dbxResult[[2]]] > 0, dbxResult[[2]][[1]][[-1]], {}],
+			(* Otherwise: all options exhausted and either found an invariant or not *)
+			If[Length[dbxResult[[1]]] > 0,
+				(* Invariant sufficient by SemiAlgInclusion check above *)
+				dbxResult[[1]],
+				(* Invariant not sufficient, return last intermediate result, if any *)
+				If[Length[dbxResult[[2]]] > 0, dbxResult[[2]][[1]][[-1]], {}]]
 		]
 		,
 		Print["DbxPoly skipped."]; {}
