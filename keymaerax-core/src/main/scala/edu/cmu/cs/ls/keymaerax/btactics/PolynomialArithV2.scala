@@ -73,6 +73,10 @@ object PolynomialArithV2 {
       // Some(proof of "term = 0")
       def zeroTest : Option[ProvableSig]
 
+      // partition monomials (where (num, denum, powers) represents num/denum*(vars(i)^powers(i))_(i))
+      // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
+      //   where p1's monomials satisfy P and p2's monomials satisfy !P
+      def partition(P: (BigDecimal, BigDecimal, IndexedSeq[Int]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
     }
 
     // result.term = n
@@ -744,6 +748,11 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
       ") ->" +
       "t_() = ll_() + c_()").asFormula, QE & done)
 
+  // Lemmas for partition
+  val partition2 = rememberAny(("(t_() = r_() & t1_() = r1_() & t2_() = r2_() & t_() - t1_() - t2_() = 0) -> t_() = t1_() + t2_()".asFormula),
+    QE & done)
+
+
   /** drop parentheses of a sum of terms on the rhs of prv to the left, e.g.,
     * t = a + (b + c) ~~> t = a + b + c
     * */
@@ -1216,6 +1225,39 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
           Some(normalizedPrv)
         case _ => None
       }
+    }
+
+    def partitionMonomials(P: Monomial => Boolean)(acc: (Seq[Monomial], Seq[Monomial])) : (Seq[Monomial], Seq[Monomial]) = {
+      def accumulate(m: Monomial)(acc: (Seq[Monomial], Seq[Monomial])) :  (Seq[Monomial], Seq[Monomial]) = acc match {
+        case (pos, neg) =>
+          if (P(m)) (m +: pos, neg)
+          else (pos, m +: neg)
+      }
+      this match {
+        case Empty(_) => acc
+        case Branch2(left, value, right, _) =>
+          right.partitionMonomials(P)(accumulate(value)(left.partitionMonomials(P)(acc)))
+        case Branch3(left, value1, mid, value2, right, _) =>
+          right.partitionMonomials(P)(accumulate(value2)(mid.partitionMonomials(P)(accumulate(value1)(left.partitionMonomials(P)(acc)))))
+      }
+    }
+
+    def ofMonomials(monomials: Seq[Monomial]): TreePolynomial = monomials.foldLeft[TreePolynomial](Empty(None))(_ + _)
+
+    def partition(P: (BigDecimal, BigDecimal, IndexedSeq[Int]) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
+      def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denum, m.powers)
+      val (pos, neg) = partitionMonomials(PMonomial)(Seq(), Seq())
+      val p1 = ofMonomials(pos)
+      val p2 = ofMonomials(neg)
+      val prv0 = (this - p1 - p2).zeroTest.getOrElse(throw new RuntimeException("Runtime error in 0-proof for partitioning - this should never fail!"))
+      val eqPrv = useDirectly(partition2,
+        Seq(
+          ("t_", lhs), ("r_", rhs),
+          ("t1_", p1.lhs), ("r1_", p1.rhs),
+          ("t2_", p2.lhs), ("r2_", p2.rhs),
+        ),
+        Seq(prv, p1.prv, p2.prv, prv0))
+      (p1, p2, eqPrv)
     }
 
   }

@@ -280,6 +280,18 @@ class PolynomialArithV2Tests extends TacticTestBase {
     b.treeSketch shouldBe "{[., x0^4 x15^7, .], x0^3 x1^8 x15^4, [., x0^3 x3^2 x15^4, .], x0^1 x15^3 x17^2, {., x1^8 x17^2, ., x3^2 x17^2, .}}"
   }
 
+  it should "partition polynomials" in withMathematica { _ =>
+    import pa4._
+    import PolynomialArithV2Helpers._
+    val t = "2*x + 3*x*y + 4*y^2 + 2*x^2 + x^2*y^2 + x^3 + 4*x^4".asTerm
+    val poly = ofTerm(t)
+    val (pos, neg, prv) = poly.partition{(_, _, powers) => powers.sum<=2 && powers(1) == 0 }
+    rhsOf(pos.prettyRepresentation) shouldBe "2*x^2+2*x".asTerm
+    rhsOf(neg.prettyRepresentation) shouldBe "4*x^4+x^3+x^2*y^2+3*x*y+4*y^2".asTerm
+    lhsOf(prv) shouldBe t
+    rhsOf(prv) shouldBe Plus(pos.term, neg.term)
+  }
+
   "Normalization" should "normalize Coefficients" in withMathematica { _ =>
     import pa4._
     Coefficient(0, 1, None).normalized._1.conclusion.succ(0) shouldBe "0/1=0".asFormula
