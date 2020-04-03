@@ -20,7 +20,7 @@ BeginPackage["DiffSaturation`"]
 SanityTimeout controls how long internal sanity check QE calls take.
 StrategyTimeout controls how each sub-strategy call takes *)
 DiffSat::usage="DiffSat[problem_List, class_List] Apply DiffSat on the input problem, restricting strategies to those matching class"
-Options[DiffSat]= {UseDependencies -> True, StrategyTimeout->Infinity, UseDI->True, MinimizeCuts->True}
+Options[DiffSat]= {UseDependencies -> True, StrategyTimeout->Infinity, StrictMethodTimeouts -> True, UseDI->True, MinimizeCuts->True}
 
 
 
@@ -144,6 +144,45 @@ If[TrueQ[invImpliesPost],
 ]
 ]
 
+RedistributeTimeouts[strategies_List, icurrent_Integer, unusedBudget_, opts: OptionsPattern[]]:=Module[{remainingBudget},
+	If[TrueQ[OptionValue[DiffSat, StrictMethodTimeouts]],
+		(* Strict: reduce remaining budget of icurrent strategy, but don't redistribute *)
+		SetOptions[strategies[[icurrent]][[3]], Timeout -> unusedBudget]
+		,
+		(* Non-strict: redistribute unused budget to other methods *)
+		(*Print["Unused budget in ", icurrent, ": ", unusedBudget, " distributing shares of ", unusedBudget/(Length[strategies]-icurrent), " to ", Length[strategies]-icurrent, " remaining strategies"];*)
+		(* Same timeout may occur multiple times: reduce by duration before increasing by share of unused budget *)
+		If[icurrent < Length[strategies],
+			SetOptions[strategies[[icurrent]][[3]], Timeout -> 0],
+			(* Reset all to 0, to evenly redistribute below *)
+			Do[SetOptions[s[[3]], Timeout -> 0], {s, strategies}]
+		];
+
+		(*Do[Print["Budget before redistributing: ", s, " -> ", OptionValue[s, Timeout]], {s, Map[#[[3]]&,strategies]//DeleteDuplicates}];*)
+		(*Print["Total remaining budget before: ", Total[Map[OptionValue[#,Timeout]&,Map[#[[3]]&,strategies]//DeleteDuplicates]] + unusedBudget];*)
+
+		(* Distribute unused budget evenly among the remaining methods.
+		 * Assumes that strategies contains only activated ones with Timeout > 0. *)
+		If[icurrent < Length[strategies],
+			Do[
+				SetOptions[remaining[[3]], Timeout -> OptionValue[remaining[[3]], Timeout] + unusedBudget/(Length[strategies]-icurrent)];
+				(*Print["Modified timeouts: ", ToString[remaining[[1]]], " -> ", OptionValue[remaining[[3]], Timeout]];*)
+				,
+				{remaining, Drop[strategies,icurrent]}
+			],
+			Do[
+				SetOptions[s[[3]], Timeout -> OptionValue[s[[3]], Timeout] + unusedBudget/Length[strategies]];
+				(*Print["Modified timeouts: ", ToString[s[[1]]], " -> ", OptionValue[s[[3]], Timeout]];*)
+				,
+				{s, strategies}
+			]
+		]
+	];
+	remainingBudget = Total[Map[OptionValue[#, Timeout]&, Map[#[[3]]&, strategies]//DeleteDuplicates]];
+	Print["Total remaining budget: ", remainingBudget];
+	remainingBudget
+]
+
 DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 	{i,pre,f,vars,origEvo,post,preImpliesPost,
 		postInvariant,preInvariant,strategies,inv,andinv,relaxedInv,invImpliesPost,
@@ -179,6 +218,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 	];
 
 	Print["Activated strategies: ", strategies];
+	Print["Total budget: ", Total[Map[OptionValue[#,Timeout]&,Map[#[[3]]&,strategies]//DeleteDuplicates]]];
 
 	(* TODO: explicitly use the constvars and constasms below!! *)
 	{ pre, { f, vars, evoConst }, post, {constvars,constasms}} = problem;
@@ -234,7 +274,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 			(* Compute polynomials for the algebraic decomposition of the state space *)
 			(*Print[subproblem];*)
 
-			Module[{timedStratResult, duration, unusedBudget, timedCutlist, minimizeBudget},
+			Module[{timedStratResult, duration, timedCutlist, remainingBudget},
 				Print["Method timeout: ", OptionValue[optionsNamespace, Timeout]];
 
 				timedStratResult = AbsoluteTiming[
@@ -245,40 +285,14 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 
 				duration = timedStratResult[[1]];
 				Print["Method duration: ", duration];
-				unusedBudget = Max[0, OptionValue[optionsNamespace, Timeout] - duration];
-				(*Print["Unused budget in ", i, ": ", unusedBudget, " distributing shares of ", unusedBudget/(Length[strategies]-i), " to ", Length[strategies]-i, " remaining strategies"];*)
-				(* Same timeout may occur multiple times: reduce by duration before increasing by share of unused budget *)
-				SetOptions[strategies[[i]][[3]], Timeout -> 0];
-				(*Do[Print["Budget before redistributing: ", s, " -> ", OptionValue[s, Timeout]], {s, Map[#[[3]]&,strategies]//DeleteDuplicates}];*)
-				(*Print["Total remaining budget before: ", Total[Map[OptionValue[#,Timeout]&,Map[#[[3]]&,strategies]//DeleteDuplicates]] + unusedBudget];*)
-
-				(* Distribute unused budget evenly among the remaining methods.
-         * Assumes that strategies contains only activated ones with Timeout > 0. *)
-				If[i < Length[strategies],
-					Do[
-						SetOptions[remaining[[3]], Timeout -> OptionValue[remaining[[3]], Timeout] + unusedBudget/(Length[strategies]-i)];
-						Print["Modified timeouts: ", ToString[remaining[[1]]], " -> ", OptionValue[remaining[[3]], Timeout]];
-						,
-						{remaining, Drop[strategies,i]}
-					],
-					Do[
-						SetOptions[s[[3]], Timeout -> OptionValue[s[[3]], Timeout] + unusedBudget/Length[strategies]];
-						Print["Modified timeouts: ", ToString[s[[1]]], " -> ", OptionValue[s[[3]], Timeout]];
-						,
-						{s, strategies}
-					]
-				];
-				(*Do[Print["Budget after redistributing: ", s, " -> ", OptionValue[s, Timeout]], {s, Map[#[[3]]&,strategies]//DeleteDuplicates}];*)
-				minimizeBudget = Total[Map[OptionValue[#, Timeout]&, Map[#[[3]]&, strategies]//DeleteDuplicates]];
-				Print["Total remaining budget after: ", minimizeBudget];
+				remainingBudget = RedistributeTimeouts[strategies, i, Max[0, OptionValue[optionsNamespace, Timeout] - duration]];
 
 				{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} = timedStratResult[[2]];
 				If[TrueQ[genDone],
-					Print["Cutminimize budget: ", minimizeBudget];
 					Print["Generated invariant implies postcondition. Returning."];
-					If[OptionValue[MinimizeCuts] && minimizeBudget>0,
+					If[OptionValue[MinimizeCuts] && remainingBudget>0,
 						Print["Reducing input cutlist: ", invlist, cutlist];
-						timedCutlist=AbsoluteTiming[ReduceCuts[cutlist, problem, minimizeBudget]];
+						timedCutlist=AbsoluteTiming[ReduceCuts[cutlist, problem, remainingBudget]];
 						Print["Reducing cuts duration: ", timedCutlist[[1]]];
 						AppendTo[timingList, Symbol["ReduceCuts"]->timedCutlist[[1]]];
 						cutlist=timedCutlist[[2]];
@@ -295,21 +309,17 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 					]
 				];
 
-				If[minimizeBudget <= 0, Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]]]
+				If[remainingBudget <= 0, Throw[Format`FormatDiffSat[invlist, cutlist, timingList, False]]]
 			]
 
 		(* End For loop *)
 		];
 
 		(* Redistribute for next dependencies cluster *)
-		Module[{remainingBudget},
-			remainingBudget = Total[Map[OptionValue[#,Timeout]&,Map[#[[3]]&,strategies]//DeleteDuplicates]];
-			Do[
-				SetOptions[s[[3]], Timeout -> remainingBudget/Length[strategies]];
-				Print["Modified timeouts: ", ToString[s[[1]]], " -> ", OptionValue[s[[3]], Timeout]];
-				,
-				{s, strategies}
-			]
+		If[TrueQ[OptionValue[DiffSat, StrictMethodTimeouts]],
+			Print["Strict method timeouts, skipping redistribution between dependency clusters"]
+			,
+			RedistributeTimeouts[strategies, Length[strategies], Total[Map[OptionValue[#,Timeout]&,Map[#[[3]]&,strategies]//DeleteDuplicates]]]
 		]
 		,
 		{curdep,deps}
