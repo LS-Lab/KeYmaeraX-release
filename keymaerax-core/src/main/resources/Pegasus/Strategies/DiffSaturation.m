@@ -13,14 +13,15 @@ Needs["Format`",FileNameJoin[{Directory[],"Strategies","Format.m"}]]
 Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]]
 
 
-BeginPackage["DiffSaturation`"];
+BeginPackage["DiffSaturation`"]
 
 
 (* DiffSat.
 SanityTimeout controls how long internal sanity check QE calls take.
 StrategyTimeout controls how each sub-strategy call takes *)
-DiffSat::usage="DiffSat[problem_List] Apply DiffSat on the input problem";
-Options[DiffSat]= {UseDependencies -> True, StrategyTimeout->Infinity, UseDI->True, MinimizeCuts->True};
+DiffSat::usage="DiffSat[problem_List, class_List] Apply DiffSat on the input problem, restricting strategies to those matching class"
+Options[DiffSat]= {UseDependencies -> True, StrategyTimeout->Infinity, UseDI->True, MinimizeCuts->True}
+
 
 
 Begin["`Private`"]
@@ -143,9 +144,9 @@ If[TrueQ[invImpliesPost],
 ]
 ]
 
-DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
+DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 	{i,pre,f,vars,origEvo,post,preImpliesPost,
-		postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
+		postInvariant,preInvariant,strategies,inv,andinv,relaxedInv,invImpliesPost,
 		polyList,invlist,cuts,cutlist,strat,hint,isLinear,
 		curproblem,subproblem,deps,curdep,timeoutmultiplier,
 		constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,genDone,optionsNamespace},
@@ -153,19 +154,29 @@ DiffSat[problem_List, opts:OptionsPattern[]]:=Catch[Module[
 	(* Bring symbolic parameters into the dynamics *)
 	Print["Input Problem: ", problem];
 
-	(* {method, proof hint, options namespace}; keep only activated ones with a timeout > 0 *)
-	strategies = Select[{
-		(*{GenericLinear`LinearMethod, Symbol["kyx`Unknown"] (*Symbol["kyx`LinearMethod"]*), GenericLinear`LinearMethod, 1},
-      {GenericLinear`FirstIntegralsLin, Symbol["kyx`FirstIntegral"] (*Symbol["kyx`FirstIntegralsLin"]*), GenericLinear`FirstIntegralsLin, 1},*)
-		{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], GenericNonLinear`PreservedState, 0},
-		{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
-		{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"], GenericNonLinear`FirstIntegrals, 2},
-		{GenericNonLinear`DbxPolyIntermediate[#,1,2]&, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
-		{GenericNonLinear`BarrierCert[#,Min[5,OptionValue[GenericNonLinear`BarrierCert,Deg]]]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0},
-		{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
-		{GenericNonLinear`DbxPolyIntermediate[#,3,GenericNonlinear`DbxPolyEndDegree[[GenericNonLinear`DbxPoly,MaxDeg]]]&, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
-		{GenericNonLinear`BarrierCert[#,OptionValue[GenericNonLinear`BarrierCert,Deg]]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0}
-	}, (OptionValue[#[[3]], Timeout] > 0)&];
+	(* {method, proof hint, options namespace, class flag}; keep only activated ones with a timeout > 0 *)
+	(* For the class flag, 0 means the strategy should be tried for both linear and nonlinear systems.
+		                     1 means linear only.
+		                     2 means nonlinear only. *)
+	strategies = Module[{activatedStrategies, dimension, classes},
+		{dimension, classes} = class;
+		activatedStrategies = Select[{
+			{GenericLinear`LinearMethod, Symbol["kyx`Unknown"] (*Symbol["kyx`LinearMethod"]*), GenericLinear`LinearMethod, 1},
+			{GenericLinear`FirstIntegralsLin, Symbol["kyx`FirstIntegral"] (*Symbol["kyx`FirstIntegralsLin"]*), GenericLinear`FirstIntegralsLin, 1},
+			{GenericNonLinear`PreservedState, Symbol["kyx`Unknown"], GenericNonLinear`PreservedState, 0},
+			{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
+			{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"], GenericNonLinear`FirstIntegrals, 2},
+			{GenericNonLinear`DbxPolyIntermediate[#,1,2]&, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
+			{GenericNonLinear`BarrierCert[#,Min[5,OptionValue[GenericNonLinear`BarrierCert,Deg]]]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0},
+			{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
+			{GenericNonLinear`DbxPolyIntermediate[#,3,GenericNonlinear`DbxPolyEndDegree[[GenericNonLinear`DbxPoly,MaxDeg]]]&, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
+			{GenericNonLinear`BarrierCert[#,OptionValue[GenericNonLinear`BarrierCert,Deg]]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0}
+		}, (OptionValue[#[[3]], Timeout] > 0)&];
+		classes/.{
+			{"Linear"} -> Select[activatedStrategies, (#[[4]] <= 1)&],
+			_List -> Select[activatedStrategies, (#[[4]] != 1)&]
+		}
+	];
 
 	Print["Activated strategies: ", strategies];
 
