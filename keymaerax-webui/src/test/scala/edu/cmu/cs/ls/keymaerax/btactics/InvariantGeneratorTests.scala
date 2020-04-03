@@ -178,7 +178,7 @@ object NonlinearExamplesTests {
 @ExtremeTest
 class NonlinearExamplesTests extends Suites(
   new NonlinearExamplesTester(
-    "Nonlinear_20200401",
+    "Nonlinear_20200403",
     s"$GITHUB_PROJECTS_RAW_PATH/nonlinear.kyx",
     300,
     genCheck = true,
@@ -236,6 +236,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -248,7 +249,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-
           val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
@@ -270,6 +270,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "false",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -303,6 +304,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "50",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -336,6 +338,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -359,6 +362,40 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
   }
 
+  it should "generate invariants with default DiffSat strategy and strict method timeouts" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(
+      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
+      Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
+      Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
+      Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
+      Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
+      Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
+      Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
+      Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
+    )) {
+      val filename = "_invgen_saturate_stricttimeouts.csv"
+      val writer = new PrintWriter(benchmarkName + filename)
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n")
+      writer.close()
+
+      entries.foreach(e => {
+        val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
+        try {
+          val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          writer.write(result.toCsv(infoPrinter) + "\r\n")
+        } finally {
+          writer.close()
+        }
+      })
+    }
+  }
+  }
+
   it should "generate invariants with Barrier only" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
@@ -371,6 +408,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.DEGREE -> "-1",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "120",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -403,6 +441,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -436,6 +475,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -469,6 +509,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -513,12 +554,15 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   private def runInvGen(name: String, modelContent: String, matlab: Boolean, stripProofHints: Boolean, keepUnverifiedCandidates: Boolean): BenchmarkResult = {
     if (genCheck) {
       // need to tear down and restart Mathematica because Pegasus caches ruin test separation
+      Thread.sleep(1000) //@HACK suspected test case separation issue: allow Mathematica to start and stop
       afterEach()
       afterAll()
+      Thread.sleep(1000)
       beforeAll()
       beforeEach()
       if (matlab) withMathematicaMatlab(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
       else withMathematica(_ => {})
+      Thread.sleep(1000)
       qeDurationListener.reset()
       val (model, defs) = parseStripHints(modelContent)
       val expandedModel = defs.exhaustiveSubst(model)
@@ -556,7 +600,9 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
                     Map("dchainlength" -> (candidates.length-1, "pegasusInvariant" -> pegasusInvariant)))
               }
             } else {
-              BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
+              //@HACK suspected test case separation: sometimes examples result in immediate $Aborted: restart the example
+              if (invGenEnd - invGenStart <= 10000) runInvGen(name, modelContent, matlab, stripProofHints, keepUnverifiedCandidates)
+              else BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
             }
           case None =>
             println("Skipping " + name + " for unknown shape, expected A -> [{x'=f(x)}]p(x), but got " + model.prettyString)
