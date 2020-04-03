@@ -179,6 +179,14 @@ object PlotConverter extends UncheckedBaseK2MConverter {
   }
 }
 
+object IdentityConverter extends M2KConverter[MExpr] {
+  /** @inheritdoc */
+  override def k2m: K2MConverter[MExpr] = null
+
+  /** @inheritdoc */
+  override private[tools] def convert(e: MExpr): MExpr = e
+}
+
 object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
   private def diffSatResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
     override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 3 &&

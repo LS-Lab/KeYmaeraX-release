@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tools.ext.PlotConverter
+import edu.cmu.cs.ls.keymaerax.tools.ext.{MathematicaInvGenTool, PlotConverter}
 import org.scalatest.{AppendedClues, PrivateMethodTester, Suites}
 import org.scalatest.LoneElement._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
@@ -223,6 +223,24 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       val (model, defs) = parseStripHints(e.model)
       println(edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.string(e.name).toString + "\n" + PlotConverter(defs.exhaustiveSubst(model)).toString)
     })
+  }
+
+  it should "classification of problems" in withMathematica { tool =>
+    val mPegasus = PrivateMethod[MathematicaInvGenTool]('mPegasus)
+    val pegasus = tool invokePrivate mPegasus()
+    val classifications = entries.map(e => {
+      val (model, defs) = parseStripHints(e.model)
+      val expandedModel = defs.exhaustiveSubst(model)
+      val Imply(assumptions, Box(ode: ODESystem, post)) = expandedModel
+      e.name -> pegasus.problemClassification(ode, assumptions :: Nil, post)
+    })
+    val filename = "_classification.csv"
+    val writer = new PrintWriter(benchmarkName + filename)
+    writer.write("Name,Dimension,Class\r\n")
+    classifications.foreach({ case (name, (dimension, clazz)) =>
+      writer.write(s"$name,$dimension,$clazz\r\n")
+    })
+    writer.close()
   }
 
   it should "generate invariants with default DiffSat strategy" in withMathematicaMatlab { tool => setTimeouts(tool) {

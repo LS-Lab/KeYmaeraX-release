@@ -29,6 +29,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   private val INVARIANTEXTRACTOR_NAMESPACE = "InvariantExtractor`"
   private val LZZ_NAMESPACE = "LZZ`"
   private val REFUTE_NAMESPACE = "Refute`"
+  private val CLASSIFIER_NAMESPACE = "Classifier`"
 
   private def psymbol(s: String) = symbol(PEGASUS_NAMESPACE + s)
   private def gnlsymbol(s: String) = symbol(GENERICNONLINEAR_NAMESPACE + s)
@@ -243,6 +244,39 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
           logger.warn("Incorrect pattern returned: " + output)
           (List(), List())
       }
+    }
+  }
+
+  /**
+    * Returns dimension and classification of the problem defined by `ode` with assumptions `assumptions` and
+    * postcondition `postCond`.
+    * @param ode The differential equation system including evolution domain constraint.
+    * @param assumptions Assumptions on the initial state.
+    * @param postCond Postcondition
+    * @return The dimension and classification of the problem.
+    */
+  def problemClassification(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (Int, String) = {
+    require(postCond.isFOL, "Unable to generate ODE conditions, expected FOL post conditions but got " + postCond.prettyString)
+    require(assumptions.forall(_.isFOL), "Unable to generate ODE conditions, expected FOL assumptions but got " + assumptions)
+
+    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
+    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(_.e).map(k2m):_*)
+    val problem = list(
+      k2m(assumptions.reduceOption(And).getOrElse(True)),
+      list(vectorField, vars, k2m(ode.constraint)),
+      k2m(postCond)
+    )
+
+    val command = compoundExpression(
+      setPathsCmd,
+      needs(string(CLASSIFIER_NAMESPACE), string("Classifier.m")),
+      applyFunc(symbol(CLASSIFIER_NAMESPACE + "ClassifyProblem"))(problem)
+    )
+
+    try {
+      val (_, result) = runUnchecked(command.toString, IdentityConverter)
+      val dimension :: classes :: Nil = result.args().toList
+      (dimension.asInt(), classes.args().head.asString)
     }
   }
 }
