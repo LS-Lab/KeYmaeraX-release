@@ -46,7 +46,7 @@ BarrierCert::usage="BarrierCert[problem_List]";
 Options[PreservedState]= {Timeout -> 10};
 Options[HeuInvariants]= {Timeout -> 20};
 Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
-Options[DbxPoly]= {StartDeg -> 1, EndDeg -> -1, Staggered -> False, CurDeg -> -1, Timeout -> 30};
+Options[DbxPoly]= {MaxDeg -> -1, Staggered -> False, Timeout -> 30};
 Options[BarrierCert]= {Deg -> -1, Timeout -> 60};
 
 
