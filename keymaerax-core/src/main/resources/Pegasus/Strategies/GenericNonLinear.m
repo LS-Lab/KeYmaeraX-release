@@ -174,14 +174,11 @@ DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,var
 						allPolys = allPolysI;
 						Print["Generated Darboux polynomials: ", polys, " at degree ", i];
 						TimeConstrained[
+							(* Invariant extractor throws result when done; if it doesn't throw result, Sow intermediate result, then proceed.  *)
 							invs = Union[invs, InvariantExtractor`DWC[problem, polys, {}, False][[2]]];
-							Print["Extracted Darboux invariants: ", invs];
-							If[Length[invs]>0,
-								If[TrueQ[Primitives`CheckSemiAlgInclusion[And[Q, And@@invs], post, vars]],
-									Throw[invs],
-									Sow[invs]
-								]
-							],
+							Print["Extracted Darboux invariants (not yet sufficient): ", invs];
+							Sow[invs]
+							,
 							timeout/2
 						]
 						,
