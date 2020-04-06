@@ -178,11 +178,11 @@ object NonlinearExamplesTests {
 @ExtremeTest
 class NonlinearExamplesTests extends Suites(
   new NonlinearExamplesTester(
-    "Nonlinear_20200403",
+    "Nonlinear_20200404",
     s"$GITHUB_PROJECTS_RAW_PATH/nonlinear.kyx",
     300,
     genCheck = true,
-    keepUnverifiedCandidates = true)
+    keepUnverifiedCandidates = false)
 )
 
 @ExtremeTest
@@ -225,7 +225,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     })
   }
 
-  it should "classification of problems" in withMathematica { tool =>
+  it should "classification of problems" in withMathematica { tool => setTimeouts(tool) {
     val mPegasus = PrivateMethod[MathematicaInvGenTool]('mPegasus)
     val pegasus = tool invokePrivate mPegasus()
     val classifications = entries.map(e => {
@@ -241,7 +241,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       writer.write(s"$name,$dimension,$clazz\r\n")
     })
     writer.close()
-  }
+  }}
 
   it should "generate invariants with default DiffSat strategy" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
@@ -250,6 +250,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
@@ -267,7 +269,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-          val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -284,6 +286,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
@@ -301,7 +305,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
 
-          val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -318,6 +322,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "30",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "15", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "15", /* half of FirstIntegrals (work on disjoint classes) */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "50",
@@ -335,7 +341,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
 
-          val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -352,6 +358,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
@@ -369,8 +377,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-
-          val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = true, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = true, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -387,6 +394,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
@@ -404,7 +413,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-          val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -421,6 +430,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.DEGREE -> "-1",
@@ -438,7 +449,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-          val result = runInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -455,6 +466,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "120",
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
@@ -472,7 +485,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-          val result = runInvGen(e.name, e.model, matlab = false, stripProofHints = false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = false, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -489,6 +502,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "120",
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
@@ -506,7 +521,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-          val result = runInvGen(e.name, e.model, matlab = false, stripProofHints = false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = false, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
         } finally {
           writer.close()
@@ -523,6 +538,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "120", /* same as FirstIntegrals, work on disjoint classes */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
@@ -539,8 +556,10 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       entries.foreach(e => {
         val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
         try {
-          val result = runInvGen(e.name, e.model, matlab=false, stripProofHints=false, keepUnverifiedCandidates)
+          val result = robustRunInvGen(e.name, e.model, matlab = false, stripProofHints = false, keepUnverifiedCandidates)
           writer.write(result.toCsv(infoPrinter) + "\r\n")
+        } catch {
+            case ex: Throwable => writer.write(s"${e.name} failed ${ex.getMessage}\r\n")
         } finally {
           writer.close()
         }
@@ -562,6 +581,16 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
         println(s"Done generating in ${invGenEnd-invGenStart}ms (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
         Some((candidates, invGenStart, invGenEnd))
       case _ => None
+    }
+  }
+
+  /** Runs invGen with retry if it fails too fast. */
+  private def robustRunInvGen(name: String, modelContent: String, matlab: Boolean, stripProofHints: Boolean, keepUnverifiedCandidates: Boolean): BenchmarkResult = {
+    runInvGen(name, modelContent, matlab, stripProofHints, keepUnverifiedCandidates) match {
+      case BenchmarkResult(_, "unfinished (gen)", _, duration, _, _, _, _, _, _, _) if duration <= 10000 =>
+        //@HACK suspected test case separation: sometimes examples result in immediate $Aborted: restart the example
+        runInvGen(name, modelContent, matlab, stripProofHints, keepUnverifiedCandidates)
+      case r => r
     }
   }
 
@@ -618,9 +647,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
                     Map("dchainlength" -> (candidates.length-1, "pegasusInvariant" -> pegasusInvariant)))
               }
             } else {
-              //@HACK suspected test case separation: sometimes examples result in immediate $Aborted: restart the example
-              if (invGenEnd - invGenStart <= 10000) runInvGen(name, modelContent, matlab, stripProofHints, keepUnverifiedCandidates)
-              else BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
+              BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
             }
           case None =>
             println("Skipping " + name + " for unknown shape, expected A -> [{x'=f(x)}]p(x), but got " + model.prettyString)
