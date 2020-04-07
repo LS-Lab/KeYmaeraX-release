@@ -31,7 +31,7 @@ Throw[dbx]
 
 
 TestConsistency[vars_, pre_, post_] := Module[{},
-Return[Resolve[Exists[vars, pre && post], Reals]];
+Return[Resolve[Exists[Evaluate[vars], pre && post], Reals]];
 ]
 
 
