@@ -74,6 +74,15 @@ object Configuration {
         val TIMEOUT = "PEGASUS_FIRSTINTEGRALS_TIMEOUT"
         val DEGREE = "PEGASUS_FIRSTINTEGRALS_DEGREE"
       }
+      object LinearFirstIntegrals {
+        val TIMEOUT = "PEGASUS_LINEAR_FIRSTINTEGRALS_TIMEOUT"
+      }
+      object LinearGenericMethod {
+        val TIMEOUT = "PEGASUS_LINEAR_GENERIC_TIMEOUT"
+        val RATIONALS_ONLY = "PEGASUS_LINEAR_RATIONALS_ONLY"
+        val RATIONAL_PRECISION = "PEGASUS_LINEAR_RATIONAL_PRECISION"
+        val FIRST_INTEGRAL_DEGREE = "PEGASUS_LINEAR_FI_DEGREE"
+      }
       object Darboux {
         val TIMEOUT = "PEGASUS_DARBOUX_TIMEOUT"
         val DEGREE = "PEGASUS_DARBOUX_DEGREE"
@@ -181,6 +190,15 @@ object Configuration {
     object FirstIntegrals {
       def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT).getOrElse(default)
       def degree(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.FirstIntegrals.DEGREE).getOrElse(default)
+    }
+    object LinearFirstIntegrals {
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT).getOrElse(default)
+    }
+    object LinearGenericMethod {
+      def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT).getOrElse(default)
+      def rationalsOnly(default: Boolean = false): Boolean = get[Boolean](Configuration.Keys.Pegasus.LinearGenericMethod.RATIONALS_ONLY).getOrElse(default)
+      def rationalPrecision(default: Int = 10): Int = get[Int](Configuration.Keys.Pegasus.LinearGenericMethod.RATIONAL_PRECISION).getOrElse(default)
+      def firstIntegralDegree(default: Int = 2): Int = get[Int](Configuration.Keys.Pegasus.LinearGenericMethod.FIRST_INTEGRAL_DEGREE).getOrElse(default)
     }
     object Darboux {
       def timeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.Darboux.TIMEOUT).getOrElse(default)

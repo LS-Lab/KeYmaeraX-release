@@ -25,6 +25,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
   private val PEGASUS_NAMESPACE = "Pegasus`"
   private val GENERICNONLINEAR_NAMESPACE = "GenericNonLinear`"
+  private val GENERICLINEAR_NAMESPACE = "GenericLinear`"
   private val DIFFSATURATION_NAMESPACE = "DiffSaturation`"
   private val INVARIANTEXTRACTOR_NAMESPACE = "InvariantExtractor`"
   private val LZZ_NAMESPACE = "LZZ`"
@@ -33,6 +34,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
   private def psymbol(s: String) = symbol(PEGASUS_NAMESPACE + s)
   private def gnlsymbol(s: String) = symbol(GENERICNONLINEAR_NAMESPACE + s)
+  private def glsymbol(s: String) = symbol(GENERICLINEAR_NAMESPACE + s)
   private def dssymbol(s: String) = symbol(DIFFSATURATION_NAMESPACE + s)
   private def invexsymbol(s: String) = symbol(INVARIANTEXTRACTOR_NAMESPACE + s)
 
@@ -73,6 +75,13 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
         rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Darboux.timeout())),
         rule(gnlsymbol("MaxDeg"), int(Configuration.Pegasus.Darboux.degree())),
         rule(gnlsymbol("Staggered"), bool(Configuration.Pegasus.Darboux.staggered()))),
+      setOptions(glsymbol("FirstIntegralsLin"),
+        rule(glsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.LinearFirstIntegrals.timeout()))),
+      setOptions(glsymbol("LinearMethod"),
+        rule(glsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.LinearGenericMethod.timeout())),
+        rule(glsymbol("RationalsOnly"), bool(Configuration.Pegasus.LinearGenericMethod.rationalsOnly())),
+        rule(glsymbol("RationalPrecision"), int(Configuration.Pegasus.LinearGenericMethod.rationalPrecision())),
+        rule(glsymbol("FirstIntegralDegree"), int(Configuration.Pegasus.LinearGenericMethod.firstIntegralDegree()))),
       setOptions(gnlsymbol("BarrierCert"),
         rule(gnlsymbol("Timeout"), timeoutExpr(Configuration.Pegasus.Barrier.timeout())),
         rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Barrier.degree()))),
