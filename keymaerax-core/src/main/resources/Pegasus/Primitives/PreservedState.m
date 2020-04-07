@@ -21,8 +21,8 @@ PreservedPre[vf_List, vars_List, pre_, domain_] :=
      preserved = {};
      Do[
          p = {};
-         Do[If[TimeConstrained[LZZ`InvSFast[f, vf, vars, domain], 1, False],
-             AppendTo[p, f], Null], {f, conjuncts}];
+         Do[If[TimeConstrained[LZZ`InvSDI[f, vf, vars, domain], 1, False],
+             AppendTo[p, f], Null], {f, Simplify[conjuncts/.{List->And}]/.{And->List}}];
          AppendTo[preserved, p]
          ,
          {conjuncts, conjunctLists}
@@ -30,7 +30,7 @@ PreservedPre[vf_List, vars_List, pre_, domain_] :=
      Print["Preserved ", preserved];
      (* TODO interfaces are not ideal: want original precondition in (not DNF) and write formulas out *)
      (* Extract left-hand sides since invariant extractor expects polynomials, not formulas *)
-     polys = Map[Primitives`GtGeqLhs, preserved//DeleteDuplicates];
+     polys = Map[Primitives`EqGtGeqLhs, preserved//DeleteDuplicates];
      (* Map disjunction p1>0&p2>=0 | p3>=0 | p4>=0 to Max[Min[p1,p2],p3,p4] *)
      poly = { Fold[Max, If[Length[polys] > 1, Map[Fold[Min, #] &, polys], polys]] }//Flatten;
      Return[poly]

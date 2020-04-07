@@ -37,7 +37,7 @@ IsConcretePolynomial::usage="IsConcretePolynomial[poly, vars] returns true if th
 
 Conjuncts::usage="Conjuncts[formula] returns the conjuncts of the formula, or the formula itself if it is atomic."
 Disjuncts::usage="Disjuncts[formula] returns the disjuncts of the formula, or the formula itself if it is atomic."
-GtGeqLhs::usage="GtGeqLhs[formula] returns the left-hand side lhs of formulas lhs>0 or lhs>=0."
+EqGtGeqLhs::usage="EqGtGeqLhs[formula] returns the left-hand side lhs of formulas lhs=0 or lhs>0 or lhs>=0."
 
 CheckSemiAlgInclusion::usage="CheckSemiAlgInclusion[s_,t_,vars_List] checks if t implies s universally on vars"
 
@@ -81,7 +81,8 @@ Disjuncts[formula_] := Module[{}, formula /. {
       Join[{Disjuncts[a]} // Flatten, {Disjuncts[b]} // Flatten]
 }]
 
-GtGeqLhs[formula_] := Module[{}, formula /. {
+EqGtGeqLhs[formula_] := Module[{}, (formula//ZeroRHS) /. {
+  Equal[a_, 0] :> a,
   Greater[a_, 0] :> a,
   GreaterEqual[a_, 0] :> a
 }]
