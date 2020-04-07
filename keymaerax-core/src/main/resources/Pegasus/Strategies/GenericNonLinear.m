@@ -53,14 +53,21 @@ Options[BarrierCert]= {Deg -> -1, Timeout -> 60};
 Begin["`Private`"];
 
 
-PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
+PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result},
 	{pre, { vf, vars, Q }, post} = problem;
 	If[OptionValue[PreservedState, Timeout] > 0,
-		TimeConstrained[Block[{},
+		result = Reap[TimeConstrained[
 			polys = PreservedState`PreservedPre[vf,vars,pre,Q]//DeleteDuplicates;
 			InvariantExtractor`DWC[problem,polys,{},False][[2]]
-		], OptionValue[PreservedState,Timeout],
-			{}],
+			,
+			OptionValue[PreservedState,Timeout]]
+		];
+		If[FailureQ[result[[1]]],
+			(* Failure, timeout etc.: return last intermediate result, if any *)
+			If[Length[result[[2]]] > 0, result[[2]][[1]][[-1]], {}],
+			result[[1]]
+		]
+		,
 		Print["PreservedState skipped."]; {}]
 ]
 
