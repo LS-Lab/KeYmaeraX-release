@@ -1068,7 +1068,7 @@ private object DifferentialTactics extends Logging {
         cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
           // Some additional cases
           //(solve(pos) & ?(timeoutQE)) |
-          ODEInvariance.nilpotentSolve(true)(pos) |
+          doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
           ODEInvariance.dRI(pos) |
           // todo: Pegasus should tell us for nonlinear ODEs
           // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
