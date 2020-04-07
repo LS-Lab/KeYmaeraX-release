@@ -52,7 +52,7 @@ USEDW=And[useFirstRoundDW, Not[TrueQ[OptionValue[Smallest]/.{True->True, _->Fals
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
 If[OptionValue[SufficiencyTimeout] > 0,
 	Print["Sufficiency check ", H0, " overlaps ", pre];
-	If[TrueQ[TimeConstrained[Resolve[Not[Exists[vars,H0 && pre],vars,Reals]], OptionValue[SufficiencyTimeout], False]],
+	If[TrueQ[TimeConstrained[Resolve[Not[Exists[Evaluate[vars],H0 && pre]],Reals], OptionValue[SufficiencyTimeout], False]],
 		Print["No overlap ", H0, " with ", pre]; Throw[{False, cuts}] ]
 	,
 	Print["Sufficiency check skipped"]
@@ -60,7 +60,7 @@ If[OptionValue[SufficiencyTimeout] > 0,
 
 (* DW check: should be disabled on the very first call, because it is often redundant to checks outside the extractor. *)
 If[USEDW && OptionValue[DWTimeout] > 0,
-	If[TrueQ[TimeConstrained[Resolve[ForAll[vars,Implies[H0, post]],vars,Reals], OptionValue[DWTimeout], False]],
+	If[TrueQ[TimeConstrained[Resolve[ForAll[Evaluate[vars],Implies[H0, post]],Reals], OptionValue[DWTimeout], False]],
 		Print["DW"]; Throw[{H0, cuts}] ]
 	,
 	Print["DW check skipped"]
@@ -72,32 +72,33 @@ Print["Simplifying"];
 Do[p=SIMPLIFY[A0[[i]],H0]; 
 
 Print["Trying: ",p];
+
 (* DC check 0 *)
-If[(MemberQ[checks, "="] && TrueQ[Resolve[ForAll[vars,Implies[H0 && pre, p==0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p==0, f, vars, H0]]),
+If[(MemberQ[checks, "="] && TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0 && pre, p==0]],Reals]]) && (TrueQ[LZZ`InvSFast[p==0, f, vars, H0]]),
 Print["DC on ", p==0];
 Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p==0), Reals]},post}, If[retryCandidates, Delete[A0,i], Drop[A0,i]], Join[cuts,{p==0}], True]]
 ];
 
 (* DC strict check 1 *)
-If[(MemberQ[checks, ">"] && TrueQ[Resolve[ForAll[vars,Implies[H0 && pre, p>0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>0, f, vars, H0]]),
+If[(MemberQ[checks, ">"] && TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0 && pre, p>0]],Reals]]) && (TrueQ[LZZ`InvSFast[p>0, f, vars, H0]]),
 Print["DC on ", p>0];
 Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>0), Reals]},post}, If[retryCandidates, Delete[A0,i], Drop[A0,i]], Join[cuts,{p>0}], True]]
 ];
 
 (* DC strict check 2 *)
-If[(MemberQ[checks, "<"] && TrueQ[Resolve[ForAll[vars,Implies[H0 && pre, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<0, f, vars, H0]]),
+If[(MemberQ[checks, "<"] && TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0 && pre, p<0]],Reals]]) && (TrueQ[LZZ`InvSFast[p<0, f, vars, H0]]),
 Print["DC on ", p<0];
 Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<0), Reals]},post}, If[retryCandidates, Delete[A0,i], Drop[A0,i]], Join[cuts,{p<0}], True]]
 ];
 
 (* DC nonstrict check 1 *)
-If[(MemberQ[checks, ">="] && TrueQ[Resolve[ForAll[vars,Implies[H0 && pre, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
+If[(MemberQ[checks, ">="] && TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0 && pre, p>=0]],Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
 Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]},post}, If[retryCandidates, Delete[A0,i], Drop[A0,i]], Join[cuts,{p>=0}], True]]
 ];
 
 (* DC nonstrict check 2 *)
-If[(MemberQ[checks, "<="] && TrueQ[Resolve[ForAll[vars,Implies[H0 && pre, p<=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
+If[(MemberQ[checks, "<="] && TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0 && pre, p<=0]],Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
 Throw[DWC[{pre,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]},post}, If[retryCandidates, Delete[A0,i], Drop[A0,i]], Join[cuts,{p<=0}], True]]
 ];
@@ -137,22 +138,22 @@ SetOptions[DWCLZR,
 
 
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
-If[TrueQ[Resolve[ForAll[vars,Not[H0 && precond]],vars,Reals]], Throw[False] ]; 
+If[TrueQ[Resolve[ForAll[Evaluate[vars],Not[H0 && precond]],Reals]], Throw[False] ]; 
 
 (* DW check *)
-If[TrueQ[Resolve[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Throw[H0] ]; 
+If[TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0, postcond]],Reals]], Throw[H0] ]; 
 
 (* Main loop *)
 Do[p=A0[[i]];
 
 (* DC check 1 *)
-If[(TrueQ[Resolve[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
+If[(TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0 && precond, p>=0]],Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
 Throw[DWCLZR[precond,postcond,{f,vars,(H0 && p>=0)}, Delete[A0,i]]]
 ];
 
 (* DC check 2 *)
-If[(TrueQ[Resolve[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
+If[(TrueQ[Resolve[ForAll[Evaluate[vars],Implies[H0 && precond, p<0]],Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
 Throw[DWCLZR[precond,postcond,{f,vars, (H0 && p<=0)}, Delete[A0,i]]]
 ]; 
