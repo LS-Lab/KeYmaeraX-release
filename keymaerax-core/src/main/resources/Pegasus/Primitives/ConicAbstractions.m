@@ -16,6 +16,7 @@ ConicAbstractionsPartition::usage="Uses techniques from the thesis to partition 
 
 DimPartitionM::usage="Splits along dimensions";
 ConicPartition::usage="Computes the conic partition for a linear system";
+ConicAbstraction::usage=" Given system matrix A, "
 
 
 Begin["`Private`"]
@@ -125,6 +126,142 @@ eigv = Transpose[Eigenvectors[A]];
 
 unifPartition = ExhaustivePartitionsM[splits, vars];
 Return[{A,b,unifPartition}];
+];
+
+
+(* Partial implementation of full conic abstractions algorithm *)
+
+(* Find the convex hull of the transformation of BoundaryMeshRegion co under matrix A *)
+TransformCone[co_,A_]:=Module[{coord,Acoord},
+coord = MeshCoordinates[co];
+Acoord=Map[A.#&,coord];
+Return[ConvexHullMesh[Acoord]];
+];
+(* Take the Minkowski sum of two BoundaryMeshRegions co and do *)
+MinkowskiSum[co_,do_]:=Module[{i,acc,mdo,mco},
+mdo=MeshCoordinates[do];
+mco=MeshCoordinates[co];
+acc={};
+For[i=1,i<=Length[mdo],i++,
+acc=Join[acc,Map[mdo[[i]]+#&,mco]];
+];
+(* Print["Coordinates: ",MeshCoordinates[ConvexHullMesh[acc]]]; *)
+Return[ConvexHullMesh[acc]];
+];
+
+(* Partition 2D plane into k regions *)
+Partition2D[k_,bnd_]:=Module[{regList,i,rota,rotb,curpt,nextpt}, 
+regList = {};
+eps=0.0001;
+rota=Rationalize[RotationMatrix[2Pi/k-eps]];
+rotb=Rationalize[RotationMatrix[2Pi/k+eps]];
+curpt={bnd,0};
+For[i=0,i<k,i++,
+nextpt=rotb.curpt;
+regList=Append[regList,ConvexHullMesh[{{0,0},curpt,nextpt}]];
+curpt=rota.curpt;
+];
+regList=Append[regList,ConvexHullMesh[{{0,0},curpt,RotationMatrix[eps].{bnd,0}}]];
+Return[regList];
+];
+
+
+(*
+	Do a basic conic abstractions algorithm
+*)
+ConicAbstraction[A_, Init_List, k_Integer, bnd_] :=Module[{
+  diagA,z0,cones, ret, i, hd,rc, conesgfx, conesactivegfx,
+  redz0,MAXITERS, iter, sp, ctr,imgsz,
+  H,c,intc,transc,msc,msic,d,intd,transd,msd,msid,fin,retgfx
+  },
+  
+  (* ctr, H, int, transc, msc, msd, msic, msid, c, inf, intc, intd,transd,d, hd,tl,rc},*) 
+
+(* maximum iterations *)
+MAXITERS=10;
+imgsz=300;
+
+diagA = A; (* Instead of diagonalizing, work directly over A. DiagonalMatrix[Eigenvalues[A]];*)
+
+(* Init is a list of 2D points, and we take the convex hull  as the initial set *)
+z0 = ConvexHullMesh[Init];
+
+(* Partition plane into k regions with bnd *)
+cones = Map[TransformCone[#,Inverse[diagA]]&, Partition2D[k,bnd]];
+
+ret = {};
+For[i = 1, i <= Length[cones], i++,
+  ret=Append[ret, EmptyRegion[2]]
+];
+
+sp = StreamPlot[A.{x,y},{x,-bnd,bnd},{y,-bnd,bnd}];
+Print["Initial state (red) and conic partition (blue)"];
+redz0 = Graphics[Show[z0]]/.{Directive[x_] :> Directive[{Opacity[0.8],Red}]};
+conesgfx = Map[Graphics[Show[#]]/.{Directive[x_] :> Directive[{Opacity[0.2],Cyan,EdgeForm[Black]}]}&,cones];
+conesactivegfx = Map[Graphics[Show[#]]/.{Directive[x_] :> Directive[{Opacity[0.3],Blue,EdgeForm[Black]}]}&,cones];
+(* The cones in state space *)
+Print[Show[sp, conesgfx ,redz0,ImageSize->imgsz]];
+
+(* Compute the initial intersections *)
+H = {};
+For[ctr=1,ctr<=Length[cones],ctr++,
+  c=cones[[ctr]];
+  intc=RegionIntersection[z0,c];
+  If[intc===EmptyRegion[2],Continue[]];
+
+  transc=TransformCone[c,diagA];
+  msc=MinkowskiSum[transc,intc];
+  msic=RegionIntersection[msc,c];
+  ret[[ctr]]=msic;
+  H=Join[H,{ctr}];
+];
+
+(* Active initial cones *)
+Print["Active initial cones"];
+Print[Show[conesgfx,conesactivegfx[[H]],redz0,PlotRange->{{-bnd,bnd},{-bnd,bnd}},ImageSize->imgsz]];
+
+iter=0;
+While[Length[H]!= 0,
+  (* Make sure it does not infinite loop *)
+  iter=iter+1;
+  If[iter > MAXITERS, Break[]];
+
+  {{hd},H}=TakeDrop[H,1];
+  rc=ret[[hd]];
+
+  For[ctr=1,ctr<=Length[cones],ctr++,
+    If[hd==ctr,Continue[]];
+    d=cones[[ctr]];
+    intd =RegionIntersection[RegionBoundary[rc],RegionBoundary[d]];
+
+    If[intd===EmptyRegion[2],Continue[]];
+
+    transd=TransformCone[d,diagA];
+    msd=MinkowskiSum[transd,intd];
+
+    msid=RegionIntersection[msd,d];
+    
+    Print["Step: ",iter," From: ",hd," To: ",ctr];
+    Print[Show[sp,conesgfx,Graphics[{Opacity[0.8],Green,rc}],
+      conesactivegfx[[hd]],
+      conesactivegfx[[ctr]],
+      Graphics[{Opacity[0.8],Yellow,msid}],PlotRange->{{-bnd,bnd},{-bnd,bnd}},ImageSize->imgsz]];
+      
+    ret[[ctr]]=RegionUnion[ret[[ctr]],msid];
+    H=Join[H,{ctr}]
+  ];
+];
+
+fin=Select[ret,Not[Head[#]===EmptyRegion]&];
+retgfx= Map[Graphics[Show[#]]/.{Directive[x_] :> Directive[{Opacity[0.8],Green,EdgeForm[Black]}]}&,fin];
+
+Print["Final tube:"];
+Print[Show[sp,conesgfx,retgfx]]; 
+
+(* Show[cones,Graphics[{Red,z0}]] *)
+(* Show[Map[TransformCone[#,diagA]&,{C0,C1,C2}]] *)
+
+Return[ret];
 ];
 
 
