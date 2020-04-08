@@ -165,6 +165,7 @@ DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,var
 	Print["Darboux degrees: ", startDeg, "-", endDeg];
 
 	If[OptionValue[DbxPoly, Timeout] > 0,
+		timeout = OptionValue[DbxPoly, Timeout];
 		dbxResult = Reap[TimeConstrained[Block[{},
 			Catch[
 				invs = {};
@@ -173,7 +174,6 @@ DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,var
 				(* upgrade to Mathematica 12.1: consider TimeRemaining[] to balance degrees *)
 				For[i=startDeg,i<=endDeg,i++,
 					Print["Degree: ", i];
-					timeout = OptionValue[DbxPoly, Timeout](*/endDeg*);
 					polys = TimeConstrained[DarbouxPolynomials`DbxDefault[{vf, vars, Q}, i], timeout/2, {}];
 					Print["Polys: ", polys];
 					allPolysI = Union[allPolys, polys];
@@ -191,17 +191,18 @@ DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,var
 						,
 						Print["No new invariants"]
 					]
-				]
+				];
+				invs
 			]
-		], OptionValue[DbxPoly,Timeout]]];
+		], timeout]];
 		If[FailureQ[dbxResult[[1]]],
 			(* Failure, timeout etc.: return last intermediate result, if any *)
 			If[Length[dbxResult[[2]]] > 0, dbxResult[[2]][[1]][[-1]], {}],
-			(* Otherwise: all options exhausted and either found an invariant or not *)
+			(* Otherwise: all options exhausted *)
 			If[Length[dbxResult[[1]]] > 0,
-				(* Invariant sufficient by SemiAlgInclusion check above *)
+				(* Invariants found so far *)
 				dbxResult[[1]],
-				(* Invariant not sufficient, return last intermediate result, if any *)
+				(* Return last intermediate result, if any *)
 				If[Length[dbxResult[[2]]] > 0, dbxResult[[2]][[1]][[-1]], {}]]
 		]
 		,

@@ -93,7 +93,7 @@ cuts=Map[Assuming[And[evoConst,constasms], FullSimplifyReals[#]]&, invs]//Delete
 
 inv=cuts//.{List->And};
 
-Print["Extracted (simplified) invariant(s): ", inv];
+Print["Extracted (simplified) invariant(s): ", inv, " from raw candidates: ", invs];
 
 If[Not[ListQ[cuts]],
 	Throw[Format`FormatErr["DiffSat did not produce a list of cuts: "<>ToString[cuts],True]]];
