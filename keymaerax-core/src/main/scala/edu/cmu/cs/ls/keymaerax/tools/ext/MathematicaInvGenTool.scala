@@ -87,7 +87,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
         rule(gnlsymbol("Deg"), int(Configuration.Pegasus.Barrier.degree()))),
       setOptions(dssymbol("DiffSat"),
         rule(dssymbol("MinimizeCuts"), bool(Configuration.Pegasus.DiffSaturation.minimizeCuts())),
-        rule(dssymbol("StrictMethodTimeouts"), bool(Configuration.Pegasus.DiffSaturation.strictMethodTimeouts()))
+        rule(dssymbol("StrictMethodTimeouts"), bool(Configuration.Pegasus.DiffSaturation.strictMethodTimeouts())),
+        rule(dssymbol("UseDependencies"), bool(Configuration.Pegasus.DiffSaturation.useDependencies()))
       ),
       setOptions(invexsymbol("DWC"),
         rule(invexsymbol("SufficiencyTimeout"), int(Configuration.Pegasus.InvariantExtractor.sufficiencyTimeout())),
