@@ -33,7 +33,7 @@ DbxPoly::usage="DbxPoly[problem_List]";
 (* Returns invariants and intermediate candidates generated using Darboux polynomials *)
 DbxPolyIntermediate::usage="DbxPoly[problem_List]";
 (* Returns a heuristic end degree, if endDeg<0, returns endDeg otherwise. *)
-DbxPolyEndDegree::usage="DbxPolyEndDegree[problem_List, endDeg_]"
+DbxPolyEndDegree::usage="DbxPolyEndDegree[problem_List, endDeg_]";
 (* Returns invariants generated from heuristics *)
 HeuInvariants::usage="Heuristics[problem_List,degree]";
 (* Returns invariants generated from barrier certificate *)

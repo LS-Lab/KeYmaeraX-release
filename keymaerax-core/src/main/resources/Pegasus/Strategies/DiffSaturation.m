@@ -197,8 +197,11 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 	(* For the class flag, 0 means the strategy should be tried for both linear and nonlinear systems.
 		                     1 means linear only.
 		                     2 means nonlinear only. *)
-	strategies = Module[{activatedStrategies, dimension, classes},
+	strategies = Module[{activatedStrategies, dimension, classes, dbxMaxDegree, barrierMidDegree, barrierMaxDegree},
 		{dimension, classes} = class;
+		dbxMaxDegree = GenericNonLinear`DbxPolyEndDegree[problem, OptionValue[GenericNonLinear`DbxPoly,MaxDeg]];
+		barrierMaxDegree = OptionValue[GenericNonLinear`BarrierCert,Deg];
+		barrierMidDegree = Min[5, barrierMaxDegree];
 		activatedStrategies = Select[{
 			{GenericLinear`LinearMethod, Symbol["kyx`Unknown"] (*Symbol["kyx`LinearMethod"]*), GenericLinear`LinearMethod, 1},
 			{GenericLinear`FirstIntegralsLin, Symbol["kyx`FirstIntegral"] (*Symbol["kyx`FirstIntegralsLin"]*), GenericLinear`FirstIntegralsLin, 1},
@@ -206,10 +209,10 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 			{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
 			{GenericNonLinear`FirstIntegrals, Symbol["kyx`FirstIntegral"], GenericNonLinear`FirstIntegrals, 2},
 			{GenericNonLinear`DbxPolyIntermediate[#,1,2]&, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
-			{GenericNonLinear`BarrierCert[#,Min[5,OptionValue[GenericNonLinear`BarrierCert,Deg]]]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0},
+			{GenericNonLinear`BarrierCert[#,barrierMidDegree]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0},
 			{GenericNonLinear`HeuInvariants, Symbol["kyx`Unknown"], GenericNonLinear`HeuInvariants, 0},
-			{GenericNonLinear`DbxPolyIntermediate[#,3,GenericNonlinear`DbxPolyEndDegree[[GenericNonLinear`DbxPoly,MaxDeg]]]&, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
-			{GenericNonLinear`BarrierCert[#,OptionValue[GenericNonLinear`BarrierCert,Deg]]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0}
+			{GenericNonLinear`DbxPolyIntermediate[#,3,dbxMaxDegree]&, Symbol["kyx`Darboux"], GenericNonLinear`DbxPoly, 0},
+			{GenericNonLinear`BarrierCert[#,barrierMaxDegree]&, Symbol["kyx`Barrier"], GenericNonLinear`BarrierCert, 0}
 		}, (OptionValue[#[[3]], Timeout] > 0)&];
 		classes/.{
 			{"Linear"} -> Select[activatedStrategies, (#[[4]] <= 1)&],
@@ -274,18 +277,19 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 			(* Compute polynomials for the algebraic decomposition of the state space *)
 			(*Print[subproblem];*)
 
-			Module[{timedStratResult, duration, timedCutlist, remainingBudget},
-				Print["Method timeout: ", OptionValue[optionsNamespace, Timeout]];
+			Module[{timedStratResult, duration, timedCutlist, stratTimeout, remainingBudget},
+				stratTimeout = OptionValue[optionsNamespace, Timeout];
+				Print["Method timeout: ", stratTimeout];
 
 				timedStratResult = AbsoluteTiming[
-					RunStrat[strat, hint, OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
+					RunStrat[strat, hint, stratTimeout, OptionValue[MinimizeCuts],
 						subproblem, vars,
 						{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}]
 				];
 
 				duration = timedStratResult[[1]];
 				Print["Method duration: ", duration];
-				remainingBudget = RedistributeTimeouts[strategies, i, Max[0, OptionValue[optionsNamespace, Timeout] - duration]];
+				remainingBudget = RedistributeTimeouts[strategies, i, Max[0, stratTimeout - duration]];
 
 				{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} = timedStratResult[[2]];
 				If[TrueQ[genDone],
