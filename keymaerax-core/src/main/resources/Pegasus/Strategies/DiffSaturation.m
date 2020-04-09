@@ -76,13 +76,15 @@ RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, subproblem_, vars_, inout_
 		(* module internal *)
 		stratResult, timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem} = inout;
+If[stratTimeout <= 1, Return[inout]]; (* very small timeouts seem to produce unreliable results *)
+
 timedInvs = AbsoluteTiming[
   stratResult = Reap[TimeConstrained[
 	Block[{res},
 		res = strat[subproblem];
 		If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
 		res]//DeleteDuplicates,
-	stratTimeout]];
+	stratTimeout, {}]];
 	If[FailureQ[stratResult[[1]]] || Length[stratResult[[1]]] <= 0,
     (* Failure, timeout etc.: return last intermediate result, if any *)
     If[Length[stratResult[[2]]] > 0, stratResult[[2]][[1]][[-1]], {True}]

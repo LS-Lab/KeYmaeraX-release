@@ -215,8 +215,8 @@ TimeConstrained[Block[{},
 polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
 polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
 InvariantExtractor`DWC[problem,polys,{},False,False,{"<","<="}][[2]]
-], OptionValue[BarrierCert,Timeout]-0.2, (* slightly reduce timeout to abort here and close MATLink *)
-MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]] (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
+], Max[0,OptionValue[BarrierCert,Timeout]-0.5], (* slightly reduce timeout to abort here and close MATLink *)
+MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"];{}] (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
 ,
 Print["BarrierCert skipped."];{}]
 
