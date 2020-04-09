@@ -322,6 +322,27 @@ class PolynomialArithV2Tests extends TacticTestBase {
       "(-2*x^1+-1*y^2+0*x^3+-2*y^1+-1*x^2)^2=x^4+4*x^3+2*x^2*y^2+4*x^2*y+4*x^2+4*x*y^2+8*x*y+1*y^4+4*y^3+4*y^2".asFormula
   }
 
+  it should "split coefficients" in withMathematica { _ =>
+    import pa4._
+    val (prv, c1, c2) = Coefficient(1, 3).split(BigDecimal("0.33333"), 1)
+    prv shouldBe 'proved
+    prv.conclusion.ante shouldBe 'empty
+    prv.conclusion.succ.loneElement shouldBe "1/3=0.33333/1+0.00001/3".asFormula
+    c1.lhs shouldBe "0.33333/1".asTerm
+    c2.lhs shouldBe "0.00001/3".asTerm
+  }
+
+  it should "approx polynomials" in withMathematica { _ =>
+    import pa4._
+    import PolynomialArithV2Helpers._
+    val t = (1 to 9).map(i => Times(Divide(Number(1), Number(i)), Power("x".asTerm, Number(i)))).reduceLeft(Plus)
+    val (prv, a, r) = ofTerm(t).asInstanceOf[TreePolynomial].approx(5)
+    a.treeSketch shouldBe "[{[., 0.1111 x^9, .], 0.125 x^8, [., 0.1428 x^7, .], 0.1666 x^6, [., 0.2 x^5, .]}, 0.25 x^4, [[., 0.3333 x^3, .], 0.5 x^2, [., x^1, .]]]"
+    r.treeSketch shouldBe "[{[., 0.0001/9 x^9, .], 0 x^8, [., 0.0004/7 x^7, .], 0.0004/6 x^6, [., 0 x^5, .]}, 0 x^4, [[., 0.0001/3 x^3, .], 0 x^2, [., 0 x^1, .]]]"
+    lhsOf(prv) shouldBe t
+    rhsOf(prv) shouldBe Plus(a.lhs, r.lhs)
+  }
+
   var time = System.nanoTime()
   def tic() = {
     time = System.nanoTime()

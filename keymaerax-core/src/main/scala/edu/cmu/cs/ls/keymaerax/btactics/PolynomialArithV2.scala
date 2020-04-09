@@ -352,6 +352,26 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
     } else {
       (prv, rhs)
     }
+
+    def split(newNum: BigDecimal, newDenum: BigDecimal) : (ProvableSig, Coefficient, Coefficient) = {
+      val num1 = newNum
+      val denum1 = newDenum
+      val num2 = num * denum1 - num1 * denum
+      val denum2 = denum * denum1
+      val numericCondition = ProvableSig.proveArithmetic(BigDecimalQETool,
+        splitCoefficientNumericCondition(numN, denumN, Number(num1), Number(denum1), Number(num2), Number(denum2)))
+      (useDirectly(splitCoefficient, Seq(("c_", lhs), ("n_", numN), ("d_", denumN),
+        ("n1_", Number(num1)), ("d1_", Number(denum1)),
+        ("n2_", Number(num2)), ("d2_", Number(denum2)),
+      ), Seq(prv, numericCondition)),
+        Coefficient(num1, denum1), Coefficient(num2, denum2))
+    }
+
+    def approx(prec: Int) : (ProvableSig, Coefficient, Coefficient) = {
+      val (l, _) = IntervalArithmeticV2.eval_ivl(prec-1)(HashMap(), HashMap())(rhs)
+      split(l, 1) // @note: this is round to negative infinity - does it matter?
+    }
+
   }
 
   val identityTimes = rememberAny("1*f_() = f_()".asFormula, QE & done)
@@ -593,6 +613,12 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
         ), Seq(prv, m.prv, cpsPrv))
       }
     }
+
+    def approx(prec: Int) : (ProvableSig, Monomial, Monomial) = {
+      val (cPrv, c1, c2) = coeff.forgetPrv.approx(prec)
+      (useDirectly(splitMonomial, Seq(("c_", coeff.rhs), ("x_", powersTerm), ("c1_", c1.rhs), ("c2_", c2.rhs), ("m_", lhs)),
+        Seq(cPrv, prv)), Monomial(c1, powers), Monomial(c2, powers))
+    }
   }
 
   val zez = rememberAny("0 = 0".asFormula, byUS(DerivedAxioms.equalReflex))
@@ -751,6 +777,27 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
   // Lemmas for partition
   val partition2 = rememberAny(("(t_() = r_() & t1_() = r1_() & t2_() = r2_() & t_() - t1_() - t2_() = 0) -> t_() = t1_() + t2_()".asFormula),
     QE & done)
+
+  // Lemmas for splitting coefficients
+  @inline
+  private def nz(t: Term) : Formula = NotEqual(t, Number(0))
+  // @todo: compute ``instantiations'' like this everywhere and prove by matching?
+  def splitCoefficientNumericCondition(n: Term, d: Term, n1: Term, d1: Term, n2: Term, d2: Term) =
+    And(Equal(Times(Times(n, d1), d2), Times(d, Plus(Times(d1, n2), Times(d2, n1)))), And(nz(d), And(nz(d1), nz(d2))))
+
+  val splitCoefficient = rememberAny(
+    Imply(And("c_() = n_()/d_()".asFormula,
+      Equiv(splitCoefficientNumericCondition("n_()".asTerm, "d_()".asTerm, "n1_()".asTerm, "d1_()".asTerm, "n2_()".asTerm, "d2_()".asTerm), True)),
+      "c_() = n1_()/d1_() + n2_()/d2_()".asFormula),
+    QE & done)
+  val splitMonomial = rememberAny("(c_() = c1_() + c2_() & m_() = c_() * x_()) -> m_() = c1_() * x_() + c2_() * x_()".asFormula, QE & done)
+  val splitEmpty  = rememberAny("t_() = 0 -> t_() = 0 + 0".asFormula, QE & done)
+  val splitBranch2  = rememberAny(("(t_() = l_() + v_() + r_() & l_() = l1_() + l2_() & v_() = v1_() + v2_() & r_() = r1_() + r2_())" +
+    "->" +
+    "t_() = (l1_() + v1_() + r1_()) + (l2_() + v2_() + r2_())").asFormula, QE & done)
+  val splitBranch3  = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = l1_() + l2_() & v1_() = v11_() + v12_() & m_() = m1_() + m2_() & v2_() = v21_() + v22_() & r_() = r1_() + r2_())" +
+    "->" +
+    "t_() = (l1_() + v11_() + m1_() + v21_() + r1_()) + (l2_() + v12_() + m2_() + v22_() + r2_())").asFormula, QE & done)
 
 
   /** drop parentheses of a sum of terms on the rhs of prv to the left, e.g.,
@@ -1258,6 +1305,35 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
         ),
         Seq(prv, p1.prv, p2.prv, prv0))
       (p1, p2, eqPrv)
+    }
+
+    def approx(prec: Int) : (ProvableSig, TreePolynomial, TreePolynomial) = this match {
+      case Empty(_) =>
+        (useDirectly(splitEmpty, Seq(("t_", lhs)), Seq(prv)), Empty(None), Empty(None))
+      case Branch2(left, value, right, _) =>
+        val (lPrv, l1, l2) = left.forgetPrv.approx(prec)
+        val (rPrv, r1, r2) = right.forgetPrv.approx(prec)
+        val (vPrv, v1, v2) = value.forgetPrv.approx(prec)
+        (useDirectly(splitBranch2, Seq(("t_", lhs),
+          ("l_", left.rhs), ("v_", value.rhs), ("r_", right.rhs),
+          ("l1_", l1.rhs), ("v1_", v1.rhs), ("r1_", r1.rhs),
+          ("l2_", l2.rhs), ("v2_", v2.rhs), ("r2_", r2.rhs)
+        ), Seq(prv, lPrv, vPrv, rPrv)),
+          Branch2(l1, v1, r1, None),
+          Branch2(l2, v2, r2, None))
+      case Branch3(left, value1, middle, value2, right, _) =>
+        val (lPrv, l1, l2) = left.forgetPrv.approx(prec)
+        val (v1Prv, v11, v12) = value1.forgetPrv.approx(prec)
+        val (mPrv, m1, m2) = middle.forgetPrv.approx(prec)
+        val (v2Prv, v21, v22) = value2.forgetPrv.approx(prec)
+        val (rPrv, r1, r2) = right.forgetPrv.approx(prec)
+        (useDirectly(splitBranch3, Seq(("t_", lhs),
+          ("l_", left.rhs), ("v1_", value1.rhs), ("m_", middle.rhs), ("v2_", value2.rhs), ("r_", right.rhs),
+          ("l1_", l1.rhs), ("v11_", v11.rhs), ("m1_", m1.rhs), ("v12_", v12.rhs), ("r1_", r1.rhs),
+          ("l2_", l2.rhs), ("v21_", v21.rhs), ("m2_", m2.rhs), ("v22_", v22.rhs), ("r2_", r2.rhs)
+        ), Seq(prv, lPrv, v1Prv, mPrv, v2Prv, rPrv)),
+          Branch3(l1, v11, m1, v21, r1, None),
+          Branch3(l2, v12, m2, v22, r2, None))
     }
 
   }
