@@ -206,7 +206,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 		                     2 means nonlinear only. *)
 	strategies = Module[{activatedStrategies, dimension, classes, dbxMaxDegree, barrierMidDegree, barrierMaxDegree},
 		{dimension, classes} = class;
-		dbxMaxDegree = GenericNonLinear`DbxPolyEndDegree[problem, OptionValue[GenericNonLinear`DbxPoly,MaxDeg]];
+		dbxMaxDegree = GenericNonLinear`DbxPolyEndDegree[Take[problem,3], OptionValue[GenericNonLinear`DbxPoly,MaxDeg]];
 		barrierMaxDegree = OptionValue[GenericNonLinear`BarrierCert,Deg];
 		barrierMidDegree = Min[5, barrierMaxDegree];
 		activatedStrategies = Select[{
