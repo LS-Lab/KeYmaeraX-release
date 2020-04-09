@@ -81,7 +81,7 @@ timedInvs = AbsoluteTiming[TimeConstrained[
 		res = strat[subproblem];
 		If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
 		res]//DeleteDuplicates,
-	stratTimeout,
+	stratTimeout+1, (* slightly increase timeout to allow methods reap intermediate results when aborted *)
 	Print["Strategy timed out after: ", stratTimeout];
 	{True}]];
 Print["Strategy ",ToString[strat]," duration: ",timedInvs[[1]]];

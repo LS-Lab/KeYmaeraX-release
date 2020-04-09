@@ -71,11 +71,11 @@ PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result},
 		Print["PreservedState skipped."]; {}]
 ]
 
-HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
+HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result,timeout},
 {pre, { vf, vars, Q }, post} = problem;
-
-If[OptionValue[HeuInvariants, Timeout] > 0,
-TimeConstrained[Block[{},
+timeout = OptionValue[HeuInvariants, Timeout];
+If[timeout > 0,
+result = Reap[TimeConstrained[Block[{},
 polys = DeleteDuplicates[Join[
 	QualAbsPolynomials`SummandFactors[problem],
 	QualAbsPolynomials`SFactorList[problem],
@@ -87,8 +87,20 @@ polys = DeleteDuplicates[Join[
 	]];
 (*res=Map[InvariantExtractor`DWC[problem,{#},{},False]&,polys];*)
 InvariantExtractor`DWC[problem,polys,{},False][[2]]
-], OptionValue[HeuInvariants,Timeout],
-{}],
+], timeout]
+];
+Print["HeuInvariants result: ", result];
+If[FailureQ[result[[1]]],
+  (* Failure, timeout etc.: return last intermediate result, if any *)
+  If[Length[result[[2]]] > 0, result[[2]][[1]][[-1]], {}],
+  (* Otherwise: all options exhausted *)
+  If[Length[result[[1]]] > 0,
+    (* Invariants found so far *)
+    result[[1]],
+    (* Return last intermediate result, if any *)
+    If[Length[result[[2]]] > 0, result[[2]][[1]][[-1]], {}]]
+]
+,
 Print["HeuInvariants skipped."]; {}]
 
 ]
