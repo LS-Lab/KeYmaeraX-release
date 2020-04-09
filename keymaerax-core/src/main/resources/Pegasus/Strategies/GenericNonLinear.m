@@ -56,51 +56,34 @@ Begin["`Private`"];
 PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result},
 	{pre, { vf, vars, Q }, post} = problem;
 	If[OptionValue[PreservedState, Timeout] > 0,
-		result = Reap[TimeConstrained[
-			polys = PreservedState`PreservedPre[vf,vars,pre,Q]//DeleteDuplicates;
-			InvariantExtractor`DWC[problem,polys,{},False][[2]]
-			,
-			OptionValue[PreservedState,Timeout]]
-		];
-		If[FailureQ[result[[1]]],
-			(* Failure, timeout etc.: return last intermediate result, if any *)
-			If[Length[result[[2]]] > 0, result[[2]][[1]][[-1]], {}],
-			result[[1]]
-		]
+		TimeConstrained[
+      polys = PreservedState`PreservedPre[vf,vars,pre,Q]//DeleteDuplicates;
+      InvariantExtractor`DWC[problem,polys,{},False][[2]]
+      ,
+      OptionValue[PreservedState,Timeout], {} (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
+    ]
 		,
 		Print["PreservedState skipped."]; {}]
 ]
 
-HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result,timeout},
+HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
 {pre, { vf, vars, Q }, post} = problem;
-timeout = OptionValue[HeuInvariants, Timeout];
-If[timeout > 0,
-result = Reap[TimeConstrained[Block[{},
-polys = DeleteDuplicates[Join[
-	QualAbsPolynomials`SummandFactors[problem],
-	QualAbsPolynomials`SFactorList[problem],
-	QualAbsPolynomials`ProblemFactors[problem]
-	(*,
-	QualAbsPolynomials`ProblemFactorsWithLie[problem],
-	QualAbsPolynomials`PhysicalQuantities[problem],
-	*)
-	]];
-(*res=Map[InvariantExtractor`DWC[problem,{#},{},False]&,polys];*)
-InvariantExtractor`DWC[problem,polys,{},False][[2]]
-], timeout]
-];
-Print["HeuInvariants result: ", result];
-If[FailureQ[result[[1]]],
-  (* Failure, timeout etc.: return last intermediate result, if any *)
-  If[Length[result[[2]]] > 0, result[[2]][[1]][[-1]], {}],
-  (* Otherwise: all options exhausted *)
-  If[Length[result[[1]]] > 0,
-    (* Invariants found so far *)
-    result[[1]],
-    (* Return last intermediate result, if any *)
-    If[Length[result[[2]]] > 0, result[[2]][[1]][[-1]], {}]]
-]
-,
+
+If[OptionValue[HeuInvariants, Timeout] > 0,
+TimeConstrained[Block[{},
+  polys = DeleteDuplicates[Join[
+    QualAbsPolynomials`SummandFactors[problem],
+    QualAbsPolynomials`SFactorList[problem],
+    QualAbsPolynomials`ProblemFactors[problem]
+    (*,
+    QualAbsPolynomials`ProblemFactorsWithLie[problem],
+    QualAbsPolynomials`PhysicalQuantities[problem],
+    *)
+  ]];
+  (*res=Map[InvariantExtractor`DWC[problem,{#},{},False]&,polys];*)
+  InvariantExtractor`DWC[problem,polys,{},False][[2]]
+  ],
+  OptionValue[HeuInvariants,Timeout], {}], (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
 Print["HeuInvariants skipped."]; {}]
 
 ]
@@ -143,8 +126,8 @@ maxminVs=Flatten[MapThread[
   {fIs,uppers,lowers}]];
 
 maxminVs
-], OptionValue[FirstIntegrals,Timeout],
-{}],
+], OptionValue[FirstIntegrals,Timeout], {} (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
+],
 Print["FirstIntegrals skipped."]; {}]
 
 ]
@@ -159,7 +142,7 @@ TimeConstrained[Block[{},
 polys = DarbouxDDC`DarbouxPolynomialsM[{vf,vars,Q}, OptionValue[DbxPoly,Timeout]*1/2, deg];
 InvariantExtractor`DWC[problem,polys,{},False][[2]]
 ], OptionValue[DbxPoly,Timeout],
-{}],
+{}],  (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
 Print["DbxPoly skipped."]; {}]
 
 ]
@@ -178,7 +161,7 @@ DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,var
 
 	If[OptionValue[DbxPoly, Timeout] > 0,
 		timeout = OptionValue[DbxPoly, Timeout];
-		dbxResult = Reap[TimeConstrained[Block[{},
+		TimeConstrained[Block[{},
 			Catch[
 				invs = {};
 				allPolys = {};
@@ -206,17 +189,7 @@ DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,var
 				];
 				invs
 			]
-		], timeout]];
-		If[FailureQ[dbxResult[[1]]],
-			(* Failure, timeout etc.: return last intermediate result, if any *)
-			If[Length[dbxResult[[2]]] > 0, dbxResult[[2]][[1]][[-1]], {}],
-			(* Otherwise: all options exhausted *)
-			If[Length[dbxResult[[1]]] > 0,
-				(* Invariants found so far *)
-				dbxResult[[1]],
-				(* Return last intermediate result, if any *)
-				If[Length[dbxResult[[2]]] > 0, dbxResult[[2]][[1]][[-1]], {}]]
-		]
+		], timeout, {}] (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
 		,
 		Print["DbxPoly skipped."]; {}
 	]
@@ -242,8 +215,8 @@ TimeConstrained[Block[{},
 polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
 polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
 InvariantExtractor`DWC[problem,polys,{},False,False,{"<","<="}][[2]]
-], OptionValue[BarrierCert,Timeout],
-MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]]
+], OptionValue[BarrierCert,Timeout]-0.2, (* slightly reduce timeout to abort here and close MATLink *)
+MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]] (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
 ,
 Print["BarrierCert skipped."];{}]
 

@@ -74,16 +74,23 @@ RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, subproblem_, vars_, inout_
 	{ (* copy of arguments *)
 		timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem,
 		(* module internal *)
-		timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
+		stratResult, timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
 {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem} = inout;
-timedInvs = AbsoluteTiming[TimeConstrained[
+timedInvs = AbsoluteTiming[
+  stratResult = Reap[TimeConstrained[
 	Block[{res},
 		res = strat[subproblem];
 		If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
 		res]//DeleteDuplicates,
-	stratTimeout+1, (* slightly increase timeout to allow methods reap intermediate results when aborted *)
-	Print["Strategy timed out after: ", stratTimeout];
-	{True}]];
+	stratTimeout]];
+	If[FailureQ[stratResult[[1]]] || Length[stratResult[[1]]] <= 0,
+    (* Failure, timeout etc.: return last intermediate result, if any *)
+    If[Length[stratResult[[2]]] > 0, stratResult[[2]][[1]][[-1]], {True}]
+    ,
+    (* Otherwise: method exhausted all its options *)
+    stratResult[[1]]
+  ]
+];
 Print["Strategy ",ToString[strat]," duration: ",timedInvs[[1]]];
 AppendTo[timingList,Symbol[ToString[strat]]->timedInvs[[1]]];
 invs=timedInvs[[2]];
