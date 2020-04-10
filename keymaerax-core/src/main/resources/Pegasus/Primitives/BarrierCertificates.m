@@ -111,7 +111,7 @@ DeleteDuplicates[{-1,0,1,Div[vf,vars],-Div[vf,vars](*,JacobianDeterminant[vf,var
 
 
 SOSBarrierMATLAB[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
-{init,unsafe,Q,f,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas,allvars,cvars,rvars,vfc,Qc},
+{init,unsafe,Q,f,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas,allvars,cvars,rvars,vfc,Qc,avars},
 
 Print["Attempting to generate a barrier certificate with SOS Programming"];
 
@@ -119,9 +119,11 @@ init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
 Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
 
+(* TODO: perhaps these should be passed in directly *)
 allvars=Union[Variables[init],Variables[unsafe],Variables[Q],Variables[vf]];
 cvars = Complement[allvars, vars];
 rvars = Complement[vars,cvars];
+avars=Join[rvars,cvars];
 
 Qc = Union[Q,Select[init,Intersection[Variables[#],rvars]=={}&]];
 
@@ -142,8 +144,8 @@ sosprog="
 clear;
 % Inputs from Mathematica
 % Variables
-pvar "<>StringRiffle[Map[MmaToMatlab, allvars], " "]<>";
-vars = "<>MmaToMatlab[allvars]<>";
+pvar "<>StringRiffle[Map[MmaToMatlab, avars], " "]<>";
+vars = "<>MmaToMatlab[avars]<>";
 rvars= "<>MmaToMatlab[rvars]<>";
 cvars= "<>MmaToMatlab[cvars]<>";
 
@@ -244,8 +246,14 @@ for deg = mindeg : maxdeg
             end
 
             opt.params.fid = 0;
-        %try OLD position of try
+
+            lastwarn('');
             prog = sossolve(prog,opt);
+            [warnMsg, warnId] = lastwarn;
+            if (~isempty(warnMsg))
+               FAIL
+            end
+
             feasibility = prog.solinfo.info.feasratio;
             if feasibility >= minfeas
                 B2 = sosgetsol(prog,B)

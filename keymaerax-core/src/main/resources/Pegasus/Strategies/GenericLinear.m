@@ -59,12 +59,13 @@ Expand[vars.LM.vars]
 ]
 
 
-LinearMethod[problem_List, opts:OptionsPattern[]]:=Module[{
+LinearMethod[problem_List,consts_List : {{},True}, opts:OptionsPattern[]]:=Module[{
 pre, vf, vars, evoConst, post,
 M,rats,FIDeg,ratPrecision,
-initConnectedComponents,class,res,invs,fIs
+initConnectedComponents,class,res,invs,fIs, constvars,constasms
 },
-{pre,{vf,vars,evoConst},post}=problem;
+{pre, { vf, vars, evoConst }, post, {constvars,constasms}} = problem;
+
 (* Doesn't work for affine *)
 M=Grad[vf, vars];
 
@@ -152,12 +153,14 @@ partitioning
 
 
 (* doesn't seem particularly useful *)
-FirstIntegralsLin[problem_List, opts:OptionsPattern[]]:=Module[{
+FirstIntegralsLin[problem_List,consts_List : {{},True}, opts:OptionsPattern[]]:=Module[{
 pre, vf, vars, evoConst, post,
 rat,bound,upperRat,lowerRat,fIs,uppers,lowers,
-maxminVs,
+maxminVs,constvars,constasms
 },
-{pre,{vf,vars,evoConst},post}=problem;
+
+{pre, { vf, vars, evoConst }, post, {constvars,constasms}} = problem;
+
 
 rat = 5;
 bound=10^8;

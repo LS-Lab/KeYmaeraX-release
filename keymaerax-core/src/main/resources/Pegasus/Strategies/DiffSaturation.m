@@ -40,14 +40,13 @@ TimeConstrained[
 		If[TrueQ[
 			(*TimeConstrained[*)
 				And[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms,rest], post, vars],
-						LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]
+						LZZ`InvSFast[rest, Join[f,Table[0,{i,Length[constvars]}]], Join[vars,constvars], And[evoConst,constasms]]]
 			(*5,*) (* TODO configuration *)
 			(*	False
 			]*)
 		],
 			Print["Skipped: ",cuts[[i]]];
 			AppendTo[skipped,{i}]
-			(*Print["INFO: ",rest,f,vars,And[evoConst,constasms],LZZ`InvSFast[rest, f, vars, And[evoConst,constasms]]]*)
 			(* skip *),
 			added=Join[added,{i}];
 			evoConst=And[evoConst,cuts[[i]]]
@@ -72,16 +71,17 @@ FullSimplify[fml,varsreals]
 
 RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, subproblem_, vars_, inout_List]:=Module[
 	{ (* copy of arguments *)
-		timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem,
+		timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem,
 		(* module internal *)
 		stratResult, timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
-{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem} = inout;
+{timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem} = inout;
+
 If[stratTimeout <= 1, Return[inout]]; (* very small timeouts seem to produce unreliable results *)
 
 timedInvs = AbsoluteTiming[
   stratResult = Reap[TimeConstrained[
 	Block[{res},
-		res = strat[subproblem];
+        res = strat[Join[subproblem,{{constvars,constasms}}]];
 		If[res==Null,  Print["Warning: Null invariant generated. Defaulting to True"]; res = {True}];
 		res]//DeleteDuplicates,
 	stratTimeout, {}]];
@@ -125,7 +125,7 @@ If[Length[cuts] > 0, Sow[Format`FormatDiffSat[invlist, cutlist, timingList, Fals
 If[OptionValue[DiffSat,UseDI] && Not[TrueQ[post]],
 	Block[{isDI},
 	(* Must call InvSDI with the original problem ODE and vars *)
-	isDI = AbsoluteTiming[LZZ`InvSDI[post,problem[[2]][[1]], problem[[2]][[2]], And[evoConst,constasms]]];
+	isDI = AbsoluteTiming[LZZ`InvSDI[post,Join[problem[[2]][[1]],Table[0,{i,Length[constvars]}]], Join[problem[[2]][[2]],constvars], And[evoConst,constasms]]];
 	Print["DI inv check duration: ", isDI[[1]]];
     AppendTo[timingList,Symbol["InvCheck"]->isDI[[1]]];
 	If[TrueQ[isDI[[2]]],
@@ -208,7 +208,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 		                     2 means nonlinear only. *)
 	strategies = Module[{activatedStrategies, dimension, classes, dbxMaxDegree, barrierMidDegree, barrierMaxDegree},
 		{dimension, classes} = class;
-		dbxMaxDegree = GenericNonLinear`DbxPolyEndDegree[Take[problem,3], OptionValue[GenericNonLinear`DbxPoly,MaxDeg]];
+		dbxMaxDegree = GenericNonLinear`DbxPolyEndDegree[problem, OptionValue[GenericNonLinear`DbxPoly,MaxDeg]];
 		barrierMaxDegree = OptionValue[GenericNonLinear`BarrierCert,Deg];
 		barrierMidDegree = Min[5, barrierMaxDegree];
 		activatedStrategies = Select[{
@@ -258,7 +258,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 				RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
 					OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 					{ pre, { f, vars, evoConst }, post }, vars,
-					{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}];
+					{timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem}];
 
 		If[TrueQ[genDone],
 			Print["Generated invariant implies postcondition. Returning."];
@@ -293,7 +293,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 				timedStratResult = AbsoluteTiming[
 					RunStrat[strat, hint, stratTimeout, OptionValue[MinimizeCuts],
 						subproblem, vars,
-						{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}]
+						{timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem}]
 				];
 
 				duration = timedStratResult[[1]];
@@ -402,7 +402,7 @@ timingList={};
     RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
 			OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 			{ pre, { f, vars, evoConst }, post }, vars,
-			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}];
+			{timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem}];
 
 (* For each dependency *)
 Do[
@@ -431,7 +431,7 @@ Module[{timedStratResult, duration, unusedBudget, genDone},
 	timedStratResult = AbsoluteTiming[
 		RunStrat[strat, hint, OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 			subproblem, vars,
-			{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}]
+			{timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem}]
 	];
 
 	duration = timedStratResult[[1]];

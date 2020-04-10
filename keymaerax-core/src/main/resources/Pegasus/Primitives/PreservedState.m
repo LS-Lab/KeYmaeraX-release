@@ -21,8 +21,11 @@ PreservedPre[vf_List, vars_List, pre_, domain_] :=
      preserved = {};
      Do[
          p = {};
-         Do[If[TimeConstrained[LZZ`InvSDI[f, vf, vars, domain], 1, False],
-             AppendTo[p, f], Null], {f, Simplify[conjuncts/.{List->And}]/.{And->List}}];
+         (*Print["conj",conjuncts];*)
+         Do[
+         If[TimeConstrained[LZZ`InvSDI[f, vf, vars, domain], 1, False],
+             AppendTo[p, f], Null],
+             {f, conjuncts}];
          AppendTo[preserved, p]
          ,
          {conjuncts, conjunctLists}
