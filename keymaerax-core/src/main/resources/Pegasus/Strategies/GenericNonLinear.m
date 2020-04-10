@@ -53,8 +53,10 @@ Options[BarrierCert]= {Deg -> -1, Timeout -> 60};
 Begin["`Private`"];
 
 
-PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result},
-	{pre, { vf, vars, Q }, post} = problem;
+PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result,constvars,constasms,prob},
+	{pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
+    (* temporary fix: *) 
+    prob ={pre, { vf, vars, Q }, post};
 	If[OptionValue[PreservedState, Timeout] > 0,
 		TimeConstrained[
       polys = PreservedState`PreservedPre[vf,vars,pre,Q]//DeleteDuplicates;
@@ -66,18 +68,20 @@ PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result},
 		Print["PreservedState skipped."]; {}]
 ]
 
-HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys},
-{pre, { vf, vars, Q }, post} = problem;
+HeuInvariants[problem_List]:=Module[{pre,post,vf,vars,Q,polys, prob, constvars,constasms},
+{pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
+(* temporary fix: *) 
+prob = {pre, { vf, vars, Q }, post};
 
 If[OptionValue[HeuInvariants, Timeout] > 0,
 TimeConstrained[Block[{},
   polys = DeleteDuplicates[Join[
-    QualAbsPolynomials`SummandFactors[problem],
-    QualAbsPolynomials`SFactorList[problem],
-    QualAbsPolynomials`ProblemFactors[problem]
+    QualAbsPolynomials`SummandFactors[prob],
+    QualAbsPolynomials`SFactorList[prob],
+    QualAbsPolynomials`ProblemFactors[prob]
     (*,
-    QualAbsPolynomials`ProblemFactorsWithLie[problem],
-    QualAbsPolynomials`PhysicalQuantities[problem],
+    QualAbsPolynomials`ProblemFactorsWithLie[prob],
+    QualAbsPolynomials`PhysicalQuantities[prob],
     *)
   ]];
   (*res=Map[InvariantExtractor`DWC[problem,{#},{},False]&,polys];*)
@@ -92,8 +96,8 @@ Print["HeuInvariants skipped."]; {}]
 FirstIntegrals[problem_List, opts:OptionsPattern[]]:=Module[{
 	pre,post,vf,vars,Q,
 	fIs,maxminVs,deg,
-	rat,uppers,lowers,bound},
-{pre, { vf, vars, Q }, post} = problem;
+	rat,uppers,lowers,bound,constvars,constasms},
+{pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
 
 (* Heuristic *)
 deg = If[OptionValue[FirstIntegrals,Deg] < 0,
@@ -134,8 +138,11 @@ Print["FirstIntegrals skipped."]; {}]
 
 
 (* Darboux polynomials: exhaust until timeout, return all found ones. *)
-DbxPoly[problem_List, endDeg_] := Module[{pre,post,vf,vars,Q,polys,deg},
-{pre, { vf, vars, Q }, post} = problem;
+DbxPoly[problem_List, endDeg_] := Module[{pre,post,vf,vars,Q,polys,deg,constvars,constasms,prob},
+{pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
+(* temporary fix: *) 
+prob ={pre, { vf, vars, Q }, post};
+
 If[OptionValue[DbxPoly, Timeout] > 0,
 TimeConstrained[Block[{},
 (* Spend 1/2 time budget on polynomial finding *)
@@ -148,14 +155,17 @@ Print["DbxPoly skipped."]; {}]
 ]
 
 (* Returns a heuristic end degree if endDeg<0, returns endDeg otherwise *)
-DbxPolyEndDegree[problem_List, endDeg_] := Module[{pre, vf, vars, Q, post},
-	{pre, { vf, vars, Q }, post} = problem;
+DbxPolyEndDegree[problem_List, endDeg_] := Module[{pre, vf, vars, Q, post,constvars,constasms,prob},
+	{pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
+	prob = {pre, { vf, vars, Q }, post};
 	If[endDeg < 0, Max[10-Length[vars],1], endDeg]
 ]
 
 (* Darboux polynomials: sowing intermediate results and checking whether done before increasing degree. *)
-DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,vars,Q,polys,allPolys,allPolysI,invs,deg,timeout,dbxResult},
-	{pre, { vf, vars, Q }, post} = problem;
+DbxPolyIntermediate[problem_List, startDeg_, endDeg_] := Module[{pre,post,vf,vars,Q,polys,allPolys,allPolysI,invs,deg,timeout,dbxResult,constvars,constasms,prob},
+	{pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
+    (* temporary fix: *) 
+    prob ={pre, { vf, vars, Q }, post};
 
 	Print["Darboux degrees: ", startDeg, "-", endDeg];
 
@@ -202,18 +212,22 @@ If[Length[cr] > 0,Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]
 ,{}]]
 
 
-BarrierCert[problem_List, maxDeg_]:=Catch[Module[{pre,post,vf,vars,Q,polySOS,polys,deg},
-{pre, { vf, vars, Q }, post} = problem;
+BarrierCert[problem_List, maxDeg_]:=Catch[Module[
+{pre,post,vf,vars,Q,polySOS,polys,deg,constvars,constasms,prob,allf,allvars},
+
+{pre, { vf, vars, Q }, post,{constvars,constasms}} = problem;
+prob = {pre, { vf, vars, Q }, post};
+
 If[pre===True,Return[{}]];
 If[post===False,Return[{}]];
 
 deg= If[maxDeg < 0, 10, maxDeg];
-			
+
 If[OptionValue[BarrierCert, Timeout] > 0,
 CheckAbort[
 TimeConstrained[Block[{},
-polySOS=BarrierCertificates`SOSBarrierMATLAB[problem,MaxDeg->deg];
-polys=Flatten[Map[RoundPolys[#,vars]&,polySOS]];
+polySOS=BarrierCertificates`SOSBarrierMATLAB[{pre && constasms, {vf,vars,Q}, post},MaxDeg->deg];
+polys=Flatten[Map[RoundPolys[#,Join[vars,constvars]]&,polySOS]];
 InvariantExtractor`DWC[problem,polys,{},False,False,{"<","<="}][[2]]
 ], OptionValue[BarrierCert,Timeout]-0.2, (* slightly reduce timeout to abort here and close MATLink *)
 MATLink`CloseMATLAB[];{}] , Print["WARNING: BarrierCert aborted!"]] (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
