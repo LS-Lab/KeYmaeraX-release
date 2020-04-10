@@ -32,12 +32,8 @@ PreservedPre[vf_List, vars_List, pre_, domain_] :=
          {conjuncts, conjunctLists}
      ];
      Print["Preserved ", preserved];
-     (* TODO interfaces are not ideal: want original precondition in (not DNF) and write formulas out *)
-     (* Extract left-hand sides since invariant extractor expects polynomials, not formulas *)
-     polys = Map[Primitives`EqGtGeqLhs, preserved//DeleteDuplicates];
-     (* Map disjunction p1>0&p2>=0 | p3>=0 | p4>=0 to Max[Min[p1,p2],p3,p4] *)
-     poly = { Fold[Max, If[Length[polys] > 1, Map[Fold[Min, #] &, polys], polys]] }//Flatten;
-     Return[poly]
+     (* TODO disjunctions *)
+     If[Length[preserved] >= 1, preserved[[1]], {}]
     ]
 
 End[]

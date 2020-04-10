@@ -59,8 +59,7 @@ PreservedState[problem_List]:=Module[{pre,post,vf,vars,Q,polys,result,constvars,
     prob ={pre, { vf, vars, Q }, post};
 	If[OptionValue[PreservedState, Timeout] > 0,
 		TimeConstrained[
-      polys = PreservedState`PreservedPre[vf,vars,pre,Q]//DeleteDuplicates;
-      InvariantExtractor`DWC[problem,polys,{},False][[2]]
+      PreservedState`PreservedPre[vf,vars,pre,Q]//DeleteDuplicates
       ,
       OptionValue[PreservedState,Timeout], {} (* Outside: reap and use last sown intermediate result on failureQ/empty main result *)
     ]
