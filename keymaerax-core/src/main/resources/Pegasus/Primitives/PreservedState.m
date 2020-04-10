@@ -25,7 +25,8 @@ PreservedPre[vf_List, vars_List, pre_, domain_] :=
          Do[
          If[TimeConstrained[LZZ`InvSDI[f, vf, vars, domain], 1, False],
              AppendTo[p, f], Null],
-             {f, conjuncts}];
+             (* Simplify undoes the GtGeq normalization of Dependency`FilterVars to obtain equations again (reduces number of InvSDI calls) *)
+             {f, ({Simplify[conjuncts/.{List->And}]/.{And->List}}//Flatten)/.{{True} -> {}} }];
          AppendTo[preserved, p]
          ,
          {conjuncts, conjunctLists}
