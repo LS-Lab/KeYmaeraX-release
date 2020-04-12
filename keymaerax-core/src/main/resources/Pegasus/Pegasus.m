@@ -5,7 +5,7 @@
  *)
 
 
-Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifier package from current directory *)
+Needs["Classifier`",FileNameJoin[{Directory[],"NewClassifier.m"}]] (* Load classifier package from current directory *)
 Needs["LZZ`",FileNameJoin[{Directory[],"Primitives","LZZ.m"}]] (* LZZ *)
 Needs["DiffSaturation`",FileNameJoin[{Directory[],"Strategies","DiffSaturation.m"}]] (* Diff Sat *)
 Needs["Helper`",FileNameJoin[{Directory[],"Strategies","Helper.m"}]] (* Diff Sat *)

@@ -10,7 +10,7 @@ Needs["Dependency`",FileNameJoin[{Directory[],"Primitives","Dependency.m"}]]
 Needs["GenericLinear`",FileNameJoin[{Directory[],"Strategies","GenericLinear.m"}]]
 Needs["GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
 Needs["Format`",FileNameJoin[{Directory[],"Strategies","Format.m"}]]
-Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]]
+Needs["Classifier`",FileNameJoin[{Directory[],"NewClassifier.m"}]]
 
 
 BeginPackage["DiffSaturation`"]
@@ -206,8 +206,8 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 	(* For the class flag, 0 means the strategy should be tried for both linear and nonlinear systems.
 		                     1 means linear only.
 		                     2 means nonlinear only. *)
-	strategies = Module[{activatedStrategies, dimension, classes, dbxMaxDegree, barrierMidDegree, barrierMaxDegree},
-		{dimension, classes} = class;
+	strategies = Module[{activatedStrategies, dimension, classes, problemData,dbxMaxDegree, barrierMidDegree, barrierMaxDegree},
+		{dimension, classes, {problemData}} = class;
 		dbxMaxDegree = GenericNonLinear`DbxPolyEndDegree[problem, OptionValue[GenericNonLinear`DbxPoly,MaxDeg]];
 		barrierMaxDegree = OptionValue[GenericNonLinear`BarrierCert,Deg];
 		barrierMidDegree = Min[5, barrierMaxDegree];
