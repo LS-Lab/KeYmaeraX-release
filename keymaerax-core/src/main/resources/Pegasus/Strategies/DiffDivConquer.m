@@ -127,7 +127,7 @@ DiffSplit[prob_List, class_List, opts:OptionsPattern[]]:=Catch[Module[
 {pre, { f, vars, Q }, post, {constvars,constQ}} = prob;
 Print["Input Problem: ",prob];
 
-deps = Join[Dependency`VariableDependenciesHelper[f,vars],{vars}];
+deps = Join[Dependency`VariableDependenciesHelper[f,vars],{vars}]//DeleteDuplicates;
 Print["Dependencies: ",deps];
 
 (* fIs = PrecomputeFIs[prob[[2]],deps];
@@ -139,10 +139,7 @@ dbx=Select[dbx, Not[TrueQ[Simplify[Grad[#,vars].f]==0]] &];
 Print["Filtered Darboux polynomials: ",dbx];
 
 SetOptions[DiffSaturation`DiffSat,StrictMethodTimeouts->True];
-(* SetOptions[GenericNonLinear`FirstIntegrals,Timeout->0]; *)
 SetOptions[GenericNonLinear`DbxPoly,Timeout->0];
-SetOptions[GenericNonLinear`HeuInvariants,Timeout->40];
-SetOptions[GenericNonLinear`BarrierCert,Timeout->80];
 
 cont[add_,polys_]:=Block[{prob2,prob3,ratFIs},
 
