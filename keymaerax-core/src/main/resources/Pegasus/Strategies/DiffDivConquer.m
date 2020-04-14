@@ -11,7 +11,7 @@ Needs["Helper`",FileNameJoin[{Directory[],"Strategies","Helper.m"}]];
 Needs["DiffSaturation`",FileNameJoin[{Directory[],"Strategies","DiffSaturation.m"}]]
 
 
-BeginPackage[ "Generic`"];
+BeginPackage[ "DiffDivConquer`"];
 
 
 (* Precomputes some ODE-specific information *)
