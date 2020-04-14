@@ -9,6 +9,7 @@ Needs["FirstIntegrals`",FileNameJoin[{Directory[],"Primitives","FirstIntegrals.m
 Needs["DarbouxDDC`",FileNameJoin[{Directory[],"Strategies","DarbouxDDC.m"}]];
 Needs["Helper`",FileNameJoin[{Directory[],"Strategies","Helper.m"}]];
 Needs["DiffSaturation`",FileNameJoin[{Directory[],"Strategies","DiffSaturation.m"}]]
+Needs["Format`",FileNameJoin[{Directory[],"Strategies","Format.m"}]]
 
 
 BeginPackage[ "DiffDivConquer`"];
@@ -114,10 +115,12 @@ tl=Rest[dbxs];
 lt=TestConsistency[Join[vars],pre && added, hd < 0];
 eq=TestConsistency[Join[vars],pre && added, hd == 0];
 gt=TestConsistency[Join[vars],pre && added, hd > 0];
-{hd,
+Format`FormatDDC[hd,
+{
 If[lt,ConstrainedDDC[tl, pre, vars, added && hd<0, Join[polys,{hd}], vf, cont],False],
 If[eq,ConstrainedDDC[tl, pre, vars, added && hd==0, polys, vf, cont],False],
-If[gt,ConstrainedDDC[tl, pre, vars, added && hd>0, Join[polys,{hd}], vf, cont],False]}
+If[gt,ConstrainedDDC[tl, pre, vars, added && hd>0, Join[polys,{hd}], vf, cont],False]
+}]
 ]
 
 
