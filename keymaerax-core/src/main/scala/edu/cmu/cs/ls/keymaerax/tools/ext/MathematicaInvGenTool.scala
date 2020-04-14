@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
+import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -265,7 +266,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     * @param postCond Postcondition
     * @return The dimension and classification of the problem.
     */
-  def problemClassification(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (Int, String) = {
+  def problemClassification(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (Int, String, Map[String, Map[String, String]]) = {
     require(postCond.isFOL, "Unable to generate ODE conditions, expected FOL post conditions but got " + postCond.prettyString)
     require(assumptions.forall(_.isFOL), "Unable to generate ODE conditions, expected FOL assumptions but got " + assumptions)
 
@@ -279,14 +280,25 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val command = compoundExpression(
       setPathsCmd,
-      needs(string(CLASSIFIER_NAMESPACE), string("Classifier.m")),
+      needs(string(CLASSIFIER_NAMESPACE), string("NewClassifier.m")),
       applyFunc(symbol(CLASSIFIER_NAMESPACE + "ClassifyProblem"))(problem)
     )
 
-    try {
-      val (_, result) = runUnchecked(command.toString, IdentityConverter)
-      val dimension :: classes :: Nil = result.args().toList
-      (dimension.asInt(), classes.args().head.asString)
+    val (_, result) = runUnchecked(command.toString, IdentityConverter)
+    val dimension :: classes :: details :: Nil = result.args().toList
+
+    def asTuple(t: Expr): (String, String) = {
+      require(rule.applies(t), "Expected Rule[String,String]")
+      val key :: value :: Nil = t.args().map(_.asString).toList
+      (key, value)
     }
+
+    def asCategory(cat: Expr): (String, Map[String, String]) = {
+      require(rule.applies(cat), "Expected Rule[String, {...}]")
+      val key :: values :: Nil = cat.args().toList
+      (key.asString, values.args().map(asTuple).toMap)
+    }
+
+    (dimension.asInt(), classes.args().head.asString, details.args().map(asCategory).toMap)
   }
 }
