@@ -77,6 +77,11 @@ object PolynomialArithV2 {
       // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where p1's monomials satisfy P and p2's monomials satisfy !P
       def partition(P: (BigDecimal, BigDecimal, IndexedSeq[Int]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
+
+      // approx(prec) = (proof of "term = p1.term + p2.term", p1, p2)
+      //   where the coefficients p1 are rounded to (decimal) precision [[prec]]
+      def approx(prec: Int) : (ProvableSig, Polynomial, Polynomial)
+
     }
 
     // result.term = n
