@@ -8,6 +8,7 @@
 Needs["Classifier`",FileNameJoin[{Directory[],"NewClassifier.m"}]] (* Load classifier package from current directory *)
 Needs["LZZ`",FileNameJoin[{Directory[],"Primitives","LZZ.m"}]] (* LZZ *)
 Needs["DiffSaturation`",FileNameJoin[{Directory[],"Strategies","DiffSaturation.m"}]] (* Diff Sat *)
+Needs["DiffDivConquer`",FileNameJoin[{Directory[],"Strategies","DiffDivConquer.m"}]] (* Diff Sat *)
 Needs["Helper`",FileNameJoin[{Directory[],"Strategies","Helper.m"}]] (* Diff Sat *)
 Needs["Format`",FileNameJoin[{Directory[],"Strategies","Format.m"}]] (* Formatting *)
 
@@ -17,7 +18,7 @@ BeginPackage["Pegasus`"];
 
 AugmentWithParameters::usage="AugmentWithParameters[problem_List] Splits out parameter information in the problem";
 InvGen::usage="InvGen[problem_List] Run Pegasus on problem";
-Options[InvGen]= {SanityCheckTimeout -> 0};
+Options[InvGen]= {SanityCheckTimeout -> 0, UseDDC -> False};
 
 
 Begin["`Private`"]
@@ -116,10 +117,12 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
 ], OptionValue[InvGen,SanityCheckTimeout]]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
-class=Classifier`ClassifyProblem[prob];
+class=Classifier`ClassifyProblem[{pre,{f,vars,evoConst},post}];
 Print["Classification: ", class];
 
-DiffSaturation`DiffSat[eprob, class]
+If[TrueQ[OptionValue[InvGen,UseDDC]],
+	DiffDivConquer`DiffSplit[eprob, class],
+	DiffSaturation`DiffSat[eprob, class]]
 ]]
 
 

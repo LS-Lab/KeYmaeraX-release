@@ -74,9 +74,10 @@ RunStrat[strat_, hint_, stratTimeout_, minimizeCuts_, subproblem_, vars_, inout_
 		timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem,
 		(* module internal *)
 		stratResult, timedInvs, inv, timedInvImpliesPost, invImpliesPost, timedCutlist},
+
 {timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem} = inout;
 
-If[stratTimeout <= 1, Return[inout]]; (* very small timeouts seem to produce unreliable results *)
+If[stratTimeout <= 1, Return[{False,inout}]]; (* very small timeouts seem to produce unreliable results *)
 
 timedInvs = AbsoluteTiming[
   stratResult = Reap[TimeConstrained[
@@ -145,11 +146,12 @@ invImpliesPost=timedInvImpliesPost[[2]];
 
 If[TrueQ[invImpliesPost],
 	Print["Generated invariant implies postcondition. Returning."];
-	{True, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}}
+	{True,
+	{timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post,problem}}
 	,
 	(* Continue search, return the modified arguments *)
 	Print["Generated invariant not yet sufficient. Continuing."];
-	{False, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}}
+	{False, {timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem}}
 ]
 ]
 
@@ -197,7 +199,8 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 		postInvariant,preInvariant,strategies,inv,andinv,relaxedInv,invImpliesPost,
 		polyList,invlist,cuts,cutlist,strat,hint,isLinear,
 		curproblem,subproblem,deps,curdep,timeoutmultiplier,
-		constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,genDone,optionsNamespace},
+		constvars,constasms,invs,timingList,curvars,collectedCuts,evoConst,genDone,optionsNamespace,
+		dummyproblem},
 
 	(* Bring symbolic parameters into the dynamics *)
 	Print["Input Problem: ", problem];
@@ -207,7 +210,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 		                     1 means linear only.
 		                     2 means nonlinear only. *)
 	strategies = Module[{activatedStrategies, dimension, classes, problemData,dbxMaxDegree, barrierMidDegree, barrierMaxDegree},
-		{dimension, classes, {problemData}} = class;
+		{dimension, classes, problemData} = class;
 		dbxMaxDegree = GenericNonLinear`DbxPolyEndDegree[problem, OptionValue[GenericNonLinear`DbxPoly,MaxDeg]];
 		barrierMaxDegree = OptionValue[GenericNonLinear`BarrierCert,Deg];
 		barrierMidDegree = Min[5, barrierMaxDegree];
@@ -254,7 +257,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 
 	If[Length[deps] > 1,
 		(* Fast check: extract from initial conditions, but only when more than a single dependency cluster *)
-		{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} =
+		{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, dummyproblem}} =
 				RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
 					OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 					{ pre, { f, vars, evoConst }, post }, vars,
@@ -300,7 +303,7 @@ DiffSat[problem_List, class_List, opts: OptionsPattern[]]:=Catch[Module[
 				Print["Method duration: ", duration];
 				remainingBudget = RedistributeTimeouts[strategies, i, Max[0, stratTimeout - duration]];
 
-				{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} = timedStratResult[[2]];
+				{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, dummyproblem}} = timedStratResult[[2]];
 				If[TrueQ[genDone],
 					Print["Generated invariant implies postcondition. Returning."];
 					If[OptionValue[MinimizeCuts] && remainingBudget>0,
@@ -398,7 +401,7 @@ cutlist=collectedCuts;
 timingList={};
 
 (* Fast check: extract from initial conditions *)
-{timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post} =
+{timingList, invs, cuts, invlist, cutlist, evoConst, constvars, constasms, post, problem} =
     RunStrat[GenericNonLinear`PreservedState, Symbol["kyx`Unknown"],
 			OptionValue[StrategyTimeout], OptionValue[MinimizeCuts],
 			{ pre, { f, vars, evoConst }, post }, vars,
@@ -456,7 +459,7 @@ Module[{timedStratResult, duration, unusedBudget, genDone},
 		]
 	];
 
-	{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post}} = timedStratResult[[2]];
+	{genDone, {timingList, invs, cuts, invlist, cutlist, evoConst, constasms, post, problem}} = timedStratResult[[2]];
 	If[TrueQ[genDone],
 		Print["Generated invariant implies postcondition. Returning."];
 		If[minimizeCuts,

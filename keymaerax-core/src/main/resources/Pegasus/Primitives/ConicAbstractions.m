@@ -22,7 +22,7 @@ ConicAbstraction::usage=" Given system matrix A, "
 Begin["`Private`"]
 
 
-(* Paritioning derivative space into uniform pizza slices in arbitrary dimensions 
+(* Paritioning derivative space into uniform pizza slices in arbitrary dimensions
 using rotation matrices *)
 RotateM[vec_List,splits_]:=Module[{u,v,rot,ang},
 ang=Pi/splits;
@@ -67,7 +67,7 @@ len =Length[inputList];
 If[len ==0, Return[newList]];
 If[len== 1, Return[ {{inputList[[1]][[1]]}, {inputList[[1]][[2]]} }]];
 (* Otherwise we need it to be recursive *)
- recList = RecursiveCombineLists[Drop[inputList, -1]];For[i = 1, i <= Length[recList], i++, newList = Append[newList, Append[recList[[i]], inputList[[Length[inputList]]][[1]]]]; 
+ recList = RecursiveCombineLists[Drop[inputList, -1]];For[i = 1, i <= Length[recList], i++, newList = Append[newList, Append[recList[[i]], inputList[[Length[inputList]]][[1]]]];
 newList =  Append[newList, Append[recList[[i]], inputList[[Length[inputList]]][[2]]]];
 ];
 Return[newList];
@@ -86,7 +86,7 @@ ls=RotateM[vec,splits];
 ls2=RotateLeft[ls,1];
 result=MapThread[vars.#1>0&&vars.#2<0&,{ls,ls2}]
 ]
-CalcListToSplit[n_] :=Module[{i, returnList, unitVec}, 
+CalcListToSplit[n_] :=Module[{i, returnList, unitVec},
 returnList = {};
 For[i = 2, i <= n, i++, unitVec = ConstantArray[0,n]; unitVec[[i]] = unitVec[[i]]+1;returnList = Append[returnList, unitVec]];
 Return[returnList];
@@ -94,12 +94,12 @@ Return[returnList];
 ExhaustivePartitionsM[splits_, vars_] :=Module[{ls,ls2,res, listToSplit, i,j, result, result2, turnVector, n},
 n = Length[vars];
 listToSplit = CalcListToSplit[n];
-turnVector = ConstantArray[0,n]; 
+turnVector = ConstantArray[0,n];
 turnVector[[1]] = turnVector[[1]] +1;
 Print[listToSplit];
 Print[turnVector];
 result = PartitionsM[{listToSplit[[1]],turnVector}, splits, vars];
-For[i = 2, i <= Length[listToSplit], i++, 
+For[i = 2, i <= Length[listToSplit], i++,
 result2 = PartitionsM[{listToSplit[[i]],turnVector}, splits, vars];
 result = Flatten[Map[And[#[[1]],#[[2]]]&,Tuples[{result,result2}]]];
 For[j = 1, j <= Length[result], j++,
@@ -150,7 +150,7 @@ Return[ConvexHullMesh[acc]];
 ];
 
 (* Partition 2D plane into k regions *)
-Partition2D[k_,bnd_]:=Module[{regList,i,rota,rotb,curpt,nextpt}, 
+Partition2D[k_,bnd_]:=Module[{regList,i,rota,rotb,curpt,nextpt},
 regList = {};
 eps=0.0001;
 rota=Rationalize[RotationMatrix[2Pi/k-eps]];
@@ -169,22 +169,22 @@ Return[regList];
 (*
 	Do a basic conic abstractions algorithm
 *)
-ConicAbstraction[A_, Init_List, k_Integer, bnd_] :=Module[{
+ConicAbstraction[A_, Init_, k_Integer, bnd_,rng_] :=Module[{
   diagA,z0,cones, ret, i, hd,rc, conesgfx, conesactivegfx,
   redz0,MAXITERS, iter, sp, ctr,imgsz,
-  H,c,intc,transc,msc,msic,d,intd,transd,msd,msid,fin,retgfx
+  H,c,intc,transc,msc,msic,d,intd,transd,msd,msid,fin,retgfx,rd
   },
-  
-  (* ctr, H, int, transc, msc, msd, msic, msid, c, inf, intc, intd,transd,d, hd,tl,rc},*) 
+
+  (* ctr, H, int, transc, msc, msd, msic, msid, c, inf, intc, intd,transd,d, hd,tl,rc},*)
 
 (* maximum iterations *)
-MAXITERS=10;
+MAXITERS=100;
 imgsz=300;
 
 diagA = A; (* Instead of diagonalizing, work directly over A. DiagonalMatrix[Eigenvalues[A]];*)
 
 (* Init is a list of 2D points, and we take the convex hull  as the initial set *)
-z0 = ConvexHullMesh[Init];
+z0 = Init;
 
 (* Partition plane into k regions with bnd *)
 cones = Map[TransformCone[#,Inverse[diagA]]&, Partition2D[k,bnd]];
@@ -194,7 +194,7 @@ For[i = 1, i <= Length[cones], i++,
   ret=Append[ret, EmptyRegion[2]]
 ];
 
-sp = StreamPlot[A.{x,y},{x,-bnd,bnd},{y,-bnd,bnd}];
+sp = StreamPlot[A.{x,y},{x,-rng,rng},{y,-rng,rng}];
 Print["Initial state (red) and conic partition (blue)"];
 redz0 = Graphics[Show[z0]]/.{Directive[x_] :> Directive[{Opacity[0.8],Red}]};
 conesgfx = Map[Graphics[Show[#]]/.{Directive[x_] :> Directive[{Opacity[0.2],Cyan,EdgeForm[Black]}]}&,cones];
@@ -218,7 +218,7 @@ For[ctr=1,ctr<=Length[cones],ctr++,
 
 (* Active initial cones *)
 Print["Active initial cones"];
-Print[Show[conesgfx,conesactivegfx[[H]],redz0,PlotRange->{{-bnd,bnd},{-bnd,bnd}},ImageSize->imgsz]];
+Print[Show[conesgfx,conesactivegfx[[H]],redz0,PlotRange->{{-rng,rng},{-rng,rng}},ImageSize->imgsz]];
 
 iter=0;
 While[Length[H]!= 0,
@@ -232,23 +232,29 @@ While[Length[H]!= 0,
   For[ctr=1,ctr<=Length[cones],ctr++,
     If[hd==ctr,Continue[]];
     d=cones[[ctr]];
-    intd =RegionIntersection[RegionBoundary[rc],RegionBoundary[d]];
+    intd = RegionDifference[RegionIntersection[RegionBoundary[rc],RegionBoundary[d]],ret[[ctr]]];
 
     If[intd===EmptyRegion[2],Continue[]];
+    (* Skip if it has already been added*)
+    (*rd=RegionDifference[intd,ret[[ctr]]];
+    If[rd===EmptyRegion[2],Continue[]];
+    Print["intd ",intd];
+    Print["ret ",ret[[ctr]]];
+    Print["rd :",rd];*)
 
     transd=TransformCone[d,diagA];
     msd=MinkowskiSum[transd,intd];
 
     msid=RegionIntersection[msd,d];
-    
+
     Print["Step: ",iter," From: ",hd," To: ",ctr];
     Print[Show[sp,conesgfx,Graphics[{Opacity[0.8],Green,rc}],
       conesactivegfx[[hd]],
       conesactivegfx[[ctr]],
-      Graphics[{Opacity[0.8],Yellow,msid}],PlotRange->{{-bnd,bnd},{-bnd,bnd}},ImageSize->imgsz]];
-      
+      Graphics[{Opacity[0.8],Yellow,msid}],PlotRange->{{-rng,rng},{-rng,rng}},ImageSize->imgsz]];
+
     ret[[ctr]]=RegionUnion[ret[[ctr]],msid];
-    H=Join[H,{ctr}]
+    If[MemberQ[H,ctr],,H=Join[H,{ctr}]]
   ];
 ];
 
@@ -256,12 +262,12 @@ fin=Select[ret,Not[Head[#]===EmptyRegion]&];
 retgfx= Map[Graphics[Show[#]]/.{Directive[x_] :> Directive[{Opacity[0.8],Green,EdgeForm[Black]}]}&,fin];
 
 Print["Final tube:"];
-Print[Show[sp,conesgfx,retgfx]]; 
+Print[Show[sp,conesgfx,retgfx]];
 
 (* Show[cones,Graphics[{Red,z0}]] *)
 (* Show[Map[TransformCone[#,diagA]&,{C0,C1,C2}]] *)
 
-Return[ret];
+Return[{cones,ret}];
 ];
 
 

@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      9419,        190]
-NotebookOptionsPosition[      8798,        172]
-NotebookOutlinePosition[      9131,        187]
-CellTagsIndexPosition[      9088,        184]
+NotebookDataLength[     10293,        208]
+NotebookOptionsPosition[      9609,        189]
+NotebookOutlinePosition[     10002,        205]
+CellTagsIndexPosition[      9959,        202]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -29,12 +29,13 @@ Cell[BoxData[
      RowBox[{"ParentDirectory", "[", 
       RowBox[{"NotebookDirectory", "[", "]"}], "]"}], "]"}], "]"}], ";", 
    RowBox[{"Needs", "[", 
-    RowBox[{"\"\<Generic`\>\"", ",", 
+    RowBox[{"\"\<DiffDivConquer`\>\"", ",", 
      RowBox[{"FileNameJoin", "[", 
       RowBox[{"{", 
        RowBox[{
         RowBox[{"Directory", "[", "]"}], ",", "\"\<Strategies\>\"", ",", 
-        "\"\<Generic.m\>\""}], "}"}], "]"}]}], "]"}], " "}]}]], "Input",
+        "\"\<DiffDivConquer.m\>\""}], "}"}], "]"}]}], "]"}], " "}]}]], "Input",\
+
  InitializationCell->True,
  CellChangeTimes->{{3.743509639829265*^9, 3.743509642761352*^9}, {
    3.743509674408206*^9, 3.743509719604023*^9}, {3.7435169488117332`*^9, 
@@ -95,8 +96,11 @@ Cell[BoxData[
    3.762793509905753*^9, {3.7630471775613937`*^9, 3.763047178336532*^9}, {
    3.787075395528885*^9, 3.7870753996705847`*^9}, 3.787675754531714*^9, {
    3.7876758317040167`*^9, 3.787675850702651*^9}, {3.789882934981112*^9, 
-   3.789882938480521*^9}, 3.789972826904932*^9, 3.789973039394877*^9},
- CellLabel->"In[10]:=",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5"],
+   3.789882938480521*^9}, 3.789972826904932*^9, 3.789973039394877*^9, {
+   3.795832083365491*^9, 3.795832083742182*^9}, {3.795836308823365*^9, 
+   3.795836316527862*^9}},
+ EmphasizeSyntaxErrors->True,
+ CellLabel->"In[1]:=",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5"],
 
 Cell[BoxData[{
  RowBox[{
@@ -142,38 +146,52 @@ Cell[BoxData[{
  CellLabel->"In[2]:=",ExpressionUUID->"b40c5629-e697-4c6b-93ec-4516c5d17dd7"],
 
 Cell[BoxData[
- RowBox[{"Precompute", "[", "ode", "]"}]], "Input",
+ RowBox[{"PrecomputeDbx", "[", 
+  RowBox[{"ode", ",", 
+   RowBox[{"{", 
+    RowBox[{"{", 
+     RowBox[{"x", ",", "y", ",", "z"}], "}"}], "}"}]}], "]"}]], "Input",
  CellChangeTimes->{{3.7898832211815777`*^9, 3.78988332059159*^9}, {
-   3.789883760362026*^9, 3.7898837619569674`*^9}, 3.789885284422645*^9},
- CellLabel->"In[11]:=",ExpressionUUID->"dfa1728c-a26e-41ab-9107-cfa3bf04c8d5"],
+   3.789883760362026*^9, 3.7898837619569674`*^9}, 3.789885284422645*^9, {
+   3.7958320984915113`*^9, 3.7958320988679132`*^9}, {3.79583212949701*^9, 
+   3.795832134437639*^9}, {3.795832240789056*^9, 3.795832241992597*^9}},
+ CellLabel->"In[6]:=",ExpressionUUID->"dfa1728c-a26e-41ab-9107-cfa3bf04c8d5"],
 
 Cell[BoxData[
  RowBox[{"DiffSplit", "[", 
-  RowBox[{"{", 
-   RowBox[{
+  RowBox[{
+   RowBox[{"{", 
     RowBox[{
-     RowBox[{"y", ">", "x"}], "&&", 
-     RowBox[{"x", ">", "0"}], "&&", 
-     RowBox[{"t", "\[Equal]", "0"}]}], ",", 
-    RowBox[{"{", 
      RowBox[{
-      RowBox[{"{", 
-       RowBox[{"1", ",", "2", ",", "1"}], "}"}], ",", 
-      RowBox[{"{", 
-       RowBox[{"x", ",", "y", ",", "t"}], "}"}], ",", 
-      RowBox[{"t", "\[GreaterEqual]", "0"}]}], "}"}], ",", 
-    RowBox[{
-     RowBox[{"x", ">", "0"}], "&&", 
-     RowBox[{"y", ">", "0"}]}], ",", " ", 
-    RowBox[{"{", 
-     RowBox[{
-      RowBox[{"{", "}"}], ",", "True"}], "}"}]}], "}"}], "]"}]], "Input",
- CellLabel->"In[13]:=",ExpressionUUID->"20232cba-47aa-4257-ab59-b7c03dae9418"]
+      RowBox[{"y", ">", "x"}], "&&", 
+      RowBox[{"t", "\[Equal]", "0"}]}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"x", ",", "y", ",", "1"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"x", ",", "y", ",", "t"}], "}"}], ",", 
+       RowBox[{"t", "\[GreaterEqual]", "0"}]}], "}"}], ",", 
+     RowBox[{"y", ">", "x"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", "}"}], ",", "True"}], "}"}]}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"3", ",", 
+     RowBox[{"{", "\"\<Constant\>\"", "}"}], ",", 
+     RowBox[{"{", "}"}]}], "}"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.795832617551312*^9, 3.795832630982047*^9}, {
+   3.795832663006722*^9, 3.795832664354354*^9}, {3.7958327173079853`*^9, 
+   3.795832719689129*^9}, {3.7958354517858343`*^9, 3.795835458837614*^9}, {
+   3.795855373238501*^9, 3.795855375107658*^9}, {3.795855438970969*^9, 
+   3.795855441070565*^9}, 3.795855498057082*^9},
+ CellLabel->"In[4]:=",ExpressionUUID->"20232cba-47aa-4257-ab59-b7c03dae9418"]
 },
-WindowSize->{960, 1025},
+WindowSize->{720., 767.25},
 WindowMargins->{{Automatic, 0}, {0, Automatic}},
-FrontEndVersion->"11.3 for Linux x86 (64-bit) (March 6, 2018)",
-StyleDefinitions->"Default.nb"
+FrontEndVersion->"12.1 for Linux x86 (64-bit) (March 18, 2020)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"b00524ef-7980-45ee-9b8c-290620fc2783"
 ]
 (* End of Notebook Content *)
 
@@ -186,12 +204,12 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[558, 20, 5185, 78, 94, "Input",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5",
+Cell[558, 20, 5330, 82, 108, "Input",ExpressionUUID->"1eca25fc-0863-48db-ba97-1ab411aa7ae5",
  InitializationCell->True],
-Cell[5746, 100, 2036, 41, 71, "Input",ExpressionUUID->"b40c5629-e697-4c6b-93ec-4516c5d17dd7",
+Cell[5891, 104, 2036, 41, 67, "Input",ExpressionUUID->"b40c5629-e697-4c6b-93ec-4516c5d17dd7",
  InitializationCell->True],
-Cell[7785, 143, 285, 4, 31, "Input",ExpressionUUID->"dfa1728c-a26e-41ab-9107-cfa3bf04c8d5"],
-Cell[8073, 149, 721, 21, 31, "Input",ExpressionUUID->"20232cba-47aa-4257-ab59-b7c03dae9418"]
+Cell[7930, 147, 544, 10, 29, "Input",ExpressionUUID->"dfa1728c-a26e-41ab-9107-cfa3bf04c8d5"],
+Cell[8477, 159, 1128, 28, 51, "Input",ExpressionUUID->"20232cba-47aa-4257-ab59-b7c03dae9418"]
 }
 ]
 *)
