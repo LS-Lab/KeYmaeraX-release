@@ -116,7 +116,7 @@ If[OptionValue[InvGen,SanityCheckTimeout] > 0,
 ], OptionValue[InvGen,SanityCheckTimeout]]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
-class=Classifier`ClassifyProblem[prob];
+class=Classifier`ClassifyProblem[{pre,{f,vars,evoConst},post}];
 Print["Classification: ", class];
 
 DiffSaturation`DiffSat[eprob, class]
