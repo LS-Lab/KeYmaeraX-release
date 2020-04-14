@@ -45,7 +45,7 @@ BarrierCert::usage="BarrierCert[problem_List]";
 *)
 Options[PreservedState]= {Timeout -> 10};
 Options[HeuInvariants]= {Timeout -> 20};
-Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20};
+Options[FirstIntegrals]= {Deg -> -1, Timeout -> 20, Numerical -> True};
 Options[DbxPoly]= {MaxDeg -> -1, Staggered -> False, Timeout -> 30};
 Options[BarrierCert]= {Deg -> -1, Timeout -> 60};
 
@@ -115,11 +115,13 @@ TimeConstrained[Block[{},
 fIs=Primitives`FuncIndep[FirstIntegrals`FindFirstIntegrals[{vf,vars,Q},deg],vars];
 (* upper and lower bounds on the FIs
 todo: NMaxValue instead? Needs extra LZZ check: it doesn't give the real max/mins sometimes! *)
+If[TrueQ[OptionValue[FirstIntegrals, Numerical]],
+Block[{},
+uppers = Map[upperRat[NMaxValue[{#,pre},vars]]&,fIs];
+lowers = Map[lowerRat[NMinValue[{#,pre},vars]]&,fIs]],
+Block[{},
 uppers = Map[upperRat[MaxValue[{#,pre},vars]]&,fIs];
-lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs];
-
-(*Print["First integrals:",fIs];
-Print[uppers,lowers]; *)
+lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs]]];
 
 maxminVs=Flatten[MapThread[
   (* If the upper and lower bound are the same and non-infinity, return the equality *)
