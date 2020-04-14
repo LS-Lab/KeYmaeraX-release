@@ -288,57 +288,57 @@ odeDim=SystemDimension[vectorField,vars];
 (* A list of the most specific classification kinds in the hierarchy *)
 odeKind=Select[VertexList[classGraph], isSink[#,classGraph]&];
 (* Set boundedness checks *)
-boundedInit=If[BoundedInitQ[problem], "Bounded initial set", "Unbounded initial set"];
-boundedUnsafe=If[BoundedUnsafeQ[problem], "Bounded unsafe set", "Unbounded unsafe set"];
-boundedEvoConst=If[BoundedEvoConstQ[problem], "Bounded evolution constraint", "Unbounded evolution constraint"];
+boundedInit=If[BoundedInitQ[problem], "Initial Set" -> "Bounded", "Initial Set" -> "Unbounded"];
+boundedUnsafe=If[BoundedUnsafeQ[problem], "Unsafe Set" -> "Bounded", "Unsafe Set" -> "Unbounded"];
+boundedEvoConst=If[BoundedEvoConstQ[problem], "Evolution Constraint" -> "Bounded", "Evolution Constraint" -> "Unbounded"];
 (* Algebraic set checks *)
-algebraicPre=If[AlgebraicPreQ[problem], "Algebraic precondition", "Semi-algebraic precondition"];
-algebraicPost=If[AlgebraicPostQ[problem], "Algebraic postcondition", "Semi-algebraic postcondition"];
-algebraicEvoConst=If[AlgebraicEvoConstQ[problem], "Algebraic evolution constraint", "Semi-algebraic evolution constraint"];
+algebraicPre=If[AlgebraicPreQ[problem], "Precondition" -> "Algebraic", "Precondition" -> "Semi-algebraic"];
+algebraicPost=If[AlgebraicPostQ[problem], "Postcondition" -> "Algebraic", "Postcondition" -> "Semi-algebraic"];
+algebraicEvoConst=If[AlgebraicEvoConstQ[problem], "Evolution Constraint" -> "Algebraic", "Evolution Constraint" -> "Semi-algebraic"];
 (* Boolean structure checks *)
-booleanStructPre=If[AtomicFormulaQ[pre], "Atomic precondition",
-(* else if *) If[ConjunctiveFormulaQ[pre], "Conjunctive precondition", 
-(* else if *) If[DisjunctiveFormulaQ[pre], "Disjunctive precondition", 
-(* else *)    "General precondition"]
+booleanStructPre=If[AtomicFormulaQ[pre], "Precondition" -> "Atomic",
+(* else if *) If[ConjunctiveFormulaQ[pre], "Precondition" -> "Conjunctive",
+(* else if *) If[DisjunctiveFormulaQ[pre], "Precondition" -> "Disjunctive",
+(* else *)    "Precondition" -> "General"]
 ]];
-booleanStructPost=If[AtomicFormulaQ[post], "Atomic postcondition",
-(* else if *) If[ConjunctiveFormulaQ[post], "Conjunctive postcondition", 
-(* else if *) If[DisjunctiveFormulaQ[post], "Disjunctive postcondition", 
-(* else *)    "General postcondition"]
+booleanStructPost=If[AtomicFormulaQ[post], "Postcondition" -> "Atomic",
+(* else if *) If[ConjunctiveFormulaQ[post], "Postcondition" -> "Conjunctive",
+(* else if *) If[DisjunctiveFormulaQ[post], "Postcondition" -> "Disjunctive",
+(* else *)    "Postcondition" -> "General"]
 ]];
-booleanStructEvoConst=If[AtomicFormulaQ[evoConstraint], "Atomic evolution constraint",
-(* else if *) If[ConjunctiveFormulaQ[evoConstraint], "Conjunctive evolution constraint", 
-(* else if *) If[DisjunctiveFormulaQ[evoConstraint], "Disjunctive evolution constraint", 
-(* else *)    "General evolution constraint"]
+booleanStructEvoConst=If[AtomicFormulaQ[evoConstraint], "Evolution Constraint" -> "Atomic",
+(* else if *) If[ConjunctiveFormulaQ[evoConstraint], "Evolution Constraint" -> "Conjunctive",
+(* else if *) If[DisjunctiveFormulaQ[evoConstraint], "Evolution Constraint" -> "Disjunctive",
+(* else *)    "Evolution Constraint" -> "General"]
 ]];
 (* Topological checks *)
-topologyPre=If[TrueQ[pre==True || pre==False], "Clopen precondition",
-(* else if *)If[OpenFormulaQ[pre], "Open precondition",
-(* else if *) If[ClosedFormulaQ[pre], "Closed precondition",  
-(* else *)    "Neither closed nor open precondition"]
+topologyPre=If[TrueQ[pre==True || pre==False], "Precondition" -> "Clopen",
+(* else if *)If[OpenFormulaQ[pre], "Precondition" -> "Open",
+(* else if *) If[ClosedFormulaQ[pre], "Precondition" -> "Closed",
+(* else *)    "Precondition" -> "Neither"]
 ]];
-topologyPost=If[TrueQ[post==True || post==False], "Clopen postcondition",
-(* else if *)If[OpenFormulaQ[post], "Open postcondition",
-(* else if *) If[ClosedFormulaQ[post], "Closed postcondition",  
-(* else *)    "Neither closed nor open postcondition"]
+topologyPost=If[TrueQ[post==True || post==False], "Postcondition" -> "Clopen",
+(* else if *)If[OpenFormulaQ[post], "Postcondition" -> "Open",
+(* else if *) If[ClosedFormulaQ[post], "Postcondition" -> "Closed",
+(* else *)    "Postcondition" -> "Neither"]
 ]];
-topologyEvoConst=If[TrueQ[evoConstraint==True || evoConstraint==False], "Clopen evolution constraint",
-(* else if *) If[OpenFormulaQ[evoConstraint], "Open evolution constraint",
-(* else if *) If[ClosedFormulaQ[evoConstraint], "Closed evolution constraint",  
-(* else *)    "Neither closed nor open evolution constraint"]
+topologyEvoConst=If[TrueQ[evoConstraint==True || evoConstraint==False], "Evolution Constraint" -> "Clopen",
+(* else if *) If[OpenFormulaQ[evoConstraint], "Evolution Constraint" -> "Open",
+(* else if *) If[ClosedFormulaQ[evoConstraint], "Evolution Constraint" -> "Closed",
+(* else *)    "Evolution Constraint" -> "Neither"]
 ]];
 
-boundedTime=If[BoundedTimeProblemQ[problem], "Bounded time", "Unbounded time"];
+boundedTime=If[BoundedTimeProblemQ[problem], "Time" -> "Bounded", "Time" -> "Unbounded"];
 
 (* Return classification as a list *)
 {odeDim, (* The first element is always the ODE system dimension *)
 odeKind, (* The second element is a list describing the kind of ODE in the right-hand side *)
 (* The third element is a list giving a summary of the features of the verification problem *)
-{boundedInit, boundedUnsafe, boundedEvoConst,  (* boundedness checks *)
-algebraicPre, algebraicPost, algebraicEvoConst, (* 'algebraicity' checks *)
-booleanStructPre, booleanStructPost, booleanStructEvoConst, (* boolean formula structure checks *)
-topologyPre, topologyPost, topologyEvoConst, (* topological checks *)
-boundedTime (* time boundedness check *)}
+{ "Boundedness" -> {boundedInit, boundedUnsafe, boundedEvoConst},  (* boundedness checks *)
+  "Algebraity" -> {algebraicPre, algebraicPost, algebraicEvoConst}, (* 'algebraicity' checks *)
+  "Boolean Structure" -> {booleanStructPre, booleanStructPost, booleanStructEvoConst}, (* boolean formula structure checks *)
+  "Topology" -> {topologyPre, topologyPost, topologyEvoConst}, (* topological checks *)
+  "Space Boundedness" -> {boundedTime} (* time boundedness check *)}
 }
 ]
 
