@@ -126,11 +126,25 @@ class TaylorModelArith(context: IndexedSeq[Formula],
 
   val exactPrv = AnonymousLemmas.remember(
     ("elem_() = poly_() ->" +
-    "\\exists err_ (elem_() = poly_() + err_ & 0 <= err_ & err_ <= 0)").asFormula, QE & done
+      "\\exists err_ (elem_() = poly_() + err_ & 0 <= err_ & err_ <= 0)").asFormula, QE & done
+  )
+
+  val approxPrv = AnonymousLemmas.remember(
+    ("(" +
+      "\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_()) &" +
+      "poly_() = poly1_() + poly2_() &" +
+      "poly1_() = poly1rep_() &" +
+      "poly2_() = poly2rep_() &" +
+      "(\\forall i1_ (l_() <= i1_ & i1_ <= u_() ->" +
+      "   l2_() <= poly2rep_() + i1_ & poly2rep_() + i1_ <= u2_()))" +
+      ") ->" +
+      "\\exists err_ (elem_() = poly1rep_() + err_ & l2_() <= err_ & err_ <= u2_())").asFormula,
+    QE & done
   )
 
   val ringVars = vars.map(ringsLib.toRing).toList
   // proof of "poly.term = horner form"
+  // TODO: add to PolynomialLibrary
   def toHorner(poly: Polynomial) : ProvableSig  = {
     val horner = ringsLib.toHorner(ringsLib.toRing(poly.term), ringVars)
     val zeroPrv = (poly - ofTerm(horner)).zeroTest.getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
@@ -304,6 +318,31 @@ class TaylorModelArith(context: IndexedSeq[Formula],
             Seq(prv, p.prv, weakenWithContext(mPrv)))
         TM(Power(elem, Number(n)), p.poly.resetTerm, p.lower, p.upper, newPrv)
       case _ => throw new IllegalArgumentException("Taylor model ^ n requires n > 0, not n = " + n)
+    }
+
+    def approx(prec: Int) = {
+      approxPrv
+      val (polyApproxPrv, poly1, poly2) = poly.approx(prec)
+      val poly1rep = rhsOf(poly1.representation)
+      val poly2repPrv = toHorner(poly2)
+      val poly2rep = rhsOf(poly2repPrv)
+      val (ivlPrv, l2, u2) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(prec)(context)(i1 => Plus(poly2rep, i1))(lower, upper)
+      val newPrv = useDirectlyConst(weakenWithContext(approxPrv.fact),
+        Seq(
+          ("elem_", elem),
+          ("poly_", rhsOf(poly.representation)),
+          ("l_", lower),
+          ("u_", upper),
+          ("poly1_", poly1.term),
+          ("poly1rep_", poly1rep),
+          ("poly2_", poly2.term),
+          ("poly2rep_", poly2rep),
+          ("l2_", l2),
+          ("u2_", u2)
+        ),
+        Seq(prv, weakenWithContext(polyApproxPrv), weakenWithContext(poly1.representation), weakenWithContext(poly2repPrv), ivlPrv)
+      )
+      TM(elem, poly1.resetTerm, l2, u2, newPrv)
     }
 
   }

@@ -123,6 +123,22 @@ class TaylorModelArithTests extends TacticTestBase {
     println(tmC)
   }
 
+  it should "approx" in withMathematica { qeTool =>
+    import ta3._
+    import ta3.polynomialRing._
+    import PolynomialArithV2Helpers._
+    val x0 = ofTerm("x0()".asTerm)
+    val y0 = ofTerm("y0()".asTerm)
+    val tm1 = Exact(ofTerm("1/3".asTerm)) * TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
+    val tm2 = TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
+    val tm = (tm1 + tm2)^2
+    val tmA = tm.approx(5)
+    tmA.elem shouldBe "(1/3*x+y)^2".asTerm
+    rhsOf(tmA.poly.prettyRepresentation) shouldBe "0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2".asTerm
+    tmA.lower shouldBe "-32099*10^-5".asTerm
+    tmA.upper shouldBe "33236*10^-5".asTerm
+  }
+
   it should "form Horner" in withMathematica { qeTool =>
     import ta3._
     import ta3.polynomialRing._
