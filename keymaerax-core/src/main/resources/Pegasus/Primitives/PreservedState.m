@@ -15,25 +15,19 @@ PreservedPre[vf_List, vars_List, pre_, domain_] :=
     Module[{normalized, disjuncts, conjunctLists, conjuncts, preserved, polys, poly},
      (*pre is usually in disjunctive normal form, see Dependency`FilterVars, but redo if called from somewhere else not in that form *)
      disjuncts = Primitives`Disjuncts[Primitives`DNFNormalizeGtGeq[pre]];
-     disjuncts = If[ListQ[disjuncts], disjuncts, { disjuncts }];
-     conjunctLists = Map[({# /. {And->List}}//Flatten)&, disjuncts];
-     Print["Filtering conjuncts ", conjunctLists];
+     (* TODO: disjunctions *)
      preserved = {};
-     Do[
-         p = {};
-         (*Print["conj",conjuncts];*)
-         Do[
-         If[TimeConstrained[LZZ`InvSDI[f, vf, vars, domain], 1, False],
-             AppendTo[p, f], Null],
-             (* Simplify undoes the GtGeq normalization of Dependency`FilterVars to obtain equations again (reduces number of InvSDI calls) *)
-             {f, ({Simplify[conjuncts/.{List->And}]/.{And->List}}//Flatten)/.{{True} -> {}} }];
-         AppendTo[preserved, p]
-         ,
-         {conjuncts, conjunctLists}
+     If[ListQ[disjuncts], {},
+       Do[
+         Print["f: ", f];
+         If[TrueQ[TimeConstrained[LZZ`InvSDI[f, vf, vars, domain], 1, False]],
+           AppendTo[preserved, f], Null],
+         (* Simplify undoes the GtGeq normalization of Dependency`FilterVars to obtain equations again (reduces number of InvSDI calls) *)
+         {f, ({Simplify[disjuncts]/.{And->List}}//Flatten)/.{{True} -> {}} }
+       ];
      ];
      Print["Preserved ", preserved];
-     (* TODO disjunctions *)
-     If[Length[preserved] >= 1, preserved[[1]], {}]
+     preserved
     ]
 
 End[]
