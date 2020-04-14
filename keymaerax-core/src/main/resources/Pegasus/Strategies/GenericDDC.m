@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(* A draft generic strategy *)
+(* A DDC strategy *)
 
 
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]];
@@ -121,7 +121,7 @@ If[gt,ConstrainedDDC[tl, pre, vars, added && hd>0, Join[polys,{hd}], vf, cont],F
 ]
 
 
-DiffSplit[prob_List, opts:OptionsPattern[]]:=Catch[Module[
+DiffSplit[prob_List, class_List, opts:OptionsPattern[]]:=Catch[Module[
 {pre,post,f,vars,Q,fIs,dbx,pre1,post1,probs,augprob,constvars,constQ,deps,cont},
 
 {pre, { f, vars, Q }, post, {constvars,constQ}} = prob;
@@ -130,29 +130,29 @@ Print["Input Problem: ",prob];
 deps = Join[Dependency`VariableDependenciesHelper[f,vars],{vars}];
 Print["Dependencies: ",deps];
 
-fIs = PrecomputeFIs[prob[[2]],deps];
-Print["First integrals: ", fIs];
+(* fIs = PrecomputeFIs[prob[[2]],deps];
+Print["First integrals: ", fIs]; *)
 
 dbx = PrecomputeDbx[prob[[2]],deps];
 (* Forget about first integrals *)
 dbx=Select[dbx, Not[TrueQ[Simplify[Grad[#,vars].f]==0]] &];
 Print["Filtered Darboux polynomials: ",dbx];
 
-SetOptions[GenericNonLinear`FirstIntegrals,Timeout->0];
+SetOptions[DiffSaturation`DiffSat,StrictMethodTimeouts->True];
+(* SetOptions[GenericNonLinear`FirstIntegrals,Timeout->0]; *)
 SetOptions[GenericNonLinear`DbxPoly,Timeout->0];
 SetOptions[GenericNonLinear`HeuInvariants,Timeout->40];
-SetOptions[GenericNonLinear`BarrierCert,Timeout->Infinity];
-(*SetOptions[DiffSaturation`DiffSat,UseDependencies\[Rule]False];*)
+SetOptions[GenericNonLinear`BarrierCert,Timeout->80];
 
 cont[add_,polys_]:=Block[{prob2,prob3,ratFIs},
 
-ratFIs=GenerateRatFI[polys,f,vars];
+(*ratFIs=GenerateRatFI[polys,f,vars];
 Print["Rational FIs:",ratFIs];
-
+*)
 prob2=AddToPre[prob,add];
-prob3=BoundFIs[prob2,Join[fIs,ratFIs]];
+prob3=prob2; (*BoundFIs[prob2,Join[fIs,ratFIs]];*)
 
-DiffSaturation`DiffSat[prob3]
+DiffSaturation`DiffSat[prob3, class, opts]
 ];
 
 ConstrainedDDC[dbx, pre&&Q&&constQ, Join[vars,constvars], True, {}, f, cont]
