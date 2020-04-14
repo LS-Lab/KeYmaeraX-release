@@ -108,6 +108,7 @@ object PolynomialArithV2 {
       }
     }
 
+    implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
   }
 
   /** construct a Polynomial ring in a given sequence of variables */

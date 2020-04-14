@@ -35,6 +35,18 @@ class PolynomialArithV2Tests extends TacticTestBase {
     prv.conclusion.succ.loneElement shouldBe Equal(Minus(Power(aT, Number(4)), bT), Number(0))
   }
 
+  it should "implicitly convert integers" in withMathematica { _ =>
+    val ring = PolynomialRing("x".split(',').map(_.asTerm).toIndexedSeq)
+    import ring._
+    val x = Var(0)
+    val a = (x + 2)*(x - 2)
+    val b = (x^2) - 4
+    val prv = (a - b).zeroTest.get
+    prv shouldBe 'proved
+    prv.conclusion.ante shouldBe 'empty
+    prv.conclusion.succ.loneElement shouldBe "(x+2)*(x-2) - (x^2-4) = 0".asFormula
+  }
+
   it should "implicitly construct an appropriate polynomial ring" in withMathematica { _ =>
     val t = ("(-x + 2/3*y - 4*z^3)^4 - (x^4 -216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2" +
       "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
