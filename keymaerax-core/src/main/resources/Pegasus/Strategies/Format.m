@@ -56,10 +56,17 @@ FormatErr[str_String,internal_]:=Module[{},
 ];
 
 
-FormatDDC[p_, branches_List]:=Module[{},
+FormatDDC[p_, branches_List]:=Module[{b1,b2,b3,s1,s2,s3},
 	If[Length[branches]!=3,
 		Return[FormatErr["Wrong number of branches to FormatDDC (expected exactly 3)", True]]];
-	
+
+b1=Lookup[branches[[1]],Symbol["ResultType"]]===Symbol["Trivial"];
+b2=Lookup[branches[[2]],Symbol["ResultType"]]===Symbol["Trivial"];
+b3=Lookup[branches[[3]],Symbol["ResultType"]]===Symbol["Trivial"];
+
+s1=Lookup[Lookup[branches[[1]],Symbol["Result"]],Symbol["Proved"]]===True;
+s2=Lookup[Lookup[branches[[2]],Symbol["Result"]],Symbol["Proved"]]===True;
+s3=Lookup[Lookup[branches[[3]],Symbol["Result"]],Symbol["Proved"]]===True;
 {
 	Symbol["ResultType"] -> Symbol["DiffDC"],
 	Symbol["Result"] -> {
@@ -69,7 +76,8 @@ FormatDDC[p_, branches_List]:=Module[{},
 		(* p = 0 *)
 		Symbol["Equal"] -> branches[[2]],
 		(* p > 0 *)
-		Symbol["Greater"] -> branches[[3]]
+		Symbol["Greater"] -> branches[[3]],
+		Symbol["Proved"] -> (b1||s1)&&(b2||s2)&&(b3||s3)
 	}
 }];
 
