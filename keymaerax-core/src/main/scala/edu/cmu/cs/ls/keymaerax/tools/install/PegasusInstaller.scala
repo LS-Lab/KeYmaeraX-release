@@ -46,13 +46,14 @@ object PegasusInstaller extends Logging {
         "Strategies/DarbouxDDC.m" ::
         "Strategies/DiffSaturation.m" ::
         "Strategies/Format.m" ::
-        "Strategies/Generic.m" ::
+        "Strategies/DiffDivConquer.m" ::
         "Strategies/GenericNonLinear.m" ::
         "Strategies/Helper.m" ::
         "Strategies/InvariantExtractor.m" ::
         "Strategies/GenericLinear.m" ::
         "Strategies/OneDimensional.m" ::
         "Classifier.m" ::
+        "NewClassifier.m" ::
         "Pegasus.m" ::
         "Refute.m" ::
         Nil
