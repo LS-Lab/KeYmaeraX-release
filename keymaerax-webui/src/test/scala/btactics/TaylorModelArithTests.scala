@@ -24,52 +24,50 @@ class TaylorModelArithTests extends TacticTestBase {
   val context3 = ("-1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1, -1 <= z0(), z0() <= 1," +
     "x = x0() + y0() + rx, -0.01 <= rx, rx <= 0.02," +
     "y = 0.5*x0() - y0() + ry, 0 <= ry, ry <= 0.1").split(',').map(_.asFormula).toIndexedSeq
-  lazy val ta3 = new TaylorModelArith(context3, "x0(),y0(),z0(),rx,ry".split(',').map(_.asTerm).toIndexedSeq, 10, 4)
+  lazy val ta3 = new TaylorModelArith(context3, "x0(),y0(),z0(),rx,ry".split(',').map(_.asTerm).toIndexedSeq, 5, 4)
   lazy val x0 = ta3.polynomialRing.ofTerm("x0()".asTerm)
   lazy val y0 = ta3.polynomialRing.ofTerm("y0()".asTerm)
   lazy val tm1 = ta3.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
   lazy val tm2 = ta3.TM("y".asTerm, ta3.polynomialRing.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
+  lazy val tm3 = ta3.Exact(ta3.polynomialRing.ofTerm("1/3".asTerm)) *! tm1
 
   "Taylor models" should "add exactly" in withMathematica { qeTool =>
-    println(tm1)
-    println(tm2)
-    println(tm1 +! tm2)
+    (tm1 +! tm2).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x+y=1.5*x0()+err_&-0.01<=err_&err_<=0.12)".asFormula
   }
 
   it should "subtract exactly" in withMathematica { qeTool =>
-    println(tm1)
-    println(tm2)
-    println(tm1 -! tm2)
+    (tm1 -! tm2).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x-y=0.5*x0()+2*y0()+err_&-0.11<=err_&err_<=0.02)".asFormula
   }
 
   it should "multiply exactly" in withMathematica { qeTool =>
-    println(tm1)
-    println(tm2)
-    println(tm1 *! tm2)
+    (tm1 *! tm2).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x*y=0.5*x0()^2+- 0.5*x0()*y0()+- 1*y0()^2+err_&-0.231<=err_&err_<=0.232)".asFormula
   }
 
   it should "negate" in withMathematica { qeTool =>
-    println(tm1)
-    println(-tm1)
+    (-tm1).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (-x=-x0()+- 1*y0()+err_&-0.02<=err_&err_<=0.01)".asFormula
   }
 
   it should "square exactly" in withMathematica { qeTool =>
-    println(tm1)
-    println(tm1.squareExact)
+    tm1.squareExact.prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x^2=x0()^2+2*x0()*y0()+1*y0()^2+err_&-0.08<=err_&err_<=0.0804)".asFormula
   }
 
   it should "^1" in withMathematica { qeTool =>
-    println(tm1)
-    println(tm1^1)
+    (tm1^1).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x^1=x0()+1*y0()+err_&-0.01<=err_&err_<=0.02)".asFormula
   }
 
   it should "^(2*n)" in withMathematica { qeTool =>
-    println(tm1)
-    println(tm1^4)
+    (tm1^4).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x^4=x0()^4+4*x0()^3*y0()+6*x0()^2*y0()^2+4*x0()*y0()^3+1*y0()^4+err_&-0.64<=err_&err_<=0.64967)".asFormula
   }
   it should "^(2*n + 1)" in withMathematica { qeTool =>
-    println(tm1)
-    println(tm1^3)
+    (tm1^3).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x^3=x0()^3+3*x0()^2*y0()+3*x0()*y0()^2+1*y0()^3+err_&-0.2024<=err_&err_<=0.24241)".asFormula
   }
 
   it should "exact" in withMathematica { qeTool =>
@@ -81,21 +79,18 @@ class TaylorModelArithTests extends TacticTestBase {
     val tmA = Exact(a)
     val tmB = Exact(b)
     val tmC = Exact(c)
-    println(tmA)
-    println(tmB)
-    println(tmC)
+    (tmA).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x0()=x0()+err_&0<=err_&err_<=0)".asFormula
+    (tmB).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (1=1+err_&0<=err_&err_<=0)".asFormula
+    (tmC).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (1/3=1/3+err_&0<=err_&err_<=0)".asFormula
   }
 
   it should "approx" in withMathematica { qeTool =>
     import ta3._
     import polynomialRing._
-    val tm3 = Exact(ofTerm("1/3".asTerm)) *! TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     val tm = (tm3 +! tm2).squareExact
     val tmA = tm.approx(5)
-    tmA.elem shouldBe "(1/3*x+y)^2".asTerm
-    rhsOf(tmA.poly.prettyRepresentation) shouldBe "0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2".asTerm
-    tmA.lower shouldBe "-32099*10^-5".asTerm
-    tmA.upper shouldBe "33236*10^-5".asTerm
+    tmA.prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ ((1/3*x+y)^2=0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2+err_&-0.32102<=err_&err_<=0.33240)".asFormula
   }
 
   it should "form Horner" in withMathematica { qeTool =>

@@ -24,10 +24,10 @@ class TaylorModelArith(context: IndexedSeq[Formula],
   import polynomialRing._
   import PolynomialArithV2Helpers._
 
-  def tmFormula(elem: Term, poly: Polynomial, lower: Term, upper: Term) = {
+  def tmFormula(elem: Term, poly: Term, lower: Term, upper: Term) = {
     val err = BaseVariable("err_")
     Exists(Seq(err),
-      And(Equal(elem, Plus(rhsOf(poly.representation), err)),
+      And(Equal(elem, Plus(poly, err)),
         And(LessEqual(lower, err),
           LessEqual(err, upper)
         ))
@@ -156,7 +156,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     *   prv: \exists err. elem = poly + err & err \in [lower; upper]
     * */
   case class TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, prv: ProvableSig) {
-    assert(prv.conclusion.succ(0) == tmFormula(elem, poly, lower, upper))
+    assert(prv.conclusion.succ(0) == tmFormula(elem, rhsOf(poly.representation), lower, upper))
 
     /** exact addition */
     def +!(other: TM) : TM = {
@@ -359,11 +359,32 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(elem, poly1.resetTerm, l2, u2, newPrv)
     }
 
+    def prettyPrv: ProvableSig = {
+      val (l1, l2) = IntervalArithmeticV2.eval_ivl(prec)(HashMap(), HashMap())(lower)
+      val (u1, u2) = IntervalArithmeticV2.eval_ivl(prec)(HashMap(), HashMap())(upper)
+      val prettyLower = if (l1 == l2) Number(l1) else lower
+      val prettyUpper = if (u1 == u2) Number(u1) else upper
+      proveBy(ProvableSig.startProof(Sequent(context, IndexedSeq(tmFormula(elem, rhsOf(poly.prettyRepresentation),
+        prettyLower, prettyUpper)))).apply(CutRight(prv.conclusion.succ(0), SuccPos(0)), 0).
+        apply(CoHideRight(SuccPos(0)), 1).
+        apply(ImplyRight(SuccPos(0)), 1),
+        Idioms.<(
+          by(prv),
+          existsL(-1) & existsR("err_".asTerm)(1) & andL(-1) & andL(-2) & andR(1) &
+          Idioms.<(
+            cohideOnlyL(-1) &
+              useAt(poly.prettyRepresentation, PosInExpr(1::Nil))(1, 1::0::Nil) & closeId
+            ,
+            hideL(-1) & IntervalArithmeticV2.intervalArithmeticBool(prec, new BigDecimalTool)
+          )
+        )
+      )
+    }
   }
 
   def TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, be: BelleExpr): TM = {
     TM(elem, poly, lower, upper,
-      proveBy(Sequent(context, IndexedSeq(tmFormula(elem, poly, lower, upper))), be & done))
+      proveBy(Sequent(context, IndexedSeq(tmFormula(elem, rhsOf(poly.representation), lower, upper))), be & done))
   }
 
   def Exact(elem: Polynomial): TM = {
@@ -371,7 +392,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       Seq(("elem_", elem.term), ("poly_", rhsOf(elem.representation))),
       Seq(weakenWithContext(elem.representation))
     )
-    TM(elem.term, elem, Number(0), Number(0), newPrv)
+    TM(elem.term, elem.resetTerm, Number(0), Number(0), newPrv)
   }
 
 }
