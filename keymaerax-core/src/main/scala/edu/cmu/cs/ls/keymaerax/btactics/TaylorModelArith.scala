@@ -12,19 +12,24 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.collection.immutable._
 
-
+/**
+  * Taylor model arithmetic
+  *
+  * Here, a Taylor model is a data structure maintaining a proof that some term is element of the Taylor model.
+  *
+  * */
 class TaylorModelArith(context: IndexedSeq[Formula],
                        vars: IndexedSeq[Term],
                        prec: Int,
                        order: Int
                       ) {
   val polynomialRing = PolynomialArithV2.PolynomialRing(vars)
-  val ringsLib = new RingsLibrary(vars) // for non-certified computations
+  private val ringsLib = new RingsLibrary(vars) // for non-certified computations
 
   import polynomialRing._
   import PolynomialArithV2Helpers._
 
-  def tmFormula(elem: Term, poly: Term, lower: Term, upper: Term) = {
+  private def tmFormula(elem: Term, poly: Term, lower: Term, upper: Term) = {
     val err = BaseVariable("err_")
     Exists(Seq(err),
       And(Equal(elem, Plus(poly, err)),
@@ -34,14 +39,14 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     )
   }
 
-  def weakenWithContext(prv: ProvableSig) = {
+  private def weakenWithContext(prv: ProvableSig) = {
     assert(prv.conclusion.ante.isEmpty)
     ProvableSig.startProof(Sequent(context, prv.conclusion.succ)).apply(CoHideRight(SuccPos(0)), 0).apply(prv, 0)
   }
 
-  val eqMinusI = rememberAny("(t_() - s_() = 0) -> t_() = s_()".asFormula, QE & done)
+  private val eqMinusI = rememberAny("(t_() - s_() = 0) -> t_() = s_()".asFormula, QE & done)
 
-  val plusPrv = AnonymousLemmas.remember(
+  private val plusPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
       "poly1_() + poly2_() = poly_() &" +
@@ -50,7 +55,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       ") ->" +
       "\\exists err_ (elem1_() + elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
 
-  val minusPrv = AnonymousLemmas.remember(
+  private val minusPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
       "poly1_() - poly2_() = poly_() &" +
@@ -59,7 +64,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       ") ->" +
       "\\exists err_ (elem1_() - elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
 
-  val timesPrv = AnonymousLemmas.remember(
+  private val timesPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
       "poly1_() * poly2_() = polyLow_() + polyHigh_() &" +
@@ -73,7 +78,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       existsR("rem_() + err__0 * poly2_() + err_ * poly1_() + err__0 * err_".asTerm)(1) & QE & done
   )
 
-  val squarePrv = AnonymousLemmas.remember(//@todo: is there a better scheme than just multiplication?
+  private val squarePrv = AnonymousLemmas.remember(//@todo: is there a better scheme than just multiplication?
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "poly1_()^2 = polyLow_() + polyHigh_() &" +
       "polyLow_() = poly_() &" +
@@ -85,12 +90,13 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & existsL(-1) & allL("err_".asTerm)(-4) &
       existsR("rem_() + 2 * err_ * poly1_() + err_^2".asTerm)(1) & QE & done
   )
-  val powerOne = AnonymousLemmas.remember((
+
+  private val powerOne = AnonymousLemmas.remember((
     "(\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_()))" +
     " ->" +
     "\\exists err_ (elem1_()^1 = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())").asFormula, QE & done)
 
-  val powerEven = AnonymousLemmas.remember((
+  private val powerEven = AnonymousLemmas.remember((
     "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ ((elem1_()^m_())^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "(n_() = 2*m_() <-> true)" +
@@ -103,7 +109,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     )
   )
 
-  val powerOdd = AnonymousLemmas.remember((
+  private val powerOdd = AnonymousLemmas.remember((
     "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ ((elem1_()^m_())^2*elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
       "(n_() = 2*m_() + 1 <-> true)" +
@@ -116,7 +122,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     )
   )
 
-  val negPrv = AnonymousLemmas.remember(
+  private val negPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "-poly1_() = poly_() &" +
       "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
@@ -124,12 +130,12 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       ") ->" +
       "\\exists err_ (-elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
 
-  val exactPrv = AnonymousLemmas.remember(
+  private val exactPrv = AnonymousLemmas.remember(
     ("elem_() = poly_() ->" +
       "\\exists err_ (elem_() = poly_() + err_ & 0 <= err_ & err_ <= 0)").asFormula, QE & done
   )
 
-  val approxPrv = AnonymousLemmas.remember(
+  private val approxPrv = AnonymousLemmas.remember(
     ("(" +
       "\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_()) &" +
       "poly_() = poly1_() + poly2_() &" +
@@ -142,7 +148,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     QE & done
   )
 
-  val ringVars = vars.map(ringsLib.toRing).toList
+  private val ringVars = vars.map(ringsLib.toRing).toList
   // proof of "poly.term = horner form"
   // TODO: add to PolynomialLibrary
   def toHorner(poly: Polynomial) : ProvableSig  = {
@@ -152,8 +158,10 @@ class TaylorModelArith(context: IndexedSeq[Formula],
   }
 
   /**
-    * invariant
+    * data structure with certifying computations
+    * maintains the invariant
     *   prv: \exists err. elem = poly + err & err \in [lower; upper]
+    *
     * */
   case class TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, prv: ProvableSig) {
     assert(prv.conclusion.succ(0) == tmFormula(elem, rhsOf(poly.representation), lower, upper))
@@ -335,6 +343,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       case _ => throw new IllegalArgumentException("Taylor model ^ n requires n > 0, not n = " + n)
     }
 
+    /** round coefficients of polynomial part, incorporate error in interval */
     def approx(prec: Int) : TM = {
       val (polyApproxPrv, poly1, poly2) = poly.approx(prec)
       val poly1rep = rhsOf(poly1.representation)
@@ -359,6 +368,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(elem, poly1.resetTerm, l2, u2, newPrv)
     }
 
+    /** theorem with a "prettier" representation of the certificate */
     def prettyPrv: ProvableSig = {
       val (l1, l2) = IntervalArithmeticV2.eval_ivl(prec)(HashMap(), HashMap())(lower)
       val (u1, u2) = IntervalArithmeticV2.eval_ivl(prec)(HashMap(), HashMap())(upper)
@@ -382,11 +392,13 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     }
   }
 
+  /** constructs a Taylor model by proving the required certificate with a tactic */
   def TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, be: BelleExpr): TM = {
     TM(elem, poly, lower, upper,
       proveBy(Sequent(context, IndexedSeq(tmFormula(elem, rhsOf(poly.representation), lower, upper))), be & done))
   }
 
+  /** constructs a Taylor model with zero interval part */
   def Exact(elem: Polynomial): TM = {
     val newPrv = useDirectlyConst(weakenWithContext(exactPrv.fact),
       Seq(("elem_", elem.term), ("poly_", rhsOf(elem.representation))),
