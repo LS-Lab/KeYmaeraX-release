@@ -158,7 +158,8 @@ class TaylorModelArith(context: IndexedSeq[Formula],
   case class TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, prv: ProvableSig) {
     assert(prv.conclusion.succ(0) == tmFormula(elem, poly, lower, upper))
 
-    def +(other: TM) : TM = {
+    /** exact addition */
+    def +!(other: TM) : TM = {
       val newPoly = poly.resetTerm + other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(prec)(IndexedSeq())(Plus)(lower, upper)(other.lower, other.upper)
@@ -178,7 +179,8 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(Plus(elem, other.elem), (poly + other.poly).resetTerm, l, u, newPrv)
     }
 
-    def -(other: TM) : TM = {
+    /** exact subtraction */
+    def -!(other: TM) : TM = {
       val newPoly = poly.resetTerm - other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(prec)(IndexedSeq())(Minus)(lower, upper)(other.lower, other.upper)
@@ -198,7 +200,8 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(Minus(elem, other.elem), (poly - other.poly).resetTerm, l, u, newPrv)
     }
 
-    def *(other: TM) : TM = {
+    /** exact multiplication */
+    def *!(other: TM) : TM = {
       val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.sum <= order}
 
       val hornerPrv = toHorner(polyHigh)
@@ -231,6 +234,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(Times(elem, other.elem), polyLow.resetTerm, l, u, newPrv)
     }
 
+    /** exact negation */
     def unary_- : TM = {
       val newPoly = -(poly.resetTerm)
 
@@ -247,7 +251,8 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(Neg(elem), (-poly).resetTerm, l, u, newPrv)
     }
 
-    def square : TM = {
+    /** exact square */
+    def squareExact : TM = {
       val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.sum <= order}
       val hornerPrv = toHorner(polyHigh)
       val rem = rhsOf(hornerPrv)
@@ -272,7 +277,8 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(Power(elem, Number(2)), (polyLow).resetTerm, l, u, newPrv)
     }
 
-    def ^(n: Int) : TM = n match {
+    /** exact exponentiation */
+    def ^!(n: Int) : TM = n match {
       case 1 =>
         val newPrv = useDirectlyConst(weakenWithContext(powerOne.fact), Seq(
           ("elem1_", elem),
@@ -284,7 +290,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       case n if n>0 && n%2 == 0 =>
         val m = n / 2
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
-        val p = (this^(m)).square
+        val p = (this^!(m)).squareExact
         val newPrv =
           useDirectlyConst(weakenWithContext(powerEven.fact), Seq(
             ("elem1_", elem),
@@ -302,7 +308,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       case n if n>0 =>
         val m = n / 2
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
-        val p = (this^m).square * this
+        val p = (this^!m).squareExact *! this
         val newPrv =
           useDirectlyConst(weakenWithContext(powerOdd.fact), Seq(
             ("elem1_", elem),

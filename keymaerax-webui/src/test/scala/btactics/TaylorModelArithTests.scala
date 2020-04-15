@@ -24,7 +24,7 @@ class TaylorModelArithTests extends TacticTestBase {
     "y = 0.5*x0() - y0() + ry, 0 <= ry, ry <= 0.1").split(',').map(_.asFormula).toIndexedSeq
   lazy val ta3 = new TaylorModelArith(context3, "x0(),y0(),z0(),rx,ry".split(',').map(_.asTerm).toIndexedSeq, 10, 4)
 
-  "Taylor models" should "add" in withMathematica { qeTool =>
+  "Taylor models" should "add exactly" in withMathematica { qeTool =>
     import ta3._
     import ta3.polynomialRing._
     val x0 = ofTerm("x0()".asTerm)
@@ -33,10 +33,10 @@ class TaylorModelArithTests extends TacticTestBase {
     val tm2 = TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
     println(tm1)
     println(tm2)
-    println(tm1 + tm2)
+    println(tm1 +! tm2)
   }
 
-  it should "subtract" in withMathematica { qeTool =>
+  it should "subtract exactly" in withMathematica { qeTool =>
     import ta3._
     import ta3.polynomialRing._
     val x0 = ofTerm("x0()".asTerm)
@@ -45,10 +45,10 @@ class TaylorModelArithTests extends TacticTestBase {
     val tm2 = TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
     println(tm1)
     println(tm2)
-    println(tm1 - tm2)
+    println(tm1 -! tm2)
   }
 
-  it should "multiply" in withMathematica { qeTool =>
+  it should "multiply exactly" in withMathematica { qeTool =>
     import ta3._
     import ta3.polynomialRing._
     val x0 = ofTerm("x0()".asTerm)
@@ -57,7 +57,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val tm2 = TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
     println(tm1)
     println(tm2)
-    println(tm1 * tm2)
+    println(tm1 *! tm2)
   }
 
   it should "negate" in withMathematica { qeTool =>
@@ -70,14 +70,14 @@ class TaylorModelArithTests extends TacticTestBase {
     println(-tm1)
   }
 
-  it should "square" in withMathematica { qeTool =>
+  it should "square exactly" in withMathematica { qeTool =>
     import ta3._
     import ta3.polynomialRing._
     val x0 = ofTerm("x0()".asTerm)
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     println(tm1)
-    println(tm1.square)
+    println(tm1.squareExact)
   }
 
   it should "^1" in withMathematica { qeTool =>
@@ -87,7 +87,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     println(tm1)
-    println(tm1^1)
+    println(tm1^!1)
   }
 
   it should "^(2*n)" in withMathematica { qeTool =>
@@ -97,7 +97,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     println(tm1)
-    println(tm1^4)
+    println(tm1^!4)
   }
   it should "^(2*n + 1)" in withMathematica { qeTool =>
     import ta3._
@@ -106,7 +106,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     println(tm1)
-    println(tm1^3)
+    println(tm1^!3)
   }
 
   it should "exact" in withMathematica { qeTool =>
@@ -129,9 +129,9 @@ class TaylorModelArithTests extends TacticTestBase {
     import PolynomialArithV2Helpers._
     val x0 = ofTerm("x0()".asTerm)
     val y0 = ofTerm("y0()".asTerm)
-    val tm1 = Exact(ofTerm("1/3".asTerm)) * TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
+    val tm1 = Exact(ofTerm("1/3".asTerm)) *! TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     val tm2 = TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
-    val tm = (tm1 + tm2)^2
+    val tm = (tm1 +! tm2)^!2
     val tmA = tm.approx(5)
     tmA.elem shouldBe "(1/3*x+y)^2".asTerm
     rhsOf(tmA.poly.prettyRepresentation) shouldBe "0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2".asTerm
