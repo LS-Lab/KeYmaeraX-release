@@ -179,6 +179,9 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       TM(Plus(elem, other.elem), (poly + other.poly).resetTerm, l, u, newPrv)
     }
 
+    /** approximate addition */
+    def +(other: TM) : TM = (this +! (other)).approx(prec)
+
     /** exact subtraction */
     def -!(other: TM) : TM = {
       val newPoly = poly.resetTerm - other.poly.resetTerm
@@ -199,6 +202,8 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       ), Seq(prv, other.prv, weakenWithContext(newPoly.representation), weakenWithContext(newIvlPrv)))
       TM(Minus(elem, other.elem), (poly - other.poly).resetTerm, l, u, newPrv)
     }
+    /** approximate subtraction */
+    def -(other: TM) : TM = (this -! (other)).approx(prec)
 
     /** exact multiplication */
     def *!(other: TM) : TM = {
@@ -233,6 +238,8 @@ class TaylorModelArith(context: IndexedSeq[Formula],
         newIvlPrv))
       TM(Times(elem, other.elem), polyLow.resetTerm, l, u, newPrv)
     }
+    /** approximate multiplication */
+    def *(other: TM) : TM = (this *! (other)).approx(prec)
 
     /** exact negation */
     def unary_- : TM = {
@@ -276,9 +283,11 @@ class TaylorModelArith(context: IndexedSeq[Formula],
         newIvlPrv))
       TM(Power(elem, Number(2)), (polyLow).resetTerm, l, u, newPrv)
     }
+    /** approximate square */
+    def square : TM = (this.squareExact).approx(prec)
 
-    /** exact exponentiation */
-    def ^!(n: Int) : TM = n match {
+    /** approximate exponentiation */
+    def ^(n: Int) : TM = n match {
       case 1 =>
         val newPrv = useDirectlyConst(weakenWithContext(powerOne.fact), Seq(
           ("elem1_", elem),
@@ -290,7 +299,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       case n if n>0 && n%2 == 0 =>
         val m = n / 2
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
-        val p = (this^!(m)).squareExact
+        val p = (this.^(m)).square
         val newPrv =
           useDirectlyConst(weakenWithContext(powerEven.fact), Seq(
             ("elem1_", elem),
@@ -308,7 +317,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       case n if n>0 =>
         val m = n / 2
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
-        val p = (this^!m).squareExact *! this
+        val p = (this^m).square * this
         val newPrv =
           useDirectlyConst(weakenWithContext(powerOdd.fact), Seq(
             ("elem1_", elem),
@@ -326,8 +335,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       case _ => throw new IllegalArgumentException("Taylor model ^ n requires n > 0, not n = " + n)
     }
 
-    def approx(prec: Int) = {
-      approxPrv
+    def approx(prec: Int) : TM = {
       val (polyApproxPrv, poly1, poly2) = poly.approx(prec)
       val poly1rep = rhsOf(poly1.representation)
       val poly2repPrv = toHorner(poly2)

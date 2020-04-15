@@ -87,7 +87,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     println(tm1)
-    println(tm1^!1)
+    println(tm1^1)
   }
 
   it should "^(2*n)" in withMathematica { qeTool =>
@@ -97,7 +97,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     println(tm1)
-    println(tm1^!4)
+    println(tm1^4)
   }
   it should "^(2*n + 1)" in withMathematica { qeTool =>
     import ta3._
@@ -106,7 +106,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     println(tm1)
-    println(tm1^!3)
+    println(tm1^3)
   }
 
   it should "exact" in withMathematica { qeTool =>
@@ -131,7 +131,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val y0 = ofTerm("y0()".asTerm)
     val tm1 = Exact(ofTerm("1/3".asTerm)) *! TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
     val tm2 = TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
-    val tm = (tm1 +! tm2)^!2
+    val tm = (tm1 +! tm2).squareExact
     val tmA = tm.approx(5)
     tmA.elem shouldBe "(1/3*x+y)^2".asTerm
     rhsOf(tmA.poly.prettyRepresentation) shouldBe "0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2".asTerm
