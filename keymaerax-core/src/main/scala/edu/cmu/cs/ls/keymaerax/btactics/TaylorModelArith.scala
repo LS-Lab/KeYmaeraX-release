@@ -66,11 +66,24 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       "polyLow_() = poly_() &" +
       "polyHigh_() = rem_() & " +
       "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
-      "  (l_() <= rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ & rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ <= u_())))" +
+      "  (l_() <= rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ & rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ <= u_())))" + // @todo: horner form for poly1, poly2 ?!
       ") ->" +
       "\\exists err_ (elem1_() * elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
     implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & andL(-5) & existsL(-1) & existsL(-1) & allL("err__0".asTerm)(-4) & allL("err_".asTerm)(-4) &
       existsR("rem_() + err__0 * poly2_() + err_ * poly1_() + err__0 * err_".asTerm)(1) & QE & done
+  )
+
+  val squarePrv = AnonymousLemmas.remember(//@todo: is there a better scheme than just multiplication?
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "poly1_()^2 = polyLow_() + polyHigh_() &" +
+      "polyLow_() = poly_() &" +
+      "polyHigh_() = rem_() & " +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= rem_() + 2 * i1_ * poly1_() + i1_^2 & rem_() + 2 * i1_ * poly1_() + i1_^2 <= u_())))" + // @todo: horner form for poly1 ?!
+      ") ->" +
+      "\\exists err_ (elem1_()^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & existsL(-1) & allL("err_".asTerm)(-4) &
+      existsR("rem_() + 2 * err_ * poly1_() + err_^2".asTerm)(1) & QE & done
   )
 
   val negPrv = AnonymousLemmas.remember(
@@ -170,9 +183,9 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     }
 
     def unary_- : TM = {
-      val newPoly = -poly.resetTerm
+      val newPoly = -(poly.resetTerm)
 
-      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(prec)(Neg)(lower, upper)
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(prec)(IndexedSeq())(Neg)(lower, upper)
       val newPrv = useDirectlyConst(weakenWithContext(negPrv.fact), Seq(
         ("elem1_", elem),
         ("poly1_", rhsOf(poly.representation)),
@@ -184,6 +197,32 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       ), Seq(prv, weakenWithContext(newPoly.representation), weakenWithContext(newIvlPrv)))
       TM(Neg(elem), (-poly).resetTerm, l, u, newPrv)
     }
+
+    def square : TM = {
+      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.sum <= order}
+      val hornerPrv = toHorner(polyHigh)
+      val rem = rhsOf(hornerPrv)
+      val poly1 = rhsOf(poly.representation)
+      def intervalBounds(i1: Term) : Term = Seq(rem, Times(Times(Number(2), i1), poly1), Power(i1, Number(2))).reduceLeft(Plus)
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(prec)(context)(intervalBounds)(lower, upper)
+      val newPrv = useDirectlyConst(weakenWithContext(squarePrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", poly1),
+        ("l1_", lower),
+        ("u1_", upper),
+        ("polyLow_", polyLow.term),
+        ("polyHigh_", polyHigh.term),
+        ("rem_", rem),
+        ("poly_", rhsOf(polyLow.representation)),
+        ("l_", l),
+        ("u_", u)
+      ), Seq(prv, weakenWithContext(partitionPrv),
+        weakenWithContext(polyLow.representation),
+        weakenWithContext(hornerPrv),
+        newIvlPrv))
+      TM(Power(elem, Number(2)), (poly^2).resetTerm, l, u, newPrv)
+    }
+
   }
 
   def TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, be: BelleExpr): TM = {
