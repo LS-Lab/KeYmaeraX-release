@@ -139,7 +139,7 @@ If[OptionValue[DiffSat,UseDI] && Not[TrueQ[post]],
 	]	
 ];
 
-timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, vars]];
+timedInvImpliesPost=AbsoluteTiming[Primitives`CheckSemiAlgInclusion[And[evoConst,constasms], post, Join[vars,constvars]]];
 Print["Invariant check duration: ", timedInvImpliesPost[[1]]];
 AppendTo[timingList,Symbol["InvCheck"]->timedInvImpliesPost[[1]]];
 invImpliesPost=timedInvImpliesPost[[2]];
