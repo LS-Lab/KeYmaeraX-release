@@ -178,7 +178,7 @@ object NonlinearExamplesTests {
 @ExtremeTest
 class NonlinearExamplesTests extends Suites(
   new NonlinearExamplesTester(
-    "Nonlinear_20200404",
+    "Nonlinear_",
     s"$GITHUB_PROJECTS_RAW_PATH/nonlinear.kyx",
     300,
     genCheck = true,
@@ -205,8 +205,9 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     withTemporaryConfig(Map(
       Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true",
       Configuration.Keys.ODE_TIMEOUT_FINALQE -> "120",
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
-      Configuration.Keys.Pegasus.INVCHECK_TIMEOUT ->"60",
+      Configuration.Keys.ODE_USE_NILPOTENT_SOLVE -> "false",
+      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
+      Configuration.Keys.Pegasus.INVCHECK_TIMEOUT ->"0",
       Configuration.Keys.LOG_QE_DURATION -> "true")) {
       //@note do not set operation timeout here, it will defeat the Reap/Sow behavior of the invariant generator
       //tool.setOperationTimeout(120)
@@ -235,17 +236,27 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       e.name -> pegasus.problemClassification(ode, assumptions :: Nil, post)
     })
     val filename = "_classification.csv"
+    val categories: List[(String, List[String])] = ("Boundedness" -> ("Initial Set" :: "Unsafe Set" :: "Evolution Constraint" :: Nil)) ::
+      ("Algebraity" -> ("Precondition" :: "Postcondition" :: "Evolution Constraint" :: Nil)) ::
+      ("Boolean Structure" -> ("Precondition" :: "Postcondition" :: "Evolution Constraint" :: Nil) ) ::
+      ("Topology" -> ("Precondition" :: "Postcondition" :: "Evolution Constraint" :: Nil)) ::
+      ("Space Boundedness" -> ("Time" :: Nil)) :: Nil
     val writer = new PrintWriter(benchmarkName + filename)
-    writer.write("Name,Dimension,Class\r\n")
-    classifications.foreach({ case (name, (dimension, clazz)) =>
-      writer.write(s"$name,$dimension,$clazz\r\n")
+    val categoryHeadings = categories.map(_._1).mkString(",,,")
+    val categorySubheadings = categories.map(_._2.mkString(",")).mkString(",")
+    writer.write("Name,Dimension,Class," + categoryHeadings + "\r\n")
+    writer.write(",,," + categorySubheadings + "\r\n")
+    classifications.foreach({ case (name, (dimension, clazz, details)) =>
+      val detailsString = categories.map({ case (key, subKeys) =>
+        subKeys.map(details(key)(_)).mkString(",")
+      }).mkString(",")
+      writer.write(s"$name,$dimension,$clazz,$detailsString\r\n")
     })
     writer.close()
   }}
 
   it should "generate invariants with default DiffSat strategy" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
@@ -257,6 +268,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -279,9 +291,82 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
   }
 
+  it should "generate invariants with DiffSat strategy and restricted maximum degrees" ignore withMathematicaMatlab { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
+      Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
+      Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
+      Configuration.Keys.Pegasus.Darboux.DEGREE -> "2",
+      Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
+      Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
+      Configuration.Keys.Pegasus.Barrier.DEGREE -> "10",
+      Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
+      Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
+      Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
+    )) {
+      val filename = "_invgen_saturate_restrictdegree_proofhints.csv"
+      val writer = new PrintWriter(benchmarkName + filename)
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n")
+      writer.close()
+
+      entries.foreach(e => {
+        val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
+        try {
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          writer.write(result.toCsv(infoPrinter) + "\r\n")
+        } finally {
+          writer.close()
+        }
+      })
+    }
+  }
+  }
+
+  it should "generate invariants with default DiffSat strategy, not using depedencies" in withMathematicaMatlab { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(
+      Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
+      Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
+      Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "20",
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "10", /* half of FirstIntegrals (work on disjoint classes) */
+      Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "30",
+      Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
+      Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
+      Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "false",
+      Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
+      Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
+    )) {
+      val filename = "_invgen_saturate_nodep_proofhints.csv"
+      val writer = new PrintWriter(benchmarkName + filename)
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n")
+      writer.close()
+
+      entries.foreach(e => {
+        val writer = new PrintWriter(new FileOutputStream(benchmarkName + filename, true))
+        try {
+          val result = robustRunInvGen(e.name, e.model, matlab = true, stripProofHints = false, keepUnverifiedCandidates)
+          writer.write(result.toCsv(infoPrinter) + "\r\n")
+        } finally {
+          writer.close()
+        }
+      })
+    }
+  }
+  }
+
   it should "generate invariants with default DiffSat strategy, no cut minimize" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
@@ -293,6 +378,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "false",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -317,7 +403,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
 
   it should "generate invariants with DiffSat strategy without heuristics" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
@@ -329,6 +414,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "50",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -353,7 +439,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
 
   it should "generate invariants with default DiffSat strategy, and prove without proof hints" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
@@ -365,6 +450,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "false",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -389,7 +475,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
 
   it should "generate invariants with default DiffSat strategy and strict method timeouts" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "10",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
@@ -401,6 +486,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "40",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -425,7 +511,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
 
   it should "generate invariants with Barrier only" in withMathematicaMatlab { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
@@ -438,6 +523,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "120",
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -459,9 +545,8 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   }
   }
 
-  it should "generate invariants with Darboux only" in withMathematica { tool => setTimeouts(tool) {
+  it should "generate invariants with Darboux only (default max. degree)" in withMathematica { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
@@ -469,10 +554,12 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "120",
+      Configuration.Keys.Pegasus.Darboux.DEGREE -> "-1",
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -497,7 +584,6 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
 
   it should "generate invariants with invariant heuristics (summands) only" in withMathematica { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "120",
@@ -509,6 +595,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
@@ -533,18 +620,18 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
 
   it should "generate invariants with first integrals only" in withMathematica { tool => setTimeouts(tool) {
     withTemporaryConfig(Map(
-      Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "125",
       Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0",
       Configuration.Keys.Pegasus.PreservedStateHeuristic.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.FirstIntegrals.TIMEOUT -> "120",
-      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "120", /* same as FirstIntegrals, work on disjoint classes */
-      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "0", /* disable */
+      Configuration.Keys.Pegasus.LinearFirstIntegrals.TIMEOUT -> "60", /* half of FirstIntegrals, work on disjoint classes */
+      Configuration.Keys.Pegasus.LinearGenericMethod.TIMEOUT -> "60", /* half of FirstIntegrals, work on disjoint classes */
       Configuration.Keys.Pegasus.Darboux.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.Darboux.STAGGERED -> "false",
       Configuration.Keys.Pegasus.Barrier.TIMEOUT -> "0", /* disable */
       Configuration.Keys.Pegasus.DiffSaturation.MINIMIZE_CUTS -> "true",
       Configuration.Keys.Pegasus.DiffSaturation.STRICT_METHOD_TIMEOUTS -> "true",
+      Configuration.Keys.Pegasus.DiffSaturation.USE_DEPENDENCIES -> "true",
       Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT -> "1",
       Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT -> "1"
     )) {
