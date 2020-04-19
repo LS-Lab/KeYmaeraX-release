@@ -95,7 +95,7 @@ Print["HeuInvariants skipped."]; {}]
 FirstIntegrals[problem_List, opts:OptionsPattern[]]:=Module[{
 	pre,post,vf,vars,Q,
 	fIs,maxminVs,deg,
-	rat,uppers,lowers,bound,constvars,constasms},
+	rat,uppers,lowers,bound,constvars,constasms,vfe,varse},
 {pre, { vf, vars, Q }, post, {constvars,constasms}} = problem;
 
 (* Heuristic *)
@@ -105,6 +105,9 @@ deg = If[OptionValue[FirstIntegrals,Deg] < 0,
 rat = 5;
 bound=10^8;
 
+vfe=Join[vf,Table[0,{i,Length[constvars]}]];
+varse=Join[vars,constvars];
+
 (* Create rationalization function wrappers *)
 upperRat[num_]:=If[TrueQ[Element[num,Reals] && num < bound],Primitives`UpperRat[num, rat], Infinity];
 lowerRat[num_]:=If[TrueQ[Element[num,Reals] && num > -bound],Primitives`LowerRat[num, rat], -Infinity];
@@ -112,7 +115,7 @@ lowerRat[num_]:=If[TrueQ[Element[num,Reals] && num > -bound],Primitives`LowerRat
 If[OptionValue[FirstIntegrals, Timeout] > 0,
 TimeConstrained[Block[{},
 (* Compute functionally independent first integrals up to given degree *)
-fIs=Primitives`FuncIndep[FirstIntegrals`FindFirstIntegrals[{vf,vars,Q},deg],vars];
+fIs=Primitives`FuncIndep[FirstIntegrals`FindFirstIntegrals[{vfe,varse,Q},deg],varse];
 (* upper and lower bounds on the FIs
 todo: NMaxValue instead? Needs extra LZZ check: it doesn't give the real max/mins sometimes! *)
 If[TrueQ[OptionValue[FirstIntegrals, Numerical]],
@@ -122,6 +125,8 @@ lowers = Map[lowerRat[NMinValue[{#,pre},vars]]&,fIs]],
 Block[{},
 uppers = Map[upperRat[MaxValue[{#,pre},vars]]&,fIs];
 lowers = Map[lowerRat[MinValue[{#,pre},vars]]&,fIs]]];
+
+Print[fIs];
 
 maxminVs=Flatten[MapThread[
   (* If the upper and lower bound are the same and non-infinity, return the equality *)
