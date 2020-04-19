@@ -111,21 +111,24 @@ angular.module('keymaerax.controllers').controller('AutoLoginCtrl',
     }
 
     $scope.login = function(username, password) {
-      $http.get("/user/" + username + "/" + password + "/mode/0")
-      .then(function(response) {
+      $http.get("/user/" + username + "/" + password + "/defaultLogin").then(function(response) {
         if (response.data.type == "LoginResponse") {
-          if (response.data.success) {
+          if (response.data.success && !response.data.triggerRegistration) {
             sessionService.setToken(response.data.sessionToken);
             sessionService.setUser(response.data.value);
             sessionService.setUserAuthLevel(response.data.userAuthLevel);
             document.location.href = "/dashboard.html?#/models";
+          } else if (response.data.triggerRegistration) {
+            $scope.processRegistration();
           } else {
-            $scope.processRegistration()
+            // unknown response
+            console.log("Unknown response " + response.data)
           }
+        } else {
+          // unknown response
+          console.log("Unknown response " + response.data)
         }
-      }).catch(function(data, status) {
-        $scope.processRegistration()
-      });
+      })
     }
 
     $scope.login($scope.username, $scope.password);

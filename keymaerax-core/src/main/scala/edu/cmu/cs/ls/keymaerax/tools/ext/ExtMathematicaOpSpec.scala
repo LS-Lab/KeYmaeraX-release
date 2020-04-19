@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, LiteralMathOpSpec, MathematicaOpSpec, NaryMathOpSpec, UnaryMathOpSpec}
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.symbol
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec.{int, symbol}
 
 /** Extended Mathematica operator specifications for non-soundness critical tools. */
 object ExtMathematicaOpSpec {
@@ -22,8 +22,6 @@ object ExtMathematicaOpSpec {
   def coefficientDomain: LiteralMathOpSpec = LiteralMathOpSpec(symbol("CoefficientDomain"))
 
   def rationals: LiteralMathOpSpec = LiteralMathOpSpec(symbol("Rationals"))
-
-  def placeholder: LiteralMathOpSpec = LiteralMathOpSpec(symbol("#"))
 
   def homeDirectory: LiteralMathOpSpec = LiteralMathOpSpec(symbol("$HomeDirectory"))
 
@@ -64,6 +62,10 @@ object ExtMathematicaOpSpec {
   def applyFunc(fn: Expr): NaryMathOpSpec = NaryMathOpSpec(fn)
 
   def quiet: NaryMathOpSpec = NaryMathOpSpec(symbol("Quiet"))
+
+  def slot: UnaryMathOpSpec = UnaryMathOpSpec(symbol("Slot"))
+
+  def placeholder: Expr = slot(int(1))
 
   //</editor-fold>
 

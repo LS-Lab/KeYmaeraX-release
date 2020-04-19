@@ -23,10 +23,18 @@ import scala.collection.immutable._
  */
 class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  val randomTrials = 100
-  val randomComplexity = 12 // 5 // 12
-  val tamperComplexity = 2
+  val randomTrials = 1000
+  val randomComplexity = 20
+  val tamperComplexity = 4
   val rand = new RandomFormula()
+
+  "Future-compatible Stored Provable" should "already support block quantifiers" in {
+    val pr = Provable.startProof(Forall(Variable("x")::Variable("y")::Nil, True)) (Skolemize(new SuccPos(0)), 0) (CloseTrue(new SuccPos(0)), 0)
+    pr shouldBe 'proved
+    val str = Provable.toStorageString(pr)
+    val readagain = Provable.fromStorageString(str)
+    readagain shouldBe pr
+  }
 
   "Stored Provable" should "be written and reread correctly (summary)" taggedAs(SummaryTest) in {test(10,4)}
   it should "be written and reread correctly (usual)" taggedAs(UsualTest) in {test(100,8)}
@@ -59,13 +67,19 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     for (i <- 1 to randomTrials) {
       val readagain = Provable.fromStorageString(stored)
       val separator = stored.lastIndexOf("::")
-      val storedChecksum = stored.substring(separator+2).toInt
+      val storedChecksum = stored.substring(separator+2)
       val remainder = stored.substring(0, separator)
-      tamperFact(""+storedChecksum, readagain, randomTrials/10, tamperComplexity)
+      tamperFact(storedChecksum, readagain, randomTrials/10, tamperComplexity)
     }
 
   private def tamperFact(chksum: String, fact: Provable, randomTrials: Int= randomTrials, tamperComplexity: Int = tamperComplexity) = {
     val toExt = PrivateMethod[String]('toExternalString)
+    val pseudotampered = Provable.invokePrivate(toExt(fact.conclusion)) +
+      (if (fact.subgoals.length <= 1) "\n\\qed"
+      else "\n\\from   " + fact.subgoals.map(s => Provable.invokePrivate(toExt(s))).mkString("\n\\from   ") + "\n\\qed") +
+      "::" + chksum
+    fact shouldBe Provable.fromStorageString(pseudotampered)
+
     for (i <- 1 to randomTrials) {
       val which = rand.rand.nextInt(1 + fact.subgoals.length)
       val (tampered, pos) = if (which == 0) {
@@ -93,10 +107,22 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
     }
   }
 
+  /** Tamper with a formula by randomly replacing one of its subexpressions */
   private def tamperFormula(f: Formula, tamperComplexity: Int = tamperComplexity): Formula = {
-    //@todo also for other kinds
-    val pos = rand.nextSubPosition(f, FormulaKind)
-    //@todo swallow and retry CoreException "No differentials in evolution domain constraints"
-    FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
+    // rejection sampling
+    for (i <- 1 to 100) try {
+      val pos = rand.nextSubPosition(f, FormulaKind)
+      FormulaAugmentor(f).sub(pos) match {
+        case Some(_: Term)    => return FormulaAugmentor(f).replaceAt(pos, rand.nextTerm(tamperComplexity))
+        case Some(_: Formula) => return FormulaAugmentor(f).replaceAt(pos, rand.nextFormula(tamperComplexity))
+        case Some(_: Program) => return FormulaAugmentor(f).replaceAt(pos, rand.nextProgram(tamperComplexity))
+        case None => throw new AssertionError("nextSubPosition should only find defined positions: " + f + " at " + pos + " is " + FormulaAugmentor(f).sub(pos))
+      }
+    } catch {
+      case possible: CoreException if possible.getMessage.contains("No differentials in evolution domain constraints") => /* continue */
+      case possible: ClassCastException if possible.getMessage.contains("cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable") => /* continue */
+      case possible: ClassCastException if possible.getMessage.contains("cannot be cast to edu.cmu.cs.ls.keymaerax.core.DifferentialSymbol") => /* continue */
+    }
+    return True
   }
 }

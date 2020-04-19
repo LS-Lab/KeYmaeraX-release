@@ -146,6 +146,7 @@ object KeYmaeraX {
   }
   var LAUNCH: Boolean = false
 
+  /** main function to start KeYmaera X from command line. Other entry points exist but this one is best for command line interfaces. */
   def main(args: Array[String]): Unit = {
     if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {
       println(help)
@@ -336,7 +337,7 @@ object KeYmaeraX {
   private def parseBelleTactic(fileName: String) = {
     try {
       initializeProver(Map('tool -> "z3")) //@note parsing a tactic requires prover (AxiomInfo)
-      val fileContents: String = managed(scala.io.Source.fromFile(fileName)).apply(_.getLines().mkString("\n"))
+      val fileContents: String = managed(scala.io.Source.fromFile(fileName, "ISO-8859-1")).apply(_.getLines().mkString("\n"))
       BelleParser(fileContents)
       println("Parsed file successfully")
       sys.exit(0)
@@ -480,7 +481,7 @@ object KeYmaeraX {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
-        val source = managed(scala.io.Source.fromFile(fileName)).apply(_.mkString)
+        val source = managed(scala.io.Source.fromFile(fileName, "ISO-8859-1")).apply(_.mkString)
         if (fileName.endsWith(".scala")) {
           val tacticGenClasses = new ScalaTacticCompiler().compile(source)
           assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
@@ -903,9 +904,9 @@ object KeYmaeraX {
     assert(modelFileNameDotKyx.endsWith(".kyx"),
       "\n[Error] Wrong model file name " + modelFileNameDotKyx + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt")
     tacticFileNameDotKyt.foreach(name => assert(name.endsWith(".kyt"), "\n[Error] Wrong tactic file name " + tacticFileNameDotKyt + " used for -repl! Should. Please use: -repl MODEL.kyx TACTIC.kyt"))
-    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx)).apply(_.mkString)
-    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
-    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f)).apply(_.mkString))
+    val modelInput = managed(scala.io.Source.fromFile(modelFileNameDotKyx, "ISO-8859-1")).apply(_.mkString)
+    val tacticInput = tacticFileNameDotKyt.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
+    val defsInput = scaladefsFilename.map(f => managed(scala.io.Source.fromFile(f, "ISO-8859-1")).apply(_.mkString))
     val inputFormula: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
@@ -1065,7 +1066,7 @@ object KeYmaeraX {
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
-    val augmentedArgs = if (args.intersect(Modes.modes.toList).isEmpty) args :+ Modes.UI else args
+    val augmentedArgs = if (args.map(_.stripPrefix("-")).intersect(Modes.modes.toList).isEmpty) args :+ Modes.UI else args
     if (LAUNCH) Main.main("-launch" +: augmentedArgs)
     else Main.main(augmentedArgs)
   }

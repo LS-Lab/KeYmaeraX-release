@@ -133,6 +133,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /** Union of uniform substitutions, i.e., both replacement lists merged.
     * @note Convenience method not used in the core, but used for stapling uniform substitutions together during unification etc.
     */
+  //@todo optimizable since most of the data structure invariant, filtering, and individual distinctness is already checked
   def ++(other: USubstOne): USubstOne = USubstOne((this.subsDefs ++ other.subsDefs).distinct)
 
 

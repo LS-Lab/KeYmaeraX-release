@@ -152,7 +152,6 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
     case f: ComparisonFormula   => "(" + pp(f.left) + ")" + LEXSPACE + op(formula).opcode + LEXSPACE + "(" + pp(f.right) + ")"
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
-    //@note the q position for variables is a little weird since it identifies the quantifier not the variable
     case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + " " + "(" + pp(f.child) + ")"
     case f: Box                 => "[" + pp(f.program) + "]" + "(" + pp(f.child) + ")"
     case f: Diamond             => "<" + pp(f.program) + ">" + "(" + pp(f.child) + ")"

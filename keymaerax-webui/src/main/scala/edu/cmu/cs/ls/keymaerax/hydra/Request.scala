@@ -185,15 +185,42 @@ class SetDefaultUserRequest(db: DBAbstraction, username: String, password: Strin
   }
 }
 
-class LoginRequest(db : DBAbstraction, username : String, password : String) extends Request with ReadRequest {
+class LocalLoginRequest(db: DBAbstraction, username: String, password: String) extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    if (Configuration.getOption(Configuration.Keys.USE_DEFAULT_USER).contains ("true") && username == "local") {
+      Configuration.getOption(Configuration.Keys.DEFAULT_USER) match {
+        case Some(username) => db.getUser(username) match {
+          case Some(user) =>
+            val sessionToken = Some(SessionManager.add(user))
+            new LoginResponse(true, user, sessionToken) :: Nil
+          case None => DefaultLoginResponse(triggerRegistration = true) :: Nil
+        }
+        case None => DefaultLoginResponse(triggerRegistration = true) :: Nil
+      }
+    } else {
+      val check = db.checkPassword(username, password)
+      db.getUser(username) match {
+        case Some(user) =>
+          val sessionToken =
+            if (check) Some(SessionManager.add(user))
+            else None
+          new LoginResponse(check, user, sessionToken) :: Nil
+        case None => new ErrorResponse("Unable to login user " + username
+          + ". Please double-check user name and password, or register a new user.") :: Nil
+      }
+    }
+  }
+}
+
+class LoginRequest(db: DBAbstraction, username: String, password: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val check = db.checkPassword(username, password)
     db.getUser(username) match {
       case Some(user) =>
         val sessionToken =
-          if(check) Some(SessionManager.add(user))
+          if (check) Some(SessionManager.add(user))
           else None
-        new LoginResponse(check, user, sessionToken) ::  Nil
+        new LoginResponse(check, user, sessionToken) :: Nil
       case None => new ErrorResponse("Unable to login user " + username
         + ". Please double-check user name and password, or register a new user.") :: Nil
     }
@@ -1376,9 +1403,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
           val generator = new ConfigurableGenerator[GenProduct]()
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
             generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
-          val defsGenerator = new ConfigurableGenerator[Expression]()
           val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
-          problem.defs.substs.foreach(sp => defsGenerator.products += (sp.what -> (sp.repl::Nil)))
           session += proofId -> ProofSession(proofId, generator, problem.defs)
           TactixLibrary.invGenerator = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
@@ -2083,10 +2108,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             try {
               val proofSession = session(proofId).asInstanceOf[ProofSession]
               val tacticString = fullExpr(sequent)
-              val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator),
-                // expand on demand, but do not auto-expand definitions
-                if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(tacticString).isDefined) proofSession.defs
-                else KeYmaeraXArchiveParser.Declaration(Map.empty))
+              // elaborate all variables to function/predicate symbols, but never auto-expand
+              val expr = BelleParser.parseWithInvGen(tacticString, Some(proofSession.invGenerator), proofSession.defs, expandAll=false)
 
               val appliedExpr: BelleExpr = (pos, pos2, expr) match {
                 case (None, None, _: AtPosition[BelleExpr]) =>
@@ -2172,8 +2195,10 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(_) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
         val proofSession = session(proofId).asInstanceOf[ProofSession]
+        //@note do not auto-expand if tactic contains verbatim expands or "pretty-printed" expands (US)
         val tactic =
           if ("(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
+          else if ("""US\([^)]*\)""".r.findFirstIn(t).isDefined) BelleParser.parseWithInvGen(t, None, proofSession.defs)
           else BelleParser.parseWithInvGen(t, None, proofSession.defs, expandAll = true) // backwards compatibility
 
         def atomic(name: String): String = {

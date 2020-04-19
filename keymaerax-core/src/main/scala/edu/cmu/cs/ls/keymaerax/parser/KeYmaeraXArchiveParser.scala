@@ -309,10 +309,10 @@ object KeYmaeraXArchiveParser {
   def parseFromFile(file: String): List[ParsedArchiveEntry] = {
     file.split('#').toList match {
       case fileName :: Nil =>
-        val input = scala.io.Source.fromFile(fileName).mkString
+        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
         KeYmaeraXArchiveParser.parse(input)
       case fileName :: entryName :: Nil =>
-        val input = scala.io.Source.fromFile(fileName).mkString
+        val input = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
         KeYmaeraXArchiveParser.getEntry(entryName, input).
           getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
     }

@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 class ODEInvarianceTests extends TacticTestBase {
 
@@ -18,6 +19,14 @@ class ODEInvarianceTests extends TacticTestBase {
     //These bounds ought to be enough for all intents and purposes
     val cs = cauchy_schwartz_bound(5)
     val fs = frobenius_subord_bound(5)
+    cs shouldBe 'proved
+    fs._1 shouldBe 'proved
+    fs._2 shouldBe 'proved
+  }
+
+  it should "prove matrix and vector bounds (requires high stack size)" taggedAs IgnoreInBuildTest in withQE { _ =>
+    val cs = cauchy_schwartz_bound(6)
+    val fs = frobenius_subord_bound(6)
     cs shouldBe 'proved
     fs._1 shouldBe 'proved
     fs._2 shouldBe 'proved
@@ -300,15 +309,15 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  //TODO: these barrier certificates fail to prove with sAIclosed because its internal rank computation gets stuck
   it should "prove duffing" in withMathematica { qeTool =>
     val fml = "(-((2*x)/5) + y)^2 <= 1/200 & x^2 <= 1/16 -> [{x'=y, y'=x - x^3 - y}] -(3/2) + x^2 + 4*y^2 <= 0".asFormula
     //The actual invariant:
     val pr = proveBy(fml, implyR(1) &
       dC("-641 + 2*x - 5*y + 49039*y^2 + 115*y^3 + 397279*y^4 + 1022*y^5 + 64226*y^6 - 41291*x*y - 148*x*y^2 - 248650*x*y^3 - 362*x*y^4 - 11562*x*y^5 + 10969*x^2 + 17*x^2*y - 102496*x^2*y^2 - 18*x^2*y^3 + 10911*x^2*y^4 + 12*x^3 + 83659*x^3*y + 51*x^3*y^2 + 98766*x^3*y^3 - 20780*x^4 + 4*x^4*y + 66980*x^4*y^2 - 13*x^5 - 40639*x^5*y + 10000*x^6<=0".asFormula)(1) <(
         dW(1) & QE,
+        // this barrier certificate fails to prove with sAIclosed because its internal rank computation gets stuck
         // sAIclosed(1)
-        sAIclosedPlus(1)(1)
+        sAIclosedPlus(3)(1)
       )
     )
     println(pr)
@@ -321,8 +330,7 @@ class ODEInvarianceTests extends TacticTestBase {
       //B1,B2,B3 <=0
       dC("1/100*(365*x1+365*x2+365*x3-60) <= 0 & 1/100*(175*x1+180*x2+100*x3-160)<=0 & 1/100*(460*x1+155*x2+270*x3-250)<=0".asFormula)(1) <(
         dW(1) & QE,
-        // sAIclosed(1)
-        sAIclosedPlus(1)(1)
+        sAIclosed(1)
       )
     )
     println(pr)
@@ -333,6 +341,7 @@ class ODEInvarianceTests extends TacticTestBase {
     //The invariant has a special point which requires the 3rd Lie derivative
     val fml = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3 -> [{x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)}]((-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3)".asFormula
     val pr = proveBy(fml, implyR(1) &
+      // this barrier certificate fails to prove with sAIclosed because its internal rank computation gets stuck
       // sAIclosed(1)
       sAIclosedPlus(3)(1)
     )

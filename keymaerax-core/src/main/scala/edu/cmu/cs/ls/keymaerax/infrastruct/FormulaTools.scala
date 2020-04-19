@@ -306,7 +306,8 @@ object FormulaTools extends Logging {
     case _ => throw new IllegalArgumentException("singularities of program " + program + " not implemented")
   }
 
-  /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game. */
+  /** Check whether given program is dual-free, so a hybrid system and not a proper hybrid game.
+    * @see [[SubstitutionPair.dualFree]] */
   def dualFree(program: Program): Boolean = program match {
     case a: ProgramConst => false
     case a: SystemConst  => true

@@ -897,12 +897,12 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         MathematicaOpSpec.symbol("kyx`init"),
         ExtMathematicaOpSpec.function(
           ExtMathematicaOpSpec.map(
-            ExtMathematicaOpSpec.function(MathematicaOpSpec.list(ExtMathematicaOpSpec.placeholder.op)),
+            ExtMathematicaOpSpec.function(MathematicaOpSpec.list(ExtMathematicaOpSpec.placeholder)),
             ExtMathematicaOpSpec.findInstance(
               basek2m(initial),
               MathematicaOpSpec.list(StaticSemantics.symbols(initial).toList.sorted.map(basek2m):_*),
               MathematicaOpSpec.reals.op,
-              ExtMathematicaOpSpec.placeholder.op)
+              ExtMathematicaOpSpec.placeholder)
           )
         )
       )
@@ -915,7 +915,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
         basek2m(s),
         ExtMathematicaOpSpec.replaceAll(
           basek2m(pre2post.getOrElse(s, throw new IllegalArgumentException("No post variable for " + s.prettyString))),
-          ExtMathematicaOpSpec.placeholder.op
+          ExtMathematicaOpSpec.placeholder
         )
       )).toArray
 
@@ -939,7 +939,7 @@ class MathematicaSimulationTool(override val link: MathematicaLink) extends Base
           ExtMathematicaOpSpec.n(
             ExtMathematicaOpSpec.nestList(
               MathematicaOpSpec.symbol("kyx`step"),
-              ExtMathematicaOpSpec.placeholder.op,
+              ExtMathematicaOpSpec.placeholder,
               MathematicaOpSpec.int(steps)
             )
           )

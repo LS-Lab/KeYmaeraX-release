@@ -357,6 +357,12 @@ case class ParseErrorResponse(override val msg: String, expect: String, found: S
   ))
 }
 
+case class DefaultLoginResponse(triggerRegistration: Boolean) extends Response {
+  override def getJson: JsObject = JsObject(Map(
+    "type" -> JsString("LoginResponse"),
+    "triggerRegistration" -> JsBoolean(triggerRegistration)))
+}
+
 class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
     extends ErrorResponse(msg, exn) {
   override def getJson: JsObject = exn match {
