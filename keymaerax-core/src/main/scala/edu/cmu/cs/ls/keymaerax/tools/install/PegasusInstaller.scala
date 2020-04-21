@@ -65,7 +65,7 @@ object PegasusInstaller extends Logging {
       val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + n))
       pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
     })
-    val pegasusAbsPaths = pegasusResourceNames.map(n => pegasusDir + File.separator + n)
+    val pegasusAbsPaths = pegasusResourceNames.map(pegasusDir + File.separator + _.replaceAllLiterally("/", File.separator))
     assert(pegasusAbsPaths.forall(new File(_).exists()), "Missing Pegasus files")
     pegasusDir
   }
