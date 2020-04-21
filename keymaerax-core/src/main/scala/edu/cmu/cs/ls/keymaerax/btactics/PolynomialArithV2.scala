@@ -260,6 +260,10 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
     ("(x_() = xn_()/xd_() & ((-xn_()=nxn_() & xd_() != 0)<-> true)) ->" +
       "-x_() = nxn_()/xd_()").asFormula, QE & done)
 
+  val coefficientBigDecimalPrv = rememberAny(
+    ("(x_() = xn_()/xd_() & ((xn_()/xd_()=bd_() & xd_() != 0)<-> true)) ->" +
+      "x_() = bd_()").asFormula, QE & done)
+
   /**
   * prv: lhs = rhs
   * lhs: input term (arbitrary, trace of construction)
@@ -347,16 +351,28 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
       Coefficient(numRes, denumRes, Some(prvRes))
     }
 
+    def bigDecimalOption : Option[ProvableSig] = {
+      val d = Divide(numN, denumN)
+      (try {
+        Some(Number(BigDecimalQETool.eval(d)))
+      } catch {
+        case _: IllegalArgumentException => None
+      }).map{bd =>
+        useDirectly(coefficientBigDecimalPrv,
+          Seq(("x_", lhs), ("xn_", numN), ("xd_", denumN), ("bd_", bd)),
+          Seq(prv, ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(d, bd), NotEqual(denumN, Number(0))))))
+      }
+    }
+
     /** normalized to a nicer output form, i.e., simplify rhs with
       *   0 / d = 0
-      *   n / 1 = n
+      *   n / d = bd
       * */
     def normalized : (ProvableSig, Term) = if (num.compareTo(0) == 0) {
       (useDirectly(normalizeCoeff0, Seq(("c_", lhs), ("d_", denumN)), Seq(prv)), Number(0))
-    } else if (denum.compareTo(1) == 0) {
-      (useDirectly(normalizeCoeff1, Seq(("c_", lhs), ("n_", numN)), Seq(prv)), numN)
-    } else {
-      (prv, rhs)
+    } else bigDecimalOption match {
+      case Some(prv) => (prv, rhsOf(prv))
+      case None => (prv, rhs)
     }
 
     def split(newNum: BigDecimal, newDenum: BigDecimal) : (ProvableSig, Coefficient, Coefficient) = {

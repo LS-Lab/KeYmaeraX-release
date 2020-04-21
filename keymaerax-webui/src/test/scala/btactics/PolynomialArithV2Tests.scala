@@ -105,6 +105,16 @@ class PolynomialArithV2Tests extends TacticTestBase {
       Divide(res.numN, res.denumN))
   }
 
+  it should "represent as bigDecimal" in withMathematica { _ =>
+    import pa4._
+    import PolynomialArithV2Helpers._
+    val c1 = Coefficient(BigDecimal("0.1"), BigDecimal("2"))
+    val c2 = Coefficient(BigDecimal("0.1"), BigDecimal("3"))
+    c2.bigDecimalOption shouldBe None
+    c1.bigDecimalOption.isDefined shouldBe true
+    rhsOf(c1.bigDecimalOption.get) shouldBe Number(BigDecimal("0.05"))
+  }
+
   "monomials" should "test" in withMathematica { _ =>
     import pa4._
   }
@@ -309,9 +319,9 @@ class PolynomialArithV2Tests extends TacticTestBase {
     Coefficient(0, 1, None).normalized._1.conclusion.succ(0) shouldBe "0/1=0".asFormula
     Coefficient(1, 1, None).normalized._1.conclusion.succ(0) shouldBe "1/1=1".asFormula
     Coefficient(2, 1, None).normalized._1.conclusion.succ(0) shouldBe "2/1=2".asFormula
-    Coefficient(1, 2, None).normalized._1.conclusion.succ(0) shouldBe "1/2=1/2".asFormula
+    Coefficient(1, 2, None).normalized._1.conclusion.succ(0) shouldBe "1/2=0.5".asFormula
     Coefficient(-2, 1, None).normalized._1.conclusion.succ(0) shouldBe "-2/1=-2".asFormula
-    Coefficient(-1, 2, None).normalized._1.conclusion.succ(0) shouldBe "-1/2=-1/2".asFormula
+    Coefficient(-1, 2, None).normalized._1.conclusion.succ(0) shouldBe "-1/2=-0.5".asFormula
     Coefficient(-1, 1, None).normalized._1.conclusion.succ(0) shouldBe "-1/1=-1".asFormula
   }
 
