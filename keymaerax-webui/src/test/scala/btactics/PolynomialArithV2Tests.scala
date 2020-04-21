@@ -23,9 +23,9 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val ring = PolynomialRing("x,y,z".split(',').map(_.asTerm).toIndexedSeq)
     import ring._
     val aT = "-x + 2/3*y - 4*z^3".asTerm
-    val bT = ("x^4 -216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2" +
+    val bT = ("x^4 -216/81*x^3*y+16*x^(5-2)*z^3+17496/6561*x^(2*1)*y^2" +
       "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
-      "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6" +
+      "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^(3+2*x+1-x+2-x)" +
       "- 13824/81*y*z^9+256*z^12").asTerm
     val a = ofTerm(aT)
     val b = ofTerm(bT)
@@ -273,6 +273,12 @@ class PolynomialArithV2Tests extends TacticTestBase {
     ((x + y)^4).treeSketch shouldBe "{[., x^4, .], 4 x^3 y^1, [., 6 x^2 y^2, .], 4 x^1 y^3, [., y^4, .]}"
     ((x + y)^5).treeSketch shouldBe "{[., x^5, .], 5 x^4 y^1, [., 10 x^3 y^2, .], 10 x^2 y^3, {., 5 x^1 y^4, ., y^5, .}}"
     ((x + y)^6).treeSketch shouldBe "[[[., x^6, .], 6 x^5 y^1, [., 15 x^4 y^2, .]], 20 x^3 y^3, [[., 15 x^2 y^4, .], 6 x^1 y^5, [., y^6, .]]]"
+  }
+
+  it should "power polynomial" in withMathematica { _ =>
+    import pa4._
+    val x = Var(0, 1)
+    (x^(Const(3)-Const(1))).treeSketch shouldBe "[., x^2, .]"
   }
 
   it should "negate" in withMathematica { _ =>
