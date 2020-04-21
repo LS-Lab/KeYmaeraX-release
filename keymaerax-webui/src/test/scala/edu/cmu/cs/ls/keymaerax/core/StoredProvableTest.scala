@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
+import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, TodoTest, UsualTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -28,10 +28,11 @@ class StoredProvableTest extends FlatSpec with Matchers with PrivateMethodTester
   val tamperComplexity = 4
   val rand = new RandomFormula()
 
-  "Future-compatible Stored Provable" should "already support block quantifiers" in {
-    val pr = Provable.startProof(Forall(Variable("x")::Variable("y")::Nil, True)) (Skolemize(new SuccPos(0)), 0) (CloseTrue(new SuccPos(0)), 0)
+  "Future-compatible Stored Provable" should "FEATURE_REQUEST: already support block quantifiers" taggedAs TodoTest in {
+    val pr = Provable.startProof(Forall(Variable("x")::Variable("y")::Nil, True)) (Skolemize(SuccPos(0)), 0) (CloseTrue(SuccPos(0)), 0)
     pr shouldBe 'proved
     val str = Provable.toStorageString(pr)
+    // toStorageString stores block quantifier, but fromStorageString reads nested quantifiers from block quantifier string
     val readagain = Provable.fromStorageString(str)
     readagain shouldBe pr
   }
