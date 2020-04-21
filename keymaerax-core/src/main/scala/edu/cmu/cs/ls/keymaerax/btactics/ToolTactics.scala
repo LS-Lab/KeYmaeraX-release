@@ -44,11 +44,7 @@ private object ToolTactics {
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETacticTool): BelleExpr = Idioms.NamedTactic("QE", {
-    val doRcf = rcf(qeTool) &
-      Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
-        if (s.succ.head == False) label(BelleLabels.QECEX)
-        else DebuggingTactics.done("QE was unable to prove: invalid formula"))
-      )
+    val doRcf = rcf(qeTool)
 
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
 
@@ -76,6 +72,9 @@ private object ToolTactics {
             close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE))
         ),
       "qecache/" + qeTool.getClass.getSimpleName
+    ) & Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
+      if (s.succ.head == False) label(BelleLabels.QECEX)
+      else DebuggingTactics.done("QE was unable to prove: invalid formula"))
     )
   })
 

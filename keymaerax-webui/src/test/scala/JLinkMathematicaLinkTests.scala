@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{ExtMathematicaOpSpec, JLinkMathematicaLink, Mathematica, MathematicaLink, ToolExecutor}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
 import org.scalatest.PrivateMethodTester
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable.Map
 import org.scalatest.LoneElement._
@@ -137,7 +137,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   "QE" should "label branch on invalid formula" in withMathematica { link =>
     link.qe("5<3".asFormula).fact.conclusion shouldBe "==> 5<3 <-> false".asSequent
     val result = proveBy("5<3".asFormula, TactixLibrary.QE, {
-      case Some(labels) => labels should contain theSameElementsAs BelleLabels.cutShow.append(BelleLabels.QECEX)::Nil
+      case Some(labels) => labels.loneElement shouldBe BelleLabels.QECEX
       case None => fail("Expected QE CEX label")
     })
     result.subgoals.loneElement shouldBe "==> false".asSequent
@@ -216,7 +216,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     compAfterRestart shouldBe Some("5".asTerm)
   }
 
-  "expressions deeper than 256" should "evaluate both as strings and expressions" taggedAs IgnoreInBuildTest in withMathematica { mathematica =>
+  "Expressions deeper than 256" should "FEATURE_REQUEST: evaluate both as strings and expressions" taggedAs TodoTest in withMathematica { mathematica =>
     val lnkMethod = PrivateMethod[MathematicaLink]('link)
     val mlMethod = PrivateMethod[KernelLink]('ml)
     val ml = mathematica.invokePrivate(lnkMethod()).asInstanceOf[JLinkMathematicaLink].invokePrivate(mlMethod())
@@ -233,6 +233,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
       ml.getExpr
     }
     res2.toString shouldBe "Times[256, x]"
+    //@todo Mathematica returns $Failed
     res1.toString shouldBe "Times[256, x]"
   }
 
