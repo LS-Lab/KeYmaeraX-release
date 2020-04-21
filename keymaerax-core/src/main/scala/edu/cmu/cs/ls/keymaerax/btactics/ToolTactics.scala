@@ -71,6 +71,7 @@ private object ToolTactics {
           Idioms.doIf(!_.isProved)(
             close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE))
         ),
+      //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
       "qecache/" + qeTool.getClass.getSimpleName
     ) & Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
       if (s.succ.head == False) label(BelleLabels.QECEX)
