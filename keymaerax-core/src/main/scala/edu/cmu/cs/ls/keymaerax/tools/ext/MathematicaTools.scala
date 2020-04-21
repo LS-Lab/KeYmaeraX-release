@@ -365,7 +365,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
     * }}}
     * We encode them in a single conjunction of the shape
     * {{{
-    *   ResultType=DiffSat & Result=Reason
+    *   ResultType=Trivial & Result=Reason
     * }}}
     * @param e The trivial result.
     * @return The result encoded in a formula.
@@ -375,7 +375,7 @@ object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
 
     def resultType: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
       override def applies(e: MExpr): Boolean =
-        super.applies(e) && e.args()(0) == symbol("ResultType") && e.args()(1) == symbol("DiffSat")
+        super.applies(e) && e.args()(0) == symbol("ResultType") && e.args()(1) == symbol("Trivial")
     }
 
     def result: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {

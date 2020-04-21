@@ -986,6 +986,8 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates,
       (prod: GenProduct) => prod match {
+        case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
+          odeInvariant(tryHard = true, useDw = false)(pos) & done
         case (inv, proofHint) =>
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)

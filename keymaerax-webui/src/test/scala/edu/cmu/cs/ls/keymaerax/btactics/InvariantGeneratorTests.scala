@@ -87,7 +87,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   it should "use Pegasus if available" in withMathematica { _ =>
     val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
     gen should not be 'empty
-    gen.head shouldBe ("x>=0".asFormula, Some(PegasusProofHint(isInvariant = true, None)))
+    gen.head shouldBe ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PostInv"))))
   }
 
   it should "split formulas correctly" in {
@@ -109,28 +109,6 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
   it should "provide precondition as invariant candidate" in {
     val s = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
     InvariantGenerator.defaultInvariantGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("x^2+y^2=2".asFormula, None)
-  }
-
-  it should "provide conjunctive candidates on diffcut chains with strict or mixed inequalities" in {
-    //@note replaces Pegasus with mock provider
-    val mockProvider = new NoneToolProvider {
-      override def invGenTool(name: Option[String]): Option[InvGenTool] = {
-        Some(new InvGenTool {
-          override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
-            Left(("x>0".asFormula, "Unknown") :: ("y>1".asFormula, "Unknown") :: Nil) :: Nil
-          }
-          override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = true
-          override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = None
-          override def genODECond(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = (List.empty, List.empty)
-        })
-      }
-    }
-    ToolProvider.setProvider(mockProvider)
-
-    val gen = InvariantGenerator.pegasusCandidates("x>0 & y>1 ==> [{x'=1, y'=1}]x + y > 1".asSequent, SuccPos(0))
-    gen.toList should contain theSameElementsInOrderAs ("x>0".asFormula, Some(PegasusProofHint(isInvariant=true, None))) ::
-      ("y>1".asFormula, Some(PegasusProofHint(isInvariant=true, None))) ::
-      ("x>0&y>1".asFormula, Some(PegasusProofHint(isInvariant=false, None))) :: Nil
   }
 
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
@@ -159,13 +137,13 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
   }
 
-  "Pegasus" should "return invariant postcondition if sanity timeout > 0" in withMathematica { _ =>
+  "Pegasus" should "return trivial invariant postcondition result if sanity timeout > 0" in withMathematica { _ =>
     val seq = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "0")) {
-      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs Nil
+      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("x^2+y^2<=2".asFormula -> Some(PegasusProofHint(isInvariant = true, None)) :: Nil)
     }
     withTemporaryConfig(Map(Configuration.Keys.Pegasus.SANITY_TIMEOUT -> "5")) {
-      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> Some(PegasusProofHint(isInvariant = true, None))) :: Nil
+      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("true".asFormula -> Some(PegasusProofHint(isInvariant = true, Some("PostInv")))) :: Nil
     }
   }
 
