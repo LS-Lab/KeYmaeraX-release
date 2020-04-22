@@ -70,6 +70,9 @@ object PolynomialArithV2 {
       // result.term = term ^ n
       def ^(n: Int) : Polynomial
 
+      // result.term = term ^ other.term if other.term normalizes to an integer constant
+      def ^(other: Polynomial) : Polynomial
+
       // Some(proof of "term = 0")
       def zeroTest : Option[ProvableSig]
 
@@ -105,6 +108,7 @@ object PolynomialArithV2 {
       case Times(a, b) => ofTerm(a) * ofTerm(b)
       case Neg(a)      => -ofTerm(a)
       case Power(a, Number(i)) if i.isValidInt && i >= 0 => ofTerm(a) ^ i.toIntExact
+      case Power(a, b) => ofTerm(a) ^ ofTerm(b)
       case Divide(Number(num), Number(denum)) if denum != 0 => Const(num, denum)
       case Number(n) => Const(n)
       case t => indices.get(t) match {
@@ -128,7 +132,7 @@ object PolynomialArithV2 {
       case Minus(a, b) => symbols(a) ++ symbols(b)
       case Times(a, b) => symbols(a) ++ symbols(b)
       case Neg(a)      => symbols(a)
-      case Power(a, Number(i)) if i.isValidInt && i >= 0 => symbols(a)
+      case Power(a, b) => symbols(a) ++ symbols(b)
       case Divide(Number(num), Number(denum)) if denum != 0 => Seq()
       case Number(n) => Seq()
       case t => Seq(t)
@@ -260,6 +264,10 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
     ("(x_() = xn_()/xd_() & ((-xn_()=nxn_() & xd_() != 0)<-> true)) ->" +
       "-x_() = nxn_()/xd_()").asFormula, QE & done)
 
+  val coefficientBigDecimalPrv = rememberAny(
+    ("(x_() = xn_()/xd_() & ((xn_()/xd_()=bd_() & xd_() != 0)<-> true)) ->" +
+      "x_() = bd_()").asFormula, QE & done)
+
   /**
   * prv: lhs = rhs
   * lhs: input term (arbitrary, trace of construction)
@@ -347,16 +355,28 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
       Coefficient(numRes, denumRes, Some(prvRes))
     }
 
+    def bigDecimalOption : Option[ProvableSig] = {
+      val d = Divide(numN, denumN)
+      (try {
+        Some(Number(BigDecimalQETool.eval(d)))
+      } catch {
+        case _: IllegalArgumentException => None
+      }).map{bd =>
+        useDirectly(coefficientBigDecimalPrv,
+          Seq(("x_", lhs), ("xn_", numN), ("xd_", denumN), ("bd_", bd)),
+          Seq(prv, ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(d, bd), NotEqual(denumN, Number(0))))))
+      }
+    }
+
     /** normalized to a nicer output form, i.e., simplify rhs with
       *   0 / d = 0
-      *   n / 1 = n
+      *   n / d = bd
       * */
     def normalized : (ProvableSig, Term) = if (num.compareTo(0) == 0) {
       (useDirectly(normalizeCoeff0, Seq(("c_", lhs), ("d_", denumN)), Seq(prv)), Number(0))
-    } else if (denum.compareTo(1) == 0) {
-      (useDirectly(normalizeCoeff1, Seq(("c_", lhs), ("n_", numN)), Seq(prv)), numN)
-    } else {
-      (prv, rhs)
+    } else bigDecimalOption match {
+      case Some(prv) => (prv, rhsOf(prv))
+      case None => (prv, rhs)
     }
 
     def split(newNum: BigDecimal, newDenum: BigDecimal) : (ProvableSig, Coefficient, Coefficient) = {
@@ -625,6 +645,9 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
       (useDirectly(splitMonomial, Seq(("c_", coeff.rhs), ("x_", powersTerm), ("c1_", c1.rhs), ("c2_", c2.rhs), ("m_", lhs)),
         Seq(cPrv, prv)), Monomial(c1, powers), Monomial(c2, powers))
     }
+
+    def isConstant = powers.forall(_ == 0) || coeff.num.compare(0) == 0
+
   }
 
   val zez = rememberAny("0 = 0".asFormula, byUS(DerivedAxioms.equalReflex))
@@ -717,6 +740,12 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
       QE & done,
       implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
     )
+  )
+  lazy val powerPoly = rememberAny("(q_() = i_() & p_()^i_() = r_()) -> p_()^q_() = r_()".asFormula,
+    implyR(1) & andL(-1) &
+      eqL2R(-1)(1, 0::1::Nil) &
+      hideL(-1) &
+      closeId
   )
 
   // Lemmas for negation
@@ -1193,6 +1222,43 @@ case class TwoThreeTreePolynomialRing(variables: IndexedSeq[Term]) extends Polyn
             r.updatePrv(newPrv)
           }
         } else throw new IllegalArgumentException("negative power unsupported by PolynomialArithV2")
+    }
+
+    def isConstant : Boolean = this match {
+      case Empty(_) => true
+      case Branch2(l, v, r, _) =>
+        v.isConstant && l.isConstant && r.isConstant
+      case Branch3(l, v1, m, v2, r, _) =>
+        v1.isConstant && v2.isConstant && l.isConstant && m.isConstant && r.isConstant
+    }
+
+    def ^(other: Polynomial): TreePolynomial = other match {
+      case other: TreePolynomial =>
+        if (other.isConstant) {
+          val otherNormalized = other.normalized
+          rhsOf(otherNormalized) match {
+            case Number(i) if i.isValidInt =>
+              val pi = this ^ i.toIntExact
+              val newPrv = useDirectly(powerPoly,
+                Seq(
+                  ("p_", lhs),
+                  ("q_", other.lhs),
+                  ("i_", Number(i)),
+                  ("r_", rhsOf(pi.prv))
+                ),
+                Seq(otherNormalized, pi.prv)
+              )
+              pi.updatePrv(newPrv)
+            case Number(bd) =>
+              throw new IllegalArgumentException("Exponent must be integer but normalizes to " + bd)
+            case d@Divide(l, r) =>
+              throw new IllegalArgumentException("Exponent must be integer but normalizes to division " + d)
+            case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
+          }
+        } else {
+          throw new IllegalArgumentException("Exponent must be a constant polynomial.")
+        }
+      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
     }
 
     // negation
