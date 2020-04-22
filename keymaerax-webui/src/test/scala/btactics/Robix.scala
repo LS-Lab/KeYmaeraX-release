@@ -113,8 +113,9 @@ class Robix extends TacticTestBase {
   }
 
   it should "synthesize a controller monitor for IJRR static safety" in withMathematica { tool =>
-    val in = DatabasePopulator.readKyx("classpath:/keymaerax-projects/ijrr/robix.kyx").filter(_.name == "Theorem 1: Static safety").head
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(in.model)
+    val entry = KeYmaeraXArchiveParser.getEntry("Theorem 1: Static safety", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/ijrr/robix.kyx")).mkString).get
+    val model = entry.defs.exhaustiveSubst(entry.model.asInstanceOf[Formula])
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
       ("x" :: "y" :: "v" :: "a" :: "dx" :: "dy" :: "w" :: "xo" :: "yo" :: "r" :: "t" :: Nil).map(Variable(_)):_*)
 
