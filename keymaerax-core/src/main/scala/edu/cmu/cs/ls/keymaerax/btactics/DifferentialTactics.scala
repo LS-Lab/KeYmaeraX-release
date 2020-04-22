@@ -546,9 +546,36 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dG]] */
   def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = "dG" byWithInputs (
       r match { case Some(rr) => ghost :: rr :: Nil case None => ghost :: Nil },
-      (pos: Position, sequent: Sequent) => r match {
-        case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) => DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
-        case _ => DG(ghost)(pos) //@note no r or r==p
+      (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+        case Some(Box(ODESystem(_, h), _)) =>
+          val (_, a: Term, b: Term) = try {
+            DifferentialHelper.parseGhost(ghost)
+          } catch {
+            case ex: CoreException =>
+              val wrongShapeStart = ex.getMessage.indexOf("b(|y_|)~>")
+              throw new BelleFriendlyUserMessage(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
+                " is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b.")
+          }
+          val singular = {
+            val evDomFmls = flattenConjunctions(h)
+            (FormulaTools.singularities(a) ++ FormulaTools.singularities(b)).filter(v =>
+              !evDomFmls.contains(Less(v, Number(0)))     &&
+              !evDomFmls.contains(Less(Number(0), v))     &&
+              !evDomFmls.contains(Greater(v, Number(0)))  &&
+              !evDomFmls.contains(Greater(Number(0), v))  &&
+              !evDomFmls.contains(NotEqual(v, Number(0))) &&
+              !evDomFmls.contains(Greater(Number(0), v))
+            )
+          }
+          val cutSingularities = if (singular.nonEmpty) {
+            singular.map(t => ?(dC(NotEqual(t, Number(0)))(pos) <(skip, ODE(pos) & done))).reduce(_ & _)
+          } else skip
+          val doGhost = r match {
+            case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) =>
+              DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
+            case _ => DG(ghost)(pos) //@note no r or r==p
+          }
+          cutSingularities & doGhost
       })
 
   /**
