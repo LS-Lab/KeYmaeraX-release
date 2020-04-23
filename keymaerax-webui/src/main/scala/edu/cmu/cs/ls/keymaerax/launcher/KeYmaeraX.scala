@@ -164,16 +164,12 @@ object KeYmaeraX {
       } else if (options.get('mode).contains(Modes.CODEGEN)) {
         //@note Mathematica needed for quantitative ModelPlex
         if (options.get('quantitative).isDefined) {
-          initializeProver(
-            if (options.contains('tool)) options
-            else options ++ configFromFile(Tools.MATHEMATICA))
+          initializeProver(combineToolConfigs(options, configFromFile(Tools.MATHEMATICA)))
         }
         codegen(options)
       } else if (!options.get('mode).contains(Modes.UI) ) {
         try {
-          initializeProver(
-            if (options.contains('tool)) options
-            else options ++ configFromFile("z3"))
+          initializeProver(combineToolConfigs(options, configFromFile("z3")))
 
           //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
@@ -189,6 +185,11 @@ object KeYmaeraX {
         }
       }
     }
+  }
+
+  /** Combines tool configurations, favoring command line configuration over file configuration. */
+  private def combineToolConfigs(cmdLineConfig: OptionMap, fileConfig: OptionMap): OptionMap = {
+    cmdLineConfig ++ fileConfig.filterKeys(!cmdLineConfig.keySet.contains(_))
   }
 
   /**
