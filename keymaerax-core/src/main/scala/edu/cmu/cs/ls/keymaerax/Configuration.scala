@@ -174,7 +174,8 @@ object Configuration {
 
   /** Pegasus configuration access shortcuts. */
   object Pegasus {
-    def path: String = apply(Configuration.Keys.Pegasus.PATH)
+    def relativePath: String = apply(Configuration.Keys.Pegasus.PATH).replaceAllLiterally("/", File.separator)
+    def absolutePath: String = Configuration.path(Configuration.Keys.Pegasus.PATH)
     def mainFile(default: String): String = get[String](Configuration.Keys.Pegasus.MAIN_FILE).getOrElse(default)
     def invGenTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVGEN_TIMEOUT).getOrElse(default)
     def invCheckTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.INVCHECK_TIMEOUT).getOrElse(default)
