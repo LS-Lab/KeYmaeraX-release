@@ -1,7 +1,8 @@
 angular.module('keymaerax.services').service('ToolConfigService', function($http) {
   var systemInfo = {
     info: undefined,
-    warning: undefined
+    warning: undefined,
+    isLocal: false
   }
 
   var toolStatus = {
@@ -16,9 +17,16 @@ angular.module('keymaerax.services').service('ToolConfigService', function($http
   }
 
   this.fetchSystemInfo = function() {
-    $http.get("/config/systeminfo").then(function(response) {
-      systemInfo.info = response.data;
-      systemInfo.error = response.data.jvmArchitecture.includes("32");
+    $http.get('/isLocal').success(function(data) {
+      if (data.errorThrown) systemInfo.isLocal = false
+      else systemInfo.isLocal = data.success;
+
+      if (systemInfo.isLocal) {
+        $http.get("/config/systeminfo").then(function(response) {
+          systemInfo.info = response.data;
+          systemInfo.error = response.data.jvmArchitecture.includes("32");
+        });
+      }
     });
   }
 
