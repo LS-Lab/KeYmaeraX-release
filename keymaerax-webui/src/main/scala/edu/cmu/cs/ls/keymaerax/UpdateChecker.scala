@@ -1,10 +1,10 @@
-package edu.cmu.cs.ls.keymaerax.hydra
+package edu.cmu.cs.ls.keymaerax
 
 import java.net.{SocketTimeoutException, URL}
 
 import org.apache.logging.log4j.scala.Logging
-import spray.json._
 import spray.json.DefaultJsonProtocol._
+import spray.json._
 
 /**
   * The JSON should be a http://keymaerax.org/version.json and should look like:

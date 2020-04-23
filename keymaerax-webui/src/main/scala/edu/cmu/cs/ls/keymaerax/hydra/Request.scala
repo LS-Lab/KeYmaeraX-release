@@ -30,7 +30,7 @@ import java.text.SimpleDateFormat
 import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
 import java.util.{Calendar, Locale}
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct

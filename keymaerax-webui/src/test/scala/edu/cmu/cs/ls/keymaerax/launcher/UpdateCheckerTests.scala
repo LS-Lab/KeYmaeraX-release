@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.hydra.{StringToVersion, VersionString}
+import edu.cmu.cs.ls.keymaerax.{StringToVersion, VersionString}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
@@ -37,7 +37,7 @@ class UpdateCheckerTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   "Update checker" should "correctly compare versions" in {
     val versions: Map[String, Int] = versionStrings.map(_._1).zipWithIndex.toMap
-    versionStrings.map(_._1).combinations(2).foreach({case (s1 :: s2 :: Nil) =>
+    versionStrings.map(_._1).combinations(2).foreach({case s1 :: s2 :: Nil =>
       withClue (s"Comparing $s1 with $s2") {
         StringToVersion(s1).compareTo(StringToVersion(s2)) shouldBe versions(s1).compareTo(versions(s2))
       }

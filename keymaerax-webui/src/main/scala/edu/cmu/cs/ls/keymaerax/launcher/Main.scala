@@ -5,9 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io._
-import javax.swing.JOptionPane
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, core}
+import javax.swing.JOptionPane
+import edu.cmu.cs.ls.keymaerax.{Configuration, StringToVersion, UpdateChecker, core}
 import edu.cmu.cs.ls.keymaerax.core.Ensures
 import edu.cmu.cs.ls.keymaerax.hydra._
 

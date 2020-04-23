@@ -11,7 +11,7 @@ import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFi
 import java.security.Permission
 import java.util.concurrent.TimeUnit
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup, StringToVersion}
 import edu.cmu.cs.ls.keymaerax.scalatactic.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -80,7 +80,8 @@ object KeYmaeraX {
     val REPL: String = "repl"
     val STRIPHINTS: String = "striphints"
     val UI: String = "ui"
-    val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI)
+    val SETUP: String = "setup"
+    val modes: Set[String] = Set(CODEGEN, MODELPLEX, PROVE, REPL, STRIPHINTS, UI, SETUP)
   }
 
   /**
@@ -106,6 +107,7 @@ object KeYmaeraX {
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
       |     [-quantitative ctrl|model|plant] |
       |  -striphints file.kyx -out fileout.kyx
+      |  -setup
       |
       |Actions:
       |  -ui        start web user interface with optional server arguments (default)
@@ -116,6 +118,7 @@ object KeYmaeraX {
       |  -parse     return error code 0 if the given model file parses
       |  -bparse    return error code 0 if given bellerophon tactic file parses
       |  -repl      prove given model interactively from REPL command line
+      |  -setup     initializes the configuration and lemma cache
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for real arithmetic
@@ -178,6 +181,10 @@ object KeYmaeraX {
             case Some(Modes.CODEGEN) => codegen(options)
             case Some(Modes.REPL) => repl(options)
             case Some(Modes.STRIPHINTS) => stripHints(options)
+            case Some(Modes.SETUP) =>
+              println("Initializing lemma cache...")
+              KeYmaeraXStartup.initLemmaCache()
+              println("...done")
             case Some(Modes.UI) => assert(false, "already handled above since no prover needed"); ???
           }
         } finally {
@@ -265,6 +272,7 @@ object KeYmaeraX {
       case "-striphints" :: kyx :: tail =>
         if (kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(map ++ Map('mode -> Modes.STRIPHINTS, 'in -> kyx), tail)
         else optionErrorReporter("-striphints")
+      case "-setup" :: tail => nextOption(map ++ Map('mode -> Modes.SETUP), tail)
       case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> Modes.UI)
       // action options
       case "-out" :: value :: tail =>
