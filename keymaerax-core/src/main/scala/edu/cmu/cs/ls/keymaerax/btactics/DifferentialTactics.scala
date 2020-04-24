@@ -1013,8 +1013,20 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates,
       (prod: GenProduct) => prod match {
+        case (True, Some(PegasusProofHint(true, Some("PreInv")))) =>
+          val preInv = (if (pos.isAnte) seq.updated(pos.top, True) else seq.updated(pos.top, False)).toFormula
+          val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
+          diffCut(preInv)(pos) <(
+            skip,
+            odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
+          )
         case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
           odeInvariant(tryHard = true, useDw = false)(pos) & done
+        case (True, Some(PegasusProofHint(true, Some("DomImpPost")))) =>
+          DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
+        case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
+          diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
+        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ???
         case (inv, proofHint) =>
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
@@ -1099,8 +1111,6 @@ private object DifferentialTactics extends Logging {
           //(solve(pos) & ?(timeoutQE)) |
           doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
           ODEInvariance.dRI(pos) |
-          // todo: Pegasus should tell us for nonlinear ODEs
-          // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
           invCheck(
             //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
             //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
