@@ -30,8 +30,9 @@ import spray.json._
   */
 object UpdateChecker extends Logging {
 
-  def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
-    downloadDBVersion match {
+  /** Indicates whether `databaseVersion` is outdated (i.e. older than expected by this KeYmaera X) and needs upgrading. */
+  def needDatabaseUpgrade(databaseVersion: String): Option[Boolean] = {
+    minDBVersion match {
       case Some(oldestAcceptableDBVersion) =>
         Some(StringToVersion(databaseVersion) < StringToVersion(oldestAcceptableDBVersion))
       case None => None
@@ -44,7 +45,7 @@ object UpdateChecker extends Logging {
     *   * the latest version number according to KeYmaeraX.org/version.json
     * or else None if we could not determine the most recent version (e.g., because we have no network connection).
     */
-  def getVersionStatus() : Option[(Boolean, String)] = {
+  def getVersionStatus: Option[(Boolean, String)] = {
     downloadCurrentVersion match {
       case Some(current) => Some((current == edu.cmu.cs.ls.keymaerax.core.VERSION, current))
       case None          => None
@@ -52,18 +53,18 @@ object UpdateChecker extends Logging {
   }
 
   /** Returns an option containing a boolean value indicating whether KeYmaera X is up to date, or None if current version info could not be downloaded. */
-  def upToDate() : Option[Boolean] = getVersionStatus() match {
-    case Some((latest, version)) => Some(latest)
+  def upToDate(): Option[Boolean] = getVersionStatus match {
+    case Some((latest, _)) => Some(latest)
     case None => None
   }
 
   /** Returns an option containing the version number of the latest KeYmaera X release, or None if current version info could not be downloaded. */
-  def latestVersion() : Option[String] = getVersionStatus() match {
-    case Some((latest, version)) => Some(version)
+  def latestVersion(): Option[String] = getVersionStatus match {
+    case Some((_, version)) => Some(version)
     case None => None
   }
 
-  private lazy val downloadDBVersion : Option[String] = {
+  private lazy val minDBVersion: Option[String] = {
     try {
       val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
       val versionString = json.parseJson.asJsObject.fields("minVersion").convertTo[String]
@@ -89,9 +90,8 @@ object UpdateChecker extends Logging {
             Some(versionString)
           }
       }
-    }
-    catch {
-      case e: Throwable => None
+    } catch {
+      case _: Throwable => None
     }
   }
 
@@ -101,25 +101,24 @@ object UpdateChecker extends Logging {
     val conn = new URL(url).openConnection()
     conn.setConnectTimeout(timeout)
     conn.setReadTimeout(timeout)
-    val source = conn.getInputStream()
+    val source = conn.getInputStream
     val read = scala.io.Source.fromInputStream(source).mkString
     if (source != null) source.close()
     Some(read)
-  }
-  catch {
-    case e: SocketTimeoutException => None
+  } catch {
+    case _: SocketTimeoutException => None
   }
 
 }
 
 case class VersionString(major: Int, minor: Int, rev: Int, letter: Option[Char], incr: Option[Int]) {
-  def <(that: VersionString) = compareTo(that) == -1
-  def >(that: VersionString) = compareTo(that) == 1
-  def >=(that: VersionString) = !(this < that)
-  def <=(that: VersionString) = !(this > that)
-  def !=(that: VersionString) = !this.equals(that)
+  def <(that: VersionString): Boolean = compareTo(that) == -1
+  def >(that: VersionString): Boolean = compareTo(that) == 1
+  def >=(that: VersionString): Boolean = !(this < that)
+  def <=(that: VersionString): Boolean = !(this > that)
+  def !=(that: VersionString): Boolean = !this.equals(that)
 
-  def compareTo(that: VersionString) = {
+  def compareTo(that: VersionString): Int = {
     if (major != that.major) major.compareTo(that.major)
     else if (minor != that.minor) minor.compareTo(that.minor)
     else if (rev != that.rev) rev.compareTo(that.rev) //@note undefined rev == -1, 4.0.1 > 4.0.0 > 4.0 (.-1)
