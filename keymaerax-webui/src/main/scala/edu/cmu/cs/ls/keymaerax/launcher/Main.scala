@@ -198,8 +198,7 @@ object Main {
     launcherLog("Database version: " + databaseVersion)
     cleanupGuestData()
     LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
-    if (UpdateChecker.upToDate().getOrElse(false) &&
-        UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
+    if (UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
       val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$databaseVersion-*"
       launcherLog("Backing up database to " + backupPath)
