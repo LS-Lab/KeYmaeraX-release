@@ -93,7 +93,7 @@
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
                         <li class="divider"></li>
-                        <li><a ng-click="extractdb()" ng-show="isLocal"><i class="fa fa-archive"></i> Extract Database</a></li>
+                        <li><a ng-click="extractdb()" ng-show="systemInfo.isLocal"><i class="fa fa-archive"></i> Extract Database</a></li>
                         <li><a target="_blank" href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download KeYmaera&#160;X</a></li>
                     </ul>
                 </li>
@@ -105,7 +105,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a ng-click="shutdown()" ng-show="isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>
+                    <a ng-click="shutdown()" ng-show="systemInfo.isLocal" uib-tooltip="Shutdown KeYmaera X" tooltip-placement="auto bottom"><i class="fa fa-power-off"></i></a>
                 </li>
                 <li class="nav-item">
                     <a ng-click="logoff()" uib-tooltip="Log off" tooltip-placement="auto bottom"><i class="fa fa-sign-out"></i></a>
