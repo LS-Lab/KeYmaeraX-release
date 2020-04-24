@@ -534,7 +534,7 @@ class KyxConfigRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Read
 class KeymaeraXVersionRequest() extends Request with ReadRequest {
   override def resultingResponses() : List[Response] = {
     val keymaeraXVersion = VERSION
-    val (upToDate, latestVersion) = UpdateChecker.getVersionStatus() match {
+    val (upToDate, latestVersion) = UpdateChecker.getVersionStatus match {
       case Some((upd, lv)) => (Some(upd), Some(lv))
       case _ => (None, None)
     }
