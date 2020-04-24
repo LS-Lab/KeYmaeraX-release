@@ -155,8 +155,9 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   lazy val differentialInvariantCandidates: Generator[GenProduct] = cached((sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting/filtering etc.
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
-      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent, pos)).distinct)
+    //@note do not relevance filter Pegasus candidates: they contain trivial results, that however make ODE try harder
+    // since flagged as truly invariant and not just a guess like the simple candidates
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct)
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
