@@ -215,7 +215,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
 
     /** exact multiplication */
     def *!(other: TM) : TM = {
-      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.sum <= order}
+      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.map(_._2).sum <= order}
 
       val hornerPrv = toHorner(polyHigh)
       val rem = rhsOf(hornerPrv)
@@ -268,7 +268,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
 
     /** exact square */
     def squareExact : TM = {
-      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.sum <= order}
+      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.map(_._2).sum <= order}
       val hornerPrv = toHorner(polyHigh)
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
