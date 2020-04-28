@@ -211,6 +211,12 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     })
   }
 
+  $scope.spinnerController = {
+    close: function(name) {
+      spinnerService.hide(name)
+    }
+  }
+
   $scope.runningTask = {
     proofId: undefined,
     nodeId: undefined,
@@ -320,6 +326,12 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
       tacticMsg: err.data.tacticMsg,
       taskStepwiseRequest: $scope.runningTask.taskStepwiseRequest
     })
+  }
+
+  $scope.spinnerController = {
+    close: function(name) {
+      spinnerService.hide(name)
+    }
   }
 
   //@todo task service (see also ProofCtrl)

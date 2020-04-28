@@ -16,8 +16,8 @@
     </div>
 </spinner>
 <spinner name="branchClosedSpinner" ng-cloak>
-    <div class="tactic-spinner-background"></div>
-    <div class="tactic-spinner-overlay">
+    <div class="tactic-spinner-background" ng-click="spinnerController.close('branchClosedSpinner')"></div>
+    <div class="tactic-spinner-overlay" ng-click="spinnerController.close('branchClosedSpinner')">
         <div class="tactic-spinner-please-wait">
             <p><i class="fa fa-5x fa-trophy faa-tada animated"></i></p>
             <p>Branch closed</p>
