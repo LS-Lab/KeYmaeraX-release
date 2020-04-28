@@ -1076,9 +1076,6 @@ private object DifferentialTactics extends Logging {
   lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
-    if (TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
-      throw new BelleThrowable("The strongest ODE invariant has already been added to the domain constraint.\nTry dW or solve the ODE to make progress in your proof.")
-
     def odeWithInvgen(sys: ODESystem, generator: Generator[GenProduct],
                       onGeneratorError: Throwable => Stream[GenProduct]): DependentPositionTactic = fastODE(
       try {
@@ -1101,7 +1098,9 @@ private object DifferentialTactics extends Logging {
         })) (pos ++ PosInExpr(0 :: Nil))
     )
 
-    seq.sub(pos) match {
+    if (StaticSemantics.symbols(seq).contains(ODEInvariance.nilpotentSolveTimeVar)) {
+      diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
+    } else seq.sub(pos) match {
       case Some(Box(sys: ODESystem, _)) =>
         // Try to prove postcondition invariant
         odeInvariant()(pos) & done |
