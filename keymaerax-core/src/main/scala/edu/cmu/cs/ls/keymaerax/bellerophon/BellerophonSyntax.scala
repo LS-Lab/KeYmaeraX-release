@@ -12,6 +12,8 @@ import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
+
 object BelleExpr {
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
 }
@@ -602,22 +604,23 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
               pt.factory(pos).computeExpr(v)
             } else {
-              throw new BelleThrowable("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
+              throw new InapplicableTactic("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
                 " is not of expected shape " + f + " in sequent \n" + provable.subgoals.head.prettyString)
             }
         }
         case None => pt.factory(pos).computeExpr(v)
       }
-      case l@Find(goal, _, start, _) =>
+      case l@Find(_, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
-        tryAllAfter(l, new BelleTacticFailure("Position tactic " + prettyString +
+        tryAllAfter(l, new InapplicableTactic("Position tactic " + prettyString +
           " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
       case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
       case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
     }
   } catch {
     //note the following exceptions are likely caused by wrong positioning
-    case be: BelleThrowable => locator match {
+    case be: BelleUserProblemInput => throw be
+    case be: BelleReportedError => locator match {
       case _: Find => throw be
       case Fixed(pos, _, _) => v match {
         case BelleProvable(provable, _) if provable.subgoals.size == 1 =>
@@ -659,6 +662,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
+          @tailrec
           def toPos(locator: Find): Option[Position] = {
             if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
               val pos = locator.toPosition(provable)
@@ -676,7 +680,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
             case _ => throw cause
           }
         } else if (cause == null) {
-          throw new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
+          throw new InapplicableTactic(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
         } else throw cause
       case _ => pt.factory(locator.start).computeExpr(v) |
         tryAllAfter(locator.copy(start = locator.start.advanceIndex(1)), cause)

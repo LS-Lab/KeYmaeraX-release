@@ -1,10 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.util.concurrent.{Callable, FutureTask, ExecutorService, Executors}
-import edu.cmu.cs.ls.keymaerax.core.Ensures
+import java.util.concurrent.{Callable, ExecutorService, Executors, FutureTask}
 
-import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.IOListener
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleValue, BelleExpr, Interpreter}
+import edu.cmu.cs.ls.keymaerax.core.Ensures
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleFriendlyUserMessage, BelleReportedError, BelleThrowable, BelleUserProblemInput, BelleValue, IOListener, Interpreter}
 
 /**
   * Scheduler for Bellerophon tactics
@@ -128,6 +127,7 @@ class BellerophonTacticExecutor(poolSize: Int) {
         try {
           Left(interpreter(tactic, value))
         } catch {
+          case e: BelleUserProblemInput => Right(e)
           case e: Throwable => Right(new BelleThrowable("Tactic " + tactic.prettyString + " failed, because internally:\n" + e.getMessage, e))
         }
       }
