@@ -19,77 +19,94 @@ import org.scalatest.LoneElement._
 class PolynomialArithV2Tests extends TacticTestBase {
   import PolynomialArithV2._
 
-  "PolynomialRing" should "be the interface to work with this library" in withMathematica { _ =>
-    val ring = PolynomialRing("x,y,z".split(',').map(_.asTerm).toIndexedSeq)
-    import ring._
-    val aT = "-x + 2/3*y - 4*z^3".asTerm
-    val bT = ("x^4 -216/81*x^3*y+16*x^(5-2)*z^3+17496/6561*x^(2*1)*y^2" +
-      "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
-      "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^(3+2*x+1-x+2-x)" +
-      "- 13824/81*y*z^9+256*z^12").asTerm
-    val a = ofTerm(aT)
-    val b = ofTerm(bT)
-    val prv = ((a^4) - b).zeroTest.get
+  val aT = "-x + 2/3*y - 4*z^3".asTerm
+  val bT = ("x^4 -216/81*x^3*y+16*x^(5-2)*z^3+17496/6561*x^(2*1)*y^2" +
+    "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
+    "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^(3+2*x+1-x+2-x)" +
+    "- 13824/81*y*z^9+256*z^12").asTerm
+  val bN = ("x^4+- 216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2+" +
+    "- 32*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3+" +
+    "- 128*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6+" +
+    "- 13824/81*y*z^9+256*z^12").asTerm
+
+  "PolynomialArithV2" should "be the interface to work with this library" in withMathematica { _ =>
+    val a4 = Power(aT, Number(4))
+
+    // directly produce Provables
+    val prv = equate(a4, bT).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
-    prv.conclusion.succ.loneElement shouldBe Equal(Minus(Power(aT, Number(4)), bT), Number(0))
+    prv.conclusion.succ.loneElement shouldBe Equal(a4, bT)
+
+
+    // Tactics
+
+    // prove (and close) equality
+    val res = proveBy(Equal(a4, bT), equate(1) & done)
+    res shouldBe 'proved
+
+    // normalize to zero on rhs and normal form (0 when applied on valid equality) on lhs
+    val res2 = proveBy(Equal(a4, bT), normalizeAt(1))
+    res2.subgoals.loneElement shouldBe "==> 0 = 0".asSequent
+
+    // normalize term (fully distributed and ordered according to default monomial order)
+    val res3 = proveBy(Equal(a4, bT), normalizeAt(1, 0::Nil))
+    res3.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(Equal(bN, bT)))
+  }
+
+  "PolynomialArithV2.ring" should "be a 'computer algebra' interface to work with this library" in withMathematica { _ =>
+    import ring._
+    val a = ofTerm(aT)
+    val b = ofTerm(bT)
+    val prv = (a^4).equate(b).get
+    prv shouldBe 'proved
+    prv.conclusion.ante shouldBe 'empty
+    prv.conclusion.succ.loneElement shouldBe Equal(Power(aT, Number(4)), bT)
   }
 
   it should "implicitly convert integers" in withMathematica { _ =>
-    val ring = PolynomialRing("x".split(',').map(_.asTerm).toIndexedSeq)
     import ring._
     val x = ofTerm("x".asTerm)
     val a = (x + 2)*(x - 2)
     val b = (x^2) - 4
-    val prv = (a - b).zeroTest.get
+    val prv = a.equate(b).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
-    prv.conclusion.succ.loneElement shouldBe "(x+2)*(x-2) - (x^2-4) = 0".asFormula
+    prv.conclusion.succ.loneElement shouldBe "(x+2)*(x-2) = (x^2-4)".asFormula
   }
 
-  it should "implicitly construct an appropriate polynomial ring" in withMathematica { _ =>
-    val t = ("(-x + 2/3*y - 4*z^3)^4 - (x^4 -216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2" +
+  it should "use the default polynomial ring" in withMathematica { _ =>
+    val (t1, t2) = ("(-x + 2/3*y - 4*z^3)^4".asTerm, ("(x^4 -216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2" +
       "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
       "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6" +
-      "- 13824/81*y*z^9+256*z^12)").asTerm
-    val prv = PolynomialArithV2.isZero(t).get
+      "- 13824/81*y*z^9+256*z^12)").asTerm)
+    val prv = equate(t1, t2).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
-    prv.conclusion.succ.loneElement shouldBe Equal(t, Number(0))
+    prv.conclusion.succ.loneElement shouldBe Equal(t1, t2)
   }
 
+  // expose implementation details
+  lazy val ring23 = ring.asInstanceOf[TwoThreeTreePolynomialRing]
+
   val pa4Vars = "x,y,f(),g()".split(',').map(_.asTerm).toIndexedSeq
-  lazy val pa4 = {
-    val variableOrdering = denseVariableOrdering(pa4Vars)
-    TwoThreeTreePolynomialRing(variableOrdering, revlex(variableOrdering))
-  }
   object PA4 {
-    def DenseVar(x: Int, i: Int) : pa4.TreePolynomial = pa4.Var(pa4Vars(x), i)
+    import ring23._
+    def DenseVar(x: Int, i: Int) : TreePolynomial = ring23.Var(pa4Vars(x), i)
     def DenseSeq(xs: Int*) : IndexedSeq[(Term, Int)] = xs.zipWithIndex.map{case (i, x) => (pa4Vars(x), i)}.filter(_._2>0).toIndexedSeq
     val x = pa4Vars(0)
     val y = pa4Vars(1)
     val f = pa4Vars(2)
     val g = pa4Vars(3)
   }
-  val pa20Vars = "x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19".split(',').map(_.asTerm).toIndexedSeq
-  lazy val pa20 = {
-    val variableOrdering = denseVariableOrdering(pa20Vars)
-    TwoThreeTreePolynomialRing(variableOrdering, revlex(variableOrdering))
-  }
+  val pa20Vars = "x00,x01,x02,x03,x04,x05,x06,x07,x08,x09,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19".split(',').map(_.asTerm).toIndexedSeq
   object PA20 {
-    def DenseVar(x: Int, i: Int): pa20.TreePolynomial = pa20.Var(pa20Vars(x), i)
-  }
-
-  "Initialization" should "initialize four Variables" in withMathematica { _ =>
-    pa4
-  }
-
-  "it" should "initialize twenty Variables" in withMathematica { _ =>
-    pa20
+    import ring23._
+    def DenseVar(x: Int, i: Int): TreePolynomial = ring23.Var(pa20Vars(x), i)
   }
 
   "Coefficient" should "construct" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     val coeff = Coefficient(BigDecimal("0.1"), BigDecimal("3"))
     coeff.prv shouldBe 'proved
     coeff.prv.conclusion.ante shouldBe 'empty
@@ -98,7 +115,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "multiply" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     val c1 = Coefficient(BigDecimal("0.1"), BigDecimal("3"))
     val c2 = Coefficient(BigDecimal("123.12"), BigDecimal("2"))
     val res = (c1*c2)*(c1*c2*c2)
@@ -112,7 +129,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "add" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     val c1 = Coefficient(BigDecimal("0.1"), BigDecimal("3"))
     val c2 = Coefficient(BigDecimal("123.12"), BigDecimal("2"))
     val res = (c1+c2)+(c2+c2)
@@ -125,7 +142,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "represent as bigDecimal" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PolynomialArithV2Helpers._
     val c1 = Coefficient(BigDecimal("0.1"), BigDecimal("2"))
     val c2 = Coefficient(BigDecimal("0.1"), BigDecimal("3"))
@@ -138,7 +155,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val x = "x".asTerm
     val y = "y".asTerm
     val z = "z".asTerm
-    val pa = TwoThreeTreePolynomialRing(denseVariableOrdering(IndexedSeq(x, y, z)), grevlex(denseVariableOrdering(IndexedSeq(x, y, z))))
+    val pa = ring23
     val c = pa.Coefficient(1, 1)
     val m1 = pa.Monomial(c, IndexedSeq((x, 2), (y, 1), (z, 3)))
     val m2 = pa.Monomial(c, IndexedSeq((y, 1)))
@@ -153,19 +170,15 @@ class PolynomialArithV2Tests extends TacticTestBase {
     res3._2.conclusion.succ(0) shouldBe "1*y^1*(1*z^1)=1*y^1*z^1 ".asFormula
   }
 
-  "monomials" should "test" in withMathematica { _ =>
-    import pa4._
-  }
-
   it should "be constructed" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val res = Monomial(Coefficient(2, 3), DenseSeq(0, 1, 0, 2))
     res.rhs shouldBe "2/3*(1*y^1*g()^2)".asTerm
   }
 
   it should "multiply" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     val m1 = Monomial(Coefficient(2, 3), DenseSeq(0, 1, 0, 2))
@@ -177,7 +190,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "multiply (again)" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     val m1 = Monomial(Coefficient(2, 3), DenseSeq(0, 1, 0, 2))
@@ -189,7 +202,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "add" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     val m1 = Monomial(Coefficient(2, 3), DenseSeq(0, 1, 0, 2))
@@ -200,7 +213,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   "Var" should "be constructed" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val x = DenseVar(0, 2)
     val x2 = Empty(None) + Monomial(Coefficient(1, 1), DenseSeq(2, 0, 0, 0), None)
@@ -211,7 +224,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   "Const" should "be constructed" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val a = Const(42)
     val a2 = Empty(None) + Monomial(Coefficient(42, 1), DenseSeq(0, 0, 0, 0), None)
@@ -222,7 +235,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   "Polynomial" should "cover all cases of add Monomial" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     val zero = Empty(None)
@@ -256,7 +269,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "cover all cases of add Polynomial" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     def x(i: Int) = DenseVar(0, i)
@@ -266,7 +279,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "cover all cases of subtract Polynomial" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     def x(i: Int) = DenseVar(0, i)
@@ -276,7 +289,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "multiply with monomials" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val pp = new KeYmaeraXPrettierPrinter(100)
     def x(i: Int) = DenseVar(0, i)
@@ -288,7 +301,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "power" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val x = DenseVar(0, 1)
     val y = DenseVar(1, 1)
@@ -303,14 +316,14 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "power polynomial" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val x = DenseVar(0, 1)
     (x^(Const(3)-Const(1))).treeSketch shouldBe "[., x^2, .]"
   }
 
   it should "negate" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     def x(i: Int) = DenseVar(0, i)
     val tree = (1 until 10).map(x).reduce(_ + _)
@@ -319,7 +332,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "subtract Monomials" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     def x(i: Int) = DenseVar(0, i)
     val tree = (1 until 10).map(x).reduce(_ + _)
@@ -330,17 +343,17 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
   }
   it should "work with many variables" in withMathematica { _ =>
-    import pa20._
+    import ring23._
     import PA20._
     def x(i: Int, p: Int) = DenseVar(i, p)
     val a = (Const(3)*x(19, 2) + Const(5)*x(0, 4) + x(1, 2) + Const(123)*x(10, 3))*(x(17, 1) + x(5, 2) + x(15, 7))
     val b = (x(17, 2) + x(0, 3)*x(15, 4))*(x(0, 1)*x(15,3) + x(3, 2) + x(1, 8))
-    a.treeSketch shouldBe "{[[., 5 x0^4 x5^2, .], 5 x0^4 x15^7, [., 5 x0^4 x17^1, .]], x1^2 x5^2, [[., x1^2 x15^7, .], x1^2 x17^1, [., 123 x5^2 x10^3, .]], 3 x5^2 x19^2, [[., 123 x10^3 x15^7, .], 123 x10^3 x17^1, {., 3 x15^7 x19^2, ., 3 x17^1 x19^2, .}]}"
-    b.treeSketch shouldBe "{[., x0^4 x15^7, .], x0^3 x1^8 x15^4, [., x0^3 x3^2 x15^4, .], x0^1 x15^3 x17^2, {., x1^8 x17^2, ., x3^2 x17^2, .}}"
+    a.treeSketch shouldBe "{[[., 5 x00^4 x05^2, .], 5 x00^4 x15^7, [., 5 x00^4 x17^1, .]], x01^2 x05^2, [[., x01^2 x15^7, .], x01^2 x17^1, [., 123 x05^2 x10^3, .]], 3 x05^2 x19^2, [[., 123 x10^3 x15^7, .], 123 x10^3 x17^1, {., 3 x15^7 x19^2, ., 3 x17^1 x19^2, .}]}"
+    b.treeSketch shouldBe "{[., x00^4 x15^7, .], x00^3 x01^8 x15^4, [., x00^3 x03^2 x15^4, .], x00^1 x15^3 x17^2, {., x01^8 x17^2, ., x03^2 x17^2, .}}"
   }
 
   it should "partition polynomials" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PolynomialArithV2Helpers._
     val t = "2*x + 3*x*y + 4*y^2 + 2*x^2 + x^2*y^2 + x^3 + 4*x^4".asTerm
     val poly = ofTerm(t)
@@ -352,7 +365,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   "Normalization" should "normalize Coefficients" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     Coefficient(0, 1, None).normalized._1.conclusion.succ(0) shouldBe "0/1=0".asFormula
     Coefficient(1, 1, None).normalized._1.conclusion.succ(0) shouldBe "1/1=1".asFormula
     Coefficient(2, 1, None).normalized._1.conclusion.succ(0) shouldBe "2/1=2".asFormula
@@ -363,7 +376,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "normalize monomials" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     Monomial(Coefficient(2, 1, None), DenseSeq(2, 1, 2, 0)).normalized.conclusion.succ(0) shouldBe "2/1*(1*x^2*y^1*f()^2)=2*x^2*y*f()^2".asFormula
     Monomial(Coefficient(1, 1, None), DenseSeq(2, 1, 2, 0)).normalized.conclusion.succ(0) shouldBe "1/1*(1*x^2*y^1*f()^2)=x^2*y*f()^2".asFormula
@@ -375,7 +388,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "normalize monomials in a polynomial" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     val p = (0 until 5).map(i => Const((i % 3) - 2) * DenseVar(i % 2, i % 3 + 1)).reduceLeft(_ + _) ^ 2
     p.normalized shouldBe 'proved
@@ -384,7 +397,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "split coefficients" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     val (prv, c1, c2) = Coefficient(1, 3).split(BigDecimal("0.33333"), 1)
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
@@ -394,7 +407,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "approx polynomials" in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PolynomialArithV2Helpers._
     val t = (1 to 9).map(i => Times(Divide(Number(1), Number(i)), Power("x".asTerm, Number(i)))).reduceLeft(Plus)
     val (prv, a, r) = ofTerm(t).asInstanceOf[TreePolynomial].approx(5)
@@ -415,7 +428,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   "Timing" should "compare multiply with polynomials" taggedAs SlowTest in withMathematica { _ =>
-    import pa4._
+    import ring23._
     import PA4._
     def timeMethods(msg: String, eval:()=>TreePolynomial, skipPA1: Boolean = false) : TreePolynomial = {
       println(msg)

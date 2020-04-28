@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
@@ -23,7 +22,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
                        prec: Int,
                        order: Int
                       ) {
-  val polynomialRing = PolynomialArithV2.PolynomialRing(vars)
+  val polynomialRing = PolynomialArithV2.ring
   private val ringsLib = new RingsLibrary(vars) // for non-certified computations
 
   import polynomialRing._
@@ -43,8 +42,6 @@ class TaylorModelArith(context: IndexedSeq[Formula],
     assert(prv.conclusion.ante.isEmpty)
     ProvableSig.startProof(Sequent(context, prv.conclusion.succ)).apply(CoHideRight(SuccPos(0)), 0).apply(prv, 0)
   }
-
-  private val eqMinusI = rememberAny("(t_() - s_() = 0) -> t_() = s_()".asFormula, QE & done)
 
   private val plusPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
@@ -153,8 +150,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
   // TODO: add to PolynomialLibrary
   def toHorner(poly: Polynomial) : ProvableSig  = {
     val horner = ringsLib.toHorner(ringsLib.toRing(poly.term), ringVars)
-    val zeroPrv = (poly - ofTerm(horner)).zeroTest.getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
-    useDirectly(eqMinusI, Seq(("t_", poly.term), ("s_", horner)), Seq(zeroPrv))
+    poly.equate(ofTerm(horner)).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
   }
 
   /**

@@ -71,8 +71,8 @@ object PolynomialArithV2 {
       // result.term = term ^ other.term if other.term normalizes to an integer constant
       def ^(other: Polynomial) : Polynomial
 
-      // Some(proof of "term = 0")
-      def zeroTest : Option[ProvableSig]
+      // Some(proof of "term = other.term") by equating coefficients
+      def equate(other: Polynomial) : Option[ProvableSig]
 
       // partition monomials (where (num, denum, powers) represents num/denum*(vars(i)^powers(i))_(i))
       // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
@@ -118,6 +118,12 @@ object PolynomialArithV2 {
       private val lookup = variables.zipWithIndex.toMap
       def compare(x: Term, y: Term): Int = lookup(x).compareTo(lookup(y))
     }
+
+  val variableConstantOrdering: Ordering[Term] = Ordering.by{
+    case BaseVariable(n, i, Real) => (0, n, i)
+    case FuncOf(Function(n, i, Unit, Real, false), Nothing) => (1, n, i)
+    case t => throw new IllegalArgumentException("variableConstantOrdering expects BaseVariable or FuncOf(_, Nothing) of sort Real, but got " + t)
+  }
 
 
   /** reverse lexicographic order -- @note: strange legacy default */
@@ -185,27 +191,48 @@ object PolynomialArithV2 {
     }
   }
 
-  /** construct a Polynomial ring in a given sequence of variables */
-  def PolynomialRing(variables: IndexedSeq[Term]) : PolynomialRing = {
-    val variableOrdering = denseVariableOrdering(variables)
-    TwoThreeTreePolynomialRing(variableOrdering, grevlex(variableOrdering))
+  /** default polynomial ring implementation */
+  val ring : PolynomialRing = TwoThreeTreePolynomialRing(variableConstantOrdering, revlex(variableConstantOrdering))
+
+  /** constructor for given variable and monomial orderings */
+  def PolynomialRing(variableOrdering: Ordering[Term],
+                     monomialOrdering: Ordering[IndexedSeq[(Term, Int)]]): PolynomialRing =
+    TwoThreeTreePolynomialRing(variableOrdering, monomialOrdering)
+
+  /** Prove "t1 = t2" by equating coefficients */
+  def equate(t1: Term, t2: Term) : Option[ProvableSig] = ring.ofTerm(t1).equate(ring.ofTerm(t2))
+
+  /** Prove an equality by equating coefficients */
+  val equate : DependentPositionTactic = "equate" by { (pos: Position, seq: Sequent) =>
+    pos.checkTop
+    pos.checkSucc
+    seq.sub(pos) match {
+      case Some(Equal(t1, t2)) =>
+        equate(t1, t2) match {
+          case None => throw new IllegalArgumentException("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
+          case Some(prv) => by(prv)
+        }
+      case e => throw new IllegalArgumentException("equate must be applied at a term or equality but was applied at " + e)
+    }
   }
 
-  /** Test for zero, returns a provable if "term = 0" can be proved using Polynomial arithmetic.
-    * Computes in a polynomial ring in all non-polynomial-arithmetic subterms.
+  /** distributive normal form */
+  def normalize(term: Term) : ProvableSig = ring.ofTerm(term).prettyRepresentation
+
+  /** normalizeAt "term" rewrites polynomial term to distributive normal form
+    * normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
     * */
-  def isZero(term: Term) : Option[ProvableSig] = {
-    def symbols(t: Term) : Seq[Term] = t match {
-      case Plus(a, b)  => symbols(a) ++ symbols(b)
-      case Minus(a, b) => symbols(a) ++ symbols(b)
-      case Times(a, b) => symbols(a) ++ symbols(b)
-      case Neg(a)      => symbols(a)
-      case Power(a, b) => symbols(a) ++ symbols(b)
-      case Divide(Number(num), Number(denum)) if denum != 0 => Seq()
-      case Number(n) => Seq()
-      case t => Seq(t)
+  private lazy val eqNormalize = remember("s_() = t_() <-> s_() - t_() = 0".asFormula,QE)
+  val normalizeAt : DependentPositionTactic = "normalizeAt" by { (pos: Position, seq: Sequent) =>
+    seq.sub(pos) match {
+      case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
+        useAt(normalize(t), PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
+      case Some(Equal(s, t)) =>
+        useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
+      case Some(t: Term) =>
+        useAt(normalize(t), PosInExpr(0::Nil))(pos)
+      case e => throw new IllegalArgumentException("normalizeAt must be applied at a term or equality but was applied at " + e)
     }
-    PolynomialRing(symbols(term).distinct.toIndexedSeq).ofTerm(term).zeroTest
   }
 
 }
@@ -894,6 +921,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       ") ->" +
       "t_() = ll_() + c_()").asFormula, QE & done)
 
+  // lemmas to prove equality
+  val equalityBySubtraction = rememberAny("t_() - s_() = 0 -> t_() = s_()".asFormula, QE & done)
+
   // Lemmas for partition
   val partition2 = rememberAny(("(t_() = r_() & t1_() = r1_() & t2_() = r2_() & t_() - t1_() - t2_() = 0) -> t_() = t1_() + t2_()".asFormula),
     QE & done)
@@ -1429,6 +1459,17 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           Some(normalizedPrv)
         case _ => None
       }
+    }
+
+    override def equate(other: Polynomial): Option[ProvableSig] = other match {
+      case other: TreePolynomial =>
+        val diff = this - other
+        diff.zeroTest match {
+          case None => None
+          case Some(zeroPrv) =>
+            Some(useDirectly(equalityBySubtraction, Seq(("t_", this.lhs), ("s_", other.lhs)), Seq(zeroPrv)))
+        }
+      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
     }
 
     def partitionMonomials(P: Monomial => Boolean)(acc: (Seq[Monomial], Seq[Monomial])) : (Seq[Monomial], Seq[Monomial]) = {
