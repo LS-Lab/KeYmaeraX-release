@@ -123,7 +123,7 @@ class CompoundException(val left: BelleThrowable, val right: BelleThrowable)
 
 /** These exceptions have well-understood causes and the given explanation should be propagated all the way to the user.
   * @todo give proper formatting and inContext and such.
-  * @todo use BelleUserProblemInput instead? */
-class BelleFriendlyUserMessage(message: => String) extends Exception(message)
+  */
+class BelleFriendlyUserMessage(message: => String) extends BelleUserProblemInput(message)
 
 
