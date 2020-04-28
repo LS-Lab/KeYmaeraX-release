@@ -15,7 +15,10 @@ import edu.cmu.cs.ls.keymaerax.core._
 object KaisarProof {
   type Ident = String
   type TimeIdent = String
+  type Statements = List[Statement]
 }
+
+final case class Proof(ss: List[Statement])
 
 sealed trait Method {}
 case class RCF() extends Method {}
@@ -33,42 +36,69 @@ sealed trait Selector {}
 case class ForwardSelector(forward: ProofTerm) extends Selector {}
 case class PatternSelector(e: Expression) extends Selector {}
 
+sealed trait IdPat
+case class NoPat() extends IdPat
+case class WildPat() extends IdPat
+// @TODO: make ident optional for assignments
+case class VarPat(p: Ident, x: Option[Variable] = None) extends IdPat
+case class TuplePat(pats: List[IdPat]) extends IdPat
 
-final case class Proof(ss: List[Statement])
+/*sealed trait AssignPat
+case class NoAPat() extends IdPat
+case class WildAPat() extends IdPat
+case class VarAPat(p: Ident, x: Variable) extends IdPat
+case class TupleAPat(pats: List[IdPat]) extends IdPat*/
 
-//@TODO: More statementy and less expressiony
 sealed trait Statement {}
-case class Have(x: Ident, f: Formula, just: Method) extends Statement
-case class Show(phi: Formula, proof: Method) extends Statement
-case class Match(pat: Expression, e: Expression) extends Statement
-case class LetFun(x: Ident, arg: Ident, e: Expression) extends Statement
-case class Note(x: Ident, proof: ProofTerm) extends Statement
+case class Assume(x: IdPat, f: Formula) extends Statement
+case class Assert(x: IdPat, f: Formula, child: Method) extends Statement
+case class Modify(x: IdPat, hp: Either[Term, Unit]) extends Statement
 case class Label(st: TimeIdent) extends Statement
-case class Block(ss: List[Statement]) extends Statement
-case class BoxChoice(left: List[Statement], right: List[Statement]) extends Statement
-case class DiamondLeft(ss: List[Statement]) extends Statement
-case class DiamondRight(ss: List[Statement]) extends Statement
-case class PatternMatch(pats: List[(Expression, List[Statement])]) extends Statement
-// For debugging
+case class Note(x: Ident, proof: ProofTerm) extends Statement
+case class LetFun(x: Ident, arg: Ident, e: Expression) extends Statement
+case class Match(pat: Expression, e: Expression) extends Statement
+case class Block(ss: Statements) extends Statement
+case class Switch(pats: List[(Expression, Statements)]) extends Statement
+case class BoxChoice(left: Statements, right: Statements) extends Statement
+case class While(x: IdPat, j: Formula, ss: Statements) extends Statement
+case class BoxLoop(s: Statement) extends Statement
+case class Ghost(ss: Statements) extends Statement
+case class InverseGhost(ss: Statements) extends Statement
 case class PrintGoal(msg: String) extends Statement
+case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement //de: DifferentialProgram
 
-sealed trait InvariantStep extends RuleSpec
+sealed trait DiffStatement
+case class AtomicODEStatement(dp: AtomicODE) extends DiffStatement
+case class DiffProductStatement(l: DiffStatement, r: DiffStatement) extends DiffStatement
+case class DiffGhostStatement(ds: DiffStatement) extends DiffStatement
+case class InverseDiffGhostStatement(ds: DiffStatement) extends DiffStatement
+
+sealed trait DomainStatement
+case class DomAssume(x: IdPat, f:Formula) extends DomainStatement
+case class DomAssert(x: IdPat, f:Formula, child: Method) extends DomainStatement
+case class DomWeak(dc: DomainStatement) extends DomainStatement
+case class DomModify(x: IdPat, hp: Assign) extends DomainStatement
+case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement
+//case class DomInverseGhost(dc: DomainStatement) extends DomainStatement
+
+//case class For(vj: Ident, j: Formula, m: Ident, init: Term, decr: Term) extends RuleSpec
+/*sealed trait InvariantStep extends RuleSpec
 case class Invariant(x: Ident, fml: Formula, inv: Proof) extends InvariantStep
-case class Ghost(ghost: Assign) extends InvariantStep
-case class For(vj: Ident, j: Formula, m: Ident, init: Term, decr: Term) extends RuleSpec
 
 sealed trait RuleSpec extends Statement
 trait BoxRule extends RuleSpec {}
-trait DiamondRule extends RuleSpec {}
+trait DiamondRule extends RuleSpec {}*/
 
-case class Modify(hp: Assign) extends RuleSpec
-case class Assume(x: Ident, f: Formula) extends BoxRule
-case class Assert(x: Ident, f: Formula, child: Method) extends DiamondRule
-case class BAssignAny(x: Variable) extends BoxRule
-case class BSolve(ode: DifferentialProgram, vdc: Ident, dc: Formula, vdur: Ident) extends BoxRule
-case class DAssignAny(x: Variable, xVal: Term) extends DiamondRule
-case class DSolve(ode: DifferentialProgram, vdc: Ident, dcProof: Proof, vdur: Ident, durProof: Proof) extends DiamondRule
-case class Yield() extends RuleSpec
+//case class BSolve(o, vdc: Ident, dc: Formula, vdur: Ident) extends BoxRule
+//case class DSolve(ode: DifferentialProgram, vdc: Ident, dcProof: Proof, vdur: Ident, durProof: Proof) extends DiamondRule
+
+// For debugging
+//case class Have(x: Ident, f: Formula, just: Method) extends Statement
+//case class Show(phi: Formula, proof: Method) extends Statement
+//case class BAssignAny(x: Variable) extends BoxRule
+//case class Ghost(ghost: Assign) extends InvariantStep
+//case class DAssignAny(x: Variable, xVal: Term) extends DiamondRule
+//case class Yield() extends RuleSpec
 
 // History records hr
 /*abstract class HistChange
