@@ -32,15 +32,15 @@ object KaisarKeywordParser {
   def differentialProgram[_: P]: P[DifferentialProgram] = expression.map(_.asInstanceOf[DifferentialProgram])
   def term[_: P]: P[Term] = expression.map(_.asInstanceOf[Term])
 
+  def proofInstance[_: P]: P[ProofInstance] = expression.map(e => ProofInstance(e))
+  def proofParen[_: P]: P[ProofTerm] = "(" ~  proofTerm  ~ ")"
   def proofVar[_: P]: P[ProofVar] = ident.map(ProofVar)
-  def proofApp[_: P]: P[ProofApp] = (proofTerm ~ wsNonempty ~ proofTerm).map({case (left, right) => ProofApp(left, right)})
-  def proofInst[_: P]: P[ProofInst] = ((proofTerm ~ wsNonempty ~ term).map({case (left, right) => ProofInst(left, right)}))
-  def proofParen[_: P]: P[ProofTerm] = "(" ~ ws ~ proofTerm ~ ws ~ ")"
-  def proofTerm[_: P]: P[ProofTerm] = ws ~ !reserved ~ (proofVar  | proofParen | proofInst | proofApp)
-
+  def proofTerminal[_: P]: P[ProofTerm] = !reserved ~ (proofInstance | proofVar | proofParen)
+  def proofTerm[_: P]: P[ProofTerm] =
+    (proofTerminal.rep(1, ws)).map(pts => pts.reduceLeft[ProofTerm]({case (acc, pt) => ProofApp(acc, pt)}))
 
   def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)
-  def patternSelector[_: P]: P[PatternSelector] = expression.map(PatternSelector)
+  def patternSelector[_: P]: P[PatternSelector] = (P("*").map(_ => PatternSelector(wild)) | expression.map(PatternSelector))
 
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector)
 

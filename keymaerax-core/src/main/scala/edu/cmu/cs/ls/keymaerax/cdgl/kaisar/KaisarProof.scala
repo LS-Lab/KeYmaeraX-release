@@ -16,6 +16,12 @@ object KaisarProof {
   type Ident = String
   type TimeIdent = String
   type Statements = List[Statement]
+  val at: Function = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
+  val max: Function = Function("max", domain = Tuple(Real, Real), sort = Real, interpreted = true)
+  val min: Function = Function("min", domain = Tuple(Real, Real), sort = Real, interpreted = true)
+  val abs: Function = Function("abs", domain = Real, sort = Real, interpreted = true)
+  val wild: FuncOf = FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing)
+  val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interpreted = true), Nothing)
 }
 
 final case class Proof(ss: List[Statement])
@@ -29,8 +35,8 @@ case class ByProof(proof: Proof) extends Method {}
 
 sealed trait ProofTerm {}
 case class ProofVar(x: Ident) extends ProofTerm {}
+case class ProofInstance(e: Expression) extends ProofTerm {}
 case class ProofApp(m: ProofTerm, n: ProofTerm) extends ProofTerm {}
-case class ProofInst(m: ProofTerm, t: Term) extends ProofTerm {}
 
 sealed trait Selector {}
 case class ForwardSelector(forward: ProofTerm) extends Selector {}

@@ -68,7 +68,8 @@ object ExpressionParser {
       map({case (e, None) => e case (e, Some(_)) => Differential(e)})
 
   def power[_: P]: P[Term] =
-    (terminal ~ (opPower ~ terminal).rep).map({case (x, xs) => (xs.+:(x)).reduce(Power)})
+    (terminal ~ (opPower ~ terminal).rep()).
+      map({case (x, xs) => (xs.+:(x)).reduce(Power)})
 
   def neg[_: P]: P[Term] =
     // check neg not followed by numeral since neg followed by numeral is Number() constructor already
@@ -181,10 +182,20 @@ object ProofParser {
   import ExpressionParser.{formula, program, term, expression, atomicOde}
   import KaisarKeywordParser.proofTerm
 
-  def method[_: P]: P[Method] = KaisarKeywordParser.method
+  def rcf[_: P]: P[RCF] = P("by" ~ ws ~ "RCF").map(_ => RCF())
+  def auto[_: P]: P[Auto] = P("by" ~ ws ~ "auto").map(_ => Auto())
+  def prop[_: P]: P[Prop] = P("by" ~ ws ~ "prop").map(_ => Prop())
+  def using[_: P]: P[Using] = (P("using") ~ selector.rep  ~ method).map({case (sels, meth) => Using(sels.toList, meth)})
+  def byProof[_: P]: P[ByProof] = ("proof" ~ proof ~ "end").map(ByProof)
+
+  def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)
+  def patternSelector[_: P]: P[PatternSelector] = (P("*").map(_ => PatternSelector(wild)) | expression.map(PatternSelector))
+  def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector)
+
+  def method[_: P]: P[Method] = rcf | auto | prop | using | byProof
 
   def wildPat[_: P]: P[WildPat] = CharIn("_*").map(_ => WildPat())
-  def tuplePat[_: P]: P[IdPat] = ("(" ~ idPat.rep() ~ ")").map(ss =>
+  def tuplePat[_: P]: P[IdPat] = ("(" ~ idPat.rep(sep=",") ~ ")").map(ss =>
     ss.length match {
       case 0 => NoPat()
       case 1 => ss.head
@@ -193,7 +204,7 @@ object ProofParser {
   //@TODO: What is the syntax for variable assumptions on :=
   def varPat[_: P]: P[VarPat] = (ident ~ ("{" ~ variable ~ "}").?).map({case (p, x) => VarPat(p, x)})
   def idPat[_: P]: P[IdPat] = tuplePat | wildPat | varPat
-  def idOptPat[_: P]: P[IdPat] = (idPat ~ ":").?.map({case None => NoPat() case Some(pat) => pat})
+  def idOptPat[_: P]: P[IdPat] = (idPat ~ (":" ~ !P("="))).?.map({case None => NoPat() case Some(pat) => pat})
 
   def assume[_: P]: P[Assume] = ("?" ~  idOptPat ~ formula ~ ";").map({
     case (pat, fml) => Assume(pat, fml)})
@@ -237,7 +248,7 @@ object ProofParser {
   def ghostODE[_: P]: P[DiffStatement] = ("(G" ~ diffStatement ~ "G)").map(DiffGhostStatement)
   def inverseGhostODE[_: P]: P[DiffStatement] = ("{G" ~ diffStatement ~ "G}").map(InverseDiffGhostStatement)
   def terminalODE[_: P]: P[DiffStatement] = ghostODE | inverseGhostODE | atomicODEStatement
-  def diffStatement[_: P]: P[DiffStatement] = terminalODE.rep(sep = ",").map(_.reduceRight(DiffProductStatement))
+  def diffStatement[_: P]: P[DiffStatement] = terminalODE.rep(sep = ",", min = 1).map(_.reduceRight(DiffProductStatement))
 
   //@TODO: Optional patterns, allow parens i guess
   def domAssume[_: P]: P[DomAssume] = (idPat ~ ":" ~ formula).map({case (id, f) => DomAssume(id, f)})
@@ -246,7 +257,7 @@ object ProofParser {
   def domWeak[_: P]: P[DomWeak] = ("{G" ~ domainStatement ~ "G}").map(DomWeak)
   //def domInverseGhost[_: P]: P[DomInverseGhost] = ("{G" ~ domainStatement ~ "G}").map(DomInverseGhost)
   def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak | domAssert | domModify
-  def domainStatement[_: P]: P[DomainStatement] = terminalDomainStatement.rep(sep = "&").map(_.reduceRight(DomAnd))
+  def domainStatement[_: P]: P[DomainStatement] = terminalDomainStatement.rep(sep = "&", min = 1).map(_.reduceRight(DomAnd))
 
   def proveODE[_: P]: P[ProveODE] = (diffStatement ~ "&" ~ domainStatement).map({case(ds, dc) => ProveODE(ds, dc)})
 
@@ -256,20 +267,22 @@ object ProofParser {
     printGoal | note | let | switch | assume | assert | ghost | inverseGhost | block | label | modify
 
   def postfixStatement[_: P]: P[Statement] =
-    ((atomicStatement | proveODE) ~ "*".!.rep).map({case (s, stars) => stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)})})
+    (((atomicStatement | proveODE) ~ "*".!.rep).
+      map({case (s, stars) => stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)})})).
+      log("postfixStatement")
 
   def statements[_: P]: P[Statements] =
-    postfixStatement.rep().map(ss => ss.toList)
+    (postfixStatement.rep().map(ss => ss.toList)).log("statements")
 
   def boxChoice[_: P]: P[Statement] = {
-    statements.rep(sep = "++")
+    (statements.rep(sep = "++", min = 1)
       .map(_.reduceRight((l, r) => List(BoxChoice(l, r))))
-      .map({case List(s) => s  case ss => Block(ss)})
+      .map({case List(s) => s  case ss => Block(ss)})).log("boxchoice")
   }
 
-  def statement[_: P]: P[Statement] = boxChoice
+  def statement[_: P]: P[Statement] = boxChoice.log("statement")
 
-  def proof[_: P]: P[Proof] = boxChoice.map(ss => Proof(List(ss)))
+  def proof[_: P]: P[Proof] = (boxChoice.map(ss => Proof(List(ss)))).log("proof")
 }
 
 object KaisarProgramParser {
