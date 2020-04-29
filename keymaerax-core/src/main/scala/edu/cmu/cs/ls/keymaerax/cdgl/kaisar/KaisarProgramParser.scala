@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ParserCommon._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
 import edu.cmu.cs.ls.keymaerax.core._
 
-private object ParserCommon {
+object ParserCommon {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
     "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
     "or", "print", "for")
@@ -33,7 +33,7 @@ private object ParserCommon {
   def literal[_: P]: P[String] = "\"" ~ CharPred(c => c != '\"').rep(1).! ~ "\""
   def ident[_: P]: P[Ident] = identString
   def number[_: P]: P[Number] =
-    ("-".!.? ~ (("0" | CharIn("1-9") ~ CharIn("0-9").rep) ~ ("." ~ CharIn("0-9").rep(1)).?).!)
+    ("-".!.? ~  (("0" | CharIn("1-9") ~ CharIn("0-9").rep) ~ ("." ~ CharIn("0-9").rep(1)).?).!)
     .map({case (None, s) => Number(BigDecimal(s))
           case (Some("-"), s) => Number(BigDecimal("-" + s))})
   def variable[_ : P]: P[Variable] = {
@@ -52,31 +52,31 @@ object ExpressionParser {
   // for parsing extended kaisar expression + pattern syntax
   def wild[_: P]: P[FuncOf] = P("*").map(_ => FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing))
 
-  def min[_: P]: P[FuncOf] = ("min" ~/ "(" ~ ws ~ term ~ ws ~ "," ~ ws ~ term ~ ws ~ ")")
+  def min[_: P]: P[FuncOf] = ("min" ~ "(" ~ ws ~ term ~ ws ~ "," ~ ws ~ term ~ ws ~ ")")
     .map({case (l, r) => FuncOf(Function("min", domain = Tuple(Real, Real), sort = Real, interpreted=true), Pair(l, r))})
 
-  def max[_: P]: P[FuncOf] = ("max" ~/ "(" ~ ws ~ term ~ ws ~ "," ~ ws ~ term ~ ws ~ ")")
+  def max[_: P]: P[FuncOf] = ("max" ~ "(" ~ ws ~ term ~ ws ~ "," ~ ws ~ term ~ ws ~ ")")
     .map({case (l, r) => FuncOf(Function("max", domain = Tuple(Real, Real), sort = Real, interpreted=true), Pair(l, r))})
 
-  def abs[_: P]: P[FuncOf] = ("abs" ~/ "(" ~ ws ~ term ~ ws ~ ")")
+  def abs[_: P]: P[FuncOf] = ("abs" ~ "(" ~ ws ~ term ~ ws ~ ")")
     .map({case e => FuncOf(Function("abs", domain = Real, sort = Real, interpreted=true), e)})
 
-  def parenTerm[_: P]: P[Term] = ("(" ~/ term ~ ")")
+  def parenTerm[_: P]: P[Term] = (("(" ~ term ~ ")"))
 
   def terminal[_: P]: P[Term] =
-    ((parenTerm | min | max | abs | wild | variable | number) ~ (P("'").!.?)).
+    ((min | max | abs | wild | variable | number | parenTerm) ~ (P("'").!.?)).
       map({case (e, None) => e case (e, Some(_)) => Differential(e)})
 
   def power[_: P]: P[Term] =
-    (terminal ~/ (opPower ~ terminal).rep).map({case (x, xs) => (xs.+:(x)).reduce(Power)})
+    (terminal ~ (opPower ~ terminal).rep).map({case (x, xs) => (xs.+:(x)).reduce(Power)})
 
   def neg[_: P]: P[Term] =
     // check neg not followed by numeral since neg followed by numeral is Number() constructor already
-    (("-".! ~ !CharIn("0-9")).? ~/ power).map({case (None, e) => e case (Some(_), e) => Neg(e)})
+    (("-".! ~ !CharIn(">0-9")).? ~ power).map({case (None, e) => e case (Some(_), e) => Neg(e)})
 
   def at[_: P]: P[Term] = {
     val at = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
-    (neg ~ (CharIn("@") ~/ ident).?).map({ case (e, None) => e
+    (neg ~ (CharIn("@") ~ ident).?).map({ case (e, None) => e
     case (e, Some(s)) =>
       val label = Function(s, domain = Unit, sort = Unit, interpreted = true)
       FuncOf(at, Pair(e, FuncOf(label, Nothing)))
@@ -84,32 +84,36 @@ object ExpressionParser {
   }
 
   def divide[_: P]: P[Term] =
-    (at ~/ (("/" | "*").! ~/ at).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
+    (at ~ (("/" | "*").! ~ at).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
       xs.foldLeft(x)({case (acc, ("/", e)) => Divide(acc, e) case (acc, ("*", e)) => Times(acc, e)})})
 
   def minus[_: P]: P[Term] =
-    (divide ~/ (("-" | "+").! ~/ divide).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
+    // disambiguate "-" and "->"
+    (divide ~ ((("-"  ~ !P(">")) | "+").! ~ divide).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
       xs.foldLeft(x)({case (acc, ("+", e)) => Plus(acc, e) case (acc, ("-", e)) => Minus(acc, e)})})
 
   def term[_: P]: P[Term] = minus
 
-  def test[_: P]: P[Test] = ("?" ~/ formula).map(Test)
+  def test[_: P]: P[Test] = ("?" ~ formula).map(Test)
   // semicolon terminator parsed in differentialProduct
   def assign[_: P]: P[Assign] = (variable ~ ":=" ~ term).map({case (x, f) => Assign(x, f)})
   // semicolon terminator parsed in differentialProduct
   def assignAny[_: P]: P[AssignAny] = (variable ~ ":=" ~ ws ~ "*").map(AssignAny)
 
-  def parenProgram[_: P]: P[Program] = "{" ~/ program ~ "}"
+  def parenProgram[_: P]: P[Program] = "{" ~ program ~ "}".?
 
-  def atomicOde[_: P]: P[AtomicODE] = (variable.filter(_.isInstanceOf[DifferentialSymbol]) ~/  "=" ~  term).
+  // Note: Cut after = since x' could be either ode or assignment
+  def atomicOde[_: P]: P[AtomicODE] = (variable.filter(_.isInstanceOf[DifferentialSymbol]) ~  "=" ~  term).
     map({case (x: DifferentialSymbol, f) => AtomicODE(x, f)})
 
   def terminalProgram[_: P]: P[Program] = (parenProgram | atomicOde | test  | assignAny | assign)
 
   // @TODO: careful about ; in ode
+  // Note: ; needs to be optional since {} is an atomic program which doesn't need ; terminator. If we really care we could
+  // do a flapmap and only use ; when not {}
   def differentialProduct[_: P]: P[Program] =
     // @TODO: Careful about polymorphic list
-    ((terminalProgram.opaque("program") ~ ("," ~ terminalProgram.opaque("program")).rep ~ ("&" ~/ formula).? ~ ";").map({
+    ((terminalProgram.opaque("program") ~ ("," ~ terminalProgram.opaque("program")).rep ~ ("&" ~ formula).? ~ ";".?).map({
       case (x: AtomicODE, xs: Seq[AtomicODE], Some(fml)) =>
         val odes: Seq[DifferentialProgram] = xs.+:(x)
         ODESystem(odes.reduce[DifferentialProgram]({case (l, r) => DifferentialProduct(l, r)}), fml)
@@ -126,21 +130,21 @@ object ExpressionParser {
     (differentialProduct.rep(1)).map({xs => xs.reduceRight(Compose)})
 
   def choice[_: P]: P[Program] =
-    (compose ~ ("++"  ~/ choice).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Choice)})
+    (compose ~ ("++"  ~ compose).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Choice)})
 
   def program[_: P]: P[Program] = choice
 
 
   // !P  P & Q   P | Q   P -> Q   P <-> Q   [a]P  <a>P  f ~ g \forall \exists
   def infixTerminal[_: P]: P[Formula] =
-    (term.opaque("term") ~ ("<=" | "<" | "=" | "!=" | ">=" | ">").!.opaque("cmp") ~/ term.opaque("term")).map({
-      case (l, "<=", r) => LessEqual(l, r)
-      case (l, "<", r) => Less(l, r)
-      case (l, "=", r) => Equal(l, r)
-      case (l, "!=", r) => NotEqual(l, r)
-      case (l, ">", r) => Greater(l, r)
-      case (l, ">=", r) => GreaterEqual(l, r)
-      case (l, s, r) =>
+    (term.opaque("term") ~ (("<=" | "<" | "=" | "!=" | ">=" | ">").!.opaque("cmp") ~ term.opaque("term"))).map({
+      case (l, ("<=", r)) => LessEqual(l, r)
+      case (l, ("<", r)) => Less(l, r)
+      case (l, ("=", r)) => Equal(l, r)
+      case (l, ("!=", r)) => NotEqual(l, r)
+      case (l, (">", r)) => Greater(l, r)
+      case (l, (">=", r)) => GreaterEqual(l, r)
+      case (l, (s, r)) =>
         {val x = s
           //println("Ident: " + s)
           val 2 = 1 + 1
@@ -148,20 +152,22 @@ object ExpressionParser {
         }
     })
 
-  def parenFormula[_: P]: P[Formula] = ("(" ~/ formula ~ ")")
+  // Note: cut *after* formula because delimiter ( is ambiguous, could be term e.g. (1) <= (2)
+  def parenFormula[_: P]: P[Formula] = (("(" ~ formula ~ ")"))
   def verum[_: P]: P[AtomicFormula] = P("true").map(_ => True)
   def falsum[_: P]: P[AtomicFormula] = P("false").map(_ => False)
-  def not[_: P]: P[Formula] = ("!" ~/ prefixTerminal).map(f => Not(f))
-  def forall[_: P]: P[Formula] = ("\\forall" ~/ variable  ~ prefixTerminal).map({case (x, p) => Forall(List(x), p)})
-  def exists[_: P]: P[Formula] = ("\\exists" ~/ variable  ~ prefixTerminal).map({case (x, p) => Exists(List(x), p)})
-  def box[_: P]: P[Formula] = (("[" ~/ program  ~ "]" ~ prefixTerminal)).map({case (l, r) => Box(l ,r)})
-  def diamond[_: P]: P[Formula] = ("<"  ~/ program  ~ ">"  ~ prefixTerminal).map({case (l, r) => Diamond(l, r)})
+  def not[_: P]: P[Formula] = ("!" ~ prefixTerminal).map(f => Not(f))
+  def forall[_: P]: P[Formula] = ("\\forall" ~ variable  ~ prefixTerminal).map({case (x, p) => Forall(List(x), p)})
+  def exists[_: P]: P[Formula] = ("\\exists" ~ variable  ~ prefixTerminal).map({case (x, p) => Exists(List(x), p)})
+  def box[_: P]: P[Formula] = (("[" ~ program  ~ "]" ~ prefixTerminal)).map({case (l, r) => Box(l ,r)})
+  def diamond[_: P]: P[Formula] = (("<" ~ !P("->"))  ~ program  ~ ">"  ~ prefixTerminal).map({case (l, r) => Diamond(l, r)})
 
+  // @TODO: fix
   def prefixTerminal[_: P]: P[Formula] =
-    ((parenFormula | verum | falsum | not | forall | exists | box | diamond | infixTerminal) ~ ("'".!.?)).
+    ((verum | falsum | not | forall | exists | box | diamond  | infixTerminal | parenFormula ) ~ ("'".!.?)).
       map({case (f, None) => f case (f, Some(_)) => DifferentialFormula(f)})
 
-  def and[_: P]: P[Formula] = (prefixTerminal ~ ("&"  ~/ prefixTerminal).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(And)})
+  def and[_: P]: P[Formula] = (prefixTerminal ~ ("&"  ~ prefixTerminal).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(And)})
   def or[_: P]: P[Formula] = (and ~ ("|"  ~ and).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Or)})
   def imply[_: P]: P[Formula] = (or ~ ("->"  ~ or).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Imply)})
   def equiv[_: P]: P[Formula] = (imply ~ ("<->"  ~ imply).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Equiv)})
