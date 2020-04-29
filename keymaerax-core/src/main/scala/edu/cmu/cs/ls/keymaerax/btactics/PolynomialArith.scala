@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
@@ -704,6 +705,18 @@ object PolynomialArith extends Logging {
     }
   }
 
+  lazy val equalityByNormalisation = "equalityByNormalisation" by { (pos: Position, seq: Sequent) =>
+      pos.checkTop
+      pos.checkSucc
+      seq.sub(pos) match {
+        case Some(Equal(t1, t2)) =>
+          normaliseAt(pos++PosInExpr(0::Nil)) &
+            normaliseAt(pos++PosInExpr(1::Nil)) &
+            cohideR(1) & byUS("= reflexive")
+        case e => throw new IllegalArgumentException("equalityByNormalisation must be applied at a term or equality but was applied at " + e)
+      }
+    }
+
   //Polynomial division: no proof needed, although the polynomials need to be pre-normalised
   //todo: Might this be implemented in terms of mulMono with -ve power? (probably not because ordering gets messed up)
 
@@ -894,8 +907,7 @@ object PolynomialArith extends Logging {
               implyRi(keep = true)(AntePos(h._1), SuccPos(0))
                 & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
                 & tac) &
-          normaliseAt(SuccPosition(1, 0 :: Nil)) &
-          cohideR(1) & byUS("= reflexive")
+          equalityByNormalisation(1)
         ,
         cohideR(1) & by(pf)
         )
@@ -1010,9 +1022,7 @@ object PolynomialArith extends Logging {
                 useAt(eqAnte)(1,PosInExpr(1::Nil)) &
                 useAt(instMulZero)(1,PosInExpr(1::Nil)) &
                 useAt(eqZeroEquiv, PosInExpr(1::Nil))(1) &
-                normaliseAt(SuccPosition(1, 0 :: Nil)) &
-                normaliseAt(SuccPosition(1, 1 :: Nil)) &
-                byUS("= reflexive")
+                equalityByNormalisation(1)
             )
           useAt(pr)(pos)
         case _ => ident
