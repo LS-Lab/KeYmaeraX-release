@@ -169,6 +169,8 @@ object PolynomialArith extends Logging {
   //A=0 & B = 0 <-> A^2+B^2=0
   private lazy val orEqz = remember("F_()=0 | G_() =0 <-> F_()*G_()=0".asFormula, QE, namespace).fact
   private lazy val andEqz = remember("F_()=0 & G_() =0 <-> F_()^2 + G_()^2 =0".asFormula, QE, namespace).fact
+  //A = 0 <-> B = 0 <- A = B
+  private lazy val eqZeroEquiv = remember("(F_() = 0 <-> G_() = 0) <- F_() = G_()".asFormula, QE, namespace).fact
 
   private lazy val divEq = remember("!(G_()=0) -> F_()/G_() = 0 -> F_() = 0".asFormula, QE, namespace).fact
   private lazy val divNeq = remember("!(G_()=0) -> (F_()/G_() != 0) -> F_() != 0".asFormula, QE, namespace).fact //Derivable from the above
@@ -1007,8 +1009,10 @@ object PolynomialArith extends Logging {
               useAt(eqAnte)(1,PosInExpr(0::Nil)) &
                 useAt(eqAnte)(1,PosInExpr(1::Nil)) &
                 useAt(instMulZero)(1,PosInExpr(1::Nil)) &
-                normaliseAt(1,PosInExpr(0::0::Nil)) &
-                normaliseAt(1,PosInExpr(1::0::Nil)) &  byUS("<-> reflexive")
+                useAt(eqZeroEquiv, PosInExpr(1::Nil))(1) &
+                normaliseAt(SuccPosition(1, 0 :: Nil)) &
+                normaliseAt(SuccPosition(1, 1 :: Nil)) &
+                byUS("= reflexive")
             )
           useAt(pr)(pos)
         case _ => ident
