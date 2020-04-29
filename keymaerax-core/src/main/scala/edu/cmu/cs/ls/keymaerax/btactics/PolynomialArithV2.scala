@@ -213,7 +213,7 @@ object PolynomialArithV2 {
       case Some(Equal(t1, t2)) =>
         equate(t1, t2) match {
           case None => throw new IllegalArgumentException("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
-          case Some(prv) => by(prv)
+          case Some(prv) => cohideR(pos) & by(prv)
         }
       case e => throw new IllegalArgumentException("equate must be applied at a term or equality but was applied at " + e)
     }
