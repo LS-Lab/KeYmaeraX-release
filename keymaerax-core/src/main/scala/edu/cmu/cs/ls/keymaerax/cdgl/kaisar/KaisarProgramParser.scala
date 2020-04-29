@@ -94,7 +94,6 @@ object ExpressionParser {
     (divide ~ ((("-"  ~ !P(">")) | "+").! ~ divide).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
       xs.foldLeft(x)({case (acc, ("+", e)) => Plus(acc, e) case (acc, ("-", e)) => Minus(acc, e)})})
 
-  // @TODO: Need to add function syntax
   def term[_: P]: P[Term] = minus
 
   def test[_: P]: P[Test] = ("?" ~ formula).map(Test)
@@ -157,7 +156,6 @@ object ExpressionParser {
   def box[_: P]: P[Formula] = (("[" ~ program  ~ "]" ~ prefixTerminal)).map({case (l, r) => Box(l ,r)})
   def diamond[_: P]: P[Formula] = (("<" ~ !P("->"))  ~ program  ~ ">"  ~ prefixTerminal).map({case (l, r) => Diamond(l, r)})
 
-  // @TODO: fix
   def prefixTerminal[_: P]: P[Formula] =
     ((verum | falsum | not | forall | exists | box | diamond  | infixTerminal | parenFormula ) ~ ("'".!.?)).
       map({case (f, None) => f case (f, Some(_)) => DifferentialFormula(f)})
@@ -240,9 +238,8 @@ object ProofParser {
   def terminalODE[_: P]: P[DiffStatement] = ghostODE | inverseGhostODE | atomicODEStatement
   def diffStatement[_: P]: P[DiffStatement] = terminalODE.rep(sep = ",", min = 1).map(_.reduceRight(DiffProductStatement))
 
-  //@TODO: Optional patterns, allow parens i guess
   def domAssume[_: P]: P[DomAssume] = (idOptPat ~ formula).map({case (id, f) => DomAssume(id, f)})
-  def domAssert[_: P]: P[DomAssert] = ("!" ~ idPat ~ ":" ~ formula ~ method).map({case (id, f, m) => DomAssert(id, f, m)})
+  def domAssert[_: P]: P[DomAssert] = ("!" ~ idOptPat ~ formula ~ method).map({case (id, f, m) => DomAssert(id, f, m)})
   def domModify[_: P]: P[DomModify] = (variable ~ ":=" ~ term).map({case (id, f) => DomModify(NoPat(), Assign(id, f))})
   def domWeak[_: P]: P[DomWeak] = ("{G" ~ domainStatement ~ "G}").map(DomWeak)
   def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
