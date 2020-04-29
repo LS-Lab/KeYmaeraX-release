@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 object ParserCommon {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
     "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
-    "or", "print", "for")
+    "or", "print", "for", "while")
   def identString[_: P]: P[String] = {
     // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
     // locally import "no whitespace" so that identifiers cannot contain spaces.
@@ -93,6 +93,7 @@ object ExpressionParser {
     (divide ~ ((("-"  ~ !P(">")) | "+").! ~ divide).rep).map({case (x: Term, xs: Seq[(String, Term)]) =>
       xs.foldLeft(x)({case (acc, ("+", e)) => Plus(acc, e) case (acc, ("-", e)) => Minus(acc, e)})})
 
+  // @TODO: Need to add function syntax
   def term[_: P]: P[Term] = minus
 
   def test[_: P]: P[Test] = ("?" ~ formula).map(Test)
@@ -213,7 +214,7 @@ object ProofParser {
     case (pat, fml, method) => Assert(pat, fml, method)})
 
   def modify[_: P]: P[Modify] = (idPat ~ ":=" ~ ("*".!.map(Right(_)) | term.map(Left(_))) ~ ";").
-    map({case (p, Left(f)) => Modify(p, Left(f)) case (p, Right(_)) => Modify(p, Right())})
+    map({case (p, Left(f)) => println ("modified: " + p + ",  " + f); Modify(p, Left(f)) case (p, Right(_)) => Modify(p, Right())})
 
   def label[_: P]: P[Label] = {
     import NoWhitespace._
@@ -264,23 +265,27 @@ object ProofParser {
   def printGoal[_: P]: P[PrintGoal] = ("print" ~ literal ~ ";").map(PrintGoal)
 
   def atomicStatement[_: P]: P[Statement] =
-    printGoal | note | let | switch | assume | assert | ghost | inverseGhost | parseBlock | label | modify
+    printGoal.log("printgoal") | note.log("log") | let.log("let") | switch.log("switch") | assume.log("assume") |
+      assert.log("assert") | ghost.log("ghost") | inverseGhost.log("ig") | parseWhile.log("while") | parseBlock.log("blk") |
+      label.log("label") | modify.log("modif")
 
   def postfixStatement[_: P]: P[Statement] =
-    (((atomicStatement | proveODE) ~ "*".!.rep).
+    (((atomicStatement | proveODE.log("ode")) ~ "*".!.rep).
       map({case (s, stars) => stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)})})).
       log("postfixStatement")
 
-  def statements[_: P]: P[Statements] =
-    (postfixStatement.rep(1).map(ss => ss.toList)).log("statements")
+  def sequence[_: P]: P[Statements] =
+    (postfixStatement.rep(1).map(ss => ss.toList)).log("sequence")
 
   def boxChoice[_: P]: P[Statement] = {
-    (statements.rep(sep = "++", min = 1)
+    (sequence.rep(sep = "++", min = 1)
       .map(_.reduceRight((l, r) => List(BoxChoice(block(l), block(r)))))
-      .map({case List(s) => s  case ss => block(ss)})).log("boxchoice")
+      .map(block)).log("boxchoice")
   }
 
   def statement[_: P]: P[Statement] = boxChoice.log("statement")
+
+  def statements[_: P]: P[List[Statement]] = statement.rep.map(ss => flatten(ss.toList))
 
   def proof[_: P]: P[Proof] = (boxChoice.map(ss => Proof(List(ss)))).log("proof")
 }

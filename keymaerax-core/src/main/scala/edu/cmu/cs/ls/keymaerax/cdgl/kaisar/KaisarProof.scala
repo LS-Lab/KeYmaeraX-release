@@ -22,7 +22,7 @@ object KaisarProof {
   val abs: Function = Function("abs", domain = Real, sort = Real, interpreted = true)
   val wild: FuncOf = FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing)
   val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interpreted = true), Nothing)
-  private def flatten(ss: Statements): Statements = {
+  def flatten(ss: Statements): Statements = {
     ss match {
       case Block(ss) :: sss  => flatten(ss ++ sss)
       case s :: ss => s :: flatten(ss)

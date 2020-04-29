@@ -332,15 +332,15 @@ class KaisarProgramParserTests extends TacticTestBase {
     p("init:", pp.statement(_)) shouldBe Label("init")
   }
   it should "parse note" in {
-    p("note conj = andI X Y", pp.statement(_)) shouldBe Note("conj", ProofApp(ProofApp(ProofVar("andI"), ProofVar("X")), ProofVar("Y")))
+    p("note conj = andI X Y;", pp.statement(_)) shouldBe Note("conj", ProofApp(ProofApp(ProofVar("andI"), ProofVar("X")), ProofVar("Y")))
   }
   // @TODO: Multiple arguments?
   it should "parse letfun" in {
-    p("let square(x) = x*x", pp.statement(_)) shouldBe LetFun("square", "x", Times(Variable("x"), Variable("x")))
+    p("let square(x) = x*x;", pp.statement(_)) shouldBe LetFun("square", "x", Times(Variable("x"), Variable("x")))
   }
   it should "parse match" in {
     // @TODO: Ambiguous parse of = sign
-    p("match (x * y) = square(z)", pp.statement(_)) shouldBe Match(Times(Variable("x"), Variable("y")), FuncOf(Function("square", domain = Real, sort = Real), Variable("z")))
+    p("let (x * y) = z;", pp.statement(_)) shouldBe Match(Times(Variable("x"), Variable("y")), Variable("z"))
   }
   it should "parse block" in {
     p("{?true; ?true;}", pp.statement(_)) shouldBe Block(List(Assume(NoPat(), True), Assume(NoPat(), True)))
@@ -348,7 +348,7 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   // @TODO: Switch should allow arguments
   it should "parse switch " in {
-    p("switch { case x <= 1: !x: true auto; case x >= 0: !x: true auto;}", pp.statement(_)) shouldBe
+    p("switch { case x <= 1: !x: true := by auto; case x >= 0: !x: true := by auto;}", pp.statement(_)) shouldBe
       Switch(List(
         (LessEqual(Variable("x"), Number(1)), Assert(VarPat("x"), True, Auto())),
         (GreaterEqual(Variable("x"), Number(0)), Assert(VarPat("x"), True, Auto()))))
@@ -358,8 +358,9 @@ class KaisarProgramParserTests extends TacticTestBase {
       block(List(Modify(VarPat("x"),Left(Number(2))), Assume(VarPat("x"), Greater(Number(1), Number(0))))),
       block(List(Modify(VarPat("x"),Left(Number(3))), Assume(VarPat("x"), Greater(Variable("x"), Number(0))))))
   }
+
   it should "parse while" in {
-    p("while (p:(x > 0)) { x := x - 1; y := y + 2;}", pp.statement(_)) shouldBe While(VarPat("x"), Greater(Variable("x"), Number(0)),
+    p("while (x > 0) { x := x - 1; y := y + 2;}", pp.statement(_)) shouldBe While(NoPat(), Greater(Variable("x"), Number(0)),
       block(List(Modify(VarPat("x"), Left(Minus(Variable("x"), Number(1))))
       , Modify(VarPat("y"), Left(Plus(Variable("y"), Number(2)))))))
   }
