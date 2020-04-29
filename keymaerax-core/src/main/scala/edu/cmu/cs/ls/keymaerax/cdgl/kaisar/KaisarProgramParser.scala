@@ -220,8 +220,8 @@ object ProofParser {
     (ident ~ ":").map(id => Label(id))
   }
 
-  def branch[_: P]: P[(Expression, Statements)] = {
-    ("case" ~ formula ~ ":" ~ statement.rep).map({case (fml: Formula, ss: Seq[Statement]) => (fml, ss.toList)})
+  def branch[_: P]: P[(Expression, Statement)] = {
+    ("case" ~ formula ~ ":" ~ statement.rep).map({case (fml: Formula, ss: Seq[Statement]) => (fml, block(ss.toList))})
   }
 
   def switch[_: P]: P[Switch] = {
@@ -229,15 +229,15 @@ object ProofParser {
   }
 
 
-  def block[_: P]: P[Block] = ("{" ~ statement.rep ~ "}").map(ss => Block(ss.toList))
+  def parseBlock[_: P]: P[Statement] = ("{" ~ statement.rep ~ "}").map(ss => block(ss.toList))
 
-  def boxLoop[_: P]: P[BoxLoop] = (statement.rep ~ "*").map(ss => BoxLoop(Block(ss.toList)))
+  def boxLoop[_: P]: P[BoxLoop] = (statement.rep ~ "*").map(ss => BoxLoop(block(ss.toList)))
 
-  def ghost[_: P]: P[Ghost] = ("(G" ~ statement.rep ~ "G)").map(ss => Ghost(ss.toList))
+  def ghost[_: P]: P[Ghost] = ("(G" ~ statement.rep ~ "G)").map(ss => Ghost(block(ss.toList)))
 
-  def inverseGhost[_: P]: P[InverseGhost] = ("{G" ~ statement.rep ~ "G}").map(ss => InverseGhost(ss.toList))
+  def inverseGhost[_: P]: P[InverseGhost] = ("{G" ~ statement.rep ~ "G}").map(ss => InverseGhost(block(ss.toList)))
 
-  def parseWhile[_: P]: P[While] = ("while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").map({case (fml: Formula, ss: Seq[Statement]) => While(NoPat(), fml, ss.toList)})
+  def parseWhile[_: P]: P[While] = ("while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").map({case (fml: Formula, ss: Seq[Statement]) => While(NoPat(), fml, block(ss.toList))})
 
   def let[_: P]: P[Statement] = ("let" ~ ((ident ~ "(" ~ ident ~ ")").map(Left(_)) | expression.map(Right(_))) ~ "=" ~ expression ~ ";").
     map({case (Left((f, x)), e) => LetFun(f, x, e) case (Right(pat), e) => Match(pat, e)})
@@ -264,7 +264,7 @@ object ProofParser {
   def printGoal[_: P]: P[PrintGoal] = ("print" ~ literal ~ ";").map(PrintGoal)
 
   def atomicStatement[_: P]: P[Statement] =
-    printGoal | note | let | switch | assume | assert | ghost | inverseGhost | block | label | modify
+    printGoal | note | let | switch | assume | assert | ghost | inverseGhost | parseBlock | label | modify
 
   def postfixStatement[_: P]: P[Statement] =
     (((atomicStatement | proveODE) ~ "*".!.rep).
@@ -272,12 +272,12 @@ object ProofParser {
       log("postfixStatement")
 
   def statements[_: P]: P[Statements] =
-    (postfixStatement.rep().map(ss => ss.toList)).log("statements")
+    (postfixStatement.rep(1).map(ss => ss.toList)).log("statements")
 
   def boxChoice[_: P]: P[Statement] = {
     (statements.rep(sep = "++", min = 1)
-      .map(_.reduceRight((l, r) => List(BoxChoice(l, r))))
-      .map({case List(s) => s  case ss => Block(ss)})).log("boxchoice")
+      .map(_.reduceRight((l, r) => List(BoxChoice(block(l), block(r)))))
+      .map({case List(s) => s  case ss => block(ss)})).log("boxchoice")
   }
 
   def statement[_: P]: P[Statement] = boxChoice.log("statement")

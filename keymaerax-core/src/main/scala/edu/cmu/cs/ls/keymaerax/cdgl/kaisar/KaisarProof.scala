@@ -22,6 +22,21 @@ object KaisarProof {
   val abs: Function = Function("abs", domain = Real, sort = Real, interpreted = true)
   val wild: FuncOf = FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing)
   val init: FuncOf = FuncOf(Function("init", domain = Unit, sort = Unit, interpreted = true), Nothing)
+  private def flatten(ss: Statements): Statements = {
+    ss match {
+      case Block(ss) :: sss  => flatten(ss ++ sss)
+      case s :: ss => s :: flatten(ss)
+      case Nil => Nil
+    }
+  }
+
+  def block(ss: Statements): Statement = {
+    flatten(ss) match {
+      case List(s) => s
+      case ss => Block(ss)
+    }
+  }
+
 }
 
 final case class Proof(ss: List[Statement])
@@ -63,13 +78,13 @@ case class Label(st: TimeIdent) extends Statement
 case class Note(x: Ident, proof: ProofTerm) extends Statement
 case class LetFun(x: Ident, arg: Ident, e: Expression) extends Statement
 case class Match(pat: Expression, e: Expression) extends Statement
-case class Block(ss: Statements) extends Statement
-case class Switch(pats: List[(Expression, Statements)]) extends Statement
-case class BoxChoice(left: Statements, right: Statements) extends Statement
-case class While(x: IdPat, j: Formula, ss: Statements) extends Statement
+case class Block( ss: Statements) extends Statement
+case class Switch(pats: List[(Expression, Statement)]) extends Statement
+case class BoxChoice(left: Statement, right: Statement) extends Statement
+case class While(x: IdPat, j: Formula, ss: Statement) extends Statement
 case class BoxLoop(s: Statement) extends Statement
-case class Ghost(ss: Statements) extends Statement
-case class InverseGhost(ss: Statements) extends Statement
+case class Ghost(ss: Statement) extends Statement
+case class InverseGhost(ss: Statement) extends Statement
 case class PrintGoal(msg: String) extends Statement
 case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement //de: DifferentialProgram
 

@@ -318,14 +318,14 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse assertion" in {
-    p("!x:true auto;", pp.statement(_)) shouldBe Assume(VarPat("x"), True)
+    p("!x:true := by auto;", pp.statement(_)) shouldBe Assert(VarPat("x"), True, Auto())
   }
 
   it should "parse assignments" in {
-    p("x := 2", pp.statement(_)) shouldBe Modify(VarPat("x"), Left(Number(2)))
-    p("p:x := 2", pp.statement(_)) shouldBe Modify(VarPat("x", Some(Variable("p"))), Left(Number(2)))
-    p("x := *", pp.statement(_)) shouldBe Modify(VarPat("x"), Right(()))
-    p("p:x := *", pp.statement(_)) shouldBe Modify(VarPat("x", Some(Variable("p"))), Right(()))
+    p("x := 2;", pp.statement(_)) shouldBe Modify(VarPat("x"), Left(Number(2)))
+    p("x{p} := 2;", pp.statement(_)) shouldBe Modify(VarPat("x", Some(Variable("p"))), Left(Number(2)))
+    p("x := *;", pp.statement(_)) shouldBe Modify(VarPat("x"), Right(()))
+    p("x{p} := *;", pp.statement(_)) shouldBe Modify(VarPat("x", Some(Variable("p"))), Right(()))
   }
 
   it should "parse label" in {
@@ -338,7 +338,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse letfun" in {
     p("let square(x) = x*x", pp.statement(_)) shouldBe LetFun("square", "x", Times(Variable("x"), Variable("x")))
   }
-  it should "parse " in {
+  it should "parse match" in {
     // @TODO: Ambiguous parse of = sign
     p("match (x * y) = square(z)", pp.statement(_)) shouldBe Match(Times(Variable("x"), Variable("y")), FuncOf(Function("square", domain = Real, sort = Real), Variable("z")))
   }
@@ -350,17 +350,18 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse switch " in {
     p("switch { case x <= 1: !x: true auto; case x >= 0: !x: true auto;}", pp.statement(_)) shouldBe
       Switch(List(
-        (LessEqual(Variable("x"), Number(1)), List(Assert(VarPat("x"), True, Auto()))),
-        (GreaterEqual(Variable("x"), Number(0)), List(Assert(VarPat("x"), True, Auto())))))
+        (LessEqual(Variable("x"), Number(1)), Assert(VarPat("x"), True, Auto())),
+        (GreaterEqual(Variable("x"), Number(0)), Assert(VarPat("x"), True, Auto()))))
   }
   it should "parse box-choice" in {
-    p("x := 2; ?x:(1 > 0); ++ x := 3; ?x:(x > 0);", pp.statement(_)) shouldBe BoxChoice(List(Modify(VarPat("x"),Left(Number(2))), Assume(VarPat("x"), Greater(Number(1), Number(0)))),
-      List(Modify(VarPat("x"),Left(Number(3))), Assume(VarPat("x"), Greater(Variable("x"), Number(0)))))
+    p("x := 2; ?x:(1 > 0); ++ x := 3; ?x:(x > 0);", pp.statement(_)) shouldBe BoxChoice(
+      block(List(Modify(VarPat("x"),Left(Number(2))), Assume(VarPat("x"), Greater(Number(1), Number(0))))),
+      block(List(Modify(VarPat("x"),Left(Number(3))), Assume(VarPat("x"), Greater(Variable("x"), Number(0))))))
   }
   it should "parse while" in {
     p("while (p:(x > 0)) { x := x - 1; y := y + 2;}", pp.statement(_)) shouldBe While(VarPat("x"), Greater(Variable("x"), Number(0)),
-      List(Modify(VarPat("x"), Left(Minus(Variable("x"), Number(1))))
-      , Modify(VarPat("y"), Left(Plus(Variable("y"), Number(2))))))
+      block(List(Modify(VarPat("x"), Left(Minus(Variable("x"), Number(1))))
+      , Modify(VarPat("y"), Left(Plus(Variable("y"), Number(2)))))))
   }
 
   it should "parse boxloop" in {
@@ -368,11 +369,11 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse ghost" in {
-    p("(G x:= 2; G)", pp.statement(_)) shouldBe Ghost(List(Modify(VarPat("x"), Left(Number(2)))))
+    p("(G x:= 2; G)", pp.statement(_)) shouldBe Ghost(Modify(VarPat("x"), Left(Number(2))))
   }
 
   it should "parse inverseghost" in {
-    p("{G x:= 2; G}", pp.statement(_)) shouldBe InverseGhost(List(Modify(VarPat("x"), Left(Number(2)))))
+    p("{G x:= 2; G}", pp.statement(_)) shouldBe InverseGhost(Modify(VarPat("x"), Left(Number(2))))
   }
 
   it should "parse print-goal" in {
