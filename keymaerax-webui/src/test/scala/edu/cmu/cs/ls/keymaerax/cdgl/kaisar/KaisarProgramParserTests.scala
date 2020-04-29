@@ -366,7 +366,8 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse boxloop" in {
-    p("{?xPos:(x >= 0); x := x - 1;}*", pp.statement(_)) shouldBe BoxLoop(Block(List(Assume(VarPat("x"), GreaterEqual(Variable("x"), Number(0))), Modify(VarPat("x"), Left(Minus(Variable("x"), Number(1)))))))
+    p("{?xPos:(x >= 0); x := x - 1;}*", pp.statement(_)) shouldBe
+      BoxLoop(Block(List(Assume(VarPat("xPos"), GreaterEqual(Variable("x"), Number(0))), Modify(VarPat("x"), Left(Minus(Variable("x"), Number(1)))))))
   }
 
   it should "parse ghost" in {
@@ -378,15 +379,16 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse print-goal" in {
-    p("print \"hello\"", pp.statement(_)) shouldBe PrintGoal("hello")
+    p("print \"hello\";", pp.statement(_)) shouldBe PrintGoal("hello")
   }
 
   // ODE proofs
   it should "parse simple atomic ode proof" in {
-    p("x' = y & true;", pp.statement(_)) shouldBe
+    p("true;", pp.domainStatement(_)) shouldBe DomAssume(NoPat(), True)
+    /*p("x' = y & true;", pp.statement(_)) shouldBe
     ProveODE(
         AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y")))
-      , DomAssume(NoPat(), True))
+      , DomAssume(NoPat(), True))*/
   }
 
   it should "parse simple system proof" in {
@@ -397,15 +399,13 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse diffghost" in {
-    p("(G x' = y G);", pp.statement(_)) shouldBe ProveODE(DiffGhostStatement(AtomicODEStatement(
+    p("(G x' = y G);", pp.diffStatement(_)) shouldBe DiffGhostStatement(AtomicODEStatement(
         AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y"))))
-      , DomAssume(NoPat(), True))
   }
 
   it should "parse inverse diffghost" in {
-    p("{G x' = y G};", pp.statement(_)) shouldBe ProveODE(InverseDiffGhostStatement(AtomicODEStatement(
+    p("{G x' = y G};", pp.diffStatement(_)) shouldBe InverseDiffGhostStatement(AtomicODEStatement(
       AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y"))))
-      , DomAssume(NoPat(), True))
   }
 
   it should "parse diffweak" in {
@@ -414,7 +414,7 @@ class KaisarProgramParserTests extends TacticTestBase {
       )), DomWeak(DomAssume(VarPat("dc"), Greater(Variable("x"), Number(0)))))
   }
   it should "parse diffcut" in {
-    p("x' = y & !dc:(x > 0) auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+    p("x' = y & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")
     )), DomAssert(VarPat("dc"), Greater(Variable("x"), Number(0)), Auto()))
   }
@@ -426,7 +426,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse conjunction" in {
-    p("x' = y & t := T & !dc:(x > 0) auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+    p("x' = y & t := T & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
       , DomAnd(
       DomModify(NoPat(), Assign(Variable("t"), Variable("T"))),
@@ -456,6 +456,7 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   "formula error messages" should "exist" in {
+    val x = Number(BigDecimal("2"))
     parse("(x <=2 ", ep.formula(_)) match  {
       case (s : Success[Formula]) => println("success: " + s)
       case (f: Failure) => println(f.extra.trace())
