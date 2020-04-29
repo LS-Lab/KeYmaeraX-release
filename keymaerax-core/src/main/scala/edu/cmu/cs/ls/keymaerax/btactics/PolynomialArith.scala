@@ -895,7 +895,7 @@ object PolynomialArith extends Logging {
                 & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
                 & tac) &
           normaliseAt(SuccPosition(1, 0 :: Nil)) &
-          ?(cohideR(1) & byUS("= reflexive"))
+          cohideR(1) & byUS("= reflexive")
         ,
         cohideR(1) & by(pf)
         )
