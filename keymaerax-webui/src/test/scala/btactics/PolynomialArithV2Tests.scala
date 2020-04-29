@@ -542,7 +542,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
       for (n <- ns)
         test(n, msg, stepProvable)
     }
-    for (i <- 0 until 4) {
+    for (i <- 0 until 2) {
       println("\nTest " + i)
       testMore("useDirectly", add0UseDirectly)
       testMore("useAt", add0UseAt)
