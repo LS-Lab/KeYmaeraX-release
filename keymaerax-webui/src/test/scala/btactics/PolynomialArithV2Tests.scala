@@ -322,6 +322,14 @@ class PolynomialArithV2Tests extends TacticTestBase {
     (x^(Const(3)-Const(1))).treeSketch shouldBe "[., x^2, .]"
   }
 
+  it should "divide polynomial" in withMathematica { _ =>
+    import ring23._
+    import PA4._
+    val x = DenseVar(0, 1)
+    (x/(Const(3)-Const(1))).treeSketch shouldBe "[., 1/2 x^1, .]"
+    (x/(Const(3, 4)-Const(1, 3))).treeSketch shouldBe "[., 12/5 x^1, .]"
+  }
+
   it should "negate" in withMathematica { _ =>
     import ring23._
     import PA4._

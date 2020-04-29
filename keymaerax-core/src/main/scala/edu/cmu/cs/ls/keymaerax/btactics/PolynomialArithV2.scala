@@ -71,6 +71,9 @@ object PolynomialArithV2 {
       // result.term = term ^ other.term if other.term normalizes to an integer constant
       def ^(other: Polynomial) : Polynomial
 
+      // result.term = term / other.term if other.term normalizes to a nonzero constant
+      def /(other: Polynomial) : Polynomial
+
       // Some(proof of "term = other.term") by equating coefficients
       def equate(other: Polynomial) : Option[ProvableSig]
 
@@ -105,7 +108,7 @@ object PolynomialArithV2 {
       case Neg(a)      => -ofTerm(a)
       case Power(a, Number(i)) if i.isValidInt && i >= 0 => ofTerm(a) ^ i.toIntExact
       case Power(a, b) => ofTerm(a) ^ ofTerm(b)
-      case Divide(Number(num), Number(denum)) if denum != 0 => Const(num, denum)
+      case Divide(a, b) => ofTerm(a) / ofTerm(b)
       case Number(n) => Const(n)
       case term: Term => Var(term)
     }
@@ -861,6 +864,14 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       closeId
   )
 
+  // Lemmas for division
+  lazy val divideNumber = rememberAny("(q_() = i_() & p_()*(1/i_()) = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done
+  )
+  lazy val divideRat = rememberAny("(q_() = n_()/d_() & p_()*(d_()/n_()) = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done
+  )
+
   // Lemmas for negation
   val negateEmpty = rememberAny("t_() = 0 -> -t_() = 0".asFormula, QE & done)
   val negateBranch2 = rememberAny(("(t_() = l_() + v_() + r_() & -l_() = nl_() & -v_() = nv_() & -r_() = nr_()) ->" +
@@ -1368,6 +1379,44 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
               throw new IllegalArgumentException("Exponent must be integer but normalizes to " + bd)
             case d@Divide(l, r) =>
               throw new IllegalArgumentException("Exponent must be integer but normalizes to division " + d)
+            case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
+          }
+        } else {
+          throw new IllegalArgumentException("Exponent must be a constant polynomial.")
+        }
+      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
+    }
+
+    def /(other: Polynomial): TreePolynomial = other match {
+      case other: TreePolynomial =>
+        if (other.isConstant) {
+          val otherNormalized = other.normalized
+          rhsOf(otherNormalized) match {
+            case Number(i) if i.compareTo(0) != 0 =>
+              val pi = this * Const(1, i)
+              val newPrv = useDirectly(divideNumber,
+                Seq(
+                  ("p_", lhs),
+                  ("q_", other.lhs),
+                  ("i_", Number(i)),
+                  ("r_", rhsOf(pi.prv))
+                ),
+                Seq(otherNormalized, pi.prv)
+              )
+              pi.updatePrv(newPrv)
+            case Divide(Number(n), Number(d)) =>
+              val pi = this * Const(d, n)
+              val newPrv = useDirectly(divideRat,
+                Seq(
+                  ("p_", lhs),
+                  ("q_", other.lhs),
+                  ("n_", Number(n)),
+                  ("d_", Number(d)),
+                  ("r_", rhsOf(pi.prv))
+                ),
+                Seq(otherNormalized, pi.prv)
+              )
+              pi.updatePrv(newPrv)
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
           }
         } else {
