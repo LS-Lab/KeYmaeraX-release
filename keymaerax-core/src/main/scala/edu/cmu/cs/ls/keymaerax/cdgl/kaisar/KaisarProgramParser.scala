@@ -9,9 +9,7 @@
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import fastparse._
-//@TODO: Nicer whitespace
 import MultiLineWhitespace._
-//import NoWhitespace._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ParserCommon._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, Parser}
@@ -21,12 +19,14 @@ object ParserCommon {
   val reservedWords: Set[String] = Set("by", "RCF", "auto", "prop", "end", "proof", "using", "assert", "assume", "have",
     "ghost", "solve", "induct", "domain", "duration", "left", "right", "yield", "let", "match", "either", "cases",
     "or", "print", "for", "while")
+
   def identString[_: P]: P[String] = {
     // Because (most of) the parser uses multiline whitespace, rep will allow space between repetitions.
     // locally import "no whitespace" so that identifiers cannot contain spaces.
     import NoWhitespace._
     (CharIn("a-zA-Z") ~ CharIn("a-zA-Z1-9").rep ~ P("'").?).!.filter(s  => !reservedWords.contains(s))
   }
+
   def reserved[_: P]: P[String]  = CharIn("a-zA-Z'").rep(1).!.filter(reservedWords.contains)
   def ws[_ : P]: P[Unit] = P((" " | "\n").rep)
   def wsNonempty[_ : P]: P[Unit] = P((" " | "\n").rep(1))
@@ -35,13 +35,12 @@ object ParserCommon {
   def number[_: P]: P[Number] = {
     import NoWhitespace._
     ("-".!.? ~  (("0" | CharIn("1-9") ~ CharIn("0-9").rep) ~ ("." ~ CharIn("0-9").rep(1)).?).!)
-    .map({case (None, s) => print("Nombre: " + s + "size " + s.length); Number(BigDecimal(s))
-          case (Some("-"), s) => print("Negbre: " + s);Number(BigDecimal("-" + s))})
+    .map({case (None, s) => Number(BigDecimal(s))
+          case (Some("-"), s) => Number(BigDecimal("-" + s))})
   }
 
   def variable[_ : P]: P[Variable] = {
     identString.map(s => {
-      //println("Identifier: " + s)
       if (s.endsWith("'")) DifferentialSymbol(BaseVariable(s.dropRight(1))) else BaseVariable(s)
     })
   }
@@ -80,10 +79,11 @@ object ExpressionParser {
 
   def at[_: P]: P[Term] = {
     val at = Function("at", domain = Tuple(Real, Unit), sort = Real, interpreted = true)
-    (neg ~ (CharIn("@") ~ ident).?).map({ case (e, None) => e
-    case (e, Some(s)) =>
-      val label = Function(s, domain = Unit, sort = Unit, interpreted = true)
-      FuncOf(at, Pair(e, FuncOf(label, Nothing)))
+    (neg ~ (CharIn("@") ~ ident).?).map({
+      case (e, None) => e
+      case (e, Some(s)) =>
+        val label = Function(s, domain = Unit, sort = Unit, interpreted = true)
+        FuncOf(at, Pair(e, FuncOf(label, Nothing)))
     })
   }
 
@@ -139,7 +139,6 @@ object ExpressionParser {
 
   def program[_: P]: P[Program] = choice
 
-
   // !P  P & Q   P | Q   P -> Q   P <-> Q   [a]P  <a>P  f ~ g \forall \exists
   def infixTerminal[_: P]: P[Formula] =
     (term.opaque("term") ~ (("<=" | "<" | "=" | "!=" | ">=" | ">").!.opaque("cmp") ~ term.opaque("term"))).map({
@@ -149,12 +148,7 @@ object ExpressionParser {
       case (l, ("!=", r)) => NotEqual(l, r)
       case (l, (">", r)) => Greater(l, r)
       case (l, (">=", r)) => GreaterEqual(l, r)
-      case (l, (s, r)) =>
-        {val x = s
-          //println("Ident: " + s)
-          val 2 = 1 + 1
-          True
-        }
+      case (l, (s, r)) => True
     })
 
   // Note: cut *after* formula because delimiter ( is ambiguous, could be term e.g. (1) <= (2)
@@ -178,7 +172,6 @@ object ExpressionParser {
   def equiv[_: P]: P[Formula] = (imply ~ ("<->"  ~ imply).rep).map({case (x, xs) => (xs.+:(x)).reduceRight(Equiv)})
 
   def formula[_: P]: P[Formula] = equiv
-
   def expression[_: P]: P[Expression] = term | program | formula
 }
 
@@ -205,6 +198,7 @@ object ProofParser {
       case 1 => ss.head
       case _ => TuplePat(ss.toList)
     })
+
   //@TODO: What is the syntax for variable assumptions on :=
   def varPat[_: P]: P[VarPat] = (ident ~ ("{" ~ variable ~ "}").?).map({case (p, x) => VarPat(p, x)})
   def idPat[_: P]: P[IdPat] = tuplePat | wildPat | varPat
@@ -217,7 +211,7 @@ object ProofParser {
     case (pat, fml, method) => Assert(pat, fml, method)})
 
   def modify[_: P]: P[Modify] = (idPat ~ ":=" ~ ("*".!.map(Right(_)) | term.map(Left(_))) ~ ";").
-    map({case (p, Left(f)) => println ("modified: " + p + ",  " + f); Modify(p, Left(f)) case (p, Right(_)) => Modify(p, Right())})
+    map({case (p, Left(f)) => Modify(p, Left(f)) case (p, Right(_)) => Modify(p, Right())})
 
   def label[_: P]: P[Label] = {
     import NoWhitespace._
@@ -234,13 +228,9 @@ object ProofParser {
 
 
   def parseBlock[_: P]: P[Statement] = ("{" ~ statement.rep ~ "}").map(ss => block(ss.toList))
-
   def boxLoop[_: P]: P[BoxLoop] = (statement.rep ~ "*").map(ss => BoxLoop(block(ss.toList)))
-
   def ghost[_: P]: P[Ghost] = ("(G" ~ statement.rep ~ "G)").map(ss => Ghost(block(ss.toList)))
-
   def inverseGhost[_: P]: P[InverseGhost] = ("{G" ~ statement.rep ~ "G}").map(ss => InverseGhost(block(ss.toList)))
-
   def parseWhile[_: P]: P[While] = ("while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").map({case (fml: Formula, ss: Seq[Statement]) => While(NoPat(), fml, block(ss.toList))})
 
   def let[_: P]: P[Statement] = ("let" ~ ((ident ~ "(" ~ ident ~ ")").map(Left(_)) | expression.map(Right(_))) ~ "=" ~ expression ~ ";").
@@ -251,7 +241,7 @@ object ProofParser {
   def atomicODEStatement[_: P]: P[AtomicODEStatement] = atomicOde.map(AtomicODEStatement)
   def ghostODE[_: P]: P[DiffStatement] = ("(G" ~ diffStatement ~ "G)").map(DiffGhostStatement)
   def inverseGhostODE[_: P]: P[DiffStatement] = ("{G" ~ diffStatement ~ "G}").map(InverseDiffGhostStatement)
-  def terminalODE[_: P]: P[DiffStatement] = ghostODE.log("G'") | inverseGhostODE.log("iG'") | atomicODEStatement.log("'")
+  def terminalODE[_: P]: P[DiffStatement] = ghostODE | inverseGhostODE | atomicODEStatement
   def diffStatement[_: P]: P[DiffStatement] = terminalODE.rep(sep = ",", min = 1).map(_.reduceRight(DiffProductStatement))
 
   //@TODO: Optional patterns, allow parens i guess
@@ -259,42 +249,35 @@ object ProofParser {
   def domAssert[_: P]: P[DomAssert] = ("!" ~ idPat ~ ":" ~ formula ~ method).map({case (id, f, m) => DomAssert(id, f, m)})
   def domModify[_: P]: P[DomModify] = (variable ~ ":=" ~ term).map({case (id, f) => DomModify(NoPat(), Assign(id, f))})
   def domWeak[_: P]: P[DomWeak] = ("{G" ~ domainStatement ~ "G}").map(DomWeak)
-  //def domInverseGhost[_: P]: P[DomInverseGhost] = ("{G" ~ domainStatement ~ "G}").map(DomInverseGhost)
-  def terminalDomainStatement[_: P]: P[DomainStatement] =
-    domAssert.log("?'") | domWeak.log("W'") |  domModify.log(":='") | domAssume.log("?")
+  def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
   def domainStatement[_: P]: P[DomainStatement] = terminalDomainStatement.rep(sep = "&", min = 1).map(_.reduceRight(DomAnd))
 
   def proveODE[_: P]: P[ProveODE] =
-    (diffStatement.log("difSt") ~
-      ("&".log("dif&") ~ domainStatement.log("domSt")).?.
+    (diffStatement ~ ("&" ~ domainStatement).?.
         map({case Some(v) => v case None => DomAssume(NoPat(), True)})
     ).map({case(ds, dc) => ProveODE(ds, dc)})
 
   def printGoal[_: P]: P[PrintGoal] = ("print" ~ literal ~ ";").map(PrintGoal)
 
   def atomicStatement[_: P]: P[Statement] =
-    printGoal.log("printgoal") | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile |
-      parseBlock | label | modify
+    printGoal | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile | parseBlock | label | modify
 
   def postfixStatement[_: P]: P[Statement] =
-    (((atomicStatement | proveODE.log("ode")) ~ "*".!.rep).
-      map({case (s, stars) => stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)})})).
-      log("postfixStatement")
+    ((atomicStatement | proveODE) ~ "*".!.rep).
+      map({case (s, stars) => stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)})})
 
   def sequence[_: P]: P[Statements] =
-    (postfixStatement.rep(1).map(ss => ss.toList))
+    postfixStatement.rep(1).map(ss => ss.toList)
 
   def boxChoice[_: P]: P[Statement] = {
-    (sequence.rep(sep = "++", min = 1)
+    sequence.rep(sep = "++", min = 1)
       .map(_.reduceRight((l, r) => List(BoxChoice(block(l), block(r)))))
-      .map(block))
+      .map(block)
   }
 
   def statement[_: P]: P[Statement] = boxChoice
-
   def statements[_: P]: P[List[Statement]] = statement.rep.map(ss => flatten(ss.toList))
-
-  def proof[_: P]: P[Proof] = (boxChoice.map(ss => Proof(List(ss))))
+  def proof[_: P]: P[Proof] = boxChoice.map(ss => Proof(List(ss)))
 }
 
 object KaisarProgramParser {

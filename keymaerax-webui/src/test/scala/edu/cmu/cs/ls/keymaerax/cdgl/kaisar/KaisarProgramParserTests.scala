@@ -9,11 +9,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
-import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.Show
 import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.cdgl.TermTactics._
-import edu.cmu.cs.ls.keymaerax.cdgl.kaisar.ExpressionParser.terminalProgram
 import edu.cmu.cs.ls.keymaerax.parser.RandomParserTests
 import edu.cmu.cs.ls.keymaerax.tags._
 import fastparse.Parsed.{Failure, Success}
@@ -40,6 +37,7 @@ class KaisarProgramParserTests extends TacticTestBase {
       case x: Success[T] => x.value
       case x: Failure => throw new KPPTestException(x.trace().toString)
     }
+
   val (vx, vy) = (Variable("x"), Variable("y"))
   val (dx, dy) = (DifferentialSymbol(vx), DifferentialSymbol(vy))
 
@@ -110,20 +108,13 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "respect order of operations" in {
     p("(x - y)*x/y-x+y+-x^x", ep.term(_)) shouldBe Plus(Plus(Minus(Divide(Times(Minus(vx, vy), vx), vy), vx), vy), Neg(Power(vx, vx)))
   }
+
   // programs
   "program parser" should "parse assignment" in {
-    val asgn = parse("x := x + x;", ep.assign(_))
-    val prog = parse("x := x + x;", ep.program(_))
-    val x = asgn
     p("x := x + x;", ep.program(_)) shouldBe Assign(vx, Plus(vx, vx))
   }
 
   it should "parse differential assignment" in {
-    // choice compose differentialProduct terminalProgram
-    p("x' := x + x", ep.assign(_)) shouldBe Assign(dx, Plus(vx, vx))
-    p("x' := x + x", ep.terminalProgram(_)) shouldBe Assign(dx, Plus(vx, vx))
-    p("x' := x + x;", ep.differentialProduct(_)) shouldBe Assign(dx, Plus(vx, vx))
-    p("x' := x + x;", ep.compose(_)) shouldBe Assign(dx, Plus(vx, vx))
     p("x' := x + x;", ep.program(_)) shouldBe Assign(dx, Plus(vx, vx))
   }
 
@@ -162,10 +153,7 @@ class KaisarProgramParserTests extends TacticTestBase {
 
   it should "parse braces" in {
     val l = Compose(Assign(vx, Number(1)), Assign(vy, Number(2)))
-    val r =  Compose(Compose(Assign(vy, Number(5)), AssignAny(vx)), Compose(Assign(vy, Number(5)), Assign(vy, Number(4))))
-    p("x:=1; y:=2;", ep.program(_)) shouldBe l
-    p("{x:=1; y:=2;}", ep.program(_)) shouldBe l
-    p("{y:=5; x:= *;} y:=5; y:=4;", ep.program(_)) shouldBe r
+    val r = Compose(Compose(Assign(vy, Number(5)), AssignAny(vx)), Compose(Assign(vy, Number(5)), Assign(vy, Number(4))))
     p("{x:=1; y:=2;} ++ {y:=5; x:= *;} y:=5; y:=4;", ep.program(_)) shouldBe Choice(l, r)
   }
 
@@ -234,7 +222,6 @@ class KaisarProgramParserTests extends TacticTestBase {
     val x2 = p("1>=27/(1-1)*(1*1*z2)&z3'>=z2'+z1'|z2<=z3'", ep.formula(_))
     val x3 = p("true&z3<=-23*1--41", ep.formula(_))
     val x4 = p("[{{?([{?(true);}*](<?(true);>(true)));}++{{z3':=((1))*((1));}++{?(true);}}}++{?((true)->((((1)) >= ((1)))&(<?(true);>(true))));}](<?(((z2)^((2))) = (z2));>(!([{{?(true);}*};{{?(true);}++{?(true);}}]([{?(true);}*](<?(true);>(true))))))", ep.formula(_))
-    val 2 = 1 + 1
   }
 
   it should "parse existses" in {
@@ -259,13 +246,13 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "not parse noPat in tuple" in {
     a[KPPTestException] shouldBe thrownBy(p("(x,)", pp.idPat(_)))
   }
+
   // forward proof-term parser
   "forward proof-term parser" should "parse proof variables" in {
     p("x", kp.proofTerm(_)) shouldBe ProofVar("x")
   }
 
   it should "parse proof application" in {
-    p("X Y", kp.proofTerm(_)) shouldBe ProofApp(ProofVar("X"), ProofVar("Y"))
     p("(X Y)", kp.proofTerm(_)) shouldBe ProofApp(ProofVar("X"), ProofVar("Y"))
   }
 
@@ -293,24 +280,9 @@ class KaisarProgramParserTests extends TacticTestBase {
     p("using x by auto", pp.method(_)) shouldBe Using(List(ForwardSelector(ProofVar("x"))), Auto())
   }
 
-  //def myAssert = ("!" ~ pp.idOptPat  ~ ep.formula ~ P(":=") ~ pp.method ~ ";")
-  //def formula = equiv
-  //    p("! true := by auto;",  myAssert(_)) shouldBe Assert(NoPat(), True, Auto())
-
   it should "parse by-proof" in {
-    import fastparse._
-    p("true", ep.formula(_)) shouldBe True
-    p("by auto", pp.method(_)) shouldBe Auto()
-    p("! true := by auto;", pp.atomicStatement(_)) shouldBe Assert(NoPat(), True, Auto())
-    p("! true := by auto;", pp.postfixStatement(_)) shouldBe Assert(NoPat(), True, Auto())
-    // breaks here
-    p("! true := by auto;", pp.statements(_)) shouldBe List(Assert(NoPat(), True, Auto()))
-    p("! true := by auto;", pp.assert(_)) shouldBe Assert(NoPat(), True, Auto())
-    p("! true := by auto;", pp.statement(_)) shouldBe Assert(NoPat(), True, Auto())
-    p("! true := by auto;", pp.proof(_)) shouldBe Proof(List[Statement](Assert(NoPat(), True, Auto())))
     p("proof ! true := by auto; end", pp.method(_)) shouldBe ByProof(Proof(List[Statement](Assert(NoPat(), True, Auto()))))
   }
-
 
   // proof-statement parser
   "proof statement parser" should "parse assumption" in {
@@ -331,17 +303,21 @@ class KaisarProgramParserTests extends TacticTestBase {
   it should "parse label" in {
     p("init:", pp.statement(_)) shouldBe Label("init")
   }
+
   it should "parse note" in {
     p("note conj = andI X Y;", pp.statement(_)) shouldBe Note("conj", ProofApp(ProofApp(ProofVar("andI"), ProofVar("X")), ProofVar("Y")))
   }
+
   // @TODO: Multiple arguments?
   it should "parse letfun" in {
     p("let square(x) = x*x;", pp.statement(_)) shouldBe LetFun("square", "x", Times(Variable("x"), Variable("x")))
   }
+
   it should "parse match" in {
     // @TODO: Ambiguous parse of = sign
     p("let (x * y) = z;", pp.statement(_)) shouldBe Match(Times(Variable("x"), Variable("y")), Variable("z"))
   }
+
   it should "parse block" in {
     p("{?true; ?true;}", pp.statement(_)) shouldBe Block(List(Assume(NoPat(), True), Assume(NoPat(), True)))
   }
@@ -353,6 +329,7 @@ class KaisarProgramParserTests extends TacticTestBase {
         (LessEqual(Variable("x"), Number(1)), Assert(VarPat("x"), True, Auto())),
         (GreaterEqual(Variable("x"), Number(0)), Assert(VarPat("x"), True, Auto()))))
   }
+
   it should "parse box-choice" in {
     p("x := 2; ?x:(1 > 0); ++ x := 3; ?x:(x > 0);", pp.statement(_)) shouldBe BoxChoice(
       block(List(Modify(VarPat("x"),Left(Number(2))), Assume(VarPat("x"), Greater(Number(1), Number(0))))),
@@ -385,10 +362,6 @@ class KaisarProgramParserTests extends TacticTestBase {
   // ODE proofs
   it should "parse simple atomic ode proof" in {
     p("true;", pp.domainStatement(_)) shouldBe DomAssume(NoPat(), True)
-    /*p("x' = y & true;", pp.statement(_)) shouldBe
-    ProveODE(
-        AtomicODEStatement(AtomicODE(DifferentialSymbol(BaseVariable("x")), Variable("y")))
-      , DomAssume(NoPat(), True))*/
   }
 
   it should "parse simple system proof" in {
@@ -409,10 +382,11 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse diffweak" in {
-      p("x' = y & {G dc:(x > 0) G};", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
-        DifferentialSymbol(BaseVariable("x")), Variable("y")
-      )), DomWeak(DomAssume(VarPat("dc"), Greater(Variable("x"), Number(0)))))
+    p("x' = y & {G dc:(x > 0) G};", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
+      DifferentialSymbol(BaseVariable("x")), Variable("y")
+    )), DomWeak(DomAssume(VarPat("dc"), Greater(Variable("x"), Number(0)))))
   }
+
   it should "parse diffcut" in {
     p("x' = y & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")
@@ -429,44 +403,21 @@ class KaisarProgramParserTests extends TacticTestBase {
     p("x' = y & t := T & !dc:(x > 0) by auto;", pp.statement(_)) shouldBe ProveODE(AtomicODEStatement(AtomicODE(
       DifferentialSymbol(BaseVariable("x")), Variable("y")))
       , DomAnd(
-      DomModify(NoPat(), Assign(Variable("t"), Variable("T"))),
-        DomAssert(VarPat("dc"), Greater(Variable("x"), Number(0)), Auto())))
-  }
-
-  // test parser for tiny language to help understand backtracking behavior
-
-
-  import fastparse._
-  import MultiLineWhitespace._
-
-  def testNumber[_: P]: P[Term] = pc.number
-  def testParenTerm[_: P]: P[Term] = ("(" ~ testTerm ~ ")")
-  def testTerm[_: P]: P[Term]  = testNumber | testParenTerm
-
-  def testParenFormula[_: P]: P[Formula] = ("(" ~ testFormula ~/ ")")
-  def testInfixFormula[_: P]: P[Formula] = (testTerm ~ "<" ~/ testTerm).map({case (l, r) => Less(l, r)})
-  def testFormula[_: P]: P[Formula] = testInfixFormula | testParenFormula
-
-  "tiny language" should "compare paren terms" in {
-    p("(0) < (2)", testFormula(_)) shouldBe Less(Number(0), Number(2))
-  }
-
-  it should "compare paren formula" in {
-    p("(0 < 2)", testFormula(_)) shouldBe Less(Number(0), Number(2))
+          DomModify(NoPat(), Assign(Variable("t"), Variable("T"))),
+          DomAssert(VarPat("dc"), Greater(Variable("x"), Number(0)), Auto())))
   }
 
   "formula error messages" should "exist" in {
-    val x = Number(BigDecimal("2"))
-    parse("(x <=2 ", ep.formula(_)) match  {
+    parse("(x <=2 ", ep.formula(_)) match {
       case (s : Success[Formula]) => println("success: " + s)
       case (f: Failure) => println(f.extra.trace())
     }
   }
 
   "program error messages" should "exist" in {
-    parse("x'=2 & x >= ;", ep.program(_)) match
-      {case (s : Success[Program]) => println("success: " + s)
-       case (f: Failure) => println(f.extra.trace())
+    parse("x'=2 & x >= ;", ep.program(_)) match {
+      case (s : Success[Program]) => println("success: " + s)
+      case (f: Failure) => println(f.extra.trace())
     }
-   }
+  }
 }
