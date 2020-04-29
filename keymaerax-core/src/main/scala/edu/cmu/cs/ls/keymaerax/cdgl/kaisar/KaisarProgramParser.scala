@@ -54,19 +54,17 @@ object ExpressionParser {
   // for parsing extended kaisar expression + pattern syntax
   def wild[_: P]: P[FuncOf] = P("*").map(_ => FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing))
 
-  def min[_: P]: P[FuncOf] = ("min" ~ "(" ~ ws ~ term ~ ws ~ "," ~ ws ~ term ~ ws ~ ")")
-    .map({case (l, r) => FuncOf(Function("min", domain = Tuple(Real, Real), sort = Real, interpreted=true), Pair(l, r))})
-
-  def max[_: P]: P[FuncOf] = ("max" ~ "(" ~ ws ~ term ~ ws ~ "," ~ ws ~ term ~ ws ~ ")")
-    .map({case (l, r) => FuncOf(Function("max", domain = Tuple(Real, Real), sort = Real, interpreted=true), Pair(l, r))})
-
-  def abs[_: P]: P[FuncOf] = ("abs" ~ "(" ~ ws ~ term ~ ws ~ ")")
-    .map({case e => FuncOf(Function("abs", domain = Real, sort = Real, interpreted=true), e)})
+  def funcOf[_: P]: P[FuncOf] =
+    (ident ~ "(" ~ term.rep(min = 1, sep = ",") ~ ")").map({case (f, args) =>
+      val builtins = Set("min", "max", "abs")
+      val fn = Function(f, domain = args.map(_ => Real).reduceRight(Tuple), sort = Real, interpreted = builtins.contains(f))
+      FuncOf(fn, args.reduceRight(Pair))
+    })
 
   def parenTerm[_: P]: P[Term] = (("(" ~ term ~ ")"))
 
   def terminal[_: P]: P[Term] =
-    ((min | max | abs | wild | variable | number | parenTerm) ~ (P("'").!.?)).
+    ((funcOf | wild | variable | number | parenTerm) ~ P("'").!.?).
       map({case (e, None) => e case (e, Some(_)) => Differential(e)})
 
   def power[_: P]: P[Term] =
@@ -113,7 +111,6 @@ object ExpressionParser {
 
   def terminalProgram[_: P]: P[Program] = (parenProgram | atomicOde | test  | assignAny | assign)
 
-  // @TODO: careful about ; in ode
   // Note: ; needs to be optional since {} is an atomic program which doesn't need ; terminator. If we really care we could
   // do a flapmap and only use ; when not {}
   def differentialProduct[_: P]: P[Program] =
@@ -125,8 +122,7 @@ object ExpressionParser {
       case (x: AtomicODE, xs: Seq[AtomicODE], None) =>
         val odes: Seq[DifferentialProgram] = xs.+:(x)
         ODESystem(odes.reduce[DifferentialProgram]({case (l, r) => DifferentialProduct(l, r)}))
-      case (x, Seq(), None) =>
-        x
+      case (x, Seq(), None) => x
     }) ~ ((P("*") | P("^d") | P("^@")).!.rep).opaque("postfix")).map({case (atom: Program, posts: Seq[String]) =>
       posts.foldLeft[Program](atom)({case (acc, "*") => Loop(acc) case (acc, ("^d" | "^@")) => Dual(acc)})
     })

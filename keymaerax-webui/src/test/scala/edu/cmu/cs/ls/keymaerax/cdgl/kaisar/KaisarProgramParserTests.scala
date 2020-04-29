@@ -4,7 +4,6 @@
  */
 /**
  * Test Kaisar parsing
- * @TODO: The tests don't test much automatically yet, mostly useful to step through in debugger
  * @author Brandon Bohrer
  */
 package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
@@ -314,7 +313,6 @@ class KaisarProgramParserTests extends TacticTestBase {
   }
 
   it should "parse match" in {
-    // @TODO: Ambiguous parse of = sign
     p("let (x * y) = z;", pp.statement(_)) shouldBe Match(Times(Variable("x"), Variable("y")), Variable("z"))
   }
 
