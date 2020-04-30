@@ -52,7 +52,8 @@ object ParserCommon {
 
 object ExpressionParser {
   // for parsing extended kaisar expression + pattern syntax
-  def wild[_: P]: P[FuncOf] = P("*").map(_ => FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing))
+  def wild[_: P]: P[FuncOf] = (Index ~ P("*")).
+    map(i => FuncOf(Function("wild", domain = Unit, sort = Unit, interpreted = true), Nothing))
 
   def funcOf[_: P]: P[FuncOf] =
     (ident ~ "(" ~ term.rep(min = 1, sep = ",") ~ ")").map({case (f, args) =>
@@ -173,99 +174,115 @@ object ProofParser {
   import ExpressionParser.{formula, program, term, expression, atomicOde}
   import KaisarKeywordParser.proofTerm
 
-  def rcf[_: P]: P[RCF] = P("by" ~ ws ~ "RCF").map(_ => RCF())
-  def auto[_: P]: P[Auto] = P("by" ~ ws ~ "auto").map(_ => Auto())
-  def prop[_: P]: P[Prop] = P("by" ~ ws ~ "prop").map(_ => Prop())
-  def using[_: P]: P[Using] = (P("using") ~ selector.rep  ~ method).map({case (sels, meth) => Using(sels.toList, meth)})
-  def byProof[_: P]: P[ByProof] = ("proof" ~ proof ~ "end").map(ByProof)
+  def locate[T <: ASTNode](x:T, i: Int): T = {x.setLocation(i); x}
+
+  def rcf[_: P]: P[RCF] = P("by" ~ ws ~ Index ~ "RCF").map(i => locate(RCF(), i))
+  def auto[_: P]: P[Auto] = P("by" ~ ws ~ Index ~ "auto").map(i => locate(Auto(), i))
+  def prop[_: P]: P[Prop] = P("by" ~ ws ~ Index ~ "prop").map(i => locate(Prop(), i))
+  def using[_: P]: P[Using] = (Index ~ P("using") ~ selector.rep  ~ method).
+    map({case (i, sels, meth) => locate(Using(sels.toList, meth), i)})
+  def byProof[_: P]: P[ByProof] = (Index ~ "proof" ~ proof ~ "end").
+    map({case (i, pf) => locate(ByProof(pf), i)})
 
   def forwardSelector[_: P]: P[ForwardSelector] = proofTerm.map(ForwardSelector)
-  def patternSelector[_: P]: P[PatternSelector] = (P("*").map(_ => PatternSelector(wild)) | expression.map(PatternSelector))
+  def patternSelector[_: P]: P[PatternSelector] =
+    (Index ~ P("*")).map(i => locate(PatternSelector(wild), i)) |
+    (Index ~ expression).map({case (i, e)  =>locate(PatternSelector(e), i)})
   def selector[_: P]: P[Selector] = !reserved ~ (forwardSelector | patternSelector)
 
   def method[_: P]: P[Method] = rcf | auto | prop | using | byProof
 
-  def wildPat[_: P]: P[WildPat] = CharIn("_*").map(_ => WildPat())
-  def tuplePat[_: P]: P[IdPat] = ("(" ~ idPat.rep(sep=",") ~ ")").map(ss =>
+  def wildPat[_: P]: P[WildPat] = (Index ~  CharIn("_*")).map(i => locate(WildPat(), i))
+  def tuplePat[_: P]: P[IdPat] = (Index ~ "(" ~ idPat.rep(sep=",") ~ ")").map({case (i, ss) =>
     ss.length match {
-      case 0 => NoPat()
+      case 0 => locate(NoPat(), i)
       case 1 => ss.head
-      case _ => TuplePat(ss.toList)
-    })
+      case _ => locate(TuplePat(ss.toList), i)
+    }})
 
   //@TODO: What is the syntax for variable assumptions on :=
-  def varPat[_: P]: P[VarPat] = (ident ~ ("{" ~ variable ~ "}").?).map({case (p, x) => VarPat(p, x)})
+  def varPat[_: P]: P[VarPat] = (Index ~ ident ~ ("{" ~ variable ~ "}").?).
+    map({case (i, p, x) => locate(VarPat(p, x), i)})
   def idPat[_: P]: P[IdPat] = tuplePat | wildPat | varPat
-  def idOptPat[_: P]: P[IdPat] = (idPat ~ (":" ~ !P("="))).?.map({case None => NoPat() case Some(pat) => pat})
+  def exPat[_: P]: P[Expression] = (expression ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
 
-  def assume[_: P]: P[Assume] = ("?" ~  idOptPat ~ formula ~ ";").map({
-    case (pat, fml) => Assume(pat, fml)})
+  def assume[_: P]: P[Assume] = (Index ~ "?" ~  exPat ~ formula ~ ";").map({
+    case (i, pat, fml) => locate(Assume(pat, fml), i)})
 
-  def assert[_: P]: P[Assert] = ("!" ~ idOptPat  ~ formula ~ ":=" ~ method ~ ";").map({
-    case (pat, fml, method) => Assert(pat, fml, method)})
+  def assert[_: P]: P[Assert] = (Index ~ "!" ~ exPat  ~ formula ~ ":=" ~ method ~ ";").map({
+    case (i, pat, fml, method) => locate(Assert(pat, fml, method), i)})
 
-  def modify[_: P]: P[Modify] = (idPat ~ ":=" ~ ("*".!.map(Right(_)) | term.map(Left(_))) ~ ";").
-    map({case (p, Left(f)) => Modify(p, Left(f)) case (p, Right(_)) => Modify(p, Right())})
+  def modify[_: P]: P[Modify] = (Index ~ idPat ~ ":=" ~ ("*".!.map(Right(_)) | term.map(Left(_))) ~ ";").
+    map({case (i, p, Left(f)) => locate(Modify(p, Left(f)), i)
+         case (i, p, Right(_)) => locate(Modify(p, Right()), i)})
 
   def label[_: P]: P[Label] = {
     import NoWhitespace._
-    (ident ~ ":" ~ !P("=")).map(id => Label(id))
+    (Index ~ ident ~ ":" ~ !P("=")).map({case (i, id) => locate(Label(id), i)})
   }
 
   def branch[_: P]: P[(Expression, Statement)] = {
-    ("case" ~ formula ~ ":" ~ statement.rep).map({case (fml: Formula, ss: Seq[Statement]) => (fml, block(ss.toList))})
+    ("case" ~ formula ~ ":" ~ statement.rep).map({case (fml: Formula, ss: Seq[Statement]) =>
+      (fml, block(ss.toList))})
   }
 
   def switch[_: P]: P[Switch] = {
-    ("switch" ~ "{" ~ branch.rep ~ "}").map(branches => Switch(branches.toList))
+    (Index ~ "switch" ~ "{" ~ branch.rep ~ "}").map({case (i, branches) => locate(Switch(branches.toList), i)})
   }
 
 
-  def parseBlock[_: P]: P[Statement] = ("{" ~ statement.rep ~ "}").map(ss => block(ss.toList))
-  def boxLoop[_: P]: P[BoxLoop] = (statement.rep ~ "*").map(ss => BoxLoop(block(ss.toList)))
-  def ghost[_: P]: P[Ghost] = ("(G" ~ statement.rep ~ "G)").map(ss => Ghost(block(ss.toList)))
-  def inverseGhost[_: P]: P[InverseGhost] = ("{G" ~ statement.rep ~ "G}").map(ss => InverseGhost(block(ss.toList)))
-  def parseWhile[_: P]: P[While] = ("while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").map({case (fml: Formula, ss: Seq[Statement]) => While(NoPat(), fml, block(ss.toList))})
+  def parseBlock[_: P]: P[Statement] = (Index ~ "{" ~ statement.rep ~ "}").map({case (i, ss) => locate(block(ss.toList), i)})
+  def boxLoop[_: P]: P[BoxLoop] = (Index ~ statement.rep ~ "*").map({case (i, ss) => locate(BoxLoop(block(ss.toList)), i)})
+  def ghost[_: P]: P[Ghost] = (Index ~ "(G" ~ statement.rep ~ "G)").map({case (i, ss) => locate(Ghost(block(ss.toList)), i)})
+  def inverseGhost[_: P]: P[InverseGhost] = (Index ~ "{G" ~ statement.rep ~ "G}").map({case (i, ss )=> locate(InverseGhost(block(ss.toList)), i)})
+  def parseWhile[_: P]: P[While] = (Index ~ "while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
+    map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
-  def let[_: P]: P[Statement] = ("let" ~ ((ident ~ "(" ~ ident ~ ")").map(Left(_)) | expression.map(Right(_))) ~ "=" ~ expression ~ ";").
-    map({case (Left((f, x)), e) => LetFun(f, x, e) case (Right(pat), e) => Match(pat, e)})
+  // @TODO: multiple args
+  def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident ~ ")").map(Left(_)) | expression.map(Right(_))) ~ "=" ~ expression ~ ";").
+    map({case (i, Left((f, x)), e) => locate(LetFun(f, x, e), i) case (i, Right(pat), e) => locate(Match(pat, e), i)})
 
-  def note[_: P]: P[Note] = ("note" ~ ident ~ "=" ~ proofTerm ~ ";").map({case (id, pt) => Note(id, pt)})
+  def note[_: P]: P[Note] = (Index ~ "note" ~ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
 
   def atomicODEStatement[_: P]: P[AtomicODEStatement] = atomicOde.map(AtomicODEStatement)
-  def ghostODE[_: P]: P[DiffStatement] = ("(G" ~ diffStatement ~ "G)").map(DiffGhostStatement)
-  def inverseGhostODE[_: P]: P[DiffStatement] = ("{G" ~ diffStatement ~ "G}").map(InverseDiffGhostStatement)
+  def ghostODE[_: P]: P[DiffStatement] = (Index ~ "(G" ~ diffStatement ~ "G)").
+    map({case (i, ds) => locate(DiffGhostStatement(ds), i)})
+  def inverseGhostODE[_: P]: P[DiffStatement] = (Index ~ "{G" ~ diffStatement ~ "G}").
+    map({case (i, ds) => locate(InverseDiffGhostStatement(ds), i)})
   def terminalODE[_: P]: P[DiffStatement] = ghostODE | inverseGhostODE | atomicODEStatement
-  def diffStatement[_: P]: P[DiffStatement] = terminalODE.rep(sep = ",", min = 1).map(_.reduceRight(DiffProductStatement))
+  def diffStatement[_: P]: P[DiffStatement] =
+    (Index ~ terminalODE.rep(sep = ",", min = 1)).
+    map({case (i, dps)=> locate(dps.reduceRight(DiffProductStatement), i)})
 
-  def domAssume[_: P]: P[DomAssume] = (idOptPat ~ formula).map({case (id, f) => DomAssume(id, f)})
-  def domAssert[_: P]: P[DomAssert] = ("!" ~ idOptPat ~ formula ~ method).map({case (id, f, m) => DomAssert(id, f, m)})
-  def domModify[_: P]: P[DomModify] = (variable ~ ":=" ~ term).map({case (id, f) => DomModify(NoPat(), Assign(id, f))})
-  def domWeak[_: P]: P[DomWeak] = ("{G" ~ domainStatement ~ "G}").map(DomWeak)
+  def domAssume[_: P]: P[DomAssume] = (Index ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
+  def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~ exPat ~ formula ~ method).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
+  def domModify[_: P]: P[DomModify] = (Index ~ variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(NoPat(), Assign(id, f)), i)})
+  def domWeak[_: P]: P[DomWeak] = (Index ~ "{G" ~ domainStatement ~ "G}").map({case (i, ds) => locate(DomWeak(ds), i)})
   def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
-  def domainStatement[_: P]: P[DomainStatement] = terminalDomainStatement.rep(sep = "&", min = 1).map(_.reduceRight(DomAnd))
+  def domainStatement[_: P]: P[DomainStatement] = (Index ~ terminalDomainStatement.rep(sep = "&", min = 1)).
+    map({case (i, da) => locate(da.reduceRight(DomAnd), i)})
 
   def proveODE[_: P]: P[ProveODE] =
-    (diffStatement ~ ("&" ~ domainStatement).?.
-        map({case Some(v) => v case None => DomAssume(NoPat(), True)})
-    ).map({case(ds, dc) => ProveODE(ds, dc)})
+    (Index ~ diffStatement ~ ("&" ~ domainStatement).?.
+        map({case Some(v) => v case None => DomAssume(Nothing, True)})
+    ).map({case(i, ds, dc) => locate(ProveODE(ds, dc), i)})
 
-  def printGoal[_: P]: P[PrintGoal] = ("print" ~ literal ~ ";").map(PrintGoal)
+  def printGoal[_: P]: P[PrintGoal] = (Index ~ "print" ~ literal ~ ";").
+    map({case (i, pg) => locate(PrintGoal(pg), i)})
 
   def atomicStatement[_: P]: P[Statement] =
     printGoal | note | let | switch | assume | assert | ghost | inverseGhost | parseWhile | parseBlock | label | modify
 
   def postfixStatement[_: P]: P[Statement] =
-    ((atomicStatement | proveODE) ~ "*".!.rep).
-      map({case (s, stars) => stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)})})
+    ((atomicStatement | proveODE) ~ Index ~ "*".!.rep).
+      map({case (s, i, stars) => locate(stars.foldLeft(s)({case (acc, x) => BoxLoop(acc)}), i)})
 
   def sequence[_: P]: P[Statements] =
     postfixStatement.rep(1).map(ss => ss.toList)
 
   def boxChoice[_: P]: P[Statement] = {
-    sequence.rep(sep = "++", min = 1)
-      .map(_.reduceRight((l, r) => List(BoxChoice(block(l), block(r)))))
-      .map(block)
+    (Index ~ sequence.rep(sep = "++", min = 1))
+      .map({case (i, ss: Seq[List[Statement]]) => locate(block(ss.reduceRight((l, r) => List(BoxChoice(block(l), block(r))))), i)})
   }
 
   def statement[_: P]: P[Statement] = boxChoice

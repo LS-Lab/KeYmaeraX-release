@@ -39,34 +39,47 @@ object KaisarProof {
 
 }
 
+sealed trait ASTNode {
+  var location: Option[Int] = None
+  def setLocation(loc: Int): Unit = { location = Some(loc)}
+}
+
 final case class Proof(ss: List[Statement])
 
-sealed trait Method {}
+// A proof-method expresses a single step of unstructured heuristic proof,
+// generally as justification of a single step of some structured proof.
+sealed trait Method extends ASTNode
+// constructive real-closed field arithmetic
 case class RCF() extends Method {}
+// general-purpose auto heuristic
 case class Auto() extends Method {}
+// propositional steps
 case class Prop() extends Method {}
+// introduce an assumption used in method
 case class Using(use: List[Selector], method: Method) extends Method {}
+// discharge goal with structured proof
 case class ByProof(proof: Proof) extends Method {}
 
-sealed trait ProofTerm {}
+sealed trait ProofTerm extends ASTNode
 case class ProofVar(x: Ident) extends ProofTerm {}
 case class ProofInstance(e: Expression) extends ProofTerm {}
 case class ProofApp(m: ProofTerm, n: ProofTerm) extends ProofTerm {}
 
-sealed trait Selector {}
+sealed trait Selector extends ASTNode
 case class ForwardSelector(forward: ProofTerm) extends Selector {}
 case class PatternSelector(e: Expression) extends Selector {}
 
-sealed trait IdPat
+sealed trait IdPat extends ASTNode
 case class NoPat() extends IdPat
 case class WildPat() extends IdPat
 // @TODO: make ident optional for assignments
 case class VarPat(p: Ident, x: Option[Variable] = None) extends IdPat
 case class TuplePat(pats: List[IdPat]) extends IdPat
 
-sealed trait Statement {}
-case class Assume(x: IdPat, f: Formula) extends Statement
-case class Assert(x: IdPat, f: Formula, child: Method) extends Statement
+sealed trait Statement extends ASTNode
+// x is a formula pattern in assume and assert
+case class Assume(x: Expression, f: Formula) extends Statement
+case class Assert(x: Expression, f: Formula, child: Method) extends Statement
 case class Modify(x: IdPat, hp: Either[Term, Unit]) extends Statement
 case class Label(st: TimeIdent) extends Statement
 case class Note(x: Ident, proof: ProofTerm) extends Statement
@@ -75,22 +88,24 @@ case class Match(pat: Expression, e: Expression) extends Statement
 case class Block( ss: Statements) extends Statement
 case class Switch(pats: List[(Expression, Statement)]) extends Statement
 case class BoxChoice(left: Statement, right: Statement) extends Statement
-case class While(x: IdPat, j: Formula, ss: Statement) extends Statement
+// x is a pattern
+case class While(x: Expression, j: Formula, ss: Statement) extends Statement
 case class BoxLoop(s: Statement) extends Statement
 case class Ghost(ss: Statement) extends Statement
 case class InverseGhost(ss: Statement) extends Statement
 case class PrintGoal(msg: String) extends Statement
 case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement //de: DifferentialProgram
 
-sealed trait DiffStatement
+sealed trait DiffStatement extends ASTNode
 case class AtomicODEStatement(dp: AtomicODE) extends DiffStatement
 case class DiffProductStatement(l: DiffStatement, r: DiffStatement) extends DiffStatement
 case class DiffGhostStatement(ds: DiffStatement) extends DiffStatement
 case class InverseDiffGhostStatement(ds: DiffStatement) extends DiffStatement
 
-sealed trait DomainStatement
-case class DomAssume(x: IdPat, f:Formula) extends DomainStatement
-case class DomAssert(x: IdPat, f:Formula, child: Method) extends DomainStatement
+sealed trait DomainStatement extends ASTNode
+// x is formula pattern in assume and assert
+case class DomAssume(x: Expression, f:Formula) extends DomainStatement
+case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainStatement
 case class DomWeak(dc: DomainStatement) extends DomainStatement
 case class DomModify(x: IdPat, hp: Assign) extends DomainStatement
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement

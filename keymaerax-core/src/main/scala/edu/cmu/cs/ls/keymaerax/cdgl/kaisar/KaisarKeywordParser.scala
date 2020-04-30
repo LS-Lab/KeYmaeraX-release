@@ -53,8 +53,8 @@ object KaisarKeywordParser {
   def method[_: P]: P[Method] = rcf | auto | prop | using | byProof
   def modify[_: P]: P[Modify] = (ident ~ ws ~ ":=" ~ ws ~ term).map({case (x: String, f: Term) => Modify(VarPat(x), Left(f))})
   def bassignAny[_: P]: P[Modify] = ((ident ~ ws ~ ":=" ~ ws ~ "*").map({case (x: String) => Modify(VarPat(x), Right(Unit))}))
-  def assert[_: P]: P[Assert] = ("assert" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~ /*"=" ~ ws ~*/ method).map({case (ident, formula, method) => Assert(VarPat(ident), formula, method)})
-  def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(VarPat(ident), formula)})
+  def assert[_: P]: P[Assert] = ("assert" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~  method).map({case (ident, formula, method) => Assert(Variable(ident), formula, method)})
+  def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(Variable(ident), formula)})
   def label[_: P]: P[Label] = (identString ~ ":").map(Label)
   def parseMatch[_: P]: P[Match] = ("match" ~ ws ~ expression ~ ws ~ "=" ~ ws ~ expression).map({case (e1, e2) => Match(e1, e2)})
   def letFun[_: P]: P[LetFun] = ("let" ~ ws ~ ident ~ "(" ~ ident ~ ")" ~ ws ~ "=" ~ ws ~ expression).map({case (f, x, e) => LetFun(f, x, e)})
