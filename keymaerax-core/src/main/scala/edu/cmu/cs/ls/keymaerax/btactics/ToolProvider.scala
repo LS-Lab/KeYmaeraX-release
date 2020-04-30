@@ -64,6 +64,8 @@ object ToolProvider extends ToolProvider with Logging {
 
   def simulationTool(): Option[SimulationTool] = f.simulationTool()
 
+  def sosSolveTool(): Option[SOSsolveTool] = f.sosSolveTool()
+
   def shutdown(): Unit = f.shutdown()
 
   def tools(): List[Tool] = f.tools()
@@ -135,6 +137,9 @@ trait ToolProvider {
   /** Returns a simulation tool. */
   def simulationTool(): Option[SimulationTool]
 
+  /** Returns a SOSsolve tool. */
+  def sosSolveTool(): Option[SOSsolveTool]
+
   /** Shutdown the tools provided by this provider. After shutdown, the provider hands out None only. */
   def shutdown(): Unit
 }
@@ -155,6 +160,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   private[this] lazy val simulator: Option[Tool with SimulationTool] = toolPreferences.find(_.isInstanceOf[SimulationTool]).map(_.asInstanceOf[Tool with SimulationTool])
   private[this] lazy val solver: Option[Tool with EquationSolverTool] = toolPreferences.find(_.isInstanceOf[EquationSolverTool]).map(_.asInstanceOf[Tool with EquationSolverTool])
   private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences.find(_.isInstanceOf[AlgebraTool]).map(_.asInstanceOf[Tool with AlgebraTool])
+  private[this] lazy val sossolve: Option[Tool with SOSsolveTool] = toolPreferences.find(_.isInstanceOf[SOSsolveTool]).map(_.asInstanceOf[Tool with SOSsolveTool])
 
   override def tools(): List[Tool] = toolPreferences
   override def defaultTool(): Option[Tool] = toolPreferences.headOption
@@ -173,6 +179,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   override def simulationTool(): Option[SimulationTool] = ensureInitialized(simulator)
   override def solverTool(): Option[EquationSolverTool] = ensureInitialized(solver)
   override def algebraTool(): Option[AlgebraTool] = ensureInitialized(algebra)
+  override def sosSolveTool(): Option[SOSsolveTool] = ensureInitialized(sossolve)
   override def shutdown(): Unit = toolPreferences.foreach(_.shutdown())
 
   /** Ensures that the tool `t` is initialized (= not yet shutdown) before returning it; returns None for uninitialized tools. */
@@ -180,6 +187,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
     case Some(t) if t.isInitialized => tool
     case _ => None
   }
+
 }
 
 /** A tool provider without tools.
@@ -197,6 +205,7 @@ class NoneToolProvider extends ToolProvider {
   override def simulationTool(): Option[SimulationTool] = None
   override def solverTool(): Option[EquationSolverTool] = None
   override def algebraTool(): Option[AlgebraTool] = None
+  override def sosSolveTool(): Option[SOSsolveTool] = None
   override def shutdown(): Unit = {}
 }
 

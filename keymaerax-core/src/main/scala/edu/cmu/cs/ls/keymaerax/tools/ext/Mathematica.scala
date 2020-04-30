@@ -29,13 +29,14 @@ import scala.collection.immutable.{Map, Seq}
 class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends Tool
     with QETacticTool with InvGenTool with ODESolverTool with CounterExampleTool
     with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
-    with PDESolverTool with ToolOperationManagement {
+    with PDESolverTool with SOSsolveTool with ToolOperationManagement {
 
   /** Indicates whether the tool is initialized. */
   private var initialized = false
 
   private val mQE: MathematicaQEToolBridge[Lemma] = new MathematicaQEToolBridge[Lemma](link)
   private val mPegasus = new MathematicaInvGenTool(link)
+  private val mSOSsolve = new MathematicaSOSsolveTool(link)
   private val mCEX = new MathematicaCEXTool(link)
   private val mODE = new MathematicaODESolverTool(link)
   private val mPDE = new MathematicaPDESolverTool(link)
@@ -53,6 +54,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def init(config: Map[String,String]): Unit = {
     mQE.memoryLimit = memoryLimit
     mPegasus.memoryLimit = memoryLimit
+    mSOSsolve.memoryLimit = memoryLimit
     mCEX.memoryLimit = memoryLimit
     mODE.memoryLimit = memoryLimit
     mSim.memoryLimit = memoryLimit
@@ -82,6 +84,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def shutdown(): Unit = {
     mQE.shutdown()
     mPegasus.shutdown()
+    mSOSsolve.shutdown()
     mCEX.shutdown()
     mODE.shutdown()
     mPDE.shutdown()
@@ -190,6 +193,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = mPegasus.lzzCheck(ode, inv)
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = mPegasus.refuteODE(ode, assumptions, postCond)
   override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = mPegasus.genODECond(ode, assumptions, postCond)
+  override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int): (Term, List[Term]) = mSOSsolve.sosSolve(polynomials, variables, degree)
 
 
   /** Restarts the MathKernel with the current configuration */

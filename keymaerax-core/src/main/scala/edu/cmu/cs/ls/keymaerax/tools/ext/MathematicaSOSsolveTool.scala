@@ -1,0 +1,69 @@
+package edu.cmu.cs.ls.keymaerax.tools.ext
+
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
+import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
+import edu.cmu.cs.ls.keymaerax.tools.install.SOSsolveInstaller
+import org.apache.logging.log4j.scala.Logging
+
+trait SOSsolveTool {
+  /**
+    * Returns a continuous invariant for a safety problem sent to the tool.
+    * @param polys polynomials (assumed to be equal to 0)
+    * @param vars variables of polys
+    * @return (1 + sos, cofactors) such that  (cofactors, polynomials).zipped.map(Times) = 1 + sos.
+    */
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int) : (Term, List[Term])
+}
+
+/**
+  * Link to Yong Kiams SOSsolve implementation in Mathematica over the JLink interface.
+  * @author Fabian Immler, based on MathematicaInvGenTool by Andrew Sogokon and QETool by Nathan Fulton and Stefan Mitsch
+  */
+class MathematicaSOSsolveTool(override val link: MathematicaLink)
+  extends BaseKeYmaeraMathematicaBridge[Expression](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
+    with SOSsolveTool
+    with Logging {
+
+  private val SOSSOLVE_NAMESPACE = "SOSsolve`"
+
+  private val sossolvePath = SOSsolveInstaller.sossolveRelativeResourcePath
+  private val pathSegments = scala.reflect.io.File(sossolvePath).segments.map(string)
+  private val joinedPath = fileNameJoin(list(homeDirectory.op :: pathSegments:_*))
+  private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
+
+  val sossolveMain = Configuration.SOSsolve.mainFile("SOSsolve.wl")
+  val setOptions = applyFunc(symbol("SetOptions"))
+  private def ssymbol(s: String) = symbol(SOSSOLVE_NAMESPACE + s)
+
+  private def decodeWitness(result: Expression): (Term, List[Term]) = result match {
+    case Pair(sos, Pair(cofactors, Nothing)) =>
+      (sos, PegasusM2KConverter.decodeTermList(cofactors))
+    case e => throw new IllegalArgumentException("Expected pair of sos and cofactors but got " + e)
+  }
+
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int) : (Term, List[Term]) = {
+    val mPolys = list(polys.map(k2m):_*)
+    val mVars = list(vars.map(k2m):_*)
+    val mDegree = int(degree)
+    val command = quiet(compoundExpression(
+      setPathsCmd,
+      needs(string(SOSSOLVE_NAMESPACE), string(sossolveMain)),
+      applyFunc(ssymbol("FindWitness"))(mPolys, mVars, mDegree)
+    )
+    )
+
+    try {
+      val (output, result) = run(command)
+      logger.debug("Found witness: " + result.prettyString + " from raw output " + output)
+      decodeWitness(result)
+    } catch {
+      case ex: Throwable =>
+        logger.warn("SOSsolve exception", ex)
+        ???
+    }
+  }
+}
+
+
