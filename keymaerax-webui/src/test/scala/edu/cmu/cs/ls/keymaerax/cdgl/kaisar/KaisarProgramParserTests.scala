@@ -308,9 +308,9 @@ class KaisarProgramParserTests extends TacticTestBase {
     p("note conj = andI X Y;", pp.statement(_)) shouldBe Note("conj", ProofApp(ProofApp(ProofVar("andI"), ProofVar("X")), ProofVar("Y")))
   }
 
-  // @TODO: Multiple arguments?
   it should "parse letfun" in {
-    p("let square(x) = x*x;", pp.statement(_)) shouldBe LetFun("square", "x", Times(Variable("x"), Variable("x")))
+    p("let square(x) = x*x;", pp.statement(_)) shouldBe LetFun("square",  List("x"), Times(Variable("x"), Variable("x")))
+    p("let prod(x,z) = x*z;", pp.statement(_)) shouldBe LetFun("prod",  List("x", "z"), Times(Variable("x"), Variable("z")))
   }
 
   it should "parse match" in {

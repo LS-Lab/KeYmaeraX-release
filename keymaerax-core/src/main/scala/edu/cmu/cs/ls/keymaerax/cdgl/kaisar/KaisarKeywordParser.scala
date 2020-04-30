@@ -57,7 +57,7 @@ object KaisarKeywordParser {
   def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(Variable(ident), formula)})
   def label[_: P]: P[Label] = (identString ~ ":").map(Label)
   def parseMatch[_: P]: P[Match] = ("match" ~ ws ~ expression ~ ws ~ "=" ~ ws ~ expression).map({case (e1, e2) => Match(e1, e2)})
-  def letFun[_: P]: P[LetFun] = ("let" ~ ws ~ ident ~ "(" ~ ident ~ ")" ~ ws ~ "=" ~ ws ~ expression).map({case (f, x, e) => LetFun(f, x, e)})
+  def letFun[_: P]: P[LetFun] = ("let" ~ ws ~ ident ~ "(" ~ ident.rep(sep=",") ~ ")" ~ ws ~ "=" ~ ws ~ expression).map({case (f, xs, e) => LetFun(f, xs.toList, e)})
   def note[_: P]: P[Note] = ("note" ~ ws ~ ident ~ ws ~ "=" ~ ws ~ proofTerm).map({case (id, pt) => Note(id, pt)})
   def parseBlock[_: P]: P[Statement] = ("{" ~ ws ~ statement.rep(2) ~ ws ~ "}").map(ss => block(ss.toList))
   def boxChoice[_: P]: P[BoxChoice] = ("either" ~ ws ~ statement.rep ~ ws ~ "or" ~ ws ~ statement.rep ~ ws ~ "end").

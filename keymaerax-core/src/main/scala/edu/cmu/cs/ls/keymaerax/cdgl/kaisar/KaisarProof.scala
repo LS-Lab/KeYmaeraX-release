@@ -83,7 +83,7 @@ case class Assert(x: Expression, f: Formula, child: Method) extends Statement
 case class Modify(x: IdPat, hp: Either[Term, Unit]) extends Statement
 case class Label(st: TimeIdent) extends Statement
 case class Note(x: Ident, proof: ProofTerm) extends Statement
-case class LetFun(x: Ident, arg: Ident, e: Expression) extends Statement
+case class LetFun(x: Ident, args: List[Ident], e: Expression) extends Statement
 case class Match(pat: Expression, e: Expression) extends Statement
 case class Block( ss: Statements) extends Statement
 case class Switch(pats: List[(Expression, Statement)]) extends Statement

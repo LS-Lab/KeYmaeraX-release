@@ -238,9 +238,8 @@ object ProofParser {
   def parseWhile[_: P]: P[While] = (Index ~ "while" ~ "(" ~ formula ~ ")" ~ "{" ~ statement.rep ~ "}").
     map({case (i, fml: Formula, ss: Seq[Statement]) => locate(While(Nothing, fml, block(ss.toList)), i)})
 
-  // @TODO: multiple args
-  def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident ~ ")").map(Left(_)) | expression.map(Right(_))) ~ "=" ~ expression ~ ";").
-    map({case (i, Left((f, x)), e) => locate(LetFun(f, x, e), i) case (i, Right(pat), e) => locate(Match(pat, e), i)})
+  def let[_: P]: P[Statement] = (Index ~ "let" ~ ((ident ~ "(" ~ ident.rep(sep = ",") ~ ")").map(Left(_)) | expression.map(Right(_))) ~ "=" ~ expression ~ ";").
+    map({case (i, Left((f, xs)), e) => locate(LetFun(f, xs.toList, e), i) case (i, Right(pat), e) => locate(Match(pat, e), i)})
 
   def note[_: P]: P[Note] = (Index ~ "note" ~ ident ~ "=" ~ proofTerm ~ ";").map({case (i, id, pt) => locate(Note(id, pt), i)})
 
