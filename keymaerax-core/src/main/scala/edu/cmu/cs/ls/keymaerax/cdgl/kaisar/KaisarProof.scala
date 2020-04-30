@@ -69,18 +69,18 @@ sealed trait Selector extends ASTNode
 case class ForwardSelector(forward: ProofTerm) extends Selector {}
 case class PatternSelector(e: Expression) extends Selector {}
 
-sealed trait IdPat extends ASTNode
-case class NoPat() extends IdPat
-case class WildPat() extends IdPat
+sealed trait AsgnPat extends ASTNode
+case class NoPat() extends AsgnPat
+case class WildPat() extends AsgnPat
 // @TODO: make ident optional for assignments
-case class VarPat(p: Ident, x: Option[Variable] = None) extends IdPat
-case class TuplePat(pats: List[IdPat]) extends IdPat
+case class VarPat(p: Ident, x: Option[Variable] = None) extends AsgnPat
+case class TuplePat(pats: List[AsgnPat]) extends AsgnPat
 
 sealed trait Statement extends ASTNode
 // x is a formula pattern in assume and assert
 case class Assume(x: Expression, f: Formula) extends Statement
 case class Assert(x: Expression, f: Formula, child: Method) extends Statement
-case class Modify(x: IdPat, hp: Either[Term, Unit]) extends Statement
+case class Modify(x: AsgnPat, hp: Either[Term, Unit]) extends Statement
 case class Label(st: TimeIdent) extends Statement
 case class Note(x: Ident, proof: ProofTerm) extends Statement
 case class LetFun(x: Ident, args: List[Ident], e: Expression) extends Statement
@@ -95,6 +95,9 @@ case class Ghost(ss: Statement) extends Statement
 case class InverseGhost(ss: Statement) extends Statement
 case class PrintGoal(msg: String) extends Statement
 case class ProveODE(ds: DiffStatement, dc: DomainStatement) extends Statement //de: DifferentialProgram
+// Debugging feature. Equivalent to "now" in all respects, annotated with the fact that it was once "was"
+// before transformation by the proof checker
+case class Was(now: Statement, was: Statement) extends Statement
 
 sealed trait DiffStatement extends ASTNode
 case class AtomicODEStatement(dp: AtomicODE) extends DiffStatement
@@ -107,5 +110,21 @@ sealed trait DomainStatement extends ASTNode
 case class DomAssume(x: Expression, f:Formula) extends DomainStatement
 case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainStatement
 case class DomWeak(dc: DomainStatement) extends DomainStatement
-case class DomModify(x: IdPat, hp: Assign) extends DomainStatement
+case class DomModify(x: AsgnPat, hp: Assign) extends DomainStatement
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement
+
+// @TODO: Implement the rest
+case class Context (proofVars: Set[String]) {
+  val ghostVar: String = "ghost"
+  def add(ident: String): Context = Context(proofVars.+(ident))
+
+  def fresh: String = {
+    var i = 0
+    while(proofVars.contains(ghostVar + i)) {
+      i = i + 1
+    }
+    ghostVar + i
+  }
+
+  def next: Context = add(fresh)
+}

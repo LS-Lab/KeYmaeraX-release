@@ -193,7 +193,7 @@ object ProofParser {
   def method[_: P]: P[Method] = rcf | auto | prop | using | byProof
 
   def wildPat[_: P]: P[WildPat] = (Index ~  CharIn("_*")).map(i => locate(WildPat(), i))
-  def tuplePat[_: P]: P[IdPat] = (Index ~ "(" ~ idPat.rep(sep=",") ~ ")").map({case (i, ss) =>
+  def tuplePat[_: P]: P[AsgnPat] = (Index ~ "(" ~ idPat.rep(sep=",") ~ ")").map({case (i, ss) =>
     ss.length match {
       case 0 => locate(NoPat(), i)
       case 1 => ss.head
@@ -203,7 +203,7 @@ object ProofParser {
   //@TODO: What is the syntax for variable assumptions on :=
   def varPat[_: P]: P[VarPat] = (Index ~ ident ~ ("{" ~ variable ~ "}").?).
     map({case (i, p, x) => locate(VarPat(p, x), i)})
-  def idPat[_: P]: P[IdPat] = tuplePat | wildPat | varPat
+  def idPat[_: P]: P[AsgnPat] = tuplePat | wildPat | varPat
   def exPat[_: P]: P[Expression] = (expression ~ ":" ~ !P("=")).?.map({case None => Nothing case Some(e) => e})
 
   def assume[_: P]: P[Assume] = (Index ~ "?" ~  exPat ~ formula ~ ";").map({
