@@ -58,11 +58,17 @@ object SOSSolve {
       }.toList
       val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
+      TaylorModelTactics.Timing.tic()
       val (sos, cofactors) = sosSolveTool.sosSolve(polys, vars, degree)
+      TaylorModelTactics.Timing.toc("sosSolve")
       val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
+      TaylorModelTactics.Timing.toc("sosPos")
       val combination = (cofactors, polys).zipped.map(Times).reduceLeft(Plus)
+      TaylorModelTactics.Timing.tic()
       val witnessPrv = proveBy(Equal(sos, combination), PolynomialArithV2.equate(1))
+      TaylorModelTactics.Timing.toc("PolynomialArithV2.equate")
       val zeroPrv = proveBy(Sequent(seq.ante, IndexedSeq(Equal(combination, Number(0)))), eqZeroTac & done)
+      TaylorModelTactics.Timing.toc("eqZeroTac")
       cut(False) & Idioms.<(
         closeF,
         useAt(witnessSOSLemma.fact(USubst(Seq(SubstitutionPair("sos_()".asTerm, sos), SubstitutionPair("comb_()".asTerm, combination)))), PosInExpr(1::Nil))(1) &

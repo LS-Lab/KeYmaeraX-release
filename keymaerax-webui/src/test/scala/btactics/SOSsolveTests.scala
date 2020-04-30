@@ -1,7 +1,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.{SOSSolve, TacticTestBase, ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{PolynomialArithV2, SOSSolve, TacticTestBase, TaylorModelTactics, ToolProvider}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import org.scalatest.PrivateMethodTester
@@ -44,6 +44,9 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
 
   "SOSSolve" should "prove using the certificate" in withMathematica { _ =>
     val pp = new KeYmaeraXPrettierPrinter(100)
+    TaylorModelTactics.Timing.tic()
+    PolynomialArithV2.ring
+    TaylorModelTactics.Timing.toc("Initialized PolynomialArithV2")
     proveBy(prob1, SOSSolve.sossolve(1)) shouldBe 'proved
   }
 
