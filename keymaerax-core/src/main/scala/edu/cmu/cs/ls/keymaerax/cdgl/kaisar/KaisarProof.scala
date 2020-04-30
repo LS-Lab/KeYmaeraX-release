@@ -113,10 +113,13 @@ case class DomWeak(dc: DomainStatement) extends DomainStatement
 case class DomModify(x: AsgnPat, hp: Assign) extends DomainStatement
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement
 
+object Context {
+  def empty: Context = Context(Set())
+}
 // @TODO: Implement the rest
-case class Context (proofVars: Set[String]) {
+case class Context (proofVars: Map[String, Formula]) {
   val ghostVar: String = "ghost"
-  def add(ident: String): Context = Context(proofVars.+(ident))
+  def add(ident: String, f: Formula): Context = Context(proofVars.+((ident, f)))
 
   def fresh: String = {
     var i = 0
@@ -126,5 +129,6 @@ case class Context (proofVars: Set[String]) {
     ghostVar + i
   }
 
-  def next: Context = add(fresh)
+  def ghost(f: Formula): Context = add(fresh, f)
+  def toList: List[(String, Formula)] = proofVars.toList
 }
