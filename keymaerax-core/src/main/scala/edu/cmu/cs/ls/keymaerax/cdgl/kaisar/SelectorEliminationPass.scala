@@ -67,6 +67,7 @@ object SelectorEliminationPass {
           case ProveODE(ds, dc) =>
             val (notes, dom) = collectPts(kc, dc)
             Some(Block(notes.:+(ProveODE(ds, dom))))
+          case _ => None
         }
       }
     })
