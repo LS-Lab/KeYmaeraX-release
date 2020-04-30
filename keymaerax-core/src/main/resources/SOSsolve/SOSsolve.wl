@@ -84,9 +84,7 @@ FindWitness[polys_List, vars_List, deg_Integer]:= Module [{
 
 	(* Finally solve the SDP *)
 	k=Length[monbasis];
-	res=SemidefiniteOptimization[Tr[IdentityMatrix[k].(Symbol["yy"])], {constraints, (Symbol["yy"])\!\(\*UnderscriptBox[\(\[VectorGreaterEqual]\), 
-TemplateBox[{"k"},
-"SemidefiniteConeList"]]\) 0}, (Symbol["yy"]) \[Element] Matrices[k]];
+	res=SemidefiniteOptimization[Tr[IdentityMatrix[k].(Symbol["yy"])], {constraints, VectorGreaterEqual[{Symbol["yy"], 0}, {"SemidefiniteCone", k}]}, Element[Symbol["yy"], Matrices[k]]];
 	If[MemberQ[res[[1]][[2]],Indeterminate,{2}],Return[{0,Map[0*#&,polys]}]];
 	(* Round the result *)
 	matrix=Rationalize[res[[1]][[2]],0.01];
