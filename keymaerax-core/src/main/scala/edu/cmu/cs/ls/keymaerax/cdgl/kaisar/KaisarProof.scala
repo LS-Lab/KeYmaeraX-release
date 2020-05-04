@@ -12,6 +12,7 @@ import KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.Metric
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 object KaisarProof {
@@ -143,6 +144,7 @@ case class Label(st: TimeIdent) extends Statement
 // Note checks forward [[proof]] and stores the result in proof-variable [[x]]
 // In the source syntax, the [[fml]] formula is usually omitted because it can be inferred, but is populated during
 // elaboration for performance reasons
+// @TODO: x should be Expression for pattern fun
 case class Note(x: Ident, proof: ProofTerm, var conclusion: Option[Formula] = None) extends Statement
 // Introduces a lexically-scoped defined function [[x]] with arguments [[args]] and body [[e]]. References to [[args]]
 // in [[e]] are resolved by substituting parameters at application sites. All others take their value according to the
@@ -167,10 +169,10 @@ case class BoxLoop(s: Statement) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
 // For example, Ghost(Modify(_)) is a discrete ghost assignment
 // @TODO: Resolve scope-escaping issues
-case class Ghost(ss: Statement) extends Statement
+case class Ghost(s: Statement) extends Statement
 // Inverse-ghost of statement [[s]], i.e., program of [[ss]] is part of the conclusion but not relevant to the proof.
 // For example, InverseGhost(Assume(_)) indicates a Demonic test which is never used in the proof
-case class InverseGhost(ss: Statement) extends Statement
+case class InverseGhost(s: Statement) extends Statement
 // Debugging functionality: print [[msg]] with proof context
 case class PrintGoal(msg: String) extends Statement
 // Proof of differential equation, either angelic or demonic.
@@ -256,16 +258,16 @@ object Context {
       }
   }
 
-  def get(mod: Modify, id: Ident): Option[Formula] = {
+  def find(mod: Modify, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
     mod match {
       case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
-        get(Modify(pat, Left(l)), id) match {
+        find(Modify(pat, Left(l)), f) match {
           case Some(x) => Some(x)
-          case None => get(Modify(TuplePat(pats), Left(r)), id)
+          case None => find(Modify(TuplePat(pats), Left(r)), f)
         }
-      case Modify(VarPat(x, None), Left(f)) =>
+      case Modify(VarPat(x, Some(p)), Left(f)) =>
         // @TODO: Proper variable renaming
-        Some(Equal(x, f))
+        Some((p, Equal(x, f)))
       case Modify(TuplePat(pats), Right(())) =>
         throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
       case Modify(VarPat(x, None), Right(())) =>
@@ -276,65 +278,103 @@ object Context {
     }
   }
 
-  def get(dc: DomainStatement, id: Ident): Option[Formula] = {
+  def find(dc: DomainStatement, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
     dc match {
-      case DomAssume(x, f) => matchAssume(x, f).collectFirst({case (mx, mf) if mx == id => mf})
-      case DomAssert(x, f, _ ) => matchAssume(x, f).collectFirst({case (mx, mf) if mx == id => mf})
-      case DomAnd(l, r) => get(l, id) match {case Some(l) => Some(l) case None => get(r, id)}
+      case DomAssume(x, fml) => matchAssume(x, fml).find(f)//collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAssert(x, fml, _ ) => matchAssume(x, fml).find(f)//collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAnd(l, r) => find(l, f) match {case Some(l) => Some(l) case None => find(r, f)}
       case DomWeak(dc) =>
-        get(dc, id) match {
-          case Some(f) => throw ProofCheckException(s"Weakened domain constraint $dc should not bind referenced variable $id to $f")
+        find(dc, f) match {
+          case Some(fml) => throw ProofCheckException(s"Weakened domain constraint $dc binds formula $fml, should not be selected")
           case None => None
         }
-      case DomModify(ap, f) => get(Modify(ap, Left(f)), id)
+      case DomModify(ap, term) => find(Modify(ap, Left(term)), f)
     }
   }
 
   // Look up latest definition of proof variable
   // @TODO: Does this handle state change properly?, Probably only works right for SSA form, or Blocks() needs to check for
   // free variable binding after reference for admissibility
-  def get(con: Context, id: Ident): Option[Formula] = {
+  def find(con: Context, f: ((Ident, Formula)) => Boolean): Option[(Ident, Formula)] = {
     con match {
       case _: Triv => None
-      case Assume(x, f) =>  if(x == id) Some(f) else None
-      case Assert(x, f, _) =>  if(x == id) Some(f) else None
-      case Note(x, _, Some(f)) =>  if(x == id) Some(f) else None
+      case Assume(x, g) => matchAssume(x, g).find(f)
+      case Assert(x, g, _) => matchAssume(x, g).find(f)
+      case Note(x, _, Some(g)) =>  if (f(x, g)) Some((x, g)) else None
       case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")
       case Block(ss) =>
-        val find: PartialFunction[Statement, Formula] = {case s => get(s, id).get}
-        ss.reverse.collectFirst(find)
+        val search: PartialFunction[Statement, (Ident, Formula)] = {case s => find(s, f).get}
+        ss.reverse.collectFirst(search)
       case BoxChoice(l, r) =>
-        (get(l, id), get(r, id)) match {
+        val and: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula) = {case ((k1, v1), (k2, v2)) =>
+          if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
+          else (k1, And(v1, v2))
+        }
+        (find(l, f), find(r, f)) match {
           case (None, None) => None
           case (Some(p), None) => Some(p)
           case (None, Some(p)) => Some(p)
-          case (Some(p), Some(q)) => Some(And(p, q))
+          case (Some(p), Some(q)) => Some(and(p, q))
         }
       case Switch(pats) =>
-        val fmls = pats.flatMap({case (e, s) => get(s, id)})
+        val or: ((Ident, Formula), (Ident, Formula)) => (Ident, Formula)  = {case ((k1, v1), (k2,v2)) =>
+          if (k1 != k2) throw ProofCheckException("recursive call found formula twice with different names")
+          else (k1, Or(v1, v2))
+        }
+        val fmls = pats.flatMap({case (e, s) => find(s, f)})
         if (fmls.isEmpty) None
-        else Some(fmls.reduceRight(Or))
-      case Ghost(ss) => get(ss, id)
-      case InverseGhost(ss) =>
-        get(ss, id) match {
-          case Some(f) => throw ProofCheckException(s"Proof variable $id should not have been found with formula $f in statement $ss which is an inverse ghost")
+        else Some(fmls.reduceRight(or))
+      case Ghost(s) => find(s, f)
+      case InverseGhost(s) =>
+        find(s, f) match {
+          case Some(ml) => throw ProofCheckException(s"Formula $f should not be selected from statement $s which is an inverse ghost")
           case None => None
         }
-      case po: ProveODE => get(po.dc, id)
-      case mod: Modify => get(mod, id)
-      case Was(now, was) => get(now, id)
+      case po: ProveODE => find(po.dc, f)
+      case mod: Modify => find(mod, f)
+      case Was(now, was) => find(now, f)
       case _ : Label | _: LetFun | _: Match | _: PrintGoal => None
       // @TODO: These loop cases probably work, but subtle
-      case While(_, _, body) => get(body, id)
-      case BoxLoop(body) => get(body, id)
+      case While(_, _, body) => find(body, f)
+      case BoxLoop(body) => find(body, f)
     }
   }
 
+  def get(con: Context, id: Ident): Option[Formula] = {
+    val f: ((Ident, Formula)) => Boolean = {case (x: Ident, v: Formula) => x == id}
+    find(con, f).map(_._2)
+  }
+
+  def contains(con: Context, id: Ident): Boolean = get(con, id).isDefined
+
+  // @TODO: Find all, not one
+  def unify(con: Context, pat: Expression): Option[(Ident, Formula)] = {
+    val f: ((Ident, Formula)) => Boolean = {case (x: Ident, fml: Formula) =>
+      try {
+        UnificationMatch(pat, fml)
+        true
+      } catch {
+        case _: ProverException => false
+      }}
+    find(con, f)
+  }
+
+  // Base name used for fresh variables generated during proof when no better variable name is available.
+  val ghostVar: String = "ghost"
+  // Extend context with a named assumption
+  //def add(ident: String, f: Formula): Context = Context(proofVars.+((ident, f)))
+
+  // A proof variable name which is not bound in the context.
+  def fresh(con: Context): Ident = {
+    var i = 0
+    while(contains(con, Variable(ghostVar + i))) {
+      i = i + 1
+    }
+    Variable(ghostVar + i)
+  }
+
   // Define the next gHost variable to be f
-  //def ghost(f: Formula): Context = add(fresh, f)
-  // Contents of context
-  //def toList: List[(String, Formula)] = proofVars.toList
-  //def empty: Context = Context(Set())
+  def ghost(con: Context, f: Formula): Context = add(con, fresh(con), f)
 }
 
 // superceded by proofs as contexts
@@ -350,18 +390,6 @@ case class CAssign(p: Option[Ident], x: Variable, f: Option[Term]) extends Conte
 
 //object Context {
 /*case class Context (proofVars: Map[String, Formula]) {
-  // Base name used for fresh variables generated during proof when no better variable name is available.
-  val ghostVar: String = "ghost"
-  // Extend context with a named assumption
-  def add(ident: String, f: Formula): Context = Context(proofVars.+((ident, f)))
-
-  // A proof variable name which is not bound in the context.
-  def fresh: String = {
-    var i = 0
-    while(proofVars.contains(ghostVar + i)) {
-      i = i + 1
-    }
-    ghostVar + i
-  }*/
+  */
 
 //}

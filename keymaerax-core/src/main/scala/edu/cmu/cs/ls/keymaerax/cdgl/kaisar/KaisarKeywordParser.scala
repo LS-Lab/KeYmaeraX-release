@@ -25,7 +25,7 @@ object KaisarKeywordParser {
   def literal[_: P]: P[String] = "\"" ~ CharPred(c => c != '\"').rep(1).! ~ "\""
 
   def variable[_ : P]: P[Variable] = identString.map(Variable(_))
-  def ident[_: P]: P[Ident] = identString
+  def ident[_: P]: P[Ident] = identString.map(Variable(_))
   def expression[_: P]: P[Expression] = literal.map(KeYmaeraXParser(_))
   def formula[_: P]: P[Formula] = expression.map(_.asInstanceOf[Formula])
   def program[_: P]: P[Program] = expression.map(_.asInstanceOf[Program])
@@ -51,10 +51,10 @@ object KaisarKeywordParser {
   def byProof[_: P]: P[ByProof] = ("proof" ~ ws ~ proof ~ ws ~ "end").map(ByProof)
 
   def method[_: P]: P[Method] = rcf | auto | prop | using | byProof
-  def modify[_: P]: P[Modify] = (ident ~ ws ~ ":=" ~ ws ~ term).map({case (x: String, f: Term) => Modify(VarPat(x), Left(f))})
-  def bassignAny[_: P]: P[Modify] = ((ident ~ ws ~ ":=" ~ ws ~ "*").map({case (x: String) => Modify(VarPat(x), Right(Unit))}))
-  def assert[_: P]: P[Assert] = ("assert" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~  method).map({case (ident, formula, method) => Assert(Variable(ident), formula, method)})
-  def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(Variable(ident), formula)})
+  def modify[_: P]: P[Modify] = (ident ~ ws ~ ":=" ~ ws ~ term).map({case (x: Ident, f: Term) => Modify(VarPat(x), Left(f))})
+  def bassignAny[_: P]: P[Modify] = ((ident ~ ws ~ ":=" ~ ws ~ "*").map({case (x: Ident) => Modify(VarPat(x), Right(Unit))}))
+  def assert[_: P]: P[Assert] = ("assert" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula ~ ws ~  method).map({case (ident, formula, method) => Assert(ident, formula, method)})
+  def assume[_: P]: P[Assume] = ("assume" ~ ws ~ ident ~ ws ~ ":" ~ ws ~ formula).map({case (ident, formula) => Assume(ident, formula)})
   def label[_: P]: P[Label] = (identString ~ ":").map(Label)
   def parseMatch[_: P]: P[Match] = ("match" ~ ws ~ expression ~ ws ~ "=" ~ ws ~ expression).map({case (e1, e2) => Match(e1, e2)})
   def letFun[_: P]: P[LetFun] = ("let" ~ ws ~ ident ~ "(" ~ ident.rep(sep=",") ~ ")" ~ ws ~ "=" ~ ws ~ expression).map({case (f, xs, e) => LetFun(f, xs.toList, e)})

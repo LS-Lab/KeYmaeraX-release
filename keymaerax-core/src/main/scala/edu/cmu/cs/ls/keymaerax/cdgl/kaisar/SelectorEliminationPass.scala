@@ -10,14 +10,7 @@ object SelectorEliminationPass {
     sel match {
       case ForwardSelector(pt) => List(pt)
       case PatternSelector(pat) =>
-        kc.toList.filter({case (_, fml) =>
-          try {
-            UnificationMatch(pat, fml)
-            true
-          } catch {
-            case _: ProverException => false
-          }
-        }).map({case (x, _) => ProofVar(x)})
+        Context.unify(kc, pat).map({case (x, _) => ProofVar(x)}).toList
     }
   }
 
@@ -42,9 +35,9 @@ object SelectorEliminationPass {
         val (_, notes: List[Note]) =
           pts.foldLeft[(Context, List[Note])]((kc, List[Note]()))({case ((kc, acc: List[Note]), pt) =>
             // TODO: Hack: context doesnt say what conclusion is
-            val (id, c: Context) = (kc.fresh, kc.ghost(True))
+            val (id, c: Context) = (Context.fresh(kc), Context.ghost(kc, True))
             (c, Note(id, pt) :: acc)})
-        val noteSels = notes.map({case Note(id, _) => ForwardSelector(ProofVar(id))})
+        val noteSels = notes.map({case Note(id, _, _) => ForwardSelector(ProofVar(id))})
         val finalMeth = Using(noteSels, meth)
         (notes, DomAssert(x, f, finalMeth))
       case _: DomWeak | _: DomAssume | _: DomModify => (List(), dc)
@@ -60,9 +53,9 @@ object SelectorEliminationPass {
             val (_, notes: List[Note]) =
               pts.foldLeft[(Context, List[Note])]((kc, List[Note]()))({case ((kc, acc: List[Note]), pt) =>
                 // TODO: Hack: context doesnt say what conclusion is
-                val (id, c: Context) = (kc.fresh, kc.ghost(True))
+                val (id, c: Context) = (Context.fresh(kc), Context.ghost(kc, True))
                 (c, Note(id, pt) :: acc)})
-            val noteSels = notes.map({case Note(id, _) => ForwardSelector(ProofVar(id))})
+            val noteSels = notes.map({case Note(id, _, _) => ForwardSelector(ProofVar(id))})
             val finalMeth = Using(noteSels, meth)
             Some(Block(notes.:+(Assert(e, f, finalMeth))))
           case ProveODE(ds, dc) =>
