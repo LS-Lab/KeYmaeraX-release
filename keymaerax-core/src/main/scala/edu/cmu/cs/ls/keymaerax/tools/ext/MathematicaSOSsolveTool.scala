@@ -5,6 +5,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.install.SOSsolveInstaller
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec
 import org.apache.logging.log4j.scala.Logging
 
 trait SOSsolveTool {
@@ -14,7 +16,7 @@ trait SOSsolveTool {
     * @param vars variables of polys
     * @return (1 + sos, cofactors) such that  (cofactors, polynomials).zipped.map(Times) = 1 + sos.
     */
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int) : (Term, List[Term])
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : (Term, List[Term])
 }
 
 /**
@@ -43,15 +45,26 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     case e => throw new IllegalArgumentException("Expected pair of sos and cofactors but got " + e)
   }
 
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int) : (Term, List[Term]) = {
+  /** FIXME: why is this.timeout a var? Provide a this.timeConstrained with a functional timeout argument!
+      "Thanks" to exceptions it is probably very hard to reliably reset the timeout to the previous value...
+    */
+  protected def timeConstrained(timeout: Option[Int], cmd: MExpr): MExpr = timeout match {
+    case Some(timeout) if timeout > 0 =>
+      MathematicaOpSpec.timeConstrained(cmd, MathematicaOpSpec.int(timeout))
+    case None => cmd
+    case _ => throw new IllegalArgumentException("Timeout must be positive")
+  }
+
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : (Term, List[Term]) = {
     val mPolys = list(polys.map(k2m):_*)
     val mVars = list(vars.map(k2m):_*)
     val mDegree = int(degree)
-    val command = quiet(compoundExpression(
-      setPathsCmd,
-      needs(string(SOSSOLVE_NAMESPACE), string(sossolveMain)),
-      applyFunc(ssymbol("FindWitness"))(mPolys, mVars, mDegree)
-    )
+    val command =
+      quiet(compoundExpression(
+        setPathsCmd,
+        needs(string(SOSSOLVE_NAMESPACE), string(sossolveMain)),
+        timeConstrained(timeout, applyFunc(ssymbol("FindWitness"))(mPolys, mVars, mDegree))
+      )
     )
 
     try {

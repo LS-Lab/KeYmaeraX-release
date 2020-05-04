@@ -193,7 +193,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = mPegasus.lzzCheck(ode, inv)
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = mPegasus.refuteODE(ode, assumptions, postCond)
   override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = mPegasus.genODECond(ode, assumptions, postCond)
-  override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int): (Term, List[Term]) = mSOSsolve.sosSolve(polynomials, variables, degree)
+  override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int, timeout: Option[Int]): (Term, List[Term]) = mSOSsolve.sosSolve(polynomials, variables, degree, timeout)
 
 
   /** Restarts the MathKernel with the current configuration */

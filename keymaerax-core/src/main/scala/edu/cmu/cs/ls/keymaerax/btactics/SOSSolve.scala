@@ -48,7 +48,7 @@ object SOSSolve {
   }
 
   lazy val witnessSOSLemma = AnonymousLemmas.remember("(sos_() > 0 & sos_() = comb_() & comb_() = 0) -> false".asFormula, QE & done)
-  private def witnessSOS(degree: Int) : DependentTactic = {
+  private def witnessSOS(degree: Int, timeout: Option[Int] = None) : DependentTactic = {
     val name = "witnessSOS"
     name by { (seq: Sequent) =>
       require(seq.succ.isEmpty, name + " requires succedent to be empty")
@@ -59,7 +59,7 @@ object SOSSolve {
       val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
       TaylorModelTactics.Timing.tic()
-      val (sos, cofactors) = sosSolveTool.sosSolve(polys, vars, degree)
+      val (sos, cofactors) = sosSolveTool.sosSolve(polys, vars, degree, timeout)
       TaylorModelTactics.Timing.toc("sosSolve")
       val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
       TaylorModelTactics.Timing.toc("sosPos")
@@ -76,9 +76,9 @@ object SOSSolve {
     }
   }
 
-  def sossolve(degree: Int) : BelleExpr = "ANON" by {
+  def sossolve(degree: Int, timeout: Option[Int] = None) : BelleExpr = "ANON" by {
     prop &
       PolynomialArith.prepareArith &
-      witnessSOS(degree)
+      witnessSOS(degree, timeout)
   }
 }
