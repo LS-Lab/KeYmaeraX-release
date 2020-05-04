@@ -1021,12 +1021,12 @@ private object DifferentialTactics extends Logging {
             odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
           )
         case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
-          odeInvariant(tryHard = true, useDw = false)(pos) & done
+          odeInvariant(tryHard = true, useDw = true)(pos) & done
         case (True, Some(PegasusProofHint(true, Some("DomImpPost")))) =>
           DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
         case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
           diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
-        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ???
+        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ??? //todo: throw an error
         case (inv, proofHint) =>
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
@@ -1736,6 +1736,9 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
+    val diffWeaken =
+      if(tryHard) DifferentialTactics.diffWeakenPlus(pos) else DifferentialTactics.diffWeakenG(pos)
+
     //Add constant assumptions to domain constraint
     SaturateTactic(andL('L)) & //Safe because pos is guaranteed to be in the succedent
     DifferentialTactics.DconstV(pos) &
@@ -1744,7 +1747,7 @@ private object DifferentialTactics extends Logging {
     DebuggingTactics.debug("odeInvariant close") &
     (
       if (useDw) {
-        (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+        ( diffWeaken & timeoutQE & done) |
           invTactic |
           DebuggingTactics.debug("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
       } else {
