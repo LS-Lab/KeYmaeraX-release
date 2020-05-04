@@ -16,7 +16,7 @@ trait SOSsolveTool {
     * @param vars variables of polys
     * @return (1 + sos, cofactors) such that  (cofactors, polynomials).zipped.map(Times) = 1 + sos.
     */
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : (Term, List[Term])
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Option[(Term, List[Term])]
 }
 
 /**
@@ -55,7 +55,7 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     case _ => throw new IllegalArgumentException("Timeout must be positive")
   }
 
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : (Term, List[Term]) = {
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Option[(Term, List[Term])] = {
     val mPolys = list(polys.map(k2m):_*)
     val mVars = list(vars.map(k2m):_*)
     val mDegree = int(degree)
@@ -70,11 +70,11 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     try {
       val (output, result) = run(command)
       logger.debug("Found witness: " + result.prettyString + " from raw output " + output)
-      decodeWitness(result)
+      Some(decodeWitness(result))
     } catch {
       case ex: Throwable =>
         logger.warn("SOSsolve exception", ex)
-        ???
+        None
     }
   }
 }
