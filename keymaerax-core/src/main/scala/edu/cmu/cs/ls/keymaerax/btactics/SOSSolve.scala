@@ -77,8 +77,7 @@ object SOSSolve {
   }
 
   def sossolve(degree: Int, timeout: Option[Int] = None) : BelleExpr = "ANON" by {
-    prop &
-      PolynomialArith.prepareArith &
-      witnessSOS(degree, timeout)
+    PolynomialArith.prepareArith &
+    witnessSOS(degree, timeout)
   }
 }
