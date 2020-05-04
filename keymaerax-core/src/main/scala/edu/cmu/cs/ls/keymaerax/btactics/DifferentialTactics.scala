@@ -38,7 +38,7 @@ private object DifferentialTactics extends Logging {
   private[btactics] def timeoutQE = QE(Nil, None, Some(ODE_QE_TIMEOUT))
   // QE with default timeout for use in counterexample tactics (timeout in seconds)
   private[btactics] val ODE_CEX_TIMEOUT =
-      Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+      Try(Integer.parseInt(Configuration(Configuration.Keys.Pegasus.INVCHECK_TIMEOUT))).getOrElse(-1)
   private[btactics] def timeoutCEXQE = QE(Nil, None, Some(ODE_CEX_TIMEOUT))
 
   /** @see [[HilbertCalculus.DE]] */
@@ -546,9 +546,36 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dG]] */
   def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = "dG" byWithInputs (
       r match { case Some(rr) => ghost :: rr :: Nil case None => ghost :: Nil },
-      (pos: Position, sequent: Sequent) => r match {
-        case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) => DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
-        case _ => DG(ghost)(pos) //@note no r or r==p
+      (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+        case Some(Box(ODESystem(_, h), _)) =>
+          val (_, a: Term, b: Term) = try {
+            DifferentialHelper.parseGhost(ghost)
+          } catch {
+            case ex: CoreException =>
+              val wrongShapeStart = ex.getMessage.indexOf("b(|y_|)~>")
+              throw new BelleFriendlyUserMessage(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
+                " is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b.")
+          }
+          val singular = {
+            val evDomFmls = flattenConjunctions(h)
+            (FormulaTools.singularities(a) ++ FormulaTools.singularities(b)).filter(v =>
+              !evDomFmls.contains(Less(v, Number(0)))     &&
+              !evDomFmls.contains(Less(Number(0), v))     &&
+              !evDomFmls.contains(Greater(v, Number(0)))  &&
+              !evDomFmls.contains(Greater(Number(0), v))  &&
+              !evDomFmls.contains(NotEqual(v, Number(0))) &&
+              !evDomFmls.contains(Greater(Number(0), v))
+            )
+          }
+          val cutSingularities = if (singular.nonEmpty) {
+            singular.map(t => ?(dC(NotEqual(t, Number(0)))(pos) <(skip, ODE(pos) & done))).reduce(_ & _)
+          } else skip
+          val doGhost = r match {
+            case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) =>
+              DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
+            case _ => DG(ghost)(pos) //@note no r or r==p
+          }
+          cutSingularities & doGhost
       })
 
   /**
@@ -986,6 +1013,20 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates,
       (prod: GenProduct) => prod match {
+        case (True, Some(PegasusProofHint(true, Some("PreInv")))) =>
+          val preInv = (if (pos.isAnte) seq.updated(pos.top, True) else seq.updated(pos.top, False)).toFormula
+          val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
+          diffCut(preInv)(pos) <(
+            skip,
+            odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
+          )
+        case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
+          odeInvariant(tryHard = true, useDw = false)(pos) & done
+        case (True, Some(PegasusProofHint(true, Some("DomImpPost")))) =>
+          DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
+        case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
+          diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
+        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ???
         case (inv, proofHint) =>
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
@@ -1035,9 +1076,6 @@ private object DifferentialTactics extends Logging {
   lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
-    if (TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
-      throw new BelleThrowable("The strongest ODE invariant has already been added to the domain constraint.\nTry dW or solve the ODE to make progress in your proof.")
-
     def odeWithInvgen(sys: ODESystem, generator: Generator[GenProduct],
                       onGeneratorError: Throwable => Stream[GenProduct]): DependentPositionTactic = fastODE(
       try {
@@ -1060,7 +1098,9 @@ private object DifferentialTactics extends Logging {
         })) (pos ++ PosInExpr(0 :: Nil))
     )
 
-    seq.sub(pos) match {
+    if (StaticSemantics.symbols(seq).contains(ODEInvariance.nilpotentSolveTimeVar)) {
+      diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
+    } else seq.sub(pos) match {
       case Some(Box(sys: ODESystem, _)) =>
         // Try to prove postcondition invariant
         odeInvariant()(pos) & done |
@@ -1068,10 +1108,8 @@ private object DifferentialTactics extends Logging {
         cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
           // Some additional cases
           //(solve(pos) & ?(timeoutQE)) |
-          ODEInvariance.nilpotentSolve(true)(pos) |
+          doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
           ODEInvariance.dRI(pos) |
-          // todo: Pegasus should tell us for nonlinear ODEs
-          // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
           invCheck(
             //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
             //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +

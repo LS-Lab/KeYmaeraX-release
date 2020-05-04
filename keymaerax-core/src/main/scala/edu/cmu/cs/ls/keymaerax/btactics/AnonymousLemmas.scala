@@ -23,7 +23,7 @@ object AnonymousLemmas {
   private val lemmaDB = LemmaDBFactory.lemmaDB
 
   /** A tactic `t` that caches its result in the lemma cache. */
-  def cacheTacticResult(t: BelleExpr, namespace: String): BuiltInTactic = new BuiltInTactic("CacheTacticResult") {
+  def cacheTacticResult(t: => BelleExpr, namespace: String): BuiltInTactic = new BuiltInTactic("CacheTacticResult") {
     override def result(provable: ProvableSig): ProvableSig = {
       val subderivations = provable.subgoals.map(remember(_, t, namespace).fact).zipWithIndex
       subderivations.foldRight(provable)({ case ((sub, i), p) => p(sub, i) })

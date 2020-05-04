@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, True}
+import edu.cmu.cs.ls.keymaerax.core.{Neg, Plus, Sequent, True}
 import org.scalatest.LoneElement._
 import testHelper.KeYmaeraXTestTags.SlowTest
 
@@ -249,6 +249,20 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     IntervalArithmeticV2Tests.timing("intervalArithmetic")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     IntervalArithmeticV2Tests.timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     IntervalArithmeticV2Tests.timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
+  }
+
+  "proveBinop" should "prove binary operations" in withMathematica { qeTool =>
+    val (res, _, _) =
+      IntervalArithmeticV2.proveBinop(qeTool)(10)(IndexedSeq())(Plus)("0.1".asTerm, "0.3".asTerm)("0.4".asTerm, "0.8".asTerm)
+    res shouldBe 'proved
+    res.conclusion.succ.loneElement shouldBe "\\forall i1_ \\forall i2_ (0.1<=i1_&i1_<=0.3&0.4<=i2_&i2_<=0.8->5*10^-1<=i1_+i2_&i1_+i2_<=11*10^-1)".asFormula
+  }
+
+  "proveUnop" should "prove unary operations" in withMathematica { qeTool =>
+    val (res, _, _) =
+      IntervalArithmeticV2.proveUnop(qeTool)(10)(IndexedSeq())(Neg)("0.1".asTerm, "0.3".asTerm)
+    res shouldBe 'proved
+    res.conclusion.succ.loneElement shouldBe "\\forall i1_ (0.1<=i1_&i1_<=0.3->-3*10^-1<=-i1_&-i1_<=-1*10^-1)".asFormula
   }
 
 }

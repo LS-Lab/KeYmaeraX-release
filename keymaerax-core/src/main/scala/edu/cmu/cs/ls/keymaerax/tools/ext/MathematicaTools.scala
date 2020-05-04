@@ -5,17 +5,20 @@
 
 package edu.cmu.cs.ls.keymaerax.tools.ext
 
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, FormulaTools, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.{KExpr, _}
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
-import edu.cmu.cs.ls.keymaerax.tools.qe.{K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.qe.{BinaryMathOpSpec, K2MConverter, KeYmaeraToMathematica, M2KConverter, MathematicaNameConversion, MathematicaOpSpec, MathematicaToKeYmaera, NaryMathOpSpec, UnaryMathOpSpec}
+import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
+import scala.math.BigDecimal
 
 object UncheckedBaseConverter {
   val CONST_FN_SUFFIX = "cnstfn_"
@@ -149,43 +152,322 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
   override def apply(e: MExpr): Either[KExpr,NamedSymbol] = convert(e)
 }
 
-object PegasusM2KConverter extends UncheckedBaseM2KConverter {
+object PlotConverter extends UncheckedBaseK2MConverter {
+  override def apply(e: KExpr): MExpr = e match {
+    case Imply(pre, Box(ODESystem(ode, domain), post)) =>
+      val primedVars = DifferentialHelper.getPrimedVariables(ode)
+      val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => apply(o.e)):_*)
+
+      val show = NaryMathOpSpec(symbol("Show"))
+      val regionPlot = NaryMathOpSpec(symbol("RegionPlot"))
+      val streamPlot = NaryMathOpSpec(symbol("StreamPlot"))
+      val regions = primedVars.map(v => list(apply(v), int(-5), int(5)))
+
+      val plotPoints = rule(symbol("PlotPoints"), int(100))
+      val postPlotStyle = rule(symbol("PlotStyle"), list(symbol("Red"), UnaryMathOpSpec(symbol("Opacity"))(double(0.5))))
+      val prePlotStyle = rule(symbol("PlotStyle"), list(symbol("Green"), UnaryMathOpSpec(symbol("Opacity"))(double(0.5))))
+      val domainPlotStyle = rule(symbol("PlotStyle"), list(symbol("Blue"), UnaryMathOpSpec(symbol("Opacity"))(double(0.5))))
+
+      val prePlot = regionPlot((list(apply(pre)) +: (regions :+ prePlotStyle :+ plotPoints)): _*)
+      val vfPlot = streamPlot((vectorField +: regions): _*)
+      val domainPlot = regionPlot((list(apply(domain)) +: (regions :+ domainPlotStyle :+ plotPoints)): _*)
+      val postPlot = regionPlot((list(apply(Not(post))) +: (regions :+ postPlotStyle :+ plotPoints)): _*)
+
+      if (domain != True) show(prePlot, vfPlot, domainPlot, postPlot)
+      else show(prePlot, vfPlot, postPlot)
+    case _ => super.apply(e)
+  }
+}
+
+object IdentityConverter extends M2KConverter[MExpr] {
+  /** @inheritdoc */
+  override def k2m: K2MConverter[MExpr] = null
+
+  /** @inheritdoc */
+  override private[tools] def convert(e: MExpr): MExpr = e
+}
+
+object PegasusM2KConverter extends UncheckedBaseM2KConverter with Logging {
+  private def diffSatResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+    override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 3 &&
+      MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
+      e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("DiffSat")
+  }
+
+  private def trivialResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+    override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 &&
+      MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
+      e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("Trivial")
+  }
+
+  private def errorResult: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+    override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 &&
+      MathematicaOpSpec.rule.applies(e.args()(0)) && MathematicaOpSpec.rule.applies(e.args()(1)) &&
+      e.args()(0).args()(0) == symbol("ResultType") && e.args()(0).args()(1) == symbol("Error")
+  }
+
   override def k2m: K2MConverter[KExpr] = null
   override def apply(e: MExpr): KExpr = convert(e)
 
   override def convert(e: MExpr): KExpr = {
     if (MathematicaOpSpec.ltrue.applies(e))   True
     else if (MathematicaOpSpec.lfalse.applies(e))  False
-    else if (e.listQ()) convertFormulaTermList(e)
+    else if (diffSatResult.applies(e)) convertDiffSatResult(e)
+    else if (trivialResult.applies(e)) convertTrivialResult(e)
+    else if (errorResult.applies(e)) convertErrorResult(e)
+    else if (list.applies(e)) convertFormulaTermList(e)
     else super.convert(e)
   }
 
   private val LIST_LENGTH = FuncOf(Function("length", None, Real, Real), Variable("list"))
 
-  /** Decodes the formula generated by convertFormulaTermList back into a list of formulas with proof hints and invariant/candidate indicator. */
-  def decodeFormulaList(listFml: Expression): (immutable.Seq[(Formula, String)], Formula) = {
+  /**
+    * Encodes a differential saturation strategy result in a formula. The differential saturation strategy returns
+    * results of the following shape.
+    * {{{
+    *   { ResultType -> DiffSat,
+    *     Result -> {
+    *       Invariant -> <formula>,
+    *       Cuts      -> {
+    *         { <formula>, Hint -> <variable> },
+    *         ...
+    *       },
+    *       Proved -> <bool>
+    *     },
+    *     Meta -> {
+    *       Timing -> { What -> Duration, ... }
+    *     }
+    *   }
+    * }}}
+    * We encode them in a single conjunction of the shape
+    * {{{
+    *   ResultType=DiffSat &
+    *   ( Result <-> length(list)=3 &
+    *                ( (Invariant <-> <formula>) &         // Result(0)
+    *                  (Cuts <-> length(list)=<numCuts> &  // Result(1)
+    *                            ( (<formula> & Hint=<variable>) &
+    *                              ...
+    *                            )
+    *                  ) &
+    *                  Proved <-> <bool>                   // Result(2)
+    *                ) // end Result list
+    *   ) // end Result
+    * }}}
+    * @param e The differential saturation strategy result.
+    * @return The result encoded in a formula.
+    */
+  private def convertDiffSatResult(e: MExpr): Expression = {
+    require(diffSatResult.applies(e), "Expected applicable Mathematica expression")
 
-    def decodeProofHint(f: Formula): (Formula, String) = f match {
-      case And(Equal(lhs, Number(lsLength)), And(l, Equal(v: BaseVariable,proofhint: BaseVariable))) if lhs == LIST_LENGTH && lsLength == 2 && v.name=="ProofHint"=>
-        (l, proofhint.name)
-      case _ => throw new IllegalArgumentException("Unable to decode proof hint: " + f)
+    def resultType: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean =
+        super.applies(e) && e.args()(0) == symbol("ResultType") && e.args()(1) == symbol("DiffSat")
+    }
+    def invariant: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Invariant")
+    }
+    def cuts: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Cuts") && list.applies(e.args()(1))
+    }
+    def hint: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Hint")
+    }
+    def cut: NaryMathOpSpec = new NaryMathOpSpec(com.wolfram.jlink.Expr.SYM_LIST) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args.length == 2 && hint.applies(e.args()(1))
+    }
+    def proved: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Proved")
+    }
+    def result: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Result") &&
+      e.args()(1).listQ && e.args()(1).args.length == 3 &&
+      invariant.applies(e.args()(1).args()(0)) && cuts.applies(e.args()(1).args()(1)) && proved.applies(e.args()(1).args()(2))
     }
 
-    listFml match {
-      case And(Equal(tupleLhs, Number(tupleLength)), invList) if tupleLhs == LIST_LENGTH =>
-        //@note Pegasus returns lists of length 2:
-        // - first entry is list of length 2 [Formula, dc chain], where dc chain is again a list
-        // - second indicates invariant (true) vs. candidate (false)
-        assert(tupleLength == 2, "Expected a list with two entries (invariant list and invariant/candidate indicator), but got " + tupleLength)
-        invList match {
-          case And(And(Equal(lhs, Number(invListLength)), And(_, And(Equal(dcChainLhs, Number(dcChainLength)), dcChainFml))), q) if lhs == LIST_LENGTH && dcChainLhs == LIST_LENGTH =>
-            assert(invListLength == 2, "Expected a list with two entries (invariant formula and DC chain), but got " + invListLength)
-            (FormulaTools.leftConjuncts(dcChainFml, dcChainLength.toInt).map(f => decodeProofHint(f)), q)
-          case _ => throw new IllegalArgumentException("Expected a conjunction of invariant list (length and (Formula,List[Formula])) and an invariant/candidate indicator, but got " + invList.prettyString)
+    /** Converts {{{ResultType->DiffSat}}} into {{{ResultType=DiffSat}}}. */
+    def convertResultType(e: MExpr): Formula = {
+      require(resultType.applies(e), "Expected a rule 'ResultType -> DiffSat', but got " + e)
+      Equal(Variable("ResultType"), Variable("DiffSat"))
+    }
+    /** Converts a result of the shape
+      * {{{Result -> { Invariant -> <...>, Cuts -> <...>, Proved -> <...> } }}}
+      * into
+      * {{{Result <-> length(list)=3 & (Invariant <-> <...>) & (Cuts <-> <...>) & (Proved <-> <...>) }}}.
+      * */
+    def convertResult(e: MExpr): Formula = {
+      def pred(s: String) = PredOf(Function(s, None, Unit, Bool), Nothing)
+
+      /** Converts {{{Invariant -> <formula>}}} to {{{Invariant <-> <formula>}}}. */
+      def convertInvariant(e: MExpr): Formula = {
+        require(invariant.applies(e), "Expected a rule Invariant -> <formula>, but got " + e)
+        convert(e.args()(1)) match {
+          case f: Formula => Equiv(pred("Invariant"), f)
+          case r => throw ConversionException("Unexpected content " + r + " in Invariant -> <formula>")
         }
-      case fml: Formula => ((fml, "Unknown") :: Nil, True)
-      case _ => throw ConversionException("Expected a formula from Pegasus call but got a non-formula expression: " +
-        listFml.prettyString)
+      }
+
+      /** Converts a hint {{{Hint-><variable>}}} into {{{Hint=<variable>}}}. */
+      def convertHint(e: MExpr): Formula = {
+        require(hint.applies(e), "Expected a hint of the form Hint-><hint>, but got " + e)
+        convert(e.args()(1)) match {
+          case v: BaseVariable => Equal(Variable("Hint"), v)
+          case r => throw ConversionException("Unexpected content " + r + " in Hint -> <variable>")
+        }
+      }
+
+      /** Converts a cut {{{ { <formula>, Hint-><variable> }}} into {{{ formula & Hint=<variable> }}} */
+      def convertCut(e: MExpr): Formula = {
+        require(cut.applies(e), "Expected a list of two elements { <formula>, Hint-><variable> }, but got " + e)
+        convert(e.args()(0)) match {
+          case f: Formula => And(f, convertHint(e.args()(1)))
+          case r => throw ConversionException("Expected a formula but got " + r)
+        }
+      }
+
+      /** Converts
+        * {{{Cuts -> { { <formula>, Hint-><variable> }, ... } }}}
+        * into
+        * {{{Cuts <-> length(list)=n & (<formula> & Hint=<variable>) ... }}}.
+        * */
+      def convertCuts(e: MExpr): Formula = {
+        require(cuts.applies(e), "Expected a rule Cuts -> { {<formula>, Hint-><...>}, ... }, but got " + e)
+        Equiv(pred("Cuts"),
+          if (e.args()(1).args.length > 0) And(Equal(LIST_LENGTH, Number(e.args()(1).args.length)), e.args()(1).args.map(convertCut).reduceLeft(And))
+          else Equal(LIST_LENGTH, Number(e.args()(1).args.length))
+        )
+      }
+
+      /** Converts {{{Proved-><bool>}}} to {{{Proved <-> <bool>}}}. */
+      def convertProved(e: MExpr): Formula = {
+        require(proved.applies(e), "Expected a rule Proved-><bool>")
+        convert(e.args()(1)) match {
+          case r@(True | False) => Equiv(pred("Proved"), r.asInstanceOf[Formula])
+          case r => throw ConversionException("Unexpected content " + r + " in Proved-><bool>")
+        }
+      }
+
+      require(result.applies(e), "Expected a result list of 3 rules: { Invariant -> <...>, Cuts -> <...>, Proved -> <...>")
+      Equiv(pred("Result"), And(Equal(LIST_LENGTH, Number(3)),
+        And(convertInvariant(e.args()(1).args()(0)),
+          And(convertCuts(e.args()(1).args()(1)), convertProved(e.args()(1).args()(2)))
+        )
+      ))
+    }
+    logger.debug("Pegasus raw result: " + e)
+    And(convertResultType(e.args()(0)), convertResult(e.args()(1)))
+  }
+
+  /**
+    * Encodes a trivial result in a formula.
+    * {{{
+    *   { ResultType -> Trivial,
+    *     Result -> Reason
+    * }}}
+    * We encode them in a single conjunction of the shape
+    * {{{
+    *   ResultType=Trivial & Result=Reason
+    * }}}
+    * @param e The trivial result.
+    * @return The result encoded in a formula.
+    */
+  private def convertTrivialResult(e: MExpr): Expression = {
+    assert(trivialResult.applies(e), "Expected applicable Mathematica expression")
+
+    def resultType: BinaryMathOpSpec = new BinaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean =
+        super.applies(e) && e.args()(0) == symbol("ResultType") && e.args()(1) == symbol("Trivial")
+    }
+
+    def result: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+      override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Result") && e.args()(1).symbolQ
+    }
+
+    /** Converts {{{ResultType->Trivial}}} into {{{ResultType=Trivial}}}. */
+    def convertResultType(e: MExpr): Formula = {
+      require(resultType.applies(e), "Expected a rule 'ResultType -> Trivial', but got " + e)
+      Equal(Variable("ResultType"), Variable("Trivial"))
+    }
+
+    /** Converts Result->{ ... } */
+    def convertResult(e: MExpr): Formula = {
+      require(result.applies(e), "Expected Result-><...>")
+      Equal(Variable("Result"), Variable(e.args()(1).asString))
+    }
+
+    And(convertResultType(e.args()(0)), convertResult(e.args()(1)))
+  }
+
+  /**
+    * Converts an error result into an exception.
+    * {{{
+    *   { ResultType -> Error,
+    *     Result -> {
+    *       ErrorString -> <string>,
+    *       InternalError -> <string>
+    *     }
+    *   }
+    * }}}
+    * We throw an exception.
+    * @param e The error result.
+    * @return Never returns, throws an exception.
+    * @throws ToolExternalException always (unless inapplicable conversion)
+    */
+  private def convertErrorResult(e: MExpr): Expression = {
+    require(errorResult.applies(e), "Expected applicable Mathematica expression")
+
+    /** Converts Result->{ ... } */
+    def convertResult(e: MExpr): Expression = {
+      def errorString: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+        override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("ErrorString")
+      }
+      def internalError: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+        override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("InternalError")
+      }
+      def result: NaryMathOpSpec = new NaryMathOpSpec(symbol("Rule")) {
+        override def applies(e: MExpr): Boolean = super.applies(e) && e.args()(0) == symbol("Result") &&
+          e.args()(1).listQ && e.args()(1).args.length == 2 &&
+          errorString.applies(e.args()(1).args()(0)) && internalError.applies(e.args()(1).args()(1))
+      }
+
+      require(result.applies(e), "Expected a result list of 2 rules: { ErrorString -> <...>, InternalError -> <...>")
+      val errorMessage = e.args()(1).args()(0)
+      throw new ToolExternalException(errorMessage.args()(1).asString(), null) {}
+    }
+
+    convertResult(e.args()(1))
+  }
+
+  /** Extracts the list of (invariant,hint) and a proved/candidate indicator from the Pegasus result formula
+    * @see [[convertDiffSatResult]], [[convertTrivialResult]]
+    */
+  def extractResult(result: Expression): (immutable.Seq[(Formula, String)], Formula) = {
+    def extractCuts(cuts: Formula): immutable.Seq[(Formula, String)] = cuts match {
+      case And(Equal(LIST_LENGTH, Number(numCuts)), cutFmls) =>
+        FormulaTools.leftConjuncts(cutFmls, numCuts.toIntExact).map({
+          case And(cutFml, Equal(BaseVariable("Hint", None, _), BaseVariable(hint, None, _))) => (cutFml, hint)
+          case r => throw ConversionException("Expected formula & Hint=<hint>, but got " + r.prettyString)
+        })
+      case Equal(LIST_LENGTH, Number(numCuts)) if numCuts == 0 => immutable.Seq.empty
+      case _ => throw ConversionException("Expected length(list)=n & ..., but got " + cuts.prettyString)
+    }
+
+    result match {
+      case And(Equal(BaseVariable("ResultType", None, Real), BaseVariable("DiffSat", None, Real)), result) => result match {
+        case Equiv(PredOf(Function("Result", None, _, _, _), Nothing), And(Equal(LIST_LENGTH, Number(n)), resultElements)) if n.toIntExact == 3 => resultElements match {
+          case And(Equiv(PredOf(Function("Invariant", None, _, _, _), Nothing), invariant),
+               And(Equiv(PredOf(Function("Cuts", None, _, _, _), Nothing), cuts),
+                   Equiv(PredOf(Function("Proved", None, _, _, _), Nothing), proved))) =>
+            val extractedCuts = extractCuts(cuts)
+            if (extractedCuts.length > 1) (extractCuts(cuts) :+ (invariant, "Unknown"), proved)
+            else (extractCuts(cuts), proved) //@note invariant is identical to the single/non-existent cut
+          case _ => throw ConversionException("Expected (Invariant <-> ...) & (Cuts <-> ...) & (Proved <-> ...), but got " + resultElements.prettyString)
+        }
+        case _ => throw ConversionException("Expected Result <-> length(list)=3 & ..., but got " + result.prettyString)
+      }
+      case And(Equal(BaseVariable("ResultType", None, Real), BaseVariable("Trivial", None, Real)), result) => result match {
+        case Equal(BaseVariable("Result", None, Real), BaseVariable(reason, _, _)) => ((True, reason) :: Nil, True)
+      }
+      case _ => throw ConversionException("Expected ResultType=[DiffSat|Trivial] & ..., but got " + result.prettyString)
     }
   }
 

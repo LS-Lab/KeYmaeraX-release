@@ -3,14 +3,11 @@
 Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* Load primitives package *)
 
 
-(* ::Input:: *)
-(*(* Polynomial generation for qualitative analysis *)*)
-
-
 BeginPackage["Dependency`"];
 
 
 FilterVars::usage="FilterVar[problem,fvars] filters problem to keep only pre/post/ODEs about fvars";
+VariableDependenciesHelper::usage="VariableDependencies[vf,vars] finds the dependency clusters in vf,vars";
 VariableDependencies::usage="VariableDependencies[problem] finds the dependency clusters in a problem";
 
 
@@ -31,10 +28,16 @@ FilterTrue[formula_] :=  Module[{},formula/.{
 	{}        :>  True
 }];
 
+FilterFalse[formula_] :=  Module[{},formula/.{
+	{}   :> False,
+	(* filter literal True to False; avoids that DW check succeeds from empty domain constraints (True->True) and discards invariant candidates. *)
+	True :> False
+}];
+
 
 FilterDrop[formula_]:=Module[{},formula/.{
-  HoldPattern[And[a__]] :>And@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&]),
-  HoldPattern[Or[a__]] :>Or@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&])
+  HoldPattern[And[a__]] :> And@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&]),
+  HoldPattern[Or[a__]]  :> Or@@(Select[Map[FilterDrop,a//List],Not[ListQ[#]]&])
  }];
 
 
@@ -49,7 +52,7 @@ If[Not[IntersectingQ[fvars,vars]],
 	Return[problem]];
 prefil = FilterAtom[pre//Primitives`DNFNormalizeGtGeq,fvars]//FilterTrue;
 Qfil = FilterAtom[Q//Primitives`DNFNormalizeGtGeq,fvars]//FilterTrue;
-postfil = (FilterAtom[post//Primitives`DNFNormalizeGtGeq,fvars]//FilterDrop)/.{ {} :> False };
+postfil = (FilterAtom[post//Primitives`DNFNormalizeGtGeq,fvars]//FilterDrop)//FilterFalse;
 {ffil,varsfil}=Transpose[Select[Transpose[{f,vars}],MemberQ[fvars,#[[2]]]&]];
 
 Return[{prefil,{ffil,varsfil,Qfil},postfil}];
@@ -82,6 +85,7 @@ returnList = DeleteDuplicates[returnList];
 returnList = SortBy[returnList, Length];
 Return[returnList];
 ];
+
 VariableDependencies[problem_List]:=Module[
 {pre,f,vars,Q,post, varsList},
 {pre,{f,vars,Q},post}=problem;

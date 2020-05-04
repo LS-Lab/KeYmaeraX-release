@@ -147,8 +147,8 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     withTemporaryConfig(Map(
         Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true",
         Configuration.Keys.ODE_TIMEOUT_FINALQE -> "120",
-        Configuration.Keys.PEGASUS_INVGEN_TIMEOUT -> "120",
-        Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT ->"60",
+        Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
+        Configuration.Keys.Pegasus.INVCHECK_TIMEOUT ->"60",
         Configuration.Keys.LOG_QE_DURATION -> "true")) {
       tool.setOperationTimeout(120)
       testcode

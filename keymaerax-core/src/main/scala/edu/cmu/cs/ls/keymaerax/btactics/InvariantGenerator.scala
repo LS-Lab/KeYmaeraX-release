@@ -155,8 +155,9 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   lazy val differentialInvariantCandidates: Generator[GenProduct] = cached((sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting/filtering etc.
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
-      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent, pos)).distinct)
+    //@note do not relevance filter Pegasus candidates: they contain trivial results, that however make ODE try harder
+    // since flagged as truly invariant and not just a guess like the simple candidates
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct)
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -181,37 +182,26 @@ object InvariantGenerator extends Logging {
   lazy val pegasusCandidates: Generator[GenProduct] = pegasus(includeCandidates=true)
   def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
-      def strictInequality(fml: Formula): Boolean = {
-        FormulaTools.atomicFormulas(fml).exists({
-          case _: Less => true
-          case _: Greater => true
-          case _: NotEqual => true
-          case _ => false
-        })
-      }
-
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
-          def pegasusInvs =
-            tool.invgen(ode, sequent.ante :+ Not(sequent.succ.patch(pos.index0, Nil, 1).reduceRightOption(Or).getOrElse(False)), post)
-          def conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
-            case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
-            case Right(r) => r.length > 1 && r.map(_._1).exists(strictInequality)
-          }).map({
-            case Left(l) => Right((l.map(_._1).reduce(And), "Unknown") :: Nil)
-            case Right(r) => Right((r.map(_._1).reduce(And), "Unknown") :: Nil)
-          })
-          def invs: Stream[GenProduct] =
+          lazy val pegasusInvs: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = {
+            val succFmls = sequent.succ.patch(pos.index0, Nil, 1).filter(_.isFOL)
+            val assumptions =
+              if (succFmls.isEmpty) sequent.ante
+              else sequent.ante :+ Not(succFmls.reduceRight(Or))
+            tool.invgen(ode, assumptions, post)
+          }
+          lazy val invs: Seq[GenProduct] =
             if (includeCandidates) {
-              (pegasusInvs ++ conjunctiveCandidates).toStream.flatMap({
+              pegasusInvs.flatMap({
                 case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
                 case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
               })
             } else {
-              pegasusInvs.toStream.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
-          invs
+          invs.toStream.distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct

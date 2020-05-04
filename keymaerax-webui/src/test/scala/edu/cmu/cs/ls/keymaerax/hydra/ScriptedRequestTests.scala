@@ -371,7 +371,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
   "Shipped tutorial import" should "import all tutorials correctly" in withDatabase { importExamplesIntoDB }
 
-  it should "execute all imported tutorial tactics correctly" in withMathematica { _ => withDatabase { db =>
+  it should "execute all imported tutorial tactics correctly" in withMathematica { tool => withDatabase { db =>
     val userName = "maxLevelUser"
     // import all tutorials, creates user too
     importExamplesIntoDB(db)
@@ -380,10 +380,10 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelInfos = models.asInstanceOf[JsArray].elements.
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
-    modelInfos should have size 84  // change when ListExamplesRequest is updated
+    modelInfos should have size 85  // change when ListExamplesRequest is updated
     val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>
-      whenever(!Thread.currentThread().isInterrupted) {
+      whenever(tool.isInitialized) {
         println("Importing and opening " + name + "...")
         val r1 = new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponses(t).loneElement
         r1 shouldBe a[CreatedIdResponse]

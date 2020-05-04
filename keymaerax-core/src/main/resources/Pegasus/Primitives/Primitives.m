@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
 (* Description: Basic functionality used by other packages.
-   Comments: Tested in Mathematica 10.0   *)
+   Comments: Tested in Mathematica 12.0   *)
 
 
 BeginPackage["Primitives`"];
@@ -22,12 +22,73 @@ NearestRatCoeffs::usage="NearestRatCoeffs[number, precision]"
 
 DNFNormalizeGtGeq::usage="DNFNormalizeGtGeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of >0 and >=0"
 DNFNormalizeLtLeq::usage="DNFNormalizeLtLeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of <0 and <=0"
+CNFNormalizeGtGeq::usage="DNFNormalizeGtGeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of >0 and >=0"
+CNFNormalizeLtLeq::usage="DNFNormalizeLtLeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of <0 and <=0"
 
 WeakenInequalities::usage="WeakenInequalities[fml] turns all strict inequalities to their weakened versions"
 DrawPlanarProb::usage="DrawPlanarProb[prob,inv,w] draws a planar problem and invariant inv"
 
+FuncIndep::usage="FuncIndep[polynomials_List, vars_List] Returns a list of functionally independent polynomials from a given list."
+
+ConjugatePolynomial::usage="ConjugatePolynomial[poly] Returns the conjugate of a complex polynomial"
+IsRealPolynomial::usage="IsRealPolynomial[poly] Returns true if poly is in R[x] and false if poly is not a real polynomial"
+IsRatPolynomial::usage="IsRatPolynomial[poly] Returns true if poly is in R[x] with rational coefficients"
+IsConcretePolynomial::usage="IsConcretePolynomial[poly, vars] returns true if the variables of poly are a subset of vars and false otherwise";
+
+Conjuncts::usage="Conjuncts[formula] returns the conjuncts of the formula, or the formula itself if it is atomic."
+Disjuncts::usage="Disjuncts[formula] returns the disjuncts of the formula, or the formula itself if it is atomic."
+EqGtGeqLhs::usage="EqGtGeqLhs[formula] returns the left-hand side lhs of formulas lhs=0 or lhs>0 or lhs>=0."
+
+CheckSemiAlgInclusion::usage="CheckSemiAlgInclusion[s_,t_,vars_List] checks if t implies s universally on vars"
+
+InstantiateParameters::usage="InstantiateParameters[poly,vars,val] instantiates any symbolic parameter in a polynomial (not in vars) to val"
+
+RationalQ::usage="RationalQ analogous to IntegerQ"
+
 
 Begin["`Private`"]
+
+
+RationalQ[x_]:=(Head[x]===Rational||IntegerQ[x]);
+
+
+ConjugatePolynomial[poly_]:=Module[{vars=Variables[poly]},
+FromCoefficientRules[CoefficientRules[poly,vars]/.{Rule[a_,b_]:>Rule[a,Conjugate[b]]},vars]
+]
+
+
+IsRealPolynomial[poly_]:=Module[{vars=Variables[poly]},
+AllTrue[Flatten[CoefficientList[poly,vars]], PossibleZeroQ[Im[#]]&]
+]
+
+
+IsRatPolynomial[poly_]:=Module[{vars=Variables[poly]},
+AllTrue[Flatten[CoefficientList[poly,vars]], RationalQ[#]&]
+]
+
+
+IsConcretePolynomial[poly_,vars_List]:=Module[{pvars=Variables[poly]},
+  SubsetQ[vars,pvars]
+]
+
+Conjuncts[formula_] := Module[{}, formula /. {
+  And[a_, b_] :>
+      Join[{Conjuncts[a]} // Flatten, {Conjuncts[b]} // Flatten]
+}]
+
+Disjuncts[formula_] := Module[{}, formula /. {
+  Or[a_, b_] :>
+      Join[{Disjuncts[a]} // Flatten, {Disjuncts[b]} // Flatten]
+}]
+
+EqGtGeqLhs[formula_] := Module[{}, (formula//ZeroRHS) /. {
+  Equal[a_, 0] :> a,
+  Greater[a_, 0] :> a,
+  GreaterEqual[a_, 0] :> a
+}]
+
+(* Instantiating symbolic parameters in polynomials *)
+InstantiateParameters[poly_,vars_List,val_]:=poly/.Map[Rule[#, val]&,Complement[Variables[poly],vars] ]
 
 
 (* Computing the maximal total polynomial degree of a given polynomial P *)
@@ -44,7 +105,8 @@ ConstTerm[P_]:=ConstTerm[P,Variables[P]]
 
 
 (* Lie derivative of P w.r.t. ODEs *)
-Lf[P_,vf_List,vars_List] := Grad[P,vars].vf;
+Lf[P_,vf_List,vars_List,domain_] := FullSimplify[Grad[P,vars].vf, And[domain, Map[#\[Element]Reals&,vars]/.{List->And}]];
+Lf[P_,vf_List,vars_List] := Lf[P,vf,vars,True];
 
 
 (* Upper, lower and nearest rational bounds of a number, nearest 10^-precision *)
@@ -105,6 +167,12 @@ DNFNormalizeGtGeq[expression_]:=Module[{},
 DNFNormalizeLtLeq[expression_]:=Module[{},
   BooleanMinimize[expression//LogicalExpand//UnequalToLtOrGt//EqualToLeqAndGeq//GtToLt//GeqToLeq//ZeroRHS, "DNF"]] 
 
+(* Normalize expression to CNF form (And of Ors) with >, \[GreaterEqual] only *)
+CNFNormalizeGtGeq[expression_]:=Module[{},
+  BooleanMinimize[expression//LogicalExpand//UnequalToLtOrGt//EqualToLeqAndGeq//LtToGt//LeqToGeq//ZeroRHS, "CNF"]] 
+CNFNormalizeLtLeq[expression_]:=Module[{},
+  BooleanMinimize[expression//LogicalExpand//UnequalToLtOrGt//EqualToLeqAndGeq//GtToLt//GeqToLeq//ZeroRHS, "CNF"]] 
+
 
 
 (* Weaken inequalities *)
@@ -141,6 +209,32 @@ DrawPlanarProb[prob_List, invariant_:False, w_:6 ] := Module[{init,f,x,y,H,safe,
     (* Plot domain in blue *)
     RegionPlot[H, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.05,Blue]]
     ]
+]
+
+
+FuncIndep[polys_List, vars_List]:=Module[{sortedlist,span,pool,gradList,Gramian},
+If[Length[polys]>0,
+sortedlist=Sort[polys,And[Primitives`PolynomDegree[#1]<=Primitives`PolynomDegree[#2], Length[#1]<=Length[#2]]&];
+span={First[sortedlist]};
+pool=Rest[sortedlist];
+While[Length[pool]>0 && Length[span]<Length[vars],
+gradList = Map[Grad[#,vars]&, Append[span,First[pool]]];
+Gramian=gradList.Transpose[gradList];
+(* Debugging 
+Print[Gramian//MatrixForm];
+Print[Det[Gramian]];
+*)
+If[TrueQ[Reduce[Exists[vars,Det[Gramian]>0],Reals]],
+ span=Append[span,First[pool]]; 
+pool=Rest[pool],
+pool=Rest[pool]
+]];
+span, polys]
+]
+
+
+CheckSemiAlgInclusion[subset_,set_,vars_List]:=Module[{},
+TrueQ[Reduce[ForAll[vars, Implies[subset,set]],Reals]]
 ]
 
 

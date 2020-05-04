@@ -30,7 +30,7 @@ import java.text.SimpleDateFormat
 import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
 import java.util.{Calendar, Locale}
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.CollectProgressListener
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
@@ -534,7 +534,7 @@ class KyxConfigRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Read
 class KeymaeraXVersionRequest() extends Request with ReadRequest {
   override def resultingResponses() : List[Response] = {
     val keymaeraXVersion = VERSION
-    val (upToDate, latestVersion) = UpdateChecker.getVersionStatus() match {
+    val (upToDate, latestVersion) = UpdateChecker.getVersionStatus match {
       case Some((upd, lv)) => (Some(upd), Some(lv))
       case _ => (None, None)
     }

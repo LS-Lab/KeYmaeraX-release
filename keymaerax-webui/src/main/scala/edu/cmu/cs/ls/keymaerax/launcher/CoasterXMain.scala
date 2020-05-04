@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, StringToVersion}
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib.{CoasterStats, ComponentStats, countVars, doStats}
@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.hydra.HyDRAInitializer._
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInitializer, StringToVersion}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInitializer}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX.shutdownProver
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica

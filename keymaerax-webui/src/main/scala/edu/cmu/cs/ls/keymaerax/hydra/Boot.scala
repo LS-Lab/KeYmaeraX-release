@@ -9,7 +9,7 @@ import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup, StringToVersion}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
@@ -188,26 +188,7 @@ object HyDRAInitializer extends Logging {
 
     LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
-    val allow = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false")
-    try {
-      //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
-      val cacheVersion = LemmaDBFactory.lemmaDB.version()
-      if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
-        LemmaDBFactory.lemmaDB.deleteDatabase()
-      //Populate the derived axioms database.
-
-      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-      DerivedAxioms.prepopulateDerivedLemmaDatabase()
-    } catch {
-      case e: Exception =>
-        val msg =
-          """===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===
-            |You should configure settings in the UI and restart KeYmaera X
-          """.stripMargin
-        logger.warn(msg, e)
-    } finally {
-      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, allow, saveToFile = false)
-    }
+    KeYmaeraXStartup.initLemmaCache(logger.warn(_, _))
   }
 
   @tailrec

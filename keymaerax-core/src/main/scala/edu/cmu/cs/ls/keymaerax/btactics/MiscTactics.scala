@@ -324,7 +324,7 @@ object Idioms {
   }
 
   /** Gives a name to a tactic to a definable tactic. */
-  def NamedTactic(name: String, tactic: BelleExpr): DependentTactic = new DependentTactic(name) {
+  def NamedTactic(name: String, tactic: => BelleExpr): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = tactic
   }
 

@@ -102,12 +102,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
   private val WOLFRAM = System.getProperty("WOLFRAM", "Mathematica")
 
-  //@note Initialize once per test class, but only if requested in a withMathematica call
-  private var mathematicaProvider =
-    if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
-    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(new WolframEngineToolProvider(configFileWolframEngineConfig)))
-    else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(new WolframScriptToolProvider))
-    else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
+  //@note Initialize once per test class in beforeAll, but only if requested in a withMathematica call
+  private var mathematicaProvider: Lazy[DelayedShutdownToolProvider] = _
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
 
@@ -157,7 +153,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       implicit val signaler: Signaler = (t: Thread) => {
         theInterpreter.kill()
         tool.cancel()
-        t.interrupt()
+        tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
         mathematicaProvider.synchronized {
           mathematicaProvider().doShutdown() //@note see [[afterAll]]
           provider.shutdown()
@@ -196,7 +192,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: QETacticTool => Any, timeout: Int = -1): Unit = {
+  def withQE(testcode: Tool with QETacticTool => Any, timeout: Int = -1): Unit = {
     withClue("Mathematica") { withMathematica(testcode, timeout) }
     afterEach()
     beforeEach()
@@ -204,8 +200,16 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Creates and initializes Mathematica; checks that a Matlab bridge is configured. @see[[withMathematica]]. */
-  def withMathematicaMatlab(testcode: Mathematica => Any) {
-    withMathematica { tool =>
+  def withMathematicaMatlab(testcode: Mathematica => Any, timeout: Int = -1) {
+    if (System.getProperty("KILL_MATLAB") == "true") {
+      var killExit = 0
+      while (killExit == 0) {
+        val p = Runtime.getRuntime.exec("pkill -9 MATLAB")
+        p.waitFor()
+        killExit = p.exitValue()
+      }
+    }
+    withMathematica ({ tool =>
       val getLink = PrivateMethod[JLinkMathematicaLink]('link)
       val link = tool invokePrivate getLink()
       link.runUnchecked("""Needs["MATLink`"]""", new M2KConverter[KExpr]() {
@@ -218,7 +222,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         override def convert(e: MExpr): KExpr = throw new Exception("Unexpected call to convert")
       })
       testcode(tool)
-    }
+    }, timeout)
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */
@@ -274,6 +278,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       TactixLibrary.invGenerator = FixedGenerator(Nil)
       TactixLibrary.differentialInvGenerator = FixedGenerator(Nil)
     }
+  }
+
+  /** Test suite setup */
+  override def beforeAll(): Unit = {
+    mathematicaProvider =
+      if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+      else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new DelayedShutdownToolProvider(new WolframEngineToolProvider(configFileWolframEngineConfig)))
+      else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new DelayedShutdownToolProvider(new WolframScriptToolProvider))
+      else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
   }
 
   /* Test suite tear down */

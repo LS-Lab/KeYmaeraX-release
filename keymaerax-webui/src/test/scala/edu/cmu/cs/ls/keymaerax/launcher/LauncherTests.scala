@@ -150,13 +150,19 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove with wildcards from command line" in {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/*.kyx"
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
-    val (output, _, exitVal) = runKeYmaeraX("-prove", inputFileName, "-out", outputFileName)
+
+    val (output, _, exitVal) = runKeYmaeraX("-tool", "Mathematica", "-prove", inputFileName, "-out", outputFileName)
     exitVal shouldBe 254 //@note -2 since one entry disproved
     val proofStatOutputs = output.lines.toList.takeRight(4)
     proofStatOutputs(0) should startWith ("PROVED")
     proofStatOutputs(1) should startWith ("UNFINISHED")
     proofStatOutputs(2) should startWith ("DISPROVED")
     proofStatOutputs(3) should startWith ("PROVED")
+
+    val (_, errorZ3, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
+    exitValZ3 shouldBe 1 // Z3 throws an exception on bouncing-ball-cex.kyx
+    errorZ3 should startWith ("""Exception in thread "main" [Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:
+                                |\forall v \forall h \forall g \forall c \forall H (v^2<=2*g*(H-h)&h>=-2&g>0&H>=0&0<=c&c < 1->v^2<=2*g*(H-h)&h>=-1)""".stripMargin)
   }
 
   it should "FEATURE_REQUEST: prove entries without tactics with auto" taggedAs (TodoTest, SlowTest) ignore {
@@ -182,10 +188,16 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-cex.kyx"
     val outputFile = File.createTempFile("bouncing-ball-cex", ".kyp")
     val outputFileName = outputFile.getAbsolutePath
-    val (output, _, exitVal) = runKeYmaeraX("-prove", inputFileName, "-out", outputFileName)
+
+    val (output, _, exitVal) = runKeYmaeraX("-tool", "Mathematica", "-prove", inputFileName, "-out", outputFileName)
     exitVal shouldBe 254 //@note -2
     output should include ("DISPROVED")
     outputFile should not (exist)
+
+    val (_, errorZ3, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
+    exitValZ3 shouldBe 1 //@note Z3 throws an exception
+    errorZ3 should startWith ("""Exception in thread "main" [Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:
+                                |\forall v \forall h \forall g \forall c \forall H (v^2<=2*g*(H-h)&h>=-2&g>0&H>=0&0<=c&c < 1->v^2<=2*g*(H-h)&h>=-1)""".stripMargin)
   }
 
   it should "have usage information, formatted to 80 characters width" in {
@@ -255,6 +267,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val output = scala.io.Source.fromInputStream(process.getInputStream).getLines().mkString("\n")
     val errors = scala.io.Source.fromInputStream(process.getErrorStream).getLines().mkString("\n")
     print(output)
+    Console.err.print(errors)
     (output, errors, exitVal)
   }
 }

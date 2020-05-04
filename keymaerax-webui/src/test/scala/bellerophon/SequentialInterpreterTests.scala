@@ -330,7 +330,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         )
       ), (labels: Option[List[BelleLabel]]) => {
       labels shouldBe Some(
-        BelleLabels.useCase.append(BelleLabels.cutShow).append(BelleLabels.QECEX) ::
+        BelleLabels.useCase.append(BelleLabels.QECEX) ::
         BelleSubLabel(BelleLabels.indStep, "1") ::
         BelleLabels.indStep :: Nil)
     })
