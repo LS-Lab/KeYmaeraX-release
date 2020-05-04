@@ -31,7 +31,7 @@ object ParserCommon {
   def ws[_ : P]: P[Unit] = P((" " | "\n").rep)
   def wsNonempty[_ : P]: P[Unit] = P((" " | "\n").rep(1))
   def literal[_: P]: P[String] = "\"" ~ CharPred(c => c != '\"').rep(1).! ~ "\""
-  def ident[_: P]: P[Ident] = identString
+  def ident[_: P]: P[Ident] = identString.map(Variable(_))
   def number[_: P]: P[Number] = {
     import NoWhitespace._
     ("-".!.? ~  (("0" | CharIn("1-9") ~ CharIn("0-9").rep) ~ ("." ~ CharIn("0-9").rep(1)).?).!)
@@ -58,7 +58,7 @@ object ExpressionParser {
   def funcOf[_: P]: P[FuncOf] =
     (ident ~ "(" ~ term.rep(min = 1, sep = ",") ~ ")").map({case (f, args) =>
       val builtins = Set("min", "max", "abs")
-      val fn = Function(f, domain = args.map(_ => Real).reduceRight(Tuple), sort = Real, interpreted = builtins.contains(f))
+      val fn = Function(f.name, domain = args.map(_ => Real).reduceRight(Tuple), sort = Real, interpreted = builtins.contains(f.name))
       FuncOf(fn, args.reduceRight(Pair))
     })
 
@@ -81,7 +81,7 @@ object ExpressionParser {
     (neg ~ (CharIn("@") ~ ident).?).map({
       case (e, None) => e
       case (e, Some(s)) =>
-        val label = Function(s, domain = Unit, sort = Unit, interpreted = true)
+        val label = Function(s.name, domain = Unit, sort = Unit, interpreted = true)
         FuncOf(at, Pair(e, FuncOf(label, Nothing)))
     })
   }
@@ -116,11 +116,11 @@ object ExpressionParser {
   def differentialProduct[_: P]: P[Program] =
     // @TODO: Careful about polymorphic list
     ((terminalProgram.opaque("program") ~ ("," ~ terminalProgram.opaque("program")).rep ~ ("&" ~ formula).? ~ ";".?).map({
-      case (x: AtomicODE, xs: Seq[AtomicODE], Some(fml)) =>
-        val odes: Seq[DifferentialProgram] = xs.+:(x)
+      case (x: AtomicODE, xs: Seq[_], Some(fml)) =>
+        val odes: Seq[DifferentialProgram] = xs.map(_.asInstanceOf[DifferentialProgram]).+:(x)
         ODESystem(odes.reduce[DifferentialProgram]({case (l, r) => DifferentialProduct(l, r)}), fml)
-      case (x: AtomicODE, xs: Seq[AtomicODE], None) =>
-        val odes: Seq[DifferentialProgram] = xs.+:(x)
+      case (x: AtomicODE, xs: Seq[_], None) =>
+        val odes: Seq[DifferentialProgram] = xs.map(_.asInstanceOf[DifferentialProgram]).+:(x)
         ODESystem(odes.reduce[DifferentialProgram]({case (l, r) => DifferentialProduct(l, r)}))
       case (x, Seq(), None) => x
     }) ~ ((P("*") | P("^d") | P("^@")).!.rep).opaque("postfix")).map({case (atom: Program, posts: Seq[String]) =>
@@ -218,7 +218,7 @@ object ProofParser {
 
   def label[_: P]: P[Label] = {
     import NoWhitespace._
-    (Index ~ ident ~ ":" ~ !P("=")).map({case (i, id) => locate(Label(id), i)})
+    (Index ~ ident ~ ":" ~ !P("=")).map({case (i, id) => locate(Label(id.name), i)})
   }
 
   def branch[_: P]: P[(Expression, Statement)] = {
@@ -255,7 +255,7 @@ object ProofParser {
 
   def domAssume[_: P]: P[DomAssume] = (Index ~ exPat ~ formula).map({case (i, id, f) => locate(DomAssume(id, f), i)})
   def domAssert[_: P]: P[DomAssert] = (Index ~ "!" ~ exPat ~ formula ~ method).map({case (i, id, f, m) => locate(DomAssert(id, f, m), i)})
-  def domModify[_: P]: P[DomModify] = (Index ~ variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(NoPat(), Assign(id, f)), i)})
+  def domModify[_: P]: P[DomModify] = (Index ~ variable ~ ":=" ~ term).map({case (i, id, f) => locate(DomModify(VarPat(id), f), i)})
   def domWeak[_: P]: P[DomWeak] = (Index ~ "{G" ~ domainStatement ~ "G}").map({case (i, ds) => locate(DomWeak(ds), i)})
   def terminalDomainStatement[_: P]: P[DomainStatement] = domAssert | domWeak |  domModify | domAssume
   def domainStatement[_: P]: P[DomainStatement] = (Index ~ terminalDomainStatement.rep(sep = "&", min = 1)).

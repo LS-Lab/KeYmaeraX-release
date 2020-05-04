@@ -10,12 +10,14 @@ package edu.cmu.cs.ls.keymaerax.cdgl.kaisar
 
 import KaisarProof._
 import edu.cmu.cs.ls.keymaerax.cdgl.Metric
+import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCP
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.pt.ProofChecker.ProofCheckException
 
 object KaisarProof {
   // Identifiers for  proof-variables. Source-level variables are typically alphabetic, elaboration can introduce
   // indices  <alpha><int>
-  type Ident = String
+  type Ident = Variable
   // Identifiers for line labels, which are typically alphabetic
   type TimeIdent = String
   type Statements = List[Statement]
@@ -42,6 +44,7 @@ object KaisarProof {
   def flatten(ss: Statements): Statements = {
     ss match {
       case Block(ss) :: sss  => flatten(ss ++ sss)
+      case Triv() :: ss => flatten(ss)
       case s :: ss => s :: flatten(ss)
       case Nil => Nil
     }
@@ -50,6 +53,7 @@ object KaisarProof {
   // smart constructor for [[Block]] which will [[flatten]] the tree structure
   def block(ss: Statements): Statement = {
     flatten(ss) match {
+      case List() => Triv()
       case List(s) => s
       case ss => Block(ss)
     }
@@ -114,12 +118,14 @@ case class NoPat() extends AsgnPat
 case class WildPat() extends AsgnPat
 // @TODO: make ident optional for assignments. Is backwards.
 // Assign to variable and optionally store equation in a proof variable
-case class VarPat(p: Ident, x: Option[Variable] = None) extends AsgnPat
+case class VarPat(x: Variable, p: Option[Ident] = None) extends AsgnPat
 // Assign elements of tuple according to each component pattern
 case class TuplePat(pats: List[AsgnPat]) extends AsgnPat
 
 /* Language of structured proofs. Statements are block-structu  red, so entire proofs are single statements */
 sealed trait Statement extends ASTNode
+// Proves nothing
+case class Triv() extends Statement
 // x is a formula pattern in assume and assert
 // Assume introduces assumption that f is true, with name(s) given by pattern [[pat]]
 case class Assume(pat: Expression, f: Formula) extends Statement
@@ -135,7 +141,9 @@ case class Modify(pat: AsgnPat, hp: Either[Term, Unit]) extends Statement
 // @TODO: Implement
 case class Label(st: TimeIdent) extends Statement
 // Note checks forward [[proof]] and stores the result in proof-variable [[x]]
-case class Note(x: Ident, proof: ProofTerm) extends Statement
+// In the source syntax, the [[fml]] formula is usually omitted because it can be inferred, but is populated during
+// elaboration for performance reasons
+case class Note(x: Ident, proof: ProofTerm, var conclusion: Option[Formula] = None) extends Statement
 // Introduces a lexically-scoped defined function [[x]] with arguments [[args]] and body [[e]]. References to [[args]]
 // in [[e]] are resolved by substituting parameters at application sites. All others take their value according to the
 // definition site of the function. Scope is lexical and functions must not be recursive for soundness.
@@ -195,17 +203,153 @@ case class DomAssert(x: Expression, f:Formula, child: Method) extends DomainStat
 // proof, which is weakened before continuing prof
 case class DomWeak(dc: DomainStatement) extends DomainStatement
 // Assignment to a variable. Only allowable use is to specify the duration of an angelic solution
-case class DomModify(x: AsgnPat, hp: Assign) extends DomainStatement
+case class DomModify(x: AsgnPat, f: Term) extends DomainStatement
 // Conjunction of domain constraints with proofs for each conjunct
 case class DomAnd(l: DomainStatement, r: DomainStatement) extends DomainStatement
 
+// Proof variable information includes program variables [[xs]] and proof variables [[ps]]
+case class ProofVars(xs: VCP, ps: SetLattice[String])
+
 object Context {
-  def empty: Context = Context(Set())
+  // Contexts are proof statements showing what game has been played thus far
+  type Context = Statement
+
+  def empty: Context = Triv()
+  def +:(con: Context, s: Statement): Context = {
+    con match {
+      case _: Triv  => s
+      case Block(ss) => Block(ss.+:(s))
+      case sl => Block(List(sl, s))
+    }
+  }
+
+  def add(con: Context, x: Ident, fml: Formula): Context = {
+    +:(con, Assume(x, fml))
+  }
+
+  def sameHead(e: Expression, f: Expression): Boolean = {
+    (e, f) match {
+      case (bcf1: BinaryCompositeFormula, bcf2: BinaryCompositeFormula) =>
+        bcf1.reapply(bcf2.left, bcf2.right) == bcf2
+      case (ucf1: UnaryCompositeFormula, ucf2: UnaryCompositeFormula) =>
+        ucf1.reapply(ucf2.child) == ucf2
+      // No matching in quantified vars or program, so reapply to q1/m1
+      case (q1: Quantified, q2: Quantified) => q1.reapply(q1.vars, q2.child) == q2
+      case (m1: Modal, m2: Modal) => m1.reapply(m1.program, m2.child) == m2
+    }
+  }
+
+  def matchAssume(e: Expression, f: Formula): Map[Ident, Formula] = {
+      e match {
+        case BaseVariable(x, _, _) => Map(Variable(x) -> f)
+        case _ =>
+          if (!sameHead(e, f))
+            throw ProofCheckException(s"Pattern $e does not match formula $f")
+          (e, f) match {
+            case (bcf1: BinaryCompositeFormula, bcf2: BinaryCompositeFormula) =>
+              matchAssume(bcf1.left, bcf2.left) ++ matchAssume(bcf1.right, bcf2.right)
+            case (ucf1: BinaryCompositeFormula, ucf2: BinaryCompositeFormula) =>
+              matchAssume(ucf1.left, ucf2.left)
+            case (q1: Quantified, q2: Quantified) => matchAssume(q1.child, q2.child)
+            case (m1: Modal, m2: Modal) =>matchAssume(m1.child, m2.child)
+          }
+      }
+  }
+
+  def get(mod: Modify, id: Ident): Option[Formula] = {
+    mod match {
+      case Modify(TuplePat(pat :: pats), Left(Pair(l, r))) =>
+        get(Modify(pat, Left(l)), id) match {
+          case Some(x) => Some(x)
+          case None => get(Modify(TuplePat(pats), Left(r)), id)
+        }
+      case Modify(VarPat(x, None), Left(f)) =>
+        // @TODO: Proper variable renaming
+        Some(Equal(x, f))
+      case Modify(TuplePat(pats), Right(())) =>
+        throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
+      case Modify(VarPat(x, None), Right(())) =>
+        throw ProofCheckException("Nondeterministic assignment pattern should not bind proof variable")
+      case Modify(TuplePat(List()), _) => None
+      case Modify(WildPat(), _) => None
+      case Modify(NoPat(), _) => None
+    }
+  }
+
+  def get(dc: DomainStatement, id: Ident): Option[Formula] = {
+    dc match {
+      case DomAssume(x, f) => matchAssume(x, f).collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAssert(x, f, _ ) => matchAssume(x, f).collectFirst({case (mx, mf) if mx == id => mf})
+      case DomAnd(l, r) => get(l, id) match {case Some(l) => Some(l) case None => get(r, id)}
+      case DomWeak(dc) =>
+        get(dc, id) match {
+          case Some(f) => throw ProofCheckException(s"Weakened domain constraint $dc should not bind referenced variable $id to $f")
+          case None => None
+        }
+      case DomModify(ap, f) => get(Modify(ap, Left(f)), id)
+    }
+  }
+
+  // Look up latest definition of proof variable
+  // @TODO: Does this handle state change properly?, Probably only works right for SSA form, or Blocks() needs to check for
+  // free variable binding after reference for admissibility
+  def get(con: Context, id: Ident): Option[Formula] = {
+    con match {
+      case _: Triv => None
+      case Assume(x, f) =>  if(x == id) Some(f) else None
+      case Assert(x, f, _) =>  if(x == id) Some(f) else None
+      case Note(x, _, Some(f)) =>  if(x == id) Some(f) else None
+      case Note(x, _, None) =>  throw ProofCheckException("Note in context needs formula annotation")
+      case Block(ss) =>
+        val find: PartialFunction[Statement, Formula] = {case s => get(s, id).get}
+        ss.reverse.collectFirst(find)
+      case BoxChoice(l, r) =>
+        (get(l, id), get(r, id)) match {
+          case (None, None) => None
+          case (Some(p), None) => Some(p)
+          case (None, Some(p)) => Some(p)
+          case (Some(p), Some(q)) => Some(And(p, q))
+        }
+      case Switch(pats) =>
+        val fmls = pats.flatMap({case (e, s) => get(s, id)})
+        if (fmls.isEmpty) None
+        else Some(fmls.reduceRight(Or))
+      case Ghost(ss) => get(ss, id)
+      case InverseGhost(ss) =>
+        get(ss, id) match {
+          case Some(f) => throw ProofCheckException(s"Proof variable $id should not have been found with formula $f in statement $ss which is an inverse ghost")
+          case None => None
+        }
+      case po: ProveODE => get(po.dc, id)
+      case mod: Modify => get(mod, id)
+      case Was(now, was) => get(now, id)
+      case _ : Label | _: LetFun | _: Match | _: PrintGoal => None
+      // @TODO: These loop cases probably work, but subtle
+      case While(_, _, body) => get(body, id)
+      case BoxLoop(body) => get(body, id)
+    }
+  }
+
+  // Define the next gHost variable to be f
+  //def ghost(f: Formula): Context = add(fresh, f)
+  // Contents of context
+  //def toList: List[(String, Formula)] = proofVars.toList
+  //def empty: Context = Context(Set())
 }
 
+// superceded by proofs as contexts
 // Structured context for checking Kaisar proofs
-// @TODO: Implement the rest
-case class Context (proofVars: Map[String, Formula]) {
+/*sealed trait Context
+case class CEmpty() extends Context
+case class COne(id: Ident, fml: Formula) extends Context
+case class CLabel(label: Ident) extends Context
+case class COr(l: Context, r: Context) extends Context
+case class CAnd(l: Context, r: Context) extends Context
+case class CThen(l: Context, r: Context) extends Context
+case class CAssign(p: Option[Ident], x: Variable, f: Option[Term]) extends Context*/
+
+//object Context {
+/*case class Context (proofVars: Map[String, Formula]) {
   // Base name used for fresh variables generated during proof when no better variable name is available.
   val ghostVar: String = "ghost"
   // Extend context with a named assumption
@@ -218,10 +362,6 @@ case class Context (proofVars: Map[String, Formula]) {
       i = i + 1
     }
     ghostVar + i
-  }
+  }*/
 
-  // Define the next gHost variable to be f
-  def ghost(f: Formula): Context = add(fresh, f)
-  // Contents of context
-  def toList: List[(String, Formula)] = proofVars.toList
-}
+//}
