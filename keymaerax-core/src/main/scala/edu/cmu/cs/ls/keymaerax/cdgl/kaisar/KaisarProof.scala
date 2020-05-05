@@ -35,6 +35,7 @@ object KaisarProof {
   val max: Function = Function("max", domain = Tuple(Real, Real), sort = Real, interpreted = true)
   val min: Function = Function("min", domain = Tuple(Real, Real), sort = Real, interpreted = true)
   val abs: Function = Function("abs", domain = Real, sort = Real, interpreted = true)
+  val builtin: Set[Function] = Set(min, max, abs)
 
   // We reuse expression syntax for patterns over expressions. We use an interpreted function wild() for the wildcard
   // patttern "*" or "_". This is elaborated before proofchecking
@@ -149,7 +150,9 @@ case class Note(x: Ident, proof: ProofTerm, var conclusion: Option[Formula] = No
 // Introduces a lexically-scoped defined function [[x]] with arguments [[args]] and body [[e]]. References to [[args]]
 // in [[e]] are resolved by substituting parameters at application sites. All others take their value according to the
 // definition site of the function. Scope is lexical and functions must not be recursive for soundness.
-case class LetFun(x: Ident, args: List[Ident], e: Expression) extends Statement
+case class LetFun(f: Ident, args: List[Ident], e: Expression) extends Statement {
+  val asFunction: Function = Function(f.name, domain = args.map(_ => Real).reduceRight(Tuple), sort = Real)
+}
 // Unifies expression [[e]] with pattern [[pat]], binding free term and formula variables of [[pat]]
 case class Match(pat: Expression, e: Expression) extends Statement
 // Sequential composition of elements of [[ss]]
@@ -163,7 +166,7 @@ case class Switch(pats: List[(Expression, Statement)]) extends Statement
 case class BoxChoice(left: Statement, right: Statement) extends Statement
 // x is a pattern
 // Repeat body statement [[ss]] so long as [[j]] holds, with hypotheses in pattern [[x]]
-case class While(x: Expression, j: Formula, ss: Statement) extends Statement
+case class While(x: Expression, j: Formula, s: Statement) extends Statement
 // Repeat [[s]] nondeterministically any number of times
 case class BoxLoop(s: Statement) extends Statement
 // Statement [[s]] is introduced for use in the proof but is not exported in the conclusion.
@@ -292,6 +295,22 @@ object Context {
     }
   }
 
+  def signature(con: Context): Set[Function] = {
+    con match {
+      case lf: LetFun => Set(lf.asFunction)
+      case Block(ss) => ss.flatMap(signature).toSet
+      case BoxChoice(l, r) => signature(l) ++ signature (r)
+      case Switch(pats) => pats.map(_._2).flatMap(signature).toSet
+      case Ghost(s) => signature(s)
+      case Was(now, was) => signature(now)
+      // @TODO: These loop cases probably work, but subtle
+      case While(_, _, body) => signature(body)
+      case BoxLoop(body) => signature(body)
+      case _: Triv | _: Assume | _: Assert | _: Note | _: PrintGoal | _: InverseGhost | _: ProveODE | _: Modify
+         | _: Label | _: Match => Set()
+    }
+  }
+
   // Look up latest definition of proof variable
   // @TODO: Does this handle state change properly?, Probably only works right for SSA form, or Blocks() needs to check for
   // free variable binding after reference for admissibility
@@ -343,6 +362,26 @@ object Context {
   def get(con: Context, id: Ident): Option[Formula] = {
     val f: ((Ident, Formula)) => Boolean = {case (x: Ident, v: Formula) => x == id}
     find(con, f).map(_._2)
+  }
+
+  def lastFact(con: Context): Option[Formula] = {
+    con match {
+      case Assume(x, f) => Some(f)
+      case Assert(x, f, _) => Some(f)
+      case Note(x, pt, opt) => opt
+      case Modify(VarPat(x, _), Left(f)) => Some(Equal(x, f))
+      case BoxChoice(l, r) =>
+        (lastFact(l), lastFact(r)) match {
+          case (Some(resL), Some(resR)) if resL == resR => Some(resL)
+          case _ => None
+        }
+      case BoxLoop(body) => lastFact(body)
+      case While(_, _, body) => lastFact(body)
+      case Block(ss) => lastFact(ss.last)
+      case Was(now, was) => lastFact(now)
+      case Ghost(s) => lastFact(s)
+      case _ => None
+    }
   }
 
   def contains(con: Context, id: Ident): Boolean = get(con, id).isDefined
