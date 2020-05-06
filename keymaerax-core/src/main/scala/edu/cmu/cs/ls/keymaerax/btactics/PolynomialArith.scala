@@ -1214,7 +1214,8 @@ object PolynomialArith extends Logging {
         else
           List(existsOr1)
       case Or(_,_) => List(existsOr2,existsOr3)
-      case _ => List()
+      case f =>
+        List()
     }
   }
 
@@ -1246,9 +1247,13 @@ object PolynomialArith extends Logging {
     }
   }
 
-  lazy val normAntes1 = fullSimpTac(ths = ths,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false)
+  lazy val normAntes0 = fullSimpTac(ths = ths,faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
+  lazy val normAntes1 = SaturateTactic(fullSimpTac(ths = Nil,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false))
   lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
-  lazy val normaliseNNF = clearSuccNNF & SaturateTactic(onAll(alphaRule)) & relaxStrict2 & hideTopNeq & normAntes1 & SaturateTactic(existsL('L)) & normAntes2 & SaturateTactic(notR('R))
+  lazy val normaliseNNF = clearSuccNNF & SaturateTactic(onAll(alphaRule)) & relaxStrict2 & hideTopNeq &
+    normAntes0 &
+    normAntes1 &
+    SaturateTactic(existsL('L)) & normAntes2 & SaturateTactic(notR('R))
 
   //Just to rearrange things back into equalities first then inequalities
   lazy val resortEqs = hideTopNeq & SaturateTactic(notR('R))
