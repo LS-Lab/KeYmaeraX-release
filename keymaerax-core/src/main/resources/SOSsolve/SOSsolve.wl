@@ -88,6 +88,8 @@ FindWitness[polys_List, vars_List, deg_Integer]:= Module [{
 	
 	(* Simplify the basis *)
 	{monbasis, R, coeffs} = ReduceBasis[prem,gb,vars];
+	(* make special case less special for the rest of the code... *)
+	{monbasis, R, coeffs} = If[Length[monbasis] === 0, {{1}, {{0}}, {{{}}}}, {monbasis, R, coeffs}];
 	umonomials = Flatten[Map[#[[1]]&,coeffs,{3}],2]//DeleteDuplicates;
 	
 	Print["Solving for constraints "];
@@ -120,8 +122,6 @@ FindWitness[polys_List, vars_List, deg_Integer]:= Module [{
 	matrix=Rationalize[matrix,0.01];
 	Print[matrix // MatrixForm];
 	{vec,vals}=LDLT[matrix];
-	matrix=Rationalize[res[[1]][[2]],0.01];
-	{vals,vec}=Eigensystem[matrix];
 	(*Print[{vals,vec}];*)
 	(* The polynomials in the SOS are given by *)
 	sos = Dot[vec,monbasis];
@@ -131,7 +131,7 @@ FindWitness[polys_List, vars_List, deg_Integer]:= Module [{
 	{seq,bla} = PolynomialReduce[result,gb,vars];
 	check = FullSimplify[Dot[Dot[seq, conv], polys] - result];
 	If[Not[check === 0], Return[failure]];
-	Return[{result,FullSimplify[Dot[seq,conv]]}]
+	Return[{result,Dot[seq,conv]}]
 ]
 
 
