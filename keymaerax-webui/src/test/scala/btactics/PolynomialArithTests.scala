@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
@@ -424,6 +425,18 @@ class PolynomialArithTests extends TacticTestBase {
 
     val pr = proveBy(Sequent(antes,succs), normaliseNNF)
     println(pr)
+
+  }
+
+  "normAntes1" should "correctly normalize" in withMathematica { _ =>
+    val fml = "\\exists g_ \\exists f_ (f_!=g_&f_<=g_&f_>=g_|f_=g_&(f_>g_|f_ < g_))".asFormula
+    val res = proveBy(Sequent(IndexedSeq(fml), IndexedSeq()),
+      PolynomialArith.normaliseNNF
+    )
+    res.subgoals(0) shouldBe Sequent("(f_ - g_) * wit_ - 1 = 0,f_ - g_ + wit__1^2 = 0,f_ - g_ - wit__0^2 = 0".split(',').map(_.asFormula).toIndexedSeq, IndexedSeq())
+  }
+
+  it should "&false" in withMathematica { _ =>
 
   }
 }
