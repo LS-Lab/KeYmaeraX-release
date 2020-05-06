@@ -887,6 +887,12 @@ object DerivationInfo {
     new DerivedAxiomInfo("true&"
       , AxiomDisplayInfo(("⊤∧","T&"), "<span class=\"k4-axiom-key\">(⊤∧p)</span>↔p")
       , "trueAnd", true, {case () => useAt(DerivedAxioms.trueAnd)}),
+    new DerivedAxiomInfo("&false"
+      , AxiomDisplayInfo(("∧F","&F"), "<span class=\"k4-axiom-key\">(p∧⊥)</span>↔⊥")
+      , "andFalse", true, {case () => useAt(DerivedAxioms.andFalse)}),
+    new DerivedAxiomInfo("false&"
+      , AxiomDisplayInfo(("⊥∧","⊥&"), "<span class=\"k4-axiom-key\">(⊥∧p)</span>↔⊥")
+      , "falseAnd", true, {case () => useAt(DerivedAxioms.falseAnd)}),
     new DerivedAxiomInfo("0*", "0*", "zeroTimes", true, {case () => useAt(DerivedAxioms.zeroTimes)}),
     new DerivedAxiomInfo("0+", "0+", "zeroPlus", true, {case () => useAt(DerivedAxioms.zeroPlus)}),
     new DerivedAxiomInfo("*0", "*0", "timesZero", true, {case () => useAt(DerivedAxioms.timesZero)}),

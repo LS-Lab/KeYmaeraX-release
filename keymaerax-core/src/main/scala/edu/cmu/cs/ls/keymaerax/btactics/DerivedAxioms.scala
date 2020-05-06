@@ -2138,6 +2138,26 @@ object DerivedAxioms extends Logging {
   lazy val trueAnd = derivedAxiom("true&", Sequent(IndexedSeq(), IndexedSeq("(true&p_()) <-> p_()".asFormula)), prop)
 
   /**
+    * {{{Axiom "&false".
+    *    (p()&false) <-> false
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val andFalse = derivedAxiom("&false", Sequent(IndexedSeq(), IndexedSeq("(p_()&false) <-> false".asFormula)), prop)
+
+  /**
+    * {{{Axiom "false&".
+    *    (false&p()) <-> false
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val falseAnd = derivedAxiom("false&", Sequent(IndexedSeq(), IndexedSeq("(false&p_()) <-> false".asFormula)), prop)
+
+  /**
    * {{{Axiom "0*".
    *    (0*f()) = 0
    * End.
