@@ -1253,7 +1253,7 @@ object PolynomialArith extends Logging {
   lazy val normaliseNNF = clearSuccNNF & SaturateTactic(onAll(alphaRule)) & relaxStrict2 & hideTopNeq &
     normAntes0 &
     normAntes1 &
-    SaturateTactic(existsL('L)) & normAntes2 & SaturateTactic(notR('R))
+    SaturateTactic(existsL('L)) & SaturateTactic(andL('L)) & normAntes2 & SaturateTactic(notR('R))
 
   //Just to rearrange things back into equalities first then inequalities
   lazy val resortEqs = hideTopNeq & SaturateTactic(notR('R))
