@@ -206,6 +206,13 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v
+
+      /** Compares provables ignoring labels. */
+      def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
+        case (BelleProvable(pPrev, _), BelleProvable(pCurr, _)) => pCurr != pPrev
+        case _ => curr != prev
+      }
+
       breakable { do {
         prev = result
         try {
@@ -215,9 +222,9 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
             case _ => // continue
           }
         } catch {
-          case e: BelleThrowable => /*@note child no longer applicable */ result = prev
+          case _: BelleThrowable => /*@note child no longer applicable */ result = prev
         }
-      } while (result != prev) }
+      } while (progress(prev, result)) }
       result
 
     case RepeatTactic(child, times) =>

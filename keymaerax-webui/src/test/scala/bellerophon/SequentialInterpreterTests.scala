@@ -168,6 +168,12 @@ class SequentialInterpreterTests extends TacticTestBase {
     db.proveBy(modelContent, SaturateTactic(boxAnd('R) & andR('R)) & master()) shouldBe 'proved
   }}
 
+  it should "not endless repeat on new labels" in {
+    failAfter(1 second) {
+      proveBy("x>=0 ==> x>=0".asSequent, SaturateTactic(label("A label"))).subgoals.loneElement shouldBe "x>=0 ==> x>=0".asSequent
+    }
+  }
+
   "+ combinator" should "saturate with at least 1 repetition" in {
     val result = proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, andL('Llast) & SaturateTactic(andL('Llast)))
     result.subgoals.loneElement shouldBe "x=2, y=3, z=4 | z=5 ==> x=2".asSequent
