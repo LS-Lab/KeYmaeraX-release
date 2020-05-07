@@ -1747,7 +1747,7 @@ private object DifferentialTactics extends Logging {
     DebuggingTactics.debug("odeInvariant close") &
     (
       if (useDw) {
-        ( diffWeaken & timeoutQE & done) |
+        (diffWeaken & timeoutQE & done) |
           invTactic |
           DebuggingTactics.debug("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
       } else {

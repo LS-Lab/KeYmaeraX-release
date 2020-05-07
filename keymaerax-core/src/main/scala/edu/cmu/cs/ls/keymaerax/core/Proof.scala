@@ -750,10 +750,10 @@ object Provable {
     insist(dim > 0, "Must introduce at least one vectorial differential ghost variable.")
 
     // The list of variables y__1, y__2, ..., y__dim
-    val ghosts = (1 to dim).map( i => BaseVariable("y_", Some(i)))
+    val ghosts = (1 to dim).map(i => BaseVariable("y_", Some(i)))
     // The list of RHS g1(||), g2(||), ..., gdim(||)
     // @todo: UnitFunctionals may need an index argument
-    val ghostRHSs = (1 to dim).map( i => UnitFunctional("g"+i,AnyArg,Real))
+    val ghostRHSs = (1 to dim).map(i => UnitFunctional("g"+i,AnyArg,Real))
     // The list ghost ODEs y__1'=g1(||), y__2'=g2(||), ..., y__dim'=gdim(||)
     val ghostODEList = (ghosts zip ghostRHSs).map{ case (y,rhs) => AtomicODE(DifferentialSymbol(y), rhs) }
     // The list of ghost ODEs as a single ODE
