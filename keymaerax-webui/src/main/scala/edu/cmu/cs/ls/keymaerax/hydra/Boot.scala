@@ -163,7 +163,7 @@ object HyDRAInitializer extends Logging {
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[GenProduct]()
-    TactixLibrary.invGenerator = generator
+    TactixLibrary.invSupplier = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
 

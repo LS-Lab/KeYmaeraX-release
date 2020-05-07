@@ -58,7 +58,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "have 4 open goals for abstract invariant J(x,v) with master" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val cgen = TactixLibrary.invGenerator match { case c: ConfigurableGenerator[GenProduct] => c }
+    val cgen = TactixLibrary.invSupplier match { case c: ConfigurableGenerator[GenProduct] => c }
     val result = proveBy(s, explore(cgen))
     result.subgoals should have size 4
     result.subgoals(0) shouldBe "x!=m(), b()>0 ==> J(x,v)".asSequent

@@ -103,12 +103,12 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
 
   it should "not generate duplicate invariants" in {
     val s = "x>=0&x<=H(), g()>0, 1>=c(), c()>=0, x>=0&x=H()&v=0&g()>0&1>=c()&c()>=0 ==> [{x'=v,v'=-g()&x>=0}]((x=0->x>=0&x<=H())&(x!=0->x>=0&x<=H()))".asSequent
-    InvariantGenerator.defaultInvariantGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("v=0".asFormula, None)
+    invGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("v=0".asFormula, None)
   }
 
   it should "provide precondition as invariant candidate" in {
     val s = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
-    InvariantGenerator.defaultInvariantGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("x^2+y^2=2".asFormula, None)
+    invGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("x^2+y^2=2".asFormula, None)
   }
 
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
@@ -119,22 +119,33 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     proveBy("x=1 -> [{x:=x+1;}*]x>=1".asFormula, auto) shouldBe 'proved
   }
 
-  it should "discrete ghost on old(.) notation in ODE annotations" in withQE { _ =>
+  it should "discrete ghost on old(.) notation in ODE annotations" in withQE { tool =>
     //@note unprovable so that we can inspect the effect of the invariant generator
     val fastODE = PrivateMethod[DependentPositionTactic]('fastODE)
     val s = "==> [{x'=3}@invariant(x>=old(x))]x>=0".asSequent
+    val expectedInvs =
+      if (tool.name == "Mathematica") List(
+        ("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true))),
+        ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PreNoImpPost")))))
+      else List(("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true))))
     val invs = TactixLibrary.invGenerator("==> [{x'=3}]x>=0".asSequent, SuccPosition(1))
-    invs.loneElement shouldBe ("x>=old(x)".asFormula, Some(AnnotationProofHint(tryHard = true)))
+    invs should contain theSameElementsInOrderAs expectedInvs
     //@note ODE will return with counterexample before even trying fastODE, so call fastODE directly
     proveBy(s, (DifferentialTactics invokePrivate fastODE(() => invs.toIterator, skip))(1)).subgoals.
       loneElement shouldBe "x_0=x ==> [{x'=3 & true&x>=x_0}]x>=0".asSequent
   }
 
-  "Configurable generator" should "return annotated conditional invariants" in withQE { _ =>
+  "Configurable generator" should "return annotated conditional invariants" in withQE { tool =>
     // parse formula with invariant annotations to populate invariant generator
     "y>0 ==> [{x:=2; ++ x:=-2;}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=-2*y -> y<=old(y)))}]y>0".asSequent
-    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y>=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
-    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
+    def expectedInvs(inv: String) =
+      if (tool.name == "Mathematica") List(
+        (inv.asFormula, Some(AnnotationProofHint(tryHard = true))),
+        ("true".asFormula, Some(PegasusProofHint(isInvariant = true, Some("PreNoImpPost")))))
+      else List((inv.asFormula, Some(AnnotationProofHint(tryHard = true))))
+
+    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)) should contain theSameElementsInOrderAs expectedInvs("y>=old(y)")
+    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)) should contain theSameElementsInOrderAs expectedInvs("y<=old(y)")
   }
 
   "Pegasus" should "return trivial invariant postcondition result if sanity timeout > 0" in withMathematica { _ =>
@@ -689,7 +700,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
                 case _ => false
               })
               val strippedCandidates = if (stripProofHints) stripHints(candidates) else candidates
-              TactixLibrary.invGenerator = FixedGenerator(strippedCandidates)
+              TactixLibrary.invSupplier = FixedGenerator(strippedCandidates)
               TactixLibrary.differentialInvGenerator = FixedGenerator(strippedCandidates)
               val checkStart = System.currentTimeMillis()
               //val proof = proveBy(seq, TactixLibrary.master())
@@ -732,7 +743,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
 
   /** Parse model but ignore all proof hints. */
   private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    TactixLibrary.invSupplier = FixedGenerator(Nil)
     TactixLibrary.differentialInvGenerator = FixedGenerator(Nil)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
     val entry = KeYmaeraXArchiveParser(modelContent).head

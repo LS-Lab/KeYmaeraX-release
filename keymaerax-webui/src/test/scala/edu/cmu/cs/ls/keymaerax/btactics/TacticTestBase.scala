@@ -253,9 +253,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true)))).distinct))
-    TactixLibrary.invGenerator = generator
-    TactixLibrary.differentialInvGenerator =
-      (sequent,pos) => generator(sequent,pos) #::: InvariantGenerator.differentialInvariantCandidates(sequent,pos)
+    TactixLibrary.invSupplier = generator
+    // reinitialize with empty caches for test case separation
+    TactixLibrary.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixLibrary.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     //@note Mathematica is expected to shut down only in afterAll(), but setting provider shuts down the current provider
     if (!mathematicaProvider.isInitialized) ToolProvider.setProvider(new NoneToolProvider())
     LemmaDBFactory.lemmaDB.removeAll("user/tests")
@@ -275,8 +276,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         dbTester().db.session.close()
         dbTester = null
       }
-      TactixLibrary.invGenerator = FixedGenerator(Nil)
+      TactixLibrary.invSupplier = FixedGenerator(Nil)
       TactixLibrary.differentialInvGenerator = FixedGenerator(Nil)
+      TactixLibrary.loopInvGenerator = FixedGenerator(Nil)
     }
   }
 

@@ -393,7 +393,7 @@ object KeYmaeraX {
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixLibrary.invGenerator = generator
+    TactixLibrary.invSupplier = generator
 
     //@note just in case the user shuts down the prover from the command line
     Runtime.getRuntime.addShutdownHook(new Thread() { override def run(): Unit = { shutdownProver() } })
@@ -469,7 +469,7 @@ object KeYmaeraX {
     implicit val ec: ExecutionContext = ExecutionContext.global
     Await.ready(Future { ToolProvider.shutdown() }, Duration(5, TimeUnit.SECONDS))
     ToolProvider.setProvider(new NoneToolProvider())
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    TactixLibrary.invSupplier = FixedGenerator(Nil)
     KeYmaeraXTool.shutdown()
     //@note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
   }

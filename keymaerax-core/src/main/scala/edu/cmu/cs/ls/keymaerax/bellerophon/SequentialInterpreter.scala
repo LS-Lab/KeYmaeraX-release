@@ -369,8 +369,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case Expand(_, s) =>
       val subst = USubst(s :: Nil)
-      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, subst :: Nil)
-      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, subst :: Nil)
+      TactixLibrary.invSupplier = substGenerator(TactixLibrary.invSupplier, subst :: Nil)
       apply(TactixLibrary.US(subst), v) match {
         case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ subst)
         case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, subst)
@@ -379,8 +378,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case ExpandAll(defs) =>
       val substs = defs.map(s => USubst(s :: Nil))
-      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, substs)
-      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, substs)
+      TactixLibrary.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
       val foo =
       apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
         reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v);
