@@ -3,21 +3,21 @@ ArchiveEntry "CPSWeek Tutorial Example 1".
   Title "1-dimensional car".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=59".
 
-Functions.
-  R A.
-  R b.
-  R m.
-  R ep.
+Definitions
+  Real A;
+  Real b;
+  Real m;
+  Real ep;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
-  R t.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
+  Real t;
 End.
 
-Problem.
+Problem
   A>=0 & b>0 & v^2<=2*b*(m-x) & ep>0 -> [
     {
       {  a := -b;
@@ -28,14 +28,13 @@ Problem.
   ]x<=m
 End.
 
-Tactic "Proof CPSWeek Tutorial Example 1".
-implyR(1); (andL('L)*); loop({`v^2 <= 2*b()*(m()-x)`}, 1); <(
+Tactic "Proof CPSWeek Tutorial Example 1"
+implyR(1); (andL('L)*); loop("v^2 <= 2*b()*(m()-x)", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); <(
-    assignb(1); composeb(1); assignb(1); ODE(1); QE; done,
-    composeb(1); testb(1); implyR(1); assignb(1); composeb(1); assignb(1); ODE(1);
-    (done | allR(1); (implyR(1)*2); allL({`t_`}, 'Llast); QE; done)
+    assignb(1); composeb(1); assignb(1); ODE(1); done,
+    composeb(1); testb(1); implyR(1); assignb(1); composeb(1); assignb(1); ODE(1); done
   )
 )
 End.
@@ -47,25 +46,25 @@ ArchiveEntry "CPSWeek Tutorial Example 2".
   Title "Damped oscillator".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=127".
 
-Functions.
-  R d().
-  R w().
-  R c().
+Definitions
+  Real d;
+  Real w;
+  Real c;
 End.
 
-ProgramVariables.
-  R x.
-  R y.
+ProgramVariables
+  Real x;
+  Real y;
 End.
 
-Problem.
-  w()^2*x^2+y^2<=c()^2 -> [
-    {x'=y, y'=-w()^2*x - 2*d()*w()*y & w()>=0 & d()>=0}
-  ]w()^2*x^2+y^2<=c()^2
+Problem
+  w^2*x^2+y^2<=c^2 -> [
+    {x'=y, y'=-w^2*x - 2*d*w*y & w>=0 & d>=0}
+  ]w^2*x^2+y^2<=c^2
 End.
 
-Tactic "Proof CPSWeek Tutorial Example 2".
-implyR('R); dI('R); done
+Tactic "Proof CPSWeek Tutorial Example 2"
+  implyR('R); dI('R); done
 End.
 
 End.
@@ -75,21 +74,21 @@ ArchiveEntry "CPSWeek Tutorial Example 3".
   Title "Motzkin".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=128".
 
-ProgramVariables.
-  R x1.
-  R x2.
-  R c.
+ProgramVariables
+  Real x1;
+  Real x2;
+  Real c;
 End.
 
-Problem.
+Problem
   x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c ->
   [
     {x1'=2*x1^4*x2+4*x1^2*x2^3-6*x1^2*x2, x2'=-4*x1^3*x2^2-2*x1*x2^4+6*x1*x2^2}
   ] x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c
 End.
 
-Tactic "Proof CPSWeek Tutorial Example 3".
-implyR('R); diffInvariant({`x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c`}, 1); dW('R); prop; done
+Tactic "Proof CPSWeek Tutorial Example 3"
+  implyR('R); diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c", 1); dW('R); prop; done
 End.
 
 End.
@@ -99,28 +98,27 @@ ArchiveEntry "CPSWeek Tutorial Example 4".
   Title "2-dimensional car".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf#page=148".
 
-Functions.
-  R A.
-  R b.
-  R ep.
-  R abs(R).
+Definitions
+  Real A;
+  Real b;
+  Real ep;
 End.
 
-ProgramVariables.
-  R x.
-  R y.
-  R dx.
-  R dy.
-  R v.
-  R a.
-  R w.
-  R r.
-  R mx.
-  R my.
-  R t.
+ProgramVariables
+  Real x;
+  Real y;
+  Real dx;
+  Real dy;
+  Real v;
+  Real a;
+  Real w;
+  Real r;
+  Real mx;
+  Real my;
+  Real t;
 End.
 
-Problem.
+Problem
   A>=0 & b>0 & r!=0 & dx^2+dy^2=1 & (2*b*abs(mx-x)>v^2 | 2*b*abs(my-y)>v^2) & v>=0 & r*w=v & ep>0 -> [
     {
       {  a := -b;
@@ -132,27 +130,27 @@ Problem.
   ](mx-x)^2+(my-y)^2 > 0
 End.
 
-Tactic "Proof CPSWeek Tutorial Example 4".
-implyR(1); (andL('L)*); loop({`r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)`}, 1); <(
+Tactic "Proof CPSWeek Tutorial Example 4"
+implyR(1); (andL('L)*); loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)", 1); <(
   QE; done,
   QE; done,
   composeb(1); choiceb(1); andR(1); <(
     assignb(1); composeb(1); assignb(1);
-    diffInvariant({`dx^2+dy^2=1`}, 1); 
-    diffInvariant({`t>=0`}, 1);
-    diffInvariant({`v=old(v)-b()*t`}, 1);
-    diffInvariant({`-t*(v+b()/2*t)<=x-old(x) & x-old(x)<=t*(v+b()/2*t)`}, 1);
-    diffInvariant({`-t*(v+b()/2*t)<=y-old(y) & y-old(y)<=t*(v+b()/2*t)`}, 1);
+    diffInvariant("dx^2+dy^2=1", 1); 
+    diffInvariant("t>=0", 1);
+    diffInvariant("v=old(v)-b()*t", 1);
+    diffInvariant("-t*(v+b()/2*t)<=x-old(x) & x-old(x)<=t*(v+b()/2*t)", 1);
+    diffInvariant("-t*(v+b()/2*t)<=y-old(y) & y-old(y)<=t*(v+b()/2*t)", 1);
     (andL('L)*); dW(1); smartQE; done
     ,
     composeb(1); assignb(1); composeb(1); randomb(1); allR(1); composeb(1); randomb(1); allR(1);
     composeb(1); testb(1); implyR(1); composeb(1); randomb(1); allR(1); composeb(1); randomb(1); allR(1);
     testb(1); implyR(1); composeb(1); assignb(1);
-    diffInvariant({`dx^2+dy^2=1`}, 1);
-    diffInvariant({`t>=0`}, 1);
-    diffInvariant({`v=old(v)+A()*t`}, 1);
-    diffInvariant({`-t*(v-A()/2*t)<=x-old(x) & x-old(x)<=t*(v-A()/2*t)`}, 1);
-    diffInvariant({`-t*(v-A()/2*t)<=y-old(y) & y-old(y)<=t*(v-A()/2*t)`}, 1);
+    diffInvariant("dx^2+dy^2=1", 1);
+    diffInvariant("t>=0", 1);
+    diffInvariant("v=old(v)+A()*t", 1);
+    diffInvariant("-t*(v-A()/2*t)<=x-old(x) & x-old(x)<=t*(v-A()/2*t)", 1);
+    diffInvariant("-t*(v-A()/2*t)<=y-old(y) & y-old(y)<=t*(v-A()/2*t)", 1);
     (andL('L)*); dW(1) /* goal remains open */
   )
 ) partial
