@@ -86,6 +86,12 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       } else Some(labels)
   }
 
+  /** Compares provables ignoring labels. */
+  private def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
+    case (BelleProvable(pPrev, _), BelleProvable(pCurr, _)) => pCurr != pPrev
+    case _ => curr != prev
+  }
+
   /** Returns the result of running tactic `expr` on value `v`. */
   protected def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case builtIn: BuiltInTactic => v match {
@@ -123,7 +129,12 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     }
 
     case EitherTactic(left, right) => try {
-      apply(left, v)
+      val leftResult = apply(left, v)
+      if (!progress(v, leftResult)) {
+        throw new BelleProofSearchControl("No progress of 'l' in 'l | r' " + expr)
+      } else {
+        leftResult
+      }
     } catch {
       case eleft: BelleThrowable =>
         try {
@@ -206,12 +217,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v
-
-      /** Compares provables ignoring labels. */
-      def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
-        case (BelleProvable(pPrev, _), BelleProvable(pCurr, _)) => pCurr != pPrev
-        case _ => curr != prev
-      }
 
       breakable { do {
         prev = result
