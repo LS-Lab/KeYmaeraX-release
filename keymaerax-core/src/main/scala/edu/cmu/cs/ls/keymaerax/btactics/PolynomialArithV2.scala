@@ -1420,7 +1420,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
           }
         } else {
-          throw new IllegalArgumentException("Exponent must be a constant polynomial.")
+          throw new IllegalArgumentException("Divisor must be a constant polynomial.")
         }
       case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
     }
