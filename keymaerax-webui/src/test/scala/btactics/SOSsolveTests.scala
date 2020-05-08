@@ -40,7 +40,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
   "sosSolveTool" should "return the certificate" in withMathematica { _ =>
     val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
     sosSolveTool.sosSolve(polys1, vars1, 1, None) shouldBe
-      ("1+20*GT16^2".asTerm,
+      Left("1+20*GT16^2".asTerm,
         "1/10*(200*GT16^2+-20*GT16^2*tuscore2dollarskuscore0), -1/10*GT16^2, 1/10*GT16^2, 0, 0, 0, 0, 0, 0, -1".split(',').map(_.asTerm).toList)
   } /* to verify: cofactors * polys = sos */
 

@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.install.SOSsolveInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
-import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec
+import edu.cmu.cs.ls.keymaerax.tools.qe.{KeYmaeraToMathematica, MathematicaOpSpec}
 import org.apache.logging.log4j.scala.Logging
 
 trait SOSsolveTool {
@@ -16,7 +16,7 @@ trait SOSsolveTool {
     * @param vars variables of polys
     * @return (1 + sos, cofactors) such that  (cofactors, polynomials).zipped.map(Times) = 1 + sos.
     */
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Option[(Term, List[Term])]
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Either[(Term, List[Term]), String]
 }
 
 /**
@@ -24,7 +24,7 @@ trait SOSsolveTool {
   * @author Fabian Immler, based on MathematicaInvGenTool by Andrew Sogokon and QETool by Nathan Fulton and Stefan Mitsch
   */
 class MathematicaSOSsolveTool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[Expression](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
+  extends BaseKeYmaeraMathematicaBridge[Expression](link, new KeYmaeraToMathematica(), PegasusM2KConverter)
     with SOSsolveTool
     with Logging {
 
@@ -55,7 +55,7 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     case _ => throw new IllegalArgumentException("Timeout must be positive")
   }
 
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Option[(Term, List[Term])] = {
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Either[(Term, List[Term]), String] = {
     val mPolys = list(polys.map(k2m):_*)
     val mVars = list(vars.map(k2m):_*)
     val mDegree = int(degree)
@@ -70,11 +70,15 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     try {
       val (output, result) = run(command)
       logger.debug("Found witness: " + result.prettyString + " from raw output " + output)
-      Some(decodeWitness(result))
+      val (sos, cofactors) = decodeWitness(result)
+      sos match {
+        case Number(n) if n.compareTo(0) == 0 =>
+          Right("sos = 0")
+        case _ => Left((sos, cofactors))
+      }
     } catch {
       case ex: Throwable =>
-        logger.warn("SOSsolve exception", ex)
-        None
+        Right("SOSsolve exception: " + ex)
     }
   }
 }

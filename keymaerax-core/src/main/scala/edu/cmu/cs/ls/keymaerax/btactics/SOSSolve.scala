@@ -59,7 +59,10 @@ object SOSSolve {
       val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
       TaylorModelTactics.Timing.tic()
-      val (sos, cofactors) = sosSolveTool.sosSolve(polys, vars, degree, timeout).getOrElse(throw new BelleProofSearchControl("witnessSOS failed to produce a witness"))
+      val (sos, cofactors) = sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
+        case Left(res) => res
+        case Right(msg) => throw new BelleProofSearchControl(msg)
+      }
       TaylorModelTactics.Timing.toc("sosSolve")
       val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
       TaylorModelTactics.Timing.toc("sosPos")
