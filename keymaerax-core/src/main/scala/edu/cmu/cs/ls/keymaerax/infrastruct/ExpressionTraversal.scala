@@ -192,6 +192,11 @@ object ExpressionTraversal {
     case None => None
   }
   def traverse[A : FTPG](f: ExpressionTraversalFunction, e: A): Option[A] = traverse(HereP, f, e)
+  def traverseExpr[E <: Expression](f: ExpressionTraversalFunction, expr: E): Option[E] = expr match {
+    case e: Term => traverse(HereP, f, e).map(_.asInstanceOf[E])
+    case e: Formula => traverse(HereP, f, e).map(_.asInstanceOf[E])
+    case e: Program => traverse(HereP, f, e).map(_.asInstanceOf[E])
+  }
 
   def traverse[A : FTPG](p: PosInExpr, f: ExpressionTraversalFunction, e: A): Option[A] = {
     pre(f, p, e) match {
