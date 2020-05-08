@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Function, Real, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Function, Real, SubstitutionPair, Trafo, Tuple, USubst, USubstOne, Unit}
 import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -120,6 +120,22 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
+  }
+
+  it should "complain when variable and function have same name" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | Definitions Real x() = 2; End.
+        | ProgramVariables Real x; End.
+        | Problem x=1 -> x<=x() End.
+        |End.""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input) should have message
+      """<somewhere> Semantic analysis error
+        |semantics: Expect unique names_index that identify a unique type.
+        |ambiguous: x:Unit->Real and x:Real
+        |symbols:   x, x
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   it should "parse definitions after variables" in {
@@ -665,6 +681,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("y", None) -> (Some(Unit), Real, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y() -> [{x'=1}]x>=y()".asFormula
+    entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
+    entry.info shouldBe empty
+  }
+
+  it should "elaborate to functions in the presence of program constants" in withQE { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real y; End.
+        | ProgramVariables Real x; End.
+        | Problem x>y -> [ctrl;]x>=y End.
+        | Tactic "Simple". implyR(1) ; dC("y=old(y)", 1) End.
+        |End.
+      """.stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (Some(Unit), Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y() -> [ctrl;]x>=y()".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
     entry.info shouldBe empty
   }

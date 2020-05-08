@@ -824,6 +824,8 @@ object KeYmaeraXArchiveParser {
           case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
         }
 
+        //@note replaces all literal occurrences of variable uses with functions and relies on earlier check
+        //      that input does not mix variable and function use of the same symbol.
         val elaborated = definitions.elaborateToFunctions(problem)
         typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 
