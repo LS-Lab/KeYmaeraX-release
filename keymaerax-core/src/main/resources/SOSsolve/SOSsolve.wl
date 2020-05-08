@@ -10,7 +10,10 @@ Given a list of polynomials p1,...,pk over variables vars attempts to prove that
 Begin["Private`"];
 
 
-monomialList[vars_List,m_Integer?NonNegative]:=Flatten[Inner[#2^#1&,#,vars,Times]&/@Table[FrobeniusSolve[ConstantArray[1,Length[vars]],k],{k,0,m}]]
+allMonomials[vars_List,m_Integer?NonNegative]:=Flatten[Inner[#2^#1&,#,vars,Times]&/@Table[FrobeniusSolve[ConstantArray[1,Length[vars]],k],{k,0,m}]]
+
+
+monomialList[poly_, vars_] := Times @@ (vars^#) & /@ CoefficientRules[poly, vars][[All, 1]]
 
 
 LDLT[mat_?SymmetricMatrixQ] := 
@@ -27,7 +30,7 @@ LDLT[mat_?SymmetricMatrixQ] :=
 
 
 (* Deletes monomials that cannot possibly in the basis *)
-ReduceBasis[monbasis_List,gb_List,vars_List]:= Module[{
+ReduceBasis[monbasis_List,gmons_,gb_List,vars_List]:= Module[{
 	mb,kp,R,coeffs,filpos,umonomials,i,lgb},
 	mb = monbasis;
 	kp = KroneckerProduct[mb,mb];
@@ -43,7 +46,7 @@ ReduceBasis[monbasis_List,gb_List,vars_List]:= Module[{
 	Block[{lk,umon, mon,coeff,constr},
 		umon = umonomials[[i]];
 		mon = FromCoefficientRules[{umon->1},vars];
-		If[mon===1, Continue[]]; (* The RHS is -1 *)
+		If[MemberQ[gmons,mon], Continue[]]; (* The RHS is non-zero *)
 		lk=Flatten[Map[Lookup[#,{umon},0]&,coeffs,{2}],{3}][[1]];
 		If[DiagonalMatrixQ[lk],
 		Block[{pos},
@@ -66,30 +69,55 @@ ReduceBasis[monbasis_List,gb_List,vars_List]:= Module[{
 ]
 
 
-FindWitness[polys_List, vars_List, deg_Integer]:= Module [{
+(* Input:
+polys {p_1,p_2,...} - polynomials assumed to be = 0
+ineqs {g_1,g_2,...} - polynomials assumed to be \[NotEqual] 0
+vars  {v_1,v_2,...} - variables
+deg - degree bound
+*)
+FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
 	failure, gb, conv, monOrder, monbasis, kp, R, coeffs,
-	umonomials,constraints,i,k,res,y, matrix, result,
-	sos, soscoeff, seq,bla,vals,vec,prem,check},
+	umonomials,constraints,i,k,res,y, matrix, result,gtrm1,
+	sos, soscoeff, seq,bla,vals,vec,prem,check,redseq,redg,gtrm,gcoeff,gmc,gmons,gheu},
 	(* Some arguments that can be factored out *)
 	monOrder = DegreeReverseLexicographic;
 
 	(* result type encoding of failure*)
 	failure = {0,Map[0*#&,polys]};
+	
+	Print["Polynomials assumed to be zero: ",polys];
+	Print["Polynomials assumed to be non-zero: ",ineqs];
 
 	(* Solve for the Groebner basis and its conversion matrix *)
 	{gb,conv} = GroebnerBasis`BasisAndConversionMatrix[polys, vars, MonomialOrder -> monOrder];
+	(* gtrm is a term known to be strictly positive
+	   i.e., we will attempt to find gtrm+sos = 0 *)
+	gtrm1 = (Apply[Times,ineqs]);
+	gtrm = gtrm1^2;
+	(* Check that the Groebner basis does not already trivially reduce the non-zero term *)
+	{redseq,redg} = PolynomialReduce[gtrm,gb,vars];
+	If[redg===0, Print["Assumptions contradictory"];Return[{gtrm,Dot[redseq,conv]}]];
+	Print["Using g: ",gtrm, " Reducing to: ",redg];
 	
-	prem = monomialList[vars,deg];
+	gcoeff=CoefficientRules[redg,vars,"DegreeReverseLexicographic"];
+	(* monomials and coefficients appearing in g *)
+	gmc = Map[FromCoefficientRules[{#[[1]]->1},vars]->#[[2]]&,gcoeff];
+	gmons = Map[#[[1]]&,gmc];
+	
+	gheu = monomialList[PolynomialReduce[gtrm1,gb,vars][[2]],vars];
+	
+	prem = Join[gheu,allMonomials[vars,deg]];
 	Print["Input monomials: ",Length[prem]];
 	(* Filter all monomials that reduce ? *)
-	prem = Select[prem,PolynomialReduce[#,gb,vars][[2]]===#&];
+	prem = Select[prem, PolynomialReduce[#,gb,vars][[2]]===#&];
+	(* Degree bound too low *)
+	If[Length[prem]===0,Return[failure]];
+	
 	Print["Filter input monomials: ",Length[prem]];
 	(* Map[Print[#," ",PolynomialReduce[#,gb,vars][[2]]]&,prem]; *)
 	
 	(* Simplify the basis *)
-	{monbasis, R, coeffs} = ReduceBasis[prem,gb,vars];
-	(* make special case less special for the rest of the code... *)
-	{monbasis, R, coeffs} = If[Length[monbasis] === 0, {{1}, {{0}}, {{{}}}}, {monbasis, R, coeffs}];
+	{monbasis, R, coeffs} = ReduceBasis[prem,gmons,gb,vars];
 	umonomials = Flatten[Map[#[[1]]&,coeffs,{3}],2]//DeleteDuplicates;
 	
 	Print["Solving for constraints "];
@@ -101,38 +129,41 @@ FindWitness[polys_List, vars_List, deg_Integer]:= Module [{
 		umon = umonomials[[i]];
 		mon = FromCoefficientRules[{umon->1},vars];
 		lk=Flatten[Map[Lookup[#,{umon},0]&,coeffs,{2}],{3}][[1]];
-		coeff=If[mon===1,-1,0];
+		coeff=-Lookup[gmc,mon,0];
+		(*Print[lk // MatrixForm];*)
 		constr=Tr[lk.Symbol["yy"]]==coeff;
 		constraints=Append[constraints,constr];
 	]
 	];
-
+	
+	If[Length[constraints]===0, Return[failure]];
+	
 	(* Finally solve the SDP *)
 	k=Length[monbasis];
 	Print["Total constraints: ",Length[constraints]];
 	Print["Dimension: ",Length[monbasis]];
 	(* Print[monbasis]; *)
 
-	res=SemidefiniteOptimization[Tr[IdentityMatrix[k].(Symbol["yy"])], {constraints, VectorGreaterEqual[{Symbol["yy"], 0}, {"SemidefiniteCone", k}]}, Element[Symbol["yy"], Matrices[k]]];
+	res=SemidefiniteOptimization[Tr[IdentityMatrix[k].(Symbol["yy"])], {constraints, VectorGreaterEqual[{Symbol["yy"], 0}, {"SemidefiniteCone", k}]}, Element[Symbol["yy"], Matrices[k]],MaxIterations->1000];
 
 	If[MemberQ[res[[1]][[2]],Indeterminate,{2}],Return[failure]];
 	(* Round the result *)
 	matrix=res[[1]][[2]];
 	matrix=1/2*(matrix+Transpose[matrix]);
 	matrix=Rationalize[matrix,0.01];
-	Print[matrix // MatrixForm];
 	{vec,vals}=LDLT[matrix];
 	(*Print[{vals,vec}];*)
 	(* The polynomials in the SOS are given by *)
 	sos = Dot[vec,monbasis];
 	(* Each with (positive) coefficient *)
 	soscoeff = vals;
-	result = 1+Dot[soscoeff,Map[#^2&,sos]];
+	result = gtrm+Dot[soscoeff,Map[#^2&,sos]];
 	{seq,bla} = PolynomialReduce[result,gb,vars];
 	check = FullSimplify[Dot[Dot[seq, conv], polys] - result];
 	If[Not[check === 0], Return[failure]];
 	Return[{result,Dot[seq,conv]}]
 ]
+FindWitness[polys_List, vars_List, deg_Integer]:= FindWitness[polys, {},vars, deg]; 
 
 
 End[]
