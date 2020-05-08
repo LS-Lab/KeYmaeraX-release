@@ -90,7 +90,7 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
-  it should "rename bound variables?" taggedAs OptimisticTest in {
+  it should "rename bound variables? OPTIMISTIC" taggedAs OptimisticTest in {
     shouldMatch("p_()&\\exists y_ true".asFormula,
       "(\\exists y true)&\\exists y true".asFormula,
       RenUSubst(Seq(("p_()".asFormula, "(\\exists z_ true)".asFormula), ("y_".asVariable, "y".asVariable), ("z_".asVariable, "y".asVariable)))
