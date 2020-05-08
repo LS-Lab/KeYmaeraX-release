@@ -87,7 +87,7 @@ object KeYmaeraXArchiveParser {
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
     def exhaustiveSubst[T <: Expression](arg: T): T = try {
-      arg.exhaustiveSubst(USubst(substs)).asInstanceOf[T]
+      elaborateToFunctions(arg).exhaustiveSubst(USubst(substs)).asInstanceOf[T]
     } catch {
       case ex: SubstitutionClashException =>
         throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
