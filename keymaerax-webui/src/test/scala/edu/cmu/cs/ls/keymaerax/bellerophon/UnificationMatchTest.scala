@@ -90,6 +90,13 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
+  it should "rename bound variables?" taggedAs OptimisticTest in {
+    shouldMatch("p_()&\\exists y_ true".asFormula,
+      "(\\exists y true)&\\exists y true".asFormula,
+      RenUSubst(Seq(("p_()".asFormula, "(\\exists z_ true)".asFormula), ("y_".asVariable, "y".asVariable), ("z_".asVariable, "y".asVariable)))
+    )
+  }
+
   "Unification programs" should "unify [a;]x>=0 with [x:=x+5;]x>=0" in {
     shouldUnify("[a;]x>=0".asFormula, "[x:=x+5;]x>=0".asFormula, USubst(
       SubstitutionPair("a;".asProgram, "x:=x+5;".asProgram) :: Nil))
