@@ -248,6 +248,7 @@ trait BaseMatcher extends Matcher with Logging {
   * Reasonably fast single-pass matcher that is defined by recursive unification from compositions.
   * @note Central recursive unification implementation.
   * @author Andre Platzer
+  * @see [[UniformMatching]]
   */
 abstract class SchematicUnificationMatch extends BaseMatcher {
 

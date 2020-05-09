@@ -119,6 +119,11 @@ class UnificationMatchTest extends SystemTestBase {
 
   //@todo split this test case
 
+  private def shouldBeSameUnifier(u1: RenUSubst, u2: RenUSubst): Unit = {
+    if (u1.subsDefsInput.filterNot(sp=>sp._1==sp._2).toSet != u2.subsDefsInput.filterNot(sp=>sp._1==sp._2).toSet)
+      u1 shouldBe (u2)
+  }
+
   // new unification matchers from now on
 
   private def shouldMatch(e1: Expression, e2: Expression, us: Option[RenUSubst]): Unit = {
@@ -129,13 +134,13 @@ class UnificationMatchTest extends SystemTestBase {
       println("Unified:     " + s)
       println("Expected:    " + us.get + "\t" + (if (s==us.get) "identical" else "different"))
       print("Expectation unifies?")
-      // check expectation whether it even unifies
+      // expect s to unify e1 against e2
       us.get(e1) shouldBe (e2)
       println("!")
       println("hence1:      " + s(e1))
       println("Expression2: " + e2)
       s(e1) shouldBe (e2)
-      s shouldBe (us.get)
+      shouldBeSameUnifier(s, us.get)
     } else {
       println("Expression: " + e1)
       println("Expression: " + e2)
