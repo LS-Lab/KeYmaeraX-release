@@ -138,7 +138,17 @@ object IOListeners {
           case Left(BelleProvable(p, _)) =>
             if (p.isProved) "proved"
             else if (p.subgoals.head.succ.headOption.contains(False)) "disproved"
-            else "unfinished"
+            else input match {
+              case BelleProvable(q, _) =>
+                if (p.subgoals == q.subgoals) "no progress"
+                else {
+                  val change = p.subgoals.diff(q.subgoals).size - q.subgoals.diff(p.subgoals).size
+                  if (change > 0) "added " + change + " goal(s)"
+                  else if (change == 0) "transformed goal(s)"
+                  else "closed " + change + " goal(s)"
+                }
+              case _ => "Unexpected output provable from input error"
+            }
           case _ => "failed"
         }
 
