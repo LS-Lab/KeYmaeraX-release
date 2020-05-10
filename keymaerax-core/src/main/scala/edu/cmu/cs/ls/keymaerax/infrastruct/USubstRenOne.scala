@@ -140,6 +140,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   }
 
   /** apply this uniform substitution renaming everywhere in a term */
+  //@todo could optimize empty subsDefsInput to be just identity application right away
   def apply(t: Term): Term = try usubst(bottom, t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
 
   /** apply this uniform substitution renaming everywhere in a formula */

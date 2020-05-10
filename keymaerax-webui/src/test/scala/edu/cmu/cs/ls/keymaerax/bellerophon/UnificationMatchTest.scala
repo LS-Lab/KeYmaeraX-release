@@ -35,10 +35,12 @@ class UnificationMatchTest extends SystemTestBase {
       println("Expression: " + e1)
       println("Expression: " + e2)
       val s = matcher(e1, e2)
-      println("Unified:  " + s)
+      println("Unifier:  " + s)
       println("Expected: " + us.get)
+      print("Unifies?")
       s(e1) shouldBe e2
-      s shouldBe RenUSubst(us.get)
+      println(" successfully!")
+      shouldBeSameUnifier(s, RenUSubst(us.get))
     } else {
       println("Expression: " + e1)
       println("Expression: " + e2)
@@ -48,6 +50,41 @@ class UnificationMatchTest extends SystemTestBase {
   }
 
   private def shouldUnify(e1: Expression, e2: Expression, us: USubst): Unit = should(e1,e2,Some(us))
+
+  private def shouldBeSameUnifier(u1: RenUSubst, u2: RenUSubst): Unit = {
+    if (u1.subsDefsInput.filterNot(sp=>sp._1==sp._2).toSet != u2.subsDefsInput.filterNot(sp=>sp._1==sp._2).toSet)
+      u1 shouldBe (u2)
+  }
+
+  // new unification matchers from now on
+
+  private def shouldMatch(e1: Expression, e2: Expression, us: Option[RenUSubst]): Unit = {
+    if (us.isDefined) {
+      println("Expression1: " + e1)
+      println("Expression2: " + e2)
+      val s = UnificationMatch(e1, e2)
+      println("Unifier:     " + s)
+      println("Expected:    " + us.get + "\t" + (if (s==us.get) "identical substitution" else "different substitution"))
+      print("Unifies?")
+      // expect s to unify e1 against e2
+      us.get(e1) shouldBe (e2)
+      println(" successfully!")
+      println("hence1:      " + s(e1))
+      println("Expression2: " + e2)
+      s(e1) shouldBe (e2)
+      shouldBeSameUnifier(s, us.get)
+    } else {
+      println("Expression: " + e1)
+      println("Expression: " + e2)
+      println("Expected: " + "<ununifiable>")
+      a [UnificationException] should be thrownBy UnificationMatch(e1, e2)
+    }
+  }
+
+  private def shouldMatch(e1: Expression, e2: Expression, us: RenUSubst): Unit = shouldMatch(e1, e2, Some(us))
+
+
+
 
   "Unification terms" should "unify f() with x^2+y" in {
     shouldUnify("f()".asTerm, "x^2+y".asTerm, USubst(
@@ -118,38 +155,6 @@ class UnificationMatchTest extends SystemTestBase {
   }
 
   //@todo split this test case
-
-  private def shouldBeSameUnifier(u1: RenUSubst, u2: RenUSubst): Unit = {
-    if (u1.subsDefsInput.filterNot(sp=>sp._1==sp._2).toSet != u2.subsDefsInput.filterNot(sp=>sp._1==sp._2).toSet)
-      u1 shouldBe (u2)
-  }
-
-  // new unification matchers from now on
-
-  private def shouldMatch(e1: Expression, e2: Expression, us: Option[RenUSubst]): Unit = {
-    if (us.isDefined) {
-      println("Expression1: " + e1)
-      println("Expression2: " + e2)
-      val s = UnificationMatch(e1, e2)
-      println("Unified:     " + s)
-      println("Expected:    " + us.get + "\t" + (if (s==us.get) "identical" else "different"))
-      print("Expectation unifies?")
-      // expect s to unify e1 against e2
-      us.get(e1) shouldBe (e2)
-      println("!")
-      println("hence1:      " + s(e1))
-      println("Expression2: " + e2)
-      s(e1) shouldBe (e2)
-      shouldBeSameUnifier(s, us.get)
-    } else {
-      println("Expression: " + e1)
-      println("Expression: " + e2)
-      println("Expected: " + "<ununifiable>")
-      a [UnificationException] should be thrownBy UnificationMatch(e1, e2)
-    }
-  }
-
-  private def shouldMatch(e1: Expression, e2: Expression, us: RenUSubst): Unit = shouldMatch(e1, e2, Some(us))
 
   private val semanticRenaming = UnificationMatch("quark(||)".asFormula, "quarks=6".asFormula).isInstanceOf[URenAboveUSubst]
 
