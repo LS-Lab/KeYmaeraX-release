@@ -1012,7 +1012,11 @@ object DerivationInfo {
     new DerivedAxiomInfo("= sym", "equalSym", "equalSym", unsure, {case () => useAt(DerivedAxioms.equalSym)}),
     new DerivedAxiomInfo("!= sym", "notEqualSym", "notEqualSym", unsure, {case () => useAt(DerivedAxioms.notEqualSym)}),
     new DerivedAxiomInfo("> antisym", "greaterNotSym", "greaterNotSym", unsure, {case () => useAt(DerivedAxioms.greaterNotSym)}),
-    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)})
+    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)}),
+
+    // Extra liveness axioms
+    new DerivedAxiomInfo("K<&>", "KDomD", "KDomD", unsure, {case () => useAt(DerivedAxioms.kDomD)})
+
   )
   //</editor-fold>
 

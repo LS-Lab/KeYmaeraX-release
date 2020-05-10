@@ -259,7 +259,7 @@ class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with 
 
   private def printSpace(s: Space): String = s match {
     case AnyArg => "" //s"(${HTML_OPEN}b$HTML_CLOSE${HTML_OPEN}i$HTML_CLOSE" + "x" + s"$HTML_OPEN/i$HTML_CLOSE$HTML_OPEN/b$HTML_CLOSE)"
-    case Except(v) => s"(${HTML_OPEN}s$HTML_CLOSE" + printName(v) + s"$HTML_OPEN/s$HTML_CLOSE)"
+    case Except(vs) => s"(${HTML_OPEN}s$HTML_CLOSE" + vs.map(printName).mkString(",") + s"$HTML_OPEN/s$HTML_CLOSE)"
   }
 
   protected override def pp(q: PosInExpr, fml: Formula): String = emit(q, fml match {

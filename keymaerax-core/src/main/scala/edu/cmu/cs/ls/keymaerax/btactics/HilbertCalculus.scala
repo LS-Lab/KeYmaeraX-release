@@ -264,7 +264,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
         us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
-          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+          (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))
       }
     )
@@ -277,7 +277,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
         us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
-          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+          (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))
       }
     )
@@ -290,7 +290,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
       us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
         (Variable("y_",None,Real), y),
-        (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+        (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
       ))
     }
   )
@@ -301,7 +301,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
         us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
-          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b)
+          (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))
       }
     )

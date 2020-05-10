@@ -99,7 +99,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)], semantic:
   /** Rename taboo variable (and/or differential symbol) in the given space. */
   private def renSpace(space: Space): Space = space match {
     case AnyArg        => AnyArg
-    case Except(taboo) => Except(renVar(taboo))
+    case Except(taboos) => Except(taboos.map(renVar))
   }
 
 
