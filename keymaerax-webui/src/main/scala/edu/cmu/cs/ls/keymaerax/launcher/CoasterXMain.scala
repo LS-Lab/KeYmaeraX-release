@@ -223,6 +223,7 @@ object CoasterXMain {
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
+      DerivationInfoRegistry.init
     } catch {
       case e : Exception =>
         println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")

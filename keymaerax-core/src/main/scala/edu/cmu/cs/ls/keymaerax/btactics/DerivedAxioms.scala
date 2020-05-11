@@ -195,10 +195,8 @@ object DerivedAxioms extends Logging {
     */
   @DerivedAxiomAnnotation("[:=]=y", "assignbeqy")
   val assignbEquality_y = derivedAxiom("[:=] assign equality y",
-    KeYmaeraXParser.formulaParser.apply("[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))"),
-    ProvableSig.axioms.apply("[:=] assign equality").apply(
-      new URename(KeYmaeraXParser.termParser.apply("x_").asInstanceOf[Variable],
-        KeYmaeraXParser.termParser.apply("y_").asInstanceOf[Variable],semantic=true))
+    "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
+    ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable, "y_".asVariable, semantic = true))
   )
 
   /** Semantically renamed
