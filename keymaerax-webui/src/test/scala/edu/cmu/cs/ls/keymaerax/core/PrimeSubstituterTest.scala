@@ -10,6 +10,8 @@ import testHelper.KeYmaeraXTestTags.NotfixedTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.AdvocatusTest
+import edu.cmu.cs.ls.keymaerax.macros._
+import DerivationInfoAugmentors._
 import TactixLibrary._
 
 /**

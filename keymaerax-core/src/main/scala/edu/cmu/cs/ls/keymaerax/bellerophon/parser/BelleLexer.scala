@@ -6,7 +6,7 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, StringOps}
 import scala.util.matching.Regex
 
 /**
@@ -74,8 +74,8 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     // update location if we encounter whitespace/comments.
     comment -> ((s: String, loc: Location, theComment: String) => {
       val comment = s.substring(0, theComment.length)
-      val lastLineCol = comment.lines.toList.last.length //column of last line.
-      val lineCount = comment.lines.length
+      val lastLineCol = (comment: StringOps).lines.toList.last.length //column of last line.
+      val lineCount = (comment: StringOps).lines.length
       Left((s.substring(theComment.length), loc match {
         case UnknownLocation       => UnknownLocation
         case Region(sl, _, el, ec) => Region(sl + lineCount - 1, lastLineCol, el, ec)

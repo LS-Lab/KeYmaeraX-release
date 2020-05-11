@@ -2,9 +2,10 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
-import edu.cmu.cs.ls.keymaerax.btactics.TacticInfo
+import edu.cmu.cs.ls.keymaerax.macros.TacticInfo
 import edu.cmu.cs.ls.keymaerax.core.{Equal, Expression, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
 
 import scala.util.Try
 

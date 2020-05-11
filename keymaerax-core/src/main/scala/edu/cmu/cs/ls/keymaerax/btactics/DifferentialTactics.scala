@@ -18,6 +18,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
+import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
 
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}

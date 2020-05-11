@@ -7,9 +7,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
+import edu.cmu.cs.ls.keymaerax.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -191,9 +193,12 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note needs semantic renaming
     */
-  lazy val assignbEquality_y = derivedAxiom("[:=] assign equality y",
-    "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
-    ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+  @DerivedAxiomAnnotation("[:=]=y")
+  val assignbEquality_y = derivedAxiom("[:=] assign equality y",
+    KeYmaeraXParser.formulaParser.apply("[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))"),
+    ProvableSig.axioms.apply("[:=] assign equality").apply(
+      new URename(KeYmaeraXParser.termParser.apply("x_").asInstanceOf[Variable],
+        KeYmaeraXParser.termParser.apply("y_").asInstanceOf[Variable],semantic=true))
   )
 
   /** Semantically renamed

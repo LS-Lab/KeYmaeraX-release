@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 
 import scala.annotation.tailrec
+import scala.collection.immutable.StringOps
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -936,7 +937,7 @@ object KeYmaeraXArchiveParser {
   }
 
   private def slice(text: String, loc: Location): String = {
-    val lines = text.lines.slice(loc.begin.line - 1, loc.end.line).toList
+    val lines = (text: StringOps).lines.toList.slice(loc.begin.line - 1, loc.end.line).toList
     if (loc.end.line > loc.begin.line) {
       val header = lines.head.drop(loc.begin.column - 1)
       val footer = lines.last.take(loc.end.column)

@@ -6,12 +6,14 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivedRuleInfo, RandomFormula, TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
 import org.scalatest._
 import testHelper.KeYmaeraXTestTags
 import testHelper.CustomAssertions.withSafeClue

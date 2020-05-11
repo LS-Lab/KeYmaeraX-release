@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{USubstTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.macros._
+import DerivationInfoAugmentors._
 import testHelper.CustomAssertions.withSafeClue
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, PrivateMethodTester}
 

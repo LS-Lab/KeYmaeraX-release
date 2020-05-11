@@ -25,6 +25,8 @@ import Helpers._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros._
+import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.InputSignature
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
