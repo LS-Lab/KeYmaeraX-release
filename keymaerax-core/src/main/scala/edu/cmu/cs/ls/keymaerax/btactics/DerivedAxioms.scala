@@ -58,7 +58,7 @@ object DerivedAxioms extends Logging {
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
   private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
-    val lemmaName = DerivedAxiomInfo(name).storedName
+    val lemmaName = DerivedAxiomInfo.toStoredName(name)
     val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
@@ -193,7 +193,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note needs semantic renaming
     */
-  @DerivedAxiomAnnotation("[:=]=y")
+  @DerivedAxiomAnnotation("[:=]=y", "assignbeqy")
   val assignbEquality_y = derivedAxiom("[:=] assign equality y",
     KeYmaeraXParser.formulaParser.apply("[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))"),
     ProvableSig.axioms.apply("[:=] assign equality").apply(

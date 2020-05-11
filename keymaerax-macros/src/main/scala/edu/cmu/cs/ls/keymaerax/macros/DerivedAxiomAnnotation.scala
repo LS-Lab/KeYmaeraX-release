@@ -12,7 +12,7 @@ object IdentAnnotation {
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] =  annottees(0)
 }
 
-class DerivedAxiomAnnotation(val display: String, val linear: Boolean = false) extends StaticAnnotation {
+class DerivedAxiomAnnotation(val display: String, val codeName: String = "", val linear: Boolean = false) extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro DerivedAxiomAnnotation.impl
 }
 
@@ -23,7 +23,13 @@ object DerivedAxiomAnnotation {
     import c.universe._
     val display: String = c.prefix.tree match {
       case q"new $annotation($display)" => c.eval[String](c.Expr(display))
-      case q"new $annotation($display, $linear)" => c.eval[String](c.Expr(display))
+      case q"new $annotation($display, $codeName)" => c.eval[String](c.Expr(display))
+      case q"new $annotation($display, $codeName, $linear)" => c.eval[String](c.Expr(display))
+    }
+    val codeNameParam: String = c.prefix.tree match {
+      case q"new $annotation($display)" => ""
+      case q"new $annotation($display, $codeName)" => c.eval[String](c.Expr(codeName))
+      case q"new $annotation($display, $codeName, $linear)" => c.eval[String](c.Expr(codeName))
     }
     //val display: Expr[String] = reify {c.prefix.splice.asInstanceOf[DerivedAxiomAnnotation].display }
     def correctName(t: Tree): Boolean = {
@@ -35,12 +41,13 @@ object DerivedAxiomAnnotation {
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
       }
     }
-    def extractValParts(valDecl: ValDef): (Modifiers, TermName, String, Tree) = {
+    def extractValParts(valDecl: ValDef, codeNameParam: String): (Modifiers, TermName, TermName, String, Tree) = {
       valDecl match {
-        case q"$mods val $cName: $tpt = $functionName( ..$params )"if correctName(functionName) && params.length == 3 =>
-          (cName,  params(0)) match {
-            case (codeName: TermName, Literal(Constant(canonName: String))) =>
-              (mods, codeName, canonName, valDecl.rhs)
+        case q"$mods val $declName: $tpt = $functionName( ..$params )"if correctName(functionName) && params.length == 3 =>
+          (declName,  params(0)) match {
+            case (declName: TermName, Literal(Constant(canonName: String))) =>
+              val codeName: TermName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
+              (mods, declName, codeName, canonName, valDecl.rhs)
             case (t1, t2) => c.abort(c.enclosingPosition, "Invalid annottee: val name = derivedAxiom(arg1, arg2, arg3), got: (" + t1 + " , " + t2 + ") of type " + t1.getClass() + " * " + t2.getClass())
           }
         case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)
@@ -49,7 +56,7 @@ object DerivedAxiomAnnotation {
     }
     annottees map (_.tree) toList match {
       case (valDecl: ValDef) :: Nil =>
-        val (mods, codeName, canonName,  rhs) = extractValParts(valDecl)
+        val (mods, declName, codeName, canonName,  rhs) = extractValParts(valDecl, codeNameParam)
         val codeString = Literal(Constant(codeName.decodedName.toString))
         val canonString = Literal(Constant(canonName))
         val displayString = Literal(Constant(display))
@@ -59,7 +66,7 @@ object DerivedAxiomAnnotation {
         val printInfo = q"""{println("Registering info: " + $info); $info}"""
         val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.register($rhs, $printInfo)"
         val lemmaType = tq"edu.cmu.cs.ls.keymaerax.lemma.Lemma"
-        c.Expr[Nothing](q"""$mods val $codeName: $lemmaType = $application""")
+        c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
       case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val declaration got: " + t.head + " of type: " + t.head.getClass())
     }
   }

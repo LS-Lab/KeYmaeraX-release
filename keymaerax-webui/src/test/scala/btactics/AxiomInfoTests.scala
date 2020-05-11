@@ -14,6 +14,10 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 class AxiomInfoTests extends FlatSpec with Matchers with BeforeAndAfterEach {
  "Axiom Info" should "exist for all axioms" in {
    try {
+     DerivationInfoRegistry.init
+     println(DerivationInfo.allInfo.length)
+     val da = DerivedAxioms.allDual_y
+     println(DerivationInfo.allInfo.length)
      ProvableSig.axiom.keys.forall({ case axiomName => AxiomInfo(axiomName); true }) shouldBe true
    } catch {
      case e:AxiomNotFoundException =>

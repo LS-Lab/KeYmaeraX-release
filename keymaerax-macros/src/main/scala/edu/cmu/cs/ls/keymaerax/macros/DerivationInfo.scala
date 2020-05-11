@@ -36,11 +36,16 @@ case class AxiomNotFoundException(axiomName: String) extends Exception("Axiom wi
  * @see [[TacticInfo]]
  */
 object DerivationInfo {
-  var allInfo: List[DerivationInfo] = List()
+  var _allInfo: List[DerivationInfo] = List()
+  def allInfo: List[DerivationInfo] =
+    _allInfo match {
+      case Nil => throw new Exception("Need to initialize DerivationInfo.allInfo by calling [[]] ")
+      case dis => dis
+    }
 
   def register[T](value: T, di: DerivationInfo): T = {
     println("Registering derivation info: " + di)
-    allInfo = di :: allInfo
+    _allInfo = di :: allInfo
     value
   }
 
@@ -207,6 +212,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , override val linear: Boolean
                             , theExpr: Unit => Any)
   extends AxiomInfo with StorableInfo {
+  override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   DerivationInfo.assertValidIdentifier(codeName)
   //def belleExpr: BelleExpr = codeName by ((pos: Position, _: Sequent) => expr()(pos))
   //override lazy val formula: Formula =
@@ -314,7 +320,8 @@ object DerivedAxiomInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
     }
 
-  val allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
+  def toStoredName(codeName: String): String = codeName.filter(c => c.isLetterOrDigit).toLowerCase
+  def allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
 }
 
 // axiomatic proof rules
@@ -333,7 +340,7 @@ object DerivedRuleInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived rule")
     }
 
-  val allInfo:List[DerivedRuleInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedRuleInfo]).map(_.asInstanceOf[DerivedRuleInfo])
+  def allInfo:List[DerivedRuleInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedRuleInfo]).map(_.asInstanceOf[DerivedRuleInfo])
 }
 
 // tactics
@@ -379,7 +386,7 @@ object ProvableInfo {
     }
   }
 
-  val allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
+  def allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
 }
 
 // axioms
@@ -399,7 +406,7 @@ object AxiomInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
     }
 
-  val allInfo:List[AxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[AxiomInfo]).map(_.asInstanceOf[AxiomInfo])
+  def allInfo:List[AxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[AxiomInfo]).map(_.asInstanceOf[AxiomInfo])
 }
 
 
@@ -419,7 +426,7 @@ object CoreAxiomInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
     }
 
-  val allInfo:List[CoreAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[CoreAxiomInfo]).map(_.asInstanceOf[CoreAxiomInfo])
+  def allInfo:List[CoreAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[CoreAxiomInfo]).map(_.asInstanceOf[CoreAxiomInfo])
 }
 
 

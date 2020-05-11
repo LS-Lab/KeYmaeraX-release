@@ -131,7 +131,7 @@ object DerivationInfoRegistry {
   //<editor-fold desc="modalities">
 
   /** Modality cases of [[allInfo]] */
-  private[this] lazy val modalityInfos: List[DerivationInfo] = List(
+  private[this] val modalityInfos: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")
@@ -1356,7 +1356,7 @@ object DerivationInfoRegistry {
     differentialInfos ++ foInfos ++ miscInfos ++ derivedAxiomsInfos ++ sequentCalculusInfos) ensures (
     consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
-  val _ = DerivationInfo.allInfo = DerivationInfo.allInfo ++ allInfo
+  def init: Unit = { DerivationInfo._allInfo = DerivationInfo._allInfo ++ allInfo }
 
   ////////////////////////////////////////////////////////
   // End of derivation infos in [[allInfo]] registry
