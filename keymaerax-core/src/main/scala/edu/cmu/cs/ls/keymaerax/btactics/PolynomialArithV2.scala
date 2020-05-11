@@ -405,8 +405,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     }
 
     def +(that: Coefficient) : Coefficient = {
-      val numRes = num*that.denum + that.num*denum
-      val denumRes = denum*that.denum
+      val numRes = BigDecimalQETool.eval(Plus(Times(Number(num), Number(that.denum)), Times(Number(that.num), Number(denum))))
+      val denumRes = BigDecimalQETool.eval(Times(Number(denum), Number(that.denum)))
       val inst = Seq(
         ("ln_", numN),
           ("ld_", denumN),
@@ -429,8 +429,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     }
 
     def *(that: Coefficient) : Coefficient = {
-      val numRes = num*that.num
-      val denumRes = denum*that.denum
+      val numRes = BigDecimalQETool.eval(Times(Number(num), Number(that.num)))
+      val denumRes = BigDecimalQETool.eval(Times(Number(denum), Number(that.denum)))
       val inst = Seq(
         ("ln_", numN),
           ("ld_", denumN),
