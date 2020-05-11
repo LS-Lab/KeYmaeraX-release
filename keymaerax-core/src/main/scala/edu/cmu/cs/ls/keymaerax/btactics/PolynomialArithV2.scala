@@ -871,6 +871,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   lazy val divideRat = rememberAny("(q_() = n_()/d_() & p_()*(d_()/n_()) = r_()) -> p_()/q_() = r_()".asFormula,
     QE & done
   )
+  lazy val divideNeg = rememberAny("(-p_()/-q_() = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done
+  )
 
   // Lemmas for negation
   val negateEmpty = rememberAny("t_() = 0 -> -t_() = 0".asFormula, QE & done)
@@ -1417,6 +1420,17 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
                 Seq(otherNormalized, pi.prv)
               )
               pi.updatePrv(newPrv)
+            case Neg(_) =>
+              val npq = - (this / (-other))
+              val newPrv = useDirectly(divideNeg,
+                Seq(
+                  ("p_", lhs),
+                  ("q_", other.lhs),
+                  ("r_", rhsOf(npq.prv))
+                ),
+                Seq(npq.prv)
+              )
+              npq.updatePrv(newPrv)
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
           }
         } else {
