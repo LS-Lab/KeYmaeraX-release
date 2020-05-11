@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, OptimisticTest, TodoTest}
 
+import scala.collection.immutable
 import scala.collection.immutable._
 
 
@@ -29,6 +30,9 @@ import scala.collection.immutable._
 class UnificationMatchTest extends SystemTestBase {
 
   val matcher = if (true) UnificationMatch else new FreshPostUnificationMatch
+  private def Subst(subs: immutable.Seq[(Expression,Expression)]): RenUSubst = if (!semanticRenaming) RenUSubst(subs) else
+    new FastURenAboveUSubst(subs)
+  private def Subst(us: USubst): RenUSubst = Subst(us.subsDefsInput.map(sp=>(sp.what,sp.repl)))
 
   private def should(e1: Expression, e2: Expression, us: Option[USubst]): Unit = {
     if (us.isDefined) {
@@ -40,7 +44,7 @@ class UnificationMatchTest extends SystemTestBase {
       print("Unifies?")
       s(e1) shouldBe e2
       println(" successfully!")
-      shouldBeSameUnifier(s, RenUSubst(us.get))
+      shouldBeSameUnifier(s, Subst(us.get))
     } else {
       println("Expression: " + e1)
       println("Expression: " + e2)
@@ -67,8 +71,11 @@ class UnificationMatchTest extends SystemTestBase {
       println("Expected:    " + us.get + "\t" + (if (s==us.get) "identical substitution" else "different substitution"))
       print("Unifies?")
       // expect s to unify e1 against e2
-      us.get(e1) shouldBe (e2)
+      s(e1) shouldBe (e2)
       println(" successfully!")
+      // expect s to unify e1 against e2
+      us.get(e1) shouldBe (e2)
+      println("recorded unifies successfully")
       println("hence1:      " + s(e1))
       println("Expression2: " + e2)
       s(e1) shouldBe (e2)
@@ -130,7 +137,8 @@ class UnificationMatchTest extends SystemTestBase {
   it should "rename bound variables? OPTIMISTIC" taggedAs OptimisticTest in {
     shouldMatch("p_()&\\exists y_ true".asFormula,
       "(\\exists y true)&\\exists y true".asFormula,
-      RenUSubst(Seq(("p_()".asFormula, "(\\exists z_ true)".asFormula), ("y_".asVariable, "y".asVariable), ("z_".asVariable, "y".asVariable)))
+      //@todo illegal unifier but UniformMatching finds correct one
+      Subst(Seq(("p_()".asFormula, "(\\exists z_ true)".asFormula), ("y_".asVariable, "y".asVariable), ("z_".asVariable, "y".asVariable)))
     )
   }
 
@@ -148,7 +156,7 @@ class UnificationMatchTest extends SystemTestBase {
     val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     //@todo not sure about the expected result
-    UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
+    UnificationMatch(s1, s2) shouldBe Subst(new USubst(
       SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
         SubstitutionPair(Variable("x"), Variable("y")) ::
         SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
@@ -156,19 +164,22 @@ class UnificationMatchTest extends SystemTestBase {
 
   //@todo split this test case
 
-  private val semanticRenaming = UnificationMatch("quark(||)".asFormula, "quarks=6".asFormula).isInstanceOf[URenAboveUSubst]
+  private val semanticRenaming =
+    UnificationMatch("quark(||)".asFormula, "quarks=6".asFormula).isInstanceOf[URenAboveUSubst] ||
+    UnificationMatch("quark(||)".asFormula, "quarks=6".asFormula).isInstanceOf[FastURenAboveUSubst]
+
 
 
   "New unification match" should "unify renaming and instance 3*f(x)>2 and 5*x>2" in {
     shouldMatch("3*f(x)>2".asFormula,
-      "3*(5*x)>2".asFormula, RenUSubst(
+      "3*(5*x)>2".asFormula, Subst(
         (FuncOf(Function("f", None, Real, Real), DotTerm()), Times(Number(5), DotTerm())) :: Nil
       ))
   }
 
   it should "unify renaming and instance p(x) and x>5" in {
     shouldMatch("p(x)".asFormula,
-      "x>5".asFormula, RenUSubst(
+      "x>5".asFormula, Subst(
         (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), Number(5))) :: Nil
       ))
   }
@@ -179,7 +190,7 @@ class UnificationMatchTest extends SystemTestBase {
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     //@todo not sure about the expected exception
     a[ProverException] shouldBe thrownBy(
-    UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
+    UnificationMatch(s1, s2) shouldBe Subst(new USubst(
       SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
         SubstitutionPair(Variable("x"), Variable("y")) ::
         SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
@@ -191,87 +202,87 @@ class UnificationMatchTest extends SystemTestBase {
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     println("Unify " + s1 + "\nwith  " + s2 + "\nyields " + UnificationMatch(s1, s2))
     //@todo not sure about the expected result
-    UnificationMatch(s1, s2) shouldBe RenUSubst(
+    UnificationMatch(s1, s2) shouldBe Subst(
       (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
         (Variable("x"), Variable("y")) ::
         ("t()".asTerm, Variable("z")) :: Nil)
   }
 
   it should "unify [x:=f();]p(x) with [x:=7+x;]x^2>=5" in {
-    shouldMatch("[x:=f();]p(x)".asFormula, "[x:=7+x;]x^2>=5".asFormula, RenUSubst(
+    shouldMatch("[x:=f();]p(x)".asFormula, "[x:=7+x;]x^2>=5".asFormula, Subst(
         ("f()".asTerm, "7+x".asTerm) ::
           (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) <-> p(f()) with [x:=7+x;]x^2>=5 <-> (7+x)^2>=5" in {
-    shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula, RenUSubst(
+    shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula, Subst(
       ("f()".asTerm, "7+x".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) with [y:=7+z;]y^2>=5" in {
-    shouldMatch("[x:=f();]p(x)".asFormula, "[y:=7+z;]y^2>=5".asFormula, RenUSubst(
+    shouldMatch("[x:=f();]p(x)".asFormula, "[y:=7+z;]y^2>=5".asFormula, Subst(
       (Variable("x"), Variable("y")) ::
       ("f()".asTerm, "7+z".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [y:=f();]p(y) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
-    shouldMatch("[y:=f();]p(y) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
+    shouldMatch("[y:=f();]p(y) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, Subst(
       (("f()".asTerm, "7+z".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil)))
   }
 
   it should "unify [x_:=f();]p(x_) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
-    shouldMatch("[x_:=f();]p(x_) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
+    shouldMatch("[x_:=f();]p(x_) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, Subst(
       (Variable("x_"), Variable("y")) ::
         ("f()".asTerm, "7+z".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
-    shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
+    shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, Subst(
       (Variable("x"), Variable("y")) ::
         ("f()".asTerm, "7+z".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x_:=y;]p(x_) with [y_0:=y;]y_0>2" in {
-    shouldMatch("[x_:=y;]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, RenUSubst(
+    shouldMatch("[x_:=y;]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, Subst(
       (Variable("x_"), Variable("y",Some(0))) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "2".asTerm)) :: Nil))
   }
 
   it should "unify [x_:=f();]p(x_) with [y_0:=y;]y_0>2" in {
-    shouldMatch("[x_:=f();]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, RenUSubst(
+    shouldMatch("[x_:=f();]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, Subst(
       (Variable("x_"), Variable("y",Some(0))) ::
         ("f()".asTerm, "y".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "2".asTerm)) :: Nil))
   }
 
 //  it should "unify [x_:=y;]y_0>0<->y_0>0 with [y_0:=y;]y_0>0<->y>0" in {
-//    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[y_0:=y;]y_0>0<->y>0".asFormula, RenUSubst(
+//    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[y_0:=y;]y_0>0<->y>0".asFormula, Subst(
 //      (Variable("x_"), Variable("y",Some(0))) :: Nil))
 //  }
 
   it should "unify [x_:=y;]y_0>0<->y_0>0 with [a:=z;]y_0>0<->y_0>0" in {
-    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[a:=z;]y_0>0<->y_0>0".asFormula, RenUSubst(
+    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[a:=z;]y_0>0<->y_0>0".asFormula, Subst(
       (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
   }
 
   it should "unify [x_:=y;]x_>0<->y>0 with [a:=z;]a>0<->z>0" in {
-    shouldMatch("[x_:=y;]x_>0<->y>0".asFormula, "[a:=z;]a>0<->z>0".asFormula, RenUSubst(
+    shouldMatch("[x_:=y;]x_>0<->y>0".asFormula, "[a:=z;]a>0<->z>0".asFormula, Subst(
       (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
   }
 
   it should "unify [x_:=y;]y>0<->y>0 with [a:=z;]z>0<->z>0" in {
-    shouldMatch("[x_:=y;]y>0<->y>0".asFormula, "[a:=z;]z>0<->z>0".asFormula, RenUSubst(
+    shouldMatch("[x_:=y;]y>0<->y>0".asFormula, "[a:=z;]z>0<->z>0".asFormula, Subst(
       (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
   }
 
   //@todo really? needs cyclic decluttering to say the least
   it should "unify [x_:=y;]y_0>0<->y_0>0 with [y_0:=z;]y_0>0<->z>0" ignore {
-    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[y_0:=z;]y_0>0<->z>0".asFormula, RenUSubst(
+    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[y_0:=z;]y_0>0<->z>0".asFormula, Subst(
       (Variable("x_"), Variable("y",Some(0))) :: Nil))
   }
 
@@ -291,7 +302,7 @@ class UnificationMatchTest extends SystemTestBase {
   it should "unify q_(x_) & x_=f(x_) -> p_(x_) with complicated formula" ignore {
     shouldMatch("q_(x_) & x_=f(x_) -> p_(x_)".asFormula,
       "((v>=0&x+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0)&x=v_0*(kyxtime-kyxtime_0)+x_0->v>=0&x+v^2/(2*B)<=S".asFormula,
-      RenUSubst(
+      Subst(
         ("q_(.)".asFormula, "(v>=0&.+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0".asFormula) ::
         ("f(.)".asTerm, "v_0*(kyxtime-kyxtime_0)+x_0".asTerm) ::
         ("p_(.)".asFormula, "v>=0&.+v^2/(2*B)<=S".asFormula) ::
@@ -303,7 +314,7 @@ class UnificationMatchTest extends SystemTestBase {
   it should "unify x_=f(x_) & q_(x_) -> p_(x_) with complicated formula" in {
     shouldMatch("x_=f(x_) & q_(x_) -> p_(x_)".asFormula,
       "x=v_0*(kyxtime-kyxtime_0)+x_0&((v>=0&x+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0)->v>=0&x+v^2/(2*B)<=S".asFormula,
-      RenUSubst(
+      Subst(
         ("f(.)".asTerm, "v_0*(kyxtime-kyxtime_0)+x_0".asTerm) ::
         ("q_(.)".asFormula, "(v>=0&.+v^2/(2*B)>=S)&v=0*(kyxtime-kyxtime_0)+v_0".asFormula) ::
         ("p_(.)".asFormula, "v>=0&.+v^2/(2*B)<=S".asFormula) ::
@@ -313,34 +324,34 @@ class UnificationMatchTest extends SystemTestBase {
   }
 
   "Dassignb unification" should "unify [u':=f();]p(u') with [u':=b();]u'>=0" in {
-    shouldMatch("[u':=f();]p(u')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
+    shouldMatch("[u':=f();]p(u')".asFormula, "[u':=b();]u'>=0".asFormula, Subst(
       (FuncOf(Function("f",None,Unit,Real), Nothing), FuncOf(Function("b",None,Unit,Real),Nothing)) ::
         (PredOf(Function("p",None,Real,Bool),DotTerm()), GreaterEqual(DotTerm(),Number(0))) :: Nil))
   }
 
   it should "unify [x':=f();]p(x') with [u':=b();]u'>=0" in {
-    shouldMatch("[x':=f();]p(x')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
+    shouldMatch("[x':=f();]p(x')".asFormula, "[u':=b();]u'>=0".asFormula, Subst(
       (Variable("x"), Variable("u")) :: (FuncOf(Function("f",None,Unit,Real), Nothing), FuncOf(Function("b",None,Unit,Real),Nothing)) ::
         (PredOf(Function("p",None,Real,Bool),DotTerm()), GreaterEqual(DotTerm(),Number(0))) :: Nil))
   }
 
 
   "More unification" should "unify y>0 -> [x:=2;]y>0 with p() -> [a;]p()" in {
-    shouldMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula, RenUSubst(
+    shouldMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula, Subst(
       (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) ::
         (ProgramConst("a"), Assign(Variable("x"), Number(2))) :: Nil))
   }
 
   it should "unify [x:=2;]y>0 -> y>0 with [a;]p() -> p()" in {
     // not an axiom, just to test both directions
-    shouldMatch("[a;]p() -> p()".asFormula, "[x:=2;]y>0 -> y>0".asFormula, RenUSubst(
+    shouldMatch("[a;]p() -> p()".asFormula, "[x:=2;]y>0 -> y>0".asFormula, Subst(
       (ProgramConst("a"), Assign(Variable("x"), Number(2))) ::
         (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) :: Nil))
   }
 
   it should "unify renaming and instance [y:=y;]p(||) and [y_0:=y_0;](y_0>77&true)" in {
     shouldMatch("[y:=y;]p(||)".asFormula,
-      "[y_0:=y_0;](y_0>77&true)".asFormula, RenUSubst(
+      "[y_0:=y_0;](y_0>77&true)".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "(y>77&true)").asFormula) ::
         Nil
@@ -349,7 +360,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](true)<->(true)" in {
     shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
-      "[y_0:=y_0;](true)<->(true)".asFormula, RenUSubst(
+      "[y_0:=y_0;](true)<->(true)".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), "(true)".asFormula) ::
         Nil
@@ -358,54 +369,54 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming x=0 and y_0=0" in {
     shouldMatch("x=0".asFormula,
-      "y_0=0".asFormula, RenUSubst(
+      "y_0=0".asFormula, Subst(
       (Variable("x"), Variable("y",Some(0))) :: Nil))
   }
 
   it should "unify renaming x=0<->x=0 and y_0=0<->y_0=0" in {
     shouldMatch("x=0<->x=0".asFormula,
-      "y_0=0<->y_0=0".asFormula, RenUSubst(
+      "y_0=0<->y_0=0".asFormula, Subst(
       (Variable("x"), Variable("y",Some(0))) :: Nil))
   }
 
   it should "unify renaming x=0&x=0<->x=0 and y_0=0&y_0=0<->y_0=0" in {
     shouldMatch("x=0&x=0<->x=0".asFormula,
-      "y_0=0&y_0=0<->y_0=0".asFormula, RenUSubst(
+      "y_0=0&y_0=0<->y_0=0".asFormula, Subst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
   it should "unify renaming x=0<->x=0&x=0 and y_0=0<->y_0=0&y_0=0" in {
     shouldMatch("x=0<->x=0&x=0".asFormula,
-      "y_0=0<->y_0=0&y_0=0".asFormula, RenUSubst(
+      "y_0=0<->y_0=0&y_0=0".asFormula, Subst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
   it should "unify renaming x>1&x=2<->x<3 and y_0>1&y_0=2<->y_0<3" in {
     shouldMatch("x>1&x=2<->x<3".asFormula,
-      "y_0>1&y_0=2<->y_0<3".asFormula, RenUSubst(
+      "y_0>1&y_0=2<->y_0<3".asFormula, Subst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
   it should "unify renaming x>1<->x=2&x<3 and y_0>1<->y_0=2&y_0<3" in {
     shouldMatch("x>1<->x=2&x<3".asFormula,
-      "y_0>1<->y_0=2&y_0<3".asFormula, RenUSubst(
+      "y_0>1<->y_0=2&y_0<3".asFormula, Subst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
   it should "unify renaming and instance [y:=y;]y>5<->y>5 and [y_0:=y_0;]y_0>5<->y_0>5" in {
     shouldMatch("[y:=y;]y>5<->y>5".asFormula,
-      "[y_0:=y_0;]y_0>5<->y_0>5".asFormula, RenUSubst(
+      "[y_0:=y_0;]y_0>5<->y_0>5".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) :: Nil
     ))
   }
 
   it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0=1)<->[y_0:=y_0;](y_0=1)" ignore {
     shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
-      "(y_0=1)<->[y_0:=y_0;](y_0=1)".asFormula, RenUSubst(
+      "(y_0=1)<->[y_0:=y_0;](y_0=1)".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0=1)" else "y=1").asFormula) ::
         Nil
@@ -414,7 +425,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0=0)<->(y_0=0)" in {
     shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
-      "[y_0:=y_0;](y_0=0)<->(y_0=0)".asFormula, RenUSubst(
+      "[y_0:=y_0;](y_0=0)<->(y_0=0)".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0=0)" else "y=0").asFormula) ::
         Nil
@@ -423,7 +434,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (true)<->[y_0:=y_0;](true)" in {
     shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
-      "(true)<->[y_0:=y_0;](true)".asFormula, RenUSubst(
+      "(true)<->[y_0:=y_0;](true)".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), "(true)".asFormula) ::
         Nil
@@ -432,7 +443,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
     shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
-      "(y_0>77&true)<->[y_0:=y_0;](y_0>77&true)".asFormula, RenUSubst(
+      "(y_0>77&true)<->[y_0:=y_0;](y_0>77&true)".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "y>77&true").asFormula) ::
         Nil
@@ -441,7 +452,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0>77&true)<->(y_0>77&true)" in {
     shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
-      "[y_0:=y_0;](y_0>77&true)<->(y_0>77&true)".asFormula, RenUSubst(
+      "[y_0:=y_0;](y_0>77&true)<->(y_0>77&true)".asFormula, Subst(
       (Variable("y"), Variable("y",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(y_0>77&true)" else "y>77&true").asFormula) ::
         Nil
@@ -450,7 +461,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and long instance" in {
     shouldMatch("[x_:=x_;]p(||)<->p(||)".asFormula,
-      "[x_0:=x_0;](((x_0>0&true)&true)&true->(2>=0|false)|false)<->((x_0>0&true)&true)&true->(2>=0|false)|false".asFormula, RenUSubst(
+      "[x_0:=x_0;](((x_0>0&true)&true)&true->(2>=0|false)|false)<->((x_0>0&true)&true)&true->(2>=0|false)|false".asFormula, Subst(
       (Variable("x_"), Variable("x",Some(0))) ::
         (UnitPredicational("p", AnyArg), (if (semanticRenaming) "(((x_0>0&true)&true)&true->(2>=0|false)|false)" else "(((x_>0&true)&true)&true->(2>=0|false)|false)").asFormula) ::
         Nil
@@ -459,7 +470,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "match abstract loop against loopy single ODE" in {
     shouldMatch("[{a;}*]p(||)".asFormula,
-      "[{{x'=v}}*](v>=0&true)".asFormula, RenUSubst(
+      "[{{x'=v}}*](v>=0&true)".asFormula, Subst(
         (ProgramConst("a"), "{x'=v}".asProgram) ::
           (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
       ))
@@ -467,7 +478,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "match abstract loop against loopy ODE system " in {
     shouldMatch("[{a;}*]p(||)".asFormula,
-      "[{{x'=v,v'=A}}*](v>=0&true)".asFormula, RenUSubst(
+      "[{{x'=v,v'=A}}*](v>=0&true)".asFormula, Subst(
       (ProgramConst("a"), "{x'=v,v'=A}".asProgram) ::
         (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
     ))
@@ -475,7 +486,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "match abstract loop against loopy ODE system with domain" in {
     shouldMatch("[{a;}*]p(||)".asFormula,
-      "[{{x'=v,v'=A&v<=5}}*](v>=0&true)".asFormula, RenUSubst(
+      "[{{x'=v,v'=A&v<=5}}*](v>=0&true)".asFormula, Subst(
         (ProgramConst("a"), "{x'=v,v'=A&v<=5}".asProgram) ::
           (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
       ))
@@ -483,7 +494,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "match abstract loop against loopy initialized ODE" in {
     shouldMatch("[{a;}*]p(||)".asFormula,
-      "[{v:=5;{x'=v,v'=A}}*](v>=0&true)".asFormula, RenUSubst(
+      "[{v:=5;{x'=v,v'=A}}*](v>=0&true)".asFormula, Subst(
         (ProgramConst("a"), "v:=5;{x'=v,v'=A}".asProgram) ::
           (UnitPredicational("p", AnyArg), "v>=0&true".asFormula) ::Nil
       ))
@@ -491,7 +502,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "match derived powers" in {
     shouldMatch("(f(||)^(c()))'".asTerm,
-      "(x^2)'".asTerm, RenUSubst(
+      "(x^2)'".asTerm, Subst(
         (UnitFunctional("f", AnyArg, Real), "x".asTerm) ::
           (FuncOf(Function("c", None, Unit, Real), Nothing), "2".asTerm) :: Nil
       ))
@@ -500,7 +511,7 @@ class UnificationMatchTest extends SystemTestBase {
   it should "say something about broken types" ignore {
     //@todo in principle this should throw a CoreException about incompatible types, actually. Not parse print and incompatible substitution sorts. Both are true but not the first issue.
     a[ProverException] shouldBe thrownBy(
-    RenUSubst(
+    Subst(
           (UnitFunctional("f", AnyArg, Real), "x".asTerm) ::
           (FuncOf(Function("c", None, Unit, Bool), Nothing), "2".asTerm) :: Nil
       )
@@ -511,7 +522,7 @@ class UnificationMatchTest extends SystemTestBase {
     shouldMatch(
       "([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula,
       "([{x'=v&v>=0&v>0}]x>=0 <-> [{x'=v&(v>=0&v>0)&x>0}]x>=0) <- [{x'=v&v>=0&v>0}]x>0".asFormula,
-      RenUSubst(
+      Subst(
         (DifferentialProgramConst("c"), "{x'=v}".asDifferentialProgram) ::
         (UnitPredicational("p", AnyArg), "x>=0".asFormula) ::
         (UnitPredicational("q", AnyArg), "v>=0&v>0".asFormula) ::
@@ -524,7 +535,7 @@ class UnificationMatchTest extends SystemTestBase {
     shouldMatch(
       "([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula,
       "([{x'=v}]x>=0 <-> [{x'=v&true&x>0}]x>=0) <- [{x'=v}]x>0".asFormula,
-      RenUSubst(
+      Subst(
         (DifferentialProgramConst("c"), "{x'=v}".asDifferentialProgram) ::
           (UnitPredicational("p", AnyArg), "x>=0".asFormula) ::
           (UnitPredicational("q", AnyArg), "true".asFormula) ::
@@ -535,7 +546,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
   "Reunifier ideally" should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" taggedAs OptimisticTest ignore {
-    shouldMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula, RenUSubst(
+    shouldMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula, Subst(
       ("f()".asTerm, "7+x".asTerm) ::
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
@@ -563,7 +574,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance p(x,y) and x*y>5" in {
     shouldMatch("p(x,y)".asFormula,
-      "x*y>5".asFormula, RenUSubst(
+      "x*y>5".asFormula, Subst(
         ("p((•_1,•_2))".asFormula,
           "•_1*•_2>5".asFormula) :: Nil
       ))
@@ -571,7 +582,7 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance p(x,y,z) and x*y>z" in {
     shouldMatch("p(x,y,z)".asFormula,
-      "x*y>z".asFormula, RenUSubst(
+      "x*y>z".asFormula, Subst(
         ("p((•_1,•_2,•_3))".asFormula,
           "•_1*•_2>•_3".asFormula) :: Nil
       ))
@@ -579,12 +590,12 @@ class UnificationMatchTest extends SystemTestBase {
 
   it should "unify renaming and instance f(x,y,x*y)" in {
     shouldMatch("f(x,y,x*y) = f(a, b, c)".asFormula,
-      "x*y = a*b".asFormula, RenUSubst(
+      "x*y = a*b".asFormula, Subst(
         ("f((•_1,•_2,•_3))".asTerm,
           "•_1*•_2".asTerm) :: Nil
       ))
     shouldMatch("f(x,y,x*y) = f(a, b, c)".asFormula,
-      "x*y = c".asFormula, RenUSubst(
+      "x*y = c".asFormula, Subst(
         ("f((•_1,•_2,•_3))".asTerm,
           "•_3".asTerm) :: Nil
       ))
