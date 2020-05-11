@@ -6,7 +6,10 @@ scalaVersion in ThisBuild := "2.12.8"
 
 version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
+lazy val macros = (project in file("keymaerax-macros"))
+
 lazy val core = (project in file("keymaerax-core"))
+  .dependsOn(macros)
 
 lazy val keymaeraxAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
   mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
@@ -19,17 +22,19 @@ lazy val keymaeraxAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
 )
 
 lazy val keymaerax = (project in file("keymaerax-webui"))
-  .dependsOn(core)
+  .dependsOn(macros, core)
   .settings(inConfig(Test)(keymaeraxAssemblySettings): _*)
 
+
 lazy val root = (project in file("."))
-  .settings(unidocSettings: _*)
+  .enablePlugins(ScalaUnidocPlugin)
   .settings(
     name := "KeYmaeraX",
-    assemblyJarName := "keymaerax-" + version.value + ".jar"
+    assemblyJarName := "keymaerax-" + version.value + ".jar",
+    scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none"
   )
   .settings(inConfig(Test)(keymaeraxAssemblySettings): _*)
-  .aggregate(core, keymaerax)
+  .aggregate(macros, core, keymaerax)
 
 
 // extra runtime checks for initialization order: "-Xcheckinit"
