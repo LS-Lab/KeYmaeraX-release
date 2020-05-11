@@ -66,24 +66,22 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   insist(what match {
     case sp: SpaceDependent => sp.space match {
       case AnyArg        => true
-      case Except(taboo) =>
-        //@note this assumes no higher-order differential symbols
-        val taboos = SetLattice(
-          if (taboo.isInstanceOf[DifferentialSymbol] || taboo.sort!=Real) Set(taboo)
-          else Set(taboo, DifferentialSymbol(taboo))
-        )
+      case Except(taboos) =>
+        //@note dtaboos is the taboo variables and associated taboo' in taboos
+        val dtaboos = StaticSemantics.spaceTaboos(taboos).toSet
+
         sp match {
           //@note by previous insists, repl has to be a DifferentialProgram in this case
           case _: DifferentialProgramConst => val vc = StaticSemantics(repl.asInstanceOf[DifferentialProgram])
-            vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
+            vc.fv.intersect(dtaboos).isEmpty && vc.bv.intersect(dtaboos).isEmpty
           //@note by previous insists, repl has to be a Program in this case
           case _: ProgramConst => val vc = StaticSemantics(repl.asInstanceOf[Program])
-            vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
+            vc.fv.intersect(dtaboos).isEmpty && vc.bv.intersect(dtaboos).isEmpty
           //@note by previous insists, repl has to be a Program in this case
           case _: SystemConst => val vc = StaticSemantics(repl.asInstanceOf[Program])
-            vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty && dualFree(repl.asInstanceOf[Program])
-          case _: UnitPredicational => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
-          case _: UnitFunctional    => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
+            vc.fv.intersect(dtaboos).isEmpty && vc.bv.intersect(dtaboos).isEmpty && dualFree(repl.asInstanceOf[Program])
+          case _: UnitPredicational => StaticSemantics.freeVars(repl).intersect(dtaboos).isEmpty
+          case _: UnitFunctional    => StaticSemantics.freeVars(repl).intersect(dtaboos).isEmpty
       }
     }
     // only space-dependents have space-compatibility requirements

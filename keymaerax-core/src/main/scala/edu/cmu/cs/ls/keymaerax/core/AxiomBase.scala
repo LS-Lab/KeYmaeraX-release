@@ -131,8 +131,8 @@ private[core] object AxiomBase extends Logging {
         */
       ("con convergence",
         (immutable.IndexedSeq(
-            Sequent(immutable.IndexedSeq(Greater(x,Number(0)),Jany), immutable.IndexedSeq(Diamond(ProgramConst("a_", Except(x)), Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
-          Sequent(immutable.IndexedSeq(Exists(immutable.IndexedSeq(x), Jany)), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
+            Sequent(immutable.IndexedSeq(Greater(x,Number(0)),Jany), immutable.IndexedSeq(Diamond(ProgramConst("a_", Except(x::Nil)), Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
+          Sequent(immutable.IndexedSeq(Exists(immutable.IndexedSeq(x), Jany)), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x::Nil))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
     )
   }
 
@@ -208,22 +208,22 @@ private[core] object AxiomBase extends Logging {
     insist(axs("DI differential invariance") == Imply(Imply(qany, Box(ODESystem(ode,qany), DifferentialFormula(pany))),
       Equiv(Box(ODESystem(ode,qany),pany), Box(Test(qany),pany))), "DI differential invariance")
     insist(axs("DG differential ghost") == Equiv(
-      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
-      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
-        AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real)))
-      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost")
+      Box(ODESystem(DifferentialProgramConst("c",Except(y::Nil)), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))),
+      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y::Nil)),
+        AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y::Nil),Real), y), UnitFunctional("b",Except(y::Nil),Real)))
+      ), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))))), "DG differential ghost")
     //@note in analogy to DG
     insist(axs("DG differential ghost constant") == Equiv(
-      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
-      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y)),
-        AtomicODE(DifferentialSymbol(y), UnitFunctional("b",Except(y),Real))
-      ), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG differential ghost constant")
+      Box(ODESystem(DifferentialProgramConst("c",Except(y::Nil)), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))),
+      Exists(Seq(y), Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c",Except(y::Nil)),
+        AtomicODE(DifferentialSymbol(y), UnitFunctional("b",Except(y::Nil),Real))
+      ), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))))), "DG differential ghost constant")
     //@note in analogy to remark in proof of soundness of DG
     insist(axs("DG inverse differential ghost") == Equiv(
-      Box(ODESystem(DifferentialProgramConst("c",Except(y)), UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))),
-      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y),Real), y), UnitFunctional("b",Except(y),Real))),
-        DifferentialProgramConst("c",Except(y))),
-        UnitPredicational("q",Except(y))), UnitPredicational("p",Except(y))))), "DG inverse differential ghost")
+      Box(ODESystem(DifferentialProgramConst("c",Except(y::Nil)), UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))),
+      Forall(Seq(y), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), Plus(Times(UnitFunctional("a",Except(y::Nil),Real), y), UnitFunctional("b",Except(y::Nil),Real))),
+        DifferentialProgramConst("c",Except(y::Nil))),
+        UnitPredicational("q",Except(y::Nil))), UnitPredicational("p",Except(y::Nil))))), "DG inverse differential ghost")
 
     /* DIFFERENTIAL AXIOMS FOR TERMS */
 

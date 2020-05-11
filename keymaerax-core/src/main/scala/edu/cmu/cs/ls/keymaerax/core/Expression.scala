@@ -66,8 +66,13 @@ case class ObjectSort(name : String) extends Sort { override def toString: Strin
 sealed trait Space
 /** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
 case object AnyArg extends Space { override def toString: String = "||" }
-/** The sort denoting a slice of the state space that does not include/depend on/affect variable `taboo`. */
-case class Except(taboo: Variable) extends Space { override def toString: String = "|" + taboo.asString + "|" }
+/** The sort denoting a slice of the state space that does not include/depend on/affect variables `taboos`. */
+case class Except(taboos: immutable.Seq[Variable]) extends Space {
+  //@note empty taboos should use AnyArg instead
+  insist(taboos.nonEmpty, "taboos expect non-empty list of taboo variables")
+
+  override def toString: String = "|" + taboos.mkString(",") + "|"
+}
 
 
 /*********************************************************************************
@@ -312,7 +317,7 @@ case class FuncOf(func: Function, child: Term) extends CompositeTerm with Applic
 
 /** Arity 0 functional symbol `name:sort`, written `f(||)`, or limited to the given state space `f(|x||)`.
   * The semantics of arity 0 functional symbol is given by the state, with the additional promise
-  * that the taboo is not free so the value does not depend on taboo when `space=Except(taboo)`.
+  * that the taboos are not free so the value does not depend on taboos when `space=Except(taboos)`.
   * @note In theory, `f(||)` is written `f(\bar{x})` where `\bar{x}` is the vector of all variables.
   *       By analogy, `f(|x|)` is like having all variables other than taboo x as argument. */
 case class UnitFunctional(name: String, space: Space, sort: Sort) extends AtomicTerm with SpaceDependent with NamedSymbol {
@@ -503,7 +508,7 @@ case class PredicationalOf(func: Function, child: Formula)
 
 /** Arity 0 predicational symbol `name:bool`, written `P(||)`, or limited to the given state space `P(|x|)`.
   * The semantics of arity 0 predicational symbol is looked up by the state, with the additional promise
-  * that taboo is not free so the value does not depend on taboo when `space=Except(taboo)`.
+  * that taboos are not free so the value does not depend on taboos when `space=Except(taboos)`.
   * @note In theory, `P(||)` is written `P(\bar{x})` where `\bar{x}` is the vector of all variables.
   *       By analogy, `P(|x|)` is like having all variables other than taboo x as argument. */
 case class UnitPredicational(name: String, space: Space) extends AtomicFormula with SpaceDependent with NamedSymbol {
@@ -631,8 +636,8 @@ trait AtomicProgram extends Program with Atomic
 
 /** Uninterpreted program constant symbol / game symbol, possibly limited to the given state space.
   * The semantics of ProgramConst symbol is looked up by the state,
-  * with the additional promise that taboo is neither free nor bound, so the run does
-  * not depend on the value of taboo nor does the value of taboo change when space=Except(taboo).
+  * with the additional promise that taboos are neither free nor bound, so the run does
+  * not depend on the value of taboos nor does the value of taboos change when space=Except(taboos).
   * @param space The part of the state space that the interpretation/replacement of this symbol
   *              is limited to have free or bound.
   *              - `AnyArg` is the default allowing full read/write access to the state.
@@ -730,8 +735,8 @@ trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
 
 /** Uninterpreted differential program constant, limited to the given state space.
   * The semantics of arity 0 DifferentialProgramConst symbol is looked up by the state,
-  * with the additional promise that taboo is neither free nor bound, so the run does
-  * not depend on the value of taboo nor does the value of taboo change when space=Except(taboo).
+  * with the additional promise that taboos are neither free nor bound, so the run does
+  * not depend on the value of taboos nor does the value of taboos change when space=Except(taboos).
   * @param space The part of the state space that the interpretation/replacement of this symbol is limited to have free or bound.
   *              `AnyArg is` the default allowing full read/write access to the state.
   *              `Taboo(x)` means `x` can neither be free nor bound. */
