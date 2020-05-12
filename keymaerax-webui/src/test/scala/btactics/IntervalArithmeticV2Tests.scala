@@ -83,7 +83,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   it should "work with a precomputed static single assignment form" in withMathematica { qeTool =>
     val assms = IndexedSeq("0 <= a", "a <= 1", "2<=b", "b<=3") map (_.asFormula)
     val ssa = new StaticSingleAssignmentExpression("(a*b + a*b)*(a*b + a*b)+a*b*b+a*(a*b)".asTerm)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), ssa.unfold)(List(ssa.expression))
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap(), ssa.unfoldMap)(List(ssa.expression))
     println(lowers)
     println(uppers)
   }
@@ -280,7 +280,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     val pp = new KeYmaeraXPrettierPrinter(120)
     val ssa = new StaticSingleAssignmentExpression(fml)
     ssa.expression shouldBe "ssa2_ >= ssa2_".asFormula
-    ssa.unfold shouldBe
+    ssa.unfoldMap shouldBe
       Map("ssa0_".asVariable -> "a".asTerm,
         "ssa1_".asVariable -> "b".asTerm,
         "ssa2_".asVariable -> "ssa0_*ssa1_".asTerm)

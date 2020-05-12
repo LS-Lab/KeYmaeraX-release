@@ -17,6 +17,7 @@ import java.util.UUID
 
 import cc.redberry.rings
 import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2.{BoundMap, StaticSingleAssignmentExpression}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{QETacticTool, RingsLibrary}
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
@@ -627,7 +628,7 @@ object TaylorModelTactics extends Logging {
                       SaturateTactic(implyR(1)) &
                       SaturateTactic(andL('L)) &
                       debugTac("Numberic condition") &
-                      IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool) &
+                      IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool, BoundMap, BoundMap, new StaticSingleAssignmentExpression[Formula](True))(1) &
                       done
                 )
               )

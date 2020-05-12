@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position, RenUSubst, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool.{minF, maxF}
@@ -180,6 +180,7 @@ object IntervalArithmeticV2 {
       case u: UnaryCompositeFormula =>
         val (cv, cm, ci) = collectSubformulas(u.child, m, i)
         (u.reapply(cv), cm, ci)
+      case a: AtomicFormula => (a, m, i)
     }
 
     val (expression : E, abbrev : Map[Term, Variable]) = e match {
@@ -191,7 +192,29 @@ object IntervalArithmeticV2 {
         (fml2, unm)
     }
 
-    val  unfold : Map[Variable, Term] = abbrev.map{case (t, v) => (v, t)}
+    val unfoldMap : Map[Variable, Term] = abbrev.map{case (t, v) => (v, t)}
+
+    def unfold(t: Term) : Term = t match {
+      case v: Variable =>
+        unfoldMap.get(v) match {
+          case None => t
+          case Some(b: BinaryCompositeTerm) => b.reapply(unfold(b.left), unfold(b.right))
+          case Some(b: UnaryCompositeTerm) => b.reapply(unfold(b.child))
+          case Some(FuncOf(f, Pair(l, r))) => FuncOf(f, Pair(unfold(l), unfold(r)))
+          case Some(FuncOf(f, c)) if c.sort == Real => FuncOf(f, unfold(c))
+          // Constant symbols
+          case _ => t
+      }
+      case t => t
+    }
+
+    def unfold(fml: Formula) : Formula = fml match {
+      case (b: BinaryCompositeFormula) => b.reapply(unfold(b.left), unfold(b.right))
+      case (b: UnaryCompositeFormula) => b.reapply(unfold(b.child))
+      case (b: ComparisonFormula) => b.reapply(unfold(b.left), unfold(b.right))
+      case _ => fml
+    }
+
   }
 
   /** Populate environment with bounds (only LessEqual are being considered)
@@ -799,22 +822,105 @@ object IntervalArithmeticV2 {
     terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2, ssaMap)(t))
   }
 
-  private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
+  private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) : Option[ProvableSig] = {
     val le_prv = qeTool.qe(leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
     le_prv.conclusion.succ(0) match {
-      case Equiv(a, True) =>
-      case _ =>
-        throw new TacticInapplicableFailure("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
-          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion)
+      case Equiv(a, True) => Some(
+        CutHide(leBoth.conclusion.ante(0))(provable).
+          apply(AndRight(SuccPos(0)), 1).
+          apply(CoHideRight(SuccPos(0)), 2).
+          apply(le_prv, 2).
+          apply(AndRight(SuccPos(0)), 1).
+          apply(bound2, 2).
+          apply(bound1, 1).
+          apply(leBoth, 0)
+      )
+      case _ => None
     }
-    CutHide(leBoth.conclusion.ante(0))(provable).
-      apply(AndRight(SuccPos(0)), 1).
-      apply(CoHideRight(SuccPos(0)), 2).
-      apply(le_prv, 2).
-      apply(AndRight(SuccPos(0)), 1).
-      apply(bound2, 2).
-      apply(bound1, 1).
-      apply(leBoth, 0)
+  }
+
+  def proveComparison(prec: Int)
+                 (qeTool: QETacticTool)
+                 (assms: IndexedSeq[Formula])
+                 (include_assms: Boolean)
+                 (lowers0: BoundMap, uppers0: BoundMap, ssaMap: Map[Variable, Term])
+                 (fml: ComparisonFormula): (BoundMap, BoundMap, Option[ProvableSig]) =
+  {
+    val a = fml.left
+    val b = fml.right
+    val (lowers, uppers) = proveBounds(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssaMap)(List(a, b))
+    val ff_prv = lowers(a)
+    val gg_prv = lowers(b)
+    val F_prv = uppers(a)
+    val G_prv = uppers(b)
+    val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val F_fml = F_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val G_fml = G_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+    val f = ff_fml.right
+    val g = gg_fml.right
+    val ff = ff_fml.left
+    val gg = gg_fml.left
+    val F = F_fml.right
+    val G = G_fml.right
+    val provable = ProvableSig.startProof(Sequent(assms, IndexedSeq(fml.reapply(f, g))))
+    (lowers, uppers,
+      fml match {
+        case _: LessEqual =>
+          proveCompBoth(qeTool,
+            leBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+            provable, F_prv, gg_prv)
+        case _: Less =>
+          proveCompBoth(qeTool,
+            ltBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+            provable, F_prv, gg_prv)
+        case _: GreaterEqual =>
+          proveCompBoth(qeTool,
+            geBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+            provable, G_prv, ff_prv)
+        case _: Greater =>
+          proveCompBoth(qeTool,
+            gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+            provable, G_prv, ff_prv)
+      })
+  }
+
+  def proveBool(prec: Int)
+               (qeTool: QETacticTool)
+               (assms: IndexedSeq[Formula])
+               (include_assms: Boolean)
+               (lowers0: BoundMap, uppers0: BoundMap, ssa: StaticSingleAssignmentExpression[Formula])
+               (fml: Formula): (BoundMap, BoundMap, Option[ProvableSig]) = fml match {
+    case And(a, b) =>
+      val (lowers1, uppers1, prv1o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssa)(a)
+      val (lowers2, uppers2, prv2o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers1, uppers1, ssa)(b)
+      (prv1o, prv2o) match {
+        case (Some(prv1), Some(prv2)) =>
+          val fml1 = prv1.conclusion.succ(0)
+          val fml2 = prv2.conclusion.succ(0)
+          (lowers2, uppers2, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(And(fml1, fml2))))(AndRight(SuccPos(0)), 0)(prv2, 1)(prv1, 0)))
+        case _ => (lowers2, uppers2, None)
+      }
+    case Or(a, b) =>
+      val (lowers1, uppers1, prv1o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssa)(a)
+      prv1o match {
+        case Some(prv1) =>
+          val fml1 = prv1.conclusion.succ(0)
+          val fml2 = ssa.unfold(b)
+          (lowers1, uppers1, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(1)), 0)(prv1, 0)))
+        case None =>
+          val (lowers2, uppers2, prv2o) = proveBool(prec)(qeTool)(assms)(include_assms)(lowers1, uppers1, ssa)(b)
+          prv2o match {
+            case Some(prv2) =>
+              val fml1 = ssa.unfold(a)
+              val fml2 = prv2.conclusion.succ(0)
+              (lowers2, uppers2, Some(ProvableSig.startProof(Sequent(assms,IndexedSeq(Or(fml1, fml2))))(OrRight(SuccPos(0)), 0)(HideRight(SuccPos(0)), 0)(prv2, 0)))
+          }
+      }
+    case cfml: ComparisonFormula =>
+      proveComparison(prec)(qeTool)(assms)(include_assms)(lowers0, uppers0, ssa.unfoldMap)(cfml)
+    case _ =>
+      throw new TacticInapplicableFailure("intervalArithmeticBool requires conjunction, disjunction, or comparison")
   }
 
   private def requireOneSubgoal(prv: ProvableSig, who: String) : Unit =
@@ -822,56 +928,6 @@ object IntervalArithmeticV2 {
 
   private def requireOneSucc(seq: Sequent, who: String) : Unit =
     require(seq.succ.length == 1, who + " requires exactly one formula in the succedent.")
-
-  private def intervalArithmeticComparison(precision: Int, qeTool: QETacticTool) = new BuiltInTactic("ANON") {
-    val notSupportedMessage = "intervalArithmetic requires either of <=,<,>,=> in the succedent"
-    override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, "intervalArithmeticComparison")
-      val sequent = provable.subgoals(0)
-      requireOneSucc(sequent, "intervalArithmeticComparison")
-      sequent.succ(0) match {
-        case fml: ComparisonFormula =>
-          val f = fml.left
-          val g = fml.right
-          // TODO: collect bounds outside, if in boolean combination?!
-          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(List(f, g))
-          val ff_prv = lowers(f)
-          val gg_prv = lowers(g)
-          val F_prv = uppers(f)
-          val G_prv = uppers(g)
-          val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val F_fml = F_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val G_fml = G_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
-          val ff = ff_fml.left
-          val gg = gg_fml.left
-          val F = F_fml.right
-          val G = G_fml.right
-          fml match {
-            case _: LessEqual =>
-              proveCompBoth(qeTool,
-                leBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
-                provable, F_prv, gg_prv)
-            case _: Less =>
-              proveCompBoth(qeTool,
-                ltBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
-                provable, F_prv, gg_prv)
-            case _: GreaterEqual =>
-              proveCompBoth(qeTool,
-                geBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
-                provable, G_prv, ff_prv)
-            case _: Greater =>
-              proveCompBoth(qeTool,
-                gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
-                provable, G_prv, ff_prv)
-            case _ =>
-              throw new TacticInapplicableFailure(notSupportedMessage)
-          }
-        case _ =>
-          throw new TacticInapplicableFailure(notSupportedMessage)
-      }
-    }
-  }
 
   private lazy val equivIff = proveBy("(p()<->q())<->(p()&q())|(!p()&!q())".asFormula, prop & done)
   private lazy val equalIff = proveBy("(f()=g())<->f()<=g()&f()>=g()".asFormula, QE & done)
@@ -941,21 +997,26 @@ object IntervalArithmeticV2 {
     }
   }
 
-  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
-    requireOneSucc(seq, "intervalArithmeticBool")
-    seq.succ(0) match {
-      case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))
-      case Or(a, b) => orR(1) & ((hideR(2) & intervalArithmeticBool(precision, qeTool)) | (hideR(1) & intervalArithmeticBool(precision, qeTool)))
-      case _: ComparisonFormula => intervalArithmeticComparison(precision, qeTool)
-      case _ => throw new IllegalArgumentException("intervalArithmeticBool requires conjunction, disjunction, or comparison")
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool, lowers : BoundMap, uppers : BoundMap,
+                                               ssa : StaticSingleAssignmentExpression[Formula]) : BuiltInRightTactic =
+    "intervalArithmeticBool" by { (prv: ProvableSig, pos: SuccPosition) =>
+      requireOneSubgoal(prv, "intervalArithmeticBool")
+      pos.checkTop
+      val seq = prv.subgoals(0)
+      requireOneSucc(seq, "intervalArithmeticBool")
+      proveBool(precision)(qeTool)(seq.ante)(true)(lowers, uppers, ssa)(seq.succ(0)) match {
+        case (_, _, Some(prvIa)) =>
+          prv(Cut(prvIa.conclusion.succ(0)), 0)(HideRight(SuccPos(0)), 1)(prvIa, 1)(Close(AntePos(seq.ante.length), SuccPos(0)), 0)
+        case _ =>
+          throw new TacticInapplicableFailure("Interval Arithmetic cannot close the goal.")
+      }
     }
-  }
 
   lazy val intervalArithmetic: BelleExpr = "intervalArithmetic" by {
     val precision = 15
     SaturateTactic((orRi |! skip)) &
       intervalArithmeticPreproc(1) &
-      intervalArithmeticBool(precision, ToolProvider.qeTool().get)
+      intervalArithmeticBool(precision, ToolProvider.qeTool().get, BoundMap, BoundMap, new StaticSingleAssignmentExpression[Formula](True))(1)
   }
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
