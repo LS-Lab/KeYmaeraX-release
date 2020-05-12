@@ -150,17 +150,16 @@ object DerivationInfoRegistry {
       , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", false, {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
-    new DerivedAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.selfAssign_y)}),
+    //new DerivedAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.selfAssign_y)}),
     new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assignd", false, {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", unsure, {case () => HilbertCalculus.useAt("<:=> self assign")}),
-    new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     //new DerivedAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbEquality_y)}),
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
-    new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
+    //new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
-    new DerivedAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbEquationalAxiom) }),
+    //new DerivedAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbEquationalAxiom) }),
     new InputPositionTacticInfo("assignbExistsRule",
       RuleDisplayInfo(
         "[:=] assign exists",
@@ -673,7 +672,7 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo("-> distributes over <->", ("→↔","-><->"), "implyDistEquiv", unsure, {case () => useAt(DerivedAxioms.implyDistEquivAxiom)}),
     new DerivedAxiomInfo("-> weaken", ("→W","->W"), "implyWeaken", unsure, {case () => useAt(DerivedAxioms.implWeaken)}),
     new DerivedAxiomInfo("!! double negation"
-      , AxiomDisplayInfo(("¬¬","!!"), "(¬¬p↔p")
+      , AxiomDisplayInfo(("¬¬","!!"), "¬¬p↔p")
       , "doubleNegation", true, {case () => useAt(DerivedAxioms.doubleNegationAxiom)}),
     new DerivedAxiomInfo(":= assign dual", ":=D", "assignDual", unsure, {case () => useAt(DerivedAxioms.assignDualAxiom)}),
     new DerivedAxiomInfo(":= assign dual 2", ":=D", "assignDual2", unsure, {case () => useAt(DerivedAxioms.assignDual2Axiom)}),

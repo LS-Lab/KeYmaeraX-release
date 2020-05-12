@@ -174,7 +174,7 @@ trait ProvableInfo extends DerivationInfo {
  * @see [[DerivedRuleInfo]]
  */
 trait StorableInfo extends DerivationInfo {
-  val storedName: String = codeName.toLowerCase
+  val storedName: String = DerivedAxiomInfo.toStoredName(canonicalName)
 }
 
 // axioms
@@ -212,7 +212,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , override val linear: Boolean
                             , theExpr: Unit => Any)
   extends AxiomInfo with StorableInfo {
-  override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
+  override val storedName: String = DerivedAxiomInfo.toStoredName(canonicalName)
   DerivationInfo.assertValidIdentifier(codeName)
   //def belleExpr: BelleExpr = codeName by ((pos: Position, _: Sequent) => expr()(pos))
   //override lazy val formula: Formula =
@@ -367,11 +367,15 @@ object ProvableInfo {
       case _ => None
     }
   /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
-  def apply(name: String): ProvableInfo =
-    DerivationInfo(name) match {
+  def apply(name: String): ProvableInfo = {
+    println ("Fetching provableinfo: " + name)
+    val res =  DerivationInfo(name)
+    println ("Fetched: " + res)
+    res match {
       case info: ProvableInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
     }
+  }
 
   /** True if ProvableInfo with `storedName` exists, false otherwise. */
   def existsStoredName(storedName: String): Boolean =

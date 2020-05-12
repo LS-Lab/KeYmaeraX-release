@@ -59,6 +59,7 @@ object DerivedAxioms extends Logging {
   private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     val lemmaName = DerivedAxiomInfo.toStoredName(name)
+    println("Stored name: " + lemmaName)
     val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
@@ -181,7 +182,7 @@ object DerivedAxioms extends Logging {
           logger.warn("WARNING: Failed to add derived lemma.", e)
       }
     })
-    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
+    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
   }
 
   // semantic renaming cases
@@ -206,6 +207,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note needs semantic renaming
     */
+  @DerivedAxiomAnnotation("[:=]y", "selfassignby")
   lazy val selfAssign_y = derivedAxiom("[:=] self assign y",
     "[y_:=y_;]p(||) <-> p(||)".asFormula,
     ProvableSig.axioms("[:=] self assign")(URename("x_".asVariable,"y_".asVariable,semantic=true))
@@ -1143,6 +1145,7 @@ object DerivedAxioms extends Logging {
     * @Derived from [:=] assign equality, quantifier dualities
     * @Derived by ":= assign dual" from "[:=] assign equality exists".
     */
+  @DerivedAxiomAnnotation("<:=>", "assigndEquality")
   lazy val assigndEqualityAxiom = derivedAxiom("<:=> assign equality",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1162,6 +1165,9 @@ object DerivedAxioms extends Logging {
     * @Derived by ":= assign dual" from "<:=> assign equality".
     * @todo does not derive yet
     */
+  import DerivationInfoAugmentors._
+  // @TODO Full display info: ("[:=]","[:=] assign exists")
+  @DerivedAxiomAnnotation(("[:=]", "[:=] assign exists"), "assignbequalityexists")
   lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
     "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
     useAt(assignDual2Axiom, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1180,6 +1186,8 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
+  //new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
+  @DerivedAxiomAnnotation(("[:=]∃","[:=]exists"), "assignbexists")
   lazy val assignbImpliesExistsAxiom = derivedAxiom("[:=] assign exists",
     Sequent(IndexedSeq(), IndexedSeq("[x_:=f_();]p_(||) -> \\exists x_ p_(||)".asFormula)),
 //    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)

@@ -35,7 +35,16 @@ object DerivationInfoAugmentors {
 
   implicit class ProvableInfoAugmentor(val pi: ProvableInfo) {
     def provable: ProvableSig = {
-      ProvableSig.axioms(pi.canonicalName)
+      // @TODO: PRovableSig for all derived stuff
+      // @TODO: Continue here
+      println("All axioms: " + ProvableSig.axioms)
+      println("Key: " + pi.canonicalName)
+      try {
+        ProvableSig.axioms(pi.canonicalName)
+      } catch {
+        case e: Throwable =>
+          ProvableSig.rules(pi.canonicalName)
+      }
     }
 
     def formula: Formula = {
