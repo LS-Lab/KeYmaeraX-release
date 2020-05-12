@@ -202,6 +202,7 @@ object IntervalArithmeticV2 {
           case Some(b: UnaryCompositeTerm) => b.reapply(unfold(b.child))
           case Some(FuncOf(f, Pair(l, r))) => FuncOf(f, Pair(unfold(l), unfold(r)))
           case Some(FuncOf(f, c)) if c.sort == Real => FuncOf(f, unfold(c))
+          case Some(a) => a
           // Constant symbols
           case _ => t
       }
@@ -380,6 +381,15 @@ object IntervalArithmeticV2 {
       "Both upper and lower bound are required and need to be separate formulas in the antecedent.\n" +
       "Bounds must be given with a number on one side of one of the comparison operators <,<=,=,>=,>.\n" +
       "Maybe try Propositional->Exhaustive (prop) first?"
+    // TODO: if there is more like this, better use an [[ StaticSingleAssignment.unfoldMap]] throughout
+    def intOfTerm(t: Term) : Option[Int] = t match {
+      case Number(n) if n.isValidInt => Some(n.toIntExact)
+      case v: Variable => ssaMap.get(v) match {
+        case Some(Number(n)) => intOfTerm(Number(n))
+        case _ => None
+      }
+      case _ => None
+    }
     if (lowers.isDefinedAt(s) && uppers.isDefinedAt(s)) (lowers, uppers)
     else s match {
       case v : Variable => {
@@ -620,9 +630,9 @@ object IntervalArithmeticV2 {
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
             (lowers2.updated(s, h_prv), uppers2.updated(s, H_prv))
-          case Power(_, i: Number) if i.value.isValidInt =>
+          case _ : Power if intOfTerm(b).isDefined =>
             // Lower Bound
-            val n = i.value.toIntExact
+            val n = intOfTerm(b).get
             val ivl = power_endpoints(prec)(DecimalBounds())(ff, F)(n)
             val h = mathematicaFriendly(ivl._1)
             val H = mathematicaFriendly(ivl._2)
@@ -997,14 +1007,19 @@ object IntervalArithmeticV2 {
     }
   }
 
-  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool, lowers : BoundMap, uppers : BoundMap,
-                                               ssa : StaticSingleAssignmentExpression[Formula]) : BuiltInRightTactic =
+  private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool, doSSA: Boolean = true) : BuiltInRightTactic =
     "intervalArithmeticBool" by { (prv: ProvableSig, pos: SuccPosition) =>
       requireOneSubgoal(prv, "intervalArithmeticBool")
       pos.checkTop
       val seq = prv.subgoals(0)
       requireOneSucc(seq, "intervalArithmeticBool")
-      proveBool(precision)(qeTool)(seq.ante)(true)(lowers, uppers, ssa)(seq.succ(0)) match {
+      val (ssa, fml) = if (doSSA) {
+        val s = new StaticSingleAssignmentExpression(seq.succ(0))
+        (s, s.expression)
+      } else {
+        (new StaticSingleAssignmentExpression[Formula](True), seq.succ(0))
+      }
+      proveBool(precision)(qeTool)(seq.ante)(true)(BoundMap, BoundMap, ssa)(fml) match {
         case (_, _, Some(prvIa)) =>
           prv(Cut(prvIa.conclusion.succ(0)), 0)(HideRight(SuccPos(0)), 1)(prvIa, 1)(Close(AntePos(seq.ante.length), SuccPos(0)), 0)
         case _ =>
@@ -1016,7 +1031,7 @@ object IntervalArithmeticV2 {
     val precision = 15
     SaturateTactic((orRi |! skip)) &
       intervalArithmeticPreproc(1) &
-      intervalArithmeticBool(precision, ToolProvider.qeTool().get, BoundMap, BoundMap, new StaticSingleAssignmentExpression[Formula](True))(1)
+      intervalArithmeticBool(precision, ToolProvider.qeTool().get, true)(1)
   }
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {

@@ -327,4 +327,15 @@ class TaylorModelTests extends TacticTestBase {
         """.stripMargin.asFormula
     }
   }
+
+  "big StaticSingleAssignmentExpression" should "be constructed in a reasonable amount of time" in withMathematica { _ =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      import Timing._
+      val tm = TaylorModel("{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram, 4)
+      tic()
+      val ssa = new IntervalArithmeticV2.StaticSingleAssignmentExpression(tm.innerNumbericCondition)
+      toc("StaticSingleAssignmentExpression constructed")
+      println(ssa.unfoldMap.toList.length)
+    }
+  }
 }

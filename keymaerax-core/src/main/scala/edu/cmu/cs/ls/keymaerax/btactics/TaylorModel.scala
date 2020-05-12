@@ -406,12 +406,14 @@ object TaylorModelTactics extends Logging {
     })
     // Horner(f (p + r) - p')
     private val hornerFprPp = (fpr, pp).zipped.map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
-    private val numbericCondition =
+    private [btactics] val innerNumbericCondition =
+      hornerFprPp.zipWithIndex.map { case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i))) }.reduceRight(And)
+    private [btactics] val numbericCondition =
       FormulaTools.quantifyForall(localTime :: remainders,
         Imply(
           And(And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)),
             (lower_rembounds(timestep)(tdL), upper_rembounds(timestep)(tdU)).zipped.map(And).reduceRight(And)),
-          hornerFprPp.zipWithIndex.map{case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i)))}.reduceRight(And)
+          innerNumbericCondition
         ))
     toc("numbericCondition")
 
@@ -628,7 +630,7 @@ object TaylorModelTactics extends Logging {
                       SaturateTactic(implyR(1)) &
                       SaturateTactic(andL('L)) &
                       debugTac("Numberic condition") &
-                      IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool, BoundMap, BoundMap, new StaticSingleAssignmentExpression[Formula](True))(1) &
+                      IntervalArithmeticV2.intervalArithmeticBool(prec, qeTool)(1) &
                       done
                 )
               )

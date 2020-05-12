@@ -381,9 +381,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
             cohideOnlyL(-1) &
               useAt(poly.prettyRepresentation, PosInExpr(1::Nil))(1, 1::0::Nil) & closeId
             ,
-            hideL(-1) & IntervalArithmeticV2.intervalArithmeticBool(prec, new BigDecimalTool, IntervalArithmeticV2.BoundMap(),
-              IntervalArithmeticV2.BoundMap(),
-              new IntervalArithmeticV2.StaticSingleAssignmentExpression[Formula](True))(1)
+            hideL(-1) & IntervalArithmeticV2.intervalArithmeticBool(prec, new BigDecimalTool)(1)
           )
         )
       )
