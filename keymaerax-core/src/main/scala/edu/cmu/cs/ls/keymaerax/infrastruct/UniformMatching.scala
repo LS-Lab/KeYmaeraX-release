@@ -10,10 +10,12 @@ import edu.cmu.cs.ls.keymaerax.core._
 import scala.collection.immutable.{List, Nil}
 
 /**
-  * Uniform Matching algorithm for tactics.
+  * Uniform Matching algorithm for tactics by sweeping.
   * Their `unify(shape, input)` function matches second argument `input` against the pattern `shape` of the first argument, but not vice versa.
   * Uniform matching leaves `input` alone and only substitutes into `shape`.
   * Fast single-pass matcher that is defined by sweeping uniform matching.
+  *
+  * Sweeping Uniform Matching is provably sound and is fast but not necessarily complete.
   * @note Central recursive unification implementation.
   * @author Andre Platzer
   * @see [[SchematicUnificationMatch]]
@@ -25,37 +27,6 @@ abstract class UniformMatching extends BaseMatcher {
   protected override def Subst(subs: List[SubstRepl]): Subst = if (false) RenUSubst(subs) else
     new FastURenAboveUSubst(subs)
     //new URenAboveUSubst(subs)
-
-  /** Union of renaming substitution representations: `join(s, t)` gives the representation of `s` performed together with `t`, if compatible.
-    * {{{
-    *   s \cup t = {p(.)~>F | (p(.)~>F) \in s}  ++  {(p(.)~>F) | (p(.)~>F) \in t}
-    *   if s and t are compatible, so do not map the same p(.) or f(.) or a to different replacements
-    * }}}
-    * @return a substitution that has the same effect as applying both substitutions `s` and `t` simultaneously. */
-  //@todo optimizable: tree maps would be a faster data structure than lists for this frequent operation
-  protected def join(s: List[SubstRepl], t: List[SubstRepl]): List[SubstRepl] = {
-    var j = t
-    for (el <- s) {
-      t.find(sp => sp._1 == el._1) match {
-        case Some(sp) => if (sp._2 != el._2)
-          throw new UnificationException("<unifier> " + Subst(s).toString(), "<unifier> " + Subst(t).toString())
-        // else skip since same already present in t
-        case None =>
-          j = el :: j
-      }
-    }
-    return j
-    //@note the following alternative is elegant but keeps duplicates or gets slow if modified
-//    // return s++t while checking all new additions from s to not conflict with t
-//    s.foldLeft(t)((list, el) => if (t.find(sp => sp._1 == el._1) match {
-//      case Some(sp) => sp._2 == el._2
-//      case None => true
-//    })
-//      el :: list
-//    else
-//      throw new UnificationException("<unifier> " + s, "<unifier> " + t)
-//    )
-  }
 
   /** `unifies2(s1,s2, t1,t2)` unifies the two expressions of shape (s2,s2) against the two inputs (t1,t2) by sweeping uniform matching.
     * {{{
