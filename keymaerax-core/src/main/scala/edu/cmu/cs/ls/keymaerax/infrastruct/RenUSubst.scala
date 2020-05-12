@@ -39,7 +39,6 @@ object RenUSubst {
   provable(URename(what,repl)(provable.conclusion), UniformRenaming(what, repl))
 
 
-  //@todo .distinct ? might depend on the use case
   private[infrastruct] def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
       subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
         map(sp => {//Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);

@@ -79,6 +79,7 @@ class UnificationMatchTest extends SystemTestBase {
       println("hence1:      " + s(e1))
       println("Expression2: " + e2)
       s(e1) shouldBe (e2)
+      println("Success, now let's compare the unifier with the expected unifier")
       shouldBeSameUnifier(s, us.get)
     } else {
       println("Expression: " + e1)
@@ -132,6 +133,13 @@ class UnificationMatchTest extends SystemTestBase {
     shouldUnify("[a;]p() -> [a;]p()".asFormula, "[x:=x+1;]y>0 -> [x:=x+1;]y>0".asFormula, USubst(
       SubstitutionPair("a;".asProgram, "x:=x+1;".asProgram) :: SubstitutionPair("p()".asFormula, "y>0".asFormula) :: Nil
     ))
+  }
+
+  it should "rename bound variables" in {
+    shouldMatch("p_()&\\exists y_ true".asFormula,
+      "(\\exists y true)&\\exists y true".asFormula,
+      Subst(Seq(("p_()".asFormula, "(\\exists y_ true)".asFormula), ("y_".asVariable, "y".asVariable)))
+    )
   }
 
   it should "rename bound variables? OPTIMISTIC" taggedAs OptimisticTest in {
