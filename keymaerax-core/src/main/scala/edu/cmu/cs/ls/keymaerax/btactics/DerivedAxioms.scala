@@ -68,7 +68,6 @@ object DerivedAxioms extends Logging {
     }
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     val lemmaName = storedName // DerivedAxiomInfo.toStoredName(name)
-    println("Stored name: " + lemmaName)
     val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
