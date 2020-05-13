@@ -322,7 +322,7 @@ object DifferentialHelper {
     }
   }
 
-  private def derive(t : Term, odes: Map[BaseVariable,Term]) : Term ={
+  private def derive(t : Term, odes: Map[BaseVariable,Term]) : Term = {
     t match {
       case n:Number => Number(0) //c'=0
       case x:BaseVariable => odes.getOrElse(x,Number(0)) //x'
@@ -344,12 +344,26 @@ object DifferentialHelper {
         Plus(derive(l,odes),derive(r,odes))
       case Minus(l,r) => // (l-r)' = l'-r'
         Minus(derive(l,odes),derive(r,odes))
-      case FuncOf(_,Nothing) => //(c())'=0
+      case FuncOf(_,Nothing) =>
         Number(0)
-      case _ => ??? //Unimplemented stuff should never be derived
+      //case FuncOf(_,args) =>
+      //  //note: this handles both
+      //  // (c())'=0 and
+      //  // (f(x,y))' where x,y do not appear in the ODEs
+      //  if (StaticSemantics.freeVars(args).intersect(odes.keySet.map(_.asInstanceOf[Variable])).isEmpty)
+      //    Number(0)
+      //  else throw new IllegalArgumentException("Unable to derive function applied to non-constant arguments: "+t)
+      case _ =>  throw new IllegalArgumentException("Unable to derive: "+t)
+      //Unimplemented stuff should never be derived
     }
   }
 
+  // Compute the simplified Jacobian of a term with respect to a list of variables
+  def simplifiedJacobian(t : Term, vars : List[BaseVariable], tool: Option[SimplificationTool]) : List[Term] = {
+    vars.map(v => simpWithTool(tool,derive(t, Map(v -> Number(1)))))
+  }
+
+  // Compute the simplified Lie derivative of a term with respect to an ODE
   def simplifiedLieDerivative(p:DifferentialProgram,t:Term, tool: Option[SimplificationTool]) : Term = {
     val ld = derive(t,DependencyAnalysis.collapseODE(p))
     val ts1 = simpWithTool(tool,ld)

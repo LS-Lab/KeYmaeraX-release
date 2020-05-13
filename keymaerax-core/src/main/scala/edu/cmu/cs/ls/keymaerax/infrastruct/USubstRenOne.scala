@@ -66,6 +66,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
 /**
   * Standalone Renaming Uniform Substitution operation, simultaneously combining [[URename]] and [[USubst]]
   * to uniformly substitute while simultaneously uniformly renaming multiple variables.
+  *
   * This implementation uses one-pass uniform substitution implementation a la [[USubstOne]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
   * where the Variable~>Variable replacements are by uniform renaming,
@@ -110,8 +111,8 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   override def toString: String = "USubstRen{" + subsDefsInput.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "}"
 
 
-  /** This USubstRen implemented strictly from the core.
-    * Implemented by performing successive uniform renamings composed with renaming-aware uniform substitution. */
+  /** This USubstRen implemented strictly from core operations.
+    * Implemented by performing successive uniform renamings after renaming-aware uniform substitution. */
   val toCore: Expression => Expression = e => {
     val renall = MultiRename(RenUSubst.renamingPartOnly(subsDefsInput))
     // rename all substitutions (by transposition) since they'll be renamed back subsequently
@@ -139,6 +140,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   }
 
   /** apply this uniform substitution renaming everywhere in a term */
+  //@todo could optimize empty subsDefsInput to be just identity application right away
   def apply(t: Term): Term = try usubst(bottom, t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
 
   /** apply this uniform substitution renaming everywhere in a formula */
@@ -172,7 +174,7 @@ final case class USubstRenOne(private[infrastruct] val subsDefsInput: immutable.
   /** Rename taboo variable (and/or differential symbol) in the given space. */
   private def renSpace(space: Space): Space = space match {
     case AnyArg        => AnyArg
-    case Except(taboo) => Except(renVar(taboo))
+    case Except(taboos) => Except(taboos.map(renVar))
   }
 
   // implementation of uniform substitution application

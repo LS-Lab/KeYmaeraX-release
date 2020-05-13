@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
@@ -169,6 +170,8 @@ object PolynomialArith extends Logging {
   //A=0 & B = 0 <-> A^2+B^2=0
   private lazy val orEqz = remember("F_()=0 | G_() =0 <-> F_()*G_()=0".asFormula, QE, namespace).fact
   private lazy val andEqz = remember("F_()=0 & G_() =0 <-> F_()^2 + G_()^2 =0".asFormula, QE, namespace).fact
+  //A = 0 <-> B = 0 <- A = B
+  private lazy val eqZeroEquiv = remember("(F_() = 0 <-> G_() = 0) <- F_() = G_()".asFormula, QE, namespace).fact
 
   private lazy val divEq = remember("!(G_()=0) -> F_()/G_() = 0 -> F_() = 0".asFormula, QE, namespace).fact
   private lazy val divNeq = remember("!(G_()=0) -> (F_()/G_() != 0) -> F_() != 0".asFormula, QE, namespace).fact //Derivable from the above
@@ -702,6 +705,18 @@ object PolynomialArith extends Logging {
     }
   }
 
+  lazy val equalityByNormalisation = "equalityByNormalisation" by { (pos: Position, seq: Sequent) =>
+      pos.checkTop
+      pos.checkSucc
+      seq.sub(pos) match {
+        case Some(Equal(t1, t2)) =>
+          normaliseAt(pos++PosInExpr(0::Nil)) &
+            normaliseAt(pos++PosInExpr(1::Nil)) &
+            cohideR(1) & byUS("= reflexive")
+        case e => throw new IllegalArgumentException("equalityByNormalisation must be applied at a term or equality but was applied at " + e)
+      }
+    }
+
   //Polynomial division: no proof needed, although the polynomials need to be pre-normalised
   //todo: Might this be implemented in terms of mulMono with -ve power? (probably not because ordering gets messed up)
 
@@ -892,8 +907,7 @@ object PolynomialArith extends Logging {
               implyRi(keep = true)(AntePos(h._1), SuccPos(0))
                 & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
                 & tac) &
-          normaliseAt(SuccPosition(1, 0 :: Nil)) &
-          ?(cohideR(1) & byUS("= reflexive"))
+          equalityByNormalisation(1)
         ,
         cohideR(1) & by(pf)
         )
@@ -1007,8 +1021,8 @@ object PolynomialArith extends Logging {
               useAt(eqAnte)(1,PosInExpr(0::Nil)) &
                 useAt(eqAnte)(1,PosInExpr(1::Nil)) &
                 useAt(instMulZero)(1,PosInExpr(1::Nil)) &
-                normaliseAt(1,PosInExpr(0::0::Nil)) &
-                normaliseAt(1,PosInExpr(1::0::Nil)) &  byUS("<-> reflexive")
+                useAt(eqZeroEquiv, PosInExpr(1::Nil))(1) &
+                equalityByNormalisation(1)
             )
           useAt(pr)(pos)
         case _ => ident

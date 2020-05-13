@@ -162,7 +162,19 @@ private object ToolTactics {
     }
   }
 
-  private def seqDegs(s:Sequent) : Map[Variable,(Int,Int,Int)] = {
+  /** Syntactic approx. of degree of variable x in term t
+    *
+    * @param t the term t
+    * @param x the variable x to compute the degree
+    * @return the degree
+    */
+  def varDegree(t:Term, x:Variable) : Int = {
+    val tx = termDegs(t)
+    if(tx.contains(x)) tx(x)._1
+    else 0
+  }
+
+    private def seqDegs(s:Sequent) : Map[Variable,(Int,Int,Int)] = {
     (s.ante++s.succ).foldLeft(Map[Variable,(Int,Int,Int)]())(
       (m:Map[Variable,(Int,Int,Int)],f:Formula) => merge(m,fmlDegs(f),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y))
   }

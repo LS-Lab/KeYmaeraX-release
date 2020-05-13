@@ -53,7 +53,7 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) {
     */
   type Subst = RenUSubst
   /** Create a (generalized) substitution from the given representation `subs`. */
-  //@todo .distinct may slow things down. Necessary all the time?
+  //@todo optimizable .distinct may slow things down. Necessary all the time? distinctness being preserved in most unificaiton steps
   protected def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs.distinct)
 
   /** A (generalized) substitution pair, which is either like a [[SubstitutionPair]] for uniform substitution
@@ -237,6 +237,42 @@ trait BaseMatcher extends Matcher with Logging {
     //println(new UnificationException(shape.toString, input.toString))
     throw new UnificationException(shape.toString, input.toString)}
 
+
+  /** Union of renaming substitution representations: `join(s, t)` gives the representation of `s` performed together with `t`, if compatible.
+    * {{{
+    *   s \cup t = {p(.)~>F | (p(.)~>F) \in s}  ++  {(p(.)~>F) | (p(.)~>F) \in t}
+    *   if s and t are compatible, so do not map the same p(.) or f(.) or a to different replacements
+    * }}}
+    * @return a substitution that has the same effect as applying both substitutions `s` and `t` simultaneously.
+    *         Similar to returning `s++t` but skipping duplicates and checking compatibility in passing.
+    * @ensures s==s.distinct && t==t.distinct => \result==\result.distinct
+    * @time O(s.size*t.size)
+    */
+  //@todo optimizable: fast but tree maps would be a faster data structure than lists for this frequent operation
+  protected def join(s: List[SubstRepl], t: List[SubstRepl]): List[SubstRepl] = {
+    var j = t
+    for (el <- s) {
+      t.find(sp => sp._1 == el._1) match {
+        case Some(sp) => if (sp._2 != el._2)
+          throw new UnificationException("<unifier> " + Subst(s).toString(), "<unifier> " + Subst(t).toString())
+        // else skip since same already present in t
+        case None =>
+          j = el :: j
+      }
+    }
+    return j
+    //@note the following alternative is elegant but keeps duplicates or gets slow if modified
+    //    // return s++t while checking all new additions from s to not conflict with t
+    //    s.foldLeft(t)((list, el) => if (t.find(sp => sp._1 == el._1) match {
+    //      case Some(sp) => sp._2 == el._2
+    //      case None => true
+    //    })
+    //      el :: list
+    //    else
+    //      throw new UnificationException("<unifier> " + s, "<unifier> " + t)
+    //    )
+  }
+
 }
 
 
@@ -248,6 +284,7 @@ trait BaseMatcher extends Matcher with Logging {
   * Reasonably fast single-pass matcher that is defined by recursive unification from compositions.
   * @note Central recursive unification implementation.
   * @author Andre Platzer
+  * @see [[UniformMatching]]
   */
 abstract class SchematicUnificationMatch extends BaseMatcher {
 

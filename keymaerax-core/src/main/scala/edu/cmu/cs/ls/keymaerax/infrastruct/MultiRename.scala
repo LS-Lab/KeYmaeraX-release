@@ -31,10 +31,10 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)], semantic:
 
   override def toString: String = "MultiRename{" + rens.map(sp => sp._1.toString + "~>" + sp._2).mkString(", ") + "}"
 
-  /** This MultiRename implemented strictly from the core (but limited to no semantic renaming). */
+  /** This MultiRename implemented strictly from the core. */
   val toCore: Expression => Expression =
   //@note core renaming only uses without transposition augmentation
-    e => rena.foldLeft(e)((expr,sp)=>URename(sp._1,sp._2)(expr))
+    e => rena.foldLeft(e)((expr,sp)=>URename(sp._1,sp._2,semantic)(expr))
 
 
   /** apply this uniform renaming everywhere in an expression, resulting in an expression of the same kind. */
@@ -99,7 +99,7 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)], semantic:
   /** Rename taboo variable (and/or differential symbol) in the given space. */
   private def renSpace(space: Space): Space = space match {
     case AnyArg        => AnyArg
-    case Except(taboo) => Except(renVar(taboo))
+    case Except(taboos) => Except(taboos.map(renVar))
   }
 
 
