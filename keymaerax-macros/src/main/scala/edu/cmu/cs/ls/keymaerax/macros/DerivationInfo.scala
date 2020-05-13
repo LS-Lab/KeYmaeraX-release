@@ -43,7 +43,10 @@ object DerivationInfo {
       case dis => dis
     }
 
-  def register[T](value: T, di: DerivationInfo): T = {
+  // @TODO: Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
+  // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
+  // of code so just delay [[value == derivedAxiom(...)]] execution till after info
+  def register[T](value: => T, di: DerivationInfo): T = {
     println("Registering derivation info: " + di)
     _allInfo = di :: allInfo
     value
@@ -314,11 +317,12 @@ object DerivedAxiomInfo {
       case _ => None
     }
   /** Retrieve meta-information on an axiom by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivedAxiomInfo =
+  def apply(axiomName: String): DerivedAxiomInfo = {
     DerivationInfo.byCanonicalName(axiomName) match {
       case info: DerivedAxiomInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
     }
+  }
 
   def toStoredName(codeName: String): String = codeName.filter(c => c.isLetterOrDigit).toLowerCase
   def allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
@@ -368,9 +372,7 @@ object ProvableInfo {
     }
   /** Retrieve meta-information on a (derived) axiom or (derived) axiomatic rule by the given canonical name `name` */
   def apply(name: String): ProvableInfo = {
-    println ("Fetching provableinfo: " + name)
     val res =  DerivationInfo(name)
-    println ("Fetched: " + res)
     res match {
       case info: ProvableInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
