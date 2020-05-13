@@ -1355,7 +1355,10 @@ object DerivationInfoRegistry {
     differentialInfos ++ foInfos ++ miscInfos ++ derivedAxiomsInfos ++ sequentCalculusInfos) ensures (
     consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
-  def init: Unit = { DerivationInfo._allInfo = DerivationInfo._allInfo ++ allInfo }
+  def init: Unit = {
+    if(DerivationInfo._allInfo.isEmpty)
+      DerivationInfo._allInfo = DerivationInfo._allInfo ++ allInfo
+  }
 
   ////////////////////////////////////////////////////////
   // End of derivation infos in [[allInfo]] registry
