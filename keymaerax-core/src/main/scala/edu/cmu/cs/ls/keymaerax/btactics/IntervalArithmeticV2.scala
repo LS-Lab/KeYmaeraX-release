@@ -278,12 +278,21 @@ object IntervalArithmeticV2 {
   }
 
   type BoundMap = HashMap[Term, ProvableSig]
+  type EqMap = HashMap[Term, Int]
   def BoundMap(): BoundMap = HashMap[Term, ProvableSig]()
+  def EqMap(): EqMap = HashMap[Term, Int]()
 
+  /**
+    * prec: numerical precision
+    * qeTool: QETool for ground numerical computations
+    * assms: assumptions on variables (call them "bounded"):
+    *   - inequalites: any (in)equality with a variable on one side and a numerical term on the other side,
+    *   - equalities with a variable on the left and a term in "bounded" variables on the right (which makes the lhs "bounded")
+    * */
   private def recurse(prec: Int)
              (qeTool: QETacticTool)
              (assms: IndexedSeq[Formula])
-             (lowers: BoundMap, uppers: BoundMap)
+             (lowers: BoundMap, uppers: BoundMap, eqMap: EqMap)
              (t: Term): (BoundMap, BoundMap)
   = {
     def unknown_bound(v: Term) : String = "\nCould not find bounds for " + v + ".\n" +
@@ -292,7 +301,24 @@ object IntervalArithmeticV2 {
       "Maybe try Propositional->Exhaustive (prop) first?"
     if (lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) (lowers, uppers)
     else t match {
-      case v if PolynomialArith.isVar(v) => throw new InputFormatFailure(unknown_bound(v))
+      case v if PolynomialArith.isVar(v) => {
+        eqMap.get(v) match {
+          case Some(i) =>
+            val f = assms(i).asInstanceOf[Equal].right
+            val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
+            val ff_prv = lowers2(f)
+            val F_prv = uppers2(f)
+            val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+            val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
+            val ff = ff_fml.left
+            val F = F_fml.right
+            val v_prv = proveBy(Sequent(assms, IndexedSeq(LessEqual(ff, v))), eqL2R(-i-1)(1, 1::Nil)).apply(ff_prv, 0)
+            val V_prv = proveBy(Sequent(assms, IndexedSeq(LessEqual(v, F))), eqL2R(-i-1)(1, 0::Nil)).apply(F_prv, 0)
+            (lowers.updated(v, v_prv), uppers.updated(v, V_prv))
+          case None =>
+            throw new InputFormatFailure(unknown_bound(v))
+        }
+      }
       case n: Number =>
         val refl = (ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(n, n))))).
           apply(CoHideRight(SuccPos(0)), 0).
@@ -300,7 +326,7 @@ object IntervalArithmeticV2 {
         (lowers.updated(n, refl), uppers.updated(n, refl))
       case Neg(a) =>
         val f = a
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
         val ff_prv = lowers2(f)
         val F_prv = uppers2(f)
         val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[LessEqual]
@@ -337,8 +363,8 @@ object IntervalArithmeticV2 {
       case binop: BinaryCompositeTerm =>
         val f = binop.left
         val g = binop.right
-        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1)(g)
+        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, eqMap)(g)
         val ff_prv = lowers2(f)
         val gg_prv = lowers2(g)
         val F_prv = uppers2(f)
@@ -558,8 +584,8 @@ object IntervalArithmeticV2 {
               "Binary operation " + t.getClass.getSimpleName + " not implemented.")
         }
       case FuncOf(m, Pair(f, g)) if m == minF || m == maxF =>
-        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers)(f)
-        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1)(g)
+        val (lowers1, uppers1) = recurse(prec)(qeTool)(assms)(lowers, uppers, eqMap)(f)
+        val (lowers2, uppers2) = recurse(prec)(qeTool)(assms)(lowers1, uppers1, eqMap)(g)
         val ff_prv = lowers2(f)
         val gg_prv = lowers2(g)
         val F_prv = uppers2(f)
@@ -655,35 +681,39 @@ object IntervalArithmeticV2 {
       apply(CoHide2(AntePos(index), SuccPos(0)), 0).
       apply(rule.apply(USubst(instantiation map (ab => SubstitutionPair(ab._1, ab._2)))), 0)
 
-  private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap) : (BoundMap, BoundMap)  =
-  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0) { (lu: (BoundMap, BoundMap), assmi) =>
-    (lu, assmi) match {
-      case ((lowers, uppers), (assm, i)) =>
+  private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap, eqs0: EqMap) : (BoundMap, BoundMap, EqMap) =
+  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0, eqs0) { (lue: (BoundMap, BoundMap, EqMap), assmi) =>
+    (lue, assmi) match {
+      case ((lowers, uppers, eqs), (assm, i)) =>
         assm match {
           case LessEqual(t, n) if isNumeric(n) =>
-            (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
+            (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), eqs)
           case LessEqual(n, t) if isNumeric(n) =>
-            (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
+            (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers, eqs)
           case Equal(t, n) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t) :: (t_g, n) :: Nil)),
-              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)))
+              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)),
+              eqs)
           case Equal(n, t) if isNumeric(n) =>
             (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound1, (t_f, n) :: (t_g, t) :: Nil)),
-              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n) :: (t_g, t) :: Nil)))
+              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n) :: (t_g, t) :: Nil)),
+              eqs)
+          case Equal(v: Variable, rhs) =>
+            (lowers, uppers, eqs.updated(v, i))
           case Less(t, n) if isNumeric(n) =>
-            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t) :: (t_g, n) :: Nil)))
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t) :: (t_g, n) :: Nil)), eqs)
           case Less(n, t) if isNumeric(n) =>
-            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n) :: (t_g, t) :: Nil)), uppers)
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n) :: (t_g, t) :: Nil)), uppers, eqs)
           case Greater(t, n) if isNumeric(n) =>
-            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t) :: (t_g, n) :: Nil)), uppers, eqs)
           case Greater(n, t) if isNumeric(n) =>
-            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n) :: (t_g, t) :: Nil)))
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n) :: (t_g, t) :: Nil)), eqs)
           case GreaterEqual(t, n) if isNumeric(n) =>
-            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t) :: (t_g, n) :: Nil)), uppers, eqs)
           case GreaterEqual(n, t) if isNumeric(n) =>
-            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n) :: (t_g, t) :: Nil)))
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n) :: (t_g, t) :: Nil)), eqs)
           case _ =>
-            (lowers, uppers)
+            (lowers, uppers, eqs)
         }
     }
   }
@@ -693,7 +723,7 @@ object IntervalArithmeticV2 {
     *
     * @param prec          decimal precision
     * @param qeTool        Tool for QE, it will only be called on formulas without variables and without quantifiers
-    * @param assms         list of constraints on variables
+    * @param assms         list of constraints on variables, equalities can be used to abbreviate terms
     * @param include_assms if assms need to be added to lowers/uppers (False if re-using precomputed bounds)
     * @param lowers0       precomputed bounds (can be used for cacheing results)
     * @param uppers0       dito
@@ -705,14 +735,14 @@ object IntervalArithmeticV2 {
                  (qeTool: QETacticTool)
                  (assms: IndexedSeq[Formula])
                  (include_assms: Boolean)
-                 (lowers0: BoundMap, uppers0: BoundMap)
+                 (lowers0: BoundMap, uppers0: BoundMap, eqs0: EqMap)
                  (terms: Seq[Term]): (BoundMap, BoundMap) = {
     // collect bounds from assms
-    val (newlowers: BoundMap, newuppers: BoundMap) =
-      if(!include_assms) (lowers0, uppers0)
-      else collectBounds(assms)(lowers0, uppers0)
+    val (newlowers: BoundMap, newuppers: BoundMap, neweqs: EqMap) =
+      if(!include_assms) (lowers0, uppers0, eqs0)
+      else collectBounds(assms)(lowers0, uppers0, eqs0)
     // recurse over the structure of t and compute new bounds
-    terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2)(t))
+    terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2, neweqs)(t))
   }
 
   private def proveCompBoth(qeTool: QETacticTool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
@@ -749,7 +779,8 @@ object IntervalArithmeticV2 {
         case fml: ComparisonFormula =>
           val f = fml.left
           val g = fml.right
-          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap())(List(f, g))
+          // TODO: collect bounds outside, if in boolean combination?!
+          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap(), EqMap())(List(f, g))
           val ff_prv = lowers(f)
           val gg_prv = lowers(g)
           val F_prv = uppers(f)
@@ -880,7 +911,7 @@ object IntervalArithmeticV2 {
       val nantes = sequent.ante.length
       val prec = 5
       val qe = ToolProvider.qeTool().get
-      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap())(terms)
+      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), EqMap())(terms)
       val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
       (prvs, prvs.indices).zipped.foldLeft(provable) {
         (result, prvi) => prvi match {
@@ -922,7 +953,7 @@ object IntervalArithmeticV2 {
     val assms = IndexedSeq((l1, i1), (i1, u1), (l2, i2), (i2, u2)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1, i2)
     // @todo: could be more efficient in caching bounds for context
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.EqMap())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
@@ -954,7 +985,7 @@ object IntervalArithmeticV2 {
     val i1 = BaseVariable("i1_")
     val assms = IndexedSeq((l1, i1), (i1, u1)).map{case(l, u)=>LessEqual(l, u)}
     val t = op(i1)
-    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap())(Seq(t))
+    val (lowers, uppers) = IntervalArithmeticV2.proveBounds(prec)(qeTool)(context++assms)(true)(IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.BoundMap(), IntervalArithmeticV2.EqMap())(Seq(t))
     val lPrv = lowers(t)
     val uPrv = uppers(t)
     val l = lPrv.conclusion.succ(0).asInstanceOf[ComparisonFormula].left
