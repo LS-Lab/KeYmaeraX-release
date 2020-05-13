@@ -133,6 +133,7 @@ object DerivedAxioms extends Logging {
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private[btactics] def derivedAxiom(name: String, derived: => Sequent, tactic: => BelleExpr): Lemma =
+  // @TODO: don't call axiominfo in derivedAxiom
     derivedAxiomDB.get(DerivedAxiomInfo(name).storedName) match {
       case Some(lemma) => lemma
       case None =>
