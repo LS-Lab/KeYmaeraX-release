@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, NamedBelleExpr}
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.HashMap
@@ -28,22 +30,20 @@ object DerivationInfoAugmentors {
 
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
     def belleExpr: Any = di match {
-      case theExpr => ??? //theExpr.asInstanceOf[Unit => BelleExpr] ()
+      // useAt will just ask a ProvableInfo for its provable
+      case pi: ProvableInfo => di.codeName by ((pos:Position, seq:Sequent) => HilbertCalculus.useAt(pi) (pos))
+      case ti: TacticInfo => ti.theExpr
     }
 
   }
 
   implicit class ProvableInfoAugmentor(val pi: ProvableInfo) {
     def provable: ProvableSig = {
-      // @TODO: PRovableSig for all derived stuff
-      // @TODO: Continue here
-      println("All axioms: " + ProvableSig.axioms)
-      println("Key: " + pi.canonicalName)
-      try {
-        ProvableSig.axioms(pi.canonicalName)
-      } catch {
-        case e: Throwable =>
-          ProvableSig.rules(pi.canonicalName)
+      pi match {
+        case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
+        case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
+        case dai: DerivedAxiomInfo => DerivedAxioms.derivedAxiomOrRule(dai.canonicalName)
+        case dari: DerivedRuleInfo => DerivedAxioms.derivedAxiomOrRule(dari.canonicalName)
       }
     }
 
@@ -52,8 +52,6 @@ object DerivationInfoAugmentors {
         case Some(fml) => fml
         case None => throw new AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
       }
-      // @TODO: Move all commented stuff to core
-      //def belleExpr = codeName by ((pos:Position, seq:Sequent) => expr ()(pos))
     }
   }
 }
