@@ -56,7 +56,7 @@ object TaylorModelTactics extends Logging {
   }
   def debug(msg: Unit => String) : Unit = {
     val message = new Message {
-      override def getFormattedMessage(): String = msg()
+      override def getFormattedMessage(): String = msg(():Unit)
       override def getParameters: Array[AnyRef] = ???
       override def getFormat(): String = ???
       override def getThrowable(): Throwable = ???
