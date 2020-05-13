@@ -56,7 +56,7 @@ object DerivedAxioms extends Logging {
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, fact: ProvableSig, storedNameOpt: Option[String] ): Lemma = {
+  private[btactics] def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): Lemma = {
     val storedName = storedNameOpt match {
       case Some(storedName) => storedName
       case None =>
@@ -155,7 +155,7 @@ object DerivedAxioms extends Logging {
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] ): Lemma = {
+  private[btactics] def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] = None): Lemma = {
     val codeName =
       codeNameOpt match {
         case Some(codeName) => codeName
@@ -166,7 +166,7 @@ object DerivedAxioms extends Logging {
         }
       }
     val storedName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedAxiom(canonicalName, fact, Some(storedName)) ensuring(lem => lem.fact.conclusion == Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)),
+    derivedFact(canonicalName, fact, Some(storedName)) ensuring(lem => lem.fact.conclusion == Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)),
       "derivedAxioms's fact indeed proved the expected formula.\n" + derived + "\nproved by\n" + fact)
   }
 
@@ -187,12 +187,12 @@ object DerivedAxioms extends Logging {
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
         assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
-        derivedAxiom(canonicalName, witness, Some(storedName))
+        derivedFact(canonicalName, witness, Some(storedName))
     }
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String]): Lemma =
+  private[btactics] def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma =
     derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic, codeNameOpt)
 
   private val x = Variable("x_", None, Real)
@@ -246,7 +246,7 @@ object DerivedAxioms extends Logging {
     * @note needs semantic renaming
     */
   @DerivedAxiomAnnotation("[:=]=y", "assignbeqy")
-  val assignbEquality_y = derivedAxiom("[:=] assign equality y",
+  val assignbEquality_y = derivedAxiomFromFact("[:=] assign equality y",
     "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
     ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable, "y_".asVariable, semantic = true)),
     None
@@ -260,7 +260,7 @@ object DerivedAxioms extends Logging {
     * @note needs semantic renaming
     */
   @DerivedAxiomAnnotation("[:=]y", "selfassignby")
-  lazy val selfAssign_y = derivedAxiom("[:=] self assign y",
+  lazy val selfAssign_y = derivedAxiomFromFact("[:=] self assign y",
     "[y_:=y_;]p(||) <-> p(||)".asFormula,
     ProvableSig.axioms("[:=] self assign")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
     None
@@ -274,7 +274,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note needs semantic renaming
     */
-  lazy val DEdifferentialEffectSystem_y = derivedAxiom("DE differential effect (system) y",
+  lazy val DEdifferentialEffectSystem_y = derivedAxiomFromFact("DE differential effect (system) y",
     "[{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)".asFormula,
     ProvableSig.axioms("DE differential effect (system)")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
     None
@@ -287,7 +287,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note needs semantic renaming
     */
-  lazy val allDual_y = derivedAxiom("all dual y",
+  lazy val allDual_y = derivedAxiomFromFact("all dual y",
     "(!\\exists y_ !p(||)) <-> \\forall y_ p(||)".asFormula,
     ProvableSig.axioms("all dual")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
     None
@@ -300,7 +300,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note needs semantic renaming
     */
-  lazy val allDual_time = derivedAxiom("all dual time",
+  lazy val allDual_time = derivedAxiomFromFact("all dual time",
     "(!\\exists t_ !p(||)) <-> \\forall t_ p(||)".asFormula,
     ProvableSig.axioms("all dual")(URename("x_".asVariable,"t_".asVariable,semantic=true)),
     None
@@ -313,7 +313,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note needs semantic renaming
     */
-  lazy val allEliminate_y = derivedAxiom("all eliminate y",
+  lazy val allEliminate_y = derivedAxiomFromFact("all eliminate y",
     "(\\forall y_ p(||)) -> p(||)".asFormula,
     ProvableSig.axioms("all eliminate")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
     None
@@ -459,7 +459,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note Core axiom derivable thanks to [:=]= and [:=]
     */
-  lazy val allInstantiate = derivedAxiom("all instantiate",
+  lazy val allInstantiate = derivedFormula("all instantiate",
     "(\\forall x_ p(x_)) -> p(f())".asFormula,
     cutR("(\\forall x_ (x_=f()->p(x_))) -> p(f())".asFormula)(1) <(
       useAt("[:=] assign equality", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -477,7 +477,6 @@ object DerivedAxioms extends Logging {
     //    \forall x (x=f -> p(x)) -> p(f)
     //   -------------------------------- CMon(p(x) -> (x=f->p(x)))
     //   \forall x p(x) -> p(f)
-    , None
   )
 
   /**
@@ -603,7 +602,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     * @see [[equalReflex]]
     */
-  lazy val equivReflexiveAxiom = derivedAxiom("<-> reflexive",
+  lazy val equivReflexiveAxiom = derivedFact("<-> reflexive",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
       // right branch
@@ -616,7 +615,7 @@ object DerivedAxioms extends Logging {
   /** Convert <-> to two implications:
     * (p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())
     */
-  lazy val equivExpand = derivedAxiom("<-> expand",
+  lazy val equivExpand = derivedFormula("<-> expand",
     "(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())".asFormula,
     prop, None
 
@@ -675,7 +674,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  lazy val constCongruence: Lemma = derivedAxiom("const congruence",
+  lazy val constCongruence: Lemma = derivedFormula("const congruence",
     "s() = t() -> ctxT_(s()) = ctxT_(t())".asFormula,
     allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
       by(proveBy("\\forall x_ (x_ = t() -> ctxT_(x_) = ctxT_(t()))".asFormula,
@@ -683,8 +682,6 @@ object DerivedAxioms extends Logging {
           useAt("[:=] assign")(1) &
           byUS(equalReflex)
       ))
-    , None
-
   )
 
   /**
@@ -695,7 +692,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  lazy val constFormulaCongruence: Lemma = derivedAxiom("const formula congruence",
+  lazy val constFormulaCongruence: Lemma = derivedFormula("const formula congruence",
     "s() = t() -> (ctxF_(s()) <-> ctxF_(t()))".asFormula,
     allInstantiateInverse(("s()".asTerm, "x_".asVariable))(1) &
       by(proveBy("\\forall x_ (x_ = t() -> (ctxF_(x_) <-> ctxF_(t())))".asFormula,
@@ -703,7 +700,6 @@ object DerivedAxioms extends Logging {
           useAt("[:=] assign")(1) &
           byUS(equivReflexiveAxiom)
       ))
-    , None
   )
 
 
@@ -715,7 +711,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  lazy val doubleNegationAxiom = derivedAxiom("!! double negation",
+  lazy val doubleNegationAxiom = derivedFact("!! double negation",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
       // right branch
@@ -726,7 +722,6 @@ object DerivedAxioms extends Logging {
       (NotLeft(AntePos(0)), 0)
       (NotRight(SuccPos(1)), 0)
       (Close(AntePos(0),SuccPos(0)), 0)
-    , None
   )
 
   /**
@@ -1189,12 +1184,11 @@ object DerivedAxioms extends Logging {
     *
     * @see [[assignDualAxiom]]
     */
-  lazy val assignDual2Axiom = derivedAxiom(":= assign dual 2",
+  lazy val assignDual2Axiom = derivedFormula(":= assign dual 2",
     "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
     useAt("[:=] self assign", PosInExpr(1::Nil))(1, 0::1::Nil) &
       useAt(assigndAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
-    , None
     // NOTE alternative proof:
     //    useAt("[:=] assign equality exists")(1, 1::Nil) &
     //      useAt("<:=> assign equality")(1, 0::Nil) &
@@ -1233,11 +1227,10 @@ object DerivedAxioms extends Logging {
   import DerivationInfoAugmentors._
   // @TODO Full display info: ("[:=]","[:=] assign exists")
   @DerivedAxiomAnnotation(("[:=]", "[:=] assign exists"), "assignbequalityexists")
-  lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
+  lazy val assignbExistsAxiom = derivedFormula("[:=] assign equality exists",
     "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
     useAt(assignDual2Axiom, PosInExpr(1::Nil))(1, 0::Nil) &
       byUS(assigndEqualityAxiom)
-    , None
     //      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
     //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
     //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
@@ -1856,12 +1849,11 @@ object DerivedAxioms extends Logging {
     *
     * @see [[forallThenExistsAxiom]]
     */
-  lazy val allThenExists = derivedAxiom("all then exists",
+  lazy val allThenExists = derivedFormula("all then exists",
     "(\\forall x_ p_(||)) -> (\\exists x_ p_(||))".asFormula,
     useAt(existsEliminate, PosInExpr(1::Nil))(1, 1::Nil) &
     useAt("all eliminate", PosInExpr(0::Nil))(1, 0::Nil) &
     implyR(1) & close(-1,1)
-    , None
   )
 
   /**
@@ -2919,11 +2911,10 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     */
-  lazy val Dvariable = derivedAxiom("x' derive variable",
+  lazy val Dvariable = derivedFact("x' derive variable",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
     (Skolemize(SuccPos(0)), 0)
     (DerivedAxiomProvableSig.axioms("x' derive var"), 0)
-    , None
   )
   //  /**
   //   * {{{Axiom "x' derive var".
@@ -2991,7 +2982,7 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     */
-  lazy val uniquenessIff = derivedAxiom("Uniq uniqueness iff",
+  lazy val uniquenessIff = derivedFormula("Uniq uniqueness iff",
     "<{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c&q(||) & r(||)}>p(||)".asFormula,
     equivR(1) <(
       implyRi & byUS("Uniq uniqueness"),
@@ -3000,7 +2991,6 @@ object DerivedAxioms extends Logging {
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop)
         )
     )
-    , None
   )
 
   // real arithmetic
