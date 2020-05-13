@@ -56,9 +56,18 @@ object DerivedAxioms extends Logging {
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
+  private[btactics] def derivedAxiom(name: String, fact: ProvableSig, storedNameOpt: Option[String] ): Lemma = {
+    val storedName = storedNameOpt match {
+      case Some(storedName) => storedName
+      case None =>
+        try {
+          DerivedAxiomInfo(name).storedName
+        } catch {
+          case _: Throwable => throw new Exception("Derived axiom info for $name needs to exist or codeName needs to be explicitly passed (66)")
+        }
+    }
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
-    val lemmaName = DerivedAxiomInfo.toStoredName(name)
+    val lemmaName = storedName // DerivedAxiomInfo.toStoredName(name)
     println("Stored name: " + lemmaName)
     val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
@@ -95,10 +104,19 @@ object DerivedAxioms extends Logging {
     }
   }
 
-  private[btactics] def derivedRule(name: String, fact: ProvableSig): Lemma = {
+  private[btactics] def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): Lemma = {
     // create evidence (traces input into tool and output from tool)
     val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
-    val lemmaName = DerivedRuleInfo(name).storedName
+    val codeName = codeNameOpt match {
+      case Some(codeName) => codeName
+      case None =>
+        try {
+          DerivedRuleInfo(name).codeName
+        } catch {
+          case _: Throwable => throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
+        }
+    }
+    val lemmaName = DerivedAxiomInfo.toStoredName(codeName)
     val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
@@ -117,34 +135,65 @@ object DerivedAxioms extends Logging {
     }
   }
 
-  private[btactics] def derivedRule(name: String, derived: => Sequent, tactic: => BelleExpr): Lemma =
-    derivedAxiomDB.get(DerivedRuleInfo(name).storedName) match {
+  private[btactics] def derivedRule(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
+    val codeName = codeNameOpt match {
+      case Some(codeName) => codeName
+      case None =>
+        try {
+          DerivedRuleInfo(name).storedName
+        } catch {
+          case _: Throwable => throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
+        }
+    }
+    val storageName = DerivedAxiomInfo.toStoredName(codeName)
+    derivedAxiomDB.get(storageName) match {
       case Some(lemma) => lemma
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
-        derivedRule(name, witness)
+        derivedRule(name, witness, codeNameOpt)
     }
+  }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, derived: Formula, fact: ProvableSig): Lemma = {
-    derivedAxiom(name, fact) ensuring(lem => lem.fact.conclusion == Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)),
+  private[btactics] def derivedAxiom(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] ): Lemma = {
+    val codeName =
+      codeNameOpt match {
+        case Some(codeName) => codeName
+        case None => try {
+          DerivedAxiomInfo.apply(canonicalName).storedName
+        } catch {
+          case _: Throwable => throw new Exception(s"""Derived axiom info for   '$canonicalName' needs to exist or codeName needs to be explicitly passed""")
+        }
+      }
+    val storedName = DerivedAxiomInfo.toStoredName(codeName)
+    derivedAxiom(canonicalName, fact, Some(storedName)) ensuring(lem => lem.fact.conclusion == Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)),
       "derivedAxioms's fact indeed proved the expected formula.\n" + derived + "\nproved by\n" + fact)
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, derived: => Sequent, tactic: => BelleExpr): Lemma =
-  // @TODO: don't call axiominfo in derivedAxiom
-    derivedAxiomDB.get(DerivedAxiomInfo(name).storedName) match {
+  private[btactics] def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
+    val codeName =
+      codeNameOpt match {
+        case Some(codeName) => codeName
+        case None => try {
+          DerivedAxiomInfo.apply(canonicalName).storedName
+        } catch {
+          case t: Throwable => throw new Exception(s"Derived axiom info for $canonicalName needs to exist or codeName needs to be explicitly passed (181)")
+        }
+      }
+    val storedName = DerivedAxiomInfo.toStoredName(codeName)
+    derivedAxiomDB.get(storedName) match {
       case Some(lemma) => lemma
       case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
-        assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
-        derivedAxiom(name, witness)
+        assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
+        derivedAxiom(canonicalName, witness, Some(storedName))
     }
+  }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(name: String, derived: Formula, tactic: => BelleExpr): Lemma =
-    derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic)
+  private[btactics] def derivedAxiom(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String]): Lemma =
+    derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic, codeNameOpt)
 
   private val x = Variable("x_", None, Real)
   private val px = PredOf(Function("p_", None, Real, Bool), x)
@@ -183,7 +232,8 @@ object DerivedAxioms extends Logging {
           logger.warn("WARNING: Failed to add derived lemma.", e)
       }
     })
-    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
+    if (failures.nonEmpty)
+      throw new Exception(s"WARNING: Encountered ${failures} failures when trying to populate DerivedAxioms database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
   }
 
   // semantic renaming cases
@@ -198,7 +248,8 @@ object DerivedAxioms extends Logging {
   @DerivedAxiomAnnotation("[:=]=y", "assignbeqy")
   val assignbEquality_y = derivedAxiom("[:=] assign equality y",
     "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
-    ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable, "y_".asVariable, semantic = true))
+    ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable, "y_".asVariable, semantic = true)),
+    None
   )
 
   /** Semantically renamed
@@ -211,7 +262,8 @@ object DerivedAxioms extends Logging {
   @DerivedAxiomAnnotation("[:=]y", "selfassignby")
   lazy val selfAssign_y = derivedAxiom("[:=] self assign y",
     "[y_:=y_;]p(||) <-> p(||)".asFormula,
-    ProvableSig.axioms("[:=] self assign")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+    ProvableSig.axioms("[:=] self assign")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
+    None
   )
 
   /** Semantically renamed
@@ -224,7 +276,8 @@ object DerivedAxioms extends Logging {
     */
   lazy val DEdifferentialEffectSystem_y = derivedAxiom("DE differential effect (system) y",
     "[{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)".asFormula,
-    ProvableSig.axioms("DE differential effect (system)")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+    ProvableSig.axioms("DE differential effect (system)")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
+    None
   )
 
   /** Semantically renamed
@@ -236,7 +289,8 @@ object DerivedAxioms extends Logging {
     */
   lazy val allDual_y = derivedAxiom("all dual y",
     "(!\\exists y_ !p(||)) <-> \\forall y_ p(||)".asFormula,
-    ProvableSig.axioms("all dual")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+    ProvableSig.axioms("all dual")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
+    None
   )
 
   /** Semantically renamed
@@ -248,7 +302,8 @@ object DerivedAxioms extends Logging {
     */
   lazy val allDual_time = derivedAxiom("all dual time",
     "(!\\exists t_ !p(||)) <-> \\forall t_ p(||)".asFormula,
-    ProvableSig.axioms("all dual")(URename("x_".asVariable,"t_".asVariable,semantic=true))
+    ProvableSig.axioms("all dual")(URename("x_".asVariable,"t_".asVariable,semantic=true)),
+    None
   )
 
   /** Semantically renamed
@@ -260,7 +315,8 @@ object DerivedAxioms extends Logging {
     */
   lazy val allEliminate_y = derivedAxiom("all eliminate y",
     "(\\forall y_ p(||)) -> p(||)".asFormula,
-    ProvableSig.axioms("all eliminate")(URename("x_".asVariable,"y_".asVariable,semantic=true))
+    ProvableSig.axioms("all eliminate")(URename("x_".asVariable,"y_".asVariable,semantic=true)),
+    None
   )
 
 
@@ -421,6 +477,7 @@ object DerivedAxioms extends Logging {
     //    \forall x (x=f -> p(x)) -> p(f)
     //   -------------------------------- CMon(p(x) -> (x=f->p(x)))
     //   \forall x p(x) -> p(f)
+    , None
   )
 
   /**
@@ -553,6 +610,7 @@ object DerivedAxioms extends Logging {
       (Close(AntePos(0),SuccPos(0)), 1)
       // left branch
       (Close(AntePos(0),SuccPos(0)), 0)
+    , None
   )
 
   /** Convert <-> to two implications:
@@ -560,7 +618,8 @@ object DerivedAxioms extends Logging {
     */
   lazy val equivExpand = derivedAxiom("<-> expand",
     "(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())".asFormula,
-    prop
+    prop, None
+
   )
 
   /**
@@ -624,6 +683,8 @@ object DerivedAxioms extends Logging {
           useAt("[:=] assign")(1) &
           byUS(equalReflex)
       ))
+    , None
+
   )
 
   /**
@@ -642,6 +703,7 @@ object DerivedAxioms extends Logging {
           useAt("[:=] assign")(1) &
           byUS(equivReflexiveAxiom)
       ))
+    , None
   )
 
 
@@ -664,6 +726,7 @@ object DerivedAxioms extends Logging {
       (NotLeft(AntePos(0)), 0)
       (NotRight(SuccPos(1)), 0)
       (Close(AntePos(0),SuccPos(0)), 0)
+    , None
   )
 
   /**
@@ -1131,6 +1194,7 @@ object DerivedAxioms extends Logging {
     useAt("[:=] self assign", PosInExpr(1::Nil))(1, 0::1::Nil) &
       useAt(assigndAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
+    , None
     // NOTE alternative proof:
     //    useAt("[:=] assign equality exists")(1, 1::Nil) &
     //      useAt("<:=> assign equality")(1, 0::Nil) &
@@ -1173,6 +1237,7 @@ object DerivedAxioms extends Logging {
     "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
     useAt(assignDual2Axiom, PosInExpr(1::Nil))(1, 0::Nil) &
       byUS(assigndEqualityAxiom)
+    , None
     //      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
     //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
     //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
@@ -1796,6 +1861,7 @@ object DerivedAxioms extends Logging {
     useAt(existsEliminate, PosInExpr(1::Nil))(1, 1::Nil) &
     useAt("all eliminate", PosInExpr(0::Nil))(1, 0::Nil) &
     implyR(1) & close(-1,1)
+    , None
   )
 
   /**
@@ -2857,6 +2923,7 @@ object DerivedAxioms extends Logging {
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
     (Skolemize(SuccPos(0)), 0)
     (DerivedAxiomProvableSig.axioms("x' derive var"), 0)
+    , None
   )
   //  /**
   //   * {{{Axiom "x' derive var".
@@ -2932,8 +2999,8 @@ object DerivedAxioms extends Logging {
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop),
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop)
         )
-
-      )
+    )
+    , None
   )
 
   // real arithmetic

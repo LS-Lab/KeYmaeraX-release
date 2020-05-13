@@ -177,7 +177,7 @@ trait ProvableInfo extends DerivationInfo {
  * @see [[DerivedRuleInfo]]
  */
 trait StorableInfo extends DerivationInfo {
-  val storedName: String = DerivedAxiomInfo.toStoredName(canonicalName)
+  val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
 }
 
 // axioms
@@ -215,7 +215,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , override val linear: Boolean
                             , theExpr: Unit => Any)
   extends AxiomInfo with StorableInfo {
-  override val storedName: String = DerivedAxiomInfo.toStoredName(canonicalName)
+  override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   DerivationInfo.assertValidIdentifier(codeName)
   //def belleExpr: BelleExpr = codeName by ((pos: Position, _: Sequent) => expr()(pos))
   //override lazy val formula: Formula =
@@ -324,7 +324,7 @@ object DerivedAxiomInfo {
     }
   }
 
-  def toStoredName(codeName: String): String = codeName.filter(c => c.isLetterOrDigit).toLowerCase
+  def toStoredName(codeName: String): String = codeName.toLowerCase
   def allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
 }
 

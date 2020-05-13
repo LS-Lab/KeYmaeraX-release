@@ -57,11 +57,6 @@ object DerivedAxiomAnnotation {
           q"""new InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
         }
       }
-    /*val display: DisplayInfo = c.prefix.tree match {
-      case q"new $annotation($display)" => c.eval[DisplayInfo](c.Expr(display))
-      case q"new $annotation($display, $codeName)" => c.eval[DisplayInfo](c.Expr(display))
-      case q"new $annotation($display, $codeName, $linear)" => c.eval[DisplayInfo](c.Expr(display))
-    }*/
     val codeNameParam: String = c.prefix.tree match {
       case q"new $annotation($display)" => ""
       case q"new $annotation($display, $codeName)" => c.eval[String](c.Expr(codeName))
@@ -90,13 +85,13 @@ object DerivedAxiomAnnotation {
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
       }
     }
-    def extractValParts(valDecl: ValDef, codeNameParam: String): (Modifiers, TermName, TermName, String, Tree) = {
+    def extractValParts(valDecl: ValDef, codeNameParam: String): (Modifiers, Tree, Tree, Tree, TermName, TermName, String, Tree) = {
       valDecl match {
         case q"$mods val $declName: $tpt = $functionName( ..$params )"if correctName(functionName) && params.length == 3 =>
           (declName,  params(0)) match {
             case (declName: TermName, Literal(Constant(canonName: String))) =>
               val codeName: TermName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
-              (mods, declName, codeName, canonName, valDecl.rhs)
+              (mods, tpt, params(1), params(2), declName, codeName, canonName, valDecl.rhs)
             case (t1, t2) => c.abort(c.enclosingPosition, "Invalid annottee: val name = derivedAxiom(arg1, arg2, arg3), got: (" + t1 + " , " + t2 + ") of type " + t1.getClass() + " * " + t2.getClass())
           }
         case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)
@@ -105,17 +100,36 @@ object DerivedAxiomAnnotation {
     }
     annottees map (_.tree) toList match {
       case (valDecl: ValDef) :: Nil =>
-        val (mods, declName, codeName, canonName,  rhs) = extractValParts(valDecl, codeNameParam)
-        val codeString = Literal(Constant(codeName.decodedName.toString))
-        val canonString = Literal(Constant(canonName))
-        //val displayString = Literal(Constant(display))
-        //val displayInfo = q"""new edu.cmu.cs.ls.keymaerax.macros.SimpleDisplayInfo($displayString, $displayString)"""
-        val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus.useAt($canonString)})""" // : (Unit => Any)
-        val info = q"""DerivedAxiomInfo(canonicalName = $canonString, codeName = $codeString, linear = false, theExpr = $expr, display = ${convDI(display)})"""
-        val printInfo = q"""{println("Registering info: " + $info); $info}"""
-        val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.register($rhs, $printInfo)"
-        val lemmaType = tq"edu.cmu.cs.ls.keymaerax.lemma.Lemma"
-        c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
+        valDecl match {
+          case q"$mods val $declName: $tpt = $functionName( ..$params )"if correctName(functionName) &&
+            (params.length == 3  || params.length == 4) =>
+            (declName,  params(0)) match {
+              case (declName: TermName, Literal(Constant(canonName: String))) =>
+                val codeName: TermName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
+                val codeString = Literal(Constant(codeName.decodedName.toString))
+                  (mods, tpt, params(1), params(2), declName, codeName, canonName, valDecl.rhs)
+                //val rhs = valDecl.rhs
+                //val storedName = DerivedAxiomInfo.toStoredName(codeString.decodedName.toString)
+                //val functionName = Ident("derivedAxiom")
+                val canonString = params(0)
+                val fullParams = Seq(params(0), params(1), params(2), q"Some($codeString)")
+                val fullRhs = q"$functionName( ..$fullParams)"
+
+                //val canonString = Literal(Constant(canonName))
+                //val displayString = Literal(Constant(display))
+                //val displayInfo = q"""new edu.cmu.cs.ls.keymaerax.macros.SimpleDisplayInfo($displayString, $displayString)"""
+                val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus.useAt($canonString)})""" // : (Unit => Any)
+                val info = q"""DerivedAxiomInfo(canonicalName = $canonString, codeName = $codeString, linear = false, theExpr = $expr, display = ${convDI(display)})"""
+                val printInfo = q"""{println("Registering info: " + $info); $info}"""
+                val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.register($fullRhs, $printInfo)"
+                val lemmaType = tq"edu.cmu.cs.ls.keymaerax.lemma.Lemma"
+                c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
+              case (t1, t2) => c.abort(c.enclosingPosition, "Invalid annottee: val name = derivedAxiom(arg1, arg2, arg3), got: (" + t1 + " , " + t2 + ") of type " + t1.getClass() + " * " + t2.getClass())
+            }
+          case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)
+          case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val name = derivedAxioms(x1, x2, x3), got: " + t + " of type " + t.getClass())
+        }
+
       case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val declaration got: " + t.head + " of type: " + t.head.getClass())
     }
   }
