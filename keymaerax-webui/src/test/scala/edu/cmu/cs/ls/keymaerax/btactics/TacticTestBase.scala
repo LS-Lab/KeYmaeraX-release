@@ -260,11 +260,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     //@note Mathematica is expected to shut down only in afterAll(), but setting provider shuts down the current provider
     if (!mathematicaProvider.isInitialized) ToolProvider.setProvider(new NoneToolProvider())
     LemmaDBFactory.lemmaDB.removeAll("user/tests")
+    LemmaDBFactory.lemmaDB.removeAll("qecache")
   }
 
   /* Test teardown */
   override def afterEach(): Unit = {
     LemmaDBFactory.lemmaDB.removeAll("user/tests")
+    LemmaDBFactory.lemmaDB.removeAll("qecache")
     try {
       interpreters.foreach(i => try { i.kill() } catch { case ex: Throwable => ex.printStackTrace() })
       interpreters = Nil
