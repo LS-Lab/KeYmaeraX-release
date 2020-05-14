@@ -32,7 +32,7 @@ object DerivationInfoAugmentors {
     def belleExpr: Any = di match {
       // useAt will just ask a ProvableInfo for its provable
       case pi: ProvableInfo => di.codeName by ((pos:Position, seq:Sequent) => HilbertCalculus.useAt(pi) (pos))
-      case ti: TacticInfo => ti.theExpr
+      case ti: TacticInfo => ti.theExpr (())
     }
 
   }
@@ -48,9 +48,13 @@ object DerivationInfoAugmentors {
     }
 
     def formula: Formula = {
-      ProvableSig.axiom.get(pi.canonicalName) match {
-        case Some(fml) => fml
-        case None => throw new AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
+      pi match {
+        case dai: DerivedAxiomInfo => DerivedAxioms.derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
+        case cai: CoreAxiomInfo =>
+          ProvableSig.axiom.get(pi.canonicalName) match {
+            case Some(fml) => fml
+            case None => throw new AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
+          }
       }
     }
   }
