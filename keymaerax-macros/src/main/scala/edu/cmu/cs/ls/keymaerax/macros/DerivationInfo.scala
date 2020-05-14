@@ -47,7 +47,6 @@ object DerivationInfo {
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info
   def register[T](value: => T, di: DerivationInfo): T = {
-    println("Registering derivation info: " + di)
     _allInfo = di :: allInfo
     value
   }
