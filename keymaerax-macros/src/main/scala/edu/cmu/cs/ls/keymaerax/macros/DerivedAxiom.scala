@@ -16,12 +16,12 @@ import scala.reflect.macros.whitebox
  *  @param linear is the axiom linear in the sense of a linear pattern
  *  @author Brandon Bohrer
  *  */
-class DerivedAxiomAnnotation(val displayObj: Any, val codeName: String = "", val linear: Boolean = false) extends StaticAnnotation {
+class DerivedAxiom(val displayObj: Any, val codeName: String = "", val linear: Boolean = false) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
-  def macroTransform(annottees: Any*): Any = macro DerivedAxiomAnnotation.impl
+  def macroTransform(annottees: Any*): Any = macro DerivedAxiom.impl
 }
 
-object DerivedAxiomAnnotation {
+object DerivedAxiom {
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     // Abstract syntax trees for string and string list literals
