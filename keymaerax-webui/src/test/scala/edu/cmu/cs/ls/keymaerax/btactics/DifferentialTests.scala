@@ -967,14 +967,14 @@ class DifferentialTests extends TacticTestBase {
     def checkSequentTactic(expected: Sequent) = new SingleGoalDependentTactic("mock") {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         sequent shouldBe expected
-        throw BelleUserGeneratedError("Success: sequent as expected, now aborting")
+        throw new BelleAbort("Success", "Sequent as expected, now aborting")
       }
     }
 
     forEvery (dconstifyTests) {
       (name, input, expectedResult) => withClue(name) {
-        the [BelleUserGeneratedError] thrownBy proveBy(input.asSequent, DifferentialTactics.Dconstify(
-          checkSequentTactic(expectedResult.asSequent))(1)) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Success: sequent as expected, now aborting"
+        the [BelleAbort] thrownBy proveBy(input.asSequent, DifferentialTactics.Dconstify(
+          checkSequentTactic(expectedResult.asSequent))(1)) should have message "Sequent as expected, now aborting"
       }
     }
   }

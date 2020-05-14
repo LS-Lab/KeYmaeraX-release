@@ -89,7 +89,7 @@ private object DLBySubst {
       case Some(Box(prg, fml)) =>
         val fv = StaticSemantics.freeVars(fml)
         val bv = StaticSemantics.boundVars(prg)
-        if (!bv.intersect(fv).isEmpty) throw new BelleFriendlyUserMessage("Abstraction would lose information from program")
+        if (!bv.intersect(fv).isEmpty) throw new TacticInapplicableFailure("Abstraction would lose information from program")
         val fmls: ListBuffer[Formula] = ListBuffer.empty
         ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
           override def preP(p: PosInExpr, e: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] = e match {
@@ -99,8 +99,8 @@ private object DLBySubst {
           }
         }, prg)
         if (fmls.isEmpty) abstractionb(pos)
-        else throw new BelleFriendlyUserMessage("Abstraction would lose information from tests and/or evolution domain constraints")
-      case e => throw new BelleTacticFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
+        else throw new TacticInapplicableFailure("Abstraction would lose information from tests and/or evolution domain constraints")
+      case e => throw new TacticInapplicableFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
         e.map(_.prettyString) + " at position " + pos.prettyString + " in sequent " + seq.prettyString)
     }
   })
@@ -286,7 +286,7 @@ private object DLBySubst {
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
   def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
-    (us: Option[Subst]) => us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in postCut")) ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
+    (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
 
   private def constAnteConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
@@ -537,7 +537,7 @@ private object DLBySubst {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
   })
 
@@ -556,7 +556,7 @@ private object DLBySubst {
     case Some(Forall(vars, p)) =>
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
   })
 }

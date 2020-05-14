@@ -181,7 +181,7 @@ object ODEInvariance {
 
     val (p: Term, ode: DifferentialProgram) = seq.sub(pos) match {
       case Some(Diamond(ODESystem(o, GreaterEqual(p,_)), _)) => (p, o)
-      case e => throw new BelleThrowable("Unknown shape: " + e)
+      case e => throw new TacticInapplicableFailure("Unknown shape: " + e)
     }
     //Maybe pass this as an argument to avoid recomputing
     val lie = lieDer(ode, p)
@@ -294,7 +294,7 @@ object ODEInvariance {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("sAI only applicable to box ODE in succedent")
     }
 
     val (fml,propt1) = semiAlgNormalize(post)
@@ -349,7 +349,7 @@ object ODEInvariance {
     val boundPr = remember(("f_()-g_()^"+(2*bound).toString()+">=0 -> f_()>0 | g_()=0").asFormula, QE, namespace)
     val (p,t) = seq.succ(0).sub(PosInExpr(0::1::Nil)) match {
       case Some(Or(Greater(p,_),Equal(t,_))) => (p,t)
-      case e => throw new BelleThrowable("lpgt called with incorrect result at expected position: " + e)
+      case e => throw new TacticInapplicableFailure("lpgt called with incorrect result at expected position: " + e)
     }
     //println(p,t)
     val unlocked = GreaterEqual(Minus(p,Power(t,Number(2*bound))),Number(0))
@@ -460,7 +460,7 @@ object ODEInvariance {
 
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("sAI only at box ODE in succedent")
     }
     val (f2, propt) = semiAlgNormalize(post)
 
@@ -487,7 +487,7 @@ object ODEInvariance {
     else {
       val f3 =
         rankOneFml(ode, dom, f2) match {
-          case None => throw new BelleThrowable("Unable to re-order to recursive rank 1 form: " + f2)
+          case None => throw new TacticInapplicableFailure("Unable to re-order to recursive rank 1 form: " + f2)
           case Some(f) => f
         }
 
@@ -521,7 +521,7 @@ object ODEInvariance {
     require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("time bound only at box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("time bound only at box ODE in succedent")
     }
     //Check that the domain at least freezes one of the coordinates
     val domConj = flattenConjunctions(dom)
@@ -541,7 +541,7 @@ object ODEInvariance {
       case _ => false})
 
     constRHS match {
-      case Nil => throw new BelleThrowable("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+      case Nil => throw new TacticInapplicableFailure("time bound requires at least one time-like coordinate to be frozen in domain, found none")
       case Equal(t,d)::_ =>
         //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
         val left = freeAtoms.map(f =>
@@ -596,7 +596,7 @@ object ODEInvariance {
       //needs to be dualized
       case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
       //todo: case Some(Diamond(sys:ODESystem,post)) if pos.isAnte => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent or diamond ODE in antecedent")
+      case _ => throw new TacticInapplicableFailure("domain stuck for box ODE in succedent or diamond ODE in antecedent")
     }
 
     val tvName = "stuck_"
@@ -628,7 +628,7 @@ object ODEInvariance {
   */
   def rank(ode:ODESystem, polys:List[Term]) : (Int, List[Term], List[List[Term]]) = {
     if (ToolProvider.algebraTool().isEmpty)
-      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+      throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
 
     val algTool = ToolProvider.algebraTool().get
 
@@ -684,7 +684,7 @@ object ODEInvariance {
 
     val (ode,dom) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,_)) => (sys.ode,sys.constraint)
-      case _ => throw new BelleThrowable("dgVdbx only applicable to box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("dgVdbx only applicable to box ODE in succedent")
     }
 
     val zero = Number(0)
@@ -818,7 +818,7 @@ object ODEInvariance {
 
     val (sys, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new BelleThrowable("dRI only applicable for box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("dRI only applicable for box ODE in succedent")
     }
 
     val (f2, _) = semiAlgNormalize(post)
@@ -1272,7 +1272,7 @@ object ODEInvariance {
             if(prf.isProved)
               (prop, inst, by(prf))
             else
-              throw new BelleThrowable("QE failed")
+              throw new BelleUnexpectedProofStateError("QE failed", prf.underlyingProvable)
           }
           else
             (prop, inst, timeoutQE)
@@ -1296,7 +1296,7 @@ object ODEInvariance {
           if(prf.isProved)
             (prop, inst, by(prf))
           else
-            throw new BelleThrowable("QE failed")
+            throw new BelleUnexpectedProofStateError("QE failed", prf.underlyingProvable)
         }
         else
           (prop, inst, QE)
@@ -1368,7 +1368,7 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("sAI only applicable to box ODE in succedent")
     }
 
     val (fml1,propt1) = semiAlgNormalize(post)
@@ -1544,23 +1544,23 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("nilpotent solve only applicable to box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("nilpotent solve only applicable to box ODE in succedent")
     }
 
     if(TacticHelper.names(seq).contains(nilpotentSolveTimeVar))
-      throw new BelleThrowable("nilpotent solve should not be called twice (solution already available from prior call)")
+      throw new IllFormedTacticApplicationException("nilpotent solve should not be called twice (solution already available from prior call)")
 
     val t = nilpotentSolveTimeVar //explicitly non-idempotent
     //val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)
-    if (linForm.isEmpty) throw new BelleThrowable("ODE " + ode + " could not be put into linear form x'=Ax")
+    if (linForm.isEmpty) throw new TacticInapplicableFailure("ODE " + ode + " could not be put into linear form x'=Ax")
     val (m, b, x) = linForm.get
 
     val npopt = nilpotentIndex(m)
 
-    if (npopt.isEmpty) throw new BelleThrowable("Coefficient matrix for " + ode + " is not nilpotent.")
+    if (npopt.isEmpty) throw new TacticInapplicableFailure("Coefficient matrix for " + ode + " is not nilpotent.")
     val np = npopt.get
 
     val bsimp = b.map(t => simpWithTool(ToolProvider.simplifierTool(), t))
@@ -1661,7 +1661,7 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("DDC only applicable to box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("DDC only applicable to box ODE in succedent")
     }
 
     val zero = Number(0)

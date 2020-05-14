@@ -52,11 +52,11 @@ object Approximator extends Logging {
           case Some(v) => expApproximate(v, n)(pos)
           case None    => DifferentialHelper.hasSinCos(system.ode) match {
             case Some((cos,sin)) => circularApproximate(sin, cos, n)(pos)
-            case None => throw new BelleFriendlyUserMessage("Could not find a system to approximate.")
+            case None => throw new TacticInapplicableFailure("Could not find a system to approximate.")
           }
         }
       }
-      case _ => throw new BelleFriendlyUserMessage(s"approximate should only be called on positions of form [{ODE}]P")
+      case _ => throw new TacticInapplicableFailure(s"approximate should only be called on positions of form [{ODE}]P")
     })
   }
 
@@ -216,7 +216,7 @@ object Approximator extends Logging {
       )
 
     }
-    case _ => throw new BelleUserGeneratedError(s"Expected to find a modality containing an ODE, but found ${f.prettyString}")
+    case _ => throw new TacticInapplicableFailure(s"Expected to find a modality containing an ODE, but found ${f.prettyString}")
   }
 
   /** Does a CEat with extendEvDomAndProve. */
@@ -254,15 +254,15 @@ object Approximator extends Logging {
   }
 
   private def timeVarInModality(e:Option[Expression]) = e match {
-    case None => throw new BelleFriendlyUserMessage("Approximator was given a non-existent position.")
+    case None => throw new IllFormedTacticApplicationException("Approximator was given a non-existent position.")
     case Some(m) if m.isInstanceOf[Modal] => m.asInstanceOf[Modal].program match {
       case ODESystem(ode,child) => timeVar(ode) match {
         case Some(t) => t
-        case None => throw new BelleFriendlyUserMessage("Approximation tactics require existence of an explicit time variable; i.e., expected to find t'=1 in the ODE but no such t was found.")
+        case None => throw new TacticInapplicableFailure("Approximation tactics require existence of an explicit time variable; i.e., expected to find t'=1 in the ODE but no such t was found.")
       }
-      case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities containing ODEs in the top level")
+      case _ => throw new TacticInapplicableFailure("Approximation tactics should only be applied to modalities containing ODEs in the top level")
     }
-    case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities")
+    case _ => throw new TacticInapplicableFailure("Approximation tactics should only be applied to modalities")
   }
 
   //endregion

@@ -623,26 +623,26 @@ object ComponentSystem {
                         case Some(comLiveness) => 
                           proveSystem(systemName, c1base, c1use, c1step, c2base, c2use, c2step,
                             compatibility, comSafety, comLiveness)(pos)
-                        case None => throw new BelleIllFormedError("Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first")
+                        case None => throw new InputFormatFailure("Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first")
                       }
-                      case None => throw new BelleIllFormedError("Unknown lemma " + comGuaranteeSafetyLemma + "; please prove first")
+                      case None => throw new InputFormatFailure("Unknown lemma " + comGuaranteeSafetyLemma + "; please prove first")
                     }
-                    case None => throw new BelleIllFormedError("Unknown lemma " + compatibilityLemma + "; please prove first")
+                    case None => throw new InputFormatFailure("Unknown lemma " + compatibilityLemma + "; please prove first")
                   }
-                  case None => throw new BelleIllFormedError("Unknown lemma " + c2stepLemma + "; please prove first")
+                  case None => throw new InputFormatFailure("Unknown lemma " + c2stepLemma + "; please prove first")
                 }
-                case None => throw new BelleIllFormedError("Unknown lemma " + c2useLemma + "; please prove first")
+                case None => throw new InputFormatFailure("Unknown lemma " + c2useLemma + "; please prove first")
               }
-              case None => throw new BelleIllFormedError("Unknown lemma " + c2baseLemma + "; please prove first")
+              case None => throw new InputFormatFailure("Unknown lemma " + c2baseLemma + "; please prove first")
             }
-            case None => throw new BelleIllFormedError("Unknown lemma " + c1stepLemma + "; please prove first")
+            case None => throw new InputFormatFailure("Unknown lemma " + c1stepLemma + "; please prove first")
           }
-          case None => throw new BelleIllFormedError("Unknown lemma " + c1useLemma + "; please prove first")
+          case None => throw new InputFormatFailure("Unknown lemma " + c1useLemma + "; please prove first")
         }
-        case None => throw new BelleIllFormedError("Unknown lemma " + c1baseLemma + "; please prove first")
+        case None => throw new InputFormatFailure("Unknown lemma " + c1baseLemma + "; please prove first")
       }
-    case Some(fml) => throw new BelleIllFormedError("Unexpected formula shape.\n" + shapeMsg + "\nBut got " + fml.prettyString)
-    case None => throw new BelleIllFormedError("Position points outside formula")
+    case Some(fml) => throw new TacticInapplicableFailure("Unexpected formula shape.\n" + shapeMsg + "\nBut got " + fml.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position points outside formula")
   })
   
   private def checkComponentLemmas(cbase: Lemma, cuse: Lemma, cstep: Lemma): Unit = {
@@ -658,14 +658,14 @@ object ComponentSystem {
       if (cstep.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head
       else cstep.fact.conclusion.toFormula
 
-    if ((FormulaTools.conjuncts(invbase).toSet -- FormulaTools.conjuncts(invuse)).nonEmpty) throw new BelleIllFormedError("Component invariants in base case and use case do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invuse.prettyString)
-    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invbase)).nonEmpty) throw new BelleIllFormedError("Component invariants in base case and step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
-    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invstepa)).nonEmpty) throw new BelleIllFormedError("Component invariants in step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
+    if ((FormulaTools.conjuncts(invbase).toSet -- FormulaTools.conjuncts(invuse)).nonEmpty) throw new InputFormatFailure("Component invariants in base case and use case do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invuse.prettyString)
+    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invbase)).nonEmpty) throw new InputFormatFailure("Component invariants in base case and step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
+    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invstepa)).nonEmpty) throw new InputFormatFailure("Component invariants in step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
     
     if (StaticSemantics.freeVars((FormulaTools.conjuncts(invuse).toSet -- FormulaTools.conjuncts(invbase)).
-      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new BelleIllFormedError("Component use case makes additional non-global assumptions")
+      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new InputFormatFailure("Component use case makes additional non-global assumptions")
     if (StaticSemantics.freeVars((FormulaTools.conjuncts(invstepa).toSet -- FormulaTools.conjuncts(invbase)).
-      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new BelleIllFormedError("Component step makes additional non-global assumptions")
+      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new InputFormatFailure("Component step makes additional non-global assumptions")
   }
   
   private def checkSysC1Programs(step: Lemma, sys: Program): Unit = {
@@ -688,14 +688,14 @@ object ComponentSystem {
                             plant: (ODESystem, ODESystem),
                             in: (Program, Program),
                             cp: (Program, Program)): Unit = {
-    if (mem._1 != mem._2) throw new BelleIllFormedError("System and component port memories must agree, but " + mem._1 + " <> " + mem._2)
-    if (ctrl._1 != ctrl._2) throw new BelleIllFormedError("System and component controllers must agree, but " + ctrl._1 + " <> " + ctrl._2)
-    if (t._1 != t._2) throw new BelleIllFormedError("System and component time memory must agree, but " + t._1 + " <> " + t._2)
-    if (!DifferentialHelper.atomicOdes(plant._2).toSet.subsetOf(DifferentialHelper.atomicOdes(plant._1).toSet)) throw new BelleIllFormedError("System plant must contain component plant, but " + plant._1.prettyString + " does not contain all of " + plant._2)
-    if (!ports(in._1).toSet.subsetOf(ports(in._2).toSet)) throw new BelleIllFormedError("System input ports must be subset of component input ports, but " +
+    if (mem._1 != mem._2) throw new InputFormatFailure("System and component port memories must agree, but " + mem._1 + " <> " + mem._2)
+    if (ctrl._1 != ctrl._2) throw new InputFormatFailure("System and component controllers must agree, but " + ctrl._1 + " <> " + ctrl._2)
+    if (t._1 != t._2) throw new InputFormatFailure("System and component time memory must agree, but " + t._1 + " <> " + t._2)
+    if (!DifferentialHelper.atomicOdes(plant._2).toSet.subsetOf(DifferentialHelper.atomicOdes(plant._1).toSet)) throw new InputFormatFailure("System plant must contain component plant, but " + plant._1.prettyString + " does not contain all of " + plant._2)
+    if (!ports(in._1).toSet.subsetOf(ports(in._2).toSet)) throw new InputFormatFailure("System input ports must be subset of component input ports, but " +
       ports(in._1).map(p => p._1.prettyString + " (" + p._2.prettyString + ")").mkString(",") + " not subset of " +
       ports(in._2).map(p => p._1.prettyString + " (" + p._2.prettyString + ")").mkString(","))
-    if (cp._1 != cp._2) throw new BelleIllFormedError("System and component internal connections must agree, but " + cp._1 + " <> " + cp._2)
+    if (cp._1 != cp._2) throw new InputFormatFailure("System and component internal connections must agree, but " + cp._1 + " <> " + cp._2)
     //@todo check that connections cover remaining (non-open) input ports
   }
 }

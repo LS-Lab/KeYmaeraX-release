@@ -26,7 +26,7 @@ private object ProofRuleTactics extends Logging {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
-    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+    if(provable.subgoals.length != 1) throw new IllFormedTacticApplicationException(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {

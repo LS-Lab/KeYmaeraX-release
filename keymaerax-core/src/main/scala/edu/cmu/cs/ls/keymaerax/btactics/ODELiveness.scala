@@ -439,11 +439,11 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("removeODEUnivariate only applicable to box ODE")
+      case _ => throw new TacticInapplicableFailure("removeODEUnivariate only applicable to box ODE")
     }
 
     if(!ode.head.isInstanceOf[AtomicODE])
-      throw new BelleThrowable("removeODEUnivariate only applies to univariate ODE")
+      throw new TacticInapplicableFailure("removeODEUnivariate only applies to univariate ODE")
 
     val uode = ode.head.asInstanceOf[AtomicODE]
 
@@ -454,7 +454,7 @@ object ODELiveness {
 
     if(!deps.isEmpty)
       // This is not a proper univariate case, forward to the nonlinear tactic instead
-       throw new BelleThrowable("removeODEUnivariate only applies to univariate ODE (independent of subsequent ODEs). Found incorrect dependencies on variables: "+deps)
+       throw new TacticInapplicableFailure("removeODEUnivariate only applies to univariate ODE (independent of subsequent ODEs). Found incorrect dependencies on variables: "+deps)
 
     val deg = ToolTactics.varDegree(rhs,x)
     val coeff1 = (1 to (deg-1)).map(i => Variable("coeff", Some(i)))
@@ -479,7 +479,7 @@ object ODELiveness {
     val starter = proveBy( Sequent(seq.ante, seq.succ :+ precond), ToolTactics.hideNonFOL & QE)
 
     if(!starter.isProved) {
-      throw new BelleThrowable("Initial conditions insufficient for global existence on variable: "+x)
+      throw new TacticInapplicableFailure("Initial conditions insufficient for global existence on variable: "+x)
     }
 
     // Forcing darboux format
@@ -551,7 +551,7 @@ object ODELiveness {
 
     ind match {
       case None =>
-        if (strict) throw new BelleThrowable("odeReduce failed to autoremove: " + ode + ". Try to add an assumption to the antecedents of either this form: " + vdgasm +" or this form: " + ddgasm)
+        if (strict) throw new TacticInapplicableFailure("odeReduce failed to autoremove: " + ode + ". Try to add an assumption to the antecedents of either this form: " + vdgasm +" or this form: " + ddgasm)
         else skip
       case Some((unif,b)) =>
         val finalrw = if(b) vdg(unif.usubst) else ddg(unif.usubst)
@@ -589,14 +589,14 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("odeReduce only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("odeReduce only applicable to diamond ODE in succedent")
     }
 
     val ode = sys.ode
 
     val odels = DifferentialProduct.listify(ode).map{
       case ve@AtomicODE(x,e) => (x.x,ve)
-      case _ => throw new BelleThrowable("odeReduce only applicable to concrete ODEs")
+      case _ => throw new TacticInapplicableFailure("odeReduce only applicable to concrete ODEs")
     }.toMap
 
     // The set of variables transitively depended on by the postcondition and domain constraint
@@ -700,7 +700,7 @@ object ODELiveness {
 
     val (tarsys,tarpost) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("compatCuts only applicable to box ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("compatCuts only applicable to box ODE in succedent")
     }
 
     // Loop through compatible assumptions and track the effect of DC
@@ -766,7 +766,7 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("kDomD only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("kDomD only applicable to diamond ODE in succedent")
     }
 
     val newfml = Diamond(sys,target)
@@ -793,7 +793,7 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dDR only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("dDR only applicable to diamond ODE in succedent")
     }
 
     val newfml = Diamond(ODESystem(sys.ode,target),post)
@@ -827,7 +827,7 @@ object ODELiveness {
     val (sys,post,isBox) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post,false)
       case Some(Box(sys:ODESystem,post)) => (sys,post,true)
-      case _ => throw new BelleThrowable("vDG only applicable to box ODE in antecedents or diamond ODE in succedents")
+      case _ => throw new TacticInapplicableFailure("vDG only applicable to box ODE in antecedents or diamond ODE in succedents")
     }
 
     //@todo: Check that ghosts are sufficiently fresh and return a nice error
@@ -896,7 +896,7 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("dV only applicable to diamond ODE in succedent")
     }
 
     val (property, propt) = ineqNormalize(post)
@@ -955,12 +955,12 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("dV only applicable to diamond ODE in succedent")
     }
 
     val odels = DifferentialProduct.listify(sys.ode).map {
       case AtomicODE(x,e) => (x,e)
-      case _ => throw new BelleThrowable("dVAuto only applicable to concrete ODEs")
+      case _ => throw new TacticInapplicableFailure("dVAuto only applicable to concrete ODEs")
     }
 
     val eps = TacticHelper.freshNamedSymbol("epsilon_".asVariable, seq)
@@ -974,7 +974,7 @@ object ODELiveness {
       case GreaterEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(l,r),None),eps)
       case Less(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
       case LessEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
-      case _ => throw new BelleThrowable("dVAuto expects only atomic inequality (>,>=,<,<=) in succedent")
+      case _ => throw new TacticInapplicableFailure("dVAuto expects only atomic inequality (>,>=,<,<=) in succedent")
     }
 
     // (Q & p < 0 -> p' >= e)
@@ -995,7 +995,7 @@ object ODELiveness {
     val pr = proveBy(seq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
 
     if(!pr.isProved)
-      throw new BelleThrowable("dVAuto failed to prove arithmetic condition: " + qe)
+      throw new BelleUnexpectedProofStateError("dVAuto failed to prove arithmetic condition: " + qe, pr.underlyingProvable)
 
     cutR(qe)(pos) <(
       by(pr),
@@ -1027,7 +1027,7 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("dV only applicable to diamond ODE in succedent")
     }
 
     val (property, propt) = SimplifierV3.semiAlgNormalize(post)
@@ -1162,7 +1162,7 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("Higher dV only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("Higher dV only applicable to diamond ODE in succedent")
     }
 
     val (property, propt) = ineqNormalize(post)
@@ -1230,7 +1230,7 @@ object ODELiveness {
 
     val (tarsys, tarpost) = seq.sub(pos) match {
       case Some(Diamond(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new BelleThrowable("saveBox only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("saveBox only applicable to diamond ODE in succedent")
     }
 
     cut(Box(tarsys,Not(tarpost))) <(
@@ -1264,7 +1264,7 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("closedRef only applicable to diamond ODE in succedent")
+      case _ => throw new TacticInapplicableFailure("closedRef only applicable to diamond ODE in succedent")
     }
 
     saveBox(pos) & dDR(target)(pos) < (

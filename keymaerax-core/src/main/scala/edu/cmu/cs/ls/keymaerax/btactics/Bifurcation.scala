@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleFriendlyUserMessage}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, ODESystem, Sequent}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -33,7 +33,7 @@ object Bifurcation {
   val biSplit = "biSplit" by ((pos: Position, seq: Sequent) => {
     val odes = seq.sub(pos) match {
       case s : ODESystem => s
-      case _ => throw new BelleFriendlyUserMessage(s"bi[furcation]Split tactic expects an ODE buy found a ${}")
+      case _ => throw new TacticInapplicableFailure(s"bi[furcation]Split tactic expects an ODE buy found a ${}")
     }
 
     nestedCuts(TactixLibrary.nil, bifurcationTool(odes).toSeq)
@@ -43,7 +43,7 @@ object Bifurcation {
   val biSplitAuto = "biSplitAuto" by ((pos: Position, seq: Sequent) => {
     val odes = seq.sub(pos) match {
       case s : ODESystem => s
-      case _ => throw new BelleFriendlyUserMessage(s"bi[furcation]Split tactic expects an ODE buy found a ${}")
+      case _ => throw new TacticInapplicableFailure(s"bi[furcation]Split tactic expects an ODE buy found a ${}")
     }
 
     nestedCuts(TactixLibrary.ODE(pos), bifurcationTool(odes).toSeq)

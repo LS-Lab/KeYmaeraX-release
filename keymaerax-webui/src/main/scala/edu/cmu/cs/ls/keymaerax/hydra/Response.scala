@@ -368,15 +368,15 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
   override def getJson: JsObject = exn match {
     case ex: BelleUnexpectedProofStateError =>
       JsObject(super.getJson.fields ++ Map(
-        "tacticMsg" -> JsString(tacticMsg.replaceAllLiterally("[Bellerophon Runtime]", ""))
+        "tacticMsg" -> JsString(tacticMsg)
       ))
-    case ex: CompoundException =>
+    case ex: CompoundCriticalException =>
       val exceptions = flatten(ex)
       val messages = exceptions.size + " tactic attempts failed:\n" + exceptions.zipWithIndex.map({
         case (x: BelleUnexpectedProofStateError, i) =>
-          (i+1) + ". " + x.getMessage.replaceAllLiterally("[Bellerophon Runtime]", "") +
+          (i+1) + ". " + x.getMessage +
             ":\n" + x.proofState.subgoals.map(_.toString).mkString(",")
-        case (x, i) => (i+1) + ". " + x.getMessage.replaceAllLiterally("[Bellerophon Runtime]", "")
+        case (x, i) => (i+1) + ". " + x.getMessage
       }).mkString("\n") + "\n"
       JsObject(super.getJson.fields.filter(_._1 != "textStatus") ++ Map(
         "textStatus" -> JsString(messages),
@@ -384,12 +384,12 @@ class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
       ))
     case _ =>
       JsObject(super.getJson.fields ++ Map(
-        "tacticMsg" -> JsString(tacticMsg.replaceAllLiterally("[Bellerophon Runtime]", ""))
+        "tacticMsg" -> JsString(tacticMsg)
       ))
   }
 
   private def flatten(ex: BelleThrowable): List[BelleThrowable] = ex match {
-    case ex: CompoundException => flatten(ex.left) ++ flatten(ex.right)
+    case ex: CompoundCriticalException => flatten(ex.left) ++ flatten(ex.right)
     case _ => ex :: Nil
   }
 }

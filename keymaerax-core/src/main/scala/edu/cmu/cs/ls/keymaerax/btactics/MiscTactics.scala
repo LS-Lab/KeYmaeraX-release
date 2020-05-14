@@ -28,9 +28,10 @@ object DebuggingTactics {
     override def result(provable: ProvableSig): ProvableSig = throw e
   }
 
+  /** Indicates a failed attempt that triggers proof search. */
   def error(s: => String): BuiltInTactic = new BuiltInTactic("Error") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
-      throw BelleUserGeneratedError(s + "\nThe error occurred on\n" + provable.underlyingProvable.prettyString)
+      throw new TacticInapplicableFailure(s + "\n" + provable.underlyingProvable.prettyString)
     }
   }
 
@@ -75,7 +76,7 @@ object DebuggingTactics {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       val ctx = provable.subgoals.head.at(pos)
       if (!assertion(ctx._2))
-        throw BelleUserGeneratedError("Assertion Failed: " + msg(ctx._2) + "\nAt:\n" + ctx)
+        throw new TacticAssertionError("Assertion Failed: " + msg(ctx._2) + "\nAt:\n" + ctx)
       provable
     }
   }
@@ -87,7 +88,7 @@ object DebuggingTactics {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.ante.size != anteSize ||
         provable.subgoals.head.succ.size != succSize) {
-        throw BelleUserGeneratedError(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
+        throw new TacticAssertionError(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with: " + provable.subgoals.head.ante.size + "antecedent and " +
           provable.subgoals.head.succ.size + " succedent formulas)")
       }
@@ -103,7 +104,7 @@ object DebuggingTactics {
       (new BuiltInPositionTactic("ANON") {
         override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
           if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != fml) {
-            throw BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
+            throw new TacticAssertionError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
               provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.sub(pos) + " at position " + pos + ")")
           }
           provable
@@ -116,7 +117,7 @@ object DebuggingTactics {
   def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
-        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition but got " +
+        throw new TacticAssertionError(message + "\nExpected 1 subgoal matching a condition but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
            else provable.subgoals.head.prettyString))
       }
@@ -128,7 +129,7 @@ object DebuggingTactics {
   def assertOnAll(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (!provable.subgoals.forall(cond(_))) {
-        throw BelleUserGeneratedError(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
+        throw new TacticAssertionError(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
           provable.subgoals.filter(!cond(_)).mkString("\n") + " do not match")
       }
       provable
@@ -138,7 +139,7 @@ object DebuggingTactics {
   def assertProvableSize(provableSize: Int): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.length != provableSize)
-        throw BelleUserGeneratedError(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
+        throw new TacticAssertionError(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
       provable
     }
   }
@@ -147,10 +148,10 @@ object DebuggingTactics {
   def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("ANON") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       if (provable.subgoals.size != 1) {
-        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
+        throw new TacticAssertionError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
           provable.subgoals.size + " subgoals")
       } else if (!cond(provable.subgoals.head, pos)) {
-        throw BelleUserGeneratedError(message + "\nAn (internal) check failed at the subgoal formula " + provable.subgoals.head.at(pos)._2)
+        throw new TacticAssertionError(message + "\nAn (internal) check failed at the subgoal formula " + provable.subgoals.head.at(pos)._2)
       }
       provable
     }
@@ -163,7 +164,7 @@ object DebuggingTactics {
       (new BuiltInPositionTactic("ANON") {
         override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
           if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != expected) {
-            throw BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
+            throw new TacticAssertionError(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
               provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
           }
           provable
@@ -183,9 +184,7 @@ object DebuggingTactics {
         print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
         if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
         provable
-      } else if (provable.subgoals.size == 1 && provable.subgoals.head.ante.isEmpty && provable.subgoals.head.succ == False :: Nil) {
-        throw new BelleUnexpectedProofStateError(msg + {if (msg.nonEmpty) ": " else ""} + "expected to have proved, but got false", provable.underlyingProvable)
-      } else throw new BelleUnexpectedProofStateError(msg + {if (msg.nonEmpty) ": " else ""} + "expected to have proved, but got open goals", provable.underlyingProvable)
+      } else throw BelleUnfinished(msg, provable.underlyingProvable)
     }
   }
 
@@ -309,7 +308,7 @@ object Idioms {
   def must(t: BelleExpr): BelleExpr = new DependentTactic("ANON") {
     override def computeExpr(before: ProvableSig): BelleExpr = t & new BuiltInTactic(name) {
       override def result(after: ProvableSig): ProvableSig = {
-        if (before == after) throw new BelleThrowable("Tactic " + t + " did not result in mandatory change")
+        if (before == after) throw new BelleNoProgress("Tactic " + t + " did not result in mandatory change")
         after
       }
     }
@@ -319,7 +318,7 @@ object Idioms {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
-      case _ => throw new BelleThrowable("Cannot perform AtSubgoal on a non-Provable value.")
+      case _ => throw new IllFormedTacticApplicationException("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
 
@@ -378,7 +377,7 @@ object Idioms {
       else {
         val succ = seq.succ.indexOf(f)
         if (succ >= 0) SuccPosition.base0(succ, in)
-        else throw new BelleTacticFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
+        else throw new TacticInapplicableFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
       }
     }
     t(subPos)

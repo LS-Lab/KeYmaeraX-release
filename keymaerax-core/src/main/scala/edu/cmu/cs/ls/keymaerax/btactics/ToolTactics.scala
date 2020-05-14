@@ -37,7 +37,7 @@ private object ToolTactics {
         Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
         ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
       case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
-      case _ => throw new BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
+      case _ => throw new InputFormatFailure("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
     }
     nil
   })
@@ -447,7 +447,7 @@ private object ToolTactics {
         pushIn(pos.inExpr)(pos.top)
       )
       )
-    else throw new BelleTacticFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
+    else throw new TacticInapplicableFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
   }
 
   /** Transforms the term at position `pos` into the term `to`. */

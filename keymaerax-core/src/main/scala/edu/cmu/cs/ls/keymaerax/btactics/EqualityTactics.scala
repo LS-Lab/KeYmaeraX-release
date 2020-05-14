@@ -161,8 +161,8 @@ private object EqualityTactics {
   /** @see [[TactixLibrary.abbrv()]] */
   def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(t: Term) => abbrv(t, Some(abbrvV))
-    case Some(e) => throw new BelleThrowable("Expected a term at position " + pos + ", but got " + e)
-    case _ => throw new BelleThrowable("Position " + pos + " is undefined in sequent " + sequent)
+    case Some(e) => throw new TacticInapplicableFailure("Expected a term at position " + pos + ", but got " + e)
+    case _ => throw new IllFormedTacticApplicationException("Position " + pos + " is undefined in sequent " + sequent)
   })
 
   /**
@@ -220,8 +220,8 @@ private object EqualityTactics {
     abbrvV match { case Some(v) => t::v::Nil case None => t::Nil }, (pos: Position, sequent: Sequent) => {
       val inFml = sequent.sub(pos) match {
         case Some(p: Formula) => p
-        case Some(t: Term) => throw new BelleTacticFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
-        case _ => throw new BelleIllFormedError("Position " + pos + " does not point to an expression")
+        case Some(t: Term) => throw new TacticInapplicableFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
+        case _ => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to an expression")
       }
       require(abbrvV.isEmpty ||
         !sequent.sub(pos).map(StaticSemantics.signature).contains(abbrvV.get),

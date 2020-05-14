@@ -222,12 +222,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
     useAt("DC differential cut",
-      (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+      (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   })
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DCd(invariant: Formula)  : DependentPositionTactic = useAt("DCd diamond differential cut",
-    (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+    (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols
     * as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`.
@@ -262,7 +262,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
+        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))
@@ -275,7 +275,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
+        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))
@@ -288,7 +288,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     (us:Option[Subst])=>{
       val singular = FormulaTools.singularities(b)
       insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-      us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
+      us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
         (Variable("y_",None,Real), y),
         (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
       ))
@@ -299,7 +299,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
+        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))

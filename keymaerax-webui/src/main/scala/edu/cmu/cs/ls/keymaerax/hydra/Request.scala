@@ -2138,7 +2138,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                       //@note display progress of inner (Let) proof, works only in stepwise execution (step details dialog)
                       val innerTrace = db.getExecutionTrace(innerId)
                       if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
-                      else throw new BelleTacticFailure("No progress", ex)
+                      else throw new BelleNoProgress("No progress", ex)
                     case None => throw ex
                   }
                 }

@@ -77,11 +77,11 @@ protected object FOQuantifierTactics {
             cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate") & done
             )
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-          throw new BelleThrowable("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
+          throw new InputFormatFailure("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
-          throw new BelleThrowable("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
+          throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
         case _ =>
-          throw new BelleThrowable("Position " + pos + " is not defined in " + sequent.prettyString)
+          throw new IllFormedTacticApplicationException("Position " + pos + " is not defined in " + sequent.prettyString)
       }
     })
 
@@ -123,11 +123,11 @@ protected object FOQuantifierTactics {
               cohide(pos) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-          throw new BelleThrowable("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
+          throw new InputFormatFailure("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
-          throw new BelleThrowable("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
+          throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
         case _ =>
-          throw new BelleThrowable("Position " + pos + " is not defined in " + sequent.prettyString)
+          throw new IllFormedTacticApplicationException("Position " + pos + " is not defined in " + sequent.prettyString)
       }
     })
 
@@ -140,7 +140,7 @@ protected object FOQuantifierTactics {
         require(pos.isSucc, "All skolemize only in succedent")
         val xs = sequent.sub(pos) match {
           case Some(Forall(vars, _)) => vars
-          case f => throw new BelleThrowable("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
+          case f => throw new TacticInapplicableFailure("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
         }
         val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
         //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
@@ -224,7 +224,7 @@ protected object FOQuantifierTactics {
             /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
             /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.existsGeneralize.fact(subst))
             )
-        case _ => throw new BelleThrowable("Position " + pos + " must refer to a formula in sequent " + sequent)
+        case _ => throw new IllFormedTacticApplicationException("Position " + pos + " must refer to a formula in sequent " + sequent)
       }
     }
 
@@ -266,7 +266,7 @@ protected object FOQuantifierTactics {
               val fresh = TacticHelper.freshNamedSymbol(fn, sequent)
               Variable(fresh.name, fresh.index, fresh.sort)
             } else funcVar
-          case _ => throw new BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
+          case _ => throw new InputFormatFailure("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
         }
     }
 
