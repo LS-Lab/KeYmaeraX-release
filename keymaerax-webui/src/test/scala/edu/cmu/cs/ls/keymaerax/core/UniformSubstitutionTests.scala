@@ -25,7 +25,7 @@ import scala.collection.immutable.IndexedSeq
  */
 @UsualTest
 @USubstTest
-class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
+class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
 
   private def V(s: String) = Variable(s, None, Real)
 
