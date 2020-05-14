@@ -573,7 +573,7 @@ object DerivedAxioms extends Logging {
     */
   lazy val convergenceFlat = {
     val v = Variable("x_", None, Real)
-    val anonv = ProgramConst("a_", Except(v))
+    val anonv = ProgramConst("a_", Except(v::Nil))
     val Jany = UnitPredicational("J", AnyArg)
     derivedRule("con convergence flat",
       Sequent(immutable.IndexedSeq(Exists(immutable.Seq(v), Jany)), immutable.IndexedSeq(Diamond(Loop(anonv), "p_(||)".asFormula))),
@@ -2787,8 +2787,8 @@ object DerivedAxioms extends Logging {
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
       useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
-        (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
-          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(BigDecimal(0))) :: Nil))(-1) &
+        (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
+          (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
       //The following replicates functionality of existsR(Number(1))(1)
       // 1) Stutter
       cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
@@ -2837,8 +2837,8 @@ object DerivedAxioms extends Logging {
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
       useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
-        (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
-          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(BigDecimal(0))) :: Nil))(-1) &
+        (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
+          (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
       //The following replicates functionality of existsR(Number(1))(1)
       // 1) Stutter
       cutLR("\\exists y_ [y_:=y_;][{c{|y_|},y_'=(-g(|y_|)/2)*y_+0&q(|y_|)}]e(|y_|)>0".asFormula)(1,0::Nil) <(
@@ -3960,4 +3960,26 @@ object DerivedAxioms extends Logging {
     byUS(equivReflexiveAxiom)
   )
 
+  // Liveness additions
+
+  /**
+    * {{{Axiom "K<&>".
+    *    [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note postcondition refinement
+    */
+  lazy val kDomD: Lemma = derivedAxiom("K<&>",
+    "==> [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))".asSequent,
+    implyR(1) & implyR(1) &
+      useExpansionAt("<> diamond")(1) &
+      useExpansionAt("<> diamond")(-2) &
+      notL(-2) & notR(1) & implyRi()(-1,1) &
+      useAt("DR differential refine",PosInExpr(1::Nil))(1) & TactixLibrary.boxAnd(1) & andR(1) <(
+      DW(1) & G(1) & implyR(1) & closeId,
+      closeId
+    )
+  )
 }

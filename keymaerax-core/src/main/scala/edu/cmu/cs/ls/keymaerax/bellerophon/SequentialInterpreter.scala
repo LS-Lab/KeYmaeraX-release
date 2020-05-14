@@ -86,6 +86,12 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       } else Some(labels)
   }
 
+  /** Compares provables ignoring labels. */
+  private def progress(prev: BelleValue, curr: BelleValue): Boolean = (prev, curr) match {
+    case (BelleProvable(pPrev, _), BelleProvable(pCurr, _)) => pCurr != pPrev
+    case _ => curr != prev
+  }
+
   /** Returns the result of running tactic `expr` on value `v`. */
   protected def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case builtIn: BuiltInTactic => v match {
@@ -123,7 +129,12 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     }
 
     case EitherTactic(left, right) => try {
-      apply(left, v)
+      val leftResult = apply(left, v)
+      if (!progress(v, leftResult)) {
+        throw new BelleProofSearchControl("No progress of 'l' in 'l | r' " + expr)
+      } else {
+        leftResult
+      }
     } catch {
       case eleft: BelleThrowable =>
         try {
@@ -206,6 +217,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v
+
       breakable { do {
         prev = result
         try {
@@ -215,9 +227,9 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
             case _ => // continue
           }
         } catch {
-          case e: BelleThrowable => /*@note child no longer applicable */ result = prev
+          case _: BelleThrowable => /*@note child no longer applicable */ result = prev
         }
-      } while (result != prev) }
+      } while (progress(prev, result)) }
       result
 
     case RepeatTactic(child, times) =>
@@ -357,8 +369,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case Expand(_, s) =>
       val subst = USubst(s :: Nil)
-      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, subst :: Nil)
-      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, subst :: Nil)
+      TactixLibrary.invSupplier = substGenerator(TactixLibrary.invSupplier, subst :: Nil)
       apply(TactixLibrary.US(subst), v) match {
         case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ subst)
         case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, subst)
@@ -367,8 +378,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case ExpandAll(defs) =>
       val substs = defs.map(s => USubst(s :: Nil))
-      TactixLibrary.invGenerator = substGenerator(TactixLibrary.invGenerator, substs)
-      TactixLibrary.differentialInvGenerator = substGenerator(TactixLibrary.differentialInvGenerator, substs)
+      TactixLibrary.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
       val foo =
       apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
         reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v);

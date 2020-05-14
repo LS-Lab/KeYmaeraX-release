@@ -48,7 +48,7 @@ class BenchmarkTests extends Suites(
 object BenchmarkTests {
   private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
   // for testing changes in a locally cloned repository
-//    private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
+//  private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
 }
 
 /** Collects a benchmark result. */
@@ -243,7 +243,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
             println(s"Done generating (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
             if (candidates.nonEmpty) {
               println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))
-              TactixLibrary.invGenerator = FixedGenerator(candidates)
+              TactixLibrary.invSupplier = FixedGenerator(candidates)
               val checkStart = System.currentTimeMillis()
               val proof = proveBy(seq, TactixLibrary.master())
               val checkEnd = System.currentTimeMillis()
@@ -280,9 +280,13 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
       case Some(t) =>
         println(s"Proving $name")
 
+        val hasDefinitions = defs.decls.exists(_._2._3.isDefined)
+        val tacticExpands = "(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).nonEmpty
+        if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
+        val theTactic = BelleParser.parseWithInvGen(t, None, defs, hasDefinitions && !tacticExpands)
+
         qeDurationListener.reset()
         val start = System.currentTimeMillis()
-        val theTactic = BelleParser.parseWithInvGen(t, None, defs)
         try {
           val proof = failAfter(Span(timeout, Seconds))({
             proveBy(model, theTactic)
@@ -313,19 +317,23 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 
   /** Parse model and add proof hint annotations to invariant generator. */
   private def parseWithHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    TactixLibrary.invSupplier = FixedGenerator(Nil)
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
     val entry = KeYmaeraXArchiveParser(modelContent).head
-    TactixLibrary.invGenerator = generator
+    TactixLibrary.invSupplier = generator
+    TactixLibrary.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixLibrary.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
   /** Parse model but ignore all proof hints. */
   private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    TactixLibrary.invSupplier = FixedGenerator(Nil)
+    TactixLibrary.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixLibrary.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
     val entry = KeYmaeraXArchiveParser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)

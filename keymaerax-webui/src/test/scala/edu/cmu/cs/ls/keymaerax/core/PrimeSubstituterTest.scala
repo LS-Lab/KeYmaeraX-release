@@ -97,7 +97,7 @@ class PrimeSubstituterTest extends TacticTestBase {
     the [CoreException] thrownBy {pr(USubst(
       SubstitutionPair(FuncOf(Function("c",None,Unit,Real),Nothing), "2".asTerm) ::
         SubstitutionPair(PredOf(Function("q",None,Real,Bool),DotTerm()), True) ::
-        SubstitutionPair(UnitPredicational("p",Except(DifferentialSymbol(x_))), Equal(DifferentialSymbol(x_),Number(5))) ::
+        SubstitutionPair(UnitPredicational("p",Except(DifferentialSymbol(x_)::Nil)), Equal(DifferentialSymbol(x_),Number(5))) ::
         Nil))} should have message "Core requirement failed: Space-compatible substitution expected: (p(|x_'|)~>x_'=5)"
     // would prove bogus [x'=2&true]x'=5 <-> \forall t>=0 (\forall 0<=s<=t true -> [x:=x+2*t;]x'=5)
     // which is not valid in a state where x'=5

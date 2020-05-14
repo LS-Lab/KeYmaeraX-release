@@ -14,7 +14,7 @@ import scala.collection.immutable.List
 
 /** Invariant generators and differential invariant generators.
   * @author Andre Platzer
-  * @see [[TactixLibrary.invGenerator]]
+  * @see [[TactixLibrary.invSupplier]]
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
   * @see Andre Platzer and Edmund M. Clarke. [[https://doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]]. Formal Methods in System Design, 35(1), pp. 98-120, 2009
   */
@@ -128,36 +128,29 @@ object InvariantGenerator extends Logging {
       )
   }
 
-  /** Default invariant generator used in Bellerophon tactics if no specific generator is requested. */
-  lazy val defaultInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
-    (loopInvariantGenerator(sequent,pos) #::: differentialInvariantGenerator(sequent,pos)).distinct)
-
   /** A differential invariant generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
-    (TactixLibrary.invGenerator(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)).distinct
+  lazy val differentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
+    (TactixLibrary.invSupplier(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)).distinct
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
-  )
 
   /** A more expensive extended differential invariant generator.
     * @author Andre Platzer */
-  lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
+  lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
     sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos).distinct
-  )
 
   /** A loop invariant generator.
     * @author Andre Platzer */
-  lazy val loopInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
-    (TactixLibrary.invGenerator(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)).distinct
-  )
+  lazy val loopInvariantGenerator: Generator[GenProduct] = (sequent,pos) =>
+    (TactixLibrary.invSupplier(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)).distinct
 
   /** A simplistic differential invariant candidate generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantCandidates: Generator[GenProduct] = cached((sequent,pos) =>
+  lazy val differentialInvariantCandidates: Generator[GenProduct] = (sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting/filtering etc.
     //@note do not relevance filter Pegasus candidates: they contain trivial results, that however make ODE try harder
     // since flagged as truly invariant and not just a guess like the simple candidates
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct)
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */

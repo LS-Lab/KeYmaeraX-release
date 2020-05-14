@@ -265,7 +265,7 @@ class TactixLibraryTests extends TacticTestBase {
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     failAfter(20 seconds) {
-      val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(InvariantGenerator.defaultInvariantGenerator)(1))
+      val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(invGenerator)(1))
       result.getMessage should include("[Bellerophon Runtime] loopPostMaster: Invariant generator ran out of ideas")
     }
   }

@@ -37,11 +37,11 @@ class ContinuousInvariantTests extends TacticTestBase {
       ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
-  "Continuous invariant generation" should "generate a simple invariant" taggedAs IgnoreInBuildTest in withMathematicaMatlab { _ =>
+  "Continuous invariant generation" should "generate a simple invariant" in withMathematicaMatlab { _ =>
     val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
     proveBy(problem, ODE(1)) shouldBe 'proved
 
-    val (simpleInvariants, pegasusInvariants) = InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)).splitAt(4)
+    val (simpleInvariants, pegasusInvariants) = TactixLibrary.differentialInvGenerator(problem, SuccPos(0)).splitAt(4)
     simpleInvariants should contain theSameElementsAs(
       ("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
         ("y>=-1".asFormula, None) :: Nil)
@@ -56,10 +56,10 @@ class ContinuousInvariantTests extends TacticTestBase {
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs ExtremeTest in withMathematica { tool =>
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invGenerator match {
+    val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invSupplier match {
       case gen: ConfigurableGenerator[GenProduct] => gen
     }
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    TactixLibrary.invSupplier = FixedGenerator(Nil)
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
@@ -155,7 +155,8 @@ class ContinuousInvariantTests extends TacticTestBase {
             val invariants = InvariantGenerator.pegasusInvariants(
               Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0))
             println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
-            TactixLibrary.invGenerator = FixedGenerator(invariants.toList)
+            TactixLibrary.invSupplier = FixedGenerator(Nil)
+            TactixLibrary.loopInvGenerator = FixedGenerator(Nil)
             TactixLibrary.differentialInvGenerator = FixedGenerator(invariants.toList)
             proveBy(model.asInstanceOf[Formula], implyR(1) & ODE(1)) shouldBe 'proved
             println(name + " done")

@@ -88,7 +88,7 @@ object KeYmaeraXArchiveParser {
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
     def exhaustiveSubst[T <: Expression](arg: T): T = try {
-      arg.exhaustiveSubst(USubst(substs)).asInstanceOf[T]
+      elaborateToFunctions(arg).exhaustiveSubst(USubst(substs)).asInstanceOf[T]
     } catch {
       case ex: SubstitutionClashException =>
         throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
@@ -825,6 +825,8 @@ object KeYmaeraXArchiveParser {
           case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
         }
 
+        //@note replaces all literal occurrences of variable uses with functions and relies on earlier check
+        //      that input does not mix variable and function use of the same symbol.
         val elaborated = definitions.elaborateToFunctions(problem)
         typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 

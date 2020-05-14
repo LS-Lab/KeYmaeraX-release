@@ -511,19 +511,19 @@ private object DifferentialTactics extends Logging {
           case (Number(n), _) if n == 0 =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
-                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+                (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
             useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
           case (_, Neg(Number(n))) =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
-                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
-                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(-n)) :: Nil)
+                (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(-n)) :: Nil)
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
           case _ =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
-                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
-                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+                (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
         }
 
@@ -608,7 +608,7 @@ private object DifferentialTactics extends Logging {
             ("y_".asTerm, y_DE.xp.x) ::
               ("b(|y_|)".asTerm, y_DE.e) ::
               ("q(|y_|)".asFormula, q) ::
-              (DifferentialProgramConst("c", Except("y_".asVariable)), c) ::
+              (DifferentialProgramConst("c", Except("y_".asVariable::Nil)), c) ::
               ("p(|y_|)".asFormula, p.replaceAll(y_DE.xp.x, "y_".asVariable)) ::
               Nil)
 
@@ -1023,12 +1023,12 @@ private object DifferentialTactics extends Logging {
             odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
           )
         case (True, Some(PegasusProofHint(true, Some("PostInv")))) =>
-          odeInvariant(tryHard = true, useDw = false)(pos) & done
+          odeInvariant(tryHard = true, useDw = true)(pos) & done
         case (True, Some(PegasusProofHint(true, Some("DomImpPost")))) =>
           DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
         case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
           diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
-        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ???
+        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ??? //todo: throw an error
         case (inv, proofHint) =>
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
@@ -1432,8 +1432,11 @@ private object DifferentialTactics extends Logging {
     // First cut in the barrier property, then use dgdbx on it
     // Barrier condition is checked first to make it fail faster
     val pre = diffCut(barrierFml)(pos) < (
-      skip, /* diffWeakenG faster but loses assumptions*/ dW(pos) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
-    ) & starter
+        skip, /* diffWeakenG faster but loses assumptions*/
+        //todo: Not sure why dW sometimes fails here
+        (dW(pos) | diffWeakenG(pos)) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
+    ) &
+    starter
 
     // Same as dgDbx but bypasses extra checks since we already know
     /** The ghost variable */
@@ -1655,7 +1658,7 @@ private object DifferentialTactics extends Logging {
     val ghost: Variable = Variable("y_")
     require(!StaticSemantics.vars(ode).contains(ghost), "fresh ghost " + ghost + " in " + ode)
     val spooky: Term = if (false) //@todo ultimate substitution won't work if it ain't true. But intermediate semantic renaming won't work if it's false.
-      UnitFunctional("jj",Except(ghost),Real)
+      UnitFunctional("jj",Except(ghost::Nil),Real)
     else
       FuncOf(Function("jj",None,Unit,Real),Nothing) //Variable("jj")
     //@todo should allocate space maybe or already actually by var in this lambda
@@ -1735,6 +1738,9 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
+    val diffWeaken =
+      if(tryHard) DifferentialTactics.diffWeakenPlus(pos) else DifferentialTactics.diffWeakenG(pos)
+
     //Add constant assumptions to domain constraint
     SaturateTactic(andL('L)) & //Safe because pos is guaranteed to be in the succedent
     DifferentialTactics.DconstV(pos) &
@@ -1743,7 +1749,7 @@ private object DifferentialTactics extends Logging {
     DebuggingTactics.debug("odeInvariant close") &
     (
       if (useDw) {
-        (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+        (diffWeaken & timeoutQE & done) |
           invTactic |
           DebuggingTactics.debug("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
       } else {
@@ -1849,9 +1855,15 @@ private object DifferentialTactics extends Logging {
   }
 
   //Keeps equalities in domain constraint
-  private[btactics] def domainEqualities(f:Formula) : List[Term] = {
+  //dropFuncs drops all equalities involving (non-constant) function symbols
+  private[btactics] def domainEqualities(f:Formula, dropFuncs:Boolean = true) : List[Term] = {
     flattenConjunctions(f).flatMap{
-      case Equal(l,r) => Some(Minus(l,r))
+      case Equal(l,r) => {
+        val sig = StaticSemantics.signature(Equal(l,r))
+        if(dropFuncs && !sig.exists(e => e.isInstanceOf[Function] && e.asInstanceOf[Function].sort != Unit))
+          Some(Minus(l, r))
+        else None
+      }
       case _ => None
     }
   }

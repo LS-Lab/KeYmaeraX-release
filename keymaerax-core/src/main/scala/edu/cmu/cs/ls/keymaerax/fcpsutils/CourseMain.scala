@@ -54,7 +54,7 @@ object CourseMain {
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixLibrary.invGenerator = generator
+    TactixLibrary.invSupplier = generator
   }
 
   /** A command-line tool that doesn't contain any of the web UI stuff. Useful because the JAR is considerably smaller, but many features aren't available.

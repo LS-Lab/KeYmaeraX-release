@@ -56,7 +56,7 @@ object CoasterXMain {
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixLibrary.invGenerator = generator
+    TactixLibrary.invSupplier = generator
     ToolProvider.setProvider(new NoneToolProvider())
   }
 
@@ -194,7 +194,7 @@ object CoasterXMain {
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[GenProduct]()
-    TactixLibrary.invGenerator = generator
+    TactixLibrary.invSupplier = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
 

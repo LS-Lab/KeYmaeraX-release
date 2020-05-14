@@ -26,7 +26,11 @@ import scala.util.Try
 // 2.5 pass for !semanticRenaming
 //object UnificationMatch extends UnificationMatchUSubstAboveURen
 // 1 pass for fresh cases of !semanticRenaming
+
 object UnificationMatch extends FreshUnificationMatch
+
+// 1 pass sweeping uniform matcher with semanticRenaming, incapable of recursive split like assignb
+//object UnificationMatch extends UniformMatcher
 
 //@todo not general enough, limited to linear pattern matching only
 //object UnificationMatch extends LinearMatcher
@@ -112,7 +116,7 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
         compose(unify(Subst(u1)(f1), f2), u1)
       val antesubst = s1.ante.indices.foldLeft(List[SubstRepl]()) ((subst,i) => composeFolder(subst, s1.ante(i), s2.ante(i)))
       val succsubst = s1.succ.indices.foldLeft(antesubst) ((subst,i) => composeFolder(subst, s1.succ(i), s2.succ(i)))
-      succsubst.distinct
+      distinctIfNeedBe(succsubst)
       //@note if flat ++ this would be easy:
       //        //@todo this is really a zip fold
       //      (
@@ -120,6 +124,10 @@ abstract class SchematicComposedUnificationMatch extends SchematicUnificationMat
       //          s1.succ.indices.foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.succ(i), s2.succ(i)))
       //        ).distinct
     }
+
+  /** Make `repl` distinct (if this algorithm does not preserve distinctness).
+    * @return repl.distinct*/
+  protected def distinctIfNeedBe(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct
 }
 
 
@@ -148,6 +156,7 @@ class UnificationMatchBase extends SchematicComposedUnificationMatch {
 
 }
 
+
 /**
   * Unification/matching algorithm for fresh shapes (with built-in names such as those in axioms).
   * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
@@ -161,15 +170,19 @@ class UnificationMatchBase extends SchematicComposedUnificationMatch {
 class FreshUnificationMatch extends SchematicComposedUnificationMatch {
 
   //private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._1.isInstanceOf[Variable] && sp._2.isInstanceOf[Variable])
+  /** apply renamings of `repl` to `e` (if there are any renamings at all) */
   private def renameIfNeedBe(repl: List[SubstRepl], e: Expression): Expression = {
     val ren = RenUSubst.renamingPartOnly(repl)
     if (ren.isEmpty)
       e
     else
-      Subst(ren.distinct)(e)
+      Subst(ren)(e)
   }
+  /** apply renamings of `repl` to the replacements of `input` (if there any renamings in `repl` at all).
+    * Filtering identity renamings that may be caused by renamings. */
   private def renameAllIfNeedBe(repl: List[SubstRepl], input: List[SubstRepl]): List[SubstRepl] = {
-    val ren = RenUSubst.renamingPartOnly(repl).map({ case (a, b) => (b, a)}) //@note converse renaming to prepare for renaming transposition
+    //@note converse renaming to prepare for renaming transposition
+    val ren = RenUSubst.renamingPartOnly(repl).map({ case (a, b) => (b, a)})
     if (ren.isEmpty)
       input
     else {
@@ -180,11 +193,19 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
   /**
     * Quickly compose patterns coming from fresh shapes by just concatenating them.
     * If indeed the shape used fresh names that did not occur in the input, this fast composition is fine.
-    * @note May contain duplicates but that will be filtered out when forming Subst() anyhow.
+    * @ensures s==s.distinct && t==t.distinct => \result==\result.distinct
     */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
   //  after ++ renameAllIfNeedBe(after, before)
-  before ++ renameAllIfNeedBe(before, after)
+  //@todo would this fail and crossrename if both before and after have renaming parts?
+  join(renameAllIfNeedBe(after,before), renameAllIfNeedBe(before, after))
+
+  /** Make `repl` distinct fast by directly returning it since this algorithm preserves distinctness in [[compose]].
+    * @return repl.distinct */
+  protected override def distinctIfNeedBe(repl: List[SubstRepl]): List[SubstRepl] = repl
+  /** @inheritdoc
+    * Faster since [[compose]] preserves distinctness. */
+  protected override def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs)
 
   protected override def unifier(e1: Expression, e2: Expression, us: List[SubstRepl]): Subst = {
     if (true)
@@ -201,6 +222,7 @@ class FreshUnificationMatch extends SchematicComposedUnificationMatch {
     }
   }
 }
+
 
 /**
   * Unification/matching algorithm for fresh shapes (with built-in names such as those in axioms).

@@ -405,8 +405,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     }
 
     def +(that: Coefficient) : Coefficient = {
-      val numRes = num*that.denum + that.num*denum
-      val denumRes = denum*that.denum
+      val numRes = BigDecimalQETool.eval(Plus(Times(Number(num), Number(that.denum)), Times(Number(that.num), Number(denum))))
+      val denumRes = BigDecimalQETool.eval(Times(Number(denum), Number(that.denum)))
       val inst = Seq(
         ("ln_", numN),
           ("ld_", denumN),
@@ -429,8 +429,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     }
 
     def *(that: Coefficient) : Coefficient = {
-      val numRes = num*that.num
-      val denumRes = denum*that.denum
+      val numRes = BigDecimalQETool.eval(Times(Number(num), Number(that.num)))
+      val denumRes = BigDecimalQETool.eval(Times(Number(denum), Number(that.denum)))
       val inst = Seq(
         ("ln_", numN),
           ("ld_", denumN),
@@ -869,6 +869,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     QE & done
   )
   lazy val divideRat = rememberAny("(q_() = n_()/d_() & p_()*(d_()/n_()) = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done
+  )
+  lazy val divideNeg = rememberAny("(-p_()/-q_() = r_()) -> p_()/q_() = r_()".asFormula,
     QE & done
   )
 
@@ -1417,10 +1420,21 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
                 Seq(otherNormalized, pi.prv)
               )
               pi.updatePrv(newPrv)
+            case Neg(_) =>
+              val npq = - (this / (-other))
+              val newPrv = useDirectly(divideNeg,
+                Seq(
+                  ("p_", lhs),
+                  ("q_", other.lhs),
+                  ("r_", rhsOf(npq.prv))
+                ),
+                Seq(npq.prv)
+              )
+              npq.updatePrv(newPrv)
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
           }
         } else {
-          throw new IllegalArgumentException("Exponent must be a constant polynomial.")
+          throw new IllegalArgumentException("Divisor must be a constant polynomial.")
         }
       case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
     }
