@@ -147,17 +147,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[DLBySubst.assignEquality]] */
   lazy val assignb            : DependentPositionTactic = "assignb" by { (pos:Position) =>
-    if (INTERNAL)
-      TryCatch(useAt("[:=] assign")(pos), classOf[SubstitutionClashException],
-        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) |
-      TryCatch(useAt("[:=] self assign")(pos), classOf[SubstitutionClashException],
-        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) /*| useAt("[:=] assign update")(pos)*/
-    else
-      TryCatch(useAt("[:=] assign")(pos), classOf[SubstitutionClashException],
-        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) |
-      TryCatch(useAt("[:=] self assign")(pos), classOf[SubstitutionClashException],
-        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) |
-      DLBySubst.assignEquality(pos)
+    if (INTERNAL) useAt("[:=] assign")(pos) |! useAt("[:=] self assign")(pos) /*|! useAt("[:=] assign update")(pos)*/
+    else useAt("[:=] assign")(pos) |! useAt("[:=] self assign")(pos) |! DLBySubst.assignEquality(pos)
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
@@ -184,7 +175,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val box                : DependentPositionTactic = useAt("[] box")
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   lazy val assignd            : DependentPositionTactic = "assignd" by { (pos:Position) =>
-    useAt("<:=> assign")(pos) | useAt("<:=> self assign")(pos) | DLBySubst.assigndEquality(pos)
+    useAt("<:=> assign")(pos) |! useAt("<:=> self assign")(pos) |! DLBySubst.assigndEquality(pos)
   }
 
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
