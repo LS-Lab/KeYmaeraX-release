@@ -588,15 +588,17 @@ object TactixLibrary extends HilbertCalculus
           val oldTimeout = tom.getOperationTimeout
           tom.setOperationTimeout(t)
           if (oldTimeout != t) {
-            e: BelleExpr => e > new DependentTactic("ANON") {
-              override def computeExpr(v: BelleValue): BelleExpr = {
-                tom.setOperationTimeout(oldTimeout)
-                v match {
-                  case _: BelleProvable => skip
-                  case err: BelleValue with BelleThrowable => throw err
-                }
-              }
-            }
+            e: BelleExpr => TryCatch(e, classOf[Throwable],
+                // catch: noop
+                (_: Throwable) => skip,
+                // finally: reset timeout
+                Some(new DependentTactic("ANON") {
+                  override def computeExpr(v: BelleValue): BelleExpr = {
+                    tom.setOperationTimeout(oldTimeout)
+                    skip
+                  }
+                })
+            )
           } else (e: BelleExpr) => e
         case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
       }
