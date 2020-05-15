@@ -246,7 +246,7 @@ private object ToolTactics {
     val qeFact = try {
       qeTool.qe(sequent.succ.head).fact
     } catch {
-      case ex: SMTQeException => throw new TacticInapplicableFailure("rcf failed to prove in external tool " + qeTool, ex)
+      case ex: SMTQeException => throw new TacticInapplicableFailure(ex.getMessage, ex)
     }
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
