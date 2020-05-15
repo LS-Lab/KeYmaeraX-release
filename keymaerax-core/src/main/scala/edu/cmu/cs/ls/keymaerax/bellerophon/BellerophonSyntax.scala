@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
-import scala.util.Failure
 
 object BelleExpr {
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
@@ -49,8 +48,6 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
   def |(other: BelleExpr)     = EitherTactic(this, other)
   /** this |! other: alternative composition executes other if applying this fails (even critically), failing if both fail. */
   def |!(other: BelleExpr)     = EitherTactic(TryCatch(this, classOf[Throwable], (ex: Throwable) => throw new TacticInapplicableFailure("Inapplicable due to critical exception", ex)), other)
-  /** this > other: followup composition executes other on the output or error of this, failing if other fails. */
-  def >(other: BelleExpr)     = AfterTactic(this, other)
   /** this*n: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
   def *(n: Int)               = RepeatTactic(this, n)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
@@ -103,9 +100,6 @@ case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override d
   *     `fi` uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.`
   */
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString: String = "case { " + options.mkString(", ") + " }"}
-
-@deprecated("Use SeqTactic(right, left) instead")
-case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ">" + right.prettyString + ")" }
 
 /** Tries tactic `t` and executes
   * - `c` (catch) on exceptions of type `T` that occur when executing `t`

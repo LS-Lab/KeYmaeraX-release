@@ -197,23 +197,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.") //.inContext(expr, "")
     }
 
-    case AfterTactic(left, right) =>
-      val leftResult: Either[BelleValue, BelleValue] = try {
-        Left(apply(left, v))
-      } catch {
-        case eleft: BelleProofSearchControl =>
-          try {
-            Right(apply(right, new BelleThrowable(eleft.getMessage, eleft.getCause) with BelleValue))
-          } catch {
-            case eright: BelleThrowable if throwWithDebugInfo => throw eright.inContext(AfterTactic(eleft.context, eright.context),
-                          "Failed: both left-hand side and right-hand side " + expr)
-          }
-      }
-      leftResult match {
-        case Left(lr: BelleValue) => apply(right, lr)
-        case Right(rr: BelleValue) => rr
-      }
-
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v

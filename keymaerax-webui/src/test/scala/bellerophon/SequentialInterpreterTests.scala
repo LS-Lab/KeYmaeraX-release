@@ -71,26 +71,6 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy("x>=0 -> \\forall y (y=x -> y>=0)".asFormula, SaturateTactic(prop | allR('R) | exhaustiveEqL2R('Llast))) shouldBe 'proved
   }
 
-  "After combinator" should "prove a simple property" in {
-    inside (theInterpreter.apply(implyR(1) > close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
-    }
-  }
-
-  it should "run right tactic on left failure" in {
-    val right = new DependentTactic("ANON") {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case _: BelleProvable => fail("Expected a BelleThrowable, but got a BelleProvable")
-        case err: BelleValue with BelleThrowable => throw err
-      }
-    }
-    the [BelleThrowable] thrownBy theInterpreter.apply(andR(1) > right, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula))) should
-      have message """Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
-                     |==> 1:  1=2->1=2	Imply
-                     |  from
-                     |==> 1:  1=2->1=2	Imply})""".stripMargin
-  }
-
   "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & OnAll (implyR(SuccPos(0)) & close)
