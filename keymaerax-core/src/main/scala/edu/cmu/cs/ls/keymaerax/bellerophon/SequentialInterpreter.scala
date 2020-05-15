@@ -18,9 +18,11 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration.{Duration, MILLISECONDS}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
 
 /**
@@ -528,6 +530,22 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         case _ => throw new IllFormedTacticApplicationException("two position tactics can only be run on Provables.")
       }
       apply(t.computeExpr(p1, p2).computeExpr(provable), v)
+
+    case TryCatch(t, cCatch, c) =>
+      @tailrec
+      def matchingCause(ex: Throwable): Option[Throwable] = {
+        if (ex == null) None
+        else if (cCatch.isAssignableFrom(ex.getClass)) Some(ex)
+        else matchingCause(ex.getCause)
+      }
+
+      Try(apply(t, v)) match {
+        case Success(r) => r
+        case Failure(ex) => matchingCause(ex) match {
+          case None => throw ex
+          case Some(cause) => apply(c(cCatch.cast(cause)), v)
+        }
+      }
   }
 
   /** Maps sequents to BelleProvables. */

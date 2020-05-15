@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
+import scala.util.Failure
 
 object BelleExpr {
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
@@ -104,7 +105,21 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
 @deprecated("Use SeqTactic(right, left) instead")
 case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ">" + right.prettyString + ")" }
 
-
+/** Tries tactic `t`, executes `c` on exceptions of type `T`.
+  * Pattern: TryCatch should usually be used together with `|`. In that case, `c` should throw a proof search control
+  * exception instead of supplying a tactic, since it is usually intended to also execute the alternative tactic on
+  * success of `t` or if `t` throws other unrelated proof search control exceptions.
+  * {{{
+  *   TryCatch(useAt("[:=] assign")(1), classOf[SubstitutionClashException],
+  *     (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable", ex)) | alternativeTactic
+  * }}}
+  * If indeed an alternative tactic should only be executed on exception, use
+  * {{{
+  *   TryCatch(useAt("[:=] assign")(1), classOf[SubstitutionClashException],
+  *     (ex: SubstitutionClashException) => alternativeTactic)
+  * }}}
+  * */
+case class TryCatch[T <: Throwable](t: BelleExpr, cCatch: Class[T], c: T => BelleExpr) extends BelleExpr { override def prettyString: String = "TryCatch" }
 
 /** Marker for no-op tactics. */
 trait NoOpTactic {}
