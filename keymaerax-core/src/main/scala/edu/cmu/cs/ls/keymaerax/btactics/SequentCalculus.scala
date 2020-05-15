@@ -214,8 +214,7 @@ trait SequentCalculus {
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         val fmls = s.ante.intersect(s.succ)
-        require(fmls.nonEmpty, "Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
-        val fml = fmls.head
+        val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString))
         close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
     }
   }
