@@ -48,7 +48,7 @@ private object DLBySubst {
         (pattern, (ru:RenUSubst) => {
           Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel")
           //ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
-          TactixLibrary.by("Goedel", ru.usubst)
+          TactixLibrary.by(DerivedAxioms.Goedel, ru.usubst)
         })::Nil
     )
   }

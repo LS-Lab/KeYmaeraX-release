@@ -128,6 +128,7 @@ trait UnifyUSCalculus {
   def by(name: String, subst: USubst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
     by(ProvableInfo(name).provable(subst))
   })
+  def by(lemma: Lemma, subst: USubst): BelleExpr = by(lemma.fact(subst))
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
   private[btactics]
   def by(name: String, subst: Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
@@ -1176,6 +1177,9 @@ trait UnifyUSCalculus {
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   private[btactics]
   def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false, inst)
+  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
+  private[btactics]
+  def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(axiom.fact, key, linear=false, inst)
 
 //  /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
 //  def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
@@ -1457,7 +1461,7 @@ trait UnifyUSCalculus {
                   sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
               case _ => us
             }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
-            useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
+            useFor(DerivedAxioms.existsEliminate, PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(AntePos(0))
             )

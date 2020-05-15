@@ -205,7 +205,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games
     */
-  lazy val V                  : DependentPositionTactic = useAt("V vacuous")
+  lazy val V                  : DependentPositionTactic = useAt(DerivedAxioms.vacuousAxiom)
   /** VK: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`
     * and provided `[a]true` proves, e.g., since `a` is a hybrid system.
     */
@@ -418,11 +418,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //
 
   /** boxAnd: splits `[a](p&q)` into `[a]p & [a]q` */
-  lazy val boxAnd             : DependentPositionTactic = useAt("[] split")
+  lazy val boxAnd             : DependentPositionTactic = useAt(DerivedAxioms.boxAnd)
   /** diamondOr: splits `⟨a⟩(p|q)` into `⟨a⟩p | ⟨a⟩q` */
-  lazy val diamondOr          : DependentPositionTactic = useAt("<> split")
+  lazy val diamondOr          : DependentPositionTactic = useAt(DerivedAxioms.diamondOr)
   /** boxImpliesAnd: splits `[a](p->q&r)` into `[a](p->q) & [a](p->r)` */
-  lazy val boxImpliesAnd      : DependentPositionTactic = useAt("[] conditional split")
+  lazy val boxImpliesAnd      : DependentPositionTactic = useAt(DerivedAxioms.boxImpliesAnd)
 
   // def ind
 
@@ -435,13 +435,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
     *******************************************************************/
 
   /** allV: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val allV               : DependentPositionTactic = useAt("vacuous all quantifier")
+  lazy val allV               : DependentPositionTactic = useAt(DerivedAxioms.vacuousAllAxiom)
   /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val existsV            : DependentPositionTactic = useAt("vacuous exists quantifier")
+  lazy val existsV            : DependentPositionTactic = useAt(DerivedAxioms.vacuousExistsAxiom)
   //@todo document and unclear what it really does depending on the index
   lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
 
   //@todo document and unclear what it really does depending on the index
-  lazy val existsE            : DependentPositionTactic = useAt("exists eliminate")
+  lazy val existsE            : DependentPositionTactic = useAt(DerivedAxioms.existsEliminate)
 
 }
