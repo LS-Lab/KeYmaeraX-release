@@ -995,7 +995,7 @@ object ODELiveness {
     val pr = proveBy(seq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
 
     if(!pr.isProved)
-      throw new BelleUnexpectedProofStateError("dVAuto failed to prove arithmetic condition: " + qe, pr.underlyingProvable)
+      throw new TacticInapplicableFailure("dVAuto failed to prove arithmetic condition: " + qe)
 
     cutR(qe)(pos) <(
       by(pr),

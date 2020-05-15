@@ -1272,7 +1272,7 @@ object ODEInvariance {
             if(prf.isProved)
               (prop, inst, by(prf))
             else
-              throw new BelleUnexpectedProofStateError("QE failed", prf.underlyingProvable)
+              throw new TacticInapplicableFailure("QE failed")
           }
           else
             (prop, inst, timeoutQE)
@@ -1296,7 +1296,7 @@ object ODEInvariance {
           if(prf.isProved)
             (prop, inst, by(prf))
           else
-            throw new BelleUnexpectedProofStateError("QE failed", prf.underlyingProvable)
+            throw new TacticInapplicableFailure("QE failed")
         }
         else
           (prop, inst, QE)
