@@ -1373,7 +1373,11 @@ object ODEInvariance {
 
     val (fml1,propt1) = semiAlgNormalize(post)
 
-    val (fml,propt2) = maxMinGeqNormalize(fml1)
+    val (fml,propt2) = try {
+      maxMinGeqNormalize(fml1)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition", ex)
+    }
 
     val propt = compose_equiv(propt1,propt2)
 
