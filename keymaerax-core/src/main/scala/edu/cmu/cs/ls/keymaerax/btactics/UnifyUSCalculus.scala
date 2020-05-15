@@ -134,6 +134,7 @@ trait UnifyUSCalculus {
   def by(name: String, subst: Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
     by(subst.toForward(ProvableInfo(name).provable))
   })
+  def by(lemma: Lemma, subst: Subst): BelleExpr = by(subst.toForward(lemma.fact))
 
   /*******************************************************************
     * close/proceed by providing a Provable fact to unify and substitute with
@@ -173,8 +174,14 @@ trait UnifyUSCalculus {
     * @see [[by()]]
     */
   private[btactics]
-  def byUS(name: String, inst: Subst=>Subst = us=>us): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
+  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
     val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
+    byUS(fact, inst)
+  })
+  private[btactics]
+  def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
+  private[btactics]
+  def byUS(fact: ProvableSig, inst: Subst=>Subst = us=>us): BelleExpr =
     //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
     USubstPatternTactic(
       (SequentType(fact.conclusion),
@@ -185,7 +192,6 @@ trait UnifyUSCalculus {
           s.getRenamingTactic & by(fact(s.substitution.usubst))
         }) :: Nil
     )
-  })
 
 
   /*******************************************************************
@@ -1434,6 +1440,7 @@ trait UnifyUSCalculus {
                   sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
               case _ => us
             }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
+            // NB: all eliminate axiom not implemented
             useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(SuccPos(0))

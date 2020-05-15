@@ -22,10 +22,10 @@ protected object FOQuantifierTactics {
       case Some(Exists(vars, p)) =>
         require(vars.size == 1, "Exists by duality does not support block quantifiers")
         val v = vars.head
-        useAt("exists dual", PosInExpr(1::Nil))(pos) &
+        useAt(DerivedAxioms.existsDualAxiom, PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
-          } else base(pos++PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
+          } else base(pos++PosInExpr(0::Nil)) & useAt(DerivedAxioms.doubleNegationAxiom)(pos))
     })
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
@@ -98,7 +98,7 @@ protected object FOQuantifierTactics {
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get))  =>
           //@todo assumes any USubstAboveURen
-          useAt("exists generalize", PosInExpr(1::Nil), (uso: Option[Subst]) => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(DerivedAxioms.existsGeneralize, PosInExpr(1::Nil), (uso: Option[Subst]) => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
           def exists(h: Formula) = if (vars.length > 1) Exists(vars.filter(_ != vToInst(vars)), h) else h
@@ -120,7 +120,7 @@ protected object FOQuantifierTactics {
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
-              cohide(pos) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
+              cohide(pos) & CMon(pos.inExpr) & byUS(DerivedAxioms.existsGeneralize, subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleThrowable("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)

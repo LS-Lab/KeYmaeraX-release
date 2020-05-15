@@ -216,17 +216,19 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //
 
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
-  lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
+  lazy val DW                 : DependentPositionTactic = useAt(DerivedAxioms.DWeakening)
   /** DWd: Diamond Differential Weakening to use evolution domain constraint `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)}>(q(x)&p(x))` */
-  lazy val DWd                 : DependentPositionTactic = useAt("DWd diamond differential weakening")
+  lazy val DWd                 : DependentPositionTactic = useAt(DerivedAxioms.DWddifferentialweakening)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
-    useAt("DC differential cut",
+    useAt(DerivedAxioms.DiffCut,
+      AxiomIndex.axiomIndex("DC differential cut")._1,
       (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   })
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DCd(invariant: Formula)  : DependentPositionTactic = useAt("DCd diamond differential cut",
+  def DCd(invariant: Formula)  : DependentPositionTactic = useAt(DerivedAxioms.DCddifferentialcut,
+    AxiomIndex.axiomIndex("DCd diamond differential cut")._1,
     (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols

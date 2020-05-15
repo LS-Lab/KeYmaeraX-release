@@ -97,7 +97,7 @@ private object EqualityTactics {
           else (equivifyR('Rlast), LastSucc(0))
         cut(condEquiv) < (
           /* use */ implyL('Llast) < (closeIdWith('Rlast), cutLR(repl)(pos) < (hide('Llast), equivifyCommute & closeIdWith(closeWhere))),
-          /* show */ cohide('Rlast) & by("const formula congruence", RenUSubst(
+          /* show */ cohide('Rlast) & by(DerivedAxioms.constFormulaCongruence, RenUSubst(
           (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
             (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
             (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl) :: Nil))
