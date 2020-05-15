@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.SMTQeException
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
@@ -242,7 +243,11 @@ private object ToolTactics {
     //Run QE and extract the resulting provable and equivalence
     //@todo how about storing the lemma, but also need a way of finding it again
     //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
-    val qeFact = qeTool.qe(sequent.succ.head).fact
+    val qeFact = try {
+      qeTool.qe(sequent.succ.head).fact
+    } catch {
+      case ex: SMTQeException => throw new TacticInapplicableFailure("rcf failed to prove in external tool " + qeTool, ex)
+    }
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
     cutLR(result)(1) & Idioms.<(
