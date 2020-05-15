@@ -456,13 +456,17 @@ object ODEInvariance {
     */
   def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
       case _ => throw new TacticInapplicableFailure("sAI only at box ODE in succedent")
     }
-    val (f2, propt) = semiAlgNormalize(post)
+    val (f2, propt) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
     val (starter, imm) = propt match {
       case None => (skip, skip)
@@ -821,14 +825,22 @@ object ODEInvariance {
       case _ => throw new TacticInapplicableFailure("dRI only applicable for box ODE in succedent")
     }
 
-    val (f2, _) = semiAlgNormalize(post)
+    val (f2, _) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
     val conjs = flattenConjunctions(f2)
     val polys = {
       if (conjs.forall(f => f.isInstanceOf[Equal]))
         conjs.map(f => f.asInstanceOf[Equal].left)
       else {
         //TODO: this is not the best way to go about proving this
-        val (f2, _) = algNormalize(post)
+        val (f2, _) = try {
+          algNormalize(post)
+        } catch {
+          case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition", ex)
+        }
         require(f2.isInstanceOf[Equal], "dRI requires only equations in postcondition")
         List(f2.asInstanceOf[Equal].left)
       }
@@ -1091,7 +1103,10 @@ object ODEInvariance {
   private val sqPos2 = remember("a_()*a_() >= 0".asFormula,QE)
   private val plusPos = remember("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
   private def prove_sos_positive : BelleExpr = {
-    SaturateTactic(OnAll(andR(1) | byUS(sqPos1) | byUS(sqPos2) | useAt(plusPos,PosInExpr(1::Nil))(1)))
+    SaturateTactic(OnAll(andR(1) |
+    TryCatch(byUS(sqPos1), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with sqPos1", ex)) |
+    TryCatch(byUS(sqPos2), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with sqPos2", ex)) |
+    useAt(plusPos,PosInExpr(1::Nil))(1)))
   }
 
   /**
@@ -1285,9 +1300,8 @@ object ODEInvariance {
             val prop = GreaterEqual(p, Number(0))
             val (pr, cofactor, rem) = findDbx(ode, dom, prop)
             (prop, Darboux(false, cofactor, pr))
-          }
-          catch {
-            case e: BelleThrowable => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
+          } catch {
+            case _: IllegalArgumentException => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
           }
 
         if(context.isDefined)
@@ -1371,7 +1385,11 @@ object ODEInvariance {
       case _ => throw new TacticInapplicableFailure("sAI only applicable to box ODE in succedent")
     }
 
-    val (fml1,propt1) = semiAlgNormalize(post)
+    val (fml1,propt1) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition to semi-algebraic set")
+    }
 
     val (fml,propt2) = try {
       maxMinGeqNormalize(fml1)

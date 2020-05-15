@@ -1400,7 +1400,11 @@ private object DifferentialTactics extends Logging {
       case _ => throw new TacticInapplicableFailure(s"barrier only at box ODE in succedent")
     }
 
-    val (property, propt)= ineqNormalize(post)
+    val (property, propt)= try {
+      ineqNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition", ex)
+    }
 
     val starter = propt match {
       case None => skip
@@ -1581,7 +1585,11 @@ private object DifferentialTactics extends Logging {
 
     //normalized to have p on LHS
     //todo: utilize pr which proves the necessary sign requirement for denRemReq
-    val (pr,cofactor,rem) = findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
+    val (pr,cofactor,rem) = try {
+      findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to find Darboux polynomial", ex)
+    }
 
     starter & dgDbx(cofactor)(pos)
   })
@@ -1731,12 +1739,12 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE,skip)) & //strengthen to the closure if applicable
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE,skip)) & //strengthen to the closure if applicable
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
@@ -1989,7 +1997,11 @@ private object DifferentialTactics extends Logging {
       case _ => throw new TacticInapplicableFailure("dCClosure expects succedent of shape [{ode&p}]q")
     }
 
-    val (q_fml, propt) = semiAlgNormalize(post)
+    val (q_fml, propt) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
     /* Apply the semialg normalization step */
     val starter = propt.map(pr => useAt(pr)(pos ++ PosInExpr(1 :: Nil))).getOrElse(skip)
@@ -1997,8 +2009,16 @@ private object DifferentialTactics extends Logging {
     val interior = FormulaTools.interior(q_fml)
     val closure = FormulaTools.closure(q_fml)
 
-    val (mm_fmlGt, proptGt) = maxMinGtNormalize(interior)
-    val (mm_fmlGe, proptGe) = maxMinGeqNormalize(closure)
+    val (mm_fmlGt, proptGt) = try {
+      maxMinGtNormalize(interior)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize interior", ex)
+    }
+    val (mm_fmlGe, proptGe) = try {
+      maxMinGeqNormalize(closure)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize closure", ex)
+    }
 
     //NOTE: mm_fmlGt should be identical to mm_fmlGe except with > instead of >=
 
