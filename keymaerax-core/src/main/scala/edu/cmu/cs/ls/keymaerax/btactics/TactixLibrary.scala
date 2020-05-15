@@ -691,6 +691,8 @@ object TactixLibrary extends HilbertCalculus
         val lvars = StaticSemantics.freeVars(l)
         EqualityTactics.exhaustiveEqL2R(pos) &
           Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty))(hideL(pos, fml))
+      case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
@@ -701,6 +703,8 @@ object TactixLibrary extends HilbertCalculus
         val rvars = StaticSemantics.freeVars(r)
         EqualityTactics.exhaustiveEqR2L(pos) &
           Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty))(hideL(pos, fml))
+      case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
     })
     else EqualityTactics.exhaustiveEqR2L
 
