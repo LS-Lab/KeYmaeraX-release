@@ -111,7 +111,7 @@ private object EqualityTactics {
     require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
     sequent.sub(eqPos) match {
       case Some(Equal(lhs, rhs)) =>
-        useAt("= commute")(eqPos) & eqL2R(eqPos)(pos) & useAt("= commute")('L, Equal(rhs, lhs))
+        useAt(DerivedAxioms.equalCommute)(eqPos) & eqL2R(eqPos)(pos) & useAt(DerivedAxioms.equalCommute)('L, Equal(rhs, lhs))
     }
   })
 
@@ -154,7 +154,7 @@ private object EqualityTactics {
    */
   lazy val exhaustiveEqR2L: DependentPositionTactic = "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(lhs, rhs)) =>
-      useAt("= commute")(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
+      useAt(DerivedAxioms.equalCommute)(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt(DerivedAxioms.equalCommute)(pos, Equal(rhs, lhs))
   })
 
 
@@ -267,7 +267,7 @@ private object EqualityTactics {
         val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
         val absVar = Variable(fn, freshAbsIdx)
         abbrv(abs, Some(absVar)) &
-          useAt("= commute")('L, Equal(absVar, abs)) &
+          useAt(DerivedAxioms.equalCommute)('L, Equal(absVar, abs)) &
           useAt(fn)('L, Equal(abs, absVar))
       } else {
         absAt(pos)
@@ -337,7 +337,7 @@ private object EqualityTactics {
         val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
         val minmaxVar = Variable(fn, freshMinMaxIdx)
         abbrv(minmax, Some(minmaxVar)) &
-          useAt("= commute")('L, Equal(minmaxVar, minmax)) &
+          useAt(DerivedAxioms.equalCommute)('L, Equal(minmaxVar, minmax)) &
           useAt(fn)('L, Equal(minmax, minmaxVar))
       } else {
         minmaxAt(pos)

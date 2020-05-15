@@ -244,6 +244,6 @@ trait SequentCalculus {
   /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]] */
   val commuteEquivR: CoreRightTactic = "commuteEquivR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
-  lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
+  lazy val commuteEqual       : DependentPositionTactic = useAt(DerivedAxioms.equalCommute)
 
 }
