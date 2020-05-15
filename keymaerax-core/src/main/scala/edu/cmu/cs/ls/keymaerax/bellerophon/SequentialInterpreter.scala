@@ -531,19 +531,39 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       }
       apply(t.computeExpr(p1, p2).computeExpr(provable), v)
 
-    case TryCatch(t, cCatch, c) =>
+    case TryCatch(t, catchClazz, doCatch, doFinally) =>
       @tailrec
       def matchingCause(ex: Throwable): Option[Throwable] = {
         if (ex == null) None
-        else if (cCatch.isAssignableFrom(ex.getClass)) Some(ex)
+        else if (catchClazz.isAssignableFrom(ex.getClass)) Some(ex)
         else matchingCause(ex.getCause)
       }
 
       Try(apply(t, v)) match {
-        case Success(r) => r
+        case Success(r) => doFinally match {
+          case None => r
+          case Some(ft) => apply(ft, r)
+        }
         case Failure(ex) => matchingCause(ex) match {
-          case None => throw ex
-          case Some(cause) => apply(c(cCatch.cast(cause)), v)
+          case None => doFinally match {
+            case None => throw ex
+            case Some(ft) =>
+              apply(ft, v)
+              throw ex
+          }
+          case Some(cause) =>
+            Try(apply(doCatch(catchClazz.cast(cause)), v)) match {
+              case Success(r) => doFinally match {
+                case None => r
+                case Some(ft) => apply(ft, r)
+              }
+              case Failure(ex) => doFinally match {
+                case None => throw ex
+                case Some(ft) =>
+                  apply(ft, v)
+                  throw ex
+              }
+            }
         }
       }
   }

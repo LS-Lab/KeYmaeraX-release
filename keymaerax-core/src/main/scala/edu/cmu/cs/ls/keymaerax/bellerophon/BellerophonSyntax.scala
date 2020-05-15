@@ -107,7 +107,10 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
 @deprecated("Use SeqTactic(right, left) instead")
 case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ">" + right.prettyString + ")" }
 
-/** Tries tactic `t`, executes `c` on exceptions of type `T`.
+/** Tries tactic `t` and executes
+  * - `c` (catch) on exceptions of type `T` that occur when executing `t`
+  * - `f` (finally) on the result of `t` (if `t` is successful), on the result of `c` (if `c` is successful), or on the
+  *   initial problem if neither `t` nor `c` are successful (throwing the exceptions of `t` or `c` even if `f` is successful).
   * Pattern: TryCatch should usually be used together with `|`. In that case, `c` should throw a proof search control
   * exception instead of supplying a tactic, since it is usually intended to also execute the alternative tactic on
   * success of `t` or if `t` throws other unrelated proof search control exceptions.
@@ -121,7 +124,7 @@ case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { ov
   *     (ex: SubstitutionClashException) => alternativeTactic)
   * }}}
   * */
-case class TryCatch[T <: Throwable](t: BelleExpr, cCatch: Class[T], c: T => BelleExpr) extends BelleExpr { override def prettyString: String = "TryCatch" }
+case class TryCatch[T <: Throwable](t: BelleExpr, cCatch: Class[T], c: T => BelleExpr, f: Option[BelleExpr] = None) extends BelleExpr { override def prettyString: String = "TryCatch" }
 
 /** Marker for no-op tactics. */
 trait NoOpTactic {}
