@@ -66,7 +66,7 @@ private object ToolTactics {
       ArithmeticSimplification.smartHide & Idioms.?(onAll(orL('L) | andR('R)))*3 & onAll(plainQE & done)
 
     AnonymousLemmas.cacheTacticResult(
-      Idioms.doIf(!_.isProved)(
+      Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
         assertT(_.isFOL, "QE on FOL only") &
         allTacticChase()(notL, andL, notR, implyR, orR, allR) &
           Idioms.doIf(!_.isProved)(
