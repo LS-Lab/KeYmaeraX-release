@@ -634,7 +634,8 @@ trait UnifyUSCalculus {
           case Sequent(IndexedSeq(), IndexedSeq(Equiv(l, r))) =>
             //ProvableSig.startProof(Equiv(r, l))(CommuteEquivRight(SuccPos(0)), 0)(fact, 0)
             fact(Sequent(IndexedSeq(), IndexedSeq(Equiv(r, l))) , CommuteEquivRight(SuccPos(0)))
-          case Sequent(IndexedSeq(), IndexedSeq(Equal(l, r))) => useFor("= commute")(SuccPos(0))(fact)
+          case Sequent(IndexedSeq(), IndexedSeq(Equal(l, r))) =>
+            useFor(DerivedAxioms.equalCommute.fact, AxiomIndex.axiomIndex("= commute")._1)(SuccPos(0))(fact)
           //case _ => throw new IllegalArgumentException("Unsupported shape of fact to commute: " + fact.prettyString)
         }
 
@@ -1200,7 +1201,6 @@ trait UnifyUSCalculus {
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   private[btactics]
   def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(axiom.fact, key, linear=false, inst)
-
 //  /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
 //  def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
