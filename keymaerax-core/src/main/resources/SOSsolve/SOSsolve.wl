@@ -157,7 +157,7 @@ FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
 	sos = Dot[vec,monbasis];
 	(* Each with (positive) coefficient *)
 	soscoeff = vals;
-	result = gtrm+Dot[soscoeff,Map[#^2&,sos]];
+	result = FullSimplify[gtrm+Dot[soscoeff,Map[#^2&,sos]]];
 	{seq,bla} = PolynomialReduce[result,gb,vars];
 	check = FullSimplify[Dot[Dot[seq, conv], polys] - result];
 	If[Not[check === 0], Return[failure]];

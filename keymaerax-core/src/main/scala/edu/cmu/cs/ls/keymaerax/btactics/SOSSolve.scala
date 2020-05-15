@@ -3,6 +3,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -77,6 +79,27 @@ object SOSSolve {
         useAt(witnessSOSLemma.fact(USubst(Seq(SubstitutionPair("sos_()".asTerm, sos), SubstitutionPair("comb_()".asTerm, combination)))), PosInExpr(1::Nil))(1) &
           andR(1) & Idioms.<(cohideR(1) & by(sosPos), andR(1) & Idioms.<(cohideR(1) & by(witnessPrv), by(zeroPrv))))
     }
+  }
+
+  val pushNegAt = "ANON" by { (pos: Position, seq: Sequent) =>
+    seq.sub(pos) match {
+      case Some(Not(Forall(_, _))) =>
+    }
+    skip
+  }
+
+  val normalizeNNF = "ANON" by { (seq: Sequent) =>
+    (seq.zipAnteWithPositions.flatMap { case(fml, pos) =>
+      SimplifierV3.baseNormalize(fml) match {
+        case (_, Some(prv)) => Some(useAt(prv, PosInExpr(0::Nil))(pos))
+        case _ => None
+      }
+    } ++ seq.zipSuccWithPositions.map { case(fml, pos) =>
+      SimplifierV3.baseNormalize(Not(fml)) match {
+        case (_, Some(prv)) => useAt(DerivedAxioms.doubleNegationAxiom, PosInExpr(1 :: Nil))(pos) & useAt(prv, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
+        case _ => throw new RuntimeException("this should not happen because we expect baseNormalize to get rid of negations.")
+      }
+    }).foldLeft(skip)(_ & _) & SaturateTactic(notR('R))
   }
 
   def sossolve(degree: Int, timeout: Option[Int] = None) : BelleExpr = "ANON" by {
