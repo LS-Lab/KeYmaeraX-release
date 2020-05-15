@@ -47,6 +47,8 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
   def &(other: BelleExpr)     = SeqTactic(this, other)
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)     = EitherTactic(this, other)
+  /** this |! other: alternative composition executes other if applying this fails (even critically), failing if both fail. */
+  def |!(other: BelleExpr)     = EitherTactic(TryCatch(this, classOf[Throwable], (ex: Throwable) => throw new TacticInapplicableFailure("Inapplicable due to critical exception", ex)), other)
   /** this > other: followup composition executes other on the output or error of this, failing if other fails. */
   def >(other: BelleExpr)     = AfterTactic(this, other)
   /** this*n: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
