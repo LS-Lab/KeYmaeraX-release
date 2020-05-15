@@ -298,7 +298,8 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dC()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
     "dC" byWithInputs (formulas.toList, (pos, sequent) => {
-      formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut & Idioms.?(<(all, skip)))
+      formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut &
+        Idioms.doIf(_.subgoals.size == 2)(<(all, skip)))
     })
 
   /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
