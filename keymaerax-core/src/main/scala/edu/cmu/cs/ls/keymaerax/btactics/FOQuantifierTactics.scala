@@ -55,7 +55,7 @@ protected object FOQuantifierTactics {
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
-          useAt("all instantiate", uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(DerivedAxioms.allInstantiate, AxiomIndex.axiomIndex("all instantiate")._1, uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity in antecedent")
           def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
@@ -74,7 +74,7 @@ protected object FOQuantifierTactics {
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
           ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
-            cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate") & done
+            cohide('Rlast) & CMon(pos.inExpr) & byUS(DerivedAxioms.allInstantiate) & done
             )
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleThrowable("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
@@ -270,22 +270,22 @@ protected object FOQuantifierTactics {
         }
     }
 
-    val (genFml, axiomName, subst) = sequent.sub(pos) match {
+    val (genFml, axiomLemma, subst) = sequent.sub(pos) match {
       case Some(f: Formula) if quantified == t =>
         val subst = (s: Option[Subst]) => s match {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
         }
-        (Forall(Seq(quantified), f), "all eliminate", subst)
+        (Forall(Seq(quantified), f), DerivedAxioms.allEliminateAxiom, subst)
       case Some(f: Formula) if quantified != t =>
         val subst = (s: Option[Subst]) => s match {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
         }
-        (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), "all instantiate", subst)
+        (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), DerivedAxioms.allInstantiate, subst)
     }
 
     cutAt(genFml)(pos) <(
       /* use */ skip,
-      /* show */ useAt(axiomName, PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &
+      /* show */ useAt(axiomLemma, PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &
         useAt(DerivedAxioms.implySelf)(pos.top) & closeT & done
       )
   })
