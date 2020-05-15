@@ -162,7 +162,10 @@ private object DifferentialTactics extends Logging {
                 derive('Rlast, PosInExpr(1 :: Nil)) &
                 DE('Rlast) &
                 (if (auto == 'full || auto == 'cex)
-                  (Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(sequent, pos) | DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")) &
+                  TryCatch(Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(sequent, pos), classOf[SubstitutionClashException],
+                    (_: SubstitutionClashException) =>
+                      DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")
+                  ) &
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
                     (if (auto == 'full) QE & done | DebuggingTactics.done("Differential invariant must be preserved")
