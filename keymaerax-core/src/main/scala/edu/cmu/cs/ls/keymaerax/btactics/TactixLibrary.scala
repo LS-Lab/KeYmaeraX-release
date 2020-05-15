@@ -261,7 +261,7 @@ object TactixLibrary extends HilbertCalculus
         case _ => None
       })
 
-      decompose.reduce[BelleExpr](_ & _)
+      decompose.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
     def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
@@ -273,7 +273,7 @@ object TactixLibrary extends HilbertCalculus
         case _ => None
       })
 
-      solvers.reduce[BelleExpr](_ & _)
+      solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
     def decomposeToODE: BelleExpr = "ANON" by ((seq: Sequent) => {
