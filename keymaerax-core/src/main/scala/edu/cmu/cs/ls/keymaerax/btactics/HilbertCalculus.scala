@@ -147,8 +147,17 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[DLBySubst.assignEquality]] */
   lazy val assignb            : DependentPositionTactic = "assignb" by { (pos:Position) =>
-    if (INTERNAL) useAt("[:=] assign")(pos) | useAt("[:=] assign equality")(pos) /*| useAt("[:=] assign update")(pos)*/
-    else useAt("[:=] assign")(pos) | useAt("[:=] self assign")(pos) | DLBySubst.assignEquality(pos)
+    if (INTERNAL)
+      TryCatch(useAt("[:=] assign")(pos), classOf[SubstitutionClashException],
+        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) |
+      TryCatch(useAt("[:=] self assign")(pos), classOf[SubstitutionClashException],
+        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) /*| useAt("[:=] assign update")(pos)*/
+    else
+      TryCatch(useAt("[:=] assign")(pos), classOf[SubstitutionClashException],
+        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) |
+      TryCatch(useAt("[:=] self assign")(pos), classOf[SubstitutionClashException],
+        (ex: SubstitutionClashException) => throw new TacticInapplicableFailure("Inapplicable due to substitution clash", ex) ) |
+      DLBySubst.assignEquality(pos)
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
