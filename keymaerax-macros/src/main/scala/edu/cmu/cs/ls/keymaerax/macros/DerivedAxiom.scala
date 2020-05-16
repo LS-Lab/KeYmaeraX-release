@@ -10,12 +10,16 @@ import scala.reflect.macros.whitebox
 
 
 /**
- *  Annotation for derived axioms, which allows decentralized AxiomInfo
- *  @param displayObj Should be a DisplayInfo and describes how the axiom is presented on the UI
- *  @param codeName used to invoke axiom in tactics
- *  @param linear is the axiom linear in the sense of a linear pattern
- *  @author Brandon Bohrer
- *  */
+  * Annotation for derived axioms, which allows decentralized AxiomInfo
+  * @param displayObj Should be a DisplayInfo and describes how the axiom is presented on the UI
+  * @param codeName used to invoke axiom in tactics
+  * @param linear is the axiom linear in the sense of a linear pattern
+  * @author Brandon Bohrer
+  * @todo Remove codeName and infer it from the "lazy val codeName = ...."
+  * @todo introduce Enum Unifier to generalie the linear argument.
+  * @todo arguments (val displayObj: Any, val key: PosInExpr, val recursor: List[PosInExpr], val unifier: Unifier = General)
+  *       where the PosInExpr is represented as List[Int] here.
+  */
 class DerivedAxiom(val displayObj: Any, val codeName: String = "", val linear: Boolean = false) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
   def macroTransform(annottees: Any*): Any = macro DerivedAxiom.impl
