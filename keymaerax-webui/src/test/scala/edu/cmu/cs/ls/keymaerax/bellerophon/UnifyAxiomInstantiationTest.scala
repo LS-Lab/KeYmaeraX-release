@@ -34,9 +34,9 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
   }
 
   /** Match given axiom directly against the given instance. */
-  private def matchDirect(axiom: String, instance: Formula): Boolean = {
+  private def matchDirect(axiom: String, instance: Formula, unifier: Matcher = unify): Boolean = {
     val ax: Formula = AxiomInfo(axiom).formula
-    val u = unify(ax, instance)
+    val u = unifier(ax, instance)
     println("unify1:  " + ax)
     println("unify2:  " + instance)
     println("unifier: " + u)
@@ -47,11 +47,11 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
   }
 
   /** Match the key of a given axiom against the given instance. */
-  private def matchKey(axiom: String, instance: Formula): Boolean = {
+  private def matchKey(axiom: String, instance: Formula,unifier: Matcher = unify): Boolean = {
     val ax: Formula = AxiomInfo(axiom).formula
     val (_, keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
     if (true) {
-      val u = unify(keyPart, instance)
+      val u = unifier(keyPart, instance)
       println("unify1:  " + keyPart)
       println("unify2:  " + instance)
       println("unifier: " + u)
@@ -284,7 +284,9 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
   private val axiomNames = schematicAxioms ++ limitedSchematicAxioms
 
   //@todo not all arity 1 predicationals will be supported during unification
-  "Random Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
+  "Random Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in instantiateRandomSchematic(unify)
+
+   private def instantiateRandomSchematic(unifier: Matcher) {
     for (ax <- axiomNames) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
@@ -298,7 +300,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
           withSafeClue("Random instance " + inst + "\n\n" + randClue) {
             println("match instance: " + inst)
-            matchKey(ax, inst)
+            matchKey(ax, inst, unifier)
           }
         }
       }
@@ -306,7 +308,9 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
   }
 
   //@todo not all arity 1 predicationals will be supported during unification
-  it should "instantiate full schematic axioms to random schematic instantiations" in {
+  it should "instantiate full schematic axioms to random schematic instantiations" in instantiateFullSchematic(unify)
+
+  private def instantiateFullSchematic(unifier: Matcher) {
     for (ax <- axiomNames) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials/5) {
@@ -319,13 +323,15 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
           println("match instance: " + inst)
-          matchDirect(ax, inst)
+          matchDirect(ax, inst, unifier)
         }
       }
     }
   }
 
-  it should "instantiate random formulas to their random schematic instantiations" in {
+  it should "instantiate random formulas to their random schematic instantiations" in instantiateRandom(unify)
+
+  private def instantiateRandom(unifier: Matcher) {
     for (k <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
       for (i <- 1 to randomTrials) {
@@ -338,7 +344,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
           println("match instance: " + inst)
-          val u = unify(fml, inst)
+          val u = unifier(fml, inst)
           println("unify1:  " + fml)
           println("unify2:  " + inst)
           println("unifier: " + u)
@@ -350,7 +356,10 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     }
   }
 
-  "Random Renamed Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in {
+  "Random Renamed Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in instantiateRandomRenamed(unify)
+  it should "UniformMatcher: instantiate keys of schematic axioms to random schematic instantiations" in instantiateRandomRenamed(UniformMatcher)
+
+  private def instantiateRandomRenamed(unifier: Matcher) {
     for (ax <- axiomNames) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
@@ -364,7 +373,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
           withSafeClue("Random instance " + inst + "\n\n" + randClue) {
             println("match instance: " + inst)
-            matchKey(ax, inst)
+            matchKey(ax, inst, unifier)
           }
         }
       }
@@ -372,7 +381,10 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
   }
 
   //@todo not all arity 1 predicationals will be supported during unification
-  it should "instantiate full schematic axioms to random schematic instantiations" in {
+  it should "instantiate full schematic axioms to random schematic instantiations" in instantiateFullRandom(unify)
+  //@todo it should "UniformMatcher: instantiate full schematic axioms to random schematic instantiations" in instantiateFullRandom(UniformMatcher)
+
+  private def instantiateFullRandom(unifier: Matcher) {
     for (ax <- axiomNames) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials/5) {
@@ -385,13 +397,16 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
           println("match instance: " + inst)
-          matchDirect(ax, inst)
+          matchDirect(ax, inst, unifier)
         }
       }
     }
   }
 
-  it should "instantiate random formulas to their random schematic instantiations" in {
+  it should "instantiate random formulas to their random schematic instantiations" in instantiateRandomRandom(unify)
+  it should "UniformMatcher: instantiate random formulas to their random schematic instantiations" in instantiateRandomRandom(UniformMatcher)
+
+  private def instantiateRandomRandom(unifier: Matcher) {
     for (k <- 1 to randomTrials) {
       val fml = rand.nextFormula(randomComplexity)
       for (i <- 1 to randomTrials) {
@@ -404,7 +419,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
           println("match instance: " + inst)
-          val u = unify(fml, inst)
+          val u = unifier(fml, inst)
           println("unify1:  " + fml)
           println("unify2:  " + inst)
           println("unifier: " + u)
@@ -416,7 +431,10 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     }
   }
 
-  "Random Renamed Instance Unification optimistic" should "instantiate keys of all axioms to random schematic instantiations" in {
+  "Random Renamed Instance Unification optimistic" should "instantiate keys of all axioms to random schematic instantiations" in instantiateRandomKey(unify)
+  it should "UniformMatcher: instantiate keys of all axioms to random schematic instantiations" in instantiateRandomKey(UniformMatcher)
+
+  private def instantiateRandomKey(unifier: Matcher) {
     for (ax <- AxiomInfo.allInfo.map(ifo=>ifo.canonicalName) /*if !problematicAxioms.contains(ax)*/) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
@@ -431,7 +449,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
             withSafeClue("Random instance " + inst + "\n\n" + randClue) {
               println("match instance: " + inst)
-              matchKey(ax, inst)
+              matchKey(ax, inst, unifier)
             }
           }
         } catch {
