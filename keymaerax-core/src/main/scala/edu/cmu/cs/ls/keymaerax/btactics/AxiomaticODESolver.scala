@@ -464,7 +464,11 @@ object AxiomaticODESolver {
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
 
-    val solutions = Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(initIdx))), system)
+    val solutions = try {
+      Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(initIdx))), system)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to obtain symbolic solution with builtin integrator", ex)
+    }
 
     val sortedDifferentials = sortAtomicOdes(atomicOdes(system), diffArg).filter(_.xp.x != TIMEVAR).map(_.xp.x)
     val sortedSolutions = solutions.sortWith({case (Equal(a, _), Equal(b, _)) => sortedDifferentials.indexOf(a) < sortedDifferentials.indexOf(b)})

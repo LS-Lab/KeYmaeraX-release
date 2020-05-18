@@ -111,13 +111,14 @@ object Integrator extends Logging {
         Times(c, integrator(x, time, primedVars))
       case Times(x, c) if StaticSemantics.freeVars(c).intersect(dx).isEmpty =>
         Times(c, integrator(x, time, primedVars))
+      case Times(_, _) => throw new IllegalArgumentException("Cannot integrate terms with non-constant multiplication factor")
       case Power(base, exp) if StaticSemantics.freeVars(exp).intersect(dx).isEmpty => exp match {
         case Number(n) if n != -1 => Divide(Power(base, Number(n+1)), Number(n+1))
-        case Number(n) if n == -1 => throw new Exception("Cannot integrate terms with exponent -1")
+        case Number(n) if n == -1 => throw new IllegalArgumentException("Cannot integrate terms with exponent -1")
         case e => Divide(Power(base, Plus(e, Number(1))), Plus(e, Number(1)))
       }
       case Power(_, exp) if !StaticSemantics.freeVars(exp).intersect(dx).isEmpty =>
-        throw new Exception("Cannot integrate terms with non-constant exponents")
+        throw new IllegalArgumentException("Cannot integrate terms with non-constant exponents")
       case Divide(num, Number(denom)) => integrator(num, time, primedVars) match {
         case Divide(n, Number(d)) => Divide(n, Number(denom*d))
         case r => Divide(r, Number(denom))
@@ -126,7 +127,7 @@ object Integrator extends Logging {
         Divide(integrator(num, time, primedVars), denom)
       case Divide(num, Power(base, Number(exp))) => integrator(Times(num, Power(base, Number(-exp))), time, primedVars)
       case Divide(num, Power(base, exp)) => integrator(Times(num, Power(base, Neg(exp))), time, primedVars)
-      case Divide(_, _) => throw new Exception("Cannot integrate terms with non-constant denominator")
+      case Divide(_, _) => throw new IllegalArgumentException("Cannot integrate terms with non-constant denominator")
     }
   }
 }
