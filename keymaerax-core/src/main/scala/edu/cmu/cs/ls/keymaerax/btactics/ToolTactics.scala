@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.SMTQeException
+import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, SMTTimeoutException, ToolInternalException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
@@ -247,6 +247,7 @@ private object ToolTactics {
       qeTool.qe(sequent.succ.head).fact
     } catch {
       case ex: SMTQeException => throw new TacticInapplicableFailure(ex.getMessage, ex)
+      case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
     }
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
