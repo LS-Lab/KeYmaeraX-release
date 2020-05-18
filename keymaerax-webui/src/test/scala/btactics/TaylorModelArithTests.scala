@@ -24,14 +24,18 @@ class TaylorModelArithTests extends TacticTestBase {
   val context3 = ("-1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1, -1 <= z0(), z0() <= 1," +
     "x = x0() + y0() + rx, -0.01 <= rx, rx <= 0.02," +
     "y = 0.5*x0() - y0() + ry, 0 <= ry, ry <= 0.1").split(',').map(_.asFormula).toIndexedSeq
-  lazy val ta3 = new TaylorModelArith(context3, "x0(),y0(),z0(),rx,ry".split(',').map(_.asTerm).toIndexedSeq, 5, 4)
+  implicit val defaultOptions = new TaylorModelOptions {
+    override val precision = 5
+    override val order = 4
+  }
+  lazy val ta3 = new TaylorModelArith()
   lazy val x0 = ta3.polynomialRing.ofTerm("x0()".asTerm)
   lazy val y0 = ta3.polynomialRing.ofTerm("y0()".asTerm)
-  lazy val tm1 = ta3.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, QE)
-  lazy val tm2 = ta3.TM("y".asTerm, ta3.polynomialRing.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, QE)
-  lazy val tm3 = ta3.Exact(ta3.polynomialRing.ofTerm("1/3".asTerm)) *! tm1
-  lazy val tm100000 = ta3.Exact(ta3.polynomialRing.ofTerm("0.000001".asTerm)) *! tm1
-  lazy val tm1234 = ta3.Exact(ta3.polynomialRing.ofTerm("12.34".asTerm)) *! tm2
+  lazy val tm1 = ta3.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
+  lazy val tm2 = ta3.TM("y".asTerm, ta3.polynomialRing.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
+  lazy val tm3 = ta3.Exact(ta3.polynomialRing.ofTerm("1/3".asTerm), context3) *! tm1
+  lazy val tm100000 = ta3.Exact(ta3.polynomialRing.ofTerm("0.000001".asTerm), context3) *! tm1
+  lazy val tm1234 = ta3.Exact(ta3.polynomialRing.ofTerm("12.34".asTerm), context3) *! tm2
 
   "Taylor models" should "add exactly" in withMathematica { qeTool =>
     (tm1 +! tm2).prettyPrv.conclusion.succ(0) shouldBe
@@ -111,9 +115,9 @@ class TaylorModelArithTests extends TacticTestBase {
     val a = ofTerm("x0()".asTerm)
     val b = ofTerm("1".asTerm)
     val c = ofTerm("1/3".asTerm)
-    val tmA = Exact(a)
-    val tmB = Exact(b)
-    val tmC = Exact(c)
+    val tmA = Exact(a, context3)
+    val tmB = Exact(b, context3)
+    val tmC = Exact(c, context3)
     (tmA).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x0()=x0()+err_&0<=err_&err_<=0)".asFormula
     (tmB).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (1=1+err_&0<=err_&err_<=0)".asFormula
     (tmC).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (1/3=1/3+err_&0<=err_&err_<=0)".asFormula
@@ -123,7 +127,7 @@ class TaylorModelArithTests extends TacticTestBase {
     import ta3._
     import polynomialRing._
     val tm = (tm3 +! tm2).squareExact
-    val tmA = tm.approx(5)
+    val tmA = tm.approx
     tmA.prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ ((1/3*x+y)^2=0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2+err_&-0.32102<=err_&err_<=0.33240)".asFormula
   }
