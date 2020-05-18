@@ -40,8 +40,13 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
   private def ssymbol(s: String) = symbol(SOSSOLVE_NAMESPACE + s)
 
   private def decodeWitness(result: Expression): (Term, List[Term]) = result match {
-    case Pair(sos, Pair(cofactors, Nothing)) =>
+    case Pair(g,Pair(coeff,Pair(st, Pair(cofactors, Nothing)))) => {
+      val sos =
+        (PegasusM2KConverter.decodeTermList(coeff) zip PegasusM2KConverter.decodeTermList(st)).map(
+          {cs => Times(cs._1,Power(cs._2,Number(2)))}
+        ).foldLeft(g)(Plus.apply)
       (sos, PegasusM2KConverter.decodeTermList(cofactors))
+    }
     case e => throw new IllegalArgumentException("Expected pair of sos and cofactors but got " + e)
   }
 
