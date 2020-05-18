@@ -168,7 +168,7 @@ trait ProvableInfo extends DerivationInfo {
   /** `true` indicates that the key of this axiom/axiomatic proof rule can be matched linearly [[LinearMatcher]].
    * For completeness, this linearity declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
    * @see [[LinearMatcher]] */
-  val linear: Boolean
+  def linear: Boolean
 }
 
 /** Storable derivation info (e.g., as lemmas).
@@ -196,11 +196,12 @@ trait AxiomInfo extends ProvableInfo {
 case class CoreAxiomInfo(  override val canonicalName:String
                          , override val display: DisplayInfo
                          , override val codeName: String
-                         , override val linear: Boolean
+                         , val unifier: Symbol
                          , val theExpr: Unit => Any)
   extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   override val numPositionArgs = 1
+  override def linear: Boolean = ('linear == unifier)
 }
 
 /** Information for a derived axiom proved from the core.
@@ -211,7 +212,7 @@ case class CoreAxiomInfo(  override val canonicalName:String
 case class DerivedAxiomInfo(  override val canonicalName: String
                             , override val display: DisplayInfo
                             , override val codeName: String
-                            , override val linear: Boolean
+                            , val unifier: Symbol
                             , theExpr: Unit => Any)
   extends AxiomInfo with StorableInfo {
   override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
@@ -221,6 +222,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
   //DerivedAxioms.derivedAxiomOrRule(canonicalName).conclusion.succ.head
   //override lazy val provable:ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 1
+  override def linear: Boolean = ('linear == unifier)
 }
 
 // axiomatic proof rules
