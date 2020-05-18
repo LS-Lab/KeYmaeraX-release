@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{False, Provable, ProverException}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, False, NamedSymbol, Provable, ProverException, Sequent}
 
 /**
  * KeYmaera X Tactic Exceptions.
@@ -143,5 +143,8 @@ case class BelleUnfinished(message: String, p: Provable) extends BelleProofSearc
   if (p.subgoals.size == 1 && p.subgoals.head.ante.isEmpty && p.subgoals.head.succ == False :: Nil) message + {if (message.nonEmpty) ": " else ""} + "expected to have proved, but got false"
   else message + {if (message.nonEmpty) ": " else ""} + "expected to have proved, but got open goals"
 )
+
+/** Raised when counterexamples are found in sequent `s`; `cex` contains counterexample values per named symbol. */
+case class BelleCEX(message: String, cex: Map[NamedSymbol, Expression], s: Sequent) extends BelleProofSearchControl(message)
 
 //</editor-fold>
