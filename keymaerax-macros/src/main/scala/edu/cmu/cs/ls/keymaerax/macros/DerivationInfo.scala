@@ -4,9 +4,10 @@
  */
 package edu.cmu.cs.ls.keymaerax.macros
 
+import edu.cmu.cs.ls.keymaerax.macros.DerivedAxiom.ExprPos
+
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
-
 import scala.collection.immutable.HashMap
 
 ////////////////////////////////////////////////////////////
@@ -213,7 +214,11 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , override val display: DisplayInfo
                             , override val codeName: String
                             , val unifier: Symbol
-                            , theExpr: Unit => Any)
+                            , theExpr: Unit => Any
+                            , val displayLevel: Symbol = 'all
+                            , val key: ExprPos = Nil
+                            , val recursor: List[ExprPos] = Nil
+                            )
   extends AxiomInfo with StorableInfo {
   override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   DerivationInfo.assertValidIdentifier(codeName)
