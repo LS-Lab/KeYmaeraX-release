@@ -148,8 +148,20 @@ object DerivedAxiom {
     def correctName(t: Tree): Boolean = {
       t match {
         case id: Ident => {
-          if (Set("derivedAxiom", "derivedFormula", "derivedAxiomFromFact").contains(id.name.decodedName.toString)) true
-          else c.abort(c.enclosingPosition, "Expected function name: one of {derivedAxiom, derivedFormula, derivedAxiomFromFact}, got: " + t + " of type " + t.getClass())
+          if (Set("derivedAxiom", "derivedFormula", "derivedAxiomFromFact", "derivedFact").contains(id.name.decodedName.toString)) true
+          else c.abort(c.enclosingPosition, "Expected function name: one of {derivedAxiom, derivedFormula, derivedAxiomFromFact, derivedFact}, got: " + t + " of type " + t.getClass())
+        }
+        case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
+      }
+    }
+    def paramCount(t: Tree): (Int, Int) = {
+      t match {
+        case id: Ident => {
+          id.name.decodedName.toString match {
+            case "derivedAxiom" | "derivedAxiomFromFact" | "derivedFormula" => (3, 4)
+            case "derivedFact" => (2, 3)
+            case _ => c.abort(c.enclosingPosition, "Expected function name: one of {derivedAxiom, derivedFormula, derivedAxiomFromFact, derivedFact}, got: " + t + " of type " + t.getClass())
+          }
         }
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
       }
@@ -160,29 +172,33 @@ object DerivedAxiom {
         valDecl match {
           // val declaration must be an invocation of one of the functions for defining derived axioms and optionally can
           // have modifiers and type annotations
-          case q"$mods val $declName: $tpt = $functionName( ..$params )" if correctName(functionName) &&
-            (params.length == 3  || params.length == 4) =>
-              // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
-              val codeName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
-              // AST for literal strings for the names
-              val codeString = Literal(Constant(codeName.decodedName.toString))
-              val canonString = params(0)
-              // derivedAxiom functions allow an optional argument for the codeName, which we supply here
-              val fullParams = Seq(params(0), params(1), params(2), q"Some($codeString)")
-              val fullRhs = q"$functionName( ..$fullParams)"
-              // Tactic implementation of derived axiom is always useAt
-              val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus.useAt($canonString)})""" // : (Unit => Any)
-              val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Knknown unifier " + s)}
-              val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
-                case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
-              val info = q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, key = $key, recursor = $recursor, theExpr = $expr)"""
-              // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
-              // the axiom info to the global axiom info table
-              val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.register($fullRhs, $info)"
-              val lemmaType = tq"edu.cmu.cs.ls.keymaerax.lemma.Lemma"
-              c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
+          case q"$mods val $declName: $tpt = $functionName( ..$params )" =>
+            if (!correctName(functionName))
+              c.abort(c.enclosingPosition, "Invalid annottee: Expected val name = <derivedAxiomFunction>(x1, x2, x3), got: " + functionName + " of type " + functionName.getClass())
+            val (minParam, maxParam) = paramCount(functionName)
+            if(params.length < minParam || params.length > maxParam)
+              c.abort(c.enclosingPosition, s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam")
+            // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
+            val codeName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
+            // AST for literal strings for the names
+            val codeString = Literal(Constant(codeName.decodedName.toString))
+            val canonString = params(0)
+            // derivedAxiom functions allow an optional argument for the codeName, which we supply here
+            val fullParams = params.take(minParam).:+(q"Some($codeString)")
+            val fullRhs = q"$functionName( ..$fullParams)"
+            // Tactic implementation of derived axiom is always useAt
+            val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus.useAt($canonString)})""" // : (Unit => Any)
+            val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Knknown unifier " + s)}
+            val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
+              case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
+            val info = q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, key = $key, recursor = $recursor, theExpr = $expr)"""
+            // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
+            // the axiom info to the global axiom info table
+            val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.register($fullRhs, $info)"
+            val lemmaType = tq"edu.cmu.cs.ls.keymaerax.lemma.Lemma"
+            c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)
-          case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val name = <derivedAxiomFunction>(x1, x2, x3), got: " + t + " of type " + t.getClass())
+
         }
       case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val declaration got: " + t.head + " of type: " + t.head.getClass())
     }

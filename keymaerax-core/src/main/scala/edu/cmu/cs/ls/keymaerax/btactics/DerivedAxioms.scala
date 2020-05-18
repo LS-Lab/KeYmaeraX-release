@@ -594,8 +594,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     * @see [[equalReflex]]
     */
-  //@TODO: derivedFact support
-  //@DerivedAxiom(("↔R","<->R"), "equivReflexive")
+  @DerivedAxiom(("↔R","<->R"), "equivReflexive")
   lazy val equivReflexiveAxiom = derivedFact("<-> reflexive",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
@@ -708,8 +707,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  // @TODO: derivedFact support
-  //@DerivedAxiom(("¬¬","!!"), formula ="¬¬p↔p", codeName ="doubleNegation")
+  @DerivedAxiom(("¬¬","!!"), formula ="¬¬p↔p", codeName ="doubleNegation")
   lazy val doubleNegationAxiom = derivedFact("!! double negation",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
