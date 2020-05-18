@@ -165,9 +165,12 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
   case class TM(elem: Term, poly: Polynomial, lower: Term, upper: Term, prv: ProvableSig) {
     val context = prv.conclusion.ante
     assert(prv.conclusion.succ(0) == tmFormula(elem, rhsOf(poly.representation), lower, upper))
+    def checkCompatibleContext(other: TM) =
+      if (context != other.context) throw new IllegalArgumentException("Incompatible contexts: " + context + " and " + other.context)
 
     /** exact addition */
     def +!(other: TM)(implicit options: TaylorModelOptions) : TM = {
+      checkCompatibleContext(other)
       val newPoly = poly.resetTerm + other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(lower, upper)(other.lower, other.upper)
@@ -192,6 +195,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
 
     /** exact subtraction */
     def -!(other: TM)(implicit options: TaylorModelOptions) : TM = {
+      checkCompatibleContext(other)
       val newPoly = poly.resetTerm - other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Minus)(lower, upper)(other.lower, other.upper)
@@ -215,6 +219,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
 
     /** exact multiplication */
     def *!(other: TM)(implicit options: TaylorModelOptions) : TM = {
+      checkCompatibleContext(other)
       val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
 
       val hornerPrv = toHorner(polyHigh)
