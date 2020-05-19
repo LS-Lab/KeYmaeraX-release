@@ -31,7 +31,6 @@ class DerivedAxiom(val names: Any,
                    val key: ExprPos = Nil,
                    val recursor: List[ExprPos] = Nil
                   ) extends StaticAnnotation {
-class DerivedAxiom(val displayObj: Any, val codeName: String = "", val linear: Boolean = false) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
   def macroTransform(annottees: Any*): Any = macro DerivedAxiom.impl
 }
