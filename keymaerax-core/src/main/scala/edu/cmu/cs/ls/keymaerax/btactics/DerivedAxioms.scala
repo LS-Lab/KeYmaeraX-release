@@ -42,6 +42,12 @@ object DerivedAxioms extends Logging {
 
   type LemmaID = String
 
+  /** Look up a core axiom from [[Provable.axioms]] and wrap it into a Lemma */
+  private def coreAxiom(name: String): Lemma = {
+      val p = ProvableSig.axioms(name)
+      Lemma(p, Lemma.requiredEvidence(p))
+  }
+
   /** A Provable proving the derived axiom/rule named id (convenience) */
   def derivedAxiomOrRule(name: String): ProvableSig = {
     val lemmaName = DerivationInfo(name) match {
@@ -829,7 +835,9 @@ object DerivedAxioms extends Logging {
     *
     * @todo will clash unlike the converse proof.
     */
-  lazy val allEliminateAxiom = ??? /*derivedAxiom("all eliminate",
+  lazy val allEliminateAxiom = coreAxiom("all eliminate")
+
+  /*derivedAxiom("all eliminate",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ p_(||)) -> p_(||)".asFormula)),
     US(
       USubst(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil),

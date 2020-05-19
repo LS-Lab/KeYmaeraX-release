@@ -761,7 +761,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
         Seq(cPrv, prv)), Monomial(c1, powers), Monomial(c2, powers))
     }
 
-    def isConstant = powers.forall(_ == 0) || coeff.num.compare(0) == 0
+    def isConstant = powers.forall{case (t, i) => i == 0 } || coeff.num.compare(0) == 0
 
     override def compare(that: Monomial): Int = monomialOrdering.compare(this.powers, that.powers)
   }

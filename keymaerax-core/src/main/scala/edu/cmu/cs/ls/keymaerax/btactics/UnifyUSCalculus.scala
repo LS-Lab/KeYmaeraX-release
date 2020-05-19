@@ -730,8 +730,8 @@ trait UnifyUSCalculus {
                   case Equiv(other, DotFormula) => (other, Equiv(other, remR), p.isAnte, Equiv)
                   case Imply(DotFormula, other) => (other, Imply(remR, other), p.isSucc, Imply)
                   case Imply(other, DotFormula) => (other, Imply(other, remR), p.isAnte, Imply)
-                  //              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
-                  //              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
+                  //              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident)
+                  //              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident)
                 }
 
                 def hide2 =
