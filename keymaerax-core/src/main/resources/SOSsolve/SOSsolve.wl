@@ -110,20 +110,47 @@ ReduceLin[prem_,gb_,vars_]:=Module[{red,linred,mons,lin,pos,mat,postmons},
 ];
 
 
+(* Round result *)
+RoundResult[res_,monbasis_,gtrm_,gb_,vars_]:= Module[{
+	matrix, L, vals, sos, fin, power, seq, rem, maxiters,i
+	},
+	maxiters=20;
+	For[i=0,i<maxiters,i++,
+	power=2^-(2*i);
+	(* Force matrix to be symmetric then rationalize *)
+	matrix=res;
+	matrix=1/2*(matrix+Transpose[matrix]);
+	matrix=Rationalize[Round[matrix,power]];
+	(* matrix = L * Diag[vals] * L^T *)
+	{L,vals}=LDLT[matrix];
+	If[Not[AllTrue[vals, # >= 0&]], Continue[]];
+	(* The polynomials in the SOS are given by *)
+	sos = Dot[Transpose[L],monbasis];
+	(* This is the thing that must reduce to zero *)
+	fin = gtrm+Dot[vals,Map[#^2&,sos]];
+	{seq,rem} = PolynomialReduce[fin,gb,vars,MonomialOrder->monOrder];
+	Print["Rounding: ",power," Remainder: ",rem];
+	If[rem===0,Return[{vals,sos,seq}]]
+	];
+	Return[{}];
+]
+
+
+
 (* Input:
 polys {p_1,p_2,...} - polynomials assumed to be = 0
 ineqs {g_1,g_2,...} - polynomials assumed to be \[NotEqual] 0
 vars  {v_1,v_2,...} - variables
 deg - degree bound
 *)
-FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
+FindWitness[polys_List, ineqs_List, vars_List, degBound_Integer]:= Module [{
 	failure, gb, conv, monbasis, kp, R, coeffs,
 	umonomials,constraints,i,k,res,y, matrix, result,gtrm1,
-	sos, soscoeff, seq,bla,vals,vec,prem,check,redseq,redg,
-	gtrm,gcoeff,gmc,gmons,gheu,cs,tt,pos},
+	sos, soscoeff, seq,bla,vec,prem,check,redseq,redg,deg,
+	gtrm,gcoeff,gmc,gmons,gheu,cs,tt,pos,rres},
 
 	(* result type encoding of failure*)
-	failure = {0,Map[0*#&,polys]};
+	failure = {0,{},{},{}};
 	
 	Print["Polynomials assumed to be zero: ",polys];
 	Print["Polynomials assumed to be non-zero: ",ineqs];
@@ -148,6 +175,8 @@ FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
 	(* gheu = monomialList[PolynomialReduce[gtrm1,gb,vars][[2]],vars]; *)
 	gheu = monomialList[gtrm1,vars]; 
 	
+	For[deg=1,deg<=degBound,deg++,
+	
 	(* All monomials up to degree bound *)
 	prem = allMonomials[vars,deg];
 	Print["No. input monomials: ",Length[prem]];
@@ -162,7 +191,7 @@ FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
 	Print["Filter input monomials: ",Length[prem]];*)
 		
 	(* Degree bound too low (should be impossible with heuristics) *)
-	If[Length[prem]===0,Return[failure]];
+	If[Length[prem]===0, Continue[]];
 	
 	(*
 	Map[Print[#," ",PolynomialReduce[#,gb,vars][[2]]]&,prem];*)
@@ -191,7 +220,7 @@ FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
 	]
 	];
 	
-	If[Length[constraints]===0, Return[failure]];
+	If[Length[constraints]===0, Continue[]];
 	
 	(* Finally solve the SDP *)
 	k=Length[monbasis];
@@ -203,11 +232,14 @@ FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
 		SemidefiniteOptimization[cs,
 		Join[{IdentityMatrix[k]},constraints],
 		{"DualityGap","DualMaximizer"},
-		Method->"CSDP"]];
+		Method->"DSDP"]
+	];
+	
 	Print["SDP time: ",tt];
 	Print["Duality gap: ",res[[1]]];
 	If[MemberQ[res[[2]],Indeterminate,{2}],
-		Print["No solution"];Return[failure]];
+		Print["No solution"];
+		Continue[]];
 	
 	Print["Eigenvalues: ",Eigenvalues[res[[2]]]];
 	(*
@@ -219,24 +251,15 @@ FindWitness[polys_List, ineqs_List, vars_List, deg_Integer]:= Module [{
 		Method\[Rule]"DSDP"];
 	*)
 	(* Round the result *)
-	matrix=Normal[res[[2]]]; (*[[1]][[2]];*)
-	matrix=1/2*(matrix+Transpose[matrix]);
-	matrix=Rationalize[Round[matrix,0.0001]];
-	(*Print[matrix//MatrixForm];*)
-	{vec,vals}=LDLT[matrix];
-	(* The polynomials in the SOS are given by *)
-	sos = Dot[Transpose[vec],monbasis];
-	(* Each with (positive) coefficient *)
-	soscoeff = vals;
-	result = gtrm+Dot[soscoeff,Map[#^2&,sos]];
-	Print["Raw result: ",gtrm+Dot[monbasis,Dot[matrix,monbasis]]];
-	Print["SOS form: ",result];
-	{seq,bla} = PolynomialReduce[result,gb,vars,MonomialOrder->monOrder];
-	check = FullSimplify[Dot[Dot[seq, conv], polys] - result];
-	Print["Final check: ",N[Expand[check]]];
-	If[Not[check === 0], Return[failure]];
+	rres = RoundResult[Normal[res[[2]]],monbasis,gtrm,gb,vars];
+	If[Length[rres]==0,
+		Print["Rounding heuristic failed"];
+		Continue[]];
+	{soscoeff,sos,seq} = rres;
 	pos=Position[soscoeff, x_ /; ! TrueQ[x == 0], {1}, Heads -> False]//Flatten;
 	Return[{gtrm,soscoeff[[pos]],sos[[pos]],Dot[seq,conv]}]
+	];
+	Return[failure];
 ]
 FindWitness[polys_List, vars_List, deg_Integer]:= FindWitness[polys, {},vars, deg]; 
 
