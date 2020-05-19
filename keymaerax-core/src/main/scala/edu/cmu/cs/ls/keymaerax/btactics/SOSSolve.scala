@@ -21,6 +21,7 @@ object SOSSolve {
   private lazy val zeroGtOne = AnonymousLemmas.remember("1 > 0".asFormula, QE & done)
   private lazy val sosPosIntro = AnonymousLemmas.remember("x_() > 0 -> x_() + y_()^2 > 0".asFormula, QE & done)
   private lazy val sosPosCoeffIntro = AnonymousLemmas.remember("((c_() > 0<->true) & x_() > 0) -> x_() + c_()*y_()^2 > 0".asFormula, QE & done)
+  private lazy val sosPosRatCoeffIntro = AnonymousLemmas.remember("(((c_() > 0 & d_() > 0)<->true) & x_() > 0) -> x_() + c_()/d_()*y_()^2 > 0".asFormula, QE & done)
   private def sosPosTac : DependentTactic = "sosPosTac" by { (seq: Sequent) =>
     require(seq.succ.length==1, "sosPosTac requires exactly one succedent")
     require(seq.ante.isEmpty, "sosPosTac requires empty antecedent")
@@ -29,6 +30,9 @@ object SOSSolve {
         by(zeroGtOne)
       case Greater(Plus(x, Power(y, Number(p))), Number(n)) if p.compareTo(2) == 0 && n.compareTo(0) == 0 =>
         useAt(sosPosIntro, PosInExpr(1::Nil))(1) & sosPosTac
+      case Greater(Plus(x, Times(Divide(c, d), Power(y, Number(p)))), Number(n)) if p.compareTo(2) == 0 && n.compareTo(0) == 0  =>
+        val cPrv = ProvableSig.proveArithmetic(BigDecimalQETool, And(Greater(c, Number(0)), Greater(d, Number(0))))
+        useAt(sosPosRatCoeffIntro, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(by(cPrv), sosPosTac)
       case Greater(Plus(x, Times(c, Power(y, Number(p)))), Number(n)) if p.compareTo(2) == 0 && n.compareTo(0) == 0  =>
         val cPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Greater(c, Number(0)))
         useAt(sosPosCoeffIntro, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(by(cPrv), sosPosTac)
