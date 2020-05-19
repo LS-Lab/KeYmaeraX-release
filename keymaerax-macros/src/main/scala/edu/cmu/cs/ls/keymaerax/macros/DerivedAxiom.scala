@@ -27,7 +27,7 @@ class DerivedAxiom(val names: Any,
                    val formula: String = "",
                    val unifier: String = "full",
                    val displayLevel: String = "internal",
-                   val inputs: List[ArgInfo] = Nil,
+                   val inputs: String = "",
                    val key: ExprPos = Nil,
                    val recursor: List[ExprPos] = Nil
                   ) extends StaticAnnotation {
@@ -36,16 +36,57 @@ class DerivedAxiom(val names: Any,
 }
 
 object DerivedAxiom {
+
   // Would just use PosInExpr but can't pull in core
   type ExprPos = List[Int]
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
+    def toArgInfo(name: String, tpe: String, allowFresh: List[String]): ArgInfo = {
+      val first = tpe.indexOf('[')
+      val last = tpe.lastIndexOf(']')
+      if (first != -1 && last != -1) {
+        val (tpeFun, tpeArg) = (tpe.slice(0, first).trim.toLowerCase, tpe.slice(first + 1, last).trim.toLowerCase)
+        tpeFun match {
+          case "list" => ListArg(name, tpeArg, allowFresh)
+          case "option" => OptionArg(toArgInfo(name, tpeArg, allowFresh))
+          case s => c.abort(c.enclosingPosition, "Unexpected type constructor: " + s + ", should be option[] or list[]")
+        }
+      } else {
+        tpe match {
+          case "variable" => VariableArg(name, allowFresh)
+          case "term" => new TermArg(name, allowFresh)
+          case "formula" => FormulaArg(name, allowFresh)
+          case "number" => NumberArg(name, allowFresh)
+          case "string" => StringArg(name, allowFresh)
+          case "expression" => new ExpressionArg(name, allowFresh)
+          case "substitution" => SubstitutionArg(name, allowFresh)
+          case s => c.abort(c.enclosingPosition, "Unexpected type name: " + s + ", should be number, string, substitution, variable, term, formula, expression, list[t], or option[t]")
+        }
+      }
+    }
+    def parseAI(s: String): ArgInfo = {
+      s.split(":").toList match {
+        case id :: tpe :: Nil =>
+          val first = id.indexOf('(')
+          val last = id.lastIndexOf(')')
+          val (name, allowFresh) =
+            if (first != -1 && last != -1)
+              (id.slice(0, first), id.slice(first+1, last).split(',').toList)
+            else (id, Nil)
+          toArgInfo(name, tpe, allowFresh)
+        case ss => c.abort(c.enclosingPosition, "Invalid argument type descriptor:" + s)
+      }
+    }
+    def parseAIs(s: String): List[ArgInfo] = {
+      if (s.isEmpty) Nil
+      else s.split(";;").toList.map(parseAI)
+    }
     // Abstract syntax trees for string and string list literals
     def literal(s: String): Tree = Literal(Constant(s))
     def literals(ss: List[String]): Tree = q"""List(..${ss.map((s: String) => literal(s))})"""
     // Abstract syntax trees for all the display info data structures
     def convAIs(ais: List[ArgInfo]): Tree = {
-      q"""new List(..${ais.map((ai:ArgInfo) => convAI(ai))})"""
+      q"""List(..${ais.map((ai:ArgInfo) => convAI(ai))})"""
     }
     def convAI(ai: ArgInfo): Tree = {
       ai match {
@@ -114,13 +155,12 @@ object DerivedAxiom {
             "displayLevel" -> Literal(Constant("internal")),
             "key" -> q"""scala.collection.immutable.Nil""",
             "recursor" -> q"""scala.collection.immutable.Nil""",
-            "inputs" -> q"""scala.collection.immutable.Nil"""
+            "inputs" -> Literal(Constant(""))
           )
           val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams (acc, x)})
           val displayObj = c.eval[Any](c.Expr(paramMap("names")))
           val fml: String = c.eval[String](c.Expr(paramMap("formula")))
-          // @TODO: Fancy input eventually
-          val inputs: List[ArgInfo] = c.eval[List[ArgInfo]](c.Expr(paramMap("inputs")))
+          val inputs: List[ArgInfo] = parseAIs(c.eval[String](c.Expr(paramMap("inputs"))))
           val codeName = c.eval[String](c.Expr(paramMap("codeName")))
           val unifier: String = c.eval[String](c.Expr(paramMap("unifier")))
           val displayLevel: String = c.eval[String](c.Expr(paramMap("displayLevel")))
