@@ -181,7 +181,8 @@ object ODEInvariance {
 
     val (p: Term, ode: DifferentialProgram) = seq.sub(pos) match {
       case Some(Diamond(ODESystem(o, GreaterEqual(p,_)), _)) => (p, o)
-      case e => throw new TacticInapplicableFailure("Unknown shape: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("lpstep only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //Maybe pass this as an argument to avoid recomputing
     val lie = lieDer(ode, p)
@@ -294,7 +295,8 @@ object ODEInvariance {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("sAI only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIc only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (fml,propt1) = semiAlgNormalize(post)
@@ -349,7 +351,8 @@ object ODEInvariance {
     val boundPr = remember(("f_()-g_()^"+(2*bound).toString()+">=0 -> f_()>0 | g_()=0").asFormula, QE, namespace)
     val (p,t) = seq.succ(0).sub(PosInExpr(0::1::Nil)) match {
       case Some(Or(Greater(p,_),Equal(t,_))) => (p,t)
-      case e => throw new TacticInapplicableFailure("lpgt called with incorrect result at expected position: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("lpgt only applicable to disjunction of strict inequality and equality, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position does not point to a valid position in sequent " + seq.prettyString)
     }
     //println(p,t)
     val unlocked = GreaterEqual(Minus(p,Power(t,Number(2*bound))),Number(0))
@@ -460,7 +463,8 @@ object ODEInvariance {
 
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new TacticInapplicableFailure("sAI only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIR1 only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     val (f2, propt) = try {
       semiAlgNormalize(post)
@@ -525,7 +529,8 @@ object ODEInvariance {
     require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new TacticInapplicableFailure("time bound only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("timeBound only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //Check that the domain at least freezes one of the coordinates
     val domConj = flattenConjunctions(dom)
@@ -600,7 +605,8 @@ object ODEInvariance {
       //needs to be dualized
       case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
       //todo: case Some(Diamond(sys:ODESystem,post)) if pos.isAnte => (sys.ode, sys.constraint, post)
-      case _ => throw new TacticInapplicableFailure("domain stuck for box ODE in succedent or diamond ODE in antecedent")
+      case Some(e) => throw new TacticInapplicableFailure("domainStuck only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val tvName = "stuck_"
@@ -688,7 +694,8 @@ object ODEInvariance {
 
     val (ode,dom) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,_)) => (sys.ode,sys.constraint)
-      case _ => throw new TacticInapplicableFailure("dgVdbx only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dgVdbx only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val zero = Number(0)
@@ -822,7 +829,8 @@ object ODEInvariance {
 
     val (sys, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new TacticInapplicableFailure("dRI only applicable for box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dRI only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (f2, _) = try {
@@ -1382,7 +1390,8 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new TacticInapplicableFailure("sAI only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIc only applicable to ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (fml1,propt1) = try {
@@ -1566,7 +1575,8 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new TacticInapplicableFailure("nilpotent solve only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("nilpotentSolve only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     if(TacticHelper.names(seq).contains(nilpotentSolveTimeVar))
@@ -1683,7 +1693,8 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new TacticInapplicableFailure("DDC only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("diffDivConquer only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val zero = Number(0)

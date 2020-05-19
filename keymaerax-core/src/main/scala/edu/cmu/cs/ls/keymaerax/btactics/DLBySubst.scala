@@ -78,6 +78,7 @@ private object DLBySubst {
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
               topAbstraction(1) & closeId
               )
+          case (_, e) => throw new TacticInapplicableFailure("GV only applicable to box properties, but got " + e.prettyString)
         }
       }
     }
@@ -100,8 +101,9 @@ private object DLBySubst {
         }, prg)
         if (fmls.isEmpty) abstractionb(pos)
         else throw new TacticInapplicableFailure("Abstraction would lose information from tests and/or evolution domain constraints")
-      case e => throw new TacticInapplicableFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
-        e.map(_.prettyString) + " at position " + pos.prettyString + " in sequent " + seq.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
+        e.prettyString + " at position " + pos.prettyString + " in sequent " + seq.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -117,6 +119,7 @@ private object DLBySubst {
         skip,
         cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS("[:=] self assign") & done
       )
+    case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
   })
 
   /** Top-level abstraction: basis for abstraction tactic */
@@ -172,6 +175,8 @@ private object DLBySubst {
                 )),
               /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
             )
+          case Some(e) => throw new TacticInapplicableFailure("Top-level abstraction only applicable to box properties, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
       }
     }
@@ -213,6 +218,8 @@ private object DLBySubst {
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
        else ident)
+    case Some(e) => throw new TacticInapplicableFailure("assignEquality only applicable to box assignments [x:=t;], but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
@@ -228,6 +235,8 @@ private object DLBySubst {
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
        else ident)
+    case Some(e) => throw new TacticInapplicableFailure("assigndEquality only applicable to diamond assignments <x:=t;>, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   /** @see [[TactixLibrary.generalize()]]
@@ -279,6 +288,7 @@ private object DLBySubst {
           /*label(BranchLabels.genUse)*/ useCleanup,
           /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
         )
+      case (_, e) => throw new TacticInapplicableFailure("MR only applicable to box, but got " + e.prettyString)
     })
   }
   /** @see [[TactixLibrary.postCut()]]
@@ -338,6 +348,8 @@ private object DLBySubst {
                      else andL('Llast) & hideL('Llast, True)) & label(useCase)
                 )
               }
+            case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
+            case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
           }}))(afterGhostsPos)
     }
     pre & discreteGhosts(ov, sequent, doloop)(pos)
@@ -502,6 +514,8 @@ private object DLBySubst {
 
         useAt("[:=] assign", PosInExpr(1::Nil), subst)(pos) &
           (if (assignInContext || pos.isTopLevel) execAssignment else skip)
+      case Some(e) => throw new TacticInapplicableFailure("discreteGhost only applicable to formulas, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -539,6 +553,8 @@ private object DLBySubst {
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   /**
@@ -558,5 +574,7 @@ private object DLBySubst {
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
       useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 }

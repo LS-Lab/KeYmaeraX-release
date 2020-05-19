@@ -795,7 +795,7 @@ object IntervalArithmeticV2 {
   private[btactics] def intervalArithmeticPreproc: DependentPositionTactic = "intervalArithmeticPreproc" by { (pos: Position, seq: Sequent) =>
     def unsupportedError(e: Expression) = throw new TacticInapplicableFailure("Interval Arithmetic does not support " + e.getClass.getSimpleName)
     seq.sub(pos) match {
-      case Some(e: Expression) =>
+      case Some(e) =>
         e match {
           case And(f, g) =>
             intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
@@ -852,6 +852,7 @@ object IntervalArithmeticV2 {
           case GreaterEqual(a, b) => nil
           case e => unsupportedError(e)
         }
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -907,7 +908,8 @@ object IntervalArithmeticV2 {
     seq.sub(pos) match {
       case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
       case Some(t: Term) => intervalCutTerms(List(t))
-      case _ => throw new IllFormedTacticApplicationException("intervalCut needs to be called on a Formula or a Term")
+      case Some(e) => throw new TacticInapplicableFailure("intervalCut only applicable to formulas or terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 

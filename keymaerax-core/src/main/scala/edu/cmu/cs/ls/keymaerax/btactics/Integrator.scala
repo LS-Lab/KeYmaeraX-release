@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
+import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import edu.cmu.cs.ls.keymaerax.tools.ext.ODESolverTool
@@ -62,7 +63,7 @@ object Integrator extends Logging {
       case True => None
       case And(l,r) =>
         //throw away the initial True
-        if(l != True) throw AxiomaticODESolver.AxiomaticODESolverExn("Expected the left-most component to be a True.")
+        if(l != True) throw new TacticInapplicableFailure("Expected the left-most component to be a True.")
         Some(r)
     }
   }

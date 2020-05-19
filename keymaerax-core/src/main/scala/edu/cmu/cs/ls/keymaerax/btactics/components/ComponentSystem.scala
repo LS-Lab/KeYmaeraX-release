@@ -118,6 +118,8 @@ object ComponentSystem {
             (dots.foldLeft[Formula](q)({ case (qq, (v,d)) => qq.replaceAll(v, d) }) -> dots.foldLeft(p)({ case (pp, (v,d)) => pp.replaceFree(v, d) }))
         )
         useAt(swapped, PosInExpr(1::Nil), rensubst)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("programIndepedence only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -138,6 +140,8 @@ object ComponentSystem {
         StaticSemantics.freeVars(p).intersect(StaticSemantics.boundVars(a)).isEmpty &&
         StaticSemantics.freeVars(a).intersect(StaticSemantics.boundVars(a)).isEmpty =>
         proveBy(Imply(p, have), implyR(1) & abstractionb(1) & closeId & done)
+      case Some(e) => throw new TacticInapplicableFailure("dropControl only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     useAt(lemma2, PosInExpr(1::Nil))(pos)
   })
@@ -213,6 +217,8 @@ object ComponentSystem {
               case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
             }
         }
+      case Some(e) => throw new TacticInapplicableFailure("Lemma 3 only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     useAt(lemma3, PosInExpr(1::Nil))(pos)
   })
@@ -232,6 +238,8 @@ object ComponentSystem {
           Imply(Box(abv.map(AssignAny).reduceRightOption(Compose).getOrElse(Test(True)), p), have),
           implyR(1) & abstractionb(1) & approximate & decompose & closeId)
         useAt(lemma4, PosInExpr(1::Nil))(pos)
+      case Some(e) => throw new TacticInapplicableFailure("higherdV only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -252,6 +260,8 @@ object ComponentSystem {
             "q(||)".asFormula -> f :: Nil
         )
         useAt(introduceTestLemma, PosInExpr(1::1::Nil), subst)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("introduceTest only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -270,6 +280,8 @@ object ComponentSystem {
             "q_()".asFormula -> f :: Nil
         )
         useAt(weakenTestLemma, PosInExpr(1::1::Nil), subst)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("weakenTest only applicable to box tests, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -284,6 +296,8 @@ object ComponentSystem {
         dropControl(pos ++ PosInExpr(1::Nil)) &
         dropControl(pos) & DebuggingTactics.print("Dropped all statements except port memory") &
         chase(1) & prop & DebuggingTactics.done("Fig. 12 done")
+    case Some(e) => throw new TacticInapplicableFailure("Fig. 12 only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
   
   /** Communication liveness for empty connections */
@@ -311,6 +325,8 @@ object ComponentSystem {
         useAt("[;] compose", PosInExpr(1::Nil))(pos) & useAt("[;] compose", PosInExpr(1::Nil))(pos.topLevel ++ pos.inExpr.parent) &
         // recurse until done
         proveSystemCompStep4(inputAssumptions, outputGuarantees, plant1Vars, compatibility, remainingCons-1)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("proveSystemCompStep4 only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
 
   private def leftAssignments(program: Program, length: Int = -1): List[Program] = {
@@ -392,6 +408,8 @@ object ComponentSystem {
               abstractionb(2) & prop & DebuggingTactics.done("Show InCp")
           )
           ) & DebuggingTactics.done("Justify Fout")
+    case Some(e) => throw new TacticInapplicableFailure("justifyFout only applicable to implications, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
 
   /** STTT Fig. 11: Component 1 */
@@ -473,6 +491,8 @@ object ComponentSystem {
             // show
             justifyFout(fout, plant2Vars, c2ComGuaranteeLiveness, c2use, c2step)('Rlast)
           ) & DebuggingTactics.print("Done disassembling system into components") & DebuggingTactics.done("Disassembling system into components")
+      case Some(e) => throw new TacticInapplicableFailure("proveSystemCompStep only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -523,6 +543,8 @@ object ComponentSystem {
             DebuggingTactics.done("Proving communication guarantee (zeta step)")
         )
       ) & DebuggingTactics.print("Done proving component loops and communication guarantees") & DebuggingTactics.done("Proving component loops and communication guarantees")
+    case Some(e) => throw new TacticInapplicableFailure("proveSystemStep only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
 
   /** STTT Fig. 9 */
@@ -562,6 +584,8 @@ object ComponentSystem {
           compatibility,
           comGuaranteeSafety, comGuaranteeLiveness)(1) & DebuggingTactics.done("Component system step", Some("user/" + systemName + " Step"))
       )
+    case Some(e) => throw new TacticInapplicableFailure("proveSystem only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
   
   private val shapeMsg =

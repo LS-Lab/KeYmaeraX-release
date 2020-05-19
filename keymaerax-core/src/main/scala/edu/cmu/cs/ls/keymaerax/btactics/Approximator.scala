@@ -56,7 +56,8 @@ object Approximator extends Logging {
           }
         }
       }
-      case _ => throw new TacticInapplicableFailure(s"approximate should only be called on positions of form [{ODE}]P")
+      case Some(e) => throw new TacticInapplicableFailure("autoApproximate only applicable on positions of form [{ODE}]P, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     })
   }
 

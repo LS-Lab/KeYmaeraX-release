@@ -151,6 +151,8 @@ trait SequentCalculus {
   //@todo turn this into a more general function that obtains data from the sequent.
   def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => allL(t)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("all instantiate pos only applicable to terms, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
   val existsL                         : DependentPositionTactic = "existsL" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsSkolemize(pos))
@@ -163,6 +165,8 @@ trait SequentCalculus {
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("exists instantiate pos only applicable to terms, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
 

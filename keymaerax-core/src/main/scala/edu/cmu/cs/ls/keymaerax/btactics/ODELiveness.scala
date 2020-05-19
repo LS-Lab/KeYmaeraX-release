@@ -439,7 +439,8 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("removeODEUnivariate only applicable to box ODE")
+      case Some(e) => throw new TacticInapplicableFailure("removeODEUnivariate only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     if(!ode.head.isInstanceOf[AtomicODE])
@@ -589,7 +590,8 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("odeReduce only applicable to diamond ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("odeReduce only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val ode = sys.ode
@@ -700,7 +702,8 @@ object ODELiveness {
 
     val (tarsys,tarpost) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("compatCuts only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("compatCuts only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     // Loop through compatible assumptions and track the effect of DC
@@ -766,7 +769,8 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("kDomD only applicable to diamond ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("kDomD only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val newfml = Diamond(sys,target)
@@ -793,7 +797,8 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("dDR only applicable to diamond ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dDR only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val newfml = Diamond(ODESystem(sys.ode,target),post)
@@ -827,7 +832,9 @@ object ODELiveness {
     val (sys,post,isBox) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post,false)
       case Some(Box(sys:ODESystem,post)) => (sys,post,true)
-      case _ => throw new TacticInapplicableFailure("vDG only applicable to box ODE in antecedents or diamond ODE in succedents")
+      //@todo IllFormed if diamond in ante or box in succ?
+      case Some(e) => throw new TacticInapplicableFailure("vDG only applicable to box ODEs in antecedent or diamond ODE in succedents, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     //@todo: Check that ghosts are sufficiently fresh and return a nice error
@@ -896,7 +903,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("dV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (property, propt) = ineqNormalize(post)
@@ -955,7 +964,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond on antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("dV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val odels = DifferentialProduct.listify(sys.ode).map {
@@ -1027,7 +1038,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("semialgdV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (property, propt) = SimplifierV3.semiAlgNormalize(post)
@@ -1162,7 +1175,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("Higher dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("higherdV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (property, propt) = ineqNormalize(post)
@@ -1230,7 +1245,9 @@ object ODELiveness {
 
     val (tarsys, tarpost) = seq.sub(pos) match {
       case Some(Diamond(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new TacticInapplicableFailure("saveBox only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("saveBox only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     cut(Box(tarsys,Not(tarpost))) <(
@@ -1264,7 +1281,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new TacticInapplicableFailure("closedRef only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("closedRef only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     saveBox(pos) & dDR(target)(pos) < (
