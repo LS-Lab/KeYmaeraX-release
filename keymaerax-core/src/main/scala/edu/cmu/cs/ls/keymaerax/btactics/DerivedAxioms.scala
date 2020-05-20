@@ -2697,7 +2697,7 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     */
-  @DerivedAxiom("DG", "DGC", formula = "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
+  @DerivedAxiom("DG", "DGCd", formula = "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
   lazy val DGCddifferentialghostconst =
     derivedAxiom("DGd diamond differential ghost constant",
       Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\forall y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)".asFormula)),
