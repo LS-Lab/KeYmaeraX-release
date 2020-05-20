@@ -293,15 +293,16 @@ class PairParserTests extends FlatSpec with Matchers {
 
   /** Formula cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParseFormula: immutable.List[(String,String)] = List(
-    ("-(x+5)^2+9>=7 & y>5 -> [x:=1;]x>=1", "((((-(x+5)^2)+9)>=7) & (y>5)) -> ([x:=1;](x>=1))"),
     ("p()->q()->r()", "p()->(q()->r())"),
-    ("p()<-q()<-r()", "(p()<-q())<-r()"),
     ("p()<->q() &\nx>0 &&\ny<2", unparseable),
+    ("p()<->q() &\nx>0 &\ny<2", "(p()) <-> (q()&((x>0)&(y<2))"),
+    ("p()<-q()<-r()", "(p()<-q())<-r()"),
 
     ("p()<->q()<->r()", unparseable),
     ("p()->q()<-r()", unparseable),
     ("p()<-q()->r()", unparseable),
 
+    ("-(x+5)^2+9>=7 & y>5 -> [x:=1;]x>=1", "((((-(x+5)^2)+9)>=7) & (y>5)) -> ([x:=1;](x>=1))"),
     ("[x:=1;x:=2;x:=3;]x=3", "[x:=1;{x:=2;x:=3;}]x=3"),
     ("[x:=1;++x:=2;++x:=3;]x=3", "[x:=1;++{x:=2;++x:=3;}]x=3"),
 
@@ -605,6 +606,12 @@ class PairParserTests extends FlatSpec with Matchers {
 
   /** Program cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParseProgram: immutable.List[(String,String)] = List(
+    ("x:=x+1;", "x:=(x+1);"),
+    ("x:=2*x;", "x:=(2*x);"),
+    ("x:=2*x+1;", "x:=((2*x)+1);"),
+    ("x:=1+2*x;", "x:=(1+(2*x));"),
+    ("(x+1):=x;", unparseable),
+    ("x:=1;x:=2;", "x:=1;x:=2;"),
     ("x:=1;x:=2;x:=3;", "x:=1;{x:=2;x:=3;}"),
     ("x:=1;++x:=2;++x:=3;", "x:=1;++{x:=2;++x:=3;}"),
 
@@ -653,15 +660,15 @@ class PairParserTests extends FlatSpec with Matchers {
   }
 
   it should "term parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseTerm, s => {val r=parser(s); r shouldBe a[Term]; r})
+    pairParse(expectedParseTerm, s => {val r=parser.termParser(s); r shouldBe a[Term]; r})
   }
 
   it should "formula parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseFormula, s => {val r=parser(s); r shouldBe a[Formula]; r})
+    pairParse(expectedParseFormula, s => {val r=parser.formulaParser(s); r shouldBe a[Formula]; r})
   }
 
   it should "program parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseProgram, s => {val r=parser(s); r shouldBe a[Program]; r})
+    pairParse(expectedParseProgram, s => {val r=parser.programParser(s); r shouldBe a[Program]; r})
   }
 
   def pairParse(expected: List[(String,String)], parser: String=>Expression) = {
