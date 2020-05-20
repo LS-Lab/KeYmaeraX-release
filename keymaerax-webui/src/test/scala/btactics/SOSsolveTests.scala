@@ -62,8 +62,17 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     proveBy(prob1, prop & PolynomialArith.prepareArith & SOSSolve.witnessSOS(1)) shouldBe 'proved
   }
 
+  def isConstant(t: Term) : Boolean = t match {
+    case t: BinaryCompositeTerm => isConstant(t.left) && isConstant(t.right)
+    case t: UnaryCompositeTerm => isConstant(t.child)
+    case n: Number => true
+    case t: AtomicTerm => false
+    case t: FuncOf => false
+    case _ => ???
+  }
+
   def denominators(t: Term) : Seq[Term] = t match {
-    case Divide(a, b) => Seq(b)++denominators(a)++denominators(b)
+    case Divide(a, b) => if(isConstant(b)) denominators(a) else Seq(b)++denominators(a)++denominators(b)
     case t: BinaryCompositeTerm => denominators(t.left)++denominators(t.right)
     case t: UnaryCompositeTerm => denominators(t.child)
     case t: AtomicTerm => Seq()
