@@ -25,7 +25,7 @@ import scala.collection.immutable._
 class PairParserTests extends FlatSpec with Matchers {
   val pp = if (true) KeYmaeraXPrettyPrinter
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
-  val parser = KeYmaeraXParser
+  val parser = DLParser //KeYmaeraXParser
   KeYmaeraXTool.init(Map.empty)
   val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7",true))
 
@@ -653,15 +653,15 @@ class PairParserTests extends FlatSpec with Matchers {
   }
 
   it should "term parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseTerm, s => {val r=parser(s); r shouldBe a[Term]; r})
+    pairParse(expectedParseTerm, s => {val r=parser.termParser(s); r shouldBe a[Term]; r})
   }
 
   it should "formula parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseFormula, s => {val r=parser(s); r shouldBe a[Formula]; r})
+    pairParse(expectedParseFormula, s => {val r=parser.formulaParser(s); r shouldBe a[Formula]; r})
   }
 
   it should "program parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseProgram, s => {val r=parser(s); r shouldBe a[Program]; r})
+    pairParse(expectedParseProgram, s => {val r=parser.programParser(s); r shouldBe a[Program]; r})
   }
 
   def pairParse(expected: List[(String,String)], parser: String=>Expression) = {
