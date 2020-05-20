@@ -164,7 +164,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
             println("NoSOS(T)  : " + noSos)
             println("ratTacFail: " + ratTacFailure)
             println("OOS (Q)   : " + outofScopeQuantifier)
-            println("NoSOS(F)  : " + outofScopePower)
+            println("OOS (P)  : " + outofScopePower)
             println("Unknown   : " + unknown)
           }
         }
