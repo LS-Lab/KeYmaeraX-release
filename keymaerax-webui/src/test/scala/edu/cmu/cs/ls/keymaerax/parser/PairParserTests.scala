@@ -12,6 +12,8 @@ import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags
 
+import scala.collection.immutable
+
 import scala.collection.immutable._
 
 /**
@@ -39,46 +41,12 @@ class PairParserTests extends FlatSpec with Matchers {
     }
   }
 
-  "The parser" should "parse table of string pairs as expected" in {
-    pairParse(expectedParse, parser)
-  }
-
-  it should "term parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseT, s => {val r=parser(s); r shouldBe a[Term]; r})
-  }
-
-  it should "formula parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseF, s => {val r=parser(s); r shouldBe a[Formula]; r})
-  }
-
-  it should "program parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
-    pairParse(expectedParseP, s => {val r=parser(s); r shouldBe a[Program]; r})
-  }
-
-  def pairParse(expected: List[(String,String)], parser: String=>Expression) = {
-    for ((s1, s2) <- expected) {
-      println("\ninput : " + s1 + "\nversus: " + s2)
-      if (s2 == unparseable) {
-        // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
-        a[Throwable] should be thrownBy println("Parsed:  " + parser(s1))
-      } else {
-        val p1 = parser(s1)
-        val p2 = parser(s2)
-        println("parsed: " + pp(p1))
-        p1 shouldBe p2
-        parser(pp(p1)) shouldBe parser(pp(p2))
-        pp(p1) shouldBe pp(p2)
-        if (uipp.isDefined) println(uipp.get(p1))
-      }
-    }
-  }
-
   /** A special swearing string indicating that the other string cannot be parsed. */
   private val unparseable: String = "@#%@*!!!"
 
 
   /** Term cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
-  private val expectedParseT: List[(String,String)] = List(
+  private val expectedParseTerm: immutable.List[(String,String)] = List(
     ("x-y","(x)-(y)"),
     ("x+-y","x+(-y)"),
     // from doc/dL-grammar.md or crucially important
@@ -324,7 +292,7 @@ class PairParserTests extends FlatSpec with Matchers {
 
 
   /** Formula cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
-  private val expectedParseF: List[(String,String)] = List(
+  private val expectedParseFormula: immutable.List[(String,String)] = List(
     ("-(x+5)^2+9>=7 & y>5 -> [x:=1;]x>=1", "((((-(x+5)^2)+9)>=7) & (y>5)) -> ([x:=1;](x>=1))"),
     ("p()->q()->r()", "p()->(q()->r())"),
     ("p()<-q()<-r()", "(p()<-q())<-r()"),
@@ -636,7 +604,7 @@ class PairParserTests extends FlatSpec with Matchers {
   )
 
   /** Program cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
-  private val expectedParseP: List[(String,String)] = List(
+  private val expectedParseProgram: immutable.List[(String,String)] = List(
     ("x:=1;x:=2;x:=3;", "x:=1;{x:=2;x:=3;}"),
     ("x:=1;++x:=2;++x:=3;", "x:=1;++{x:=2;++x:=3;}"),
 
@@ -678,7 +646,43 @@ class PairParserTests extends FlatSpec with Matchers {
   )
 
   /** Left string is expected to parse like the right string parses, or not at all if right==unparseable */
-  private val expectedParse: List[(String,String)] = expectedParseT ++ expectedParseF ++ expectedParseP
+  private val expectedParseExpression: immutable.List[(String,String)] = expectedParseTerm ++ expectedParseFormula ++ expectedParseProgram
+
+  "The parser" should "parse table of string pairs as expected" in {
+    pairParse(expectedParseExpression, parser)
+  }
+
+  it should "term parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+    pairParse(expectedParseTerm, s => {val r=parser(s); r shouldBe a[Term]; r})
+  }
+
+  it should "formula parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+    pairParse(expectedParseFormula, s => {val r=parser(s); r shouldBe a[Formula]; r})
+  }
+
+  it should "program parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+    pairParse(expectedParseProgram, s => {val r=parser(s); r shouldBe a[Program]; r})
+  }
+
+  def pairParse(expected: List[(String,String)], parser: String=>Expression) = {
+    for ((s1, s2) <- expected) {
+      println("\ninput : " + s1 + "\nversus: " + s2)
+      if (s2 == unparseable) {
+        // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
+        a[Throwable] should be thrownBy parser(s1)
+      } else {
+        val p1 = parser(s1)
+        println("parsed: " + pp(p1))
+        val p2 = parser(s2)
+        println("versus: " + pp(p2))
+        p1 shouldBe p2
+        parser(pp(p1)) shouldBe parser(pp(p2))
+        pp(p1) shouldBe pp(p2)
+        if (uipp.isDefined) println(uipp.get(p1))
+      }
+    }
+  }
+
 
   //  "Parser" should "accept or throw parse errors for primes in primes" in {
 //    a[ParseException] shouldBe thrownBy(parser("(x')'"))
