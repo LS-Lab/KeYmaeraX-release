@@ -538,7 +538,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
+      useAt(DerivedAxioms.assignbExistsAxiom, PosInExpr(1::Nil), subst)(pos)
   })
 
   /**
@@ -557,6 +557,6 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new BelleUnsupportedFailure("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
+      useAt(DerivedAxioms.forallImpliesAssignbAxiom, PosInExpr(0::Nil), subst)(pos)
   })
 }

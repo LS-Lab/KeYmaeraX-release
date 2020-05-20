@@ -364,7 +364,7 @@ private object DifferentialTactics extends Logging {
           else Imply(last, Imply(fml, ctx(fml.replaceAt(PosInExpr(0::1::Nil), remainder))))
         proveBy(factFml,
           implyR(1)*2 & diffCut(last)(if (polarity > 0) -2 else 1) <(
-            Idioms.?(useAt("true&")(-2, PosInExpr(0::1::Nil))) & close
+            Idioms.?(useAt(DerivedAxioms.trueAnd)(-2, PosInExpr(0::1::Nil))) & close
             ,
             cohideOnlyR('Rlast) & diffInd()(1) & DebuggingTactics.done
           )

@@ -224,11 +224,11 @@ object AxiomaticODESolver {
       simpConsts(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
       DebuggingTactics.debug("AFTER simplifying consts", ODE_DEBUGGER) &
       (if (q == True && consts == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)) &
-        TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
-        (TactixLibrary.useAt("true->")(pos ++ PosInExpr(0 :: 1 :: Nil))
-          | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0 :: 1 :: Nil)))
+        TactixLibrary.useAt(DerivedAxioms.vacuousAllAxiom)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
+        (TactixLibrary.useAt(DerivedAxioms.trueImplies)(pos ++ PosInExpr(0 :: 1 :: Nil))
+          | TactixLibrary.useAt(DerivedAxioms.trueAnd)(pos ++ PosInExpr(0 :: 1 :: Nil)))
       else if (instEnd && q != True) TactixLibrary.allL(DURATION)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
-        TactixLibrary.useAt("<= flip")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil))
+        TactixLibrary.useAt(DerivedAxioms.flipLessEqual)(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil))
       else TactixLibrary.skip) &
       DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &
       simpSol & simpEvolDom &
