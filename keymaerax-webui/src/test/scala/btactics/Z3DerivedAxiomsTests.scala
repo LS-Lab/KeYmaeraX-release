@@ -7,7 +7,9 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
@@ -30,17 +32,33 @@ import scala.collection.immutable.Map
 @UsualTest
 class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
 
+  // @TODO: Change everything to ProvableInfo
   private def check(lemma: Lemma): Sequent = {
     println(lemma.name.get + "\n" + lemma.fact.conclusion)
     lemma.fact shouldBe 'proved
     useToClose(lemma)
     lemma.fact.conclusion
   }
+  private def check(pi: ProvableInfo): Sequent = {
+    println(pi.codeName + "\n" + pi.provable.conclusion)
+    pi.provable shouldBe 'proved
+    useToClose(pi)
+    pi.provable.conclusion
+  }
 
   private def useToClose(lemma: Lemma): Unit = {
     ProvableSig.startProof(lemma.fact.conclusion)(lemma.fact, 0) shouldBe 'proved
     //@note same test as previous line, just to make sure the lemma can be used by substitution
     theInterpreter(TactixLibrary.byUS(lemma), BelleProvable(ProvableSig.startProof(lemma.fact.conclusion))) match {
+      case BelleProvable(provable, _) => provable shouldBe 'proved
+      case _ => fail()
+    }
+  }
+
+  private def useToClose(pi: ProvableInfo): Unit = {
+    ProvableSig.startProof(pi.provable.conclusion)(pi.provable, 0) shouldBe 'proved
+    //@note same test as previous line, just to make sure the lemma can be used by substitution
+    theInterpreter(TactixLibrary.byUS(pi), BelleProvable(ProvableSig.startProof(pi.provable.conclusion))) match {
       case BelleProvable(provable, _) => provable shouldBe 'proved
       case _ => fail()
     }

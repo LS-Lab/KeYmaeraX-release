@@ -233,11 +233,11 @@ object DerivedAxiom {
             val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
             val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
               case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
-            val info = q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, key = $key, recursor = $recursor, theExpr = $expr)"""
+            val info = q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
             // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
             // the axiom info to the global axiom info table
-            val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.register($fullRhs, $info)"
-            val lemmaType = tq"edu.cmu.cs.ls.keymaerax.lemma.Lemma"
+            val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerDerived($fullRhs, $info)"
+            val lemmaType = tq"edu.cmu.cs.ls.keymaerax.macros.DerivedAxiomInfo"
             c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)
 

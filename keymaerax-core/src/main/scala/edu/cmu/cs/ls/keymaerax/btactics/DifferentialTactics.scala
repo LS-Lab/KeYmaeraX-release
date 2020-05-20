@@ -331,8 +331,8 @@ private object DifferentialTactics extends Logging {
     "dR" byWithInputs (f::/* todo unsupported argument type (argument not used from UI yet) hide::*/Nil,(pos,sequent) => {
     require(pos.isTopLevel, "dR only at top-level succedents/antecedents")
     val (newFml,ax) = sequent.sub(pos) match {
-      case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond.fact)
-      case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine.fact)
+      case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond)
+      case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine)
       case _ => throw new IllegalArgumentException("dR only for box/diamond ODEs")
     }
     val cpos = if (pos.isSucc) Fixed(pos) else LastSucc(0)

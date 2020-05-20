@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
-
+import DerivationInfoAugmentors._
 import scala.collection.immutable
 import scala.collection.immutable.Nil
 import scala.collection.mutable.ListBuffer
@@ -164,7 +164,7 @@ object ODELiveness {
 
     //g(|y_|) is the cofactor from darbouxGt
     val unifC = UnificationMatch.unifiable("g(|y_|)".asTerm, cofA).get.usubst
-    val dbx = DerivedAxioms.darbouxGt.fact(unifC)
+    val dbx = DerivedAxioms.darbouxGt.provable(unifC)
 
     val unifD = UnificationMatch.unifiable("c".asDifferentialProgram,extODE).get.usubst
     val commute = ElidingProvable(Provable.axioms(", commute")(unifD))

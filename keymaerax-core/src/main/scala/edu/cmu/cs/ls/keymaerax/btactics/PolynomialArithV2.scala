@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import DerivationInfoAugmentors._
 
 import scala.collection.immutable._
 
@@ -260,7 +261,7 @@ object PolynomialArithV2Helpers {
     prv(us)
   }
 
-  val equalReflex = anyArgify(DerivedAxioms.equalReflex.fact)
+  val equalReflex = anyArgify(DerivedAxioms.equalReflex.provable)
   val spat = "s_(||)".asTerm
   def equalReflex(t: Term) : ProvableSig = equalReflex(USubst(Seq(SubstitutionPair(spat, t))))
 

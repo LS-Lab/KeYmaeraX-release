@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, NamedBelleExpr}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -57,5 +57,10 @@ object DerivationInfoAugmentors {
           }
       }
     }
+  }
+
+  implicit class DerivedAxiomInfoAugmentor(val dai: DerivedAxiomInfo) {
+    def key: PosInExpr = PosInExpr(dai.theKey)
+    def recursor: List[PosInExpr] = dai.theRecursor.map(PosInExpr(_))
   }
 }

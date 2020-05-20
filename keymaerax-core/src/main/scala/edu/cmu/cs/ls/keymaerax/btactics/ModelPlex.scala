@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import org.apache.logging.log4j.scala.Logging
-
+import DerivationInfoAugmentors._
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
 
@@ -1060,15 +1060,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case And(LessEqual(_, _), Less(_, _)) => fromAxIndex("& recursor")::Nil
       case And(Less(_, _), LessEqual(_, _)) => fromAxIndex("& recursor")::Nil
       case And(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("& recursor")::Nil
-      case And(_: BinaryCompositeFormula, _) => (DerivedAxioms.andRecursor.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
-      case And(_, _: BinaryCompositeFormula) => (DerivedAxioms.andRecursor.fact, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case And(_: BinaryCompositeFormula, _) => (DerivedAxioms.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case And(_, _: BinaryCompositeFormula) => (DerivedAxioms.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
       case Or(Less(_, _), Less(_, _)) => fromAxIndex("metric < | <")::Nil
       case Or(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= | <=")::Nil
       case Or(LessEqual(_, _), Less(_, _)) => fromAxIndex("| recursor")::Nil
       case Or(Less(_, _), LessEqual(_, _)) => fromAxIndex("| recursor")::Nil
       case Or(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("| recursor")::Nil
-      case Or(_: BinaryCompositeFormula, _) => (DerivedAxioms.orRecursor.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
-      case Or(_, _: BinaryCompositeFormula) => (DerivedAxioms.orRecursor.fact, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case Or(_: BinaryCompositeFormula, _) => (DerivedAxioms.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case Or(_, _: BinaryCompositeFormula) => (DerivedAxioms.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
       case _ => Nil
     })
 
