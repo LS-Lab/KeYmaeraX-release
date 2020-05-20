@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging

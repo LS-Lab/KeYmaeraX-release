@@ -66,6 +66,11 @@ class SequentialInterpreterTests extends TacticTestBase {
     )
   }
 
+  it should "run right if left makes no progress" in {
+    proveBy("x>=0 ==> \\forall y (y=x -> y>=0)".asSequent, prop | allR(1)).subgoals.loneElement shouldBe "x>=0 ==> y=x -> y>=0".asSequent
+    proveBy("x>=0 -> \\forall y (y=x -> y>=0)".asFormula, SaturateTactic(prop | allR('R) | exhaustiveEqL2R('Llast))) shouldBe 'proved
+  }
+
   "After combinator" should "prove a simple property" in {
     inside (theInterpreter.apply(implyR(1) > close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
       case BelleProvable(p, _) => p shouldBe 'proved
@@ -148,10 +153,9 @@ class SequentialInterpreterTests extends TacticTestBase {
       assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close) shouldBe 'proved
   }
 
-  it should "not try right branch when used in combination with either combinator" in {
-    val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      SaturateTactic(SaturateTactic(andL('Llast)) | close))
-    result.subgoals.loneElement shouldBe "x=2, y=3, z=4 | z=5 ==> x=2".asSequent
+  it should "try right branch when used in combination with either combinator" in {
+    proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent,
+      SaturateTactic(SaturateTactic(andL('Llast)) | close)) shouldBe 'proved
   }
 
   it should "saturate 'Rlike' unification matching" in {
@@ -167,6 +171,12 @@ class SequentialInterpreterTests extends TacticTestBase {
     db.createProof(modelContent, "saturateTest")
     db.proveBy(modelContent, SaturateTactic(boxAnd('R) & andR('R)) & master()) shouldBe 'proved
   }}
+
+  it should "not endless repeat on new labels" in {
+    failAfter(1 second) {
+      proveBy("x>=0 ==> x>=0".asSequent, SaturateTactic(label("A label"))).subgoals.loneElement shouldBe "x>=0 ==> x>=0".asSequent
+    }
+  }
 
   "+ combinator" should "saturate with at least 1 repetition" in {
     val result = proveBy("x=2&y=3&(z=4|z=5) ==> x=2".asSequent, andL('Llast) & SaturateTactic(andL('Llast)))

@@ -5,12 +5,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 
 import scala.util.Random
 import scala.collection.immutable
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -152,7 +151,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case ow => ow->ow
     })}).toSet.flatten
     def doRepl(f: Formula, repl: (Expression, Expression)): Formula =
-      if (repl._1==repl._2) f else FormulaAugmentor(f).replaceAll(repl._1, repl._2)
+      if (repl._1==repl._2) f else f.replaceAll(repl._1, repl._2)
     println("Replace all " + repls.mkString(", "))
     // do all replacements repl to fml
     val inst = repls.foldRight(fml) ((repl, f) => doRepl(f,repl))

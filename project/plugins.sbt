@@ -1,10 +1,10 @@
-addSbtPlugin("io.spray" % "sbt-revolver" % "0.7.1")
+addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 
-addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "2.5.0")
+addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "5.2.4")
 
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.6")
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.10")
 
-addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.3.2")
+addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.4.3")
 
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
 

@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter, HackyInlineErrorMsgPrinter}
@@ -44,6 +44,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.macros._
+import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, QETacticTool, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
@@ -665,7 +667,8 @@ class SystemInfoRequest(db: DBAbstraction) extends LocalhostOnlyRequest with Rea
 class LicensesRequest() extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val reader = this.getClass.getResourceAsStream("/license/tools_licenses")
-    val lines = Source.fromInputStream(reader).mkString.lines.toList
+    // StringOps for JDK 11 compatibility
+    val lines = (Source.fromInputStream(reader).mkString: StringOps).lines.toList
     val header = lines.head
     val licenseStartPos = header.indexOf("License")
     val licenses = lines.tail.tail.map(l => l.splitAt(licenseStartPos)).map({case (tool, license) =>
@@ -1405,7 +1408,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
           val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
           session += proofId -> ProofSession(proofId, generator, problem.defs)
-          TactixLibrary.invGenerator = generator //@todo should not store invariant generator globally for all users
+          TactixLibrary.invSupplier = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
     }
@@ -1665,7 +1668,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val trace = db.getExecutionTrace(localProofId)
         val marginLeft::marginRight::Nil = db.getConfiguration(userId).config.getOrElse("renderMargins", "[40,80]").parseJson.convertTo[Array[Int]].toList
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
-          DerivationInfo.locate(parentTactic) match {
+          DerivationInfoRegistry.locate(parentTactic) match {
             case Some(ptInfo) => ExpandTacticResponse(localProofId, Nil, Nil,
               ptInfo.codeName, "", Nil, Nil, marginLeft, marginRight) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
@@ -1757,7 +1760,7 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
   override protected def doResultingResponses(): List[Response] = {
     val infos = axiomId match {
       case Some(aid) => (DerivationInfo.ofCodeName(aid), UIIndex.comfortOf(aid).map(DerivationInfo.ofCodeName)) :: Nil
-      case None => DerivationInfo.allInfo.map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
+      case None => DerivationInfoRegistry.allInfo.map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
     }
     ApplicableAxiomsResponse(infos, Map.empty) :: Nil
   }
@@ -1930,13 +1933,13 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   /** Checks expression inputs. */
   private def checkExpressionInput[E <: Expression](arg: ArgInfo, exprs: List[E], sequent: Sequent,
                                                     defs: KeYmaeraXArchiveParser.Declaration) = {
-    val sortMismatch = (arg, exprs) match {
-      case (_: TermArg, (t: Term) :: Nil) => arg.convert(t).right.toOption
-      case (_: FormulaArg, (f: Formula) :: Nil) => arg.convert(f).right.toOption
-      case (_: VariableArg, (v: Variable) :: Nil) => arg.convert(v).right.toOption
-      case (_: ExpressionArg, (e: Expression) :: Nil) => arg.convert(e).right.toOption
+    val sortMismatch: Option[String] = (arg, exprs) match {
+      case (_: VariableArg, (v: Variable) :: Nil) => DerivationInfoRegistry.convert(arg, List(v)).right.toOption
+      case (_: TermArg, (t: Term) :: Nil) => DerivationInfoRegistry.convert(arg, List(t)).right.toOption
+      case (_: FormulaArg, (f: Formula) :: Nil) => DerivationInfoRegistry.convert(arg, List(f)).right.toOption
+      case (_: ExpressionArg, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
       case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
-      case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
+      case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " +   exprs.map(_.prettyString).mkString(","))
     }
 
     sortMismatch match {

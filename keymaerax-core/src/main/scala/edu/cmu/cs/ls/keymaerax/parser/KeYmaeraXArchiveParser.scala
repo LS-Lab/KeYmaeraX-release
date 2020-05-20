@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 
 import scala.annotation.tailrec
+import scala.collection.immutable.StringOps
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -87,7 +88,7 @@ object KeYmaeraXArchiveParser {
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
     def exhaustiveSubst[T <: Expression](arg: T): T = try {
-      arg.exhaustiveSubst(USubst(substs)).asInstanceOf[T]
+      elaborateToFunctions(arg).exhaustiveSubst(USubst(substs)).asInstanceOf[T]
     } catch {
       case ex: SubstitutionClashException =>
         throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
@@ -824,6 +825,8 @@ object KeYmaeraXArchiveParser {
           case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
         }
 
+        //@note replaces all literal occurrences of variable uses with functions and relies on earlier check
+        //      that input does not mix variable and function use of the same symbol.
         val elaborated = definitions.elaborateToFunctions(problem)
         typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 
@@ -936,7 +939,7 @@ object KeYmaeraXArchiveParser {
   }
 
   private def slice(text: String, loc: Location): String = {
-    val lines = text.lines.slice(loc.begin.line - 1, loc.end.line).toList
+    val lines = (text: StringOps).lines.toList.slice(loc.begin.line - 1, loc.end.line).toList
     if (loc.end.line > loc.begin.line) {
       val header = lines.head.drop(loc.begin.column - 1)
       val footer = lines.last.take(loc.end.column)

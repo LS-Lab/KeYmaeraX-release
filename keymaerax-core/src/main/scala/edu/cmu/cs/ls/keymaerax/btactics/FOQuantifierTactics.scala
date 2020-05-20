@@ -22,17 +22,17 @@ protected object FOQuantifierTactics {
       case Some(Exists(vars, p)) =>
         require(vars.size == 1, "Exists by duality does not support block quantifiers")
         val v = vars.head
-        useAt("exists dual", PosInExpr(1::Nil))(pos) &
+        useAt(DerivedAxioms.existsDualAxiom, PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
-          } else base(pos++PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
+          } else base(pos++PosInExpr(0::Nil)) & useAt(DerivedAxioms.doubleNegationAxiom)(pos))
     })
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
   def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
     def allInstI(t: Term, v: Variable): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
       val fml = sequent.sub(pos) match { case Some(fml: Formula) => fml }
-      useAt("all instantiate", PosInExpr(1::Nil), (us: Option[Subst]) => RenUSubst(
+      useAt(DerivedAxioms.allInstantiate, PosInExpr(1::Nil), (us: Option[Subst]) => RenUSubst(
         ("x_".asTerm, v) ::
         ("f()".asTerm, t.replaceFree(v, "x_".asTerm)) ::
         ("p(.)".asFormula, fml.replaceFree(t, DotTerm())) :: Nil))(pos)
@@ -55,7 +55,7 @@ protected object FOQuantifierTactics {
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
-          useAt("all instantiate", uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(DerivedAxioms.allInstantiate, AxiomIndex.axiomIndex("all instantiate")._1, uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity in antecedent")
           def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
@@ -74,7 +74,7 @@ protected object FOQuantifierTactics {
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
           ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
-            cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate") & done
+            cohide('Rlast) & CMon(pos.inExpr) & byUS(DerivedAxioms.allInstantiate) & done
             )
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleThrowable("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
@@ -93,12 +93,12 @@ protected object FOQuantifierTactics {
 
       sequent.at(pos) match {
         case (ctx, f@Exists(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
-          useAt("exists eliminate")(pos)
+          useAt(DerivedAxioms.existsEliminate)(pos)
         case (ctx, f@Exists(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get))  =>
           //@todo assumes any USubstAboveURen
-          useAt("exists generalize", PosInExpr(1::Nil), (uso: Option[Subst]) => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(DerivedAxioms.existsGeneralize, PosInExpr(1::Nil), (uso: Option[Subst]) => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Exists(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           require((if (pos.isSucc) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\exists must have negative polarity in antecedent")
           def exists(h: Formula) = if (vars.length > 1) Exists(vars.filter(_ != vToInst(vars)), h) else h
@@ -120,7 +120,7 @@ protected object FOQuantifierTactics {
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
-              cohide(pos) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
+              cohide(pos) & CMon(pos.inExpr) & byUS(DerivedAxioms.existsGeneralize, subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleThrowable("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
@@ -270,22 +270,22 @@ protected object FOQuantifierTactics {
         }
     }
 
-    val (genFml, axiomName, subst) = sequent.sub(pos) match {
+    val (genFml, axiomLemma, subst) = sequent.sub(pos) match {
       case Some(f: Formula) if quantified == t =>
         val subst = (s: Option[Subst]) => s match {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
         }
-        (Forall(Seq(quantified), f), "all eliminate", subst)
+        (Forall(Seq(quantified), f), DerivedAxioms.allEliminateAxiom, subst)
       case Some(f: Formula) if quantified != t =>
         val subst = (s: Option[Subst]) => s match {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
         }
-        (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), "all instantiate", subst)
+        (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), DerivedAxioms.allInstantiate, subst)
     }
 
     cutAt(genFml)(pos) <(
       /* use */ skip,
-      /* show */ useAt(axiomName, PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &
+      /* show */ useAt(axiomLemma, PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &
         useAt(DerivedAxioms.implySelf)(pos.top) & closeT & done
       )
   })

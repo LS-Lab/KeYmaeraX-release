@@ -6,6 +6,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{existsR, _}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros._
+import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
