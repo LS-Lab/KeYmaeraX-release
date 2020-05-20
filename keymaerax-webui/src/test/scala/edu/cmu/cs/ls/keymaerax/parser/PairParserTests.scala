@@ -25,7 +25,7 @@ import scala.collection.immutable._
 class PairParserTests extends FlatSpec with Matchers {
   val pp = if (true) KeYmaeraXPrettyPrinter
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
-  val parser = DLParser //KeYmaeraXParser
+  val parser = KeYmaeraXParser
   KeYmaeraXTool.init(Map.empty)
   val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7",true))
 
