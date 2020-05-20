@@ -12,18 +12,18 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
- * Parser interface for KeYmaera X.
- * Provides a parser to read string inputs as differential dynamic logic.
- * A parser is a function from input strings to differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]].
- * {{{
- *     Parser: String => Expression
- * }}}
- * Parsers are adjoint to printers, i.e., they reparse printed expressions as the original expressions
- * but fail to parse syntactically ill-formed strings.
- * @author Andre Platzer
- * @see [[TokenParser]]
-* @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
- */
+  * Parser interface for KeYmaera X.
+  * Provides a parser to read string inputs as differential dynamic logic.
+  * A parser is a function from input strings to differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]].
+  * {{{
+  *     Parser: String => Expression
+  * }}}
+  * Parsers are adjoint to printers, i.e., they reparse printed expressions as the original expressions
+  * but fail to parse syntactically ill-formed strings.
+  * @author Andre Platzer
+  * @see [[TokenParser]]
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  */
 trait Parser extends (String => Expression) {
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression
     * @param input the string to parse as a dL formula, dL term, or dL program.
