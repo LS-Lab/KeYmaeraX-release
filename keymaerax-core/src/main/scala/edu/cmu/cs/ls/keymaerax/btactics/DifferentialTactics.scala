@@ -1148,8 +1148,9 @@ private object DifferentialTactics extends Logging {
       diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
     } else seq.sub(pos) match {
       case Some(b@Box(sys: ODESystem, _)) =>
-        // Try to prove postcondition invariant
-        odeInvariant()(pos) & done |
+        // Try to prove postcondition invariant. If we don't have an invariant generator, try hard immediately.
+        (if (ToolProvider.invGenTool().isEmpty) odeInvariant(tryHard = true, useDw = true)(pos) & done
+         else odeInvariant()(pos) & done) |
         // Counterexample check
         cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
           // Some additional cases

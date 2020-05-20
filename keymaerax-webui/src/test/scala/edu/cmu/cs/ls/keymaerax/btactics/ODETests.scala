@@ -93,6 +93,10 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("\\forall x_0 (x_0>0->\\exists y_ (true->x_0*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula, QE) shouldBe 'proved
   }
 
+  it should "prove a postcondition invariant that requires trying hard" in withZ3 { _ =>
+    proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe 'proved
+  }
+
   "QE" should "be able to prove the arithmetic subgoal from x'=-x case" in withQE { _ =>
     val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
     TactixLibrary.proveBy(f, QE) shouldBe 'proved
