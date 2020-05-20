@@ -4103,33 +4103,37 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("powOne" , "powOne")
   lazy val powOne = derivedAxiom("F^1", Sequent(IndexedSeq(), IndexedSeq("f_()^1 = f_()".asFormula)), QE)
 
-  // @TODO: Make annotation-friendly
+  private def equivSequent(t: String, tt: String): Sequent =
+    Sequent(IndexedSeq(),IndexedSeq(Equiv(t.asFormula,tt.asFormula)))
+  private def implySequent(f: String, t: String, tt: String): Sequent =
+    Sequent(IndexedSeq(),IndexedSeq(Imply(f.asFormula,Equiv(t.asFormula,tt.asFormula))))
+  private def propQE: BelleExpr = prop & QE & done
   // The following may already appear above
   // They are stated here in a shape suitable for the simplifier
-  private def mkDerivedAxiom(name:String,f:Option[String],t:String,tt:String):Lemma =
-  {
-    val tfml = t.asFormula
-    val ttfml  = tt.asFormula
-    f match{
-      case None => derivedAxiom(name,Sequent(IndexedSeq(),IndexedSeq(Equiv(tfml,ttfml))),prop & QE & done)
-      case Some(f) => derivedAxiom(name,Sequent(IndexedSeq(),IndexedSeq(Imply(f.asFormula,Equiv(tfml,ttfml)))),prop & QE & done)
-    }
-  }
-
   //(Ir)reflexivity axioms for comparison operators
-  lazy val lessNotRefl      = mkDerivedAxiom("< irrefl",  None,"F_()<F_()","false")
-  lazy val greaterNotRefl   = mkDerivedAxiom("> irrefl", None,"F_()>F_()","false")
-  lazy val notEqualNotRefl  = mkDerivedAxiom("!= irrefl",None,"F_()!=F_()","false")
+  @DerivedAxiom("lessNotRefl", "lessNotRefl", unifier = "full")
+  lazy val lessNotRefl      = derivedAxiom("< irrefl", equivSequent("F_()<F_()","false"), propQE)
+  @DerivedAxiom("greaterNotRefl", "greaterNotRefl", unifier = "full")
+  lazy val greaterNotRefl   = derivedAxiom("> irrefl", equivSequent("F_()>F_()","false"), propQE)
+  @DerivedAxiom("notEqualNotRefl", "notEqualNotRefl", unifier = "full")
+  lazy val notEqualNotRefl  = derivedAxiom("!= irrefl", equivSequent("F_()!=F_()","false"), propQE)
   /** @see [[equivReflexiveAxiom]] */
-  lazy val equalRefl        = mkDerivedAxiom("= refl",   None,"F_() = F_()","true")
-  lazy val lessEqualRefl    = mkDerivedAxiom("<= refl",  None,"F_() <= F_()","true")
-  lazy val greaterEqualRefl = mkDerivedAxiom(">= refl",  None,"F_() >= F_()","true")
+  @DerivedAxiom("equalRefl", "equalRefl", unifier = "full")
+  lazy val equalRefl        = derivedAxiom("= refl", equivSequent("F_() = F_()","true"), propQE)
+  @DerivedAxiom("lessEqualRefl", "lessEqualRefl", unifier = "full")
+  lazy val lessEqualRefl    = derivedAxiom("<= refl", equivSequent("F_() <= F_()","true"), propQE)
+  @DerivedAxiom("greaterEqualRefl", "greaterEqualRefl", unifier = "full")
+  lazy val greaterEqualRefl = derivedAxiom(">= refl", equivSequent("F_() >= F_()","true"), propQE)
 
   //(anti) symmetry axioms
-  lazy val equalSym = mkDerivedAxiom("= sym",Some("F_() = G_()"),"G_() = F_()","true")
-  lazy val notEqualSym = mkDerivedAxiom("!= sym",Some("F_() != G_()"),"G_() != F_()","true")
-  lazy val greaterNotSym = mkDerivedAxiom("> antisym",Some("F_() > G_()"),"G_() > F_()","false")
-  lazy val lessNotSym = mkDerivedAxiom("< antisym",Some("F_() < G_()"),"G_() < F_()","false")
+  @DerivedAxiom("equalSym", "equalSym")
+  lazy val equalSym = derivedAxiom("= sym", implySequent("F_() = G_()", "G_() = F_()","true"), propQE)
+  @DerivedAxiom("notEqualSym", "notEqualSym")
+  lazy val notEqualSym = derivedAxiom("!= sym", implySequent("F_() != G_()","G_() != F_()","true"), propQE)
+  @DerivedAxiom("greaterNotSym", "greaterNotSym")
+  lazy val greaterNotSym = derivedAxiom("> antisym", implySequent("F_() > G_()","G_() > F_()","false"), propQE)
+  @DerivedAxiom("lessNotSym", "lessNotSym")
+  lazy val lessNotSym = derivedAxiom("< antisym", implySequent("F_() < G_()","G_() < F_()","false"), propQE)
 
 
   /**
