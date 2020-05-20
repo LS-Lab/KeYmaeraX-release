@@ -299,9 +299,17 @@ object ODEInvariance {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (fml,propt1) = semiAlgNormalize(post)
+    val (fml,propt1) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
-    val (fmlMM,propt2) = maxMinGeqNormalize(fml)
+    val (fmlMM,propt2) = try {
+      maxMinGeqNormalize(fml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to max/min/>=", ex)
+    }
 
     require(fmlMM.isInstanceOf[GreaterEqual], "Normalization failed to reach max/min normal form "+fmlMM)
 
@@ -321,7 +329,11 @@ object ODEInvariance {
         useAt(pr,PosInExpr(1::Nil))(1,PosInExpr(0::1::Nil)))
     }
 
-    val (pf,inst) = fStar(sys,fml)
+    val (pf,inst) = try {
+      fStar(sys,fml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       tac1 & tac2 &
@@ -369,7 +381,11 @@ object ODEInvariance {
     f match {
       case cf:ComparisonFormula =>
         //findDbx
-        val (pr, cofactor, rem) = findDbx(ode, dom, cf,false)
+        val (pr, cofactor, rem) = try {
+          findDbx(ode, dom, cf,false)
+        } catch {
+          case _: IllegalArgumentException => return None
+        }
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
