@@ -220,15 +220,17 @@ object DerivedAxiom {
               c.abort(c.enclosingPosition, s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam")
             // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
             val codeName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
+            val storageName = TermName(codeName.toString.toLowerCase)
             // AST for literal strings for the names
             val codeString = Literal(Constant(codeName.decodedName.toString))
+            val storageString = Literal(Constant(storageName.decodedName.toString))
             val canonString = params(0)
             // derivedAxiom functions allow an optional argument for the codeName, which we supply here
-            val fullParams = params.take(minParam).:+(q"Some($codeString)")
+            val fullParams = params.take(minParam).:+(q"Some($storageString)")
             val fullRhs = q"$functionName( ..$fullParams)"
             // Tactic implementation of derived axiom is always useAt
             val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus.useAt($canonString)})""" // : (Unit => Any)
-            val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Knknown unifier " + s)}
+            val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
             val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
               case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
             val info = q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, key = $key, recursor = $recursor, theExpr = $expr)"""
