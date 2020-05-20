@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimulationTool.{SimRun, SimState, Simulation}
 import edu.cmu.cs.ls.keymaerax.tools._
+import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Result
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{Map, Seq}
@@ -193,7 +194,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = mPegasus.lzzCheck(ode, inv)
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = mPegasus.refuteODE(ode, assumptions, postCond)
   override def genODECond(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): (List[Formula],List[Formula]) = mPegasus.genODECond(ode, assumptions, postCond)
-  override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int, timeout: Option[Int]): Either[(Term, List[Term]), String] = mSOSsolve.sosSolve(polynomials, variables, degree, timeout)
+  override def sosSolve(polynomials: List[Term], variables: List[Term], degree: Int, timeout: Option[Int]): Result = mSOSsolve.sosSolve(polynomials, variables, degree, timeout)
 
 
   /** Restarts the MathKernel with the current configuration */

@@ -936,7 +936,7 @@ object PolynomialArith extends Logging {
           case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
           case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
           case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
-          case _ => hideR(ind)
+          case _ => ident
         }) & tac
       }
     }
@@ -953,7 +953,7 @@ object PolynomialArith extends Logging {
           case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
           case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
           case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => hideL(ind)
+          case _ => ident
         }) & tac
       }
     }
@@ -989,7 +989,7 @@ object PolynomialArith extends Logging {
           //case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
           //case Less(f, g) => useAt(ltAnteZ)(ind) & andL(ind) & existsL(ind)
           case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => hideL(ind)
+          case _ => ident
         }) & tac
       } & SaturateTactic(notR('R))
     }

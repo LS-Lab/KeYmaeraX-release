@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.BigDecimalTool
+import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.collection.immutable._
@@ -54,7 +55,11 @@ object SOSSolve {
   }
 
   lazy val witnessSOSLemma = AnonymousLemmas.remember("(sos_() > 0 & sos_() = comb_() & comb_() = 0) -> false".asFormula, QE & done)
-  private def witnessSOS(degree: Int, timeout: Option[Int] = None) : DependentTactic = {
+
+  case class SOSSolveAborted() extends BelleProofSearchControl("sossolve aborted")
+  case class SOSSolveNoSOS() extends BelleProofSearchControl("sossolve did not find sos")
+
+  def witnessSOS(degree: Int, timeout: Option[Int] = None) : DependentTactic = {
     val name = "witnessSOS"
     name by { (seq: Sequent) =>
       require(seq.succ.isEmpty, name + " requires succedent to be empty")
@@ -66,8 +71,9 @@ object SOSSolve {
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
       TaylorModelTactics.Timing.tic()
       val (sos, cofactors) = sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
-        case Left(res) => res
-        case Right(msg) => throw new BelleProofSearchControl(msg)
+        case Witness(sos, cofactors) => (sos, cofactors)
+        case NoSOS => throw new SOSSolveNoSOS
+        case Aborted => throw new SOSSolveAborted
       }
       TaylorModelTactics.Timing.toc("sosSolve")
       val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
@@ -85,13 +91,6 @@ object SOSSolve {
     }
   }
 
-  val pushNegAt = "ANON" by { (pos: Position, seq: Sequent) =>
-    seq.sub(pos) match {
-      case Some(Not(Forall(_, _))) =>
-    }
-    skip
-  }
-
   val normalizeNNF = "ANON" by { (seq: Sequent) =>
     (seq.zipAnteWithPositions.flatMap { case(fml, pos) =>
       SimplifierV3.baseNormalize(fml) match {
@@ -106,8 +105,4 @@ object SOSSolve {
     }).foldLeft(skip)(_ & _) & SaturateTactic(notR('R))
   }
 
-  def sossolve(degree: Int, timeout: Option[Int] = None) : BelleExpr = "ANON" by {
-    PolynomialArith.prepareArith &
-    witnessSOS(degree, timeout)
-  }
 }

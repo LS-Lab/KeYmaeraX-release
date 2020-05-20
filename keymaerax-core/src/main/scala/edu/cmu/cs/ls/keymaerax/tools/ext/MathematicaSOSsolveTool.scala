@@ -2,12 +2,21 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.ext.ExtMathematicaOpSpec._
 import edu.cmu.cs.ls.keymaerax.tools.install.SOSsolveInstaller
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
 import edu.cmu.cs.ls.keymaerax.tools.qe.{KeYmaeraToMathematica, MathematicaOpSpec}
 import org.apache.logging.log4j.scala.Logging
+
+object SOSsolveTool {
+  trait Result
+  final case object Aborted extends Result
+  final case object NoSOS extends Result
+  final case class Witness(sos: Term, cofactors: List[Term]) extends Result
+  final case class Exception(exception: Throwable) extends Result
+}
 
 trait SOSsolveTool {
   /**
@@ -16,7 +25,7 @@ trait SOSsolveTool {
     * @param vars variables of polys
     * @return (1 + sos, cofactors) such that  (cofactors, polynomials).zipped.map(Times) = 1 + sos.
     */
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Either[(Term, List[Term]), String]
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : SOSsolveTool.Result
 }
 
 /**
@@ -27,6 +36,8 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[Expression](link, new KeYmaeraToMathematica(), PegasusM2KConverter)
     with SOSsolveTool
     with Logging {
+
+  import SOSsolveTool._
 
   private val SOSSOLVE_NAMESPACE = "SOSsolve`"
 
@@ -47,7 +58,8 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
         ).foldLeft(g)(Plus.apply)
       (sos, PegasusM2KConverter.decodeTermList(cofactors))
     }
-    case e => throw new IllegalArgumentException("Expected pair of sos and cofactors but got " + e)
+    case e =>
+      throw new IllegalArgumentException("Expected pair of sos and cofactors but got " + e)
   }
 
   /** FIXME: why is this.timeout a var? Provide a this.timeConstrained with a functional timeout argument!
@@ -60,7 +72,7 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     case _ => throw new IllegalArgumentException("Timeout must be positive")
   }
 
-  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Either[(Term, List[Term]), String] = {
+  def sosSolve(polys: List[Term], vars: List[Term], degree: Int, timeout: Option[Int]) : Result = {
     val mPolys = list(polys.map(k2m):_*)
     val mVars = list(vars.map(k2m):_*)
     val mDegree = int(degree)
@@ -77,13 +89,15 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
       logger.debug("Found witness: " + result.prettyString + " from raw output " + output)
       val (sos, cofactors) = decodeWitness(result)
       sos match {
-        case Number(n) if n.compareTo(0) == 0 =>
-          Right("sos = 0")
-        case _ => Left((sos, cofactors))
+        case Number(n) if n.compareTo(0) <= 0 =>
+          NoSOS
+        case _ => Witness(sos, cofactors)
       }
     } catch {
+      case _: MathematicaComputationAbortedException =>
+        Aborted
       case ex: Throwable =>
-        Right("SOSsolve exception: " + ex)
+        Exception(ex)
     }
   }
 }
