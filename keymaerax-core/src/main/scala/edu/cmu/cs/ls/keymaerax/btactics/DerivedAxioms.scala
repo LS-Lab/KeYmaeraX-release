@@ -2508,7 +2508,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  @DerivedAxiom("DIo >", "DIogreater", formula = "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]g(x)>h(x)</span>↔[?Q]g(x)>h(x))←(Q→[{x′=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))′))"
+  @DerivedAxiom("DIo <", "DIoless", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]g(x)<h(x)</span>↔[?Q]g(x)<h(x))←(Q→[{x'=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))'))"
     , unifier = "linear")
   lazy val DIOpeninvariantLess =
     derivedAxiom("DIo open differential invariance <",
