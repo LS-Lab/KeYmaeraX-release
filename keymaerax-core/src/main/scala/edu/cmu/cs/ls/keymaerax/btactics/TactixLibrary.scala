@@ -193,10 +193,12 @@ object TactixLibrary extends HilbertCalculus
   def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic(
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
     Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
-      ss.succ.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
+      ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }))) &
     Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
-      ss.ante.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
+      ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     })))
   )
 
@@ -927,8 +929,7 @@ object TactixLibrary extends HilbertCalculus
     })
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
-  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new ProverSetupException("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
-
+  def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]] = ToolProvider.cexTool().getOrElse(throw new ProverSetupException("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
 
   ///
 
