@@ -124,8 +124,8 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
           } else {
             try {
               println(preprocessed.subgoals.length + " subgoal(s):")
-              println(preprocessed)
-              val res = for (subgoal <- preprocessed.subgoals) yield {
+              val res = for ((subgoal, subgoalN) <- preprocessed.subgoals.zipWithIndex) yield {
+                println("Subgoal " + subgoalN + ": " + subgoal.ante.mkString(", "))
                 val denoms = denominators(subgoal)
                 if (denoms.isEmpty)
                   proveBy(subgoal, SOSSolve.witnessSOS(degree, Some(timeout)))
@@ -165,9 +165,9 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
 
             println("Aborted(T): " + aborted)
             println("NoSOS(T)  : " + noSos)
+            println("non-universal: " + outofScopeQuantifier)
+            println("non-natural power: " + outofScopePower)
             println("ratTacFail: " + ratTacFailure)
-            println("OOS (Q)   : " + outofScopeQuantifier)
-            println("OOS (P)  : " + outofScopePower)
             println("Unknown   : " + unknown)
           }
         }
