@@ -158,14 +158,11 @@ object DerivedAxiom {
             "inputs" -> Literal(Constant(""))
           )
           val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams (acc, x)})
-          val displayObj = c.eval[Any](c.Expr(paramMap("names")))
-          val fml: String = c.eval[String](c.Expr(paramMap("formula")))
-          val inputs: List[ArgInfo] = parseAIs(c.eval[String](c.Expr(paramMap("inputs"))))
-          val codeName = c.eval[String](c.Expr(paramMap("codeName")))
-          val unifier: String = c.eval[String](c.Expr(paramMap("unifier")))
-          val displayLevel: String = c.eval[String](c.Expr(paramMap("displayLevel")))
-          val key: ExprPos = c.eval[ExprPos](c.Expr(paramMap("key")))
-          val recursor: List[ExprPos] = c.eval[List[ExprPos]](c.Expr(paramMap("recursor")))
+          val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, key: ExprPos, recursor: List[ExprPos])
+          = (c.eval[(Any, String, String, String, String, String, ExprPos, List[ExprPos])](c.Expr
+            (q"""(${paramMap("names")}, ${paramMap("formula")}, ${paramMap("inputs")}, ${paramMap("codeName")}, ${paramMap("unifier")},
+              ${paramMap("displayLevel")}, ${paramMap("key")}, ${paramMap("recursor")})""")))
+          val inputs: List[ArgInfo] = parseAIs(inputString)
           val simpleDisplay = displayObj match {
             case s: String => SimpleDisplayInfo(s, s)
             case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
