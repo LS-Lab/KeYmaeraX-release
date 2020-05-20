@@ -234,3 +234,4 @@ class UniformMatcher extends UniformMatching {
     }
 }
 
+object UniformMatcher extends UniformMatcher

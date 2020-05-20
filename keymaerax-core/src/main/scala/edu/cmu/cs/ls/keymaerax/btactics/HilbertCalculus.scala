@@ -205,7 +205,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games
     */
-  lazy val V                  : DependentPositionTactic = useAt("V vacuous")
+  lazy val V                  : DependentPositionTactic = useAt(DerivedAxioms.vacuousAxiom)
   /** VK: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`
     * and provided `[a]true` proves, e.g., since `a` is a hybrid system.
     */
@@ -216,17 +216,19 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //
 
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
-  lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
+  lazy val DW                 : DependentPositionTactic = useAt(DerivedAxioms.DWeakening)
   /** DWd: Diamond Differential Weakening to use evolution domain constraint `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)}>(q(x)&p(x))` */
-  lazy val DWd                 : DependentPositionTactic = useAt("DWd diamond differential weakening")
+  lazy val DWd                 : DependentPositionTactic = useAt(DerivedAxioms.DWddifferentialweakening)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
-    useAt("DC differential cut",
+    useAt(DerivedAxioms.DiffCut,
+      AxiomIndex.axiomIndex("DC differential cut")._1,
       (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   })
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DCd(invariant: Formula)  : DependentPositionTactic = useAt("DCd diamond differential cut",
+  def DCd(invariant: Formula)  : DependentPositionTactic = useAt(DerivedAxioms.DCddifferentialcut,
+    AxiomIndex.axiomIndex("DCd diamond differential cut")._1,
     (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols
@@ -252,7 +254,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
     * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
     * @see [[DifferentialTactics.diffInd()]] */
-  lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant")
+  lazy val DI                 : DependentPositionTactic = useAt(DerivedAxioms.DIinvariant)
 
   //@todo replace with a DG(DifferentialProgram) tactic instead to use said axiom.
 
@@ -418,11 +420,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //
 
   /** boxAnd: splits `[a](p&q)` into `[a]p & [a]q` */
-  lazy val boxAnd             : DependentPositionTactic = useAt("[] split")
+  lazy val boxAnd             : DependentPositionTactic = useAt(DerivedAxioms.boxAnd)
   /** diamondOr: splits `⟨a⟩(p|q)` into `⟨a⟩p | ⟨a⟩q` */
-  lazy val diamondOr          : DependentPositionTactic = useAt("<> split")
+  lazy val diamondOr          : DependentPositionTactic = useAt(DerivedAxioms.diamondOr)
   /** boxImpliesAnd: splits `[a](p->q&r)` into `[a](p->q) & [a](p->r)` */
-  lazy val boxImpliesAnd      : DependentPositionTactic = useAt("[] conditional split")
+  lazy val boxImpliesAnd      : DependentPositionTactic = useAt(DerivedAxioms.boxImpliesAnd)
 
   // def ind
 
@@ -435,13 +437,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
     *******************************************************************/
 
   /** allV: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val allV               : DependentPositionTactic = useAt("vacuous all quantifier")
+  lazy val allV               : DependentPositionTactic = useAt(DerivedAxioms.vacuousAllAxiom)
   /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val existsV            : DependentPositionTactic = useAt("vacuous exists quantifier")
+  lazy val existsV            : DependentPositionTactic = useAt(DerivedAxioms.vacuousExistsAxiom)
   //@todo document and unclear what it really does depending on the index
   lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
 
   //@todo document and unclear what it really does depending on the index
-  lazy val existsE            : DependentPositionTactic = useAt("exists eliminate")
+  lazy val existsE            : DependentPositionTactic = useAt(DerivedAxioms.existsEliminate)
 
 }

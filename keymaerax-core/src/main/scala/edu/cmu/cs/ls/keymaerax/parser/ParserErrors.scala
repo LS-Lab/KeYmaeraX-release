@@ -9,6 +9,8 @@ import edu.cmu.cs.ls.keymaerax.core.Expression
 import edu.cmu.cs.ls.keymaerax.core.ProverException
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{ParseState, TokenStream}
 
+import scala.collection.immutable.StringOps
+
 /**
  * Indicates a parse error at the given location,
  * with the context information state.
@@ -29,7 +31,7 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
     val lineInfo = if (input == "") "<empty>" else loc match {
       case UnknownLocation => "<unknown>"
       case _ => assert(loc.line>0 && loc.column>0, "positive location")
-        val lines = input.lines.toList
+        val lines = (input: StringOps).lines.toList
         if (loc.line > lines.size) "<past EOF> at line " + loc.line
         else {
           //assert(!lines.isEmpty, "nonempty number of lines:\n" + input)

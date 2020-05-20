@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{USubstTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.macros._
+import DerivationInfoAugmentors._
 import testHelper.CustomAssertions.withSafeClue
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, PrivateMethodTester}
 
@@ -23,7 +25,7 @@ import scala.collection.immutable.IndexedSeq
  */
 @UsualTest
 @USubstTest
-class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
+class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
 
   private def V(s: String) = Variable(s, None, Real)
 

@@ -50,6 +50,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
       getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
         // delete all stored lemmas
         LemmaDBFactory.lemmaDB.deleteDatabase()
+        DerivationInfoRegistry.init
         // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
         val c = DerivedAxioms.getClass.getDeclaredConstructor()
         c.setAccessible(true)

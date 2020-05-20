@@ -18,6 +18,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
+import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -376,7 +378,7 @@ private object DifferentialTactics extends Logging {
           else Imply(last, Imply(fml, ctx(fml.replaceAt(PosInExpr(0::1::Nil), remainder))))
         proveBy(factFml,
           implyR(1)*2 & diffCut(last)(if (polarity > 0) -2 else 1) <(
-            Idioms.?(useAt("true&")(-2, PosInExpr(0::1::Nil))) & close
+            Idioms.?(useAt(DerivedAxioms.trueAnd)(-2, PosInExpr(0::1::Nil))) & close
             ,
             cohideOnlyR('Rlast) & diffInd()(1) & DebuggingTactics.done
           )

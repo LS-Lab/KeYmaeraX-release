@@ -9,7 +9,8 @@ import java.util.{Calendar, Date}
 
 import akka.http.scaladsl.model.{Multipart, StatusCodes}
 import akka.http.scaladsl.server.{ExceptionHandler, Route, StandardRoute}
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry
+import edu.cmu.cs.ls.keymaerax.macros._
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser

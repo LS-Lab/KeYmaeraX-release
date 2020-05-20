@@ -48,7 +48,7 @@ private object DLBySubst {
         (pattern, (ru:RenUSubst) => {
           Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel")
           //ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
-          TactixLibrary.by("Goedel", ru.usubst)
+          TactixLibrary.by(DerivedAxioms.Goedel, ru.usubst)
         })::Nil
     )
   }
@@ -552,7 +552,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt("[:=] assign exists", PosInExpr(1::Nil), subst)(pos)
+      useAt(DerivedAxioms.assignbExistsAxiom, PosInExpr(1::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -573,7 +573,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt("[:=] assign all", PosInExpr(0::Nil), subst)(pos)
+      useAt(DerivedAxioms.forallImpliesAssignbAxiom, PosInExpr(0::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })

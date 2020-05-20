@@ -655,13 +655,13 @@ final class FastURenAboveUSubst(private[infrastruct] val subsDefsInput: immutabl
     }
   }
 
-  override lazy val toCore: Expression => Expression = e => throw new Error("not implemented") /*{
+  override lazy val toCore: Expression => Expression = e => {
     val replaced = usubst(e)
     Predef.assert(rens.toMap.keySet.intersect(rens.toMap.values.toSet).isEmpty, "no cyclic renaming")
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
     //rens.foldLeft(replaced)((expr,sp)=>URename(sp._1,sp._2)(expr))
     renall.toCore(replaced)
-  }*/
+  }
 
   override def toString: String
   = "FastUSubstAboveRen{" + subsDefs.mkString(", ") + ";" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + "}"
