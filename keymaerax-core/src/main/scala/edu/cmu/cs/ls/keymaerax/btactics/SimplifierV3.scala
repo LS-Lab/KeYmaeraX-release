@@ -10,6 +10,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
 
 import scala.collection.immutable._
 
@@ -527,7 +530,7 @@ object SimplifierV3 {
             val res = m.reapply(m.program,uf)
 
             // |- [a]p <-> [a]p
-            val init = DerivedAxioms.equivReflexiveAxiom.fact(
+            val init = DerivedAxioms.equivReflexiveAxiom.provable(
               USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil))
 
             // |- [a]p <-> [a]q
@@ -773,31 +776,31 @@ object SimplifierV3 {
 //  }
 
   //These are mostly just the basic unit and identity rules
-  private lazy val mulArith = List(
-    DerivedAxioms.zeroTimes.fact,
-    DerivedAxioms.timesZero.fact,
-    DerivedAxioms.timesIdentity.fact,
-    useFor(DerivedAxioms.timesCommute.fact, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.timesIdentity.fact),
-    DerivedAxioms.timesIdentityNeg.fact,
-    useFor(DerivedAxioms.timesCommute.fact, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.timesIdentityNeg.fact))
+  private lazy val mulArith: List[ProvableSig] = List(
+    DerivedAxioms.zeroTimes.provable,
+    DerivedAxioms.timesZero.provable,
+    DerivedAxioms.timesIdentity.provable,
+    useFor(DerivedAxioms.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.timesIdentity.provable),
+    DerivedAxioms.timesIdentityNeg.provable,
+    useFor(DerivedAxioms.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.timesIdentityNeg.provable))
 
-  private lazy val plusArith = List(
-    DerivedAxioms.plusZero.fact,
-    DerivedAxioms.zeroPlus.fact)
+  private lazy val plusArith: List[ProvableSig] = List(
+    DerivedAxioms.plusZero.provable,
+    DerivedAxioms.zeroPlus.provable)
 
-  private lazy val minusArith = List(
-    DerivedAxioms.minusZero.fact,
-    DerivedAxioms.zeroMinus.fact)
+  private lazy val minusArith: List[ProvableSig] = List(
+    DerivedAxioms.minusZero.provable,
+    DerivedAxioms.zeroMinus.provable)
 
   //TODO: move to DerivedAxioms?
-  lazy val divArith = List(
-    DerivedAxioms.zeroDivNez.fact,
-    useFor(DerivedAxioms.gtzImpNez.fact, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.zeroDivNez.fact),
-    useFor(DerivedAxioms.ltzImpNez.fact, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.zeroDivNez.fact))
+  lazy val divArith: List[ProvableSig] = List(
+    DerivedAxioms.zeroDivNez.provable,
+    useFor(DerivedAxioms.gtzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.zeroDivNez.provable),
+    useFor(DerivedAxioms.ltzImpNez, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.zeroDivNez.provable))
 
-  lazy val powArith = List(
-    DerivedAxioms.powZero.fact,
-    DerivedAxioms.powOne.fact)
+  lazy val powArith: List[ProvableSig] = List(
+    DerivedAxioms.powZero.provable,
+    DerivedAxioms.powOne.provable)
 
   //These may also be useful:
   //qeTermProof("F_()*(F_()^-1)","1",Some("F_()>0")), qeTermProof("(F_()^-1)*F_()","1",Some("F_()>0")))
@@ -807,14 +810,14 @@ object SimplifierV3 {
   //  qeTermProof("F_()+G_()-G_()","F_()"),
 
   def arithBaseIndex (t:Term,ctx:context) : List[ProvableSig] = {
-    t match {
+    (t match {
       case Plus(_,_) => plusArith
       case Minus(_,_) => minusArith
       case Times(_,_) => mulArith
       case Divide(_,_) => divArith
       case Power(_,_) => powArith
       case _ => List()
-    }
+    })
   }
 
   //This generates theorems on the fly to simplify ground arithmetic (only for integers)
@@ -928,11 +931,11 @@ object SimplifierV3 {
     ).filter(_.isProved)
   }
 
-  private lazy val eqs = DerivedAxioms.equalSym.fact::qeSearch(Equal.apply,List(NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
-  private lazy val neqs = DerivedAxioms.notEqualSym.fact::qeSearch(NotEqual.apply,List(Equal.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
-  private lazy val gts = DerivedAxioms.greaterNotSym.fact::qeSearch(Greater.apply,List(Equal.apply,NotEqual.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  private lazy val eqs = DerivedAxioms.equalSym.provable::qeSearch(Equal.apply,List(NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  private lazy val neqs = DerivedAxioms.notEqualSym.provable::qeSearch(NotEqual.apply,List(Equal.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  private lazy val gts = DerivedAxioms.greaterNotSym.provable::qeSearch(Greater.apply,List(Equal.apply,NotEqual.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
   private lazy val ges = qeSearch(GreaterEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,Less.apply,LessEqual.apply))
-  private lazy val lts = DerivedAxioms.lessNotSym.fact::qeSearch(Less.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,LessEqual.apply))
+  private lazy val lts = DerivedAxioms.lessNotSym.provable::qeSearch(Less.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,LessEqual.apply))
   private lazy val les = qeSearch(LessEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply))
 
   //This contains the basic heuristics for closing a comparison formula
@@ -943,17 +946,17 @@ object SimplifierV3 {
       case Not(bop:ComparisonFormula) =>
         List(DerivedAxioms.notNotEqual,DerivedAxioms.notEqual,
           DerivedAxioms.notLess,DerivedAxioms.notGreater,
-          DerivedAxioms.notLessEqual,DerivedAxioms.notGreaterEqual).map(l=>l.fact)
+          DerivedAxioms.notLessEqual,DerivedAxioms.notGreaterEqual).map(l=>l.provable)
       // Reflexive cases
       // This protects against unification errors using Scala to inspect the term directly
       case bop:ComparisonFormula if bop.left==bop.right =>
         bop match{
-          case Less(_,_) => List(DerivedAxioms.lessNotRefl.fact)
-          case Greater(_,_) => List(DerivedAxioms.greaterNotRefl.fact)
-          case NotEqual(_,_) => List(DerivedAxioms.notEqualNotRefl.fact)
-          case Equal(_,_) => List(DerivedAxioms.equalRefl.fact)
-          case GreaterEqual(_,_) => List(DerivedAxioms.greaterEqualRefl.fact)
-          case LessEqual(_,_) => List(DerivedAxioms.lessEqualRefl.fact)
+          case Less(_,_) => List(DerivedAxioms.lessNotRefl.provable)
+          case Greater(_,_) => List(DerivedAxioms.greaterNotRefl.provable)
+          case NotEqual(_,_) => List(DerivedAxioms.notEqualNotRefl.provable)
+          case Equal(_,_) => List(DerivedAxioms.equalRefl.provable)
+          case GreaterEqual(_,_) => List(DerivedAxioms.greaterEqualRefl.provable)
+          case LessEqual(_,_) => List(DerivedAxioms.lessEqualRefl.provable)
         }
       //Closing by search
       case bop:ComparisonFormula =>
@@ -1005,7 +1008,7 @@ object SimplifierV3 {
       case Imply(l,r) => List(implyT,Timply,implyF,Fimply)
       case Or(l,r) => List(orT,Tor,orF,For)
       case Equiv(l,r) =>  List(equivT,Tequiv,equivF,Fequiv)
-      case Not(u) => List(notT,notF,DerivedAxioms.doubleNegationAxiom.fact)
+      case Not(u) => List(notT,notF,DerivedAxioms.doubleNegationAxiom.provable)
       case Forall(_,_) => List(forallTrue,forallFalse)
       case Exists(_,_) => List(existsTrue,existsFalse)
       case _ => List()
@@ -1013,7 +1016,7 @@ object SimplifierV3 {
   }
 
   def chaseIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    val id = proveBy(Equiv(f,f),byUS(DerivedAxioms.equivReflexiveAxiom.fact))
+    val id = proveBy(Equiv(f,f),byUS(DerivedAxioms.equivReflexiveAxiom.provable))
     val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
     List(cpr)
   }

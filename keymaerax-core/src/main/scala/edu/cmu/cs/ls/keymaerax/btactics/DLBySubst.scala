@@ -418,7 +418,7 @@ private object DLBySubst {
           val v0 = Variable(v.name, Some(v.index.getOrElse(-1)+1))  //@note want v__0 in result instead of x2
 
           def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(closeId, skip))*(consts.size-1) & close)
-          val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(DerivedAxioms.andTrue.fact)('Llast)
+          val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(DerivedAxioms.andTrue)('Llast)
 
           val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)

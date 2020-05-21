@@ -111,7 +111,7 @@ object DerivationInfoRegistry {
 
 
 
-  private def useAt(l:Lemma):DependentPositionTactic = HilbertCalculus.useAt(l)
+  private def useAt(pi: ProvableInfo):DependentPositionTactic = HilbertCalculus.useAt(pi)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
   /** Alphanumeric letter or digit parts of a name, skipping all other characters or spaces. */

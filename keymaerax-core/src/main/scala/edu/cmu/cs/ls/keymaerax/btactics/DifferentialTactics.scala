@@ -344,8 +344,8 @@ private object DifferentialTactics extends Logging {
     "dR" byWithInputs (f::/* todo unsupported argument type (argument not used from UI yet) hide::*/Nil,(pos,sequent) => {
     require(pos.isTopLevel, "dR only at top-level succedents/antecedents")
     val (newFml,ax) = sequent.sub(pos) match {
-      case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond.fact)
-      case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine.fact)
+      case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond)
+      case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine)
       case Some(e) => throw new TacticInapplicableFailure("dR only applicable to box/diamond ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }

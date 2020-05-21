@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, DerivedAxiomInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._
@@ -109,6 +109,7 @@ trait UnifyUSCalculus {
     }
   }
   /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
+  def by(pi: ProvableInfo)                 : BelleExpr = by(pi.provable, pi.codeName)
   def by(lemma: Lemma)                     : BelleExpr = by(lemma.fact)
   def by(lemma: Lemma, name:String)        : BelleExpr = by(lemma.fact, name:String)
   /**
@@ -137,6 +138,7 @@ trait UnifyUSCalculus {
     by(subst.toForward(ProvableInfo(name).provable))
   })
   def by(lemma: Lemma, subst: Subst): BelleExpr = by(subst.toForward(lemma.fact))
+  def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable))
 
   /*******************************************************************
     * close/proceed by providing a Provable fact to unify and substitute with
@@ -148,6 +150,7 @@ trait UnifyUSCalculus {
   def byUS(provable: ProvableSig): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr = byUS(lemma.fact)
+  def byUS(pi: ProvableInfo) : BelleExpr = byUS(pi.provable)
   /** byUS(axiom) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
     *
     * @see [[UnifyUSCalculus.byUS()]]
@@ -184,6 +187,7 @@ trait UnifyUSCalculus {
   })
   private[btactics]
   def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
+  def byUS(pi: ProvableInfo, inst: Subst=>Subst): BelleExpr = byUS(pi.provable, inst)
   private[btactics]
   def byUS(fact: ProvableSig, inst: Subst=>Subst = us=>us): BelleExpr =
     //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
@@ -635,7 +639,7 @@ trait UnifyUSCalculus {
             //ProvableSig.startProof(Equiv(r, l))(CommuteEquivRight(SuccPos(0)), 0)(fact, 0)
             fact(Sequent(IndexedSeq(), IndexedSeq(Equiv(r, l))) , CommuteEquivRight(SuccPos(0)))
           case Sequent(IndexedSeq(), IndexedSeq(Equal(l, r))) =>
-            useFor(DerivedAxioms.equalCommute.fact, AxiomIndex.axiomIndex("= commute")._1)(SuccPos(0))(fact)
+            useFor(DerivedAxioms.equalCommute)(SuccPos(0))(fact)
           //case _ => throw new IllegalArgumentException("Unsupported shape of fact to commute: " + fact.prettyString)
         }
 
@@ -1201,7 +1205,11 @@ trait UnifyUSCalculus {
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   private[btactics]
   def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(axiom.fact, key, linear=false, inst)
-//  /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
+  private[btactics]
+  def useFor(pi: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(pi.provable, key, linear=false, inst)
+  private[btactics]
+  def useFor(dai: DerivedAxiomInfo, inst: Subst=>Subst): ForwardPositionTactic = useFor(dai.provable, dai.key, dai.linear, inst)
+  ////  /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
 //  def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
 
@@ -1818,8 +1826,14 @@ trait UnifyUSCalculus {
       r
     }
   }
+  def useFor(dai: DerivedAxiomInfo, key: PosInExpr): ForwardPositionTactic = {
+    useFor(dai.provable, key)
+  }
+  def useFor(dai: DerivedAxiomInfo): ForwardPositionTactic = {
+    useFor(dai.provable, dai.key, dai.linear, (us => us))
+  }
 
-  /**
+    /**
     * Inverse of imply-right rule, which is admissible since invertible.
     * {{{
     *   G |- a -> b, D
@@ -1946,9 +1960,9 @@ trait UnifyUSCalculus {
         // reflexive setup corresponds to no-progress chase
         val initial: ProvableSig = e match {
           case t: Term =>      // t=t
-            DerivedAxioms.equalReflex.fact(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
+            DerivedAxioms.equalReflex.provable(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
           case f: Formula =>   // f<->f
-            DerivedAxioms.equivReflexiveAxiom.fact(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
+            DerivedAxioms.equivReflexiveAxiom.provable(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
         }
         Predef.assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1,
           "Proved reflexive start " + initial + " for " + e)

@@ -47,9 +47,9 @@ object DerivationInfo {
   // @TODO: Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info
-  def register[T](value: => T, di: DerivationInfo): T = {
+  def registerDerived[T](value: T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
     _allInfo = di :: allInfo
-    value
+    di
   }
 
   /** code name mapped to derivation information */
@@ -216,8 +216,8 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , val unifier: Symbol
                             , theExpr: Unit => Any
                             , val displayLevel: Symbol = 'all
-                            , val key: ExprPos = Nil
-                            , val recursor: List[ExprPos] = Nil
+                            , val theKey: ExprPos = Nil
+                            , val theRecursor: List[ExprPos] = Nil
                             )
   extends AxiomInfo with StorableInfo {
   override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)

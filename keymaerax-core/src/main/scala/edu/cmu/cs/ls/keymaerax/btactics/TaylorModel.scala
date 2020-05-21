@@ -24,6 +24,7 @@ import rings.scaladsl._
 import syntax._
 
 import scala.collection.immutable._
+import DerivationInfoAugmentors._
 
 object TaylorModelTactics extends Logging {
 
@@ -434,7 +435,7 @@ object TaylorModelTactics extends Logging {
         implyR(1) &
         // push in existencial quantifiers
         SaturateTactic(rewriteFormula(partialVacuousExistsAxiom2.fact)(1) |
-          rewriteFormula(DerivedAxioms.partialVacuousExistsAxiom.fact)(1) |
+          rewriteFormula(DerivedAxioms.partialVacuousExistsAxiom.provable)(1) |
           rewriteFormula(TaylorModelTactics.unfoldExistsLemma.fact)(1)
         ) &
         tocTac("pre dIClosed") &

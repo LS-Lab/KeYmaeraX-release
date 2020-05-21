@@ -43,9 +43,8 @@ object DerivedAxioms extends Logging {
   type LemmaID = String
 
   /** Look up a core axiom from [[Provable.axioms]] and wrap it into a Lemma */
-  private def coreAxiom(name: String): Lemma = {
-      val p = ProvableSig.axioms(name)
-      Lemma(p, Lemma.requiredEvidence(p))
+  private def coreAxiom(name: String): CoreAxiomInfo = {
+    CoreAxiomInfo(name)
   }
 
   /** A Provable proving the derived axiom/rule named id (convenience) */
@@ -515,7 +514,7 @@ object DerivedAxioms extends Logging {
         ,
         equivifyR(1) &
           CQ(PosInExpr(0::0::Nil)) &
-          useAt(equalCommute.fact)(1)
+          useAt(equalCommute)(1)
       )
     )
 
@@ -532,7 +531,7 @@ object DerivedAxioms extends Logging {
     */
   lazy val boxMonotone = derivedRule("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
-    useAt(boxAxiom.fact, PosInExpr(1::Nil))(-1) & useAt(boxAxiom.fact, PosInExpr(1::Nil))(1) &
+    useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
       by("<> monotone", USubst(
         SubstitutionPair(UnitPredicational("p_", AnyArg), Not(UnitPredicational("q_", AnyArg))) ::
@@ -553,7 +552,7 @@ object DerivedAxioms extends Logging {
     */
   lazy val boxMonotone2 = derivedRule("[] monotone 2",
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
-    useAt(boxAxiom.fact, PosInExpr(1::Nil))(-1) & useAt(boxAxiom.fact, PosInExpr(1::Nil))(1) &
+    useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
       byUS("<> monotone") &
       //      ProofRuleTactics.axiomatic("<> monotone", USubst(
@@ -750,8 +749,8 @@ object DerivedAxioms extends Logging {
   lazy val existsDualAxiom = derivedAxiom("exists dual",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (!p_(||))) <-> \\exists x_ p_(||)".asFormula)),
     useAt("all dual", PosInExpr(1::Nil))(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -759,8 +758,8 @@ object DerivedAxioms extends Logging {
   lazy val existsDualAxiomy = derivedAxiom("exists dual y",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall y_ (!p_(||))) <-> \\exists y_ p_(||)".asFormula)),
     useAt(allDual_y, PosInExpr(1::Nil))(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -776,7 +775,7 @@ object DerivedAxioms extends Logging {
   , key = 0::Nil, recursor = (0::Nil)::(Nil)::Nil)
   lazy val notExists = derivedAxiom("!exists",
     Sequent(IndexedSeq(), IndexedSeq("(!\\exists x_ (p_(x_))) <-> \\forall x_ (!p_(x_))".asFormula)),
-    useAt(doubleNegationAxiom.fact, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+    useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
       useAt("all dual")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -793,8 +792,8 @@ object DerivedAxioms extends Logging {
   , key = (0::Nil), recursor = (0::Nil)::Nil::Nil)
   lazy val notAll = derivedAxiom("!all",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (p_(||))) <-> \\exists x_ (!p_(||))".asFormula)),
-    useAt(doubleNegationAxiom.fact, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
-      useAt(existsDualAxiom.fact)(1, 0::Nil) &
+    useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+      useAt(existsDualAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -809,7 +808,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("¬[]","![]"), "notBox", key = 0::Nil, recursor = (1::Nil)::Nil::Nil, unifier = "linear")
   lazy val notBox = derivedAxiom("![]",
     Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula)),
-    useAt(doubleNegationAxiom.fact, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
+    useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
       useAt("<> diamond")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -825,8 +824,8 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("¬<>","!<>"), "notDiamond", key = 0::Nil, recursor = (1::Nil)::Nil::Nil, unifier = "linear")
   lazy val notDiamond = derivedAxiom("!<>",
     Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula)),
-    useAt(doubleNegationAxiom.fact, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
-      useAt(boxAxiom.fact)(1, 0::Nil) &
+    useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
+      useAt(boxAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -891,8 +890,8 @@ object DerivedAxioms extends Logging {
   lazy val boxAxiom = derivedAxiom("[] box",
     Sequent(IndexedSeq(), IndexedSeq("(!<a_;>(!p_(||))) <-> [a_;]p_(||)".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::1::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::1::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -908,8 +907,8 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};](p(||)->q(||)) -> (<a{|^@|};>p(||) -> <a{|^@|};>q(||))".asFormula)),
     useExpansionAt("<> diamond")(1, 1::0::Nil) &
       useExpansionAt("<> diamond")(1, 1::1::Nil) &
-      useAt(converseImply.fact, PosInExpr(1::Nil))(1, 1::Nil) &
-      useAt(converseImply.fact, PosInExpr(0::Nil))(1, 0::1::Nil) &
+      useAt(converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(converseImply, PosInExpr(0::Nil))(1, 0::1::Nil) &
       byUS("K modal modus ponens")
   )
 
@@ -1015,7 +1014,7 @@ object DerivedAxioms extends Logging {
       /* show */ cut(/*(8)*/"([a_{|^@|};]p_(||) -> [a_{|^@|};](q_(||) -> p_(||)&q_(||)))  ->  (([a_{|^@|};](q_(||)->p_(||)&q_(||)) -> ([a_{|^@|};]q_(||) -> [a_{|^@|};](p_(||)&q_(||))))  ->  (([a_{|^@|};]p_(||) & [a_{|^@|};]q_(||)) -> [a_{|^@|};](p_(||)&q_(||))))".asFormula) <(
       /* use */ cut(/*(5)*/"[a_{|^@|};]p_(||) -> [a_{|^@|};](q_(||) -> p_(||)&q_(||))".asFormula) <(
       /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
-      /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt(implyTautology.fact)(1, 1::Nil) & V(1) & close
+      /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt(implyTautology)(1, 1::Nil) & V(1) & close
       ),
       /* show */ cohide(3) & prop
       )
@@ -1034,7 +1033,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("K&", "Kand", key = 1::1::Nil, recursor = Nil::Nil)
   lazy val Kand = derivedAxiom("K modal modus ponens &",
     Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};](p_(||)->q_(||)) & [a{|^@|};]p_(||) -> [a{|^@|};]q_(||)".asFormula)),
-    useAt(andImplies.fact, PosInExpr(0::Nil))(1) &
+    useAt(andImplies, PosInExpr(0::Nil))(1) &
     byUS("K modal modus ponens")
   )
 
@@ -1084,8 +1083,8 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("[]→∧", "[]->^"), "boxImpliesAnd", "<span class=\"k4-axiom-key\">[a](P→Q∧R)</span> ↔ [a](P→Q) ∧ [a](P→R)", unifier = "linear")
   lazy val boxImpliesAnd = derivedAxiom("[] conditional split",
     Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};](P_(||)->Q_(||)&R_(||)) <-> [a_{|^@|};](P_(||)->Q_(||)) & [a_{|^@|};](P_(||)->R_(||))".asFormula)),
-    useAt(implyDistAndAxiom.fact, PosInExpr(0::Nil))(1, 0::1::Nil) &
-    useAt(boxAnd.fact, PosInExpr(0::Nil))(1, 0::Nil) &
+    useAt(implyDistAndAxiom, PosInExpr(0::Nil))(1, 0::1::Nil) &
+    useAt(boxAnd, PosInExpr(0::Nil))(1, 0::Nil) &
     byUS(equivReflexiveAxiom)
   )
 
@@ -1107,7 +1106,7 @@ object DerivedAxioms extends Logging {
         /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
         /* show */ cohide(2) & byUS("K modal modus ponens")
       ),
-        /* show */ cohide(2) & useAt(PC1)(1, 1::0::Nil) & useAt(implySelf.fact)(1, 1::Nil) & V(1) & close
+        /* show */ cohide(2) & useAt(PC1)(1, 1::0::Nil) & useAt(implySelf)(1, 1::Nil) & V(1) & close
       )
     )
   }
@@ -1128,9 +1127,9 @@ object DerivedAxioms extends Logging {
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
-      useAt(notOr.fact)(1, 0::0::1::Nil) &
-      useAt(boxAnd.fact)(1, 0::0::Nil) &
-      useAt(notAnd.fact)(1, 0::Nil) &
+      useAt(notOr)(1, 0::0::1::Nil) &
+      useAt(boxAnd)(1, 0::0::Nil) &
+      useAt(notAnd)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -1149,12 +1148,12 @@ object DerivedAxioms extends Logging {
       equivR(1) <(
         andL(-1) & useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) &
         useAt("<> diamond", PosInExpr(1::Nil))(-1) & notL(-1) &
-        useAt(notAnd.fact)(-2, 1::Nil) & useAt(implyExpand.fact, PosInExpr(1::Nil))(-2, 1::Nil) &
-        useAt(converseImply.fact)(-2, 1::Nil) & useAt(doubleNegationAxiom.fact)(-2, 1::0::Nil) &
+        useAt(notAnd)(-2, 1::Nil) & useAt(implyExpand, PosInExpr(1::Nil))(-2, 1::Nil) &
+        useAt(converseImply)(-2, 1::Nil) & useAt(doubleNegationAxiom)(-2, 1::0::Nil) &
         useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(V('Rlast) & closeId, closeId)
         ,
-        useAt("<> diamond", PosInExpr(1::Nil))(-1) & useAt(notAnd.fact)(-1, 0::1::Nil) &
-        useAt(implyExpand.fact, PosInExpr(1::Nil))(-1, 0::1::Nil) & notL(-1) &
+        useAt("<> diamond", PosInExpr(1::Nil))(-1) & useAt(notAnd)(-1, 0::1::Nil) &
+        useAt(implyExpand, PosInExpr(1::Nil))(-1, 0::1::Nil) & notL(-1) &
         andR(1) <(
           useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) & implyRi &
           useAt("K modal modus ponens", PosInExpr(1::Nil))(1) &
@@ -1177,7 +1176,7 @@ object DerivedAxioms extends Logging {
     */
   private lazy val diamondSplitLeft = TactixLibrary.proveBy(//derivedAxiom("<> split left",
     Sequent(IndexedSeq(), IndexedSeq("<a_;>(p_(||)&q_(||)) -> <a_;>p_(||)".asFormula)),
-    useAt(PC1)(1, 0::1::Nil) & useAt(implySelf.fact)(1) & close
+    useAt(PC1)(1, 0::1::Nil) & useAt(implySelf)(1) & close
   )
 
   /**
@@ -1197,7 +1196,7 @@ object DerivedAxioms extends Logging {
       /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
       /* show */ cohide(2) & byUS("K modal modus ponens")
       ),
-      /* show */ cohide(2) & useAt(PC2)(1, 1::0::Nil) & useAt(implySelf.fact)(1, 1::Nil) & V(1) & close
+      /* show */ cohide(2) & useAt(PC2)(1, 1::0::Nil) & useAt(implySelf)(1, 1::Nil) & V(1) & close
       )
   )
 
@@ -1237,7 +1236,7 @@ object DerivedAxioms extends Logging {
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(notAnd)(1, 1::0::0::Nil) &
-      useAt(implyExpand.fact, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
+      useAt(implyExpand, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
       CE(PosInExpr(0::Nil)) &
       byUS("[:=] assign equality")
   )
@@ -1335,7 +1334,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("<:=>", "assigndEqualityAll", key = 0::Nil, recursor = Nil::(0::1::Nil)::Nil)
   lazy val assigndEqualityAllAxiom = derivedAxiom("<:=> assign equality all",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\forall x_ (x_=f_() -> p_(||))".asFormula)),
-    useAt(assignDual2Axiom.fact, PosInExpr(0::Nil))(1, 0::Nil) &
+    useAt(assignDual2Axiom, PosInExpr(0::Nil))(1, 0::Nil) &
       byUS("[:=] assign equality")
   )
 
@@ -1353,7 +1352,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> p(f())".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[:=] assign")(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -1370,7 +1369,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=x_;>p(||) <-> p(||)".asFormula)),
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[:=] self assign")(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -1385,7 +1384,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(":=D", "assignDual")
   lazy val assignDualAxiom = derivedAxiom(":= assign dual",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> [x_:=f();]p(x_)".asFormula)),
-    useAt(assigndAxiom.fact)(1, 0::Nil) &
+    useAt(assigndAxiom)(1, 0::Nil) &
       useAt("[:=] assign")(1, 1::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -1465,8 +1464,8 @@ object DerivedAxioms extends Logging {
   lazy val vacuousAssigndAxiom = derivedAxiom("<:=> vacuous assign",
     Sequent(IndexedSeq(), IndexedSeq("<v_:=t_();>p_() <-> p_()".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
-      useAt(vacuousAssignbAxiom.fact)(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      useAt(vacuousAssignbAxiom)(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -1514,7 +1513,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<x_':=f();>p(x_') <-> p(f())".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[':=] differential assign", PosInExpr(0::Nil))(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -1532,8 +1531,8 @@ object DerivedAxioms extends Logging {
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[:*] assign nondet")(1, 0::0::Nil) &
       useAt("all dual", PosInExpr(1::Nil))(1, 0::0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -1607,7 +1606,7 @@ object DerivedAxioms extends Logging {
       useAt("[;] compose")(1, 0::0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 1::0::1::Nil) &
+      useAt(doubleNegationAxiom)(1, 1::0::1::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -1626,8 +1625,8 @@ object DerivedAxioms extends Logging {
       useAt("[*] iterate")(1, 0::0::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::1::Nil) &
       useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
-      useAt(notAnd.fact)(1, 0::Nil) & //HilbertCalculus.stepAt(1, 0::Nil) &
-      useAt(doubleNegationAxiom.fact)(1, 1::1::0::1::Nil) &
+      useAt(notAnd)(1, 0::Nil) & //HilbertCalculus.stepAt(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 1::1::0::1::Nil) &
       prop
   )
 
@@ -1734,7 +1733,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("[**]", "iterateiterateb", unifier = "full")
   lazy val iterateiterateb = derivedAxiom("[**] iterate iterate",
     "==> [{a_{|^@|};}*;{a_{|^@|};}*]p_(||) <-> [{a_{|^@|};}*]p_(||)".asSequent,
-    useAt("[;] compose")(1, 0::Nil) & by(loopMergeb.fact)
+    useAt("[;] compose")(1, 0::Nil) & by(loopMergeb)
   )
 
   /**
@@ -1748,7 +1747,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("<**>", "iterateiterated", unifier = "full")
   lazy val iterateiterated = derivedAxiom("<**> iterate iterate",
     "==> <{a_{|^@|};}*;{a_{|^@|};}*>p_(||) <-> <{a_{|^@|};}*>p_(||)".asSequent,
-    useAt(composedAxiom)(1, 0::Nil) & by(loopMerged.fact)
+    useAt(composedAxiom)(1, 0::Nil) & by(loopMerged)
   )
 
   /**
@@ -1764,8 +1763,8 @@ object DerivedAxioms extends Logging {
     derivedAxiom("[*-] backiterate",
       "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*][a_{|^@|};]p_(||)".asSequent,
       equivR(1) < (
-        byUS(backiteratebnecc.fact),
-        by(backiteratebsuff.fact)
+        byUS(backiteratebnecc),
+        by(backiteratebsuff)
       ))
 
   /**
@@ -1779,10 +1778,10 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("[*-] backiterate sufficiency", "backiteratebsuff")
   lazy val backiteratebsuff = derivedAxiom("[*-] backiterate sufficiency",
     "p_(||) & [{a_{|^@|};}*][a_{|^@|};]p_(||) ==> [{a_{|^@|};}*]p_(||)".asSequent,
-    andL(-1) & useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) <(
+    andL(-1) & useAt(iiinduction, PosInExpr(1::1::Nil))(1) <(
       close(-1,1)
       ,
-      hideL(-1) & byUS(boxMonotone.fact) & implyR(1) & close(-1,1)
+      hideL(-1) & byUS(boxMonotone) & implyR(1) & close(-1,1)
       )
   )
 
@@ -1802,13 +1801,13 @@ object DerivedAxioms extends Logging {
         useAt("[*] iterate")(-1) & andL(-1) & close(-1,1)
         ,
         generalize("[{b_{|^@|};}*]q_(||)".asFormula)(1) <(
-          useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) <(
+          useAt(iiinduction, PosInExpr(1::1::Nil))(1) <(
             close(-1,1)
             ,
             G(1) & useAt("[*] iterate")(1, 0::Nil) & prop
           )
           ,
-          implyRi()(-1,1) & byUS(loopApproxb.fact)
+          implyRi()(-1,1) & byUS(loopApproxb)
         )
       )
     )
@@ -1829,9 +1828,9 @@ object DerivedAxioms extends Logging {
       andR(1) <(
         iterateb(-1) & andL(-1) & close(-1,1)
         ,
-        useAt(backiterateb.fact)(-1) & andL(-1) & hideL(-1) & byUS(boxMonotone.fact) & implyR(1) & close(-1,1)
+        useAt(backiterateb)(-1) & andL(-1) & hideL(-1) & byUS(boxMonotone) & implyR(1) & close(-1,1)
         ),
-      useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
+      useAt(iiinduction, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
       )
   )
 
@@ -1851,7 +1850,7 @@ object DerivedAxioms extends Logging {
   lazy val existsGeneralize =
     derivedAxiom("exists generalize",
       Sequent(IndexedSeq(), IndexedSeq("p_(f()) -> (\\exists x_ p_(x_))".asFormula)),
-      useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
         implyR(SuccPos(0)) &
         notR(SuccPos(0)) &
         useAt(allInstantiate, PosInExpr(0::Nil))(-2) &
@@ -1861,7 +1860,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("∃Gy","existsGy"), "existsGeneralizey")
   lazy val existsGeneralizey = derivedAxiom("exists generalize y",
     Sequent(IndexedSeq(), IndexedSeq("p_(f()) -> (\\exists y_ p_(y_))".asFormula)),
-    useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+    useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
       implyR(SuccPos(0)) &
       notR(SuccPos(0)) &
       useAt(allInstantiate, PosInExpr(0::Nil))(-2) &
@@ -1879,7 +1878,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("∃e","existse"), "existse", key = 1::Nil, recursor = Nil::Nil)
   lazy val existsEliminate = derivedAxiom("exists eliminate",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) -> (\\exists x_ p_(||))".asFormula)),
-    useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+    useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
       implyR(1) &
       notR(1) &
       useAt("all eliminate", PosInExpr(0::Nil))(-2) &
@@ -1896,7 +1895,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("∃ey","existsey"), "existsey")
   lazy val existsEliminatey = derivedAxiom("exists eliminate y",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) -> (\\exists y_ p_(||))".asFormula)),
-    useAt(existsDualAxiomy.fact, PosInExpr(1::Nil))(1, 1::Nil) &
+    useAt(existsDualAxiomy, PosInExpr(1::Nil))(1, 1::Nil) &
       implyR(1) &
       notR(1) &
       useAt(allEliminate_y, PosInExpr(0::Nil))(-2) &
@@ -1949,7 +1948,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("V∃","existsV"), "existsV", key = 0::Nil, recursor = Nil::Nil)
   lazy val vacuousExistsAxiom = derivedAxiom("vacuous exists quantifier",
     Sequent(IndexedSeq(), IndexedSeq("(\\exists x_ p_()) <-> p_()".asFormula)),
-    useAt(existsDualAxiom.fact, PosInExpr(1::Nil))(1, 0::Nil) &
+    useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(vacuousAllAxiom)(1, 0::0::Nil) &
       useAt(doubleNegationAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
@@ -2001,8 +2000,8 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("V<:*>", "vacuousDiamondAssignNondet")
   lazy val vacuousDiamondAssignNondetAxiom = derivedAxiom("V<:*> vacuous assign nondet",
     Sequent(IndexedSeq(), IndexedSeq("(<x_:=*;>p_()) <-> p_()".asFormula)),
-    useAt(nondetassigndAxiom.fact)(1, 0::Nil) &
-      useAt(vacuousExistsAxiom.fact)(1, 0::Nil) &
+    useAt(nondetassigndAxiom)(1, 0::Nil) &
+      useAt(vacuousExistsAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -2017,7 +2016,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("{∧}C","{&}C"), "domainCommute")
   lazy val domainCommute = derivedAxiom("Domain Constraint Conjunction Reordering",
     Sequent(IndexedSeq(), IndexedSeq("[{c_ & (H_(||) & q_(||))}]p_(||) <-> [{c_ & (q_(||) & H_(||))}]p_(||)".asFormula)),
-    useAt(andCommute.fact)(1, 0::0::1::Nil) &
+    useAt(andCommute)(1, 0::0::1::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -2232,7 +2231,7 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom(("→′","->'"), "Dimply", formula = "<span class=\"k4-axiom-key\">(P→Q)′</span>↔(¬P∨Q)′", unifier = "linear")
   lazy val Dimply = derivedAxiom("->' derive imply",
     Sequent(IndexedSeq(), IndexedSeq("(p_(||) -> q_(||))' <-> (!p_(||) | q_(||))'".asFormula)),
-    useAt(implyExpand.fact)(1, 0::0::Nil) &
+    useAt(implyExpand)(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -2248,7 +2247,7 @@ object DerivedAxioms extends Logging {
   lazy val forallThenExistsAxiom = derivedAxiom("\\forall->\\exists",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ p_(x_)) -> (\\exists x_ p_(x_))".asFormula)),
     implyR(1) &
-      useAt(existsGeneralize.fact, PosInExpr(1::Nil))(1) &
+      useAt(existsGeneralize, PosInExpr(1::Nil))(1) &
       useAt(allInstantiate)(-1) &
       closeId
   )
@@ -2324,7 +2323,7 @@ object DerivedAxioms extends Logging {
     */
   @DerivedAxiom("*0", "timesZero", unifier = "linear")
   lazy val timesZero = derivedAxiom("*0", Sequent(IndexedSeq(), IndexedSeq("(f_()*0) = 0".asFormula)),
-    if (false) useAt(timesCommutative.fact)(1, 0::Nil) & byUS(zeroTimes)
+    if (false) useAt(timesCommutative)(1, 0::Nil) & byUS(zeroTimes)
     else allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (x*0 = 0)".asFormula, TactixLibrary.RCF))
   )
 
@@ -2350,7 +2349,7 @@ object DerivedAxioms extends Logging {
     */
   @DerivedAxiom("+0", "plusZero", unifier = "linear")
   lazy val plusZero = derivedAxiom("+0", Sequent(IndexedSeq(), IndexedSeq("(f_()+0) = f_()".asFormula)),
-    if (false) useAt(plusCommutative.fact)(1, 0::Nil) & byUS(zeroPlus)
+    if (false) useAt(plusCommutative)(1, 0::Nil) & byUS(zeroPlus)
     else allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (x+0 = x)".asFormula, TactixLibrary.RCF))
   )
 
@@ -2491,7 +2490,7 @@ object DerivedAxioms extends Logging {
     , unifier = "linear", key = (1::Nil), recursor = (1::1::Nil)::Nil)
   lazy val DIinvariant = derivedAxiom("DI differential invariant",
     Sequent(IndexedSeq(), IndexedSeq("[{c&q(||)}]p(||) <- (q(||)-> (p(||) & [{c&q(||)}]((p(||))')))".asFormula)),
-    implyR(1) & useAt(implyDistAndAxiom.fact, PosInExpr(0::Nil))(-1) & andL(-1) &
+    implyR(1) & useAt(implyDistAndAxiom, PosInExpr(0::Nil))(-1) & andL(-1) &
       useAt("[?] test", PosInExpr(1::Nil))(-1) &
       cut(DIinvarianceF) <(
         prop & onAll(close)
@@ -2513,11 +2512,11 @@ object DerivedAxioms extends Logging {
   lazy val DIOpeninvariantLess =
     derivedAxiom("DIo open differential invariance <",
       Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<g(||) <-> [?q(||);]f(||)<g(||)) <- (q(||) -> [{c&q(||)}](f(||)<g(||) -> (f(||)<g(||))'))".asFormula)),
-      useAt(flipLess.fact)(1, 1::0::1::Nil) &
-        useAt(flipLess.fact)(1, 1::1::1::Nil) &
-        useAt(flipLess.fact)(1, 0::1::1::0::Nil) &
+      useAt(flipLess)(1, 1::0::1::Nil) &
+        useAt(flipLess)(1, 1::1::1::Nil) &
+        useAt(flipLess)(1, 0::1::1::0::Nil) &
         HilbertCalculus.Derive.Dless(1, 0::1::1::1::Nil) &
-        useAt(flipLessEqual.fact)(1, 0::1::1::1::Nil) &
+        useAt(flipLessEqual)(1, 0::1::1::1::Nil) &
         useExpansionAt(">' derive >")(1, 0::1::1::1::Nil) &
         byUS("DIo open differential invariance >")
     )
@@ -2551,9 +2550,9 @@ object DerivedAxioms extends Logging {
   @DerivedAxiom("DX", "Dskipd", unifier = "linear", key = (1::Nil), recursor = (1::Nil)::Nil)
   lazy val Dskipd = derivedAxiom("DX diamond differential skip",
     Sequent(IndexedSeq(), IndexedSeq("<{c&q(||)}>p(||) <- q(||)&p(||)".asFormula)),
-    useAt(doubleNegationAxiom.fact, PosInExpr(1::Nil))(1, 0::Nil) &
-      useAt(notAnd.fact)(1, 0::0::Nil) &
-      useAt(implyExpand.fact, PosInExpr(1::Nil))(1, 0::0::Nil) &
+    useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt(notAnd)(1, 0::0::Nil) &
+      useAt(implyExpand, PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt("DX differential skip", PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt("<> diamond")(1, 0::Nil) & implyR(1) & close
   )
@@ -2572,9 +2571,9 @@ object DerivedAxioms extends Logging {
     derivedAxiom("DS differential equation solution",
       Sequent(IndexedSeq(), IndexedSeq("[{x_'=c_()}]p_(x_) <-> \\forall t_ (t_>=0 -> [x_:=x_+(c_()*t_);]p_(x_))".asFormula)),
       useAt("DS& differential equation solution")(1, 0::Nil) &
-        useAt(impliesTrue.fact)(1, 0::0::1::0::0::Nil) &
+        useAt(impliesTrue)(1, 0::0::1::0::0::Nil) &
         useAt(vacuousAllAxiom)(1, 0::0::1::0::Nil) &
-        useAt(trueImplies.fact)(1, 0::0::1::Nil) &
+        useAt(trueImplies)(1, 0::0::1::Nil) &
         byUS(equivReflexiveAxiom)
     )
 
@@ -2592,10 +2591,10 @@ object DerivedAxioms extends Logging {
   lazy val DSdnodomain =
     derivedAxiom("Dsol differential equation solution",
     Sequent(IndexedSeq(), IndexedSeq("<{x_'=c_()}>p_(x_) <-> \\exists t_ (t_>=0 & <x_:=x_+(c_()*t_);>p_(x_))".asFormula)),
-    useAt(DSddomain.fact)(1, 0::Nil) &
-      useAt(impliesTrue.fact)(1, 0::0::1::0::0::Nil) &
+    useAt(DSddomain)(1, 0::Nil) &
+      useAt(impliesTrue)(1, 0::0::1::0::0::Nil) &
       useAt(vacuousAllAxiom)(1, 0::0::1::0::Nil) &
-      useAt(trueAnd.fact)(1, 0::0::1::Nil) &
+      useAt(trueAnd)(1, 0::0::1::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -2612,8 +2611,8 @@ object DerivedAxioms extends Logging {
       useAt("DS& differential equation solution")(1, 0::0::Nil) &
       useAt(allDual_time, PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt(doubleNegationAxiom)(1, 0::Nil) &
-      useAt(notImply.fact)(1, 0::0::Nil) &
-      useAt(notImply.fact)(1, 0::0::1::Nil) &
+      useAt(notImply)(1, 0::0::Nil) &
+      useAt(notImply)(1, 0::0::1::Nil) &
       useAt("<> diamond")(1, 0::0::1::1::Nil) &
       //useAt("& associative", PosInExpr(1::Nil))(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
@@ -3011,7 +3010,7 @@ object DerivedAxioms extends Logging {
   lazy val dualbDirectAxiom = derivedAxiom("[d] dual direct",
     Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> <a;>p(||)".asFormula)),
     useExpansionAt("<> diamond")(1, 1::Nil) &
-      byUS(dualbAxiom.fact)
+      byUS(dualbAxiom)
   )
 
   /**
@@ -3043,7 +3042,7 @@ object DerivedAxioms extends Logging {
     , unifier = "linear")
   lazy val DvariableCommuted = derivedAxiom("x' derive var commuted",
     Sequent(IndexedSeq(), IndexedSeq("(x_') = (x_)'".asFormula)),
-    useAt(equalCommute.fact)(1) &
+    useAt(equalCommute)(1) &
       byUS("x' derive var")
   )
 
@@ -3091,8 +3090,8 @@ object DerivedAxioms extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("(c_()*f_(||))' = c_()*(f_(||))'".asFormula)),
       useAt("*' derive product")(1, 0::Nil) &
         useAt("c()' derive constant fn")(1, 0::0::0::Nil) &
-        useAt(zeroTimes.fact)(1, 0::0::Nil) &
-        useAt(zeroPlus.fact)(1, 0::Nil) &
+        useAt(zeroTimes)(1, 0::0::Nil) &
+        useAt(zeroPlus)(1, 0::Nil) &
         byUS(equalReflex)
     )
 
@@ -3107,8 +3106,8 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(f(||)*c())' = (f(||))'*c()".asFormula)),
     useAt("*' derive product")(1, 0:: Nil) &
       useAt("c()' derive constant fn")(1, 0:: 1::1::Nil) &
-      useAt(timesZero.fact)(1, 0:: 1::Nil) &
-      useAt(plusZero.fact)(1, 0:: Nil) &
+      useAt(timesZero)(1, 0:: 1::Nil) &
+      useAt(plusZero)(1, 0:: Nil) &
       byUS(equalReflex)
   )
   //@note elegant proof that clashes for some reason
@@ -3299,7 +3298,7 @@ object DerivedAxioms extends Logging {
     */
   @DerivedAxiom(("¬<","!<"), "notLess", formula = "<span class=\"k4-axiom-key\">¬(f<g)</span>↔(f≥g)", unifier ="linear")
   lazy val notLess = derivedAxiom("! <", Sequent(IndexedSeq(), IndexedSeq("(!(f_() < g_())) <-> (f_() >= g_())".asFormula)),
-    useAt(flipGreater.fact, PosInExpr(1::Nil))(1, 0::0::Nil) & useAt(notGreater.fact)(1, 0::Nil) & useAt(flipGreaterEqual.fact)(1, 1::Nil) & byUS(equivReflexiveAxiom)
+    useAt(flipGreater, PosInExpr(1::Nil))(1, 0::0::Nil) & useAt(notGreater)(1, 0::Nil) & useAt(flipGreaterEqual)(1, 1::Nil) & byUS(equivReflexiveAxiom)
   )
 
   /**
@@ -3310,7 +3309,7 @@ object DerivedAxioms extends Logging {
     */
   @DerivedAxiom(("¬≤","!<="), "notLessEqual", formula = "<span class=\"k4-axiom-key\">(¬(f≤g)</span>↔(f>g)", unifier = "linear")
   lazy val notLessEqual = derivedAxiom("! <=", Sequent(IndexedSeq(), IndexedSeq("(!(f_() <= g_())) <-> (f_() > g_())".asFormula)),
-    useAt(flipGreaterEqual.fact, PosInExpr(1::Nil))(1, 0::0::Nil) & useAt(notGreaterEqual.fact)(1, 0::Nil) & useAt(flipGreater.fact)(1, 1::Nil) & byUS(equivReflexiveAxiom)
+    useAt(flipGreaterEqual, PosInExpr(1::Nil))(1, 0::0::Nil) & useAt(notGreaterEqual)(1, 0::Nil) & useAt(flipGreater)(1, 1::Nil) & byUS(equivReflexiveAxiom)
   )
 
   /**

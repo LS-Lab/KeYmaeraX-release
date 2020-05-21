@@ -12,6 +12,7 @@ import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import DerivationInfoAugmentors._
 
 /**
   * Created by yongkiat on 9/29/16.
@@ -125,7 +126,7 @@ object SimplifierV2 {
   //Fold constants
   def reassoc(t:Term): ProvableSig =
   {
-    val init = DerivedAxioms.equalReflex.fact(
+    val init = DerivedAxioms.equalReflex.provable(
       USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     t match {
       case Plus(_,_) =>
@@ -193,7 +194,7 @@ object SimplifierV2 {
         val tactic = simp.zipWithIndex.map({ case ((_, eqPr), i) => useAt(eqPr)(1, pref ++ PosInExpr.parseInt(i).pos) }).
           reduce[BelleExpr](_&_) & byUS(DerivedAxioms.equalReflex)
         proveBy(Equal(t, FuncOf(fn, nArgs)), tactic)
-      case _ => DerivedAxioms.equalReflex.fact(
+      case _ => DerivedAxioms.equalReflex.provable(
         USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     }
 
@@ -777,12 +778,12 @@ object SimplifierV2 {
             equivR(1) & onAll(instantiate & implyRi()(AntePos(remainingCtx.length), SuccPos(0)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
       case m:Modal =>
         val (uf,upr) = formulaSimp(m.child,IndexedSeq())
-        val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
+        val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.provable(
           USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
         val pr = useFor(upr, PosInExpr(0 :: Nil))(SuccPosition(1, 1:: 1 :: Nil))(init)
         (extract(pr).asInstanceOf[Formula],pr)
       case _ =>
-        (f,weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
+        (f,weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.provable(
           USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil))))
     }
 

@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
+import DerivationInfoAugmentors._
 import scala.collection.immutable
 
 /**
@@ -44,7 +44,7 @@ class ProofRuleTests extends TacticTestBase {
 
   it should "support derived axioms" in {
     val theSubst = USubst(SubstitutionPair(UnitPredicational("p_", AnyArg), Greater("x_".asVariable, "0".asTerm))::Nil)
-    val theAxiom = DerivedAxioms.notAll.fact
+    val theAxiom = DerivedAxioms.notAll.provable
 
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("(!\\forall x_ x_>0) <-> (\\exists x_ !x_>0)".asFormula)),
