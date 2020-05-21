@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.macros
 
-import edu.cmu.cs.ls.keymaerax.macros.DerivedAxiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
 
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
@@ -47,6 +47,10 @@ object DerivationInfo {
   // @TODO: Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info
+  def registerCore[T](value: T, ci: CoreAxiomInfo): CoreAxiomInfo = {
+    _allInfo = ci :: allInfo
+    ci
+  }
   def registerDerived[T](value: T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
     _allInfo = di :: allInfo
     di
@@ -203,7 +207,11 @@ case class CoreAxiomInfo(  override val canonicalName:String
                          , override val display: DisplayInfo
                          , override val codeName: String
                          , val unifier: Symbol
-                         , val theExpr: Unit => Any)
+                         , val theExpr: Unit => Any
+                         , val displayLevel: Symbol = 'all
+                         , val theKey: ExprPos = Nil
+                         , val theRecursor: List[ExprPos] = Nil
+                        )
   extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   override val numPositionArgs = 1
