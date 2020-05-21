@@ -71,7 +71,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
         // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
         val c = DerivedAxioms.getClass.getDeclaredConstructor()
         c.setAccessible(true)
-        withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of DerivedAxioms.scala for hints where to add missing dependency\n") {
+        withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n") {
           try {
             println("Deriving " + fm.symbol + "...")
             fm.bind(c.newInstance())()
