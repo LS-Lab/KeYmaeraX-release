@@ -47,7 +47,7 @@ object DerivationInfo {
   // @TODO: Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info
-  def registerDerived[T](value: => T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
+  def registerDerived[T](value: T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
     _allInfo = di :: allInfo
     di
   }

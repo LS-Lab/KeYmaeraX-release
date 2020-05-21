@@ -28,7 +28,7 @@ class DerivedAxiom(val names: Any,
                    val unifier: String = "full",
                    val displayLevel: String = "internal",
                    val inputs: String = "",
-                   val key: ExprPos = Nil,
+                   val key: ExprPos = 0::Nil,
                    val recursor: List[ExprPos] = Nil
                   ) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
@@ -153,7 +153,7 @@ object DerivedAxiom {
             "formula" -> Literal(Constant("")),
             "unifier" -> Literal(Constant("full")),
             "displayLevel" -> Literal(Constant("internal")),
-            "key" -> q"""scala.collection.immutable.Nil""",
+            "key" -> q"""0::scala.collection.immutable.Nil""",
             "recursor" -> q"""scala.collection.immutable.Nil""",
             "inputs" -> Literal(Constant(""))
           )
