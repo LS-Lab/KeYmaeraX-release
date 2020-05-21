@@ -98,7 +98,7 @@ class DLParser extends Parser {
   def fullProgram[_: P]: P[Program]   = P( program ~ End )
   def fullDifferentialProgram[_: P]: P[DifferentialProgram]   = P( diffProgram ~ End )
 
-  def fullExpression[_: P]: P[Expression] = P( (NoCut(formula) | NoCut(term) | program) ~ End )
+  def fullExpression[_: P]: P[Expression] = P( NoCut(formula ~ End) | NoCut(term ~ End) | (program ~ End) )
 
 
   //*****************
@@ -224,11 +224,11 @@ class DLParser extends Parser {
     NoCut(odesys) | NoCut(braceP) |
     ifthen) ~ "^@".!.?).map({case (p,None) => p case (p,Some("^@")) => Dual(p)})
 
-  //@todo add @invariant
-  def repeat[_: P]: P[Program] = P( braceP ~ "*".! ).
-    map({case (p,"*") => Loop(p)})
+  //@todo notify listener of invariant
+  def repeat[_: P]: P[Program] = P( braceP ~ "*".! ~/ ("@invariant" ~/ "(" ~/ formula ~ ")").?).
+    map({case (p,"*",None) => Loop(p) case (p,"*",Some(inv)) => Loop(p)})
 
-  def sequence[_: P]: P[Program] = P( baseP.rep(1) ).
+  def sequence[_: P]: P[Program] = P( (baseP ~ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
 
   def choice[_: P]: P[Program] = P( sequence ~ ("++" ~/ sequence).rep ).
