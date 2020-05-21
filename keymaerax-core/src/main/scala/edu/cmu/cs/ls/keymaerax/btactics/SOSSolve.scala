@@ -16,6 +16,31 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.collection.immutable._
 
+/** @TODO: move somewhere reasonable! */
+trait Timer {
+  def time[R](f: => R) : R
+  def getTimeMs : Double
+}
+object Timer {
+  def apply() = new NanoTimer
+}
+object NoTimer extends Timer {
+  override def time[R](f: => R): R = f
+  def getTimeMs = 0.0
+}
+class NanoTimer extends Timer {
+  var count = 0L
+  def time[R](f: => R): R = {
+    val t0 = System.nanoTime()
+    val result = f
+    val t1 = System.nanoTime()
+    count = count + (t1 - t0)
+    result
+  }
+  def getTimeMs : Double = count / 1000000.0
+}
+
+
 /** tactics to prove SOSsolve witnesses */
 object SOSSolve {
 
@@ -59,7 +84,7 @@ object SOSSolve {
   case class SOSSolveAborted() extends BelleProofSearchControl("sossolve aborted")
   case class SOSSolveNoSOS() extends BelleProofSearchControl("sossolve did not find sos")
 
-  def witnessSOS(degree: Int, timeout: Option[Int] = None) : DependentTactic = {
+  def witnessSOS(degree: Int, timeout: Option[Int] = None, sosTimer: Timer = NoTimer, witnessTimer: Timer = NoTimer) : DependentTactic = {
     val name = "witnessSOS"
     name by { (seq: Sequent) =>
       require(seq.succ.isEmpty, name + " requires succedent to be empty")
@@ -69,25 +94,27 @@ object SOSSolve {
       }.toList
       val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
-      TaylorModelTactics.Timing.tic()
-      val (sos, cofactors) = sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
-        case Witness(sos, cofactors) => (sos, cofactors)
-        case NoSOS => throw new SOSSolveNoSOS
-        case Aborted => throw new SOSSolveAborted
+      val (sos, cofactors) = sosTimer.time {
+        sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
+          case Witness(sos, cofactors) => (sos, cofactors)
+          case NoSOS => throw new SOSSolveNoSOS
+          case Aborted => throw new SOSSolveAborted
+        }
       }
-      TaylorModelTactics.Timing.toc("sosSolve")
-      val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
-      TaylorModelTactics.Timing.toc("sosPos")
-      val combination = (cofactors, polys).zipped.map(Times).reduceLeft(Plus)
-      TaylorModelTactics.Timing.tic()
-      val witnessPrv = proveBy(Equal(sos, combination), PolynomialArithV2.equate(1))
-      TaylorModelTactics.Timing.toc("PolynomialArithV2.equate")
-      val zeroPrv = proveBy(Sequent(seq.ante, IndexedSeq(Equal(combination, Number(0)))), eqZeroTac & done)
-      TaylorModelTactics.Timing.toc("eqZeroTac")
-      cut(False) & Idioms.<(
-        closeF,
-        useAt(witnessSOSLemma.fact(USubst(Seq(SubstitutionPair("sos_()".asTerm, sos), SubstitutionPair("comb_()".asTerm, combination)))), PosInExpr(1::Nil))(1) &
-          andR(1) & Idioms.<(cohideR(1) & by(sosPos), andR(1) & Idioms.<(cohideR(1) & by(witnessPrv), by(zeroPrv))))
+      witnessTimer.time {
+        val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
+        TaylorModelTactics.Timing.toc("sosPos")
+        val combination = (cofactors, polys).zipped.map(Times).reduceLeft(Plus)
+        TaylorModelTactics.Timing.tic()
+        val witnessPrv = proveBy(Equal(sos, combination), PolynomialArithV2.equate(1))
+        TaylorModelTactics.Timing.toc("PolynomialArithV2.equate")
+        val zeroPrv = proveBy(Sequent(seq.ante, IndexedSeq(Equal(combination, Number(0)))), eqZeroTac & done)
+        TaylorModelTactics.Timing.toc("eqZeroTac")
+        cut(False) & Idioms.<(
+          closeF,
+          useAt(witnessSOSLemma.fact(USubst(Seq(SubstitutionPair("sos_()".asTerm, sos), SubstitutionPair("comb_()".asTerm, combination)))), PosInExpr(1 :: Nil))(1) &
+            andR(1) & Idioms.<(cohideR(1) & by(sosPos), andR(1) & Idioms.<(cohideR(1) & by(witnessPrv), by(zeroPrv))))
+      }
     }
   }
 
