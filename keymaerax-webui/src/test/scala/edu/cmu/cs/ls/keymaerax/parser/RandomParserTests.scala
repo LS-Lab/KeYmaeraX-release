@@ -26,7 +26,7 @@ class RandomParserTests extends FlatSpec with Matchers {
 
   val pp = if (true) KeYmaeraXPrettyPrinter
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
-  val parser = KeYmaeraXParser
+  val parser = if (true) KeYmaeraXParser else DLParser
 
   def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser.formulaParser(input)
@@ -38,6 +38,13 @@ class RandomParserTests extends FlatSpec with Matchers {
       parse shouldBe expr
     }
   }
+
+  "The parser manually" should "reparse pretty-printed (-2)*x" in {reparse(Times(Number(BigDecimal("-2")), Variable("x")))}
+  it should "reparse pretty-printed -(2*x)" in {reparse(Neg(Times(Number(BigDecimal("2")), Variable("x"))))}
+  it should "reparse pretty-printed (-2)^4" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("4"))))}
+  it should "reparse pretty-printed -(2^4)" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("4")))))}
+  it should "reparse pretty-printed (-2)^(-4)" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("-4"))))}
+  it should "reparse pretty-printed -(2^(-4))" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("-4")))))}
 
   "The parser" should "reparse pretty-prints of random formulas (checkin)" taggedAs(CheckinTest) in {test(10, 6)}
   it should "reparse pretty-prints of random formulas (summary)" taggedAs(SummaryTest) in {test(50, 6)}
@@ -53,14 +60,17 @@ class RandomParserTests extends FlatSpec with Matchers {
       val output = withSafeClue("Error printing\n\n" + randClue) { pp.stringify(e) }
 
       withSafeClue("Random formula " + output + "\n\n" + randClue) {
-        val printed = pp.stringify(e)
-        println("Random in: " + printed)
-        val full = pp.fullPrinter(e)
-        println("Fullform:  " + full)
-        parseShouldBe(full, e)
-        println("Reparsing: " + printed)
-        parseShouldBe(printed, e)
+        reparse(e)
       }
     }
 
+  private def reparse(e: Expression) = {
+    val printed = pp.stringify(e)
+    println("Random in: " + printed)
+    val full = pp.fullPrinter(e)
+    println("Fullform:  " + full)
+    parseShouldBe(full, e)
+    println("Reparsing: " + printed)
+    parseShouldBe(printed, e)
+  }
 }

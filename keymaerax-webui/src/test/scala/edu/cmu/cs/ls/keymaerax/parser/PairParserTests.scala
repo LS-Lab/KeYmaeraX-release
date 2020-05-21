@@ -6,7 +6,6 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{FlatSpec, Matchers}
@@ -23,8 +22,7 @@ import scala.collection.immutable._
  */
 @SummaryTest
 class PairParserTests extends FlatSpec with Matchers {
-  val pp = if (true) KeYmaeraXPrettyPrinter
-  else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
+  val pp = KeYmaeraXPrettyPrinter
   val parser =
 //    KeYmaeraXParser
   DLParser
@@ -44,6 +42,12 @@ class PairParserTests extends FlatSpec with Matchers {
     }
   }
 
+  /** `true` has unary negation `-` bind weakly like binary subtraction.
+    * `false` has unary negation `-` bind strong just shy of power `^`. */
+  private val weakNeg: Boolean = true
+
+  private val numNeg: Boolean = true
+
   /** A special swearing string indicating that the other string cannot be parsed. */
   private val unparseable: String = "@#%@*!!!"
 
@@ -53,8 +57,8 @@ class PairParserTests extends FlatSpec with Matchers {
     //("x*-y/z", "x*(-(y/z))"),
     ("-x+y", "(-x)+y"),
     ("-x-y", "(-x)-y"),
-    ("-x*y", "-(x*y)"),
-    ("-x/y", "-(x/y)"),
+    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
+    ("-x/y", if (!weakNeg) "(-x)/y" else "-(x/y)"),
     ("-x^y", "-(x^y)"),
     ("x+-y", "x+(-y)"),
     ("x--y", "x-(-y)"),
@@ -62,14 +66,17 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x/-y", "x/(-y)"),
     ("x^-y", "x^(-y)"),
     ("x*-y+z", "(x*(-y))+z"),
-    ("x*-y*z", "x*(-(y*z))"),
-    ("x*-y/z", "x*(-(y/z))"),
+    ("x*-y*z", if (!weakNeg) "(x*(-y))*z)" else "x*(-(y*z))"),
+    ("x*-y/z", if (!weakNeg) "(x*(-y))/z" else "x*(-(y/z))"),
     ("x-y","(x)-(y)"),
     ("x+-y","x+(-y)"),
     ("x^-y/z","(x^(-y))/z"),
     // from doc/dL-grammar.md or crucially important
     ("x-y-z","(x-y)-z"),
     ("x/y/z","(x/y)/z"),
+    ("x*22", "x*(22)"),
+    ("x*-22", "x*(-22)"),
+    ("x^22", "x^(22)"),
     ("x^2^4", "x^(2^4)"),
     ("-x^2", "-(x^2)"),
 
@@ -81,9 +88,14 @@ class PairParserTests extends FlatSpec with Matchers {
     // unary meets binary left
     ("-x+y", "(-x)+y"),
     ("-x-y", "(-x)-y"),
-    ("-x*y", "-(x*y)"),
-    ("-x/y", "-(x/y)"),
+    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
+    ("-x/y", if (!weakNeg) "(-x)/y" else "-(x/y)"),
     ("-x^y", "-(x^y)"),
+    ("-(2^4)", "-(2^4)"),
+    ("- 2^4", "-(2^4)"),
+    ("(-2)^4", "(-2)^4"),
+    ("(- 2)^4", "(- 2)^4"),
+    ("-2^4", "-2^4"),
     ("-2^4", "-(2^4)"),
     // unary meets binary right
     ("x+-y", "x+(-y)"),
@@ -211,16 +223,16 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x- -y-z","(x-(-y))-z"),
     ("x+y- -z","(x+y)-(-z)"),
     ("x-y- -z","(x-y)-(-z)"),
-    ("-x*y+z","(-(x*y))+z"),
+    ("-x*y+z",if (!weakNeg) "((-x)*y)+z" else "(-(x*y))+z"),
     ("x*-y-z","(x*(-y))-z"),
     ("x+y*-z","x+(y*(-z))"),
     ("x-y*-z","x-(y*(-z))"),
-    ("-x/y+z","(-(x/y))+z"),
+    ("-x/y+z",if (!weakNeg) "((-x)/y)+z" else "(-(x/y))+z"),
     ("x/-y-z","(x/(-y))-z"),
     ("-x+y/z","(-x)+(y/z)"),
     ("x-y/-z","x-(y/(-z))"),
-    ("-x*y*z","-((x*y)*z)"),
-    ("x*-y/z","x*(-(y/z))"),     // subtle  (x*(-y))/z
+    ("-x*y*z",if (!weakNeg) "((-x)*y)*z" else "-((x*y)*z)"),
+    ("x*-y/z",if (!weakNeg) "(x*(-y))/z" else "x*(-(y/z))"),     // subtle  (x*(-y))/z
     ("x/y/-z","(x/y)/(-z)"),
     ("x/y*-z","(x/y)*(-z)"),
     ("x*-/y", unparseable),
@@ -238,8 +250,8 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x-y- -z","(x-y)-(-z)"),
     ("x- -y- -z","(x-(-y))-(-z)"),
     ("-x- -y- -z","((-x)-(-y))-(-z)"),
-    ("x*-y*z","x*(-(y*z))"),   // subtle (x*(-y))*z
-    ("-x*y*z","-((x*y)*z)"),        // subtle ((-x)*y)*z
+    ("x*-y*z",if (!weakNeg) "(x*(-y))*x" else "x*(-(y*z))"),   // subtle (x*(-y))*z
+    ("-x*y*z",if (!weakNeg) "((-x)*y)*z" else "-((x*y)*z)"),        // subtle ((-x)*y)*z
     ("x*y*-z","(x*y)*(-z)"),
 
     // primes
@@ -273,17 +285,17 @@ class PairParserTests extends FlatSpec with Matchers {
     ("y-x^2", "y-(x^2)"),
     ("y*x^2", "y*(x^2)"),
     ("y/x^2", "y/(x^2)"),
-    ("-x*y", "-(x*y)"),
+    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
 
-    ("-x*y", "-(x*y)"),
+    ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
 //    ("-3*y", "(-3)*y"), //@note subtle "-(3*y)"),
 //    ("-5*(y-z)", "(-5)*(y-z)"), // subtle "-(5*(y-z))"),
     ("-2-3", "(-2)-(3)"),  // subtle "(-(2))-(3)"),
 //    ("-2*-3", "(-2)*(-3)"),  // subtle "-(2*(-(3)))"),
     ("-2^-3", "-(2^(-3))"),  // subtle
     ("-8", "(-8)"),
-//    ("-2*a", "(-2)*a"),  // subtle -(2*a)"),
-//    ("-0*a", "(-0)*a"),  // subtle "-(0*a)"),
+    ("-2*a", if (!weakNeg||numNeg) "(-2)*a" else "-(2*a)"),  // subtle -(2*a)"),
+    ("-0*a", if (!weakNeg||numNeg) "(-0)*a" else "-(0*a)"),  // subtle "-(0*a)"),
     ("a-3*b", "a-(3*b)"),
     ("-2-3*b", "(-2)-(3*b)"),
 //    ("-2+-3*b", "(-2)+((-3)*b)"),
@@ -557,6 +569,9 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x + y*z + 3*(x+y) >= 3+x+7  &  x+1 < 2   ->   x^2 >= (x-1)^2  |  5 > 1", "((((x+(y*z))+(3*(x+y)))>=((3+x)+7))&((x+1)<2))->((x^2)>=(((x-1)^2))|(5>1))"),
     ("2 + 3*x >= 2   ->   [{x:=x+1; x:=2*x;   ++  x:=0;}*] 3*x >= 0", "((2+(3*x))>=2)->([{{x:=(x+1);x:=(2*x);}++{x:=0;}}*]((3*x)>=0))"),
 
+    ("p()<-q()", "(p()) <- (q())"),
+    ("p()< -q()", "(p()) < (-(q()))"),
+
     ("true", "true"),
     ("false", "false"),
 
@@ -741,6 +756,28 @@ class PairParserTests extends FlatSpec with Matchers {
     }
   }
 
+  "Reparsing Pretty-printed Expressions" should "reparse (-2)*x" in {reparse(Times(Number(BigDecimal("-2")), Variable("x")))}
+  it should "reparse -(2*x)" in {reparse(Neg(Times(Number(BigDecimal("2")), Variable("x"))))}
+  it should "reparse (-2)^4" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("4"))))}
+  it should "reparse (- 2)^4" in {reparse(Power(Neg(Number(BigDecimal("2"))), Number(BigDecimal("4"))))}
+  it should "reparse -(2^4)" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("4")))))}
+  it should "reparse (-2)^(-4)" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("-4"))))}
+  it should "reparse (- 2)^(-4)" in {reparse(Power(Neg(Number(BigDecimal("2"))), Number(BigDecimal("-4"))))}
+  it should "reparse (- 2)^(- 4)" in {reparse(Power(Neg(Number(BigDecimal("2"))), Neg(Number(BigDecimal("4")))))}
+  it should "reparse (-2)^(- 4)" in {reparse(Power(Number(BigDecimal("-2")), Neg(Number(BigDecimal("4")))))}
+  it should "reparse -(2^(-4))" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("-4")))))}
+
+
+  private def reparse(e: Expression) = {
+    val printed = pp.stringify(e)
+    println("Expression: " + printed)
+    val full = pp.fullPrinter(e)
+    println("Fullform:   " + full)
+    parseShouldBe(full, e)
+    println("Reparsing:  " + printed)
+    parseShouldBe(printed, e)
+    println("Fullparse:  " + pp.fullPrinter(parser(printed)))
+  }
 
   //  "Parser" should "accept or throw parse errors for primes in primes" in {
 //    a[ParseException] shouldBe thrownBy(parser("(x')'"))
