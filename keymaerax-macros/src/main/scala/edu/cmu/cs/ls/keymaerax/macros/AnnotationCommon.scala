@@ -48,11 +48,11 @@ object AnnotationCommon {
     if(str == "*") {
       SequentDisplay(Nil, Nil, isClosed = true)
     } else {
-      str.split("|-").toList match {
+      str.split("\\|-").toList match {
         case ante :: succ :: Nil =>
           val (a, s) = (ante.split(",").toList, succ.split(",").toList)
           SequentDisplay(a, s)
-        case _ => c.abort(c.enclosingPosition, "Expected exactly one |- in sequent, got: " + str)
+        case ss => c.abort(c.enclosingPosition, "Expected exactly one |- in sequent, got: " + ss)
       }
     }
   }

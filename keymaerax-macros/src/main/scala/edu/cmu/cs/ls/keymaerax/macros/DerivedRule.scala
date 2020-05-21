@@ -46,7 +46,7 @@ object DerivedRule {
           val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
           val (displayObj, premisesString: String, conclusionString: String, codeName, displayLevel: String)
             = c.eval[(Any, String, String, String, String)](c.Expr
-              (q"""(${paramMap("names")}, ${paramMap("premises")}, ${paramMap("conclusioninputs")}, ${paramMap("codeName")}, ${paramMap("displayLevel")})"""))
+              (q"""(${paramMap("names")}, ${paramMap("premises")}, ${paramMap("conclusion")}, ${paramMap("codeName")}, ${paramMap("displayLevel")})"""))
           val premises = parseSequents(premisesString)
           val conclusionOpt = if(conclusionString == "") None else Some(parseSequent(conclusionString))
           val simpleDisplay = displayObj match {

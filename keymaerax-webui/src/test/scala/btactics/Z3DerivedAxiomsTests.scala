@@ -256,19 +256,19 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "tactically prove min" in withZ3 { qeTool => check(minDef)}
   it should "tactically prove max" in withZ3 { qeTool => check(maxDef)}
 
-  "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.fact.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove CT" in withZ3 { qeTool => CTtermCongruence.fact.subgoals shouldBe List(
+  it should "prove CT" in withZ3 { qeTool => CTtermCongruence.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone" in withZ3 { qeTool => boxMonotone.fact.subgoals shouldBe List(
+  it should "prove [] monotone" in withZ3 { qeTool => boxMonotone.provable.subgoals shouldBe List(
       Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone 2" in withZ3 { qeTool => boxMonotone2.fact.subgoals shouldBe List(
+  it should "prove [] monotone 2" in withZ3 { qeTool => boxMonotone2.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 

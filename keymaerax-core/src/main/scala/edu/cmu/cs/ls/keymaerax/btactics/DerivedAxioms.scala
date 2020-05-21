@@ -400,6 +400,7 @@ object DerivedAxioms extends Logging {
     * @derived from Skolemize
     * @Note generalization of p(x) to p(||) as in Theorem 14
     */
+  @DerivedRule(("all gen", "allgen"), "allGeneralize", premises = "|- P", conclusion = "|- \\forall x P")
   lazy val allGeneralize = derivedRuleSequent("all generalization",
     //(immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
@@ -424,6 +425,7 @@ object DerivedAxioms extends Logging {
     * @NOTE Unsound for hybrid games
     * @derived from M and [a]true
     */
+  @DerivedRule("G", "Goedel", conclusion = "|- [a;]P", premises = "|- P")
   lazy val Goedel = derivedRuleSequent("Goedel",
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
@@ -506,6 +508,8 @@ object DerivedAxioms extends Logging {
     *
     * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
     */
+  @DerivedRule(("CT term congruence", "CTtermCongruence"), "CTtermCongruence", conclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
+    premises = "|- f_(||) = g_(||)")
   lazy val CTtermCongruence =
     derivedRuleSequent("CT term congruence",
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) = ctx_(g_(||))".asFormula)),
@@ -529,6 +533,7 @@ object DerivedAxioms extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
+  @DerivedRule(("[] monotone", "[]monotone"), "monb", conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
   lazy val boxMonotone = derivedRuleSequent("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
@@ -550,6 +555,7 @@ object DerivedAxioms extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Renamed form of boxMonotone.
     */
+  @DerivedRule(("[] monotone 2", "[]monotone 2"), "monb2", conclusion = "[a;]Q |- [a;]P", premises = "Q |- P")
   lazy val boxMonotone2 = derivedRuleSequent("[] monotone 2",
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
     useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
@@ -576,6 +582,8 @@ object DerivedAxioms extends Logging {
     *     \exists x_ J(x_) |- <a{|x_|}*>P
     * }}}
     */
+  @DerivedRule(("con flat", "conflat"), "conflat", conclusion = "J |- <a*>P",
+    premises ="\\exists v (v<=0&J) |- P;; v > 0, J |- <a>J(v-1)")
   lazy val convergenceFlat =
     derivedRuleSequent("con convergence flat",
       Sequent(immutable.IndexedSeq(Exists(immutable.Seq(v), Jany)), immutable.IndexedSeq(Diamond(Loop(anonv), "p_(||)".asFormula))),

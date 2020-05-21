@@ -87,27 +87,27 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     }
   }
 
-  "Derived Rule" should "prove allG" in withMathematica { _ => allGeneralize.fact.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withMathematica { _ => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove Goedel" in withMathematica { _ => Goedel.fact.subgoals shouldBe List(
+  it should "prove Goedel" in withMathematica { _ => Goedel.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove CT" in withMathematica { _ => CTtermCongruence.fact.subgoals shouldBe List(
+  it should "prove CT" in withMathematica { _ => CTtermCongruence.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone" in withMathematica { _ => boxMonotone.fact.subgoals shouldBe List(
+  it should "prove [] monotone" in withMathematica { _ => boxMonotone.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone 2" in withMathematica { _ => boxMonotone2.fact.subgoals shouldBe List(
+  it should "prove [] monotone 2" in withMathematica { _ => boxMonotone2.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove con convergence flat" in withMathematica { _ => convergenceFlat.fact.subgoals shouldBe List(
+  it should "prove con convergence flat" in withMathematica { _ => convergenceFlat.provable.subgoals shouldBe List(
     //Sequent(immutable.IndexedSeq("v_<=0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
     Sequent(immutable.IndexedSeq("\\exists x_ (x_<=0 & J(||))".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
     Sequent(immutable.IndexedSeq("x_>0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("<a_{|x_|};><x_:=x_-1;>J(||)".asFormula))
