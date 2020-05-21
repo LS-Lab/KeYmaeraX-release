@@ -136,10 +136,10 @@ class DLParser extends Parser {
   /** `p | -p`: possibly signed occurrences of what is parsed by parser `p`, so to `p` or `-p`. */
   def signed[_: P](p: => P[Term]): P[Term] = P(("-".! ~ !(">")).? ~ p).map({case (Some("-"),t) => Neg(t) case (None,t) =>t})
 
-  def factor[_: P]: P[Term] = P( baseT ~ ("^" ~/ (baseT | neg(factor))).rep ).
+  def factor[_: P]: P[Term] = P( baseT ~ ("^" ~/ (neg(factor) | baseT)).rep ).
     map({case (t,ts) => (ts.+:(t)).reduceRight(Power)})
 
-  def summand[_: P]: P[Term] = P( factor ~ (CharIn("*/").! ~/ (factor | neg(summand))).rep ).
+  def summand[_: P]: P[Term] = P( factor ~ (CharIn("*/").! ~/ (neg(summand) | factor)).rep ).
     map({case (t,ts) => ts.foldLeft(t)({case (l,("*",r)) => Times(l,r) case (l,("/",r)) => Divide(l,r)})})
 
   def term[_: P]: P[Term] = P( signed(summand) ~ (("+" | ("-" ~ !(">"))).! ~/ signed(summand)).rep ).
