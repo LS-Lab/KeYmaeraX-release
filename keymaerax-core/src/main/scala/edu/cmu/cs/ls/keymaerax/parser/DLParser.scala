@@ -94,6 +94,9 @@ class DLParser extends Parser {
   /** Report an @invariant @annotation to interested parties */
   private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
 
+  /** `true` has unary negation `-` bind weakly like binary subtraction.
+    * `false` has unary negation `-` bind strong just shy of power `^`. */
+  private val weakNeg: Boolean = true
 
   //*****************
   // implementation
@@ -113,7 +116,7 @@ class DLParser extends Parser {
 
   def number[_: P]: P[Number] = {
     import NoWhitespace._
-    P(/*"-".!.? ~*/ CharIn("0-9").rep(1) ~ ("." ~ CharIn("0-9").rep(1)).?).!.
+    P("-".!.? ~ CharIn("0-9").rep(1) ~ ("." ~/ CharIn("0-9").rep(1)).?).!.
       map(s => Number(BigDecimal(s)))
   }
   def ident[_: P]: P[(String,Option[Int])] = {
@@ -138,27 +141,20 @@ class DLParser extends Parser {
   def baseT[_: P]: P[Term] = P( NoCut(func) | variable | (number ~ "'").map(Differential) | number | NoCut(unitFunctional) | differential)
 
   /** `-p`: negative occurrences of what is parsed by parser `p`. */
-  def neg[_: P](p: => P[Term]): P[Term] = P(("-" ~ !(">")) ~/ p).map(t => Neg(t))
-  /** `p | -p`: possibly signed occurrences of what is parsed by parser `p`, so to `p` or `-p`. */
-  def signed[_: P](p: => P[Term]): P[Term] = P(("-".! ~ !(">")).? ~ p).map({case (Some("-"),t) => Neg(t) case (None,t) =>t})
+  def neg[_: P](p: => P[Term]): P[Term] = P(("-" ~~ !">") ~/ p).map(t => Neg(t))
+  /** `-p | p`: possibly signed occurrences of what is parsed by parser `p`, so to `p` or `-p`. */
+  def signed[_: P](p: => P[Term]): P[Term] = P(("-".! ~~ !">").? ~ p).map({case (Some("-"),t) => Neg(t) case (None,t) =>t})
 
   def factor[_: P]: P[Term] = P( baseT ~ ("^" ~/ (neg(factor) | baseT)).rep ).
     map({case (t,ts) => (ts.+:(t)).reduceRight(Power)})
 
-  def summand[_: P]: P[Term] = P( factor ~ (CharIn("*/").! ~/ (neg(summand) | factor)).rep ).
+  def summand[_: P]: P[Term] = P( if (weakNeg) factor ~ (CharIn("*/").! ~/ (neg(summand) | factor)).rep
+    else signed(factor) ~ (CharIn("*/").! ~/ signed(factor)).rep).
     map({case (t,ts) => ts.foldLeft(t)({case (l,("*",r)) => Times(l,r) case (l,("/",r)) => Divide(l,r)})})
 
-  def term[_: P]: P[Term] = P( signed(summand) ~ (("+" | ("-" ~ !(">"))).! ~/ signed(summand)).rep ).
+  def term[_: P]: P[Term] = P( if (weakNeg) signed(summand) ~ (("+" | ("-" ~ !">")).! ~/ signed(summand)).rep
+    else (summand ~ (("+" | ("-" ~ !(">"))).! ~/ summand).rep)).
     map({case (t,ts) => ts.foldLeft(t)({case (l,("+",r)) => Plus(l,r)  case (l,("-",r)) => Minus(l,r)})})
-  /**
-    * {{{
-    *     T ::= T+S | T-S | -S | S
-    *     S ::= S*F | S*-F | S/F | S/-F | F
-    *     F ::= P^F | P^-F | P
-    *     P ::= x | x' | num | f(T,...,T) | (T)' | (T)
-    * }}}
-    */
-
 
   def termList[_: P]: P[Term] = P("(" ~ (term ~ ("," ~/ term).rep).? ~ ")").
     map({case Some((t,ts)) => (ts.+:(t)).reduceRight(Pair) case None => Nothing})
@@ -175,7 +171,7 @@ class DLParser extends Parser {
   def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
   def predicational[_: P]: P[PredicationalOf] = P(ident ~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
   def trueFalse[_: P]: P[Formula] = P("true".! | "false".!).map({case "true" => True case "false" => False})
-  def comparison[_: P]: P[Formula] = P( term ~ ("=" | ">=" | "<=" | ">" | "<" | "!=").! ~/ term ).
+  def comparison[_: P]: P[Formula] = P( term ~ ("=" | ">=" | "<=" | ">" | ("<" ~~ !"-") | "!=").! ~/ term ).
     map({case (l,"=",r) => Equal(l,r) case (l,">=",r) => GreaterEqual(l,r) case (l,"<=",r) => LessEqual(l,r)
     case (l,">",r) => Greater(l,r) case (l,"<",r) => Less(l,r) case (l,"!=",r) => NotEqual(l,r)})
   def parenF[_: P]: P[Formula] = P( "(" ~/ formula ~ ")" )
