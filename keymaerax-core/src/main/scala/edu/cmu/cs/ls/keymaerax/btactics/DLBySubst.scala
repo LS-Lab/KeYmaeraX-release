@@ -321,7 +321,7 @@ private object DLBySubst {
                   else And(oldified, True)
                 cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                   //@todo use useAt("I") instead of useAt("I induction"), because it's the more general equivalence
-                  /* c */ useAt("I")(pos) & andR(pos) & Idioms.<(
+                  /* c */ useAt(DerivedAxioms.Ieq)(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
                       label(initCase),
                       (andR(pos) & Idioms.<(closeIdWith(pos), ident))*constAntes.size &
