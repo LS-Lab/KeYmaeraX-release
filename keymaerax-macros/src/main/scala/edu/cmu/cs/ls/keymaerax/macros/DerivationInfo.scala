@@ -52,6 +52,11 @@ object DerivationInfo {
     di
   }
 
+  def registerDerivedRule[T](value: T, di: DerivedRuleInfo): DerivedRuleInfo = {
+    _allInfo = di :: allInfo
+    di
+  }
+
   /** code name mapped to derivation information */
   def byCodeName: Map[String, DerivationInfo] =
   /* @todo Decide on a naming convention. Until then, making everything case insensitive */
@@ -251,7 +256,7 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
 /** Information for a derived rule proved from the core
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  * @see [[AxiomaticRuleInfo]] */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any)
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any, val displayLevel: Symbol = 'all)
   extends ProvableInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   //def belleExpr = expr()

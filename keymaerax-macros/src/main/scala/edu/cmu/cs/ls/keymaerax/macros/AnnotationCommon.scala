@@ -44,6 +44,22 @@ object AnnotationCommon {
     if (s.isEmpty) Nil
     else s.split(";;").toList.map(parseAI)
   }
+  def parseSequent(str: String)(implicit c: whitebox.Context): SequentDisplay = {
+    if(str == "*") {
+      SequentDisplay(Nil, Nil, isClosed = true)
+    } else {
+      str.split("|-").toList match {
+        case ante :: succ :: Nil =>
+          val (a, s) = (ante.split(",").toList, succ.split(",").toList)
+          SequentDisplay(a, s)
+        case _ => c.abort(c.enclosingPosition, "Expected exactly one |- in sequent, got: " + str)
+      }
+    }
+  }
+  def parseSequents(s: String)(implicit c: whitebox.Context): List[SequentDisplay] = {
+    if (s.isEmpty) Nil
+    else s.split(";;").toList.map(parseSequent)
+  }
   // Abstract syntax trees for string and string list literals
   def literal(s: String)(implicit c: whitebox.Context): c.universe.Tree = c.universe.Literal(c.universe.Constant(s))
   def literals(ss: List[String])(implicit c: whitebox.Context): c.universe.Tree = {
@@ -96,4 +112,20 @@ object AnnotationCommon {
       case e => c.abort(c.enclosingPosition, "Expected SequentDisplay, got: " + e)
     }
   }
+  def foldParams(c: whitebox.Context, paramNames: List[String])(acc: (Int, Boolean, Map[String, c.universe.Tree]), param: c.universe.Tree): (Int, Boolean, Map[String, c.universe.Tree]) = {
+    import c.universe._
+    val (idx, wereNamed, paramMap) = acc
+    val (k, v, isNamed) = param match {
+      case na: AssignOrNamedArg => {
+        na.lhs match {
+          case id: Ident => (id.name.decodedName.toString, na.rhs, true)
+          case e => c.abort(c.enclosingPosition, "Expected argument name to be identifier, got: " + e)
+        }
+      }
+      case t: Tree if !wereNamed => (paramNames(idx), t, false)
+      case t: Tree => c.abort(c.enclosingPosition, "Positional argument " + t + " must appear before all named arguments")
+    }
+    (idx+1, isNamed || wereNamed, paramMap.+(k -> v))
+  }
+
 }

@@ -139,7 +139,7 @@ object DerivedAxioms extends Logging {
     }
   }
 
-  private[btactics] def derivedRule(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
+  private[btactics] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
     val codeName = codeNameOpt match {
       case Some(codeName) => codeName
       case None =>
@@ -400,7 +400,7 @@ object DerivedAxioms extends Logging {
     * @derived from Skolemize
     * @Note generalization of p(x) to p(||) as in Theorem 14
     */
-  lazy val allGeneralize = derivedRule("all generalization",
+  lazy val allGeneralize = derivedRuleSequent("all generalization",
     //(immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
     useAt("[:*] assign nondet", PosInExpr(1::Nil))(1) &
@@ -424,7 +424,7 @@ object DerivedAxioms extends Logging {
     * @NOTE Unsound for hybrid games
     * @derived from M and [a]true
     */
-  lazy val Goedel = derivedRule("Goedel",
+  lazy val Goedel = derivedRuleSequent("Goedel",
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
       // use
@@ -507,7 +507,7 @@ object DerivedAxioms extends Logging {
     * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
     */
   lazy val CTtermCongruence =
-    derivedRule("CT term congruence",
+    derivedRuleSequent("CT term congruence",
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) = ctx_(g_(||))".asFormula)),
       cutR("ctx_(g_(||)) = ctx_(g_(||))".asFormula)(SuccPos(0)) <(
         byUS(equalReflex)
@@ -529,7 +529,7 @@ object DerivedAxioms extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
-  lazy val boxMonotone = derivedRule("[] monotone",
+  lazy val boxMonotone = derivedRuleSequent("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
@@ -550,7 +550,7 @@ object DerivedAxioms extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Renamed form of boxMonotone.
     */
-  lazy val boxMonotone2 = derivedRule("[] monotone 2",
+  lazy val boxMonotone2 = derivedRuleSequent("[] monotone 2",
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
     useAt(boxAxiom, PosInExpr(1::Nil))(-1) & useAt(boxAxiom, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
@@ -560,6 +560,10 @@ object DerivedAxioms extends Logging {
       //          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
       notL(-1) & notR(1)
   )
+
+  val v = Variable("x_", None, Real)
+  val anonv = ProgramConst("a_", Except(v::Nil))
+  val Jany = UnitPredicational("J", AnyArg)
 
   /**
     * Rule "con convergence flat".
@@ -572,11 +576,8 @@ object DerivedAxioms extends Logging {
     *     \exists x_ J(x_) |- <a{|x_|}*>P
     * }}}
     */
-  lazy val convergenceFlat = {
-    val v = Variable("x_", None, Real)
-    val anonv = ProgramConst("a_", Except(v::Nil))
-    val Jany = UnitPredicational("J", AnyArg)
-    derivedRule("con convergence flat",
+  lazy val convergenceFlat =
+    derivedRuleSequent("con convergence flat",
       Sequent(immutable.IndexedSeq(Exists(immutable.Seq(v), Jany)), immutable.IndexedSeq(Diamond(Loop(anonv), "p_(||)".asFormula))),
       cut(Diamond(Loop(anonv), Exists(immutable.Seq(v), And(LessEqual(v, Number(0)), Jany)))) <(
         hideL(-1) & mond
@@ -586,7 +587,6 @@ object DerivedAxioms extends Logging {
         hideR(1) & by(ProvableSig.rules("con convergence"))
         )
     )
-  }
 
 
   // derived axioms and their proofs

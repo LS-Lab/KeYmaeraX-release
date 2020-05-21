@@ -43,22 +43,6 @@ object DerivedAxiom {
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     val u = c.universe
     val paramNames = List("names", "codeName", "formula", "unifier", "displayLevel", "inputs", "key", "recursor")
-    def foldParams(c: whitebox.Context)(acc: (Int, Boolean, Map[String, c.universe.Tree]), param: c.universe.Tree): (Int, Boolean, Map[String, c.universe.Tree]) = {
-      import c.universe._
-      val (idx, wereNamed, paramMap) = acc
-      val (k, v, isNamed) = param match {
-        case na: AssignOrNamedArg => {
-          na.lhs match {
-            case id: Ident => (id.name.decodedName.toString, na.rhs, true)
-            case e => c.abort(c.enclosingPosition, "Expected argument name to be identifier, got: " + e)
-          }
-        }
-        case t: Tree if !wereNamed => (paramNames(idx), t, false)
-        case t: Tree => c.abort(c.enclosingPosition, "Positional argument " + t + " must appear before all named arguments")
-      }
-      (idx+1, isNamed || wereNamed, paramMap.+(k -> v))
-    }
-
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
     def getParams(implicit c: whitebox.Context): (String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
@@ -75,7 +59,7 @@ object DerivedAxiom {
             "recursor" -> q"""scala.collection.immutable.Nil""",
             "inputs" -> Literal(Constant(""))
           )
-          val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c)(acc, x)})
+          val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
           val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, key: ExprPos, recursor: List[ExprPos])
           = (c.eval[(Any, String, String, String, String, String, ExprPos, List[ExprPos])](c.Expr
             (q"""(${paramMap("names")}, ${paramMap("formula")}, ${paramMap("inputs")}, ${paramMap("codeName")}, ${paramMap("unifier")},
