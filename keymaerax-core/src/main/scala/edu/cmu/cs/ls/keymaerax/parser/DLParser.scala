@@ -125,14 +125,11 @@ class DLParser extends Parser {
   //*****************
 
   def func[_: P]: P[FuncOf] = P(ident ~ termList).map({case (s,idx,ts) => FuncOf(Function(s,idx,ts.sort,Real), ts)})
+  def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
   def parenT[_: P]: P[Term] = P( "(" ~/ term ~ ")" )
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).
     map({case (t,None) => t case (t,Some("'")) => Differential(t)})
-  def baseT[_: P]: P[Term] = P( NoCut(func) | variable | (number ~ "'").map(Differential) | number | differential )
-
-  //*****************
-  // term parser
-  //*****************
+  def baseT[_: P]: P[Term] = P( NoCut(func) | variable | (number ~ "'").map(Differential) | number | NoCut(unitFunctional) | differential)
 
   /** `-p`: negative occurrences of what is parsed by parser `p`. */
   def neg[_: P](p: => P[Term]): P[Term] = P(("-" ~ !(">")) ~/ p).map(t => Neg(t))
@@ -160,6 +157,8 @@ class DLParser extends Parser {
   def termList[_: P]: P[Term] = P("(" ~ (term ~ ("," ~/ term).rep).? ~ ")").
     map({case Some((t,ts)) => (ts.+:(t)).reduceRight(Pair) case None => Nothing})
 
+  def space[_: P]: P[Space] = P("(|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|)").
+    map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
 
   //*****************
   // formula parser
@@ -167,6 +166,8 @@ class DLParser extends Parser {
 
   def pred[_: P]: P[PredOf] = P(ident ~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
     map({case (s,idx,ts) => PredOf(Function(s,idx,ts.sort,Bool), ts)})
+  def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
+  def predicational[_: P]: P[PredicationalOf] = P(ident ~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
   def trueFalse[_: P]: P[Formula] = P("true".! | "false".!).map({case "true" => True case "false" => False})
   def comparison[_: P]: P[Formula] = P( term ~ ("=" | ">=" | "<=" | ">" | "<" | "!=").! ~/ term ).
     map({case (l,"=",r) => Equal(l,r) case (l,">=",r) => GreaterEqual(l,r) case (l,"<=",r) => LessEqual(l,r)
@@ -174,8 +175,7 @@ class DLParser extends Parser {
   def parenF[_: P]: P[Formula] = P( "(" ~/ formula ~ ")" )
   def differentialF[_: P]: P[Formula] = P( parenF ~ "'".!.?).
     map({case (f,None) => f case (f,Some("'")) => DifferentialFormula(f)})
-  //@todo allow PredicationalOf | UnitPred
-  def baseF[_: P]: P[Formula] = P( trueFalse | NoCut(pred) | NoCut(comparison) | differentialF )
+  def baseF[_: P]: P[Formula] = P( trueFalse | NoCut(pred) | NoCut(comparison) | NoCut(unitPredicational) | NoCut(predicational) | differentialF )
 
   def not[_: P]: P[Formula] = P("!" ~/ conjunct ).map(f => Not(f))
   def modal[_: P]: P[Formula] = P( (("[".! ~/ program ~/ "]".!) | ("<".! ~/ program ~/ ">".!)) ~/ conjunct ).
