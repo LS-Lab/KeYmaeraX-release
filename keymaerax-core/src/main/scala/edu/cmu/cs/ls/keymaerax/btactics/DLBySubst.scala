@@ -552,7 +552,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt(DerivedAxioms.assignbExistsAxiom, PosInExpr(1::Nil), subst)(pos)
+      useAt(DerivedAxioms.assignbImpliesExistsAxiom, PosInExpr(1::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
