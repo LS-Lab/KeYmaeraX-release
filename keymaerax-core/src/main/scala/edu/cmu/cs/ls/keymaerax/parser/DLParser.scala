@@ -21,7 +21,7 @@ import fastparse._, MultiLineWhitespace._
   * @example
   * Parsing formulas from strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]:
   * {{{
-  * val parser = KeYmaeraXParser
+  * val parser = DLParser
   * val fml0 = parser("x!=5")
   * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
   * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
@@ -33,6 +33,7 @@ import fastparse._, MultiLineWhitespace._
   * val term1 = parser.termParser("x^2+2*x+1")
   * }}}
   * @author Andre Platzer
+  * @see [[KeYmaeraXParser]]
   * @see [[edu.cmu.cs.ls.keymaerax.parser]]
   * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
@@ -80,14 +81,19 @@ class DLParser extends Parser {
   override lazy val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
 
+  private[parser] var annotationListener: ((Program,Formula) => Unit) = {(p,inv) => }
+
   /**
     * Register a listener for @annotations during the parse.
     *
     * @todo this design is suboptimal.
     */
   def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
-  //@todo
-    {}
+    this.annotationListener = listener
+
+  /** Report an @invariant @annotation to interested parties */
+  private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
+
 
   //*****************
   // implementation
@@ -217,16 +223,19 @@ class DLParser extends Parser {
   def assignany[_: P]: P[AssignAny] = P( variable ~ ":=" ~ "*" ~ ";").map({case x => AssignAny(x)})
   def test[_: P]: P[Test] = P( "?" ~/ formula ~ ";").map(f => Test(f))
   def braceP[_: P]: P[Program] = P( "{" ~ program ~ "}" )
-  //@todo add @invariant
-  def odesys[_: P]: P[Program] = P( "{" ~ diffProgram ~ ("&" ~/ formula).? ~ "}" ).
+  def odeprogram[_: P]: P[ODESystem] = P( diffProgram ~ ("&" ~/ formula).?).
     map({case (p,None) => ODESystem(p,True) case (p,Some(f)) => ODESystem(p,f)})
+  def odesystem[_: P]: P[ODESystem] = P( "{" ~ odeprogram ~ "}" ~/ annotation.?).
+    map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
   def baseP[_: P]: P[Program] = P(( programSymbol | NoCut(assign) | assignany | test | NoCut(repeat) |
-    NoCut(odesys) | NoCut(braceP) |
+    NoCut(odesystem) | NoCut(braceP) |
     ifthen) ~ "^@".!.?).map({case (p,None) => p case (p,Some("^@")) => Dual(p)})
 
-  //@todo notify listener of invariant
-  def repeat[_: P]: P[Program] = P( braceP ~ "*".! ~/ ("@invariant" ~/ "(" ~/ formula ~ ")").?).
-    map({case (p,"*",None) => Loop(p) case (p,"*",Some(inv)) => Loop(p)})
+  def repeat[_: P]: P[Program] = P( braceP ~ "*".! ~/ annotation.?).
+    map({case (p,"*",None) => Loop(p) case (p,"*",Some(inv)) => reportAnnotation(p,inv); Loop(p)})
+
+  /** Parses an annotation */
+  def annotation[_: P]: P[Formula] = P("@invariant" ~/ "(" ~/ formula ~ ")")
 
   def sequence[_: P]: P[Program] = P( (baseP ~ ";".?).rep(1) ).
     map(ps => ps.reduceRight(Compose))
