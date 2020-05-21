@@ -271,4 +271,8 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     }
   }
 
+  it should "not fail" in withMathematica { _ =>
+    val fml = "\\forall z \\forall y \\forall x \\forall w9_0 \\forall w8_0 \\forall w7_0 \\forall w6_0 \\forall w5_0 \\forall w4_0 \\forall w3_0 \\forall w2_0 \\forall w10_0 \\forall w1 (\\forall w2 \\exists w3 \\forall w4 \\exists w5 \\forall w6 \\exists w7 \\forall w8 \\exists w9 \\forall w10 \\exists w11 \\forall w12 \\exists w13 \\forall w14 \\exists w15 \\forall w16 \\exists w17 \\forall w18 \\exists w19 \\forall w20 w11*100*w12^2*w13^2*w14^4*w15^777*w16^(15/552)*w7^44*w18^8*w19^2*w20^20+y^100*x^1000<=y^100*x^999*w1*w2^2*w3^3*w4^4*w5^5*w6^6*w7^7*w8^8*w9^9*w10^10&x^2+y^2!=y^2&y^100*x^1000+w1*w5_0*w7_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&y^2+y^2!=y^2&y^100*x^1000+w3_0*w7_0*w8_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&w1^2+y^2!=y^2&y^100*x^1000+w1*w2_0*w3_0*w4_0*w7_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&z^2+y^2!=y^2&9000*y^1000/2*z<=z^12->x^2+y^2+w1^2+z^2>0)".asFormula
+    println(proveBy(fml, QE))
+  }
 }
