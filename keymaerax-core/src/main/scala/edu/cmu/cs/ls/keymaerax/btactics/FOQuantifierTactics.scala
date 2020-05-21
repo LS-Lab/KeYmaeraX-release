@@ -7,8 +7,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.macros.DerivedAxiomInfo
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivedAxiomInfo}
 import DerivationInfoAugmentors._
+
 import scala.collection.immutable._
 
 
@@ -271,7 +272,7 @@ protected object FOQuantifierTactics {
         }
     }
 
-    val (genFml, axiomLemma: DerivedAxiomInfo, subst) = sequent.sub(pos) match {
+    val (genFml, axiomLemma: AxiomInfo, subst) = sequent.sub(pos) match {
       case Some(f: Formula) if quantified == t =>
         val subst = (s: Option[Subst]) => s match {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
@@ -283,7 +284,6 @@ protected object FOQuantifierTactics {
         }
         (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), DerivedAxioms.allInstantiate, subst)
     }
-
     cutAt(genFml)(pos) <(
       /* use */ skip,
       /* show */ useAt(axiomLemma, PosInExpr(0::Nil), subst)(pos.topLevel ++ PosInExpr(0 +: pos.inExpr.pos)) &

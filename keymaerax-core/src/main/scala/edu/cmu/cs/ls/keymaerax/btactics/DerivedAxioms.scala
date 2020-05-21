@@ -43,9 +43,8 @@ object DerivedAxioms extends Logging {
   type LemmaID = String
 
   /** Look up a core axiom from [[Provable.axioms]] and wrap it into a Lemma */
-  private def coreAxiom(name: String): Lemma = {
-      val p = ProvableSig.axioms(name)
-      Lemma(p, Lemma.requiredEvidence(p))
+  private def coreAxiom(name: String): CoreAxiomInfo = {
+    CoreAxiomInfo(name)
   }
 
   /** A Provable proving the derived axiom/rule named id (convenience) */
