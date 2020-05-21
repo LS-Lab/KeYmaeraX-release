@@ -272,7 +272,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
       if (OpSpec.negativeNumber) "(" + n.bigDecimal.toPlainString + ")"
       else assert(n>=0 || OpSpec.negativeNumber); n.bigDecimal.toPlainString
     } else n.bigDecimal.toPlainString
-    case FuncOf(f, c)           => f.asString + "(" + pp(q++0, c) + ")"
+    case FuncOf(f, c)           => if (f.domain.isInstanceOf[Tuple]) f.asString + pp(q++0, c) else f.asString + "(" + pp(q++0, c) + ")"
     // special notation
     case p: Pair                =>
       //@todo create positions when flattening pairs
@@ -305,7 +305,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
 
   protected def pp(q: PosInExpr, formula: Formula): String = emit(q, formula match {
     case True|False|DotFormula  => ppOp(formula)
-    case PredOf(p, c)           => p.asString + "(" + pp(q++0, c) + ")"
+    case PredOf(p, c)           => if (p.domain.isInstanceOf[Tuple]) p.asString + pp(q++0, c) else p.asString + "(" + pp(q++0, c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(q++0, c) + "}"
     // special case to disambiguate between x<-y as in x < -y compared to x REVIMPLY y
     case f: Less                => wrapLeft(f, pp(q++0, f.left)) + LEXSPACE + ppOp(formula) + LEXSPACE + wrapRight(f, pp(q++1, f.right))
