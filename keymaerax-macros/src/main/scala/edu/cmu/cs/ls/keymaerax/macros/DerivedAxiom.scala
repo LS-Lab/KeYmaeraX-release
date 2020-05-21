@@ -10,6 +10,7 @@ import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Nil
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
+import AnnotationCommon._
 
 
 /**
@@ -40,94 +41,10 @@ object DerivedAxiom {
   // Would just use PosInExpr but can't pull in core
   type ExprPos = List[Int]
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._
-    def toArgInfo(name: String, tpe: String, allowFresh: List[String]): ArgInfo = {
-      val first = tpe.indexOf('[')
-      val last = tpe.lastIndexOf(']')
-      if (first != -1 && last != -1) {
-        val (tpeFun, tpeArg) = (tpe.slice(0, first).trim.toLowerCase, tpe.slice(first + 1, last).trim.toLowerCase)
-        tpeFun match {
-          case "list" => ListArg(name, tpeArg, allowFresh)
-          case "option" => OptionArg(toArgInfo(name, tpeArg, allowFresh))
-          case s => c.abort(c.enclosingPosition, "Unexpected type constructor: " + s + ", should be option[] or list[]")
-        }
-      } else {
-        tpe match {
-          case "variable" => VariableArg(name, allowFresh)
-          case "term" => new TermArg(name, allowFresh)
-          case "formula" => FormulaArg(name, allowFresh)
-          case "number" => NumberArg(name, allowFresh)
-          case "string" => StringArg(name, allowFresh)
-          case "expression" => new ExpressionArg(name, allowFresh)
-          case "substitution" => SubstitutionArg(name, allowFresh)
-          case s => c.abort(c.enclosingPosition, "Unexpected type name: " + s + ", should be number, string, substitution, variable, term, formula, expression, list[t], or option[t]")
-        }
-      }
-    }
-    def parseAI(s: String): ArgInfo = {
-      s.split(":").toList match {
-        case id :: tpe :: Nil =>
-          val first = id.indexOf('(')
-          val last = id.lastIndexOf(')')
-          val (name, allowFresh) =
-            if (first != -1 && last != -1)
-              (id.slice(0, first), id.slice(first+1, last).split(',').toList)
-            else (id, Nil)
-          toArgInfo(name, tpe, allowFresh)
-        case ss => c.abort(c.enclosingPosition, "Invalid argument type descriptor:" + s)
-      }
-    }
-    def parseAIs(s: String): List[ArgInfo] = {
-      if (s.isEmpty) Nil
-      else s.split(";;").toList.map(parseAI)
-    }
-    // Abstract syntax trees for string and string list literals
-    def literal(s: String): Tree = Literal(Constant(s))
-    def literals(ss: List[String]): Tree = q"""List(..${ss.map((s: String) => literal(s))})"""
-    // Abstract syntax trees for all the display info data structures
-    def convAIs(ais: List[ArgInfo]): Tree = {
-      q"""List(..${ais.map((ai:ArgInfo) => convAI(ai))})"""
-    }
-    def convAI(ai: ArgInfo): Tree = {
-      ai match {
-      case VariableArg(name, allowsFresh) => q"""new VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case NumberArg(name, allowsFresh) => q"""new NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case StringArg(name, allowsFresh) => q"""new StringArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case SubstitutionArg(name, allowsFresh) => q"""new SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case OptionArg(arg) => q"""new OptionArg(${convAI(arg)})"""
-        case FormulaArg(name, allowsFresh) => q"""new FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""
-        case ListArg(name, sort, allowsFresh) => q"""new ListArg(${literal(name)}, ${literal(sort)}, ${literals(allowsFresh)})"""
-        case ta: TermArg => q"""new TermArg(${literal(ta.name)}, ${literals{ta.allowsFresh}})"""
-        case ea: ExpressionArg => q"""new ExpressionArg (${literal(ea.name)}, ${literals(ea.allowsFresh)})"""
-      }
-    }
-    def convSD(sd: SequentDisplay): Tree = {
-      val SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean) = sd
-      q"""new SequentDisplay($ante, $succ, $isClosed)"""
-    }
-    def convDI(di: DisplayInfo): Tree = {
-      di match {
-        case SimpleDisplayInfo(name, asciiName) => q"""new SimpleDisplayInfo(${literal(name)}, ${literal(asciiName)})"""
-        case RuleDisplayInfo(names, conclusion, premises)  =>
-          val namesTree = convDI(names)
-          val conclusionTree = convSD(conclusion)
-          val premiseTrees = premises.map((sd: SequentDisplay) => convSD(sd))
-          q"""new RuleDisplayInfo(${namesTree}, ${conclusionTree}, ${premiseTrees})"""
-        case AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) =>
-          q"""new AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
-        case InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) =>
-          q"""new InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
-        }
-      }
-    def sequentDisplayFromObj(a: Any): SequentDisplay = {
-      a match {
-        case (ante: List[String], succ: List[String]) => SequentDisplay(ante, succ)
-        case sd: SequentDisplay => sd
-        case e => c.abort(c.enclosingPosition, "Expected SequentDisplay, got: " + e)
-      }
-    }
+    val u = c.universe
     val paramNames = List("names", "codeName", "formula", "unifier", "displayLevel", "inputs", "key", "recursor")
-    def foldParams(acc: (Int, Boolean, Map[String, Tree]), param: Tree): (Int, Boolean, Map[String, Tree]) = {
+    def foldParams(c: whitebox.Context)(acc: (Int, Boolean, Map[String, c.universe.Tree]), param: c.universe.Tree): (Int, Boolean, Map[String, c.universe.Tree]) = {
+      import c.universe._
       val (idx, wereNamed, paramMap) = acc
       val (k, v, isNamed) = param match {
         case na: AssignOrNamedArg => {
@@ -144,8 +61,9 @@ object DerivedAxiom {
 
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
-    def getParams: (String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
+    def getParams(implicit c: whitebox.Context): (String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
       // @TODO: What do ASTs look like when option arguments are omitted or passed by name?
+      import c.universe._
       c.prefix.tree match {
         case q"new $annotation(..$params)" =>
           val defaultMap = Map(
@@ -157,12 +75,12 @@ object DerivedAxiom {
             "recursor" -> q"""scala.collection.immutable.Nil""",
             "inputs" -> Literal(Constant(""))
           )
-          val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams (acc, x)})
+          val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c)(acc, x)})
           val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, key: ExprPos, recursor: List[ExprPos])
           = (c.eval[(Any, String, String, String, String, String, ExprPos, List[ExprPos])](c.Expr
             (q"""(${paramMap("names")}, ${paramMap("formula")}, ${paramMap("inputs")}, ${paramMap("codeName")}, ${paramMap("unifier")},
               ${paramMap("displayLevel")}, ${paramMap("key")}, ${paramMap("recursor")})""")))
-          val inputs: List[ArgInfo] = parseAIs(inputString)
+          val inputs: List[ArgInfo] = parseAIs(inputString)(c)
           val simpleDisplay = displayObj match {
             case s: String => SimpleDisplayInfo(s, s)
             case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
@@ -180,9 +98,10 @@ object DerivedAxiom {
         case e => c.abort(c.enclosingPosition, "Excepted @DerivedAxiom(args), got: " + e)
       }
     }
-    val (codeNameParam: String, display: DisplayInfo, unifier: String, displayLevel: String, key, recursor) = getParams
+    val (codeNameParam: String, display: DisplayInfo, unifier: String, displayLevel: String, key, recursor) = getParams(c)
     // Annotation can only be attached to library functions for defining new axioms
-    def correctName(t: Tree): Boolean = {
+    def correctName(c: whitebox.Context)(t: c.universe.Tree): Boolean = {
+      import c.universe._
       t match {
         case id: Ident => {
           if (Set("derivedAxiom", "derivedFormula", "derivedAxiomFromFact", "derivedFact").contains(id.name.decodedName.toString)) true
@@ -191,7 +110,8 @@ object DerivedAxiom {
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
       }
     }
-    def paramCount(t: Tree): (Int, Int) = {
+    def paramCount(c: whitebox.Context)(t: c.universe.Tree): (Int, Int) = {
+      import c.universe._
       t match {
         case id: Ident => {
           id.name.decodedName.toString match {
@@ -203,6 +123,7 @@ object DerivedAxiom {
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
       }
     }
+    import c.universe._
     annottees map (_.tree) toList match {
       // Annottee must be a val declaration of an axiom
       case (valDecl: ValDef) :: Nil =>
@@ -210,9 +131,9 @@ object DerivedAxiom {
           // val declaration must be an invocation of one of the functions for defining derived axioms and optionally can
           // have modifiers and type annotations
           case q"$mods val $declName: $tpt = $functionName( ..$params )" =>
-            if (!correctName(functionName))
+            if (!correctName(c)(functionName))
               c.abort(c.enclosingPosition, "Invalid annottee: Expected val name = <derivedAxiomFunction>(x1, x2, x3), got: " + functionName + " of type " + functionName.getClass())
-            val (minParam, maxParam) = paramCount(functionName)
+            val (minParam, maxParam) = paramCount(c)(functionName)
             if(params.length < minParam || params.length > maxParam)
               c.abort(c.enclosingPosition, s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam")
             // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
@@ -230,7 +151,7 @@ object DerivedAxiom {
             val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
             val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
               case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
-            val info = q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
+            val info = q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
             // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
             // the axiom info to the global axiom info table
             val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerDerived($fullRhs, $info)"
