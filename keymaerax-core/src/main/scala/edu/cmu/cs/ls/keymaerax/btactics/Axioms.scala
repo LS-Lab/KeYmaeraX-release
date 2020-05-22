@@ -403,7 +403,7 @@ object DerivedAxioms extends Logging {
   @Axiom("K", formula = "[a](P→Q) → ([a]P → <span class=\"k4-axiom-key\">[a]Q</span>)", unifier = "linear",
     key = 1::1::Nil, recursor = (Nil)::Nil)
   val K = coreAxiom("K modal modus ponens")
-  //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
+  //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
   @Axiom(("I<sub>→</sub>", "Iind"), formula = "P∧[a<sup>*</sup>](P→[a]P)→<span class=\"k4-axiom-key\">[a<sup>*</sup>]P</span>", displayLevel = "internal")
   val Iind = coreAxiom("I induction")
 
