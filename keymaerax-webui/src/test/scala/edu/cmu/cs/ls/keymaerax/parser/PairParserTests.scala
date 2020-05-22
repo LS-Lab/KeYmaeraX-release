@@ -46,7 +46,9 @@ class PairParserTests extends FlatSpec with Matchers {
     * `false` has unary negation `-` bind strong just shy of power `^`. */
   private val weakNeg: Boolean = true
 
-  private val numNeg: Boolean = true
+  /** `true` when negative numbers are picked out specially, e.g. `-2*x` is `(-2)*x`.
+    * `false` when negative numbers are handled like unary `-`. */
+  private val numNeg: Boolean = false
 
   /** A special swearing string indicating that the other string cannot be parsed. */
   private val unparseable: String = "@#%@*!!!"
@@ -737,16 +739,18 @@ class PairParserTests extends FlatSpec with Matchers {
 
   def pairParse(expected: List[(String,String)], parser: String=>Expression) = {
     for ((s1, s2) <- expected) {
-      println("\ninput : " + s1)
+      println("\ninput:    " + s1)
       if (s2 == unparseable) {
         // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
         a[Throwable] should be thrownBy parser(s1)
       } else {
         val p1 = parser(s1)
-        println("parsed: " + pp(p1))
-        println("versus: " + s2)
+        println("parsed:   " + pp(p1))
+        println("which is: " + pp.fullPrinter(p1))
+        println("versus:   " + s2)
         val p2 = parser(s2)
-        println("readas: " + pp(p2))
+        println("read as:  " + pp(p2))
+        println("which is: " + pp.fullPrinter(p2))
         p1 shouldBe p2
         println("parsing of print")
         parser(pp(p1)) shouldBe parser(pp(p2))

@@ -285,7 +285,7 @@ protected object FOQuantifierTactics {
         val subst = (s: Option[Subst]) => s match {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(("x_".asTerm, t) :: Nil)
         }
-        (Forall(Seq(quantified), f), DerivedAxioms.allEliminateAxiom, subst)
+        (Forall(Seq(quantified), f), DerivedAxioms.alle, subst)
       case Some(f: Formula) if quantified != t =>
         val subst = (s: Option[Subst]) => s match {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))

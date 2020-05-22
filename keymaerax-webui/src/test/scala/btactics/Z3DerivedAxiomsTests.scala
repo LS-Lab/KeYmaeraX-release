@@ -72,7 +72,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
         // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
         val c = DerivedAxioms.getClass.getDeclaredConstructor()
         c.setAccessible(true)
-        withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of DerivedAxioms.scala for hints where to add missing dependency\n") {
+        withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n") {
           try {
             println("Deriving " + fm.symbol + "...")
             fm.bind(c.newInstance())()
@@ -91,7 +91,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
-  ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
+  ignore should "prove all eliminate" taggedAs OptimisticTest in {check(alle)}
   ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
   it should "prove !exists" in {check(notExists)}
   it should "prove !all" in {check(notAll)}
@@ -222,7 +222,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "tactically prove !!" in {check(doubleNegationAxiom)}
   it should "tactically prove exists dual" in {check(existsDualAxiom)}
-  ignore should "tactically prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
+  ignore should "tactically prove all eliminate" taggedAs OptimisticTest in {check(alle)}
   ignore should "tactically prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
   it should "tactically prove all distribute" in {check(allDistributeAxiom)}
   it should "tactically prove box dual" in {check(boxAxiom)}
@@ -256,19 +256,19 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "tactically prove min" in withZ3 { qeTool => check(minDef)}
   it should "tactically prove max" in withZ3 { qeTool => check(maxDef)}
 
-  "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.fact.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove CT" in withZ3 { qeTool => CTtermCongruence.fact.subgoals shouldBe List(
+  it should "prove CT" in withZ3 { qeTool => CTtermCongruence.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone" in withZ3 { qeTool => boxMonotone.fact.subgoals shouldBe List(
+  it should "prove [] monotone" in withZ3 { qeTool => boxMonotone.provable.subgoals shouldBe List(
       Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone 2" in withZ3 { qeTool => boxMonotone2.fact.subgoals shouldBe List(
+  it should "prove [] monotone 2" in withZ3 { qeTool => boxMonotone2.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 

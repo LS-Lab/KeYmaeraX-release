@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, DerivedAxiomInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, CoreAxiomInfo, DerivationInfo, DerivedAxiomInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._
@@ -131,6 +131,7 @@ trait UnifyUSCalculus {
     by(ProvableInfo(name).provable(subst))
   })
   def by(lemma: Lemma, subst: USubst): BelleExpr = by(lemma.fact(subst))
+  def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst))
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
   @deprecated("by(DerivedAxioms.<codeName>/Provable,...) instead of by(String,...)")
   private[btactics]
@@ -300,6 +301,13 @@ trait UnifyUSCalculus {
     useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 //  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
 //    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
+  def useExpansionAt(axiom: AxiomInfo): DependentPositionTactic = {
+  //@todo optimize once AxiomInfo fixed
+  if (axiom.isInstanceOf[CoreAxiomInfo])
+    useAt(axiom, PosInExpr(axiom.asInstanceOf[CoreAxiomInfo].theKey).sibling)
+  else
+    useAt(axiom, PosInExpr(axiom.asInstanceOf[DerivedAxiomInfo].theKey).sibling)
+  }
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
@@ -1417,7 +1425,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (ProvableSig.startProof(Sequent(ante, succ))
-            (DerivedAxioms.boxMonotone.fact(USubst(
+            (DerivedAxioms.boxMonotone.provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
                 :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))

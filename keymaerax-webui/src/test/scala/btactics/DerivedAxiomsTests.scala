@@ -71,7 +71,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
         // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
         val c = DerivedAxioms.getClass.getDeclaredConstructor()
         c.setAccessible(true)
-        withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of DerivedAxioms.scala for hints where to add missing dependency\n") {
+        withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n") {
           try {
             println("Deriving " + fm.symbol + "...")
             fm.bind(c.newInstance())()
@@ -87,27 +87,27 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     }
   }
 
-  "Derived Rule" should "prove allG" in withMathematica { _ => allGeneralize.fact.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withMathematica { _ => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove Goedel" in withMathematica { _ => Goedel.fact.subgoals shouldBe List(
+  it should "prove Goedel" in withMathematica { _ => Goedel.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove CT" in withMathematica { _ => CTtermCongruence.fact.subgoals shouldBe List(
+  it should "prove CT" in withMathematica { _ => CTtermCongruence.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone" in withMathematica { _ => boxMonotone.fact.subgoals shouldBe List(
+  it should "prove [] monotone" in withMathematica { _ => boxMonotone.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone 2" in withMathematica { _ => boxMonotone2.fact.subgoals shouldBe List(
+  it should "prove [] monotone 2" in withMathematica { _ => boxMonotone2.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
-  it should "prove con convergence flat" in withMathematica { _ => convergenceFlat.fact.subgoals shouldBe List(
+  it should "prove con convergence flat" in withMathematica { _ => convergenceFlat.provable.subgoals shouldBe List(
     //Sequent(immutable.IndexedSeq("v_<=0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
     Sequent(immutable.IndexedSeq("\\exists x_ (x_<=0 & J(||))".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
     Sequent(immutable.IndexedSeq("x_>0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("<a_{|x_|};><x_:=x_-1;>J(||)".asFormula))
@@ -125,7 +125,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
-  it should "prove all eliminate" taggedAs OptimisticTest ignore {check(allEliminateAxiom)}
+  it should "prove all eliminate" taggedAs OptimisticTest ignore {check(alle)}
   it should "prove exists eliminate" in {check(existsEliminate)}
   it should "prove exists eliminate y" in {check(existsEliminatey)}
   it should "prove !exists" in {check(notExists)}
@@ -325,7 +325,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "tactically prove !!" in {check(doubleNegationAxiom)}
   it should "tactically prove exists dual" in {check(existsDualAxiom)}
-  it should "tactically prove all eliminate" taggedAs OptimisticTest ignore {check(allEliminateAxiom)}
+  it should "tactically prove all eliminate" taggedAs OptimisticTest ignore {check(alle)}
   it should "tactically prove exists eliminate" in {check(existsEliminate)}
   it should "tactically prove all distribute" in {check(allDistributeAxiom)}
   it should "tactically prove box dual" in {check(boxAxiom)}
