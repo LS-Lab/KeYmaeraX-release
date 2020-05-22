@@ -256,7 +256,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "tactically prove min" in withZ3 { qeTool => check(min)}
   it should "tactically prove max" in withZ3 { qeTool => check(max)}
 
-  "Derived Rule" should "prove allG" in withZ3 { qeTool => allgen.provable.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 

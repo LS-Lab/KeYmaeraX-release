@@ -87,7 +87,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     }
   }
 
-  "Derived Rule" should "prove allG" in withMathematica { _ => allgen.provable.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withMathematica { _ => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 

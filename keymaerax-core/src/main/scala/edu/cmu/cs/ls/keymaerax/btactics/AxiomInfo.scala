@@ -1306,7 +1306,7 @@ object DerivationInfoRegistry {
     // Derived axiomatic rules
     new DerivedRuleInfo("all generalization"
       , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall x P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
-      , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allgen)}),
+      , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allGeneralize)}),
     new DerivedRuleInfo("[] monotone"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]P"::Nil, "[a;]Q"::Nil), SequentDisplay("P"::Nil, "Q"::Nil)::Nil)
       , "monb", {case () => HilbertCalculus.useAt(DerivedAxioms.monb)}),
