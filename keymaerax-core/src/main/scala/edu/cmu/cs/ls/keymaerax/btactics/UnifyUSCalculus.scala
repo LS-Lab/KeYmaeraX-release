@@ -113,8 +113,7 @@ trait UnifyUSCalculus {
       else throw new BelleUnexpectedProofStateError("Conclusion of fact " + fact + " does not match sole open goal of " + provable, provable.underlyingProvable)
     }
   }
-  //@todo use lemma.name?
-  def by(lemma: Lemma)                     : BelleExpr = by(lemma.fact)
+  def by(lemma: Lemma)                     : BelleExpr = if (lemma.name.isDefined) by(lemma.fact, lemma.name.get) else by(lemma.fact)
   def by(lemma: Lemma, name:String)        : BelleExpr = by(lemma.fact, name:String)
 
   // by with given substitutions
@@ -245,17 +244,18 @@ trait UnifyUSCalculus {
   //    useAt(fact.conclusion.succ.head, key, by(fact))
   //  }
 
-  import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors.DerivedAxiomInfoAugmentor
+  import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors.AxiomInfoAugmentor
 
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
-    //@todo generalize to AxiomInfo
-  def useAt(axiom: DerivedAxiomInfo): DependentPositionTactic = {
+  def useAt(axiom: AxiomInfo): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, axiom.key, linear=axiom.linear,
-      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
+  def useAt(axiom: ProvableInfo): DependentPositionTactic = axiom match {
+    case ax: AxiomInfo => useAt(ax)
+    case _ =>
     useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
       us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
@@ -311,8 +311,7 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting),
     * with a given instantiation augmentation.
     * @param inst  transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-    //@todo generalize to AxiomInfo
-  def useAt(axiom: DerivedAxiomInfo, inst: Option[Subst]=>Subst): DependentPositionTactic = {
+  def useAt(axiom: AxiomInfo, inst: Option[Subst]=>Subst): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, axiom.key, linear=axiom.linear,
       us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
@@ -380,7 +379,7 @@ trait UnifyUSCalculus {
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
   private[btactics]
   def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(ProvableInfo(axiom), inst)
+    useAt(AxiomInfo(axiom), inst)
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
   private[btactics]
@@ -391,11 +390,7 @@ trait UnifyUSCalculus {
     * in the direction that expands as opposed to simplifies operators.
     * @see [[useAt(AxiomInfo)]] */
   def useExpansionAt(axiom: AxiomInfo): DependentPositionTactic =
-  //@todo optimize once AxiomInfo fixed
-    if (axiom.isInstanceOf[CoreAxiomInfo])
-      useAt(axiom, PosInExpr(axiom.asInstanceOf[CoreAxiomInfo].theKey).sibling)
-    else
-      useAt(axiom, PosInExpr(axiom.asInstanceOf[DerivedAxiomInfo].theKey).sibling)
+      useAt(axiom, axiom.key.sibling)
 
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   @deprecated("useExpansionAt(DerivedAxioms.<codeName>,...) instead of useExpansionAt(String,...)")
@@ -1260,13 +1255,13 @@ trait UnifyUSCalculus {
     CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])
   )
 
+  /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
+  def useFor(axiom: ProvableInfo): ForwardPositionTactic = useFor(axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear)
 
   /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
   @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
   private[btactics]
   def useFor(axiom: String): ForwardPositionTactic = useFor(ProvableInfo(axiom))
-  /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: ProvableInfo): ForwardPositionTactic = useFor(axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear)
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
@@ -1284,7 +1279,7 @@ trait UnifyUSCalculus {
   private[btactics]
   def useFor(pi: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(pi.provable, key, linear=false, inst)
   private[btactics]
-  def useFor(dai: DerivedAxiomInfo, inst: Subst=>Subst): ForwardPositionTactic = useFor(dai.provable, dai.key, dai.linear, inst)
+  def useFor(dai: AxiomInfo, inst: Subst=>Subst): ForwardPositionTactic = useFor(dai.provable, dai.key, dai.linear, inst)
   ////  /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
 //  def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
@@ -1902,10 +1897,10 @@ trait UnifyUSCalculus {
       r
     }
   }
-  def useFor(dai: DerivedAxiomInfo, key: PosInExpr): ForwardPositionTactic = {
+  def useFor(dai: AxiomInfo, key: PosInExpr): ForwardPositionTactic = {
     useFor(dai.provable, key)
   }
-  def useFor(dai: DerivedAxiomInfo): ForwardPositionTactic = {
+  def useFor(dai: AxiomInfo): ForwardPositionTactic = {
     useFor(dai.provable, dai.key, dai.linear, (us => us))
   }
 
@@ -2159,7 +2154,8 @@ trait UnifyUSCalculus {
     doChase(de,pos)
   }
 
-  @deprecated("Undocumented code in wrong place, scheduled for removal")
+  @deprecated("Undocumented and incorrect code in wrong place, scheduled for removal")
+  private[btactics]
   def fromAxIndex(s:String) : (ProvableSig,PosInExpr, List[PosInExpr]) = {
     val (ax,rec) = AxiomIndex.axiomIndex(s)
     (ProvableInfo(s).provable,ax,rec)
