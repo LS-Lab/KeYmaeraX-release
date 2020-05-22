@@ -1195,6 +1195,7 @@ object DerivationInfoRegistry {
             case Equiv(l, r) => (l, r)
             case s => throw new IllegalArgumentException("Expected substitution of the shape t=s or p<->q, but got " + s.prettyString)
           }))
+          //@todo
           TactixLibrary.byUS(axiomName, (_: UnificationMatch.Subst) => subst)
       }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
     InputTacticInfo("US"

@@ -242,6 +242,19 @@ object DerivedAxioms extends Logging {
   }
 
 
+
+  //***************
+  // Core Axiomatic Rules   see [[AxiomBase]]
+  //***************
+
+  //@todo turn into ProvableInfo and annotate with @DerivedRule or better yet @AxiomaticRule
+  val CQrule = ProvableSig.rules("CQ equation congruence")
+  val CErule = ProvableSig.rules("CE congruence")
+  val mondrule = ProvableSig.rules("<> monotone")
+  val indrule = ProvableSig.rules("ind induction")
+  val conrule = ProvableSig.rules("con convergence")
+
+
   //***************
   // Core Axioms   see [[AxiomBase]]
   //***************
@@ -696,7 +709,7 @@ object DerivedAxioms extends Logging {
         byUS(equalReflexive)
         ,
         equivifyR(1) &
-          CQ(PosInExpr(0::0::Nil)) &
+          HilbertCalculus.CQ(PosInExpr(0::0::Nil)) &
           useAt(equalCommute)(1)
       )
     )
@@ -717,7 +730,8 @@ object DerivedAxioms extends Logging {
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
-      by("<> monotone", USubst(
+      //@todo use [[DerivedAxioms.mondrule]]
+      by(ProvableInfo("<> monotone"), USubst(
         SubstitutionPair(UnitPredicational("p_", AnyArg), Not(UnitPredicational("q_", AnyArg))) ::
           SubstitutionPair(UnitPredicational("q_", AnyArg), Not(UnitPredicational("p_", AnyArg))) :: Nil)) &
       notL(-1) & notR(1)
@@ -3187,7 +3201,7 @@ object DerivedAxioms extends Logging {
     , unifier = "linear", key = "0", recursor = "0")
   lazy val dualDirectb = derivedAxiom("[d] dual direct",
     Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> <a;>p(||)".asFormula)),
-    useExpansionAt("<> diamond")(1, 1::Nil) &
+    useExpansionAt(diamond)(1, 1::Nil) &
       byUS(dualb)
   )
 
@@ -4349,8 +4363,8 @@ object DerivedAxioms extends Logging {
     derivedAxiom("K<&>",
       "==> [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))".asSequent,
       implyR(1) & implyR(1) &
-        useExpansionAt("<> diamond")(1) &
-        useExpansionAt("<> diamond")(-2) &
+        useExpansionAt(diamond)(1) &
+        useExpansionAt(diamond)(-2) &
         notL(-2) & notR(1) & implyRi()(-1,1) &
         useAt(DR, PosInExpr(1::Nil))(1) & TactixLibrary.boxAnd(1) & andR(1) <(
         HilbertCalculus.DW(1) & G(1) & implyR(1) & closeId,

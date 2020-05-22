@@ -36,7 +36,7 @@ private object DLBySubst {
       USubstPatternTactic(
         (pattern, (ru:RenUSubst) =>
           cut(ru.substitution.usubst("[a_;]true".asFormula)) <(
-            ru.getRenamingTactic & TactixLibrary.by("[] monotone 2", ru.substitution.usubst ++ USubst(
+            ru.getRenamingTactic & TactixLibrary.by(DerivedAxioms.monb2, ru.substitution.usubst ++ USubst(
               SubstitutionPair(UnitPredicational("q_", AnyArg), True) :: Nil
             )) &
               hideL(-1, True)

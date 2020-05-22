@@ -134,18 +134,8 @@ trait UnifyUSCalculus {
   def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst))
   def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable))
 
-  @deprecated("by(DerivedAxioms.<codeName>/Provable,...) instead of by(String,...)")
-  private[btactics]
-  def by(name: String, subst: USubst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
-    by(ProvableInfo(name).provable(subst))
-  })
   def by(lemma: Lemma, subst: USubst): BelleExpr = by(lemma.fact(subst))
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
-  @deprecated("by(DerivedAxioms.<codeName>/Provable,...) instead of by(String,...)")
-  private[btactics]
-  def by(name: String, subst: Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
-    by(subst.toForward(ProvableInfo(name).provable))
-  })
   def by(lemma: Lemma, subst: Subst): BelleExpr = by(subst.toForward(lemma.fact))
 
 
@@ -376,6 +366,7 @@ trait UnifyUSCalculus {
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
     useAt(ProvableInfo(axiom), key)
+  //@todo delete, only IntervalArithmetic violates
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
   private[btactics]
   def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
@@ -391,14 +382,6 @@ trait UnifyUSCalculus {
     * @see [[useAt(AxiomInfo)]] */
   def useExpansionAt(axiom: AxiomInfo): DependentPositionTactic =
       useAt(axiom, axiom.key.sibling)
-
-  /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
-  @deprecated("useExpansionAt(DerivedAxioms.<codeName>,...) instead of useExpansionAt(String,...)")
-  private[keymaerax]
-  def useExpansionAt(axiom: String): DependentPositionTactic =
-    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
-  //  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
-  //    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
 
 
   /*******************************************************************
@@ -926,7 +909,8 @@ trait UnifyUSCalculus {
           require(ctxF.isTermContext, "Formula context expected for CQ")
           logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
           if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty) {
-            by("CQ equation congruence", USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
+            //@todo use Axioms.CQrule
+            by(ProvableInfo("CQ equation congruence"), USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
           } else {
             logger.debug("CQ: Split " + p + " around " + inEqPos)
             val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
@@ -974,7 +958,8 @@ trait UnifyUSCalculus {
             require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
             require(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
             require(ctxP.isFormulaContext, "Formula context expected for CE")
-            by("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
+            //@todo use DerivedAxioms.CErule
+            by(ProvableInfo("CE congruence"), USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
           }
         case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
       }

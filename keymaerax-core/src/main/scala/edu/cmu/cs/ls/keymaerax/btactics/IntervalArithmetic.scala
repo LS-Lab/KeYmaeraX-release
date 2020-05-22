@@ -133,26 +133,26 @@ object IntervalArithmetic extends Logging {
   //Arithmetic lemmas involving the interval axioms
   private lazy val PlusULem = remember(("((\\forall x \\forall y (x + y <= PlusU(x,y))) & f_() <= F_() & g_() <= G_()) ->" +
     "f_() + g_() <= PlusU(F_(),G_())").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("+<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   private lazy val PlusLLem = remember(("((\\forall x \\forall y (PlusL(x,y) <= x + y)) & ff_() <= f_() & gg_() <= g_()) ->" +
     "PlusL(ff_(),gg_()) <= f_() + g_()").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("<=+ down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   private lazy val MinusULem = remember(("((\\forall x \\forall y (x - y <= MinusU(x,y))) & f_() <= F_() & gg_() <= g_()) ->" +
     "f_() - g_() <= MinusU(F_(),gg_())").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("-<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   private lazy val MinusLLem = remember(("((\\forall x \\forall y (MinusL(x,y) <= x - y)) & ff_() <= f_() & g_() <= G_()) ->" +
     "MinusL(ff_(),G_()) <= f_() - g_()").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(DerivedAxioms.allInst,(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("<=- down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   //Rewrites for max/min, not to be confused with the actual lemmas

@@ -616,13 +616,12 @@ private object DifferentialTactics extends Logging {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     s.sub(pos) match {
       case Some(f@Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
-        val axiomName = "DG inverse differential ghost implicational"
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
         TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
-          HilbertCalculus.useExpansionAt(axiomName)(pos)
+          HilbertCalculus.useExpansionAt(DerivedAxioms.DGi)(pos)
           ,
           (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
-            HilbertCalculus.useAt("all eliminate")(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
+            HilbertCalculus.useAt(DerivedAxioms.alle)(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
             TactixLibrary.useAt(DerivedAxioms.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
         )
       case Some(Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
