@@ -201,7 +201,7 @@ object AxiomaticODESolver {
       simplifyEvolutionDomain(osize)(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying evolution domain constraint", ODE_DEBUGGER) &
       (if (polarity > 0) HilbertCalculus.DW(odePosAfterInitialVals)
-       else if (polarity < 0) HilbertCalculus.useAt(DerivedAxioms.DWeakeningAnd, PosInExpr(0 :: Nil))(odePosAfterInitialVals)
+       else if (polarity < 0) HilbertCalculus.useAt(DerivedAxioms.DWeakenAnd, PosInExpr(0 :: Nil))(odePosAfterInitialVals)
        else throw AxiomaticODESolverExn("Unable to DW: unknown ODE polarity.")
       ) &
       DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
@@ -224,8 +224,8 @@ object AxiomaticODESolver {
       simpConsts(pos ++ PosInExpr(0::1::0::0::1::Nil)) &
       DebuggingTactics.debug("AFTER simplifying consts", ODE_DEBUGGER) &
       (if (q == True && consts == True) TactixLibrary.useAt("->true")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: Nil)) &
-        TactixLibrary.useAt(DerivedAxioms.vacuousAllAxiom)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
-        (TactixLibrary.useAt(DerivedAxioms.trueImplies)(pos ++ PosInExpr(0 :: 1 :: Nil))
+        TactixLibrary.useAt(DerivedAxioms.allV)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
+        (TactixLibrary.useAt(DerivedAxioms.trueImply)(pos ++ PosInExpr(0 :: 1 :: Nil))
           | TactixLibrary.useAt(DerivedAxioms.trueAnd)(pos ++ PosInExpr(0 :: 1 :: Nil)))
       else if (instEnd && q != True) TactixLibrary.allL(DURATION)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         TactixLibrary.useAt(DerivedAxioms.flipLessEqual)(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil))
@@ -496,7 +496,7 @@ object AxiomaticODESolver {
         val (ctx, modal: Modal) = Context.at(fml, odePos)
         val ODESystem(_, e) = modal.program
         TactixLibrary.proveBy(Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut)))),
-          CMon(odePos) & useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+          CMon(odePos) & useAt(DerivedAxioms.DR, PosInExpr(1::Nil))(1) &
             DW(1) & G(1) & implyR(1) & andL(-1) & close(-1, 1))
     }
 
@@ -591,7 +591,7 @@ object AxiomaticODESolver {
         val (ctx, modal: Modal) = Context.at(fml, odePos)
         val ODESystem(_, And(e, soln)) = modal.program
         TactixLibrary.proveBy(Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)), fml),
-          CMon(odePos) & useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+          CMon(odePos) & useAt(DerivedAxioms.DR, PosInExpr(1::Nil))(1) &
             DW(1) & G(1) & implyR(1) & andL(-1) & close(-1, 1))
       case Some(fml: Formula) if polarity < 0 =>
         val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize+1))

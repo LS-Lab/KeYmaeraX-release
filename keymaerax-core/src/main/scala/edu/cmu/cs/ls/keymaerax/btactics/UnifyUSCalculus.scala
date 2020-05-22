@@ -786,7 +786,7 @@ trait UnifyUSCalculus {
       useAt(DerivedAxioms.impliesRightAnd)(1, subPos ++ 0) &
       useAt(DerivedAxioms.sameImpliesImplies)(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
-      useAt(DerivedAxioms.impliesTrue)(1, subPos)
+      useAt(DerivedAxioms.implyTrue)(1, subPos)
     case And(p, _) if towards.head == 0 =>
       useAt(DerivedAxioms.factorAndRight)(1, subPos ++ 0) &
       useAt(DerivedAxioms.impliesMonAndLeft, PosInExpr(1::Nil))(1, subPos) &
@@ -1425,7 +1425,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (ProvableSig.startProof(Sequent(ante, succ))
-            (DerivedAxioms.boxMonotone.provable(USubst(
+            (DerivedAxioms.monb.provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
                 :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))
@@ -1498,7 +1498,7 @@ trait UnifyUSCalculus {
                   sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
               case _ => us
             }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
-            useFor(DerivedAxioms.existsEliminate, PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
+            useFor(DerivedAxioms.existse, PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(AntePos(0))
             )
@@ -1968,9 +1968,9 @@ trait UnifyUSCalculus {
         // reflexive setup corresponds to no-progress chase
         val initial: ProvableSig = e match {
           case t: Term =>      // t=t
-            DerivedAxioms.equalReflex.provable(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
+            DerivedAxioms.equalReflexive.provable(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
           case f: Formula =>   // f<->f
-            DerivedAxioms.equivReflexiveAxiom.provable(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
+            DerivedAxioms.equivReflexive.provable(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
         }
         Predef.assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1,
           "Proved reflexive start " + initial + " for " + e)

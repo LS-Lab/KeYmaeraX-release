@@ -107,10 +107,10 @@ class BTacticExamples extends TacticTestBase  {
         useAt("[:=] assign")(1, 0::0::Nil) &
         // use double negation at the indicated position on
         // |- __!!q(2*v+1)__ <-> q(2*v+1)
-        useAt(doubleNegationAxiom)(1, 0::Nil) &
+        useAt(doubleNegation)(1, 0::Nil) &
         // close by (an instance of) reflexivity |- p() <-> p()
         // |- q(2*v+1) <-> q(2*v+1)
-        byUS(equivReflexiveAxiom)
+        byUS(equivReflexive)
     )
     proof shouldBe 'proved
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula))

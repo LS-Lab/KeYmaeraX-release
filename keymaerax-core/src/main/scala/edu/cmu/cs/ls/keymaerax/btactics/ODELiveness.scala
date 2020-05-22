@@ -164,7 +164,7 @@ object ODELiveness {
 
     //g(|y_|) is the cofactor from darbouxGt
     val unifC = UnificationMatch.unifiable("g(|y_|)".asTerm, cofA).get.usubst
-    val dbx = DerivedAxioms.darbouxGt.provable(unifC)
+    val dbx = DerivedAxioms.DBXgt.provable(unifC)
 
     val unifD = UnificationMatch.unifiable("c".asDifferentialProgram,extODE).get.usubst
     val commute = ElidingProvable(Provable.axioms(", commute")(unifD))

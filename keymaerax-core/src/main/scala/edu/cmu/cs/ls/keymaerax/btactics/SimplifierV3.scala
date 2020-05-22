@@ -530,7 +530,7 @@ object SimplifierV3 {
             val res = m.reapply(m.program,uf)
 
             // |- [a]p <-> [a]p
-            val init = DerivedAxioms.equivReflexiveAxiom.provable(
+            val init = DerivedAxioms.equivReflexive.provable(
               USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil))
 
             // |- [a]p <-> [a]q
@@ -549,7 +549,7 @@ object SimplifierV3 {
         val cuts = proofs.zipWithIndex.map({ case ((None,_),_) => ident case ((Some(prf),_),i) => useAt(prf._2)(-(i+1)) & eqL2R(-(i+1))(1)}).
           reduceRight( _&_)
         val pr = proveBy(Imply(premise,Equiv(f,nf)),implyR(1) & (andL('Llast)*(proofs.length-1)) & cuts & cohideR(1)
-          & byUS(DerivedAxioms.equivReflexiveAxiom))
+          & byUS(DerivedAxioms.equivReflexive))
         (nf,Some(premise,pr))
       //Differentials
       case _ => (f,None)
@@ -1008,7 +1008,7 @@ object SimplifierV3 {
       case Imply(l,r) => List(implyT,Timply,implyF,Fimply)
       case Or(l,r) => List(orT,Tor,orF,For)
       case Equiv(l,r) =>  List(equivT,Tequiv,equivF,Fequiv)
-      case Not(u) => List(notT,notF,DerivedAxioms.doubleNegationAxiom.provable)
+      case Not(u) => List(notT,notF,DerivedAxioms.doubleNegation.provable)
       case Forall(_,_) => List(forallTrue,forallFalse)
       case Exists(_,_) => List(existsTrue,existsFalse)
       case _ => List()
@@ -1016,7 +1016,7 @@ object SimplifierV3 {
   }
 
   def chaseIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    val id = proveBy(Equiv(f,f),byUS(DerivedAxioms.equivReflexiveAxiom.provable))
+    val id = proveBy(Equiv(f,f),byUS(DerivedAxioms.equivReflexive.provable))
     val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
     List(cpr)
   }

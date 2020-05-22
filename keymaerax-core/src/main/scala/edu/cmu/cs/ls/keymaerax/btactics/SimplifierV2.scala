@@ -126,7 +126,7 @@ object SimplifierV2 {
   //Fold constants
   def reassoc(t:Term): ProvableSig =
   {
-    val init = DerivedAxioms.equalReflex.provable(
+    val init = DerivedAxioms.equalReflexive.provable(
       USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     t match {
       case Plus(_,_) =>
@@ -179,22 +179,22 @@ object SimplifierV2 {
         val nt = bop.reapply(lt,rt)
         proveBy(Equal(t, nt),
           CEat(lpr)(SuccPosition(1,1::0::Nil))&
-            CEat(rpr)(SuccPosition(1,1::1::Nil))& byUS(DerivedAxioms.equalReflex))
+            CEat(rpr)(SuccPosition(1,1::1::Nil))& byUS(DerivedAxioms.equalReflexive))
       case uop: UnaryCompositeTerm =>
         val u = uop.child
         val (ut,upr) = termSimp(u)
         val nt = uop.reapply(ut)
         proveBy(Equal(t,nt),
-          CEat(upr)(SuccPosition(1,1::0::Nil)) & byUS(DerivedAxioms.equalReflex))
+          CEat(upr)(SuccPosition(1,1::0::Nil)) & byUS(DerivedAxioms.equalReflexive))
       case FuncOf(fn, c) if c != Nothing =>
         val args = FormulaTools.argumentList(c)
         val simp = args.map(termSimp)
         val nArgs = simp.map(_._1).reduce[Term](Pair)
         val pref = if (args.size <= 1) 0::Nil else 0::0::Nil
         val tactic = simp.zipWithIndex.map({ case ((_, eqPr), i) => useAt(eqPr)(1, pref ++ PosInExpr.parseInt(i).pos) }).
-          reduce[BelleExpr](_&_) & byUS(DerivedAxioms.equalReflex)
+          reduce[BelleExpr](_&_) & byUS(DerivedAxioms.equalReflexive)
         proveBy(Equal(t, FuncOf(fn, nArgs)), tactic)
-      case _ => DerivedAxioms.equalReflex.provable(
+      case _ => DerivedAxioms.equalReflexive.provable(
         USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     }
 
@@ -778,12 +778,12 @@ object SimplifierV2 {
             equivR(1) & onAll(instantiate & implyRi()(AntePos(remainingCtx.length), SuccPos(0)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
       case m:Modal =>
         val (uf,upr) = formulaSimp(m.child,IndexedSeq())
-        val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.provable(
+        val init = weaken(ctx)(DerivedAxioms.equivReflexive.provable(
           USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
         val pr = useFor(upr, PosInExpr(0 :: Nil))(SuccPosition(1, 1:: 1 :: Nil))(init)
         (extract(pr).asInstanceOf[Formula],pr)
       case _ =>
-        (f,weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.provable(
+        (f,weaken(ctx)(DerivedAxioms.equivReflexive.provable(
           USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil))))
     }
 

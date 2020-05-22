@@ -246,8 +246,8 @@ private object EqualityTactics {
       cutAt(cutFml)(pos) <(
         /* use */ skip,
         /* show */ cohidePos & CMon(pos.inExpr) & implyR(1) &
-        (if (polarity >= 0) allL(t)(-1) & implyL(-1) <(cohide(2) & byUS(DerivedAxioms.equalReflex), closeId)
-         else existsR(t)(1) & andR(1) <(cohide(1) & byUS(DerivedAxioms.equalReflex), closeId)) &
+        (if (polarity >= 0) allL(t)(-1) & implyL(-1) <(cohide(2) & byUS(DerivedAxioms.equalReflexive), closeId)
+         else existsR(t)(1) & andR(1) <(cohide(1) & byUS(DerivedAxioms.equalReflexive), closeId)) &
         done
       )
   })
