@@ -58,7 +58,7 @@ protected object FOQuantifierTactics {
 
       sequent.at(pos) match {
         case (ctx, f@Forall(vars, qf)) if instance.isEmpty && (quantified.isEmpty || vars.contains(quantified.get)) =>
-          useAt("all eliminate")(pos)
+          useAt(DerivedAxioms.alle)(pos)
         case (ctx, f@Forall(vars, qf)) if instance.isDefined &&
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
