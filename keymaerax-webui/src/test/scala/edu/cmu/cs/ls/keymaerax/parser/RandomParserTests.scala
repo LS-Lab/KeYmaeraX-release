@@ -5,13 +5,14 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
+import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 import testHelper.CustomAssertions.withSafeClue
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
 /**
  * Tests the parser on pretty prints of randomly generated formulas
@@ -24,9 +25,10 @@ class RandomParserTests extends FlatSpec with Matchers {
   val rand = new RandomFormula()
 
 
-  val pp = if (true) KeYmaeraXPrettyPrinter
-  else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
-  val parser = if (true) KeYmaeraXParser else DLParser
+  val pp = KeYmaeraXPrettyPrinter
+  //else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
+  val parser = if (false) KeYmaeraXParser else DLParser
+  KeYmaeraXTool.init(Map.empty)
 
   def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser.formulaParser(input)
@@ -38,13 +40,6 @@ class RandomParserTests extends FlatSpec with Matchers {
       parse shouldBe expr
     }
   }
-
-  "The parser manually" should "reparse pretty-printed (-2)*x" in {reparse(Times(Number(BigDecimal("-2")), Variable("x")))}
-  it should "reparse pretty-printed -(2*x)" in {reparse(Neg(Times(Number(BigDecimal("2")), Variable("x"))))}
-  it should "reparse pretty-printed (-2)^4" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("4"))))}
-  it should "reparse pretty-printed -(2^4)" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("4")))))}
-  it should "reparse pretty-printed (-2)^(-4)" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("-4"))))}
-  it should "reparse pretty-printed -(2^(-4))" in {reparse(Neg(Power(Number(BigDecimal("2")), Number(BigDecimal("-4")))))}
 
   "The parser" should "reparse pretty-prints of random formulas (checkin)" taggedAs(CheckinTest) in {test(10, 6)}
   it should "reparse pretty-prints of random formulas (summary)" taggedAs(SummaryTest) in {test(50, 6)}
@@ -66,11 +61,13 @@ class RandomParserTests extends FlatSpec with Matchers {
 
   private def reparse(e: Expression) = {
     val printed = pp.stringify(e)
-    println("Random in: " + printed)
+    println("Expression: " + printed)
     val full = pp.fullPrinter(e)
-    println("Fullform:  " + full)
+    println("Fullform:   " + full)
     parseShouldBe(full, e)
-    println("Reparsing: " + printed)
+    println("Reparsing:  " + printed)
     parseShouldBe(printed, e)
+    println("Fullparse:  " + pp.fullPrinter(parser(printed)))
   }
+
 }

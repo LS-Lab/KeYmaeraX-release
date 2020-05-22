@@ -17,6 +17,7 @@ import AnnotationCommon._
   * Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]].
   * @param names Display names to render in the user interface.
   * @param codeName Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+  *                 `codeName`` will be inferred from the (lazy) val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
   * @param formula Formula displayed for axioms as html with unicode
   * @param unifier Which unifier to use for axiom: 'linear or 'full
   * @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
