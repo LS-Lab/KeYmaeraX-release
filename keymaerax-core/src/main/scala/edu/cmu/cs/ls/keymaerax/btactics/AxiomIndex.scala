@@ -68,7 +68,7 @@ object AxiomIndex extends Logging {
     case "DG inverse differential ghost system" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
     case "DG inverse differential ghost" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil) //todo copies from DG inverse differential ghost system. Not sure if this is correct.
     case ", commute" => (PosInExpr(0::Nil), Nil)
-    case "DS& differential equation solution" => (PosInExpr(0::Nil), PosInExpr(0::1::1::Nil)::PosInExpr(Nil)::Nil)
+    case "DS& differential equation solution" => (PosInExpr(0::Nil), PosInExpr(0::1::1::Nil)::/*@todo PosInExpr(0::1::Nil)::*/PosInExpr(Nil)::Nil)
     case "DX differential skip" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "DX diamond differential skip" => (PosInExpr(1::Nil), PosInExpr(1::Nil)::Nil)
 
@@ -91,7 +91,7 @@ object AxiomIndex extends Logging {
     case "*' derive product" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(1::1::Nil)::Nil)
     case "/' derive quotient" => (PosInExpr(0::Nil), PosInExpr(0::0::0::Nil)::PosInExpr(0::1::1::Nil)::Nil)
     case "^' derive power" => (PosInExpr(1::0::Nil), PosInExpr(1::Nil)::Nil)
-    case "chain rule" => (PosInExpr(1::1::0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+    //@todo case "chain rule" => (PosInExpr(1::1::0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "x' derive var"   => nullaryDefault
 
     case "all instantiate" | "all eliminate"
