@@ -77,7 +77,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x-y-z","(x-y)-z"),
     ("x/y/z","(x/y)/z"),
     ("x*22", "x*(22)"),
-    ("x*-22", "x*(-22)"),
+    ("x*(-22)", "x*(-22)"),
     ("x^22", "x^(22)"),
     ("x^2^4", "x^(2^4)"),
     ("-x^2", "-(x^2)"),
@@ -292,14 +292,14 @@ class PairParserTests extends FlatSpec with Matchers {
     ("-x*y", if (!weakNeg) "(-x)*y" else "-(x*y)"),
 //    ("-3*y", "(-3)*y"), //@note subtle "-(3*y)"),
 //    ("-5*(y-z)", "(-5)*(y-z)"), // subtle "-(5*(y-z))"),
-    ("-2-3", "(-2)-(3)"),  // subtle "(-(2))-(3)"),
+    ("-2-3", if (numNeg) "(-2)-(3)" else "(-(2))-(3)"),
 //    ("-2*-3", "(-2)*(-3)"),  // subtle "-(2*(-(3)))"),
-    ("-2^-3", "-(2^(-3))"),  // subtle
-    ("-8", "(-8)"),
+    ("-2^-3", if (numNeg) "-(2^(-3))" else "-(2^(-(3)))"),  // subtle NOT "(-2)^(-3)"
+    ("(-8)", "(-8)"),
     ("-2*a", if (!weakNeg||numNeg) "(-2)*a" else "-(2*a)"),  // subtle -(2*a)"),
     ("-0*a", if (!weakNeg||numNeg) "(-0)*a" else "-(0*a)"),  // subtle "-(0*a)"),
     ("a-3*b", "a-(3*b)"),
-    ("-2-3*b", "(-2)-(3*b)"),
+    ("-2-3*b", if (numNeg) "(-2)-(3*b)" else "-(2)-(3*b)"),
 //    ("-2+-3*b", "(-2)+((-3)*b)"),
     ("-(5*x)", "-(5*x)"),
     ("-(5+x)", "-(5+x)"),
@@ -319,10 +319,23 @@ class PairParserTests extends FlatSpec with Matchers {
     ("a+2b+1", unparseable),
 
     ("z2'^4","(z2')^(4)"),
-    ("(0)'-0+0*z4*(((z4'^3/z4'/gg()*-83)^2-(0)'-(-45)'-z1)/15)^4", "((0)'-0)+0*z4*(((((((((((z4')^3)/(z4'))/gg())*(-83))^2)-(0)')-((-45)'))-z1)/15)^4)"),
+    ("(0)'-0+0*z4*(((z4'^3/z4'/gg()*-83)^2-(0)'-(-45)'-z1)/15)^4", "((0)'-0)+(0*z4)*(((((((((((z4')^3)/(z4'))/gg())*(-(83)))^2)-(0)')-((-45)'))-z1)/15)^4)"),
+
+    ("-(2)", "-(2)"),
+    ("-(2)", "-(2)"),
+    ("(-2)", "(-2)"),
+    ("- 2", "-(2)"),
+    ("(- 2)", "-(2)"),
+    ("-2*x", if (weakNeg || !numNeg) "-(2*x)" else "(-2)*x"),
+    ("-1*x", if (weakNeg || !numNeg) "-(1*x)" else "(-1)*x"),
+    ("-10*x", if (weakNeg || !numNeg) "-(10*x)" else "(-10)*x"),
+    ("0-2*x", "0-(2*x)"),
 
     ("001", "1"),
+    ("000001", "1"),
     ("00", "0"),
+    ("-0", if (numNeg) "0" else "-(0)"),
+    ("(-0)", "0"),
 
     ("m_0", "m_0"),
     //("m_00", "m_0"),   // @subtle...
@@ -610,7 +623,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("[{{?true;?true;}{?true;++?true;}}?true|true;](ff(0))'=16", "[{{?true;?true;}{?true;++?true;}}?(true|true);]((ff(0))'=16)"),
     //("{?true;}*++{z3'=45&true}++{{{z1:=-85/-94;++?true;{{?true;++z5:=*;}++z6:=*;}}++{{{{?true;++z2:=*;}*++z3:=*;}{{{{{{z7'=0&false}z1:=*;}?0*0*(0+0)<=z6;++z7:=*;++?[{?true;}*?true;?true;][{?true;}*][?true;]true;}++z4:=pp(-58);}{z5:=z5;}*z6:=((0--25)*z4')';}{{{z5:=((0)')';}*++?true;++{{z4'=0*0&\\exists z6 true}++{z7'=0,z3'=0&true}{?true;++?true;}}*}++z5:=pp(96);}*}{{{?true;}*++{{z3'=0&\\exists z2 <?true|true;>\\forall z7 [?true;]true}}*}*}*}{{{?true;}*}*++{{{{?true;++z6:=*;++?!true;}++{z7:=(0^5)^3+(0+0)^3;}*}++{{z4:=*;++?true;}*}*{{z6:=*;}*}*}{{?false;++{{?true;++?true;}{?true;++?true;}}?true;{?true;++?true;}++z4:=qq();}{z1:=z1;{{?true;}*z4:=0;++{?true;++?true;}++?true;?true;}}{{?true;}*++?true;{?true;}*}*}*}{{z1'=0&!\\forall z3 \\forall z6 ((true)')'}?<{?true;{?true;}*++{?true;++?true;}++?true;?true;}?true;>\\exists z1 <z4:=z4;{?true;++?true;}>-91!=0+0;}?true;}?[{{z1:=(z1)'^1;++?true;++{z3'=0,z2'=0&PP{true}}{?true;?true;++?true;++?true;}*}{{{{?true;}*?true;?true;}*{{{?true;}*}*}*++?true;}++{{z1'=0&\\forall z4 true}++z4:=z2';}{z3'=z4&true}++z6:=0;++{{?true;++?true;}++{?true;}*}++{{?true;}*}*}}*]\\forall z6 \\exists z4 \\exists z6 \\forall z1 \\forall z2 ((true|true)&z5'>=z2');++{{z5:=*;++{?\\forall z4 <?true;><{{z3:=z3;}*}*>((\\forall z3 true)'|<{?true;}*>qq());}*}*++?\\forall z5 0+0--20^0*72<=-49;}{z7:=*;}*}{{{z3:=0-z4-((z2)')'*z6';++{z5'=79&<{{{?true;}*++{{?<?true;>true;{?true;?true;++?true;?true;}}*}*}++?true;z4:=pp(0*0+0/0)+-29;}++{z7:=*;++{{?<?true;>true;}*{?true;++?true;}*{?true;++?true;}?true;}{{?true;{?true;}*++{{?true;}*}*}++{z6'=0&true}?true;?true;++{?true;++?true;}*}}?true;{?true;?true;++?true;}>true}}++{{{{{{{{z7:=0;}*}*}*++{?true;}*}*++{{{{?true;}*++?true;?true;}++?true;}++?<z3:=z3;>(true<->true);}*++{{{?true;}*z3:=z3;}{?true;}*{?true;}*}*?true;}++{{{?true;++{z6:=0;}*{z2:=*;++{?true;}*}}?true;{{?true;?true;++{?true;}*}++{?true;?true;}*}}{?true;{{?true;++?true;}*++?false;}}?true;}z6:=*;}++?true;}{{{{{{z1:=*;}*}*}*{?true;++z4:=0+0;}*++z4:=z7^1;{z5:=18;++z7:=z5';}}{{z4:=*;}*}*++{{{{{?true;++?true;}++{?true;}*}++{?true;?true;}*}{?true;++?true;}*{?true;++?true;}?true;?true;++{z7'=0&[z6:=0;]\\exists z4 true}++{?true;++?true;}*{?true;++?true;++?true;}}++{?0>=0;{z7'=0,z2'=0&0 < 0}++{{?true;}*++?true;++?true;}++?true;}z6:=*;}?<{{?0<=0;}*}*>true;}++{{{{{z6'=1&0 < -43}}*}*}*++{{?true;?true;}*?true;}*{{?true;?true;}*++?true;++?true;?true;}{?true;}*++{z1:=*;}*++?true;}*}}*}++z7:=*;}}{?true;}*}*{{?\\exists z5 pp(z1/-74+((-4)')'/0);++{{{{{{{{{?true;++?true;}?true;?true;++{{?true;}*}*}++{?true;?true;}z4:=0;++{?true;?true;}*}*z2:=z3';z5:=*;++{{z6:=*;++{{?true;}*}*}*++{{?true;++?true;}*}*++{z2'=0&[?true;]true|<?true;>true}}{{{{?true;++?true;}z5:=*;}{z3:=0;}*}z4:=*;++{?true;?true;++z5:=0;}*++z4:=0+0;{z5:=*;++?true;}}}{{z2:=*;}*++z7:=0;}}{{{{{{z7'=0&true}++{?true;}*}?true;}{z3:=0;++?true;}}?true;}*++?true;}z2:=z2;}*++z5:=*;++{{{z1:=(75)'^1;}*++{{z7:=*;++{z5:=z5;}*++z7:=0-0;}{{z3:=z3;}*{{z7'=0&true}++?true;}}{{{z6'=0&true}}*}*}{{{z3'=0/0+0/0&!true}}*}*}{?true;++?\\exists z1 <{?true;++?true;}{?true;++?true;}++?true;>0*0-(0-0)!=z4';}}z3:=z3;}{?true;}*}*}*}*}*","{?true;}*++{z3'=45&true}++{{{z1:=-85/-94;++?true;{{?true;++z5:=*;}++z6:=*;}}++{{{{?true;++z2:=*;}*++z3:=*;}{{{{{{z7'=0&false}z1:=*;}?0*0*(0+0)<=z6;++z7:=*;++?[{?true;}*?true;?true;][{?true;}*][?true;]true;}++z4:=pp(-58);}{z5:=z5;}*z6:=((0--25)*z4')';}{{{z5:=((0)')';}*++?true;++{{z4'=0*0&\\exists z6 true}++{z7'=0,z3'=0&true}{?true;++?true;}}*}++z5:=pp(96);}*}{{{?true;}*++{{z3'=0&\\exists z2 <?true|true;>\\forall z7 [?true;]true}}*}*}*}{{{?true;}*}*++{{{{?true;++z6:=*;++?!true;}++{z7:=(0^5)^3+(0+0)^3;}*}++{{z4:=*;++?true;}*}*{{z6:=*;}*}*}{{?false;++{{?true;++?true;}{?true;++?true;}}?true;{?true;++?true;}++z4:=qq();}{z1:=z1;{{?true;}*z4:=0;++{?true;++?true;}++?true;?true;}}{{?true;}*++?true;{?true;}*}*}*}{{z1'=0&!\\forall z3 \\forall z6 ((true)')'}?<{?true;{?true;}*++{?true;++?true;}++?true;?true;}?true;>\\exists z1 <z4:=z4;{?true;++?true;}>-91!=0+0;}?true;}?[{{z1:=(z1)'^1;++?true;++{z3'=0,z2'=0&PP{true}}{?true;?true;++?true;++?true;}*}{{{{?true;}*?true;?true;}*{{{?true;}*}*}*++?true;}++{{z1'=0&\\forall z4 true}++z4:=z2';}{z3'=z4&true}++z6:=0;++{{?true;++?true;}++{?true;}*}++{{?true;}*}*}}*]\\forall z6 \\exists z4 \\exists z6 \\forall z1 \\forall z2 ((true|true)&z5'>=z2');++{{z5:=*;++{?\\forall z4 <?true;><{{z3:=z3;}*}*>((\\forall z3 true)'|<{?true;}*>qq());}*}*++?\\forall z5 0+0--20^0*72<=-49;}{z7:=*;}*}{{{z3:=0-z4-((z2)')'*z6';++{z5'=79&<{{{?true;}*++{{?<?true;>true;{?true;?true;++?true;?true;}}*}*}++?true;z4:=pp(0*0+0/0)+-29;}++{z7:=*;++{{?<?true;>true;}*{?true;++?true;}*{?true;++?true;}?true;}{{?true;{?true;}*++{{?true;}*}*}++{z6'=0&true}?true;?true;++{?true;++?true;}*}}?true;{?true;?true;++?true;}>true}}++{{{{{{{{z7:=0;}*}*}*++{?true;}*}*++{{{{?true;}*++?true;?true;}++?true;}++?<z3:=z3;>(true<->true);}*++{{{?true;}*z3:=z3;}{?true;}*{?true;}*}*?true;}++{{{?true;++{z6:=0;}*{z2:=*;++{?true;}*}}?true;{{?true;?true;++{?true;}*}++{?true;?true;}*}}{?true;{{?true;++?true;}*++?false;}}?true;}z6:=*;}++?true;}{{{{{{z1:=*;}*}*}*{?true;++z4:=0+0;}*++z4:=z7^1;{z5:=18;++z7:=z5';}}{{z4:=*;}*}*++{{{{{?true;++?true;}++{?true;}*}++{?true;?true;}*}{?true;++?true;}*{?true;++?true;}?true;?true;++{z7'=0&[z6:=0;]\\exists z4 true}++{?true;++?true;}*{?true;++?true;++?true;}}++{?0>=0;{z7'=0,z2'=0&0 < 0}++{{?true;}*++?true;++?true;}++?true;}z6:=*;}?<{{?0<=0;}*}*>true;}++{{{{{z6'=1&0 < -43}}*}*}*++{{?true;?true;}*?true;}*{{?true;?true;}*++?true;++?true;?true;}{?true;}*++{z1:=*;}*++?true;}*}}*}++z7:=*;}}{?true;}*}*{{?\\exists z5 pp(z1/-74+((-4)')'/0);++{{{{{{{{{?true;++?true;}?true;?true;++{{?true;}*}*}++{?true;?true;}z4:=0;++{?true;?true;}*}*z2:=z3';z5:=*;++{{z6:=*;++{{?true;}*}*}*++{{?true;++?true;}*}*++{z2'=0&[?true;]true|<?true;>true}}{{{{?true;++?true;}z5:=*;}{z3:=0;}*}z4:=*;++{?true;?true;++z5:=0;}*++z4:=0+0;{z5:=*;++?true;}}}{{z2:=*;}*++z7:=0;}}{{{{{{z7'=0&true}++{?true;}*}?true;}{z3:=0;++?true;}}?true;}*++?true;}z2:=z2;}*++z5:=*;++{{{z1:=(75)'^1;}*++{{z7:=*;++{z5:=z5;}*++z7:=0-0;}{{z3:=z3;}*{{z7'=0&true}++?true;}}{{{z6'=0&true}}*}*}{{{z3'=0/0+0/0&!true}}*}*}{?true;++?\\exists z1 <{?true;++?true;}{?true;++?true;}++?true;>0*0-(0-0)!=z4';}}z3:=z3;}{?true;}*}*}*}*}*"),
     ("-69=0","-69=0"),
-    ("\\forall z3 <{?true;++z3:=z3;}*>-67>=1","\\forall z3 (<{?true;++z3:=z3;}*>((-67)>=1))"),
+    ("\\forall z3 <{?true;++z3:=z3;}*>-67>=1","\\forall z3 (<{{?true;}++{z3:=z3;}}*>((-(67))>=1))"),
 
     ("P{z'=1}", "(P{((z')=1)})"),
     ("\\exists x P{z'=1}", "\\exists x (P{((z')=1)})"),
@@ -760,7 +773,8 @@ class PairParserTests extends FlatSpec with Matchers {
     }
   }
 
-  "Reparsing Pretty-printed Expressions" should "reparse (-2)*x" in {reparse(Times(Number(BigDecimal("-2")), Variable("x")))}
+  "Reparsing Pretty-printed Expressions" should "reparse (-2)" in {reparse(Number(BigDecimal("-2")))}
+  it should "reparse (-2)*x" in {reparse(Times(Number(BigDecimal("-2")), Variable("x")))}
   it should "reparse -(2*x)" in {reparse(Neg(Times(Number(BigDecimal("2")), Variable("x"))))}
   it should "reparse (-2)^4" in {reparse(Power(Number(BigDecimal("-2")), Number(BigDecimal("4"))))}
   it should "reparse (- 2)^4" in {reparse(Power(Neg(Number(BigDecimal("2"))), Number(BigDecimal("4"))))}
