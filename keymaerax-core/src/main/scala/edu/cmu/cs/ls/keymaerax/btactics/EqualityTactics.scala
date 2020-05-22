@@ -60,6 +60,8 @@ private object EqualityTactics {
 
         val occurrences = sequent.zipWithPositions.filter({ case (f, p) => p != pos && f.find(lhs).isDefined })
         occurrences.map({ case (_, p) => renameBoundRhs(p) & eqL2R(pos.checkAnte)(p) }).reduceOption[BelleExpr](_&_).getOrElse(skip)
+      case Some(e) => throw new TacticInapplicableFailure("ExhaustiveEq (" + name + ") only applicable to equalities l=r, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -102,6 +104,8 @@ private object EqualityTactics {
             (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
             (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl) :: Nil))
         )
+      case Some(e) => throw new TacticInapplicableFailure("eqL2R only applicable to equalities l=r, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -112,6 +116,8 @@ private object EqualityTactics {
     sequent.sub(eqPos) match {
       case Some(Equal(lhs, rhs)) =>
         useAt(DerivedAxioms.equalCommute)(eqPos) & eqL2R(eqPos)(pos) & useAt(DerivedAxioms.equalCommute)('L, Equal(rhs, lhs))
+      case Some(e) => throw new TacticInapplicableFailure("eqR2L only applicable to equalities l=r, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -130,6 +136,8 @@ private object EqualityTactics {
   lazy val atomExhaustiveEqL2R: DependentPositionTactic = "atomAllL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(_: Variable, _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
     case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
+    case Some(e) => throw new TacticInapplicableFailure("Equality rewriting only applicable to equalities l=r, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   /** Rewrites all atom equalities in the assumptions. */
@@ -161,8 +169,8 @@ private object EqualityTactics {
   /** @see [[TactixLibrary.abbrv()]] */
   def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(t: Term) => abbrv(t, Some(abbrvV))
-    case Some(e) => throw new BelleThrowable("Expected a term at position " + pos + ", but got " + e)
-    case _ => throw new BelleThrowable("Position " + pos + " is undefined in sequent " + sequent)
+    case Some(e) => throw new TacticInapplicableFailure("Expected a term at position " + pos + ", but got " + e)
+    case _ => throw new IllFormedTacticApplicationException("Position " + pos + " is undefined in sequent " + sequent)
   })
 
   /**
@@ -220,8 +228,8 @@ private object EqualityTactics {
     abbrvV match { case Some(v) => t::v::Nil case None => t::Nil }, (pos: Position, sequent: Sequent) => {
       val inFml = sequent.sub(pos) match {
         case Some(p: Formula) => p
-        case Some(t: Term) => throw new BelleTacticFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
-        case _ => throw new BelleIllFormedError("Position " + pos + " does not point to an expression")
+        case Some(t: Term) => throw new TacticInapplicableFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
+        case _ => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to an expression")
       }
       require(abbrvV.isEmpty ||
         !sequent.sub(pos).map(StaticSemantics.signature).contains(abbrvV.get),
@@ -272,6 +280,7 @@ private object EqualityTactics {
       } else {
         absAt(pos)
       }
+    case (_, e) => throw new TacticInapplicableFailure("absExp only applicable to abs(.), but got " + e.prettyString)
   })
 
   private lazy val absContradiction = AnonymousLemmas.remember("f()<0 & f()>=0 <-> false".asFormula, QE, namespace)
@@ -320,6 +329,8 @@ private object EqualityTactics {
           }, "Unable to expand " + fn + " since its argument is bound in context") &
           proveAbs
       )
+    case Some(e) => throw new TacticInapplicableFailure("absAt only applicable to abs, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to valid position in sequent " + sequent.prettyString)
   })
 
   /**
@@ -342,6 +353,7 @@ private object EqualityTactics {
       } else {
         minmaxAt(pos)
       }
+    case (_, e) => throw new TacticInapplicableFailure("minmax only applicable to min/max, but got " + e.prettyString)
   })
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
   lazy val minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -393,6 +405,8 @@ private object EqualityTactics {
           }, "Unable to expand " + fn + " since its arguments are bound in context") &
           proveMinMax
       )
+    case Some(e) => throw new TacticInapplicableFailure("minmaxAt only applicable to min/max, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " does not point to a valid position in " + sequent.prettyString)
   })
 
   /** Expands all special functions (abs/min/max). */

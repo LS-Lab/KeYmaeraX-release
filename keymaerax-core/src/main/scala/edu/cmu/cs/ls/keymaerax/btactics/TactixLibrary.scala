@@ -103,7 +103,7 @@ object TactixLibrary extends HilbertCalculus
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
      else HilbertCalculus.stepAt(pos))
-    | assignb(pos))
+    |! assignb(pos))
 
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
@@ -183,8 +183,8 @@ object TactixLibrary extends HilbertCalculus
       case Some(fml: Formula) if expected.isEmpty || expected.contains(fml) => onAll(atPos(None)(pos, fml))
       case Some(fml: Formula) if !expected.contains(fml) => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
       case None if expected.isDefined => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-      case None if expected.isEmpty => throw new BelleTacticFailure("Position " + pos + " points outside sequent")
-      case _ => throw new BelleTacticFailure("TacticChase is only applicable at formulas")
+      case None if expected.isEmpty => throw new IllFormedTacticApplicationException("Position " + pos + " points outside sequent")
+      case _ => throw new TacticInapplicableFailure("TacticChase is only applicable at formulas")
     }
   })
 
@@ -193,10 +193,12 @@ object TactixLibrary extends HilbertCalculus
   def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic(
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
     Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
-      ss.succ.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
+      ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }))) &
     Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
-      ss.ante.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+      //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
+      ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     })))
   )
 
@@ -213,10 +215,10 @@ object TactixLibrary extends HilbertCalculus
           if (pos.isAnte && tactics._1.isDefined || pos.isSucc && tactics._2.isDefined) {
             tacticChase(tacticIndex)(restrictTo:_*)(None)(pos)
           } else {
-            throw new BelleTacticFailure("Inapplicable chase at position " + pos.prettyString + " in " + seq.prettyString)
+            throw new TacticInapplicableFailure("Inapplicable chase at position " + pos.prettyString + " in " + seq.prettyString)
           }
         }
-      case None => throw new BelleTacticFailure("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
     }
   })
 
@@ -261,7 +263,7 @@ object TactixLibrary extends HilbertCalculus
         case _ => None
       })
 
-      decompose.reduce[BelleExpr](_ & _)
+      decompose.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
     def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
@@ -273,7 +275,7 @@ object TactixLibrary extends HilbertCalculus
         case _ => None
       })
 
-      solvers.reduce[BelleExpr](_ & _)
+      solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
     def decomposeToODE: BelleExpr = "ANON" by ((seq: Sequent) => {
@@ -326,7 +328,7 @@ object TactixLibrary extends HilbertCalculus
         },
         (inv: Formula) => loop(inv)(pos) & onAll(explore(gen))
       )
-    case _ => throw new BelleIllFormedError("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
+    case _ => throw new InputFormatFailure("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
   }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
 
   //  meta-tactics for proof structuring information but no effect
@@ -412,7 +414,7 @@ object TactixLibrary extends HilbertCalculus
   def loop(gen: Generator[GenProduct]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos).map(_._1).iterator,
-        throw new BelleThrowable("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
+        throw new BelleNoProgress("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
@@ -450,7 +452,7 @@ object TactixLibrary extends HilbertCalculus
               (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
             )
       }
-    case _ => throw new BelleTacticFailure("Loopauto is applicable to nondeterministic repetition only")
+    case _ => throw new TacticInapplicableFailure("Loopauto is applicable to nondeterministic repetition only")
   })
 
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
@@ -581,24 +583,26 @@ object TactixLibrary extends HilbertCalculus
   def QE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     //@todo implement as part of tools?
     lazy val tool = ToolProvider.qeTool(requiresTool.map(n => if (n == "M") "Mathematica" else n)).getOrElse(
-      throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
+      throw new ProverSetupException(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
     lazy val resetTimeout: BelleExpr => BelleExpr = timeout match {
       case Some(t) => tool match {
         case tom: ToolOperationManagement =>
           val oldTimeout = tom.getOperationTimeout
           tom.setOperationTimeout(t)
           if (oldTimeout != t) {
-            e: BelleExpr => e > new DependentTactic("ANON") {
-              override def computeExpr(v: BelleValue): BelleExpr = {
-                tom.setOperationTimeout(oldTimeout)
-                v match {
-                  case _: BelleProvable => skip
-                  case err: BelleValue with BelleThrowable => throw err
-                }
-              }
-            }
+            e: BelleExpr => TryCatch(e, classOf[Throwable],
+                // catch: noop
+                (_: Throwable) => skip,
+                // finally: reset timeout
+                Some(new DependentTactic("ANON") {
+                  override def computeExpr(v: BelleValue): BelleExpr = {
+                    tom.setOperationTimeout(oldTimeout)
+                    skip
+                  }
+                })
+            )
           } else (e: BelleExpr) => e
-        case _ => throw new BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
+        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
       }
       case None => (e: BelleExpr) => e
     }
@@ -607,7 +611,7 @@ object TactixLibrary extends HilbertCalculus
         case tom: ToolOperationManagement =>
           tom.setOperationTimeout(t)
           tool
-        case _ => throw new BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
+        case _ => throw new UnsupportedTacticFeature("Tool " + tool + " does not support timeouts")
       }
       case None => tool
     }
@@ -625,7 +629,7 @@ object TactixLibrary extends HilbertCalculus
     * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None")))
+  def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("partialQE requires a QETool, but got None")))
 
   /** Splits propositional into many smallest possible QE calls.
     * @param split Configures how the tactic splits into smaller subgoals before QE (default: exhaustive alpha and beta rules).
@@ -636,8 +640,8 @@ object TactixLibrary extends HilbertCalculus
     split & onAll(preQE & qe & done)
   def atomicQE: BelleExpr = atomicQE()
 
-  def heuQE: BelleExpr = ToolTactics.heuristicQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("QE requires a QETool, but got None")))
-  def heuQEPO (po:Ordering[Variable]): BelleExpr = ToolTactics.heuristicQE(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("QE requires a QETool, but got None")),po)
+  def heuQE: BelleExpr = ToolTactics.heuristicQE(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("QE requires a QETool, but got None")))
+  def heuQEPO (po:Ordering[Variable]): BelleExpr = ToolTactics.heuristicQE(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("QE requires a QETool, but got None")),po)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -649,9 +653,9 @@ object TactixLibrary extends HilbertCalculus
   val skip : BelleExpr = Idioms.ident
   /** nil=skip is a no-op tactic that has no effect */
   val nil : BelleExpr = skip
-  /** fail is a tactic that always fails
+  /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
-  val fail : BelleExpr = assertT(seq=>false, "fail")
+  val fail : BelleExpr = "fail" by ((_: Sequent) => throw new TacticInapplicableFailure("fail"))
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done : BelleExpr = DebuggingTactics.done
@@ -689,6 +693,8 @@ object TactixLibrary extends HilbertCalculus
         val lvars = StaticSemantics.freeVars(l)
         EqualityTactics.exhaustiveEqL2R(pos) &
           Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty))(hideL(pos, fml))
+      case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
@@ -699,6 +705,8 @@ object TactixLibrary extends HilbertCalculus
         val rvars = StaticSemantics.freeVars(r)
         EqualityTactics.exhaustiveEqR2L(pos) &
           Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty))(hideL(pos, fml))
+      case Some(e) => throw new TacticInapplicableFailure("Expected equality l=r, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " is undefined in " + sequent.prettyString)
     })
     else EqualityTactics.exhaustiveEqR2L
 
@@ -796,7 +804,7 @@ object TactixLibrary extends HilbertCalculus
 
   /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
     * @see [[QE]] */
-  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("RCF requires a QETool, but got None")))
+  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -921,8 +929,7 @@ object TactixLibrary extends HilbertCalculus
     })
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
-  def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
-
+  def findCounterExample(formula: Formula): Option[Map[NamedSymbol, Expression]] = ToolProvider.cexTool().getOrElse(throw new ProverSetupException("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
 
   ///
 

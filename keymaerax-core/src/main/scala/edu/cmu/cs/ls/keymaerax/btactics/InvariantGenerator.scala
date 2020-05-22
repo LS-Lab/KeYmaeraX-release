@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleNoProgress, BelleThrowable, ProverSetupException}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, FormulaTools, StaticSemanticsTools}
 import org.apache.logging.log4j.scala.Logging
@@ -207,8 +207,8 @@ object InvariantGenerator extends Logging {
     */
   val inverseCharacteristicDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) => {
     import FormulaTools._
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a computer algebra tool")
-    if (ToolProvider.pdeTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a PDE Solver")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("inverse characteristic method needs a computer algebra tool")
+    if (ToolProvider.pdeTool().isEmpty) throw new ProverSetupException("inverse characteristic method needs a PDE Solver")
     val (ode, constraint, post) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf)
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
@@ -218,9 +218,9 @@ object InvariantGenerator extends Logging {
     val solutions = try {
       ToolProvider.pdeTool().get.pdeSolve(ode).toStream.distinct
     } catch {
-      case e: Throwable => throw new BelleThrowable("inverseCharacteristic generation unsuccessful", e)
+      case e: Throwable => throw new BelleNoProgress("inverseCharacteristic generation unsuccessful", e)
     }
-    if (solutions.isEmpty) throw new BelleThrowable("No solutions found that would construct invariants")
+    if (solutions.isEmpty) throw new BelleNoProgress("No solutions found that would construct invariants")
     val polynomials = atomicFormulas(negationNormalForm(post)).collect({
       case Equal(p,q)        => Minus(p,q)
       case GreaterEqual(p,q) => Minus(p,q)

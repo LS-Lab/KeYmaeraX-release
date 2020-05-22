@@ -21,6 +21,7 @@ import org.apache.logging.log4j.scala.Logging
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
 
+import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
 import scala.util.Try
@@ -113,6 +114,8 @@ private object DifferentialTactics extends Logging {
               /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) &
               TactixLibrary.US(subst, TactixLibrary.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable)))
               //TactixLibrary.US(subst, "DE differential effect (system)"))
+          case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to box ODEs, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
       }
     }
@@ -126,6 +129,8 @@ private object DifferentialTactics extends Logging {
             useAt("DE differential effect (system)")(pos)
           case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
             useAt("DE differential effect")(pos)
+          case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to formulas, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
       }
     }
@@ -136,15 +141,15 @@ private object DifferentialTactics extends Logging {
     require(auto == 'full || auto == 'none || auto == 'diffInd || auto == 'cex, "Expected one of ['none, 'diffInd, 'full, 'cex] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        val diFml = sequent.sub(pos)
+        if (!pos.isSucc) throw new IllFormedTacticApplicationException("diffInd only applicable to succedent positions, but got " + pos.prettyString)
+        val diFml: Formula = sequent.sub(pos) match {
+          case Some(b@Box(_: ODESystem, _)) => b
+          case Some(e) => throw new TacticInapplicableFailure("diffInd only applicable to box ODEs in succedent, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+        }
 
-        require(pos.isSucc && (diFml match {
-          case Some(Box(_: ODESystem, _)) => true
-          case _ => false
-        }), "diffInd only at ODE system in succedent, but got " + diFml)
-
-        val expand = diFml match {
-          case Some(Box(_, post)) if StaticSemantics.symbols(post).exists(
+        val expand: BelleExpr = diFml match {
+          case Box(_, post) if StaticSemantics.symbols(post).exists(
             { case Function(_, _, _, _, interpreted) => interpreted case _ => false }) =>
             // expand all interpreted function symbols below pos.1
             EqualityTactics.expandAllAt(pos ++ PosInExpr(1::Nil))
@@ -164,7 +169,10 @@ private object DifferentialTactics extends Logging {
                 derive('Rlast, PosInExpr(1 :: Nil)) &
                 DE('Rlast) &
                 (if (auto == 'full || auto == 'cex)
-                  (Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(sequent, pos) | DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")) &
+                  TryCatch(Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(sequent, pos), classOf[SubstitutionClashException],
+                    (_: SubstitutionClashException) =>
+                      DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")
+                  ) &
                   //@note DW after DE to keep positions easier
                   (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
                     (if (auto == 'full) QE & done | DebuggingTactics.done("Differential invariant must be preserved")
@@ -225,8 +233,8 @@ private object DifferentialTactics extends Logging {
         val (axUse,der) = sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => ("DIo open differential invariance >",true)
           case Some(Box(_: ODESystem, _: Less)) => ("DIo open differential invariance <",true)
-
-          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g), but got " + sequent.sub(pos))
+          case Some(e) => throw new TacticInapplicableFailure("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g), but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
         if (pos.isTopLevel) {
           val t = useAt(axUse)(pos) <(
@@ -275,7 +283,8 @@ private object DifferentialTactics extends Logging {
         val greater = sequent.sub(pos) match {
           case Some(Diamond(ODESystem(_,True), _: GreaterEqual)) => true
           case Some(Diamond(ODESystem(_,True), _: LessEqual)) => false
-          case _ => throw new IllegalArgumentException("diffVar currently only implemented at ODE system with postcondition f>=g or f<=g and domain true, but got " + sequent.sub(pos))
+          case Some(e) => throw new TacticInapplicableFailure("diffVar currently only implemented at ODE system with postcondition f>=g or f<=g and domain true, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
         val t = (if (greater)
           useAt("DV differential variant >=")
@@ -297,7 +306,8 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dC()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
     "dC" byWithInputs (formulas.toList, (pos, sequent) => {
-      formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut & Idioms.?(<(all, skip)))
+      formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut &
+        Idioms.doIf(_.subgoals.size == 2)(<(all, skip)))
     })
 
   /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
@@ -305,6 +315,9 @@ private object DifferentialTactics extends Logging {
     lazy val (ode, dc) = seq.sub(pos) match {
       case Some(Box(os: ODESystem, _)) => (os, DC _)
       case Some(Diamond(os: ODESystem, _)) => (os, DCd _)
+      case Some(e) => throw new TacticInapplicableFailure("ghostDC only applicable to box/diamond properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+
     }
 
     val ov = FormulaTools.argsOf("old", f)
@@ -333,7 +346,8 @@ private object DifferentialTactics extends Logging {
     val (newFml,ax) = sequent.sub(pos) match {
       case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DRd)
       case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DR)
-      case _ => throw new IllegalArgumentException("dR only for box/diamond ODEs")
+      case Some(e) => throw new TacticInapplicableFailure("dR only applicable to box/diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
     val cpos = if (pos.isSucc) Fixed(pos) else LastSucc(0)
 
@@ -369,6 +383,7 @@ private object DifferentialTactics extends Logging {
             cohideOnlyR('Rlast) & diffInd()(1) & DebuggingTactics.done
           )
         )
+      case (_, e) => throw new TacticInapplicableFailure("dCi only applicable to modal box/diamond properties, but got " + e.prettyString)
     }
 
     useAt(fact, PosInExpr(1::(if (polarity > 0) 1 else 0)::Nil))(pos)
@@ -388,6 +403,8 @@ private object DifferentialTactics extends Logging {
       case Some(Diamond(ode@ODESystem(_, _), p)) =>
         val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
         constify(consts, inner)
+      case Some(e) => throw new TacticInapplicableFailure("Dconstify only applicable to box/diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -405,7 +422,8 @@ private object DifferentialTactics extends Logging {
     val dom = seq.sub(pos) match {
       case Some(Box(ODESystem(_, dom), p)) => dom
       case Some(Diamond(ODESystem(_, dom), p)) => dom
-      case _ => throw new BelleThrowable("DconstV adds constants into domain constraint for box/diamond ODEs")
+      case Some(e) => throw new TacticInapplicableFailure("DconstV only applicable to box/diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     //The constant context
@@ -430,7 +448,8 @@ private object DifferentialTactics extends Logging {
 
     val (ode,post) = seq.sub(pos) match {
       case Some(Box(ode @ ODESystem(_,_), post)) => (ode,post)
-      case _ => throw new BelleThrowable("domSimplify only applies to box ODEs")
+      case Some(e) => throw new TacticInapplicableFailure("domSimplify only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     //todo: How to exactly simulate behavior of andL('L)*?? flattenConjunctions doesn't match it
@@ -471,7 +490,7 @@ private object DifferentialTactics extends Logging {
     } catch {
       case ex: CoreException =>
         val wrongShapeStart = ex.getMessage.indexOf("b(|y_|)~>")
-        throw new BelleFriendlyUserMessage(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
+        throw new InputFormatFailure(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
           " is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b.")
     }
 
@@ -502,25 +521,25 @@ private object DifferentialTactics extends Logging {
         }
 
         if (!singular.isEmpty)
-          throw new BelleThrowable("Possible singularities during DG(" + ghost + ") will be rejected: " +
+          throw new IllFormedTacticApplicationException("Possible singularities during DG(" + ghost + ") will be rejected: " +
             singular.mkString(",") + " in\n" + sequent.prettyString +
             "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
           )
 
         (a, b) match {
           case (Number(n), _) if n == 0 =>
-            val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+            val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
             useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
           case (_, Neg(Number(n))) =>
-            val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+            val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(-n)) :: Nil)
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
           case _ =>
-            val subst = (us: Option[Subst]) => us.getOrElse(throw new BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+            val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
@@ -528,20 +547,23 @@ private object DifferentialTactics extends Logging {
         }
 
       case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(ode).bv.contains(y) =>
-        throw new BelleFriendlyUserMessage(
+        throw new InputFormatFailure(
           "Differential ghost " + y + " of " + ghost + " is not new but already has a differential equation in " + ode + ".\nChoose a new name for the differential ghost.")
 
       case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics.symbols(a).contains(y) || StaticSemantics.symbols(b).contains(y) =>
-        throw new BelleFriendlyUserMessage(
+        throw new InputFormatFailure(
           "Differential ghost " + y + " occurs nonlinearly or in the wrong place of the new differential equation " + ghost + ".\nChoose a differential equation " + y + "'=a*" + y + "+b that is linear in the differential ghost.")
 
       case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(ode).fv.contains(y) =>
-        throw new BelleFriendlyUserMessage(
+        throw new InputFormatFailure(
           "Differential ghost " + y + " of " + ghost + " is not new but already read in the differential equation " + ode + ".\nChoose a new name for the differential ghost.")
 
       case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(p).fv.contains(y) =>
-        throw new BelleFriendlyUserMessage(
+        throw new InputFormatFailure(
           "Differential ghost " + y + " of " + ghost + " is not new but already read in the postcondition " + p + ".\nChoose a new name for the differential ghost.")
+
+      case Some(e) => throw new TacticInapplicableFailure("DG only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -555,7 +577,7 @@ private object DifferentialTactics extends Logging {
           } catch {
             case ex: CoreException =>
               val wrongShapeStart = ex.getMessage.indexOf("b(|y_|)~>")
-              throw new BelleFriendlyUserMessage(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
+              throw new InputFormatFailure(ex.getMessage.substring(wrongShapeStart + "b(|y_|)~>".length).stripSuffix(")") +
                 " is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b.")
           }
           val singular = {
@@ -578,6 +600,8 @@ private object DifferentialTactics extends Logging {
             case _ => DG(ghost)(pos) //@note no r or r==p
           }
           cutSingularities & doGhost
+        case Some(e) => throw new TacticInapplicableFailure("dG only applicable to box ODEs, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       })
 
   /**
@@ -621,6 +645,9 @@ private object DifferentialTactics extends Logging {
               TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
               TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
           )
+      case Some(e) if polarity == 0 => throw new TacticInapplicableFailure("dGi only applicable in positive or negative polarity contexts")
+      case Some(e) => throw new TacticInapplicableFailure("dGi only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + s.prettyString)
     }
   })
 
@@ -649,10 +676,13 @@ private object DifferentialTactics extends Logging {
               cohide('Rlast) & byUS(DerivedAxioms.DvariableAxiom))
               )
           }
-        }
+        case Some(e) => throw new TacticInapplicableFailure("Dvariable only applicable to Differentials, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       }
+    }
 
     /** Finds the first parent of p in f that is a formula. Returns p if f at p is a formula. */
+    @tailrec
     private def formulaPos(f: Formula, p: PosInExpr): PosInExpr = {
       f.sub(p) match {
         case Some(_: Formula) => p
@@ -677,6 +707,8 @@ private object DifferentialTactics extends Logging {
         /* use */ skip,
         /* show */ DI(pos) & implyR(pos) & closeIdWith('Llast)
         )
+    case Some(e) => throw new TacticInapplicableFailure("diffUnpackEvolDomain only applicable to box ODEs, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
@@ -692,6 +724,8 @@ private object DifferentialTactics extends Logging {
       } else {
         useAt("DW differential weakening")(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
+    case Some(e) => throw new TacticInapplicableFailure("dW only applicable to box ODEs, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   /** diffWeaken preserving all initial facts and mimicking the initial sequent shape. */
@@ -733,6 +767,8 @@ private object DifferentialTactics extends Logging {
       } else {
         useAt("DW differential weakening")(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
+    case Some(e) => throw new TacticInapplicableFailure("dWplus only applicable to box ODEs, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   /** diffWeaken by DW & G
@@ -743,6 +779,8 @@ private object DifferentialTactics extends Logging {
     case Some(Box(_: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
       cohide(pos.top) & DW(1) & G(1)
+    case Some(e) => throw new TacticInapplicableFailure("diffWeakenG only applicable to box ODEs, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
   //A user-friendly error message displayed when ODE can't find anything useful to do.
@@ -897,6 +935,8 @@ private object DifferentialTactics extends Logging {
         proveWithoutCuts(false)(pos) |
         recurseODE
       }
+    case Some(e) => throw new TacticInapplicableFailure("ODE only applicable to box ODEs, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
 
   /** Compatibility ODE invariance tactics prior to [[DifferentialTactics.odeInvariant]] */
@@ -915,8 +955,8 @@ private object DifferentialTactics extends Logging {
   private val proveInvariant = "ANON" by ((pos: Position, seq: Sequent) => {
     val post: Formula = seq.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => pf
-      case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-      case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+      case Some(e) => throw new TacticInapplicableFailure("proveInvariant only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     val isOpen = post match {
       case  _: Greater => true
@@ -932,8 +972,8 @@ private object DifferentialTactics extends Logging {
       onAll(("ANON" by ((pos: Position, seq: Sequent) => {
         val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
           case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-          case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-          case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+          case Some(e) => throw new TacticInapplicableFailure("proveWithoutCuts only applicable to box ODEs, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
         }
 
         val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
@@ -982,6 +1022,8 @@ private object DifferentialTactics extends Logging {
       case Some(Box(a: ODESystem, _)) =>
         val primedVars = StaticSemantics.boundVars(a).toSet[Variable].filter(_.isInstanceOf[BaseVariable])
         primedVars.map(DLBySubst.stutter(_)(pos ++ PosInExpr(1::Nil))).reduceOption[BelleExpr](_&_).getOrElse(skip)
+      case Some(e) => throw new TacticInapplicableFailure("ODE.stutter only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     })
 
     val unstutter = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
@@ -1071,7 +1113,9 @@ private object DifferentialTactics extends Logging {
     seq.sub(pos) match {
       case Some(Box(sys@ODESystem(_, _), And(_, _))) =>
         boxAnd(pos) & andR(pos) <(mathematicaSplittingODE(pos) & done, mathematicaSplittingODE(pos)) | mathematicaODE(pos)
-      case _ => mathematicaODE(pos)
+      case Some(Box(_: ODESystem, _)) => mathematicaODE(pos)
+      case Some(e) => throw new TacticInapplicableFailure("mathematicaSplittingODE only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -1097,15 +1141,18 @@ private object DifferentialTactics extends Logging {
             if (sys.constraint == True && extendedQ != True) useAt("true&")(ppos ++
               PosInExpr(1 :: FormulaTools.posOf(extendedQ, sys.constraint).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
             else skip
+          case Some(e) => throw new TacticInapplicableFailure("mathematicaODE.finish only applicable to box ODEs, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
         })) (pos ++ PosInExpr(0 :: Nil))
     )
 
     if (StaticSemantics.symbols(seq).contains(ODEInvariance.nilpotentSolveTimeVar)) {
       diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
     } else seq.sub(pos) match {
-      case Some(Box(sys: ODESystem, _)) =>
-        // Try to prove postcondition invariant
-        odeInvariant()(pos) & done |
+      case Some(b@Box(sys: ODESystem, _)) =>
+        // Try to prove postcondition invariant. If we don't have an invariant generator, try hard immediately.
+        (if (ToolProvider.invGenTool().isEmpty) odeInvariant(tryHard = true, useDw = true)(pos) & done
+         else odeInvariant()(pos) & done) |
         // Counterexample check
         cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
           // Some additional cases
@@ -1119,14 +1166,15 @@ private object DifferentialTactics extends Logging {
             //@note ODEInvariance not yet proving all invariance questions: try if Pegasus finds simpler invariants
             odeWithInvgen(sys, InvariantGenerator.pegasusInvariants,
               //@note ran out of options on generator error
-              (ex: Throwable) => throw new BelleTacticFailure("Detected an invariant-only question at " +
-                seq.sub(pos)+ " but ODE automation was unable to prove it.", ex)
+              (ex: Throwable) => throw new BelleNoProgress("Detected an invariant-only question at " +
+                b.prettyString + " but ODE automation was unable to prove it.", ex)
             )(pos)
             ,
             odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
           )(pos)
         )
-      case _ => throw new BelleThrowable("ODE automation only applies to box ODEs.")
+      case Some(e) => throw new TacticInapplicableFailure("ODE automation only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -1137,12 +1185,12 @@ private object DifferentialTactics extends Logging {
   def splitWeakInequality : DependentPositionTactic = "splitWeakInequality" by ((pos: Position, seq: Sequent) => {
     val postcondition = seq.at(pos)._2 match {
       case Box(ODESystem(_,_), p) => p
-      case _ => throw new BelleThrowable("splitWeakInequality is only applicable for ODE's with weak inequalities as post-conditions.")
+      case _ => throw new TacticInapplicableFailure("splitWeakInequality is only applicable for ODE's with weak inequalities as post-conditions.")
     }
     val (lhs, rhs, openSetConstructor) = postcondition match {
       case GreaterEqual(l,r) => (l,r,Greater)
       case LessEqual(l,r)    => (l,r,Less)
-      case _                 => throw new BelleThrowable(s"splitWeakInequality Expected a weak inequality in the post condition (<= or >=) but found: ${postcondition}")
+      case _                 => throw new TacticInapplicableFailure(s"splitWeakInequality Expected a weak inequality in the post condition (<= or >=) but found: ${postcondition}")
     }
 
     val caseDistinction = Or(openSetConstructor(lhs,rhs), Equal(lhs,rhs))
@@ -1158,17 +1206,21 @@ private object DifferentialTactics extends Logging {
     )
   })
 
-  def dgZeroPolynomial : DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq:Sequent) => {
-    val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
+  def dgZeroPolynomial: DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq: Sequent) => {
+    val Box(ODESystem(system, constraint), property) = seq.sub(pos) match {
+      case Some(b@Box(ODESystem(system, constraint), property)) => b
+      case Some(e) => throw new TacticInapplicableFailure("dgZeroPolynomial only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
 
     val lhs = property match {
       case Equal(term, Number(n)) if n == 0 => term
-      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
+      case e => throw new TacticInapplicableFailure("Not sure what to do with shape " + e.prettyString)
     }
 
     val (x: Variable, derivative:Term) = system match {
       case AtomicODE(xp, t) => (xp.x, t)
-      case _ => throw new BelleThrowable("Systems not currently supported by dgZeroPolynomialDerivative")
+      case _ => throw new TacticInapplicableFailure("Systems not currently supported by dgZeroPolynomialDerivative")
     }
     require(lhs == x, "Currently require that the post-condition is of the form x=0 where x is the primed variable in the ODE.")
 
@@ -1210,15 +1262,19 @@ private object DifferentialTactics extends Logging {
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
     * @todo make this happen by usubst. */
   @deprecated
-  def dgZeroMonomial : DependentPositionTactic = "dgZeroMonomial" by ((pos: Position, seq:Sequent) => {
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
+  def dgZeroMonomial: DependentPositionTactic = "dgZeroMonomial" by ((pos: Position, seq: Sequent) => {
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
 
-    val Some(Box(ODESystem(system, constraint), property)) = seq.sub(pos)
+    val Box(ODESystem(system, constraint), property) = seq.sub(pos) match {
+      case Some(b@Box(ODESystem(system, constraint), property)) => b
+      case Some(e) => throw new TacticInapplicableFailure("dgZeroMonomial only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
 
     /** The lhs of the post-condition {{{lhs = 0}}} */
     val lhs = property match {
       case Equal(term, Number(n)) if n == 0 => term
-      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
+      case e => throw new TacticInapplicableFailure("Not sure what to do with shape " + e.prettyString)
     }
 
     /** The equation in the ODE of the form {{{x'=c*x^n}}}; the n is optional.
@@ -1296,14 +1352,15 @@ private object DifferentialTactics extends Logging {
 
     val (system,property) = seq.sub(pos) match {
       case Some (Box (ODESystem (system, _), property) ) => (system,property)
-      case _ => throw new BelleThrowable(s"dbx only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dbx only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     /** The argument works for any comparison operator */
-    val (p,pop) = property match {
-      case bop:ComparisonFormula if bop.right.isInstanceOf[Number] && bop.right.asInstanceOf[Number].value == 0 =>
+    val (p, pop) = property match {
+      case bop: ComparisonFormula if bop.right.isInstanceOf[Number] && bop.right.asInstanceOf[Number].value == 0 =>
         (bop.left,bop)
-      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}, dgDbx requires 0 on RHS")
+      case e => throw new TacticInapplicableFailure(s"Not sure what to do with shape ${e.prettyString}, dgDbx requires 0 on RHS")
     }
 
     val dbxRw = pop match {
@@ -1395,10 +1452,15 @@ private object DifferentialTactics extends Logging {
 
     val (system,dom,post) = seq.sub(pos) match {
       case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
-      case _ => throw new BelleThrowable(s"barrier only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("barrier only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (property, propt)= ineqNormalize(post)
+    val (property, propt)= try {
+      ineqNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition", ex)
+    }
 
     val starter = propt match {
       case None => skip
@@ -1519,7 +1581,7 @@ private object DifferentialTactics extends Logging {
         case Equal(_, _) => proveBy(Imply(dom, Equal(r, zero)), timeoutQE)
         //todo: is there a special case of open DI that would work for disequalities?
         case NotEqual(_, _) => proveBy(Imply(dom, Equal(r, zero)), timeoutQE)
-        case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+        case _ => throw new TacticInapplicableFailure(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
       }
     }
     catch {
@@ -1543,7 +1605,7 @@ private object DifferentialTactics extends Logging {
           case Equal(_, _) => proveBy(Imply(dom, Equal(lie, zero)), timeoutQE)
           //todo: is there a special case of open DI that would work for disequalities?
           case NotEqual(_, _) => proveBy(Imply(dom, Equal(lie, zero)), timeoutQE)
-          case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+          case _ => throw new TacticInapplicableFailure(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
         }
       }
       catch {
@@ -1556,7 +1618,7 @@ private object DifferentialTactics extends Logging {
     }
 
     if(strict)
-      throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
+      throw new TacticInapplicableFailure("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
 
     (pr,q,r)
   }
@@ -1567,7 +1629,8 @@ private object DifferentialTactics extends Logging {
 
     val (system,dom,post) = seq.sub(pos) match {
       case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
-      case _ => throw new BelleThrowable(s"dbx auto only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dbx auto only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (property,propt) = atomNormalize(post)
@@ -1579,7 +1642,11 @@ private object DifferentialTactics extends Logging {
 
     //normalized to have p on LHS
     //todo: utilize pr which proves the necessary sign requirement for denRemReq
-    val (pr,cofactor,rem) = findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
+    val (pr,cofactor,rem) = try {
+      findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to find Darboux polynomial", ex)
+    }
 
     starter & dgDbx(cofactor)(pos)
   })
@@ -1587,7 +1654,7 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.DGauto]]
     * @author Andre Platzer */
   def DGauto: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("DGAuto requires a AlgebraTool, but got None")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("DGAuto requires a AlgebraTool, but got None")
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
       case Number(n) if n == 0 => a
@@ -1599,7 +1666,8 @@ private object DifferentialTactics extends Logging {
     val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
       case Some(Box(ODESystem(o, _), Greater(a, b))) => (minus(a, b), o)
       case Some(Box(ODESystem(o, _), Less(a, b))) => (minus(b, a), o)
-      case e => throw new BelleThrowable("DGauto does not support argument shape: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("DGauto does not support argument shape: " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //@todo find a ghost that's not in ode
     val ghost: Variable = Variable("y_")
@@ -1608,9 +1676,9 @@ private object DifferentialTactics extends Logging {
     val lie = DifferentialHelper.lieDerivative(ode, quantity)
 
     lazy val constrGGroebner: Term = {
-      val groebnerBasis: List[Term] = ToolProvider.algebraTool().getOrElse(throw new BelleThrowable("DGAuto requires an AlgebraTool, but got None")).groebnerBasis(
+      val groebnerBasis: List[Term] = ToolProvider.algebraTool().getOrElse(throw new ProverSetupException("DGAuto requires an AlgebraTool, but got None")).groebnerBasis(
         quantity :: Nil)
-      ToolProvider.algebraTool().getOrElse(throw new BelleThrowable("DGAuto requires an AlgebraTool, but got None")).polynomialReduce(
+      ToolProvider.algebraTool().getOrElse(throw new ProverSetupException("DGAuto requires an AlgebraTool, but got None")).polynomialReduce(
         lie match {
           case Minus(Number(n), l) if n == 0 => l //@note avoid negated ghost from (f()-x)'
           case _ => lie
@@ -1620,7 +1688,7 @@ private object DifferentialTactics extends Logging {
     }
 
     val odeBoundVars = StaticSemantics.boundVars(ode).symbols[NamedSymbol].toList.filter(_.isInstanceOf[BaseVariable]).sorted.map(_.asInstanceOf[BaseVariable])
-    val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new BelleThrowable("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
+    val constrG: Term = ToolProvider.algebraTool().getOrElse(throw new ProverSetupException("DGAuto requires an AlgebraTool, but got None")).quotientRemainder(
       lie, Times(Number(-2), quantity), odeBoundVars.headOption.getOrElse(Variable("x")))._1
 
     // Formula that must be valid: quantity <-> \exists ghost. quantity * ghost^2 > 0
@@ -1640,7 +1708,7 @@ private object DifferentialTactics extends Logging {
     * @author Andre Platzer
     */
   def DGautoSandR: DependentPositionTactic = "DGauto" by ((pos:Position,seq:Sequent) => {
-    if (!ToolProvider.solverTool().isDefined) throw new BelleThrowable("DGAuto requires a SolutionTool, but got None")
+    if (!ToolProvider.solverTool().isDefined) throw new ProverSetupException("DGAuto requires a SolutionTool, but got None")
     /** a-b with some simplifications */
     def minus(a: Term, b: Term): Term = b match {
       case Number(n) if n==0 => a
@@ -1652,7 +1720,8 @@ private object DifferentialTactics extends Logging {
     val (quantity: Term, ode: DifferentialProgram) = seq.sub(pos) match {
       case Some(Box(ODESystem(ode, _), Greater(a, b))) => (minus(a,b), ode)
       case Some(Box(ODESystem(ode, _), Less(a, b))) => (minus(b,a), ode)
-      case e => throw new BelleThrowable("DGauto does not support argument shape: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("DGauto does not support argument shape: " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //@todo find a ghost that's not in ode
     val ghost: Variable = Variable("y_")
@@ -1677,14 +1746,14 @@ private object DifferentialTactics extends Logging {
         }
         //@todo a witness of Reduce of >=0 would suffice
         logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
-        ToolProvider.solverTool().getOrElse(throw new BelleThrowable("DGAuto requires a SolutionTool, but got None")).solve(Equal(condition, Number(0)), spooky::Nil) match {
+        ToolProvider.solverTool().getOrElse(throw new ProverSetupException("DGAuto requires a SolutionTool, but got None")).solve(Equal(condition, Number(0)), spooky::Nil) match {
           case Some(Equal(l,r)) if l==spooky => logger.debug("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity)
             constructedGhost = Some(r)
             r
           case None => logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
-            throw new BelleThrowable("DGauto could not solve conditions: " + condition + ">=0")
+            throw new TacticInapplicableFailure("DGauto could not solve conditions: " + condition + ">=0")
           case Some(stuff) => logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
-            throw new BelleThrowable("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
+            throw new TacticInapplicableFailure("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
         }
       }
       ,
@@ -1696,7 +1765,7 @@ private object DifferentialTactics extends Logging {
     val fallback: DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
       logger.debug("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost)
       // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
-      dG(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleThrowable("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
+      dG(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new TacticInapplicableFailure("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
         Some(Greater(Times(quantity, Power(ghost, Number(2))), Number(0)))
       )(pos) <(
         QE & done,
@@ -1729,12 +1798,12 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE,skip)) & //strengthen to the closure if applicable
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE,skip)) & //strengthen to the closure if applicable
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
@@ -1767,7 +1836,8 @@ private object DifferentialTactics extends Logging {
 
     val (ode,post) = seq.sub(pos) match {
       case Some(Box(ode:ODESystem,post)) => (ode,post)
-      case _ => throw new BelleThrowable("ODE invariant only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("ODE invariant only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     odeInvariant(tryHard=true)(pos) |
@@ -1775,17 +1845,17 @@ private object DifferentialTactics extends Logging {
       if(!s.equals(seq)) true // should never happen
       else {
         ToolProvider.invGenTool() match {
-          case None => throw new BelleThrowable("odeInvC was unable to prove postcondition invariant for ODE nor disprove its invariance." +
+          case None => throw new UnsupportedTacticFeature("odeInvC was unable to prove postcondition invariant for ODE nor disprove its invariance." +
             " This may be a completeness bug in the implementation." +
             " Please submit a bug report if you are sure that "+post+" is an ODE invariant for "+ode)
           case Some(tool) =>
             val(nec,_) = tool.genODECond(ode, s.ante, post)
             val pr = proveBy(nec.tail.foldLeft(nec.head)(And(_,_)),?(timeoutQE))
             if(pr.isProved)
-              throw new BelleThrowable("The ODE postcondition "+post+" is invariant but odeInvC could not prove it." +
+              throw new UnsupportedTacticFeature("The ODE postcondition "+post+" is invariant but odeInvC could not prove it." +
                 " This is a completeness bug in the implementation. Please submit a bug report.")
             else
-              throw new BelleThrowable("odeInvC was unable to prove postcondition invariant for ODE nor disprove its invariance." +
+              throw new UnsupportedTacticFeature("odeInvC was unable to prove postcondition invariant for ODE nor disprove its invariance." +
                 " This may be a completeness bug in the implementation." +
                 " Please submit a bug report if you are sure that "+post+" is an ODE invariant for "+ode)
         }
@@ -1810,7 +1880,7 @@ private object DifferentialTactics extends Logging {
     //Else, DC chain
     // Assume that Pegasus hands us back a diffcut chain
     invs.headOption match {
-      case None => throw new BelleThrowable(s"Pegasus failed to generate an invariant")
+      case None => throw new BelleNoProgress(s"Pegasus failed to generate an invariant")
       case Some((True, _)) => diffWeakenG(pos) & timeoutQE & done
       case _ =>
         invs.foldRight(diffWeakenG(pos) & timeoutQE & done)( (fml,tac) =>
@@ -1835,7 +1905,7 @@ private object DifferentialTactics extends Logging {
     */
   def domQuoRem(poly: Term, div: Term, dom: Formula): (Term,Term) = {
     if (ToolProvider.algebraTool().isEmpty) {
-      throw new BelleThrowable(s"duoQuoRem requires a AlgebraTool, but got None")
+      throw new ProverSetupException(s"duoQuoRem requires a AlgebraTool, but got None")
       // val polynorm = PolynomialArith.normalise(poly,true)._1
       // val divnorm = PolynomialArith.normalise(div,true)._1
     }
@@ -1961,7 +2031,7 @@ private object DifferentialTactics extends Logging {
       case (False, _) => closeF
       case (x, y) if x == y => closeId
       case _ =>
-        throw new BelleThrowable("strengthenInequalities expected ante and succ of same shape, but got " + seq)
+        throw new TacticInapplicableFailure("strengthenInequalities expected ante and succ of same shape, but got " + seq)
     }
   }
 
@@ -1984,10 +2054,15 @@ private object DifferentialTactics extends Logging {
 
     val (ode,p_fml,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,p)) => (sys.ode,sys.constraint,p)
-      case _ => throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
+      case Some(e) => throw new TacticInapplicableFailure("dCClosure only applicable to box ODEs of shape [{ode&p}]q, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (q_fml, propt) = semiAlgNormalize(post)
+    val (q_fml, propt) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
     /* Apply the semialg normalization step */
     val starter = propt.map(pr => useAt(pr)(pos ++ PosInExpr(1 :: Nil))).getOrElse(skip)
@@ -1995,8 +2070,16 @@ private object DifferentialTactics extends Logging {
     val interior = FormulaTools.interior(q_fml)
     val closure = FormulaTools.closure(q_fml)
 
-    val (mm_fmlGt, proptGt) = maxMinGtNormalize(interior)
-    val (mm_fmlGe, proptGe) = maxMinGeqNormalize(closure)
+    val (mm_fmlGt, proptGt) = try {
+      maxMinGtNormalize(interior)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize interior", ex)
+    }
+    val (mm_fmlGe, proptGe) = try {
+      maxMinGeqNormalize(closure)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize closure", ex)
+    }
 
     //NOTE: mm_fmlGt should be identical to mm_fmlGe except with > instead of >=
 
@@ -2173,7 +2256,8 @@ private object DifferentialTactics extends Logging {
             case unexpected =>
               throw new RuntimeException("dIClosed: maxMinGeqNormalize produced something unexpected: " + unexpected)
           }
-        case _ => throw new IllegalArgumentException("dIClosed must be applied on box ODE [']")
+        case Some(e) => throw new TacticInapplicableFailure("dIClosed only applicable to box ODEs, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }
     }
   }

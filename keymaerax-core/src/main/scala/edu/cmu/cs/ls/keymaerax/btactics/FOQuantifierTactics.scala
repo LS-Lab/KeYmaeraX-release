@@ -28,12 +28,18 @@ protected object FOQuantifierTactics {
           (if (atTopLevel || pos.isTopLevel) {
             if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
           } else base(pos++PosInExpr(0::Nil)) & useAt(DerivedAxioms.doubleNegation)(pos))
+      case Some(e) => throw new TacticInapplicableFailure("existsByDuality only applicable to existential quantifiers, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     })
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
   def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
     def allInstI(t: Term, v: Variable): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
-      val fml = sequent.sub(pos) match { case Some(fml: Formula) => fml }
+      val fml = sequent.sub(pos) match {
+        case Some(fml: Formula) => fml
+        case Some(e) => throw new TacticInapplicableFailure("allInstantiateInverse only applicable to formulas, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+      }
       useAt(DerivedAxioms.allInst, PosInExpr(1::Nil), (us: Option[Subst]) => RenUSubst(
         ("x_".asTerm, v) ::
         ("f()".asTerm, t.replaceFree(v, "x_".asTerm)) ::
@@ -79,11 +85,11 @@ protected object FOQuantifierTactics {
             cohide('Rlast) & CMon(pos.inExpr) & byUS(DerivedAxioms.allInst) & done
             )
         case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-          throw new BelleThrowable("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
+          throw new InputFormatFailure("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
-          throw new BelleThrowable("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
+          throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a universal quantifier")
         case _ =>
-          throw new BelleThrowable("Position " + pos + " is not defined in " + sequent.prettyString)
+          throw new IllFormedTacticApplicationException("Position " + pos + " is not defined in " + sequent.prettyString)
       }
     })
 
@@ -125,11 +131,11 @@ protected object FOQuantifierTactics {
               cohide(pos) & CMon(pos.inExpr) & byUS(DerivedAxioms.existsGeneralize, subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
-          throw new BelleThrowable("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
+          throw new InputFormatFailure("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
         case (_, f) =>
-          throw new BelleThrowable("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
+          throw new TacticInapplicableFailure("Cannot instantiate: formula " + f.prettyString + " at pos " + pos + " is not a existential quantifier")
         case _ =>
-          throw new BelleThrowable("Position " + pos + " is not defined in " + sequent.prettyString)
+          throw new IllFormedTacticApplicationException("Position " + pos + " is not defined in " + sequent.prettyString)
       }
     })
 
@@ -142,7 +148,8 @@ protected object FOQuantifierTactics {
         require(pos.isSucc, "All skolemize only in succedent")
         val xs = sequent.sub(pos) match {
           case Some(Forall(vars, _)) => vars
-          case f => throw new BelleThrowable("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
+          case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
+          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
         val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
         //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
@@ -226,7 +233,8 @@ protected object FOQuantifierTactics {
             /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
             /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.existsGeneralize.provable(subst))
             )
-        case _ => throw new BelleThrowable("Position " + pos + " must refer to a formula in sequent " + sequent)
+        case Some(e) => throw new TacticInapplicableFailure("existsGeneralize only applicable to formulas, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       }
     }
 
@@ -268,7 +276,7 @@ protected object FOQuantifierTactics {
               val fresh = TacticHelper.freshNamedSymbol(fn, sequent)
               Variable(fresh.name, fresh.index, fresh.sort)
             } else funcVar
-          case _ => throw new BelleIllFormedError("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
+          case _ => throw new InputFormatFailure("allGeneralize only applicable to variables or function symbols, but got " + t.prettyString)
         }
     }
 
@@ -283,6 +291,8 @@ protected object FOQuantifierTactics {
           case Some(ren: RenUSubst) => ren ++ RenUSubst(USubst("f()".asTerm ~> t :: Nil))
         }
         (Forall(Seq(quantified), SubstitutionHelper.replaceFree(f)(t, quantified)), DerivedAxioms.allInst, subst)
+      case Some(e) => throw new TacticInapplicableFailure("allGeneralize only applicable to formulas, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
     cutAt(genFml)(pos) <(
       /* use */ skip,

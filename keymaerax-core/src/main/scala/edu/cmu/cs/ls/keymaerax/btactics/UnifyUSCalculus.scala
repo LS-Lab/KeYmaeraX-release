@@ -78,16 +78,16 @@ trait UnifyUSCalculus {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic("stepAt") {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val sub = sequent.sub(pos)
-        if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+        if (sub.isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         axiomIndex(sub.get) match {
           case Some(axiom) =>
             logger.debug("stepAt " + axiom)
             DerivationInfo(axiom).belleExpr match {
               case ap:AtPosition[_] => ap(pos)
               case expr:BelleExpr => expr
-              case expr => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
+              case expr => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
             }
-          case None => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+          case None => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         }
       }
     }
@@ -110,7 +110,7 @@ trait UnifyUSCalculus {
     override def result(provable: ProvableSig): ProvableSig = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
-      else throw new BelleThrowable("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
+      else throw new BelleUnexpectedProofStateError("Conclusion of fact " + fact + " does not match sole open goal of " + provable, provable.underlyingProvable)
     }
   }
   //@todo use lemma.name?
@@ -257,7 +257,7 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: ProvableInfo): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
-      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
 
@@ -314,7 +314,7 @@ trait UnifyUSCalculus {
     //@todo generalize to AxiomInfo
   def useAt(axiom: DerivedAxiomInfo, inst: Option[Subst]=>Subst): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, axiom.key, linear=axiom.linear,
-      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
 
@@ -323,7 +323,7 @@ trait UnifyUSCalculus {
     * @param key the optional position of the key in the axiom to unify with. */
   def useAt(axiom: ProvableInfo, key:PosInExpr): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, key, linear=axiom.linear,
-      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
 
@@ -344,7 +344,7 @@ trait UnifyUSCalculus {
       logger.info("INFO: useAt of an anonymous lemma may disable tactic extraction")
       useAt(lem.fact, key, inst)
   }
-  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")))
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma)               : DependentPositionTactic = lem.name match {
     case Some(name) if ProvableInfo.existsStoredName(name) =>
@@ -494,7 +494,7 @@ trait UnifyUSCalculus {
       //@note Probably not worth it, because all axiomatic rules in AxiomBase are nonlinear
       val subst = matcher(fact.conclusion, sequent)
       logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
-      if (sequent != subst(fact.conclusion)) throw new BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
+      if (sequent != subst(fact.conclusion)) throw new UnsupportedTacticFeature("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
       by(subst.toForward(fact))
     }
   }
@@ -549,7 +549,7 @@ trait UnifyUSCalculus {
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
     useAt("ANON", fact, key, linear=false, inst, serializeByCodeName=true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic =
-    useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+    useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")))
   private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic =
     useAt(fact, PosInExpr(0::Nil))
 
@@ -603,7 +603,7 @@ trait UnifyUSCalculus {
   @deprecated("useAt(DerivedAxioms.<codeName>/Provable,...) instead of useAt(String,...)")
   private[this] def useAt(codeName: String, fact: ProvableSig, key: PosInExpr,
             linear: Boolean,
-            inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+            inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
             serializeByCodeName: Boolean = false): DependentPositionTactic = {
     val (name, inputs) =
       if (serializeByCodeName) (codeName, Nil)
@@ -941,7 +941,7 @@ trait UnifyUSCalculus {
             //@todo could optimize to build directly since ctx already known
             CE(fmlPos) & CQ(termPos)
           }
-        case fml => throw new BelleThrowable("Expected equivalence, but got " + fml)
+        case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
       }
     }
   }
@@ -981,7 +981,7 @@ trait UnifyUSCalculus {
             require(ctxP.isFormulaContext, "Formula context expected for CE")
             by("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
           }
-        case fml => throw new BelleThrowable("Expected equivalence, but got " + fml)
+        case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
       }
     }
   })
@@ -1097,7 +1097,7 @@ trait UnifyUSCalculus {
         //todo: Should this be TacticFailure or Illformed?
         // Case for Illformed: user should not be applying tactics in sequents where positions don't exist
         // Case for TacticFailure: some automation might need to do that
-        if(!sequent.sub(pos).isDefined) throw new BelleTacticFailure("In-applicable CE(" + fact + ")\nat " + pos +
+        if(!sequent.sub(pos).isDefined) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
           "which is <ill-positioned>\n at " +sequent)
 
         val (other,key) = {
@@ -1161,7 +1161,7 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
 
         //todo: See above
-        if(!sequent.sub(pos).isDefined) throw new BelleTacticFailure("In-applicable CE(" + fact + ")\nat " + pos +
+        if(!sequent.sub(pos).isDefined) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
           "which is <ill-positioned>\n at " +sequent)
 
         val (posctx,c) = sequent.at(pos)
@@ -2026,7 +2026,7 @@ trait UnifyUSCalculus {
   private def chaseFor2Back(name: String, forward: ForwardPositionTactic): DependentPositionTactic = new DependentPositionTactic(name) {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        if (sequent.sub(pos).isEmpty) throw new BelleThrowable("ill-positioned " + pos + " in " + sequent + "\nin " +
+        if (sequent.sub(pos).isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " +
           "chase\n(" + sequent + ")")
         CEat(chaseProof(sequent.sub(pos).get))(pos)
       }

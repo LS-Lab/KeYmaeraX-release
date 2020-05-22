@@ -147,8 +147,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[DLBySubst.assignEquality]] */
   lazy val assignb            : DependentPositionTactic = "assignb" by { (pos:Position) =>
-    if (INTERNAL) useAt("[:=] assign")(pos) | useAt("[:=] assign equality")(pos) /*| useAt("[:=] assign update")(pos)*/
-    else useAt("[:=] assign")(pos) | useAt("[:=] self assign")(pos) | DLBySubst.assignEquality(pos)
+    if (INTERNAL) useAt("[:=] assign")(pos) |! useAt("[:=] self assign")(pos) /*|! useAt("[:=] assign update")(pos)*/
+    else useAt("[:=] assign")(pos) |! useAt("[:=] self assign")(pos) |! DLBySubst.assignEquality(pos)
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
@@ -175,7 +175,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val box                : DependentPositionTactic = useAt("[] box")
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   lazy val assignd            : DependentPositionTactic = "assignd" by { (pos:Position) =>
-    useAt("<:=> assign")(pos) | useAt("<:=> self assign")(pos) | DLBySubst.assigndEquality(pos)
+    useAt("<:=> assign")(pos) |! useAt("<:=> self assign")(pos) |! DLBySubst.assigndEquality(pos)
   }
 
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
@@ -223,13 +223,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
   def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
     useAt(DerivedAxioms.DC,
       AxiomIndex.axiomIndex("DC differential cut")._1,
-      (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+      (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   })
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DCd(invariant: Formula)  : DependentPositionTactic = useAt(DerivedAxioms.DCd,
     AxiomIndex.axiomIndex("DCd diamond differential cut")._1,
-    (us:Option[Subst])=>us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+    (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols
     * as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`.
@@ -264,7 +264,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
+        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))
@@ -277,7 +277,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DG"))++RenUSubst(Seq(
+        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DG"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))
@@ -290,7 +290,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     (us:Option[Subst])=>{
       val singular = FormulaTools.singularities(b)
       insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-      us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
+      us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DGd"))++RenUSubst(Seq(
         (Variable("y_",None,Real), y),
         (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
       ))
@@ -301,7 +301,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
-        us.getOrElse(throw new BelleUnsupportedFailure("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
+        us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DGde"))++RenUSubst(Seq(
           (Variable("y_",None,Real), y),
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b)
         ))

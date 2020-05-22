@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{Provable, ProverException}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, False, NamedSymbol, Provable, ProverException, Sequent}
 
 /**
  * KeYmaera X Tactic Exceptions.
@@ -13,16 +13,16 @@ import edu.cmu.cs.ls.keymaerax.core.{Provable, ProverException}
 
 /** Common exception type for all Bellerophon tactic problems and exceptions.
   * Tactic exceptions come on three different kinds:
-  *   1. [[BelleReportedError]] indicates an internal bug in a tactic implementation, such as applying left rules on the right.
+  *   1. [[BelleCriticalException]] indicates an internal bug in a tactic implementation, such as applying left rules on the right.
   *      They will be reported but need a KeYmaera X implementation change to fix.
-  *   2. [[BelleUserProblemInput]] indicates that the user has provided an unsuitable input problem or made a correctable error in a proof step.
+  *   2. [[BelleUserCorrectableException]] indicates that the user has provided an unsuitable input problem or made a correctable error in a proof step.
   *      They will be reported back to the user along with a legible message describing what needs to be changed in the problem or proof.
   *   3. [[BelleProofSearchControl]] indicates that one proof attempt did not succeed so other proof options should be tried.
   *      They will be swallowed by any outer proof search tactics that will try something else instead.
-  * Some advanced proof search tactics may ``convert'' between these exception types or swallow more of them
+  * Some advanced proof search tactics may "convert" between these exception types or swallow more of them
   * when they deliberately try steps they know may fail spectacularly but have a backup plan.
   */
-class BelleThrowable(message: => String, cause: Throwable = null) extends ProverException("", cause) {
+abstract class BelleThrowable(message: => String, cause: Throwable = null) extends ProverException("", cause) {
   /* @note message not passed to super (constructing Bellerophon messages tends to be expensive, so construct on demand only) */
 
   /* @note mutable state for gathering the logical context that led to this exception */
@@ -35,70 +35,51 @@ class BelleThrowable(message: => String, cause: Throwable = null) extends Prover
   }
 
   /** Read the message describing what went wrong. */
-  override def getMessage: String = s"[Bellerophon Runtime] ${message.stripPrefix("[Bellerophon Runtime] ")}"
+  override def getMessage: String = message
 
   override def toString: String = getMessage() + "\n" + super.toString + "\nin " + tacticContext
 }
 
 
-// Main tactical exception categories
+//<editor-fold desc="Exception groups">
 
 /** Reported bug: Major syntactic and semantic errors in bellerophon tactics that indicate a tactic is broken.
   * For example, forgetting to provide an expected position or applying a left tactic on the right.
   * BelleInterpreter will raise the error to the user's attention but it needs an internal fix to KeYmaera X.
   */
-class BelleReportedError     (message: => String, cause: Throwable = null) extends BelleThrowable(message, cause)
+abstract class BelleCriticalException(message: => String, cause: Throwable = null) extends BelleThrowable(message, cause)
 
 /** User feedback: Indicates that the user has provided an unsuitable input problem or made a correctable error in a proof step.
   * They will be reported back to the user along with a legible message describing what needs to be changed in the problem or proof.
   */
-class BelleUserProblemInput  (message: => String, cause: Throwable = null) extends BelleThrowable(message, cause)
+abstract class BelleUserCorrectableException(message: => String, cause: Throwable = null) extends BelleThrowable(message, cause)
 
 /** Search control: Silently raises issues to control proof search, indicating that one proof attempt did not succeed
   * so other proof options should be tried.
   * They will be swallowed by any outer proof search tactics that will try something else instead.
   * For example, trying to apply an implyR tactic at a succedent position that contains an Or will be inapplicable but
   * does not indicate a bug in the tactic, merely that a different branch needs to be taken in proof search.
-  * @see [[InapplicableTactic]]
+  * @see [[BelleTacticFailure]]
+  * @see [[TacticInapplicableFailure]]
   */
-class BelleProofSearchControl(message: => String, cause: Throwable = null) extends BelleThrowable(message, cause)
+abstract class BelleProofSearchControl(message: => String, cause: Throwable = null) extends BelleThrowable(message, cause)
+
+//</editor-fold>
 
 
-// Subtypes
+//<editor-fold desc="Critical exceptions">
 
-//@todo rename to BelleIllFormedTacticError for clarity?
-class BelleIllFormedError(message: => String, cause: Throwable = null)     extends BelleReportedError(message, cause)
+/** Ill-formed ways of applying tactics, such as missing position for a position tactic or supplying a term when a formula was expected. */
+class IllFormedTacticApplicationException(message: => String, cause: Throwable = null) extends BelleCriticalException(message, cause)
 
-/** Tactic is not applicable as indicated.
-  * For example, InapplicableTactic can be raised when trying to apply [[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.andR]]
-  * at the correct position 2 in bounds on the right-hand side where it turns out there is an Or formula not an And formula.
-  * This does not indicate a catastrophic failure in the tactic implementation, merely a promising but unsuccessful attempt of applying a tactic.
-  */
-class InapplicableTactic(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
-
-
-/** Signaling that a tactic was not applicable or did not work at the current goal.
-  * BelleTacticFailures will be consumed by the BelleInterpreter which will try something else instead. */
-class BelleTacticFailure(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
-
-
+/** Incorrect prover setup, such as insufficient stack size or missing tools. */
+class ProverSetupException(message: => String, cause: Throwable = null) extends BelleCriticalException(message, cause)
 
 /** Signals an unexpected proof state (e.g., an open goal that should have been closed). */
 class BelleUnexpectedProofStateError(message: => String, val proofState: Provable, cause: Throwable = null)
-  extends BelleIllFormedError(message, cause) {
+  extends BelleCriticalException(message, cause) {
   override def toString: String = message + "\n" + proofState.prettyString
 }
-
-
-/** Signaling that a tactic's implementation was incomplete and did not work out as planned, so tactic execution might continue,
-  * but it is indicating a potential problem in the tactic's implementation. */
-//@todo should extend BelleTacticFailure
-class BelleUnsupportedFailure(message: => String, cause: Throwable = null) extends BelleIllFormedError(message, cause)
-
-/** Raised when a tactic decides that all further tactical work on a goal is useless and bellerophon should immediately stop
-  * @param status signaling the status of the goal such as Counterexample, Valid
-  * @param message readable description of the issue */
-class BelleAbort(status: => String, message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
 
 /**
   * Raised to indicate that two expressions are not unifiable in the single-sided matching sense.
@@ -107,23 +88,63 @@ class BelleAbort(status: => String, message: => String, cause: Throwable = null)
   * @param info Additional information
   */
 class UnificationException(val shape: String, val input: String, info: String = "")
-  extends BelleThrowable("Un-Unifiable: " + shape + "\nfor:          " + input + "\n" + info) {}
+  extends BelleCriticalException("Un-Unifiable: " + shape + "\nfor:          " + input + "\n" + info) {}
 
-
-case class BelleUserGeneratedError(msg: String) extends BelleThrowable(s"[Bellerophon User-Generated Message] $msg")
+/** Tactic assertions. */
+class TacticAssertionError(message: => String) extends BelleCriticalException(message)
 
 /**
   * A Bellerophon exception that consists of two reasons why it is being raised, for example,
   * if two things went wrong out of which it would have sufficed if only one succeeds.
-  * @param left
-  * @param right
+  * @param left Primary reason.
+  * @param right Alternate reason.
   */
-class CompoundException(val left: BelleThrowable, val right: BelleThrowable)
-  extends BelleThrowable(s"Left Message: ${left.getMessage}\nRight Message: ${right.getMessage})")
+class CompoundCriticalException(val left: BelleThrowable, val right: BelleThrowable)
+  //@note critical for now since raised only in interpreter
+  extends BelleCriticalException("Left: " + left.getMessage + "\nRight: " + right.getMessage + ")", left)
 
-/** These exceptions have well-understood causes and the given explanation should be propagated all the way to the user.
-  * @todo give proper formatting and inContext and such.
+//</editor-fold>
+
+//<editor-fold desc="User-correctable exceptions">
+
+/** Signaling that a tactic was not applicable or did not work at the current goal.
+  * BelleTacticFailures will be consumed by the BelleInterpreter which will try something else instead. */
+abstract class BelleTacticFailure(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
+
+/** Tactic is not applicable as indicated.
+  * For example, InapplicableTactic can be raised when trying to apply [[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.andR]]
+  * at the correct position 2 in bounds on the right-hand side where it turns out there is an Or formula not an And formula.
+  * This does not indicate a catastrophic failure in the tactic implementation, merely a promising but unsuccessful attempt of applying a tactic.
   */
-class BelleFriendlyUserMessage(message: => String) extends BelleUserProblemInput(message)
+class TacticInapplicableFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
 
 
+/** Signaling that a tactic's implementation was incomplete and did not work out as planned, so tactic execution might continue,
+  * but it is indicating a potential problem in the tactic's implementation. */
+class UnsupportedTacticFeature(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
+
+/** Signaling that a tactic input was not as expected. */
+class InputFormatFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
+
+//</editor-fold>
+
+//<editor-fold desc="Proof search control">
+
+/** Raised when a tactic decides that all further tactical work on a goal is useless and bellerophon should immediately stop
+  * @param status signaling the status of the goal such as Counterexample, Valid
+  * @param message readable description of the issue */
+class BelleAbort(status: => String, message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
+
+/** Raised when a tactic wants to indicate that it is/was not able to make progress on the goal. */
+class BelleNoProgress(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
+
+/** Raised when provable `p` is not yet proved. */
+case class BelleUnfinished(message: String, p: Provable) extends BelleProofSearchControl(
+  if (p.subgoals.size == 1 && p.subgoals.head.ante.isEmpty && p.subgoals.head.succ == False :: Nil) message + {if (message.nonEmpty) ": " else ""} + "expected to have proved, but got false"
+  else message + {if (message.nonEmpty) ": " else ""} + "expected to have proved, but got open goals"
+)
+
+/** Raised when counterexamples are found in sequent `s`; `cex` contains counterexample values per named symbol. */
+case class BelleCEX(message: String, cex: Map[NamedSymbol, Expression], s: Sequent) extends BelleProofSearchControl(message)
+
+//</editor-fold>

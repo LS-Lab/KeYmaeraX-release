@@ -71,26 +71,6 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy("x>=0 -> \\forall y (y=x -> y>=0)".asFormula, SaturateTactic(prop | allR('R) | exhaustiveEqL2R('Llast))) shouldBe 'proved
   }
 
-  "After combinator" should "prove a simple property" in {
-    inside (theInterpreter.apply(implyR(1) > close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))) {
-      case BelleProvable(p, _) => p shouldBe 'proved
-    }
-  }
-
-  it should "run right tactic on left failure" in {
-    val right = new DependentTactic("ANON") {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case _: BelleProvable => fail("Expected a BelleThrowable, but got a BelleProvable")
-        case err: BelleValue with BelleThrowable => throw err
-      }
-    }
-    the [BelleThrowable] thrownBy theInterpreter.apply(andR(1) > right, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula))) should
-      have message """[Bellerophon Runtime] Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
-                     |==> 1:  1=2->1=2	Imply
-                     |  from
-                     |==> 1:  1=2->1=2	Imply})""".stripMargin
-  }
-
   "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & OnAll (implyR(SuccPos(0)) & close)
@@ -103,13 +83,19 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy(f, expr) shouldBe 'proved
   }
 
-  it should "support 'Rlike' unification matching" in {
+  it should "support 'Rlike unification matching" in {
     val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
       SaturateTactic(orR('R)) & SaturateTactic(onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))))
     result.subgoals.loneElement shouldBe "a=0&b=1, f=5&g=6 ==> d=3->e=4, c=2, h=7".asSequent
   }
 
-  it should "support 'Llike' unification matching" in {
+  it should "report when no unification found with 'Rlike unification matching" in {
+    the [BelleProofSearchControl] thrownBy proveBy("==> a=0, b=1, c=2->d=3".asSequent,
+      onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))) should have message "Position tactic implyR('R~=\"p_()&q_()->r_()\") is not applicable anywhere in succedent"
+
+  }
+
+  it should "support 'Llike unification matching" in {
     val result = proveBy("(a=0&b=1 -> c=2) & (d=3 -> e=4) & (f=5&g=6 -> h=7) -> i=8".asFormula,
       implyR('R) & SaturateTactic(andL('L)) & SaturateTactic(onAll(implyL('Llike, "p_()&q_()->r_()".asFormula)))
     )
@@ -122,7 +108,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "fail inapplicable builtin-rules with legible error messages" in {
     the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should have message
-      """[Bellerophon Runtime] Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
+      """Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
         |==> 1:  x=5	Equal
         |  from
         |==> 1:  x=5	Equal})""".stripMargin
@@ -169,7 +155,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     val fml = "[x:=3;](x>0 & x>1 & x>2)".asFormula
     val modelContent = s"ProgramVariables Real x; End.\n Problem ${fml.prettyString} End."
     db.createProof(modelContent, "saturateTest")
-    db.proveBy(modelContent, SaturateTactic(boxAnd('R) & andR('R)) & master()) shouldBe 'proved
+    db.proveBy(modelContent, SaturateTactic(onAll(boxAnd('R) & andR('R))) & master()) shouldBe 'proved
   }}
 
   it should "not endless repeat on new labels" in {
@@ -319,10 +305,10 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
       )
     )) should have message
-      """[Bellerophon Runtime] Left Message: [Bellerophon Runtime] Unable to create dependent tactic 'id', cause: requirement failed: Expects same formula in antecedent and succedent. Found:
+      """Left: Unable to create dependent tactic 'id', cause: requirement failed: Expects same formula in antecedent and succedent. Found:
         |   -1:  x>0	Greater
         |==> 1:  x>5	Greater
-        |Right Message: [Bellerophon Runtime] Unable to create dependent tactic 'id', cause: requirement failed: Expects same formula in antecedent and succedent. Found:
+        |Right: Unable to create dependent tactic 'id', cause: requirement failed: Expects same formula in antecedent and succedent. Found:
         |   -1:  x>0	Greater
         |==> 1:  x>2	Greater)""".stripMargin
 
@@ -348,8 +334,8 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   "Let" should "fail (but not horribly) when inner proof cannot be started" in {
     val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
-    the [BelleThrowable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
-      "[Bellerophon Runtime] Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
+    the [Throwable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
+      "Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
     val result = proveBy(fml, BelleParser("let ({`f()=f`}) in (nil) | nil"))
     result.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
   }
@@ -397,7 +383,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       (pattern2, (_: RenUSubst) => error("Should never get here.")),
       (pattern1, (_: RenUSubst) => implyR(1) & close)
     ))
-    a [BelleUserGeneratedError] shouldBe thrownBy (proveBy("1=1->1=1".asFormula, e))
+    a [BelleThrowable] shouldBe thrownBy (proveBy("1=1->1=1".asFormula, e))
   }
 
   "AtSubgoal" should "work" in {
@@ -433,7 +419,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         val name = expr.prettyString
         if (namesToRecord.contains(name)) calls += name
       }
-      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
 
@@ -454,7 +440,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     val wait: BuiltInTactic = new BuiltInTactic("wait") {
       def result(p: ProvableSig): ProvableSig = { Thread.sleep(5000); p }
     }
-    the [BelleThrowable] thrownBy testTimeoutAlternatives("x>=0 -> x>=0".asFormula, wait::Nil, 1000) should have message "[Bellerophon Runtime] Alternative timed out"
+    the [BelleNoProgress] thrownBy testTimeoutAlternatives("x>=0 -> x>=0".asFormula, wait::Nil, 1000) should have message "Alternative timed out"
   }
 
   it should "succeed the first succeeding alternative" in {
@@ -475,7 +461,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       def result(p: ProvableSig): ProvableSig = { Thread.sleep(5000); p }
     }
     the [BelleThrowable] thrownBy testTimeoutAlternatives("x>=0 -> x>=0".asFormula,
-      wait::DebuggingTactics.error("Should not be executed")::Nil, 1000) should have message "[Bellerophon Runtime] Alternative timed out"
+      wait::DebuggingTactics.error("Should not be executed")::Nil, 1000) should have message "Alternative timed out"
   }
 
   "Def tactic" should "define a tactic and apply it later" in {
@@ -543,14 +529,13 @@ class SequentialInterpreterTests extends TacticTestBase {
     val listener = new IOListener {
       val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
       override def begin(input: BelleValue, expr: BelleExpr): Unit = calls += expr
-      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
     the [BelleThrowable] thrownBy LazySequentialInterpreter(listener::Nil)(
       "andR(1) & <(close, close)".asTactic,
       BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
-        """[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close
-          |The error occurred on
+        """Inapplicable close
           |Provable{
           |==> 1:  false	False$
           |  from
@@ -567,14 +552,13 @@ class SequentialInterpreterTests extends TacticTestBase {
     val listener = new IOListener {
       val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
       override def begin(input: BelleValue, expr: BelleExpr): Unit = calls += expr
-      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
     the [BelleThrowable] thrownBy ExhaustiveSequentialInterpreter(listener::Nil)(
       "andR(1) & <(close, close)".asTactic,
       BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
-        """[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close
-          |The error occurred on
+        """Inapplicable close
           |Provable{
           |==> 1:  false	False$
           |  from
@@ -626,7 +610,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         case NamedTactic(name, _) if name == "prop" => calls += expr
         case _ =>
       }
-      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
       override def kill(): Unit = {}
     }
     ExhaustiveSequentialInterpreter(listener :: Nil)(

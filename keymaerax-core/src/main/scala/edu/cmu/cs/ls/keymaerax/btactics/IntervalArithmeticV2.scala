@@ -292,7 +292,7 @@ object IntervalArithmeticV2 {
       "Maybe try Propositional->Exhaustive (prop) first?"
     if (lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) (lowers, uppers)
     else t match {
-      case v if PolynomialArith.isVar(v) => throw new BelleThrowable (unknown_bound(v))
+      case v if PolynomialArith.isVar(v) => throw new InputFormatFailure(unknown_bound(v))
       case n: Number =>
         val refl = (ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(n, n))))).
           apply(CoHideRight(SuccPos(0)), 0).
@@ -554,7 +554,7 @@ object IntervalArithmeticV2 {
               apply(ff_prv, 0)
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
           case _ =>
-            throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +
+            throw new UnsupportedTacticFeature("\nUnable to compute bound for " + t + "\n" +
               "Binary operation " + t.getClass.getSimpleName + " not implemented.")
         }
       case FuncOf(m, Pair(f, g)) if m == minF || m == maxF =>
@@ -645,7 +645,7 @@ object IntervalArithmeticV2 {
           (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
         }
       case _ =>
-        throw new BelleThrowable ("\nUnable to compute bound for " + t + "\n" +
+        throw new UnsupportedTacticFeature("\nUnable to compute bound for " + t + "\n" +
           t.getClass.getSimpleName + " not implemented for Interval Arithmetic.")
     }
   }
@@ -720,8 +720,8 @@ object IntervalArithmeticV2 {
     le_prv.conclusion.succ(0) match {
       case Equiv(a, True) =>
       case _ =>
-        throw new BelleThrowable ("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
-          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion)
+        throw new BelleUnexpectedProofStateError("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
+          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion, le_prv.underlyingProvable)
     }
     CutHide(leBoth.conclusion.ante(0))(provable).
       apply(AndRight(SuccPos(0)), 1).
@@ -780,10 +780,10 @@ object IntervalArithmeticV2 {
                 gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
                 provable, G_prv, ff_prv)
             case _ =>
-              throw new BelleThrowable(notSupportedMessage)
+              throw new TacticInapplicableFailure(notSupportedMessage)
           }
         case _ =>
-          throw new BelleThrowable(notSupportedMessage)
+          throw new TacticInapplicableFailure(notSupportedMessage)
       }
     }
   }
@@ -793,9 +793,9 @@ object IntervalArithmeticV2 {
   private lazy val notEqual = proveBy("(!f()=g())<->f()<g()|f()>g()".asFormula, QE & done)
 
   private[btactics] def intervalArithmeticPreproc: DependentPositionTactic = "intervalArithmeticPreproc" by { (pos: Position, seq: Sequent) =>
-    def unsupportedError(e: Expression) = throw new BelleThrowable("Interval Arithmetic does not support " + e.getClass.getSimpleName)
+    def unsupportedError(e: Expression) = throw new TacticInapplicableFailure("Interval Arithmetic does not support " + e.getClass.getSimpleName)
     seq.sub(pos) match {
-      case Some(e: Expression) =>
+      case Some(e) =>
         e match {
           case And(f, g) =>
             intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
@@ -852,6 +852,7 @@ object IntervalArithmeticV2 {
           case GreaterEqual(a, b) => nil
           case e => unsupportedError(e)
         }
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -907,7 +908,8 @@ object IntervalArithmeticV2 {
     seq.sub(pos) match {
       case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
       case Some(t: Term) => intervalCutTerms(List(t))
-      case _ => throw new BelleThrowable("intervalCut needs to be called on a Formula or a Term")
+      case Some(e) => throw new TacticInapplicableFailure("intervalCut only applicable to formulas or terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -1049,7 +1051,7 @@ object IntervalArithmeticV2 {
                 QE() & done)
             case LessEqual(_, x) if bounds._1.isDefinedAt(x) => QE() & done
             case LessEqual(_, n) if isNumeric(n) => QE() & done
-            case _ => throw new BelleThrowable("recurseLower went wrong")
+            case _ => throw new TacticInapplicableFailure("recurseLower went wrong")
           }
       }
       // recurse to find an upper bound for the expression on the lhs
@@ -1076,7 +1078,7 @@ object IntervalArithmeticV2 {
                 QE() & done)
             case LessEqual(x, _) if bounds._1.isDefinedAt(x) => QE() & done
             case LessEqual(n, _) if isNumeric(n) => QE() & done
-            case _ => throw new BelleThrowable("recurseUpper went wrong")
+            case _ => throw new TacticInapplicableFailure("recurseUpper went wrong")
           }
       }
       def recurseFormula: BelleExpr = "slowIntervalArithmetic.recurseFormula" by {
@@ -1091,7 +1093,7 @@ object IntervalArithmeticV2 {
               val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
               val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
               lessBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
-            case _ => throw new BelleThrowable("recurseFormula went wrong")
+            case _ => throw new TacticInapplicableFailure("recurseFormula went wrong")
           })
       }
       recurseFormula
