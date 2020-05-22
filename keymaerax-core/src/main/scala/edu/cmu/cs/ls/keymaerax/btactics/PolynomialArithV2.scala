@@ -263,7 +263,7 @@ object PolynomialArithV2Helpers {
     prv(us)
   }
 
-  val equalReflex = anyArgify(DerivedAxioms.equalReflex.provable)
+  val equalReflex = anyArgify(DerivedAxioms.equalReflexive.provable)
   val spat = "s_(||)".asTerm
   def equalReflex(t: Term) : ProvableSig = equalReflex(USubst(Seq(SubstitutionPair(spat, t))))
 
@@ -769,7 +769,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def compare(that: Monomial): Int = monomialOrdering.compare(this.powers, that.powers)
   }
 
-  val zez = rememberAny("0 = 0".asFormula, byUS(DerivedAxioms.equalReflex))
+  val zez = rememberAny("0 = 0".asFormula, byUS(DerivedAxioms.equalReflexive))
 
   val emptySprout = rememberAny("s_() = 0 & t_() = u_() -> s_() + t_() = 0 + u_() + 0".asFormula, QE & done)
 

@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.macros
 
+import edu.cmu.cs.ls.keymaerax.macros.DerivedRule.ExprPos
+
 import scala.reflect.macros.whitebox
 
 object AnnotationCommon {
@@ -60,6 +62,25 @@ object AnnotationCommon {
     if (s.isEmpty) Nil
     else s.split(";;").toList.map(parseSequent)
   }
+  def toNonneg(s: String)(implicit c: whitebox.Context): Int = {
+    val i =
+      try {
+         s.toInt
+      } catch {
+        case t: Throwable => c.abort(c.enclosingPosition, "Could not convert position " + s + " to integer")
+      }
+    if (i < 0) c.abort(c.enclosingPosition, "Position needs to be nonnegative, got: " + i)
+    else i
+  }
+  def parsePos(s: String)(implicit c: whitebox.Context): ExprPos = {
+    if(s == "*" || s == "") Nil
+    else s.split("\\.").toList.map(toNonneg)
+  }
+  def parsePoses(s: String)(implicit c: whitebox.Context): List[ExprPos] = {
+    if(s == "") Nil
+    else s.split(";").toList.map(parsePos)
+  }
+
   // Abstract syntax trees for string and string list literals
   def literal(s: String)(implicit c: whitebox.Context): c.universe.Tree = c.universe.Literal(c.universe.Constant(s))
   def literals(ss: List[String])(implicit c: whitebox.Context): c.universe.Tree = {

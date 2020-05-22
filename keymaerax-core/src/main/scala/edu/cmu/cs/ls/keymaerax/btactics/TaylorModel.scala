@@ -435,7 +435,7 @@ object TaylorModelTactics extends Logging {
         implyR(1) &
         // push in existencial quantifiers
         SaturateTactic(rewriteFormula(partialVacuousExistsAxiom2.fact)(1) |
-          rewriteFormula(DerivedAxioms.partialVacuousExistsAxiom.provable)(1) |
+          rewriteFormula(DerivedAxioms.pexistsV.provable)(1) |
           rewriteFormula(TaylorModelTactics.unfoldExistsLemma.fact)(1)
         ) &
         tocTac("pre dIClosed") &

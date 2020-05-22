@@ -331,7 +331,7 @@ private object DLBySubst {
                   else And(oldified, True)
                 cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                   //@todo use useAt("I") instead of useAt("I induction"), because it's the more general equivalence
-                  /* c */ useAt(DerivedAxioms.Ieq)(pos) & andR(pos) & Idioms.<(
+                  /* c */ useAt(DerivedAxioms.I)(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
                       label(initCase),
                       (andR(pos) & Idioms.<(closeIdWith(pos), ident))*constAntes.size &
@@ -426,10 +426,10 @@ private object DLBySubst {
 
           cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <(
             stutter(ur.what)(pos ++ PosInExpr(0::0::Nil)) &
-            useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
+            useAt(DerivedAxioms.pexistsV)(pos) & closeConsts(pos) &
             assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(BelleLabels.initCase)
             ,
-            cohide(pp) & implyR(1) & byUS(DerivedAxioms.convergenceFlat) <(
+            cohide(pp) & implyR(1) & byUS(DerivedAxioms.conflat) <(
               existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
@@ -468,7 +468,7 @@ private object DLBySubst {
       uniformRename(ur) & label(BelleLabels.initCase)
       ,
       cohide(pos) & implyR(1)
-        & byUS(DerivedAxioms.convergenceFlat) <(
+        & byUS(DerivedAxioms.conflat) <(
         existsL(-1) & andL(-1) & uniformRename(ur) & label(BelleLabels.useCase)
         ,
         assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep)
@@ -552,7 +552,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt(DerivedAxioms.assignbImpliesExistsAxiom, PosInExpr(1::Nil), subst)(pos)
+      useAt(DerivedAxioms.assignbexists, PosInExpr(1::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -573,7 +573,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt(DerivedAxioms.forallImpliesAssignbAxiom, PosInExpr(0::Nil), subst)(pos)
+      useAt(DerivedAxioms.assignball, PosInExpr(0::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })

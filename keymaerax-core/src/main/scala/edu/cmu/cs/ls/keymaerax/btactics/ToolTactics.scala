@@ -443,7 +443,7 @@ private object ToolTactics {
       case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.right ==right.right =>
         useAt(propPushRightIn(left.reapply), PosInExpr(1::Nil))(pp)
       case Some(Imply(Box(a, _), Box(b, _))) if a==b => useAt("K modal modus ponens", PosInExpr(1::Nil))(pp)
-      case Some(Imply(Forall(lv, _), Forall(rv, _))) if lv==rv => useAt(DerivedAxioms.allDistributeAxiom, PosInExpr(1::Nil))(pp)
+      case Some(Imply(Forall(lv, _), Forall(rv, _))) if lv==rv => useAt(DerivedAxioms.allDist, PosInExpr(1::Nil))(pp)
       case Some(Imply(Exists(lv, _), Exists(rv, _))) if lv==rv => useAt(existsDistribute, PosInExpr(1::Nil))(pp)
       case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1::Nil))(pos)
       case _ => skip

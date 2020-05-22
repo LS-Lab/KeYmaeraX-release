@@ -32,7 +32,7 @@ object TacticIndex {
 
   lazy val default: TacticIndex = new DefaultTacticIndex
 
-  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.forallStutter)
+  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.allStutter)
   val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.existsStutter)
 }
 

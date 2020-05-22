@@ -138,7 +138,9 @@ class DLParser extends Parser {
   def parenT[_: P]: P[Term] = P( "(" ~/ term ~ ")" )
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).
     map({case (t,None) => t case (t,Some("'")) => Differential(t)})
-  def baseT[_: P]: P[Term] = P( NoCut(func) | variable | (number ~ "'").map(Differential) | number | NoCut(unitFunctional) | differential)
+  def baseT[_: P]: P[Term] = P( NoCut(func) | variable |
+    (number ~ "'").map(Differential) | number | ("(" ~ number ~ ")" ~ "'").map(Differential) | ("(" ~ number ~ ")") |
+    NoCut(unitFunctional) | differential)
 
   /** `-p`: negative occurrences of what is parsed by parser `p`. */
   def neg[_: P](p: => P[Term]): P[Term] = P(("-" ~~ !">") ~/ p).map(t => Neg(t))
@@ -152,13 +154,17 @@ class DLParser extends Parser {
     else signed(factor) ~ (CharIn("*/").! ~/ signed(factor)).rep).
     map({case (t,ts) => ts.foldLeft(t)({case (l,("*",r)) => Times(l,r) case (l,("/",r)) => Divide(l,r)})})
 
+  /** term: Parses a dL term. */
   def term[_: P]: P[Term] = P( if (weakNeg) signed(summand) ~ (("+" | ("-" ~ !">")).! ~/ signed(summand)).rep
-    else (summand ~ (("+" | ("-" ~ !(">"))).! ~/ summand).rep)).
+    else (summand ~ (("+" | ("-" ~ !">")).! ~/ summand).rep)).
     map({case (t,ts) => ts.foldLeft(t)({case (l,("+",r)) => Plus(l,r)  case (l,("-",r)) => Minus(l,r)})})
 
+
+  /** (t1,t2,t3,...,tn) parenthesized list of terms */
   def termList[_: P]: P[Term] = P("(" ~ (term ~ ("," ~/ term).rep).? ~ ")").
     map({case Some((t,ts)) => (ts.+:(t)).reduceRight(Pair) case None => Nothing})
 
+  /** (|x1,x2,x3|) parses a space declaration */
   def space[_: P]: P[Space] = P("(|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|)").
     map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
 
@@ -204,6 +210,7 @@ class DLParser extends Parser {
 
   def implicational[_: P]: P[Formula] = P(NoCut(backimplication) | implication)
 
+  /** formula: Parses a dL formula. */
   def formula[_: P]: P[Formula] = P( implicational ~ ("<->" ~/ implicational).? ).
     map({case (l,None) => l case (l,Some(r)) => Equiv(l,r)})
 
@@ -244,6 +251,7 @@ class DLParser extends Parser {
     map({case (f, p, None) => Choice(Compose(Test(f),p), Test(Not(f)))
          case (f, p, Some(q)) => Choice(Compose(Test(f),p), Compose(Test(Not(f)),q))})
 
+  /** program: Parses a dL program. */
   def program[_: P]: P[Program] = P( choice )
 
 
@@ -260,6 +268,7 @@ class DLParser extends Parser {
   def diffProduct[_: P]: P[DifferentialProgram] = P( atomicDP ~ ("," ~/ atomicDP).rep ).
     map({case (p, ps) => (ps.+:(p)).reduceRight(DifferentialProduct.apply)})
 
+  /** diffProgram: Parses a dL differential program. */
   def diffProgram[_: P]: P[DifferentialProgram] = P( diffProduct )
 
 }

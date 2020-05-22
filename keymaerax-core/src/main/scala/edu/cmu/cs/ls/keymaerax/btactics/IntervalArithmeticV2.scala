@@ -832,7 +832,7 @@ object IntervalArithmeticV2 {
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Not(f) =>
-                useAt(DerivedAxioms.doubleNegationAxiom, PosInExpr(0::Nil))(pos) &
+                useAt(DerivedAxioms.doubleNegation, PosInExpr(0::Nil))(pos) &
                   intervalArithmeticPreproc(pos)
               case Equal(f, g) =>
                 useAt(notEqual, PosInExpr(0 :: Nil))(pos)

@@ -14,24 +14,41 @@ import AnnotationCommon._
 
 
 /**
- *  Annotation for derived axioms, which allows decentralized AxiomInfo
- *  @param names Display names
- *  @param formula Formula displayed for axioms
- *  @param inputs Display inputs for axiom-with-input
- *  @param codeName used to invoke axiom in tactics
- *  @param unifier  Which unifier to use for axiom: 'linear or 'full
- *  @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
- *  @author Brandon Bohrer
- *  */
+  * Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]].
+  * @param names Display names to render in the user interface.
+  * @param codeName Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+  *                 `codeName`` will be inferred from the (lazy) val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
+  * @param formula Formula displayed for axioms as html with unicode
+  * @param unifier Which unifier to use for axiom: 'linear or 'full
+  * @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
+  * @param inputs Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut.
+  * @param key The position of the subexpression in this formula that will be unified against when using this axiom.
+  *            The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
+  *            - Default key="0" is the left child.
+  *            - Root key="" is the full formula.
+  *            - key="0.1.1" is the right child of the right child of the left child.
+  * @param recursor The ;-separated list of relative subpositions in the resulting formulas that will be chased away next.
+  *                 The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
+  *                 The resulting subexpressions will be considered in the order of the ;-separated list.
+  *                 - Default recursor="" means no recursion so stop chasing.
+  *                 - recursor="0;1" first considers the left child then the right child.
+  *                 - recursor="1;" first considers the right child then the whole subformula.
+  *                 - recursor="1" only considers the right child.
+  *                 - recursor="0.0;1.1" first considers the left child of the left child, then the right child of the right child.
+  *                 - recursor="0.1.1;0.1;" first considers the right child of the right child of the left child, then the right child of the left child, then the whole formula.
+  *                 - recursor="*" considers the full resulting formula.
+  *                   In particular recursor="1;" and recursor="1;*" are equivalent.
+  * @author Brandon Bohrer
+  */
 class Axiom(val names: Any,
             val codeName: String = "",
             val formula: String = "",
             val unifier: String = "full",
             val displayLevel: String = "internal",
             val inputs: String = "",
-            val key: ExprPos = 0::Nil,
-            val recursor: List[ExprPos] = Nil
-                  ) extends StaticAnnotation {
+            val key: String = "0",
+            val recursor: String = ""
+           ) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
   def macroTransform(annottees: Any*): Any = macro Axiom.impl
 }
@@ -50,31 +67,33 @@ object Axiom {
       import c.universe._
       c.prefix.tree match {
         case q"new $annotation(..$params)" =>
-          val defaultMap = Map(
+          val defaultMap: Map[String, Tree] = Map(
             "codeName" -> Literal(Constant("")),
             "formula" -> Literal(Constant("")),
             "unifier" -> Literal(Constant("full")),
             "displayLevel" -> Literal(Constant("internal")),
-            "key" -> q"""0::scala.collection.immutable.Nil""",
-            "recursor" -> q"""scala.collection.immutable.Nil""",
+            "key" -> Literal(Constant("0")),
+            "recursor" -> Literal(Constant("")),
             "inputs" -> Literal(Constant(""))
           )
           val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-          val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, key: ExprPos, recursor: List[ExprPos])
-          = (c.eval[(Any, String, String, String, String, String, ExprPos, List[ExprPos])](c.Expr
+          val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, keyString: String, recursorString: String)
+          = (c.eval[(Any, String, String, String, String, String, String, String)](c.Expr
             (q"""(${paramMap("names")}, ${paramMap("formula")}, ${paramMap("inputs")}, ${paramMap("codeName")}, ${paramMap("unifier")},
               ${paramMap("displayLevel")}, ${paramMap("key")}, ${paramMap("recursor")})""")))
           val inputs: List[ArgInfo] = parseAIs(inputString)(c)
+          val key = parsePos(keyString)
+          val recursor = parsePoses(recursorString)
           val simpleDisplay = displayObj match {
             case s: String => SimpleDisplayInfo(s, s)
             case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
             case sdi: SimpleDisplayInfo => sdi
             case di => c.abort(c.enclosingPosition, "@Axiom expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di)
           }
-          val displayInfo = (fml, inputs, Nil, None) match {
-            case ("", Nil, Nil, None) => simpleDisplay
-            case (fml, Nil, Nil, None) if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
-            case (fml, args, Nil, None) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
+          val displayInfo = (fml, inputs) match {
+            case ("", Nil) => simpleDisplay
+            case (fml, Nil) if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
+            case (fml, args) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
             //case ("", Nil, premises, Some(conclusion)) => RuleDisplayInfo(simpleDisplay, conclusion, premises)
             case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Axiom: either specify premisses and conclusion, or formula optionally with inputs, not both")
           }
@@ -124,6 +143,8 @@ object Axiom {
               c.abort(c.enclosingPosition, s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam")
             // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
             val codeName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
+            if (codeName.toString.exists(c => c =='\"'))
+              c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
             val storageName = TermName(codeName.toString.toLowerCase)
             // AST for literal strings for the names
             val codeString = Literal(Constant(codeName.decodedName.toString))

@@ -306,7 +306,7 @@ object PolynomialArith extends Logging {
 
   //This seems like it might be a bad idea ...
   private def getProver(skip_proofs:Boolean) :(Formula,BelleExpr)=>ProvableSig =
-    if (skip_proofs) ( (f:Formula,b:BelleExpr) => DerivedAxioms.equivReflexiveAxiom.provable ) else proveBy
+    if (skip_proofs) ( (f:Formula,b:BelleExpr) => DerivedAxioms.equivReflexive.provable ) else proveBy
 
   def addCoeff(cl:Term,cr:Term) : (Term,Boolean) = {
     (cl,cr) match {
@@ -358,7 +358,7 @@ object PolynomialArith extends Logging {
         else {
           val (rec,pr) = addPoly(r,l,skip_proofs)
           //Flip the +
-          (rec,if (skip_proofs) DerivedAxioms.equivReflexiveAxiom.provable else useFor("+ commute")(SuccPosition(1,0::Nil))(pr))
+          (rec,if (skip_proofs) DerivedAxioms.equivReflexive.provable else useFor("+ commute")(SuccPosition(1,0::Nil))(pr))
         }
       }
       case _ => ???
@@ -403,7 +403,7 @@ object PolynomialArith extends Logging {
         else {
           val (rec,pr) = mulMono(r,l,skip_proofs)
           //Flip the *
-          (rec,if (skip_proofs) DerivedAxioms.equivReflexiveAxiom.provable else useFor("* commute")(SuccPosition(1,0::Nil))(pr))
+          (rec,if (skip_proofs) DerivedAxioms.equivReflexive.provable else useFor("* commute")(SuccPosition(1,0::Nil))(pr))
         }
       case _ => ???
     }
@@ -1105,19 +1105,19 @@ object PolynomialArith extends Logging {
         (pr1, pr2) match {
           case (None, None) =>
             b match {
-              case Divide(_, _) => Some(proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex)))
+              case Divide(_, _) => Some(proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflexive)))
               case _ => None
             }
           case (Some(pr1), None) =>
-            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex))
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflexive))
             Some(useFor(lem._2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
             (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr)))
           case (None, Some(pr2)) =>
-            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex))
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflexive))
             Some(useFor(lem._3, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
             (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))(pr)))
           case (Some(pr1), Some(pr2)) =>
-            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex))
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflexive))
             Some(useFor(lem._1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
             (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))
             (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr))))
@@ -1127,7 +1127,7 @@ object PolynomialArith extends Logging {
         pr1 match {
           case None => None
           case Some(pr1) =>
-            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex))
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflexive))
             Some(useFor(negDiv, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
             (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr)))
         }

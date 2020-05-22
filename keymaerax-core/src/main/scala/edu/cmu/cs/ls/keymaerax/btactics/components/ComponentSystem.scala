@@ -185,12 +185,12 @@ object ComponentSystem {
                     cohideR(1) & dW(1) & prop & done
                   )
                 )
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexive))
             }
           case Some(xsys) if StaticSemantics.boundVars(xsys).toSet.forall(_.name == "t") =>
             ys.reduceOption(DifferentialProduct.apply) match {
               case Some(ysys) => ???
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexive))
             }
           case None =>
             ys.reduceOption(DifferentialProduct.apply) match {
@@ -214,7 +214,7 @@ object ComponentSystem {
                     cohideR(1) & dW(1) & prop & done
                   )
                 )
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexive))
             }
         }
       case Some(e) => throw new TacticInapplicableFailure("Lemma 3 only applicable to box ODEs, but got " + e.prettyString)
@@ -388,7 +388,7 @@ object ComponentSystem {
                       DebuggingTactics.done("Close by C2 induction step")
                     ,
                     DebuggingTactics.print("Proving C2 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
-                      useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+                      useAt(DerivedAxioms.DR, PosInExpr(1::Nil))(1) &
                       dW(1) & prop & DebuggingTactics.done("Proving C2 diff. refine")
                   )
                   ,
@@ -483,7 +483,7 @@ object ComponentSystem {
                   DebuggingTactics.done("Close by C1 induction step")
                 ,
                 DebuggingTactics.print("Proving C1 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
-                  composeb(1, 0::1::Nil) & useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+                  composeb(1, 0::1::Nil) & useAt(DerivedAxioms.DR, PosInExpr(1::Nil))(1) &
                   dW(1) & prop & DebuggingTactics.done("Proving C1 diff. refine")
               ) &
               DebuggingTactics.print("Step done") & DebuggingTactics.done("Step")

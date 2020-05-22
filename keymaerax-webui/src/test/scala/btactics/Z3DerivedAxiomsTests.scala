@@ -88,18 +88,18 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
     }
   }
 
-  "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
-  it should "prove !!" in {check(doubleNegationAxiom)}
-  it should "prove exists dual" in {check(existsDualAxiom)}
+  "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexive)}
+  it should "prove !!" in {check(doubleNegation)}
+  it should "prove exists dual" in {check(existsDual)}
   ignore should "prove all eliminate" taggedAs OptimisticTest in {check(alle)}
-  ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
+  ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existse)}
   it should "prove !exists" in {check(notExists)}
   it should "prove !all" in {check(notAll)}
 //  it should "prove !all2" in {check(notAll2)}
   it should "prove ![]" in {check(notBox)}
   it should "prove !<>" in {check(notDiamond)}
-  ignore should "prove all distribute" in {check(allDistributeAxiom)}
-  it should "prove box dual" in {check(boxAxiom)}
+  ignore should "prove all distribute" in {check(allDist)}
+  it should "prove box dual" in {check(box)}
 //  it should "prove K1" in {check(K1)}
 //  it should "prove K2" in {check(K2)}
   //@todo nrf it should "prove box split" in {check(boxAnd)}
@@ -109,33 +109,33 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove [] conditional split" in {check(boxImpliesAnd)}
   it should "prove <> split" in {check(diamondOr)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
-  it should "prove <:=> assign" in {check(assigndAxiom)}
+  it should "prove <:=> assign" in {check(assignd)}
 //  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
-  it should "prove := assign dual" in {check(assignDualAxiom)}
+  it should "prove := assign dual" in {check(assignDual)}
   it should "prove all substitute" in withZ3 { qeTool => check(allSubstitute)}
-  it should "prove [:=] equational" in withZ3 { qeTool => check(assignbEquationalAxiom)}
+  it should "prove [:=] equational" in withZ3 { qeTool => check(assignbequational)}
 //  it should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
-  it should "prove exists and" in {check(existsAndAxiom)}
-  it should "prove [:=] assign exists" in {check(assignbImpliesExistsAxiom)}
-  it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
-  it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
-  it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
+  it should "prove exists and" in {check(existsAnd)}
+  it should "prove [:=] assign exists" in {check(assignbexists)}
+  it should "prove <:=> assign equality" in {check(assigndEquality)}
+  it should "prove [:=] vacuous assign" in {check(vacuousAssignb)}
+  it should "prove <:=> vacuous assign" in {check(vacuousAssignd)}
   //@todo it should "prove [':=] differential assign" in {check(assignDAxiomb)}
-  it should "prove <':=> differential assign" in {check(assignDAxiom)}
-  it should "prove <:*> assign nondet" in {check(nondetassigndAxiom)}
-  it should "prove <?> test" in {check(testdAxiom)}
-  it should "prove <++> choice" in {check(choicedAxiom)}
-  it should "prove <;> compose" in {check(composedAxiom)}
-  it should "prove <*> iterate" in {check(iteratedAxiom)}
+  it should "prove <':=> differential assign" in {check(Dassignd)}
+  it should "prove <:*> assign nondet" in {check(randomd)}
+  it should "prove <?> test" in {check(testd)}
+  it should "prove <++> choice" in {check(choiced)}
+  it should "prove <;> compose" in {check(composed)}
+  it should "prove <*> iterate" in {check(iterated)}
   it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove [*] approx" in {check(loopApproxb)}
-  it should "prove II induction" in {check(iiinduction)}
+  it should "prove II induction" in {check(IIinduction)}
   it should "prove [*] merge" in {check(loopMergeb)}
   it should "prove <*> merge" in {check(loopMerged)}
   it should "prove exists generalize" in {check(existsGeneralize)}
-  it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
-  it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
-  it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
+  it should "prove vacuous exists" in {check(existsV)}
+  it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondet)}
+  it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondet)}
   it should "prove & commute" in {check(andCommute)}
   it should "prove & assoc" in {check(andAssoc)}
   it should "prove !& deMorgan" in {check(notAnd)}
@@ -149,16 +149,16 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove PC3" in {check(PC3)}
   it should "prove -> tautology" in {check{implyTautology}}
   it should "prove ->'" in {check(Dimply)}
-  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
+  it should "prove \\forall->\\exists" in {check(forallThenExists)}
   //it should "prove DI differential invariance from DI" in {check(DIinvariance)}
-  it should "prove DI differential invariant from DI" in {check(DIinvariant)}
-  it should "prove DIo open differential invariance >" in withZ3 {_ => check(DIOpeninvariantLess)}
-  it should "prove DW differential weakening" in {check(DWeakening)}
+  it should "prove DI differential invariant from DI" in {check(DI)}
+  it should "prove DIo open differential invariance >" in withZ3 {_ => check(DIoless)}
+  it should "prove DW differential weakening" in {check(DW)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   //  it should "prove x' derive var" in {check(Dvar)}
-  it should "prove x' derive variable" in {check(Dvariable)}
-  it should "prove x' derive var commuted" in withZ3 { qetool => check(DvariableCommuted)}
+  it should "prove x' derive variable" in {check(DvariableAxiom)}
+  it should "prove x' derive var commuted" in withZ3 { qetool => check(DvariableCommutedAxiom)}
   it should "prove 'linear" in withZ3 { qetool => check(Dlinear)}
   it should "prove 'linear right" in withZ3 { qeTool => check(DlinearRight)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
@@ -167,7 +167,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove 0+" in withZ3 { qeTool => check(zeroPlus)}
   it should "prove +0" in withZ3 { qeTool => check(plusZero)}
   it should "prove *0" in withZ3 { qeTool => check(timesZero)}
-  it should "prove = reflexive" in withZ3 {qetool =>check(equalReflex)}
+  it should "prove = reflexive" in withZ3 {qetool =>check(equalReflexive)}
   it should "prove = commute" in withZ3 { qetool =>check(equalCommute)}
   it should "prove <=" in withZ3 { qetool =>check(lessEqual)}
   it should "prove ! !=" in withZ3 { qetool =>check(notNotEqual)}
@@ -178,8 +178,8 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove < flip" in withZ3 { qetool =>check(flipLess)}
   it should "prove + associative" in withZ3 { qeTool => check(plusAssociative)}
   it should "prove * associative" in withZ3 { qeTool => check(timesAssociative)}
-  it should "prove + commute" in withZ3 { qeTool => check(plusCommutative)}
-  it should "prove * commute" in withZ3 { qeTool => check(timesCommutative)}
+  it should "prove + commute" in withZ3 { qeTool => check(plusCommute)}
+  it should "prove * commute" in withZ3 { qeTool => check(timesCommute)}
   it should "prove distributive" in withZ3 { qeTool => check(distributive)}
   it should "prove + identity" in withZ3 { qeTool => check(plusIdentity)}
   it should "prove * identity" in withZ3 { qeTool => check(timesIdentity)}
@@ -203,9 +203,9 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove >2!=" in withZ3 { qeTool => check(greaterImpliesNotEqual)}
   it should "prove > monotone" in withZ3 { qeTool => check(greaterMonotone)}
 
-  it should "prove abs" in withZ3 { qeTool => check(absDef)}
-  it should "prove min" in withZ3 { qeTool => check(minDef)}
-  it should "prove max" in withZ3 { qeTool => check(maxDef)}
+  it should "prove abs" in withZ3 { qeTool => check(abs)}
+  it should "prove min" in withZ3 { qeTool => check(min)}
+  it should "prove max" in withZ3 { qeTool => check(max)}
   //it should "prove +<= up" in withZ3 { qeTool => check(intervalUpPlus)}
   //it should "prove -<= up" in withZ3 { qeTool => check(intervalUpMinus)}
   it should "prove *<= up" in withZ3 { qeTool => check(intervalUpTimes)}
@@ -219,24 +219,24 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove K& down" in withZ3 { qeTool => check(Kand)}
   it should "prove &-> down" in withZ3 { qeTool => check(andImplies)}
 
-  "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
-  it should "tactically prove !!" in {check(doubleNegationAxiom)}
-  it should "tactically prove exists dual" in {check(existsDualAxiom)}
+  "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexive)}
+  it should "tactically prove !!" in {check(doubleNegation)}
+  it should "tactically prove exists dual" in {check(existsDual)}
   ignore should "tactically prove all eliminate" taggedAs OptimisticTest in {check(alle)}
-  ignore should "tactically prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
-  it should "tactically prove all distribute" in {check(allDistributeAxiom)}
-  it should "tactically prove box dual" in {check(boxAxiom)}
-  it should "tactically prove <:=> assign" in {check(assigndAxiom)}
-  it should "tactically prove [:=] equational" in withZ3 { qeTool => check(assignbEquationalAxiom)}
+  ignore should "tactically prove exists eliminate" taggedAs OptimisticTest in {check(existse)}
+  it should "tactically prove all distribute" in {check(allDist)}
+  it should "tactically prove box dual" in {check(box)}
+  it should "tactically prove <:=> assign" in {check(assignd)}
+  it should "tactically prove [:=] equational" in withZ3 { qeTool => check(assignbequational)}
 //  it should "tactically prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
-  it should "tactically prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
-  it should "tactically prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
-  it should "tactically prove <':=> differential assign" in {check(assignDAxiom)}
-  it should "tactically prove <++> choice" in {check(choicedAxiom)}
-  it should "tactically prove <;> compose" in {check(composedAxiom)}
-  it should "tactically prove <*> iterate" in {check(iteratedAxiom)}
+  it should "tactically prove [:=] vacuous assign" in {check(vacuousAssignb)}
+  it should "tactically prove <:=> vacuous assign" in {check(vacuousAssignd)}
+  it should "tactically prove <':=> differential assign" in {check(Dassignd)}
+  it should "tactically prove <++> choice" in {check(choiced)}
+  it should "tactically prove <;> compose" in {check(composed)}
+  it should "tactically prove <*> iterate" in {check(iterated)}
   it should "tactically prove exists generalize" in {check(existsGeneralize)}
-  it should "tactically prove = reflexive" in withZ3 { qeTool => check(equalReflex)}
+  it should "tactically prove = reflexive" in withZ3 { qeTool => check(equalReflexive)}
   it should "tactically prove = commute" in withZ3 { qeTool => check(equalCommute)}
   it should "tactically prove <=" in withZ3 { qeTool => check(lessEqual)}
   it should "tactically prove ! !=" in withZ3 { qeTool => check(notNotEqual)}
@@ -244,17 +244,17 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "tactically prove >= flip" in withZ3 { qeTool => check(flipGreaterEqual)}
   it should "tactically prove > flip" in withZ3 { qeTool => check(flipGreater)}
   it should "tactically prove all substitute" in {check(allSubstitute)}
-  it should "tactically prove vacuous exists" in {check(vacuousExistsAxiom)}
-  it should "tactically prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
-  it should "tactically prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
-  it should "tactically prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
+  it should "tactically prove vacuous exists" in {check(existsV)}
+  it should "tactically prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondet)}
+  it should "tactically prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondet)}
+  it should "tactically prove \\forall->\\exists" in {check(forallThenExists)}
   //it should "tactically prove DI differential invariance" in {check(DIinvariance)}
-  it should "tactically prove DI differential invariant" in {check(DIinvariant)}
+  it should "tactically prove DI differential invariant" in {check(DI)}
   it should "tactically prove DG differential pre-ghost" in {check(DGpreghost)}
-  it should "tactically prove DW differential weakening" in {check(DWeakening)}
-  it should "tactically prove abs" in withZ3 { qeTool => check(absDef)}
-  it should "tactically prove min" in withZ3 { qeTool => check(minDef)}
-  it should "tactically prove max" in withZ3 { qeTool => check(maxDef)}
+  it should "tactically prove DW differential weakening" in {check(DW)}
+  it should "tactically prove abs" in withZ3 { qeTool => check(abs)}
+  it should "tactically prove min" in withZ3 { qeTool => check(min)}
+  it should "tactically prove max" in withZ3 { qeTool => check(max)}
 
   "Derived Rule" should "prove allG" in withZ3 { qeTool => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
@@ -264,11 +264,11 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone" in withZ3 { qeTool => boxMonotone.provable.subgoals shouldBe List(
+  it should "prove [] monotone" in withZ3 { qeTool => monb.provable.subgoals shouldBe List(
       Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
   ) }
 
-  it should "prove [] monotone 2" in withZ3 { qeTool => boxMonotone2.provable.subgoals shouldBe List(
+  it should "prove [] monotone 2" in withZ3 { qeTool => monb2.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
