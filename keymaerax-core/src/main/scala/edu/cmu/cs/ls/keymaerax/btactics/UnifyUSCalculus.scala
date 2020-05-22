@@ -97,9 +97,14 @@ trait UnifyUSCalculus {
     * close or proceed in proof by providing a Provable fact
     *******************************************************************/
 
+  /** by(pi) uses the given provable with its information literally to continue or close the proof (if it fits to what has been proved).
+    * @param pi the information for the Provable to use, e.g., from [[DerivedAxioms]]. */
+  def by(pi: ProvableInfo)                 : BelleExpr = by(pi.provable, pi.codeName)
+
   /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved so far)
     * @param fact the Provable to drop into the proof to proceed or close it if proved.
-    * @param name the name to use/record for the tactic */
+    * @param name the name to use/record for the tactic
+    * @migration If possible use by(ProvableInfo) instead, which is faster and more robust. */
   //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(fact: ProvableSig, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
     override def result(provable: ProvableSig): ProvableSig = {
@@ -108,12 +113,14 @@ trait UnifyUSCalculus {
       else throw new BelleThrowable("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
     }
   }
-  /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
-  def by(pi: ProvableInfo)                 : BelleExpr = by(pi.provable, pi.codeName)
+  //@todo use lemma.name?
   def by(lemma: Lemma)                     : BelleExpr = by(lemma.fact)
   def by(lemma: Lemma, name:String)        : BelleExpr = by(lemma.fact, name:String)
+
+  // by with given substitutions
+
   /**
-    * by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent.
+    * by(pi,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent.
     * {{{
     *    s(a) |- s(b)      a |- b
     *   ------------- rule(---------) if s(g)=G and s(d)=D
@@ -121,17 +128,19 @@ trait UnifyUSCalculus {
     * }}}
     *
     * @author Andre Platzer
-    * @param name the name of the fact to use to prove the sequent
-    * @param subst what substitution `s` to use for instantiating the fact called `name`.
+    * @param pi the provable to use to prove the sequent
+    * @param subst what substitution `s` to use for instantiating the fact `pi`.
     * @see [[byUS()]]
     */
+  def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst))
+  def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable))
+
   @deprecated("by(DerivedAxioms.<codeName>/Provable,...) instead of by(String,...)")
   private[btactics]
   def by(name: String, subst: USubst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
     by(ProvableInfo(name).provable(subst))
   })
   def by(lemma: Lemma, subst: USubst): BelleExpr = by(lemma.fact(subst))
-  def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst))
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
   @deprecated("by(DerivedAxioms.<codeName>/Provable,...) instead of by(String,...)")
   private[btactics]
@@ -139,21 +148,23 @@ trait UnifyUSCalculus {
     by(subst.toForward(ProvableInfo(name).provable))
   })
   def by(lemma: Lemma, subst: Subst): BelleExpr = by(subst.toForward(lemma.fact))
-  def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable))
+
 
   /*******************************************************************
     * close/proceed by providing a Provable fact to unify and substitute with
     *******************************************************************/
 
-  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification with the current goal.
-    *
+  /** byUS(pi) proves by a uniform substitution instance of provable (information) or axiom or axiomatic rule, obtained by unification with the current goal.
+    * Like [[by(ProvableInfo,USubst)]] except that the required substitution is automatically obtained by unification.
+    * @see [[UnifyUSCalculus.US()]] */
+  def byUS(pi: ProvableInfo) : BelleExpr = byUS(pi.provable)
+  /** byUS(pi) proves by a uniform substitution instance of provable (information), obtained by unification with the current goal.
+    * Like [[by(ProvableInfo,USubst)]] except that the required substitution is automatically obtained by unification.
     * @see [[UnifyUSCalculus.US()]] */
   def byUS(provable: ProvableSig): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr = byUS(lemma.fact)
-  def byUS(pi: ProvableInfo) : BelleExpr = byUS(pi.provable)
-  /** byUS(axiom) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
-    *
+  /** byUS(name) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
     * @see [[UnifyUSCalculus.byUS()]]
     */
   @deprecated("byUS(DerivedAxioms.<codeName>/Provable) instead of byUS(String)")
@@ -161,7 +172,7 @@ trait UnifyUSCalculus {
   def byUS(name: String)     : BelleExpr = new NamedTactic(ProvableInfo(name).codeName, byUS(ProvableInfo(name).provable))
 
   /**
-    * rule(name,inst) uses the given axiomatic rule to prove the sequent.
+    * rule(pi,inst) uses the given axiom or axiomatic rule to prove the sequent.
     * Unifies the fact's conclusion with the current sequent and proceed to the instantiated premise of `fact`.
     * {{{
     *    s(a) |- s(b)      a |- b
@@ -173,22 +184,15 @@ trait UnifyUSCalculus {
     * the former prefetches the uniform substitution instance during tactics applicability checking.
     *
     * @author Andre Platzer
-    * @param name the name of the fact to use to prove the sequent
+    * @param pi the provable info for the fact to use to prove the sequent
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in the conclusion.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
-    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+    *   This transformation could also modify the unifier if other cases than the most-general unifier are preferred.
     * @see [[byUS()]]
     * @see [[by()]]
     */
-  @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
-  private[btactics]
-  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
-    val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
-    byUS(fact, inst)
-  })
-  private[btactics]
-  def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
   def byUS(pi: ProvableInfo, inst: Subst=>Subst): BelleExpr = byUS(pi.provable, inst)
+
   private[btactics]
   def byUS(fact: ProvableSig, inst: Subst=>Subst = us=>us): BelleExpr =
     //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
@@ -201,6 +205,15 @@ trait UnifyUSCalculus {
           s.getRenamingTactic & by(fact(s.substitution.usubst))
         }) :: Nil
     )
+
+  @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
+  private[btactics]
+  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
+    val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
+    byUS(fact, inst)
+  })
+  private[btactics]
+  def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
 
 
   /*******************************************************************
@@ -231,6 +244,22 @@ trait UnifyUSCalculus {
   //    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
   //    useAt(fact.conclusion.succ.head, key, by(fact))
   //  }
+
+  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
+      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      serializeByCodeName = true)
+  }
+
+  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting),
+    * overwriting key and instantiation information. */
+  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
+      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      serializeByCodeName = true)
+  }
+
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
@@ -288,12 +317,6 @@ trait UnifyUSCalculus {
   private[btactics]
   def useAt(axiom: String): DependentPositionTactic =
     useAt(ProvableInfo(axiom))
-  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
-    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
-      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
-      serializeByCodeName = true)
-  }
 
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   @deprecated("useExpansionAt(DerivedAxioms.<codeName>,...) instead of useExpansionAt(String,...)")
@@ -309,9 +332,11 @@ trait UnifyUSCalculus {
     useAt(axiom, PosInExpr(axiom.asInstanceOf[DerivedAxiomInfo].theKey).sibling)
   }
 
+
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
+
 
   /** US(subst, fact) reduces the present proof to a proof of `fact`, whose uniform substitution instance under `subst` the current goal is.
     * {{{
