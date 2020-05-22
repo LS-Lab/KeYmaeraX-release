@@ -29,8 +29,8 @@ class Axiom(val names: Any,
             val unifier: String = "full",
             val displayLevel: String = "internal",
             val inputs: String = "",
-            val key: ExprPos = 0::Nil,
-            val recursor: List[ExprPos] = Nil
+            val key: String = "0",
+            val recursor: String = ""
                   ) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
   def macroTransform(annottees: Any*): Any = macro Axiom.impl
@@ -50,31 +50,33 @@ object Axiom {
       import c.universe._
       c.prefix.tree match {
         case q"new $annotation(..$params)" =>
-          val defaultMap = Map(
+          val defaultMap: Map[String, Tree] = Map(
             "codeName" -> Literal(Constant("")),
             "formula" -> Literal(Constant("")),
             "unifier" -> Literal(Constant("full")),
             "displayLevel" -> Literal(Constant("internal")),
-            "key" -> q"""0::scala.collection.immutable.Nil""",
-            "recursor" -> q"""scala.collection.immutable.Nil""",
+            "key" -> Literal(Constant("0")),
+            "recursor" -> Literal(Constant("")),
             "inputs" -> Literal(Constant(""))
           )
           val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-          val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, key: ExprPos, recursor: List[ExprPos])
-          = (c.eval[(Any, String, String, String, String, String, ExprPos, List[ExprPos])](c.Expr
+          val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, keyString: String, recursorString: String)
+          = (c.eval[(Any, String, String, String, String, String, String, String)](c.Expr
             (q"""(${paramMap("names")}, ${paramMap("formula")}, ${paramMap("inputs")}, ${paramMap("codeName")}, ${paramMap("unifier")},
               ${paramMap("displayLevel")}, ${paramMap("key")}, ${paramMap("recursor")})""")))
           val inputs: List[ArgInfo] = parseAIs(inputString)(c)
+          val key = parsePos(keyString)
+          val recursor = parsePoses(recursorString)
           val simpleDisplay = displayObj match {
             case s: String => SimpleDisplayInfo(s, s)
             case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
             case sdi: SimpleDisplayInfo => sdi
             case di => c.abort(c.enclosingPosition, "@Axiom expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di)
           }
-          val displayInfo = (fml, inputs, Nil, None) match {
-            case ("", Nil, Nil, None) => simpleDisplay
-            case (fml, Nil, Nil, None) if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
-            case (fml, args, Nil, None) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
+          val displayInfo = (fml, inputs) match {
+            case ("", Nil) => simpleDisplay
+            case (fml, Nil) if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
+            case (fml, args) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
             //case ("", Nil, premises, Some(conclusion)) => RuleDisplayInfo(simpleDisplay, conclusion, premises)
             case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Axiom: either specify premisses and conclusion, or formula optionally with inputs, not both")
           }
