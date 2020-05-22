@@ -196,7 +196,8 @@ trait StorableInfo extends DerivationInfo {
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula
-  //@todo lift theKey and theRecursor here
+  val theKey: ExprPos = Nil
+  val theRecursor: List[ExprPos] = Nil
 }
 
 /** Meta-Information for an axiom from the prover core
@@ -210,8 +211,8 @@ case class CoreAxiomInfo(  override val canonicalName:String
                          , val unifier: Symbol
                          , val theExpr: Unit => Any
                          , val displayLevel: Symbol = 'all
-                         , val theKey: ExprPos = Nil
-                         , val theRecursor: List[ExprPos] = Nil
+                         , override val theKey: ExprPos = Nil
+                         , override val theRecursor: List[ExprPos] = Nil
                         )
   extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
@@ -230,8 +231,8 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , val unifier: Symbol
                             , theExpr: Unit => Any
                             , val displayLevel: Symbol = 'all
-                            , val theKey: ExprPos = Nil
-                            , val theRecursor: List[ExprPos] = Nil
+                            , override val theKey: ExprPos = Nil
+                            , override val theRecursor: List[ExprPos] = Nil
                             )
   extends AxiomInfo with StorableInfo {
   override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)

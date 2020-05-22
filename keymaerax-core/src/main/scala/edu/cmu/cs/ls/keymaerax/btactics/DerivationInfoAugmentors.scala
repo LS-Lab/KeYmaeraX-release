@@ -59,8 +59,8 @@ object DerivationInfoAugmentors {
     }
   }
 
-  implicit class DerivedAxiomInfoAugmentor(val dai: DerivedAxiomInfo) {
-    def key: PosInExpr = PosInExpr(dai.theKey)
-    def recursor: List[PosInExpr] = dai.theRecursor.map(PosInExpr(_))
+  implicit class AxiomInfoAugmentor(val ai: AxiomInfo) {
+    def key: PosInExpr = PosInExpr(ai.theKey)
+    def recursor: List[PosInExpr] = ai.theRecursor.map(PosInExpr(_))
   }
 }
