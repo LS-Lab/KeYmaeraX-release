@@ -14,15 +14,31 @@ import AnnotationCommon._
 
 
 /**
- *  Annotation for derived axioms, which allows decentralized AxiomInfo
- *  @param names Display names
- *  @param formula Formula displayed for axioms
- *  @param inputs Display inputs for axiom-with-input
- *  @param codeName used to invoke axiom in tactics
- *  @param unifier  Which unifier to use for axiom: 'linear or 'full
- *  @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
- *  @author Brandon Bohrer
- *  */
+  * Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]].
+  * @param names Display names to render in the user interface.
+  * @param codeName Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+  * @param formula Formula displayed for axioms as html with unicode
+  * @param unifier Which unifier to use for axiom: 'linear or 'full
+  * @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
+  * @param inputs Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut.
+  * @param key The position of the subexpression in this formula that will be unified against when using this axiom.
+  *            The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
+  *            - Default key="0" is the left child.
+  *            - Root key="" is the full formula.
+  *            - key="0.1.1" is the right child of the right child of the left child.
+  * @param recursor The ;-separated list of relative subpositions in the resulting formulas that will be chased away next.
+  *                 The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
+  *                 The resulting subexpressions will be considered in the order of the ;-separated list.
+  *                 - Default recursor="" means no recursion so stop chasing.
+  *                 - recursor="0;1" first considers the left child then the right child.
+  *                 - recursor="1;" first considers the right child then the whole subformula.
+  *                 - recursor="1" only considers the right child.
+  *                 - recursor="0.0;1.1" first considers the left child of the left child, then the right child of the right child.
+  *                 - recursor="0.1.1;0.1;" first considers the right child of the right child of the left child, then the right child of the left child, then the whole formula.
+  *                 - recursor="*" considers the full resulting formula.
+  *                   In particular recursor="1;" and recursor="1;*" are equivalent.
+  * @author Brandon Bohrer
+  */
 class Axiom(val names: Any,
             val codeName: String = "",
             val formula: String = "",
@@ -31,7 +47,7 @@ class Axiom(val names: Any,
             val inputs: String = "",
             val key: String = "0",
             val recursor: String = ""
-                  ) extends StaticAnnotation {
+           ) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
   def macroTransform(annottees: Any*): Any = macro Axiom.impl
 }

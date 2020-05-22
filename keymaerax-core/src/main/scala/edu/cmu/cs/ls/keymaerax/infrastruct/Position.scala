@@ -11,10 +11,12 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import scala.language.implicitConversions
 
 /**
- * Positions identify subexpressions of an expression.
- * A position is a finite sequence of binary numbers where
- * 0 identifies the left or only subexpression of an expression and
- * 1 identifies the right subexpression of an expression.
+  * Positions identify subexpressions of an expression.
+  * A position is a finite sequence of binary numbers where
+  *   - `0` identifies the left or only subexpression of an expression and
+  *   - `1` identifies the right subexpression of an expression.
+  * For example, `0.1` is the right child of the left child.
+  * And, `0.1.0.0` is the left child of the left child of the right child of the left child.
  *
  * @example
  * {{{
@@ -74,6 +76,12 @@ object PosInExpr {
 
   /** Parses the binary representation of an int into a PosInExpr */
   def parseInt(i: Int): PosInExpr = if (i > 1) parseInt(i/2) ++ i%2 else PosInExpr(i::Nil)
+  /** Parses the representation of a string into a PosInExpr.
+    * @example {{{
+    *         // left child of left child of right child of right child of left child
+    *         parse("0.1.1.0.0") = PosInExpr(0::1::1::0::0::Nil)
+    *         }}}
+    */
   def parse(s: String): PosInExpr = PosInExpr(s.stripPrefix(".").split("\\.").map(_.toInt).toList)
 }
 
