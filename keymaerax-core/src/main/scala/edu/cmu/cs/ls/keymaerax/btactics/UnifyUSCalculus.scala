@@ -1249,16 +1249,15 @@ trait UnifyUSCalculus {
   private[btactics]
   def useFor(axiom: String): ForwardPositionTactic = useFor(ProvableInfo(axiom))
 
-  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
-  private[btactics]
-  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false)
+//  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
+//  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
+//  private[btactics]
+//  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
-  private[btactics]
-  def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false, inst)
+  private[btactics] def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false, inst)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   private[btactics]
   def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(axiom.fact, key, linear=false, inst)
@@ -1520,7 +1519,7 @@ trait UnifyUSCalculus {
               case _ => us
             }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
             // NB: all eliminate axiom not implemented
-            useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
+            useFor(DerivedAxioms.alle, PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(SuccPos(0))
             )
