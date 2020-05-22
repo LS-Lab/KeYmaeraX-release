@@ -245,6 +245,15 @@ trait UnifyUSCalculus {
   //    useAt(fact.conclusion.succ.head, key, by(fact))
   //  }
 
+  import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors.DerivedAxiomInfoAugmentor
+
+  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
+    //@todo generalize to AxiomInfo
+  def useAt(axiom: DerivedAxiomInfo): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, axiom.key, linear=axiom.linear,
+      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      serializeByCodeName = true)
+  }
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: ProvableInfo): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
@@ -252,16 +261,74 @@ trait UnifyUSCalculus {
       serializeByCodeName = true)
   }
 
+  /**
+    * useAt(axiom)(pos) uses the given axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence/implicational rewriting).
+    * Unifies the left or right part of fact with what's found at sequent(pos) and use corresponding
+    * instance to make progress by reducing to the other side.
+    * {{{
+    *     G |- C{s(r)}, D
+    *   ------------------ useAt(__l__<->r) if s=unify(c,l)
+    *     G |- C{c}, D
+    * }}}
+    * and accordingly for implication facts that are `__l__->r` facts or conditional equivalences `p->(__l__<->r)` or `p->(__l__->r)` facts and so on,
+    * where `__l__` indicates the key part of the fact.
+    * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
+    *
+    * Backward Tableaux-style proof analogue of [[useFor()]].
+    *
+    * Tactic specification:
+    * {{{
+    * useAt(fact)(p)(F) = let (C,c)=F(p) in
+    *   case c of {
+    *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) ; <(
+    *       "use cut": skip
+    *       "show cut": EquivifyRight(p.top) ; CoHide(p.top) ; CE(C(_)) ; fact
+    *     )
+    *     s=unify(fact.right,_) => accordingly with an extra commuteEquivRightT
+    *   }
+    * }}}
+    *
+    * @author Andre Platzer
+    * @param axiom describing what fact to use to simplify at the indicated position of the sequent
+    * @param key the part of the Formula fact to unify the indicated position of the sequent with
+    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
+    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+    * @example useAt(AxiomInfo("[;] choice", PosInExpr(0::Nil))(0, PosInExpr(1::1::Nil))
+    * applied to the indicated 1::1::Nil position of
+    * [x:=1;][{x'=22}] [x:=2*x;++x:=0;]x>=0
+    * turns it into
+    * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
+    * @see [[useFor()]]
+    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
+    */
+  def useAt(axiom: ProvableInfo, key:PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, key, linear=axiom.linear,
+      inst,
+      serializeByCodeName = true)
+  }
+
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting),
-    * overwriting key and instantiation information. */
-  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
-    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
+    * with a given instantiation augmentation.
+    * @param inst  transformation augmenting or replacing the uniform substitutions after unification with additional information. */
+    //@todo generalize to AxiomInfo
+  def useAt(axiom: DerivedAxiomInfo, inst: Option[Subst]=>Subst): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, axiom.key, linear=axiom.linear,
+      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+      serializeByCodeName = true)
+  }
+
+  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting),
+    * overwriting key.
+    * @param key the optional position of the key in the axiom to unify with. */
+  def useAt(axiom: ProvableInfo, key:PosInExpr): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, key, linear=axiom.linear,
       us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
 
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting).
-    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
+    * @param key the optional position of the key in the axiom to unify with.
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   def useAt(lem: Lemma, key:PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = lem.name match {
     case Some(name) if ProvableInfo.existsStoredName(name) =>
@@ -290,12 +357,14 @@ trait UnifyUSCalculus {
     case _ => useAt(lem, PosInExpr(0 :: Nil))
   }
 
-  /** Lazy useAt of a lemma by name. For use with ProveAs. */
-  def lazyUseAt(lemmaName: String) : DependentPositionTactic =
-    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, PosInExpr(Nil))(pos))
-  def lazyUseAt(lemmaName: String, key:PosInExpr) : DependentPositionTactic =
-    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, key)(pos))
-  /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
+//  /** Lazy useAt of a lemma by name. For use with ProveAs. */
+//  private[keymaerax]
+//  def lazyUseAt(lemmaName: String) : DependentPositionTactic =
+//    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, PosInExpr(Nil))(pos))
+//  private[keymaerax]
+//  def lazyUseAt(lemmaName: String, key:PosInExpr) : DependentPositionTactic =
+//    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, key)(pos))
+
 
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
@@ -318,19 +387,23 @@ trait UnifyUSCalculus {
   def useAt(axiom: String): DependentPositionTactic =
     useAt(ProvableInfo(axiom))
 
+  /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting)
+    * in the direction that expands as opposed to simplifies operators.
+    * @see [[useAt(AxiomInfo)]] */
+  def useExpansionAt(axiom: AxiomInfo): DependentPositionTactic =
+  //@todo optimize once AxiomInfo fixed
+    if (axiom.isInstanceOf[CoreAxiomInfo])
+      useAt(axiom, PosInExpr(axiom.asInstanceOf[CoreAxiomInfo].theKey).sibling)
+    else
+      useAt(axiom, PosInExpr(axiom.asInstanceOf[DerivedAxiomInfo].theKey).sibling)
+
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   @deprecated("useExpansionAt(DerivedAxioms.<codeName>,...) instead of useExpansionAt(String,...)")
+  private[keymaerax]
   def useExpansionAt(axiom: String): DependentPositionTactic =
     useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
-//  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
-//    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
-  def useExpansionAt(axiom: AxiomInfo): DependentPositionTactic = {
-  //@todo optimize once AxiomInfo fixed
-  if (axiom.isInstanceOf[CoreAxiomInfo])
-    useAt(axiom, PosInExpr(axiom.asInstanceOf[CoreAxiomInfo].theKey).sibling)
-  else
-    useAt(axiom, PosInExpr(axiom.asInstanceOf[DerivedAxiomInfo].theKey).sibling)
-  }
+  //  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
+  //    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
 
 
   /*******************************************************************
@@ -338,6 +411,18 @@ trait UnifyUSCalculus {
     *******************************************************************/
 
 
+  /** US(subst, fact) reduces the proof to the given fact, whose uniform substitution instance under `subst` the current goal is.
+    * {{{
+    *       *              *
+    *   ---------   if  -------- fact
+    *     G |- D         g |- d
+    *   where G=s(g) and D=s(d)
+    * }}}
+    * @param subst the substitution `s` that instantiates fact `g |- d` to the present goal `G |- D`.
+    * @param fact the provable for the axiom `g |- d` to reduce the proof to (accordingly for axiomatic rules).
+    * @see [[US(USubst,ProvableSig)]]
+    */
+  def US(subst: USubst, fact: ProvableInfo): BuiltInTactic = US(subst, fact.provable)
   /** US(subst, fact) reduces the present proof to a proof of `fact`, whose uniform substitution instance under `subst` the current goal is.
     * {{{
     *   s(g1) |- s(d1) ... s(gn) |- s(dn)        g1 |- d1 ... gn |- dn
@@ -363,7 +448,14 @@ trait UnifyUSCalculus {
     * @see [[US(USubst,ProvableSig)]]
     */
   @deprecated("US(USubst, DerivedAxioms.<codeName>/Provable) instead of US(USubst,String)")
+  private[btactics]
   def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, ProvableInfo(axiom).provable)
+
+  //*********************
+  // main implementations
+  //*********************
+
+
   /** US(subst) uses a uniform substitution of rules to transform an entire provable.
     * {{{
     *    G1 |- D1 ... Gn |- Dn              s(G1) |- s(D1) ... s(Gn) |- s(Dn)
@@ -379,8 +471,6 @@ trait UnifyUSCalculus {
     override def result(provable: ProvableSig): ProvableSig = provable(subst)
   }
 
-
-  // main implementations
 
   /**
     * US(fact) uses a suitable uniform substitution to reduce the proof to the proof of `fact`.
@@ -456,53 +546,6 @@ trait UnifyUSCalculus {
     map(p => p.what.prettyString + "~>" + p.repl.prettyString), US(subst))
 
 
-  /**
-    * useAt(axiom)(pos) uses the given axiom fact at the given position in the sequent.
-    * Unifies the left or right part of fact with what's found at sequent(pos) and use corresponding
-    * instance to make progress by reducing to the other side.
-    * {{{
-    *     G |- C{s(r)}, D
-    *   ------------------ useAt(__l__<->r) if s=unify(c,l)
-    *     G |- C{c}, D
-    * }}}
-    * and accordingly for implication facts that are `__l__->r` facts or conditional equivalences `p->(__l__<->r)` or `p->(__l__->r)` facts and so on,
-    * where `__l__` indicates the key part of the fact.
-    * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
-    *
-    * Backward Tableaux-style proof analogue of [[useFor()]].
-    *
-    * Tactic specification:
-    * {{{
-    * useAt(fact)(p)(F) = let (C,c)=F(p) in
-    *   case c of {
-    *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) ; <(
-    *       "use cut": skip
-    *       "show cut": EquivifyRight(p.top) ; CoHide(p.top) ; CE(C(_)) ; fact
-    *     )
-    *     s=unify(fact.right,_) => accordingly with an extra commuteEquivRightT
-    *   }
-    * }}}
-    *
-    * @author Andre Platzer
-    * @param axiom describing what fact to use to simplify at the indicated position of the sequent
-    * @param key the part of the Formula fact to unify the indicated position of the sequent with
-    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
-    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
-    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
-    * @example useAt(AxiomInfo("[;] choice", PosInExpr(0::Nil))(0, PosInExpr(1::1::Nil))
-    * applied to the indicated 1::1::Nil position of
-    * [x:=1;][{x'=22}] [x:=2*x;++x:=0;]x>=0
-    * turns it into
-    * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
-    * @see [[useFor()]]
-    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
-    */
-  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, key, linear=false, inst, serializeByCodeName = true)
-  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, key, linear=false, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")), serializeByCodeName = true)
-  def useAt(axiom: ProvableInfo, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear, inst, serializeByCodeName = true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
     useAt("ANON", fact, key, linear=false, inst, serializeByCodeName=true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic =
