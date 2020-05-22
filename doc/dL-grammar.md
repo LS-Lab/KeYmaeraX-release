@@ -17,7 +17,7 @@ All logical and program operators except `<-` and `<->` are right-associative.
 
     T ::= x | x' | num | ∙ | f(T) | f() | T^T | T*T | T/T | -T | T+T | T-T | (T)' | (T,T) | (T) 
 
-Operators are left-associative, i.e. `x-y-z` is `(x-y)-z`.
+Arithmetic operators are left-associative, i.e. `x-y-z` is `(x-y)-z`.
 Except that `T^T` and pairs are right-associative, i.e. `x^4^2` is `x^(4^2)`.
 
 ===Formulas===
@@ -26,7 +26,7 @@ Except that `T^T` and pairs are right-associative, i.e. `x^4^2` is `x^(4^2)`.
         | !F | \forall x F | \exists x F | [P]F | <P>F 
         | F&F | F|F | F->F | F<->F | true | false | (F)' | (F)
 
-Operators are right-associative, i.e. `p()->q()->r()` is `p()->(q()->r())`.
+Logical operators are right-associative, i.e. `p()->q()->r()` is `p()->(q()->r())`.
 Except that `<->` is non-associative and `<-` is left-associative.
 
 ===Programs===
@@ -40,7 +40,7 @@ Even the invisible `;` in `P P` is right-associative, i.e. x:=1;x:=2;x:=3; is x:
 
     D ::= c | x'=T | D,D
 
-Operators are right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,{y'=2,z'=3}
+Program operators are right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,{y'=2,z'=3}
 
 ===Types===
 
@@ -68,14 +68,14 @@ If unary minus were to bind strong (which incorrectly reads `-2^4` as `(-2)^4)`,
     F ::= P^F | P
     P ::= -P | x | x' | num | f(T,...,T) | (T)' | (T)
 
-If unary minus were to bind slightly weaker than `^` (where `-2^4` is `-(2^4)` but reads `-x*y` as `(-x)*y` incorrectly), the LL grammar would be:
+If unary minus binds strong but weaker than `^` (where `-2^4` is `-(2^4)` but reads negation `-x*y` incorrectly as the nonmonomial `(-x)*y` and different from the subtraction `0-x*y` which is `0-(x*y)`), then this reads unary `-` multiplicatively like `(-1)*`, and the LL grammar would be:
 
     T ::= T+S | T-S | S
     S ::= S*F | S/F | -F | F
     F ::= P^F | P^-F | P
     P ::= x | x' | num | f(T,...,T) | (T)' | (T)
 
-To make unary minus bind like binary subtraction (reading `-x*y` as `-(x*y)` correctly), the LL grammar is:
+To make unary minus bind like binary subtraction (reading `-x*y` correctly as negated monomial `-(x*y)` and reading it like subtraction `0-x*y` as `0-(x*y)` and reading `-2*x` consistently as `-(2*x)` instead of `(-2)*x`), then this reads unary `-` additively like `0-`, and the LL grammar is:
 
     T ::= T+S | T-S | -S | S
     S ::= S*F | S*-F | S/F | S/-F | F
