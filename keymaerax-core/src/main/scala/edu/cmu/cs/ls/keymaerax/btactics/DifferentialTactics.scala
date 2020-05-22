@@ -531,19 +531,19 @@ private object DifferentialTactics extends Logging {
             val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
-            useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
+            useAt(DerivedAxioms.DGC, PosInExpr(0::Nil), subst)(pos)
           case (_, Neg(Number(n))) =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(-n)) :: Nil)
-            useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
+            useAt(DerivedAxioms.DGa, PosInExpr(0::Nil), subst)(pos)
           case _ =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
-            useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
+            useAt(DerivedAxioms.DGa, PosInExpr(0::Nil), subst)(pos)
         }
 
       case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(ode).bv.contains(y) =>
@@ -638,7 +638,7 @@ private object DifferentialTactics extends Logging {
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then rewrite.
         HilbertCalculus.useAt(", commute", PosInExpr(1::Nil))(pos) &
           TactixLibrary.cutAt(Exists(y_DE.xp.x::Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) <(
-            HilbertCalculus.useAt("DG differential ghost constant", PosInExpr(1::Nil), subst)(pos)
+            HilbertCalculus.useAt(DerivedAxioms.DGC, PosInExpr(1::Nil), subst)(pos)
             ,
             (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
               TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &

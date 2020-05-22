@@ -114,7 +114,6 @@ trait UnifyUSCalculus {
     }
   }
   def by(lemma: Lemma)                     : BelleExpr = if (lemma.name.isDefined) by(lemma.fact, lemma.name.get) else by(lemma.fact)
-  def by(lemma: Lemma, name:String)        : BelleExpr = by(lemma.fact, name:String)
 
   // by with given substitutions
 
@@ -146,7 +145,8 @@ trait UnifyUSCalculus {
   /** byUS(pi) proves by a uniform substitution instance of provable (information) or axiom or axiomatic rule, obtained by unification with the current goal.
     * Like [[by(ProvableInfo,USubst)]] except that the required substitution is automatically obtained by unification.
     * @see [[UnifyUSCalculus.US()]] */
-  def byUS(pi: ProvableInfo) : BelleExpr = byUS(pi.provable)
+    //@todo
+  def byUS(pi: ProvableInfo) : BelleExpr = new NamedTactic(pi.codeName, byUS(pi.provable))
   /** byUS(pi) proves by a uniform substitution instance of provable (information), obtained by unification with the current goal.
     * Like [[by(ProvableInfo,USubst)]] except that the required substitution is automatically obtained by unification.
     * @see [[UnifyUSCalculus.US()]] */
@@ -195,6 +195,7 @@ trait UnifyUSCalculus {
         }) :: Nil
     )
 
+  //@todo delete since only used in one AxiomInfo
   @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
   private[btactics]
   def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
@@ -359,9 +360,9 @@ trait UnifyUSCalculus {
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-  private[btactics]
-  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(ProvableInfo(axiom), key, inst)
+//  private[btactics]
+//  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
+//    useAt(ProvableInfo(axiom), key, inst)
   //private[btactics]
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
@@ -825,7 +826,7 @@ trait UnifyUSCalculus {
   private def condEquivCongruence(context: Formula, towards: PosInExpr, subPos: PosInExpr, commute: Boolean, op: (Formula, Formula) => Formula): BelleExpr = context match {
     case Box(_, p) if towards.head == 1 =>
       useAt(DerivedAxioms.boxAnd, PosInExpr(1::Nil))(1, subPos ++ 0) &
-      useAt("K modal modus ponens", PosInExpr(1::Nil))(1, subPos) &
+      useAt(DerivedAxioms.K, PosInExpr(1::Nil))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
       useAt(DerivedAxioms.boxTrueTrue)(1, subPos)
     case Imply(_, p) if towards.head == 1 =>
@@ -852,9 +853,9 @@ trait UnifyUSCalculus {
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
       useAt(DerivedAxioms.orTrue)(1, subPos)
     case Forall(x, p) if towards.head == 0 =>
-      useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 0 ++ 0) &
-      useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 0 ++ 1) &
-      useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, subPos ++ 1) &
+      useAt(DerivedAxioms.randomb, PosInExpr(1::Nil))(1, subPos ++ 0 ++ 0) &
+      useAt(DerivedAxioms.randomb, PosInExpr(1::Nil))(1, subPos ++ 0 ++ 1) &
+      useAt(DerivedAxioms.randomb, PosInExpr(1::Nil))(1, subPos ++ 1) &
       condEquivCongruence(Box(AssignAny(x.head), p), PosInExpr(towards.pos.updated(0, 1)), subPos, commute, op)
     case DotFormula =>
       val p = "p_()".asFormula

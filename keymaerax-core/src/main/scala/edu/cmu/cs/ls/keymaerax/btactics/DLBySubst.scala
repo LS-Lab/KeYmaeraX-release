@@ -295,7 +295,7 @@ private object DLBySubst {
    * @todo same for diamonds by the dual of K
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
-  def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
+  def postCut(C: Formula): DependentPositionTactic = useAt(DerivedAxioms.K, PosInExpr(1::Nil),
     (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
 
   private def constAnteConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
@@ -512,7 +512,7 @@ private object DLBySubst {
             else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
           } else skip)
 
-        useAt("[:=] assign", PosInExpr(1::Nil), subst)(pos) &
+        useAt(DerivedAxioms.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
           (if (assignInContext || pos.isTopLevel) execAssignment else skip)
       case Some(e) => throw new TacticInapplicableFailure("discreteGhost only applicable to formulas, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
