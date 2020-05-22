@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, DerivedAxiomInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, CoreAxiomInfo, DerivationInfo, DerivedAxiomInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._
@@ -301,6 +301,13 @@ trait UnifyUSCalculus {
     useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 //  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
 //    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
+  def useExpansionAt(axiom: AxiomInfo): DependentPositionTactic = {
+  //@todo optimize once AxiomInfo fixed
+  if (axiom.isInstanceOf[CoreAxiomInfo])
+    useAt(axiom, PosInExpr(axiom.asInstanceOf[CoreAxiomInfo].theKey).sibling)
+  else
+    useAt(axiom, PosInExpr(axiom.asInstanceOf[DerivedAxiomInfo].theKey).sibling)
+  }
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)

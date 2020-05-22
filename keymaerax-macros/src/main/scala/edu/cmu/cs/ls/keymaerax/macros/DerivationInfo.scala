@@ -196,6 +196,7 @@ trait StorableInfo extends DerivationInfo {
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula
+  //@todo lift theKey and theRecursor here
 }
 
 /** Meta-Information for an axiom from the prover core
