@@ -143,6 +143,8 @@ object Axiom {
               c.abort(c.enclosingPosition, s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam")
             // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
             val codeName = if(codeNameParam.nonEmpty) TermName(codeNameParam) else declName
+            if (codeName.toString.exists(c => c =='\"'))
+              c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
             val storageName = TermName(codeName.toString.toLowerCase)
             // AST for literal strings for the names
             val codeString = Literal(Constant(codeName.decodedName.toString))
