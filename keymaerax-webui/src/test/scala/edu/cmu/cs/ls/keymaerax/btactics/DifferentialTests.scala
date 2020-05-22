@@ -370,18 +370,17 @@ class DifferentialTests extends TacticTestBase {
 
   it should "report when invariant not true in the beginning" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x<0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
-      have message "[Bellerophon Runtime] Differential invariant must hold in the beginning: expected to have proved, but got open goals"
+      have message "Differential invariant must hold in the beginning: expected to have proved, but got open goals"
   }
 
   it should "report when not an invariant" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x>0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
-      have message "[Bellerophon Runtime] Differential invariant must be preserved: expected to have proved, but got open goals"
+      have message "Differential invariant must be preserved: expected to have proved, but got open goals"
   }
 
   it should "report when failing to derive postcondition" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x>0, f(x,y)>0 ==> [{x'=2}]f(x,y)>0".asSequent, dI()(1)) should
-      have message """[Bellerophon Runtime] [Bellerophon User-Generated Message] After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition
-                     |The error occurred on
+      have message """After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition
                      |Provable{
                      |   -1:  x>0	Greater
                      |   -2:  f((x,y()))>0	Greater
@@ -401,7 +400,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "expand special functions" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("[{x'=3}]abs(x)>=0".asFormula, dI()(1)) should have message
-      """[Bellerophon Runtime] Differential invariant must be preserved: expected to have proved, but got open goals""".stripMargin
+      "Differential invariant must be preserved: expected to have proved, but got open goals"
   }
 
   it should "work when not sole formula in succedent" in withQE { _ =>
@@ -967,14 +966,14 @@ class DifferentialTests extends TacticTestBase {
     def checkSequentTactic(expected: Sequent) = new SingleGoalDependentTactic("mock") {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         sequent shouldBe expected
-        throw BelleUserGeneratedError("Success: sequent as expected, now aborting")
+        throw new BelleAbort("Success", "Sequent as expected, now aborting")
       }
     }
 
     forEvery (dconstifyTests) {
       (name, input, expectedResult) => withClue(name) {
-        the [BelleUserGeneratedError] thrownBy proveBy(input.asSequent, DifferentialTactics.Dconstify(
-          checkSequentTactic(expectedResult.asSequent))(1)) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Success: sequent as expected, now aborting"
+        the [BelleAbort] thrownBy proveBy(input.asSequent, DifferentialTactics.Dconstify(
+          checkSequentTactic(expectedResult.asSequent))(1)) should have message "Sequent as expected, now aborting"
       }
     }
   }
@@ -1084,10 +1083,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "give useful error messages on shape mismatch" in {
     the [BelleThrowable] thrownBy proveBy("[{x'=2}]x>0".asFormula, dG("{t'=x*t*x^2}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)) should
-      have message """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
-                     |    [{x'=2&true}]x>0
-                     |at position 1
-                     |because x*y_*x^2 is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b.""".stripMargin
+      have message "x*y_*x^2 is not of the expected shape a*y+b, please provide a differential program of the shape y'=a*y+b."
   }
 
   "DA" should "add y'=1 to [x'=2]x>0" in withQE { _ =>

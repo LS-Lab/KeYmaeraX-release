@@ -562,8 +562,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Precondition check" should "fail early when the ODE doesn't have the correct shape" in withMathematica { _ =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=x,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
-    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message
-      """[Bellerophon Runtime] [Bellerophon User-Generated Message] ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().
+    the [BelleThrowable] thrownBy proveBy(f, t) should have message
+      """ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().
         |The error occurred on
         |Provable{
         |==> 1:  x=1&v=2&a=0&t=0->[{x'=v,v'=x,t'=1&true}]x^3>=1	Imply

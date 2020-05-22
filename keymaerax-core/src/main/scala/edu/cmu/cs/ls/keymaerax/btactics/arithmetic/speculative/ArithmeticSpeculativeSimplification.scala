@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
 
 import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success, Try}
 
 /**
   * Tactics for simplifying arithmetic sub-goals.
@@ -26,19 +27,14 @@ object ArithmeticSpeculativeSimplification {
 
   private val DEBUG = false
 
-  /** @todo I'm not sure where the error function was defined prior to this. Maybe it was a Scala 2.11->2.12 thing? */
-  class ErrorException(msg: String) extends Exception
-  def error[T](message : String) : T = throw new ErrorException(message)
-
-
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
-  lazy val speculativeQE: BelleExpr = "smartQE" by ((sequent: Sequent) => {
+  lazy val speculativeQE: BelleExpr = "smartQE" by ((_: Sequent) => {
     (debug("Trying abs...", DEBUG) & proveOrRefuteAbs & debug("...abs done", DEBUG)) | speculativeQENoAbs
   })
 
   /** QE without handling abs */
-  private lazy val speculativeQENoAbs: BelleExpr = "QE" by ((sequent: Sequent) => {
+  private lazy val speculativeQENoAbs: BelleExpr = "QE" by ((_: Sequent) => {
     (debug("Trying orIntro and smart hiding...", DEBUG) & (orIntro((debug("Bound", DEBUG) & hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (debug("Non-Bound", DEBUG) & smartHide & QE() & TactixLibrary.done)) & debug("... orIntro and smart hiding successful", DEBUG))) |
     (debug("orIntro failed, trying smart hiding...", DEBUG) & ((hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (smartHide & QE()) & TactixLibrary.done) & debug("...smart hiding successful", DEBUG)) |
     (debug("All simplifications failed, falling back to ordinary QE", DEBUG) & QE() & TactixLibrary.done)
@@ -58,9 +54,11 @@ object ArithmeticSpeculativeSimplification {
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   lazy val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
-    TactixLibrary.findCounterExample(sequent.toFormula) match {
-      case Some(cex) => error("Found counterexample " + cex)
-      case None => skip
+    Try(TactixLibrary.findCounterExample(sequent.toFormula)) match {
+      case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
+      case Success(None) => skip
+      case Failure(_: ProverSetupException) => skip //@note no counterexample tool, so no counterexample
+      case Failure(ex) => throw ex //@note fail with all other exceptions
     }
   })
 
@@ -68,7 +66,7 @@ object ArithmeticSpeculativeSimplification {
   lazy val proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
     if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & assertNoCex & QE & TactixLibrary.done) | speculativeQENoAbs)
-    else error("Sequent does not contain abs")
+    else throw new TacticInapplicableFailure("Sequent does not contain abs")
   })
 
   /** Splits absolute value functions to create more, but hopefully simpler, goals. */

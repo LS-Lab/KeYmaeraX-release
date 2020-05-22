@@ -216,7 +216,8 @@ object PolynomialArithV2 {
           case None => throw new IllegalArgumentException("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
           case Some(prv) => cohideR(pos) & by(prv)
         }
-      case e => throw new IllegalArgumentException("equate must be applied at a term or equality but was applied at " + e)
+      case Some(e) => throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -235,7 +236,8 @@ object PolynomialArithV2 {
         useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
       case Some(t: Term) =>
         useAt(normalize(t), PosInExpr(0::Nil))(pos)
-      case e => throw new IllegalArgumentException("normalizeAt must be applied at a term or equality but was applied at " + e)
+      case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 

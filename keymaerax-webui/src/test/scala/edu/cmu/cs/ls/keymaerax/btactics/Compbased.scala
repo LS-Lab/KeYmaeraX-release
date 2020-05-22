@@ -156,6 +156,8 @@ class Compbased extends TacticTestBase {
         val repl = proveBy(Imply(p, Equiv(True, Diamond(Assign(margin, metric), LessEqual(margin, Number(0))))),
           assignd(1, 1::1::Nil) & QE & done)
         useAt(repl, PosInExpr(1::0::Nil))(pos ++ PosInExpr(0::0::1::0::Nil))
+      case Some(e) => throw new TacticInapplicableFailure("toMetric only applicable to diamond properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     })
 
     val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",

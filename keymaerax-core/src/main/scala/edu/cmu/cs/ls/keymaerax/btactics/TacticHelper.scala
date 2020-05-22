@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, Position}
@@ -122,7 +122,7 @@ object TacticHelper {
         case _ => Left(None)
       }
     }
-    ExpressionTraversal.traverse(fn, term).getOrElse(throw new BelleThrowable("Could not determine whether this variable occurs with an exponent."))
+    ExpressionTraversal.traverse(fn, term).getOrElse(throw new TacticInapplicableFailure("Could not determine whether this variable occurs with an exponent."))
     occursWithExponent
   }
 
@@ -134,7 +134,7 @@ object TacticHelper {
         else Left(None)
       }
     }
-    ExpressionTraversal.traverse(fn, e).getOrElse(throw new BelleThrowable("Expected transformMonomials to succeed."))
+    ExpressionTraversal.traverse(fn, e).getOrElse(throw new TacticInapplicableFailure("Expected transformMonomials to succeed."))
   }
 
   /** Returns monomial iff t is (approximately, locally) a monomial; i.e., has the form {{{coeff(|x|)*x^exp(|x|)}}} where coeff and exp are optional.

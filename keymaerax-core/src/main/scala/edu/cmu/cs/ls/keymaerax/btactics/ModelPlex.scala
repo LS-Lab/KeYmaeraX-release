@@ -169,7 +169,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" => input match {
         case BelleProvable(p, _) =>
           val di = t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula]
-          p.subgoals.head.sub(t.locator.toPosition(p)) match {
+          p.subgoals.head.sub(t.locator.toPosition(p).getOrElse(throw new IllFormedTacticApplicationException("ModelPlex input proof provides position locator that points to no valid position in the sequent"))) match {
             case Some(Box(ODESystem(_, qq@And(_, prevDi)), _)) if qq != q =>
               //@todo identify branch (e.g., (a=-B -> dC1) & (a=0 -> dC2) & (a=A -> dC3)
               //@todo shared diffcuts before branch
@@ -193,7 +193,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       }
       case _ => // nothing to do
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = expr match {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = expr match {
       case b@BranchTactic(children) if loopBranch.contains(b) => loopBranch = None
       case _ =>
     }
@@ -782,6 +782,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
         (SaturateTactic(debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))) &
           debug("Done with transformation, now looking for quantifiers") &
           debug("Modelplex done")
+      case Some(e) => throw new TacticInapplicableFailure("Modelplex In-Place only applicable to diamond properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -984,6 +986,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val equality: Option[Term] = if (postEquality.isDefined) postEquality else synonyms.headOption
 
         optimizationOneAt(equality.map(v -> _))(pos)
+      case Some(e) => throw new TacticInapplicableFailure("'Optimization 1 with instance search at' only applicable to existential quantifiers, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
@@ -1026,6 +1030,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
             val (v, post) = vars.map(v => (v, BaseVariable(s"${v.name.replaceAllLiterally("_", "")}post", Some(0)))).head
             allL(v, post)(pos)
         }
+      case Some(e) => throw new TacticInapplicableFailure("Optimization 1 only applicable to quantifiers, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 

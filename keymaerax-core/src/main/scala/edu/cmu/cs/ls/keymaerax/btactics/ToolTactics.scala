@@ -12,9 +12,11 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, SMTTimeoutException, ToolInternalException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
+import scala.annotation.tailrec
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
 
@@ -37,7 +39,7 @@ private object ToolTactics {
         Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
         ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
       case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
-      case _ => throw new BelleIllFormedError("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
+      case _ => throw new InputFormatFailure("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
     }
     nil
   })
@@ -65,7 +67,7 @@ private object ToolTactics {
       ArithmeticSimplification.smartHide & Idioms.?(onAll(orL('L) | andR('R)))*3 & onAll(plainQE & done)
 
     AnonymousLemmas.cacheTacticResult(
-      Idioms.doIf(!_.isProved)(
+      Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(
         assertT(_.isFOL, "QE on FOL only") &
         allTacticChase()(notL, andL, notR, implyR, orR, allR) &
           Idioms.doIf(!_.isProved)(
@@ -242,7 +244,12 @@ private object ToolTactics {
     //Run QE and extract the resulting provable and equivalence
     //@todo how about storing the lemma, but also need a way of finding it again
     //@todo for storage purposes, store rcf(lemmaName) so that the proof uses the exact same lemma without
-    val qeFact = qeTool.qe(sequent.succ.head).fact
+    val qeFact = try {
+      qeTool.qe(sequent.succ.head).fact
+    } catch {
+      case ex: SMTQeException => throw new TacticInapplicableFailure(ex.getMessage, ex)
+      case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
+    }
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
     cutLR(result)(1) & Idioms.<(
@@ -268,9 +275,11 @@ private object ToolTactics {
 
   /** @see [[TactixLibrary.edit()]] */
   def edit(to: Expression): DependentPositionWithAppliedInputTactic = "edit" byWithInput (to, (pos: Position, sequent: Sequent) => {
-    val srcExpr = sequent.sub(pos).getOrElse(throw new IllegalArgumentException("Edit does not point to a term or formula in the sequent"))
-
-    require(to.kind == srcExpr.kind, "Edit should result in same expression kind, but " + to.kind + " is not " + srcExpr.kind)
+    val srcExpr = sequent.sub(pos) match {
+      case Some(e) if e.kind == to.kind => e
+      case Some(e) if e.kind != to.kind => throw new TacticInapplicableFailure("edit only applicable to terms or formulas of same kind, but " + e.prettyString + " of kind " + e.kind + " is not " + to.kind)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
 
     val (abbrvTo: Expression, abbrvTactic: BelleExpr) = createAbbrvTactic(to, sequent)
     val (expandTo: Expression, expandTactic: BelleExpr) = createExpandTactic(abbrvTo, sequent, pos)
@@ -302,6 +311,7 @@ private object ToolTactics {
               }
             }
         }
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     })
 
     abbrvTactic & expandTactic & transformTactic
@@ -384,11 +394,14 @@ private object ToolTactics {
 
     val (src, tgt) = (sequent.sub(pos), to) match {
       case (Some(src: Formula), tgt: Formula) => if (polarity > 0) (tgt, src) else (src, tgt)
+      case (Some(e), _) => throw new TacticInapplicableFailure("transformFormula only applicable to formulas, but got " + e.prettyString)
+      case (None, _) => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
 
     val boundVars = StaticSemantics.boundVars(sequent(pos.top))
     val gaFull = if (pos.isSucc) sequent.ante.flatMap(FormulaTools.conjuncts) else sequent.ante.patch(pos.top.getIndex, Nil, 1).flatMap(FormulaTools.conjuncts)
 
+    @tailrec
     def proveFact(assumptions: IndexedSeq[Formula], filters: List[IndexedSeq[Formula]=>IndexedSeq[Formula]]): (ProvableSig, IndexedSeq[Formula]) = {
       val filteredAssumptions = filters.head(assumptions)
       lazy val filteredAssumptionsFml = filteredAssumptions.reduceOption(And).getOrElse(True)
@@ -433,7 +446,7 @@ private object ToolTactics {
       case Some(Imply(Forall(lv, _), Forall(rv, _))) if lv==rv => useAt(DerivedAxioms.allDist, PosInExpr(1::Nil))(pp)
       case Some(Imply(Exists(lv, _), Exists(rv, _))) if lv==rv => useAt(existsDistribute, PosInExpr(1::Nil))(pp)
       case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1::Nil))(pos)
-      case Some(_) => skip
+      case _ => skip
     }) & (if (remainder.pos.isEmpty) skip else pushIn(remainder.child)(pp ++ PosInExpr(remainder.head::Nil))))
 
     val key = if (polarity > 0) PosInExpr(1::Nil) else if (ga.isEmpty) PosInExpr(0::Nil) else PosInExpr(1::0::Nil)
@@ -447,18 +460,26 @@ private object ToolTactics {
         pushIn(pos.inExpr)(pos.top)
       )
       )
-    else throw new BelleTacticFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
+    else throw new TacticInapplicableFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
   }
 
   /** Transforms the term at position `pos` into the term `to`. */
   private def transformTerm(to: Term, sequent: Sequent, pos: Position) = {
-    val src = sequent.sub(pos) match { case Some(src: Term) => src }
+    val src = sequent.sub(pos) match {
+      case Some(src: Term) => src
+      case Some(e) => throw new TacticInapplicableFailure("transformTerm only applicable to terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
     useAt(proveBy(Equal(src, to), QE & done), PosInExpr(0::Nil))(pos)
   }
 
   /** Ensures that the formula at position `pos` is available at that position from the assumptions. */
   private def ensureAt: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
-    lazy val ensuredFormula = seq.sub(pos) match { case Some(fml: Formula) => fml }
+    lazy val ensuredFormula = seq.sub(pos) match {
+      case Some(fml: Formula) => fml
+      case Some(e) => throw new TacticInapplicableFailure("ensureAt only applicable to formulas, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
     lazy val ensuredFree = StaticSemantics.freeVars(ensuredFormula).toSet
     lazy val skipAt = "ANON" by ((_: Position, _: Sequent) => skip)
 

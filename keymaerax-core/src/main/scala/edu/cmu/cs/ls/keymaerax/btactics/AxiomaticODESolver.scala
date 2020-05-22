@@ -112,8 +112,8 @@ object AxiomaticODESolver {
   private def boxAxiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
     val (ode, q, post) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), pp)) => (o, qq, pp)
-      case Some(f) => throw new BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
-      case None => throw new BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation")
+      case Some(f) => throw new TacticInapplicableFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a differential equation")
     }
 
     val osize = odeSize(ode)
@@ -179,7 +179,10 @@ object AxiomaticODESolver {
                 andR(pos) <(prop & done, skip)
               else skip//useAt(allExtract2)(pos ++ PosInExpr(0::1::0::Nil))
             case Some(Box(ODESystem(_, qq), _)) if polarity < 0 => skip //@todo
+            case Some(e) => throw new TacticInapplicableFailure("simpConsts only applicable to box ODEs, but got " + e.prettyString)
+            case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + s.prettyString)
           }
+        case None => throw new IllFormedTacticApplicationException("Position " + pp + " does not point to a valid position in sequent " + ss.prettyString)
       } else TactixLibrary.skip)
 
     val cutConsts = consts != True && pos.isTopLevel && polarity >= 0
@@ -202,7 +205,7 @@ object AxiomaticODESolver {
       DebuggingTactics.debug("AFTER simplifying evolution domain constraint", ODE_DEBUGGER) &
       (if (polarity > 0) HilbertCalculus.DW(odePosAfterInitialVals)
        else if (polarity < 0) HilbertCalculus.useAt(DerivedAxioms.DWeakenAnd, PosInExpr(0 :: Nil))(odePosAfterInitialVals)
-       else throw AxiomaticODESolverExn("Unable to DW: unknown ODE polarity.")
+       else throw new TacticInapplicableFailure("Unable to DW: unknown ODE polarity.")
       ) &
       DebuggingTactics.debug("AFTER DW", ODE_DEBUGGER) &
       simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1 :: Nil)) &
@@ -406,7 +409,8 @@ object AxiomaticODESolver {
   val odeSolverPreconds: DependentPositionTactic =  TacticFactory.anon ((pos: Position, s: Sequent) => {
     val (ode: DifferentialProgram, dom:Formula, post:Formula) = s.sub(pos) match {
       case Some(Box(ODESystem(o, q), p)) => (o, q, p)
-      case sub => throw new BelleTacticFailure("Expected [] or <> modality at position " + pos + ", but got " + sub)
+      case Some(sub) => throw new TacticInapplicableFailure("Expected [] or <> modality at position " + pos + ", but got " + sub.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + s.prettyString)
     }
 
     DebuggingTactics.debug("Before Canonicalization") &
@@ -430,7 +434,7 @@ object AxiomaticODESolver {
     s.sub(pos ++ PosInExpr(0::Nil)) match {
       case Some(_: DifferentialProgram) => //ok
       case Some(_: ODESystem) => //ok
-      case _ => throw AxiomaticODESolverExn(s"setupTimeVar should only be called on differential programs without an existing time variable but found ${s.apply(pos)} of type ${s.apply(pos).getClass}.")
+      case _ => throw new TacticInapplicableFailure(s"setupTimeVar should only be called on differential programs without an existing time variable but found ${s.apply(pos)} of type ${s.apply(pos).getClass}.")
     }
 
     val t = TacticHelper.freshNamedSymbol(TIMEVAR, s)
@@ -440,7 +444,7 @@ object AxiomaticODESolver {
 
     if (polarity > 0) HilbertCalculus.DGC(t, Number(1))(pos) & DLBySubst.assignbExists(Number(0))(pos)
     else if (polarity < 0) HilbertCalculus.DGCa(t, Number(1))(pos) & DLBySubst.assignbAll(Number(0))(pos)
-    else throw AxiomaticODESolverExn("Parent position of setupTimeVar should be a modality in known polarity.")
+    else throw new TacticInapplicableFailure("Parent position of setupTimeVar should be a modality in known polarity.")
   })
 
   //endregion
@@ -450,11 +454,17 @@ object AxiomaticODESolver {
   def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")): DependentPositionTactic = "solDC" by ((pos: Position, s: Sequent) => {
     val system: ODESystem = s.sub(pos) match {
       case Some(Box(x: ODESystem, _)) => x
+      case Some(e) => throw new TacticInapplicableFailure("solDC only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + s.prettyString)
     }
 
     def extract(f: Formula, p: PosInExpr, n: Int): List[(Variable, Term)] =
       if (n == 0) Nil
-      else extract(f, p.parent, n-1) :+ (f.sub(p) match { case Some(Box(Assign(v, t: Variable), _)) => t -> v })
+      else extract(f, p.parent, n-1) :+ (f.sub(p) match {
+        case Some(Box(Assign(v, t: Variable), _)) => t -> v
+        case Some(e) => throw new TacticInapplicableFailure("solDC.extract only applicable to box assignments, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in formula " + f.prettyString)
+      })
 
     val initialConditions: Map[Variable, Term] = extract(s(pos.top), pos.inExpr.parent, odeSize+1).toMap
 
@@ -464,7 +474,11 @@ object AxiomaticODESolver {
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
 
-    val solutions = Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(initIdx))), system)
+    val solutions = try {
+      Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(initIdx))), system)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to obtain symbolic solution with builtin integrator", ex)
+    }
 
     val sortedDifferentials = sortAtomicOdes(atomicOdes(system), diffArg).filter(_.xp.x != TIMEVAR).map(_.xp.x)
     val sortedSolutions = solutions.sortWith({case (Equal(a, _), Equal(b, _)) => sortedDifferentials.indexOf(a) < sortedDifferentials.indexOf(b)})
@@ -498,6 +512,9 @@ object AxiomaticODESolver {
         TactixLibrary.proveBy(Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut)))),
           CMon(odePos) & useAt(DerivedAxioms.DR, PosInExpr(1::Nil))(1) &
             DW(1) & G(1) & implyR(1) & andL(-1) & close(-1, 1))
+      case Some(fml: Formula) if polarity == 0 => throw new TacticInapplicableFailure("cutAndProveFml only applicable in positive or negative polarity contexts")
+      case Some(e) => throw new TacticInapplicableFailure("cutAndProveFml only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + s.prettyString)
     }
 
     TactixLibrary.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0 )::Nil))(withInitialsPos)
@@ -534,6 +551,8 @@ object AxiomaticODESolver {
             ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
             ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
             Nil)
+        case Some(e) => throw new TacticInapplicableFailure("domSimplifyStep only applicable to conjunctions, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pp + " does not point to a valid position in sequent " + ss.prettyString)
       }
       TactixLibrary.useAt(simplFact, PosInExpr(1::Nil), subst)(pp)
     })
@@ -567,6 +586,8 @@ object AxiomaticODESolver {
             ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) ::
             ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
             Nil), rewrite2)
+        case Some(e) => throw new TacticInapplicableFailure("postSimplifyStep not applicable at " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }
 
       DLBySubst.stutter(xx)(pp ++ PosInExpr(1::Nil)) &
@@ -606,6 +627,9 @@ object AxiomaticODESolver {
             DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
             )
         )
+      case Some(fml: Formula) if polarity == 0 => throw new TacticInapplicableFailure("dCi2 only applicable in negative or positive polarity contexts")
+      case Some(e) => throw new TacticInapplicableFailure("dCi2 only applicable to formulas, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + withInitialsPos + " does not point to a valid position in sequent " + s.prettyString)
     }
 
     TactixLibrary.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0)::Nil))(withInitialsPos)
@@ -619,11 +643,4 @@ object AxiomaticODESolver {
     case _: AtomicODE => 1
     case x: DifferentialProduct => odeSize(x.left) + odeSize(x.right)
   }
-
-  //region Misc.
-
-  /** Exceptions thrown by the axiomatic ODE solver. */
-  case class AxiomaticODESolverExn(msg: String) extends Exception(msg)
-
-  //endregion
 }

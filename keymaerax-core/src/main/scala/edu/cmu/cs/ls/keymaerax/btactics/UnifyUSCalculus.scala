@@ -78,16 +78,16 @@ trait UnifyUSCalculus {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic("stepAt") {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val sub = sequent.sub(pos)
-        if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+        if (sub.isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         axiomIndex(sub.get) match {
           case Some(axiom) =>
             logger.debug("stepAt " + axiom)
             DerivationInfo(axiom).belleExpr match {
               case ap:AtPosition[_] => ap(pos)
               case expr:BelleExpr => expr
-              case expr => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
+              case expr => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
             }
-          case None => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+          case None => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         }
       }
     }
@@ -97,23 +97,30 @@ trait UnifyUSCalculus {
     * close or proceed in proof by providing a Provable fact
     *******************************************************************/
 
+  /** by(pi) uses the given provable with its information literally to continue or close the proof (if it fits to what has been proved).
+    * @param pi the information for the Provable to use, e.g., from [[DerivedAxioms]]. */
+  def by(pi: ProvableInfo)                 : BelleExpr = by(pi.provable, pi.codeName)
+
   /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved so far)
     * @param fact the Provable to drop into the proof to proceed or close it if proved.
-    * @param name the name to use/record for the tactic */
+    * @param name the name to use/record for the tactic
+    * @migration If possible use by(ProvableInfo) instead, which is faster and more robust. */
   //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(fact: ProvableSig, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
     override def result(provable: ProvableSig): ProvableSig = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
-      else throw new BelleThrowable("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
+      else throw new BelleUnexpectedProofStateError("Conclusion of fact " + fact + " does not match sole open goal of " + provable, provable.underlyingProvable)
     }
   }
-  /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
-  def by(pi: ProvableInfo)                 : BelleExpr = by(pi.provable, pi.codeName)
+  //@todo use lemma.name?
   def by(lemma: Lemma)                     : BelleExpr = by(lemma.fact)
   def by(lemma: Lemma, name:String)        : BelleExpr = by(lemma.fact, name:String)
+
+  // by with given substitutions
+
   /**
-    * by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent.
+    * by(pi,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent.
     * {{{
     *    s(a) |- s(b)      a |- b
     *   ------------- rule(---------) if s(g)=G and s(d)=D
@@ -121,17 +128,19 @@ trait UnifyUSCalculus {
     * }}}
     *
     * @author Andre Platzer
-    * @param name the name of the fact to use to prove the sequent
-    * @param subst what substitution `s` to use for instantiating the fact called `name`.
+    * @param pi the provable to use to prove the sequent
+    * @param subst what substitution `s` to use for instantiating the fact `pi`.
     * @see [[byUS()]]
     */
+  def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst))
+  def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable))
+
   @deprecated("by(DerivedAxioms.<codeName>/Provable,...) instead of by(String,...)")
   private[btactics]
   def by(name: String, subst: USubst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
     by(ProvableInfo(name).provable(subst))
   })
   def by(lemma: Lemma, subst: USubst): BelleExpr = by(lemma.fact(subst))
-  def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst))
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
   @deprecated("by(DerivedAxioms.<codeName>/Provable,...) instead of by(String,...)")
   private[btactics]
@@ -139,21 +148,23 @@ trait UnifyUSCalculus {
     by(subst.toForward(ProvableInfo(name).provable))
   })
   def by(lemma: Lemma, subst: Subst): BelleExpr = by(subst.toForward(lemma.fact))
-  def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable))
+
 
   /*******************************************************************
     * close/proceed by providing a Provable fact to unify and substitute with
     *******************************************************************/
 
-  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification with the current goal.
-    *
+  /** byUS(pi) proves by a uniform substitution instance of provable (information) or axiom or axiomatic rule, obtained by unification with the current goal.
+    * Like [[by(ProvableInfo,USubst)]] except that the required substitution is automatically obtained by unification.
+    * @see [[UnifyUSCalculus.US()]] */
+  def byUS(pi: ProvableInfo) : BelleExpr = byUS(pi.provable)
+  /** byUS(pi) proves by a uniform substitution instance of provable (information), obtained by unification with the current goal.
+    * Like [[by(ProvableInfo,USubst)]] except that the required substitution is automatically obtained by unification.
     * @see [[UnifyUSCalculus.US()]] */
   def byUS(provable: ProvableSig): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr = byUS(lemma.fact)
-  def byUS(pi: ProvableInfo) : BelleExpr = byUS(pi.provable)
-  /** byUS(axiom) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
-    *
+  /** byUS(name) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
     * @see [[UnifyUSCalculus.byUS()]]
     */
   @deprecated("byUS(DerivedAxioms.<codeName>/Provable) instead of byUS(String)")
@@ -161,7 +172,7 @@ trait UnifyUSCalculus {
   def byUS(name: String)     : BelleExpr = new NamedTactic(ProvableInfo(name).codeName, byUS(ProvableInfo(name).provable))
 
   /**
-    * rule(name,inst) uses the given axiomatic rule to prove the sequent.
+    * rule(pi,inst) uses the given axiom or axiomatic rule to prove the sequent.
     * Unifies the fact's conclusion with the current sequent and proceed to the instantiated premise of `fact`.
     * {{{
     *    s(a) |- s(b)      a |- b
@@ -173,22 +184,15 @@ trait UnifyUSCalculus {
     * the former prefetches the uniform substitution instance during tactics applicability checking.
     *
     * @author Andre Platzer
-    * @param name the name of the fact to use to prove the sequent
+    * @param pi the provable info for the fact to use to prove the sequent
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in the conclusion.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
-    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+    *   This transformation could also modify the unifier if other cases than the most-general unifier are preferred.
     * @see [[byUS()]]
     * @see [[by()]]
     */
-  @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
-  private[btactics]
-  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
-    val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
-    byUS(fact, inst)
-  })
-  private[btactics]
-  def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
   def byUS(pi: ProvableInfo, inst: Subst=>Subst): BelleExpr = byUS(pi.provable, inst)
+
   private[btactics]
   def byUS(fact: ProvableSig, inst: Subst=>Subst = us=>us): BelleExpr =
     //@todo could optimize to skip s.getRenamingTactic if fact's conclusion has no explicit variables in symbols
@@ -201,6 +205,15 @@ trait UnifyUSCalculus {
           s.getRenamingTactic & by(fact(s.substitution.usubst))
         }) :: Nil
     )
+
+  @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
+  private[btactics]
+  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
+    val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
+    byUS(fact, inst)
+  })
+  private[btactics]
+  def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
 
 
   /*******************************************************************
@@ -231,6 +244,14 @@ trait UnifyUSCalculus {
   //    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
   //    useAt(fact.conclusion.succ.head, key, by(fact))
   //  }
+
+  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
+      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
+      serializeByCodeName = true)
+  }
+
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
@@ -248,7 +269,7 @@ trait UnifyUSCalculus {
       logger.info("INFO: useAt of an anonymous lemma may disable tactic extraction")
       useAt(lem.fact, key, inst)
   }
-  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")))
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma)               : DependentPositionTactic = lem.name match {
     case Some(name) if ProvableInfo.existsStoredName(name) =>
@@ -288,12 +309,6 @@ trait UnifyUSCalculus {
   private[btactics]
   def useAt(axiom: String): DependentPositionTactic =
     useAt(ProvableInfo(axiom))
-  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
-    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
-      us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
-      serializeByCodeName = true)
-  }
 
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   @deprecated("useExpansionAt(DerivedAxioms.<codeName>,...) instead of useExpansionAt(String,...)")
@@ -309,9 +324,11 @@ trait UnifyUSCalculus {
     useAt(axiom, PosInExpr(axiom.asInstanceOf[DerivedAxiomInfo].theKey).sibling)
   }
 
+
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
+
 
   /** US(subst, fact) reduces the present proof to a proof of `fact`, whose uniform substitution instance under `subst` the current goal is.
     * {{{
@@ -379,7 +396,7 @@ trait UnifyUSCalculus {
       //@note Probably not worth it, because all axiomatic rules in AxiomBase are nonlinear
       val subst = matcher(fact.conclusion, sequent)
       logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
-      if (sequent != subst(fact.conclusion)) throw new BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
+      if (sequent != subst(fact.conclusion)) throw new UnsupportedTacticFeature("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
       by(subst.toForward(fact))
     }
   }
@@ -475,13 +492,13 @@ trait UnifyUSCalculus {
   def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
     useAt(axiom.codeName, axiom.provable, key, linear=false, inst, serializeByCodeName = true)
   def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, key, linear=false, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")), serializeByCodeName = true)
+    useAt(axiom.codeName, axiom.provable, key, linear=false, us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")), serializeByCodeName = true)
   def useAt(axiom: ProvableInfo, inst: Option[Subst]=>Subst): DependentPositionTactic =
     useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear, inst, serializeByCodeName = true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
     useAt("ANON", fact, key, linear=false, inst, serializeByCodeName=true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic =
-    useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+    useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")))
   private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic =
     useAt(fact, PosInExpr(0::Nil))
 
@@ -535,7 +552,7 @@ trait UnifyUSCalculus {
   @deprecated("useAt(DerivedAxioms.<codeName>/Provable,...) instead of useAt(String,...)")
   private[this] def useAt(codeName: String, fact: ProvableSig, key: PosInExpr,
             linear: Boolean,
-            inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
+            inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
             serializeByCodeName: Boolean = false): DependentPositionTactic = {
     val (name, inputs) =
       if (serializeByCodeName) (codeName, Nil)
@@ -873,7 +890,7 @@ trait UnifyUSCalculus {
             //@todo could optimize to build directly since ctx already known
             CE(fmlPos) & CQ(termPos)
           }
-        case fml => throw new BelleThrowable("Expected equivalence, but got " + fml)
+        case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
       }
     }
   }
@@ -913,7 +930,7 @@ trait UnifyUSCalculus {
             require(ctxP.isFormulaContext, "Formula context expected for CE")
             by("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
           }
-        case fml => throw new BelleThrowable("Expected equivalence, but got " + fml)
+        case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
       }
     }
   })
@@ -1029,7 +1046,7 @@ trait UnifyUSCalculus {
         //todo: Should this be TacticFailure or Illformed?
         // Case for Illformed: user should not be applying tactics in sequents where positions don't exist
         // Case for TacticFailure: some automation might need to do that
-        if(!sequent.sub(pos).isDefined) throw new BelleTacticFailure("In-applicable CE(" + fact + ")\nat " + pos +
+        if(!sequent.sub(pos).isDefined) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
           "which is <ill-positioned>\n at " +sequent)
 
         val (other,key) = {
@@ -1093,7 +1110,7 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
 
         //todo: See above
-        if(!sequent.sub(pos).isDefined) throw new BelleTacticFailure("In-applicable CE(" + fact + ")\nat " + pos +
+        if(!sequent.sub(pos).isDefined) throw new IllFormedTacticApplicationException("In-applicable CE(" + fact + ")\nat " + pos +
           "which is <ill-positioned>\n at " +sequent)
 
         val (posctx,c) = sequent.at(pos)
@@ -1958,7 +1975,7 @@ trait UnifyUSCalculus {
   private def chaseFor2Back(name: String, forward: ForwardPositionTactic): DependentPositionTactic = new DependentPositionTactic(name) {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        if (sequent.sub(pos).isEmpty) throw new BelleThrowable("ill-positioned " + pos + " in " + sequent + "\nin " +
+        if (sequent.sub(pos).isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " +
           "chase\n(" + sequent + ")")
         CEat(chaseProof(sequent.sub(pos).get))(pos)
       }

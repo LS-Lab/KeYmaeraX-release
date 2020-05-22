@@ -217,7 +217,7 @@ class TactixLibraryTests extends TacticTestBase {
     (_,e) => println("SnR loop status " + e)
       rem match {
         case hd::tail => rem = tail; hd :: Nil
-        case _ => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
+        case _ => throw new BelleNoProgress("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
 

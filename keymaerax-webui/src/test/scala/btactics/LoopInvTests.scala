@@ -419,7 +419,7 @@ class LoopInvTests extends TacticTestBase {
     (_,e) => println("SnR loop status " + e)
       rem match {
         case hd::tail => rem = tail; hd :: Nil
-        case Nil => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
+        case Nil => throw new BelleNoProgress("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
 

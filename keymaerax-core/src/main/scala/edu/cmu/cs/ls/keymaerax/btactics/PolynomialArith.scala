@@ -714,7 +714,8 @@ object PolynomialArith extends Logging {
           normaliseAt(pos++PosInExpr(0::Nil)) &
             normaliseAt(pos++PosInExpr(1::Nil)) &
             cohideR(1) & byUS("= reflexive")
-        case e => throw new IllegalArgumentException("equalityByNormalisation must be applied at a term or equality but was applied at " + e)
+        case Some(e) => throw new TacticInapplicableFailure("equalityByNormalisation only applicable to equalities, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }
     }
 
