@@ -68,9 +68,9 @@ class HilbertTests extends TacticTestBase {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       Dplus(1, 0::Nil) &
         Dvar(1, 0::0::Nil) &
-        useAt("' linear")(1, 0::1::Nil) & // Dtimes(SuccPosition(0, 0::1::Nil))
+        useAt(DerivedAxioms.Dlinear)(1, 0::1::Nil) & // Dtimes(SuccPosition(0, 0::1::Nil))
         Dvar(1, 0::1::1::Nil) &
-        byUS("= reflexive")
+        byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
@@ -78,33 +78,33 @@ class HilbertTests extends TacticTestBase {
     val x = Variable("y")
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvar(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
+      Dvar(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)) shouldBe 'proved
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvar(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
+      Dvar(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)) shouldBe 'proved
   }
 
   it should "derive (y)'=y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (x+y)'=x'+y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (x*y)'=x'*y+x*y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
@@ -117,50 +117,50 @@ class HilbertTests extends TacticTestBase {
   //@todo we only support optimized
   ignore should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
   //@todo we only support optimized
   ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (5*x+2*y)'=5*x'+2*y'" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
-      derive(1,0::Nil) & byUS("= reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equalReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(5*x+2*y>=6)' <-> 5*x'+2*y'>=0".asFormula)),
-      derive(1,0::Nil) & byUS("<-> reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equivReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)),
-      derive(1,0::Nil) & byUS("<-> reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equivReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
-      derive(1,0::Nil) & byUS("<-> reflexive")
+      derive(1,0::Nil) & byUS(DerivedAxioms.equivReflexive)
     ) shouldBe 'proved
   }
 
   it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { qeTool =>
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
-      derive(1,0::1::Nil) & byUS("<-> reflexive")
+      derive(1,0::1::Nil) & byUS(DerivedAxioms.equivReflexive)
     ) shouldBe 'proved
   }
 
@@ -517,7 +517,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   "useFor" should "use DX to forward (true&x=y) to <{x'=2}>x=y" in {
-    useFor("DX diamond differential skip", PosInExpr(0::Nil),
+    useFor(DerivedAxioms.DX, PosInExpr(0::Nil),
       (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c", AnyArg), KeYmaeraXParser.differentialProgramParser("x'=2"))))
     )(SuccPosition(1, Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(true&x=y)".asFormula)))
@@ -525,13 +525,13 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use DX to forward <{x'=2}>x=y -> bla() to (true&x=y) -> bla()" in {
-    useFor("DX diamond differential skip")(SuccPosition(1, 0::Nil)) (
+    useFor(DerivedAxioms.DX)(SuccPosition(1, 0::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
 
   it should "use DX to forward <{x'=2}>x=y <-> bla() to (true&x=y) -> bla()" in {
-    useFor("DX diamond differential skip")(SuccPosition(1, 0::Nil)) (
+    useFor(DerivedAxioms.DX)(SuccPosition(1, 0::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
@@ -575,7 +575,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in {
-    useFor("DX diamond differential skip")(SuccPosition(1, (0::1::Nil))) (
+    useFor(DerivedAxioms.DX)(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }

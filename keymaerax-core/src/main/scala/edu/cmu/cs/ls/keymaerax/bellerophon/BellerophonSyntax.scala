@@ -541,7 +541,7 @@ abstract case class DependentTactic(name: String) extends NamedBelleExpr with Lo
 abstract class SingleGoalDependentTactic(override val name: String) extends DependentTactic(name) {
   def computeExpr(sequent: Sequent): BelleExpr
   final override def computeExpr(provable: ProvableSig): BelleExpr = {
-    require(provable.subgoals.size <= 1, "1 subgoal expected, but got " + provable.subgoals.size)
+    require(provable.subgoals.size <= 1, "1 subgoal expected, but got " + provable.subgoals.size + "\n" + provable.prettyString)
     if (provable.subgoals.size == 1) computeExpr(provable.subgoals.head)
     else DebuggingTactics.done("Goal is proved, skipped tactic " + name)
   }

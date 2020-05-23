@@ -3240,7 +3240,7 @@ object DerivedAxioms extends Logging {
     * }}}
     */
   @Axiom("x',C", "DvariableCommutedAxiom", formula = "x'=<span class=\"k4-axiom-key\">(x)'</span>"
-    , unifier = "linear")
+    , unifier = "linear", key = "0", recursor="")
   lazy val DvariableCommutedAxiom = derivedAxiom("x' derive var commuted",
     Sequent(IndexedSeq(), IndexedSeq("(x_') = (x_)'".asFormula)),
     useAt(equalCommute)(1) &
