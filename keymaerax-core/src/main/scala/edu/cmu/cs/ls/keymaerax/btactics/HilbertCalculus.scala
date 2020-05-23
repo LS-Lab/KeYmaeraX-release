@@ -27,6 +27,7 @@ object HilbertCalculus extends HilbertCalculus
   *
   * Provides the axioms and axiomatic proof rules from Figure 2 and Figure 3 in:
   * Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+ *
   * @author Andre Platzer
   * @author Stefan Mitsch
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
@@ -38,7 +39,7 @@ object HilbertCalculus extends HilbertCalculus
   * @see [[HilbertCalculus.stepAt()]]
   * @see [[HilbertCalculus.derive()]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
   */
 trait HilbertCalculus extends UnifyUSCalculus {
   import TacticFactory._
@@ -94,7 +95,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-  lazy val monb               : BelleExpr         = byUS(DerivedAxioms.monb)
+  lazy val monb               : BelleExpr         = byUS(Ax.monb)
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
@@ -103,7 +104,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-  lazy val mond               : BelleExpr         = byUS(DerivedAxioms.mondrule)
+  lazy val mond               : BelleExpr         = byUS(Ax.mondrule)
 
   //
   // axioms
@@ -114,7 +115,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //
 
   /** diamond: <.> reduce double-negated box `![a]!p(x)` to a diamond `⟨a⟩p(x)`. */
-  lazy val diamond            : DependentPositionTactic = useAt(DerivedAxioms.diamond)
+  lazy val diamond            : DependentPositionTactic = useAt(Ax.diamond)
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation.
     * Box assignment by substitution assignment [v:=t();]p(v) <-> p(t()) (preferred),
     * or by equality assignment [x:=f();]p(||) <-> \forall x (x=f() -> p(||)) as a fallback.
@@ -147,51 +148,51 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[DLBySubst.assignEquality]] */
   lazy val assignb            : DependentPositionTactic = "assignb" by { (pos:Position) =>
-    if (INTERNAL) useAt(DerivedAxioms.assignbAxiom)(pos) |! useAt(DerivedAxioms.selfassignb)(pos) /*|! useAt(DerivedAxioms.assignbup)(pos)*/
-    else useAt(DerivedAxioms.assignbAxiom)(pos) |! useAt(DerivedAxioms.selfassignb)(pos) |! DLBySubst.assignEquality(pos)
+    if (INTERNAL) useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) /*|! useAt(DerivedAxioms.assignbup)(pos)*/
+    else useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) |! DLBySubst.assignEquality(pos)
   }
 
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
-  lazy val randomb            : DependentPositionTactic = useAt(DerivedAxioms.randomb)
+  lazy val randomb            : DependentPositionTactic = useAt(Ax.randomb)
   /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
-  lazy val testb              : DependentPositionTactic = useAt(DerivedAxioms.testb)
+  lazy val testb              : DependentPositionTactic = useAt(Ax.testb)
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
   //def diffSolve               : DependentPositionTactic = ???
   /** choiceb: [++] handles both cases of a nondeterministic choice `[a++b]p(x)` separately `[a]p(x) & [b]p(x)` */
-  lazy val choiceb            : DependentPositionTactic = useAt(DerivedAxioms.choiceb)
+  lazy val choiceb            : DependentPositionTactic = useAt(Ax.choiceb)
   /** composeb: [;] handle both parts of a sequential composition `[a;b]p(x)` one at a time `[a][b]p(x)` */
-  lazy val composeb           : DependentPositionTactic = useAt(DerivedAxioms.composeb)
+  lazy val composeb           : DependentPositionTactic = useAt(Ax.composeb)
 
   /** iterateb: [*] prove a property of a loop `[{a}*]p(x)` by unrolling it once `p(x) & [a][{a}*]p(x)` */
-  lazy val iterateb           : DependentPositionTactic = useAt(DerivedAxioms.iterateb)
+  lazy val iterateb           : DependentPositionTactic = useAt(Ax.iterateb)
   /** dualb: [^d^] handle dual game `[{a}^d^]p(x)` by `![a]!p(x)` */
-  lazy val dualb              : DependentPositionTactic = useAt(DerivedAxioms.dualb)
+  lazy val dualb              : DependentPositionTactic = useAt(Ax.dualb)
 
   //
   // diamond modality
   //
 
   /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
-  lazy val box                : DependentPositionTactic = useAt(DerivedAxioms.box)
+  lazy val box                : DependentPositionTactic = useAt(Ax.box)
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   lazy val assignd            : DependentPositionTactic = "assignd" by { (pos:Position) =>
-    useAt(DerivedAxioms.assignd)(pos) |! useAt(DerivedAxioms.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
+    useAt(Ax.assignd)(pos) |! useAt(Ax.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
   }
 
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
-  lazy val randomd            : DependentPositionTactic = useAt(DerivedAxioms.randomd)
+  lazy val randomd            : DependentPositionTactic = useAt(Ax.randomd)
   /** testd: <?> simplifies test `<?q;>p` to a conjunction `q&p` */
-  lazy val testd              : DependentPositionTactic = useAt(DerivedAxioms.testd)
+  lazy val testd              : DependentPositionTactic = useAt(Ax.testd)
   /** diffSolve: solve a differential equation `<x'=f>p(x)` to `\exists t>=0 <x:=solution(t)>p(x)` */
   //def diffSolved              : DependentPositionTactic = ???
   /** choiced: <++> handles both cases of a nondeterministic choice `⟨a++b⟩p(x)` separately `⟨a⟩p(x) | ⟨b⟩p(x)` */
-  lazy val choiced            : DependentPositionTactic = useAt(DerivedAxioms.choiced)
+  lazy val choiced            : DependentPositionTactic = useAt(Ax.choiced)
   /** composed: <;> handle both parts of a sequential composition `⟨a;b⟩p(x)` one at a time `⟨a⟩⟨b⟩p(x)` */
-  lazy val composed           : DependentPositionTactic = useAt(DerivedAxioms.composed)
+  lazy val composed           : DependentPositionTactic = useAt(Ax.composed)
   /** iterated: <*> prove a property of a loop `⟨{a}*⟩p(x)` by unrolling it once `p(x) | ⟨a⟩⟨{a}*⟩p(x)` */
-  lazy val iterated           : DependentPositionTactic = useAt(DerivedAxioms.iterated)
+  lazy val iterated           : DependentPositionTactic = useAt(Ax.iterated)
   /** duald: `<^d^>` handle dual game `⟨{a}^d^⟩p(x)` by `!⟨a⟩!p(x)` */
-  lazy val duald              : DependentPositionTactic = useAt(DerivedAxioms.duald)
+  lazy val duald              : DependentPositionTactic = useAt(Ax.duald)
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
@@ -201,34 +202,34 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[monb]]
     * @see [[mond]]
     */
-  lazy val K                  : DependentPositionTactic = useAt(DerivedAxioms.K, PosInExpr(1::Nil))
+  lazy val K                  : DependentPositionTactic = useAt(Ax.K, PosInExpr(1::Nil))
   /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games
     */
-  lazy val V                  : DependentPositionTactic = useAt(DerivedAxioms.V)
+  lazy val V                  : DependentPositionTactic = useAt(Ax.V)
   /** VK: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`
     * and provided `[a]true` proves, e.g., since `a` is a hybrid system.
     */
-  lazy val VK                 : DependentPositionTactic = useAt(DerivedAxioms.VK)
+  lazy val VK                 : DependentPositionTactic = useAt(Ax.VK)
 
   //
   // differential equations
   //
 
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
-  lazy val DW                 : DependentPositionTactic = useAt(DerivedAxioms.DW)
+  lazy val DW                 : DependentPositionTactic = useAt(Ax.DW)
   /** DWd: Diamond Differential Weakening to use evolution domain constraint `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)}>(q(x)&p(x))` */
-  lazy val DWd                 : DependentPositionTactic = useAt(DerivedAxioms.DWd)
+  lazy val DWd                 : DependentPositionTactic = useAt(Ax.DWd)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
     //@todo ODE is axiomIndex still needed?
-    useAt(DerivedAxioms.DC,
+    useAt(Ax.DC,
       AxiomIndex.axiomIndex("DC differential cut")._1,
       (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   })
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DCd(invariant: Formula)  : DependentPositionTactic = useAt(DerivedAxioms.DCd,
+  def DCd(invariant: Formula)  : DependentPositionTactic = useAt(Ax.DCd,
     //@todo ODE is axiomIndex still needed?
     AxiomIndex.axiomIndex("DCd diamond differential cut")._1,
     (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
@@ -256,13 +257,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
     * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
     * @see [[DifferentialTactics.diffInd()]] */
-  lazy val DI                 : DependentPositionTactic = useAt(DerivedAxioms.DI)
+  lazy val DI                 : DependentPositionTactic = useAt(Ax.DI)
 
   //@todo replace with a DG(DifferentialProgram) tactic instead to use said axiom.
 
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGC(y:Variable, b:Term) =
-    useAt(DerivedAxioms.DGC, PosInExpr(0::Nil),
+    useAt(Ax.DGC, PosInExpr(0::Nil),
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
@@ -275,7 +276,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   //@todo unclear
   private[btactics] def DGCa(y:Variable, b:Term) =
-    useAt(DerivedAxioms.DGCa, PosInExpr(0::Nil),
+    useAt(Ax.DGCa, PosInExpr(0::Nil),
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
@@ -288,7 +289,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** DGC: Differential ghost add auxiliary differential equation with extra constant g */
   private[btactics] def DGCd(y:Variable, b:Term) =
-  useAt(DerivedAxioms.DGCd, PosInExpr(0::Nil),
+  useAt(Ax.DGCd, PosInExpr(0::Nil),
     (us:Option[Subst])=>{
       val singular = FormulaTools.singularities(b)
       insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
@@ -299,7 +300,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     }
   )
   private[btactics] def DGCde(y:Variable, b:Term) =
-    useAt(DerivedAxioms.DGCde, PosInExpr(0::Nil),
+    useAt(Ax.DGCde, PosInExpr(0::Nil),
       (us:Option[Subst])=>{
         val singular = FormulaTools.singularities(b)
         insist(singular.isEmpty, "Possible singularities during DG(" + DifferentialSymbol(y) + "=" + b + ") will be rejected: " + singular.mkString(","))
@@ -314,11 +315,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a simple differential equation `[x'=c&q(x)]p(x)` by reduction to
     * `\forall t>=0 ((\forall 0<=s<=t  q(x+c()*s) -> [x:=x+c()*t;]p(x))` */
-  lazy val DS                 : DependentPositionTactic = useAt(DerivedAxioms.DS)
+  lazy val DS                 : DependentPositionTactic = useAt(Ax.DS)
 
   /** Dassignb: [':=] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   //@note potential incompleteness here should not ever matter
-  lazy val Dassignb           : DependentPositionTactic =  useAt(DerivedAxioms.Dassignb)
+  lazy val Dassignb           : DependentPositionTactic =  useAt(Ax.Dassignb)
 
   /*******************************************************************
     * Derive by proof
@@ -356,22 +357,22 @@ trait HilbertCalculus extends UnifyUSCalculus {
     */
   object Derive {
     /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
-    lazy val Dplus              : DependentPositionTactic = useAt(DerivedAxioms.Dplus)
+    lazy val Dplus              : DependentPositionTactic = useAt(Ax.Dplus)
     /** neg: -' derives unary negation `(-f(x))' = -(f(x)')` */
-    lazy val Dneg               : DependentPositionTactic = useAt(DerivedAxioms.Dneg)
+    lazy val Dneg               : DependentPositionTactic = useAt(Ax.Dneg)
     /** Dminus: -' derives a difference `(f(x)-g(x))' = (f(x))' - (g(x))'` */
-    lazy val Dminus             : DependentPositionTactic = useAt(DerivedAxioms.Dminus)
+    lazy val Dminus             : DependentPositionTactic = useAt(Ax.Dminus)
     /** Dtimes: *' derives a product `(f(x)*g(x))' = f(x)'*g(x) + f(x)*g(x)'` */
-    lazy val Dtimes             : DependentPositionTactic = useAt(DerivedAxioms.Dtimes)
+    lazy val Dtimes             : DependentPositionTactic = useAt(Ax.Dtimes)
     /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
-    lazy val Dquotient          : DependentPositionTactic = useAt(DerivedAxioms.Dquotient)
+    lazy val Dquotient          : DependentPositionTactic = useAt(Ax.Dquotient)
     /** Dpower: ^' derives a power */
-    lazy val Dpower             : DependentPositionTactic = useAt(DerivedAxioms.Dpower)
+    lazy val Dpower             : DependentPositionTactic = useAt(Ax.Dpower)
     /** Dcompose: o' derives a function composition by chain rule */
       //@todo not sure if useAt can handle this yet
-    lazy val Dcompose           : DependentPositionTactic = useAt(DerivedAxioms.Dcompose)
+    lazy val Dcompose           : DependentPositionTactic = useAt(Ax.Dcompose)
     /** Dconst: c()' derives a constant `c()' = 0` */
-    lazy val Dconst             : DependentPositionTactic = useAt(DerivedAxioms.Dconst)
+    lazy val Dconst             : DependentPositionTactic = useAt(Ax.Dconst)
     /** Dvariable: x' derives a variable `(x)' = x'`
       * Syntactically derives a differential of a variable to a differential symbol.
       * {{{
@@ -392,30 +393,30 @@ trait HilbertCalculus extends UnifyUSCalculus {
       * }}}
       * @incontext
       */
-    lazy val Dvar: DependentPositionTactic = "Dvar" by {(pos:Position) => (if (INTERNAL) useAt(DerivedAxioms.Dvar) else DifferentialTactics.Dvariable)(pos)}
+    lazy val Dvar: DependentPositionTactic = "Dvar" by {(pos:Position) => (if (INTERNAL) useAt(Ax.Dvar) else DifferentialTactics.Dvariable)(pos)}
 
     /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
-    lazy val Dand               : DependentPositionTactic = useAt(DerivedAxioms.Dand)
+    lazy val Dand               : DependentPositionTactic = useAt(Ax.Dand)
     /** Dor: |' derives a disjunction `(p(x)|q(x))'` to obtain `p(x)' & q(x)'` */
-    lazy val Dor                : DependentPositionTactic = useAt(DerivedAxioms.Dor)
+    lazy val Dor                : DependentPositionTactic = useAt(Ax.Dor)
     /** Dimply: ->' derives an implication `(p(x)->q(x))'` to obtain `(!p(x) | q(x))'` */
-    lazy val Dimply             : DependentPositionTactic = useAt(DerivedAxioms.Dimply)
+    lazy val Dimply             : DependentPositionTactic = useAt(Ax.Dimply)
     /** Dequal: =' derives an equation `(f(x)=g(x))'` to obtain `f(x)'=g(x)'` */
-    lazy val Dequal             : DependentPositionTactic = useAt(DerivedAxioms.Dequal)
+    lazy val Dequal             : DependentPositionTactic = useAt(Ax.Dequal)
     /** Dnotequal: !=' derives a disequation `(f(x)!=g(x))'` to obtain `f(x)'=g(x)'` */
-    lazy val Dnotequal          : DependentPositionTactic = useAt(DerivedAxioms.Dnotequal)
+    lazy val Dnotequal          : DependentPositionTactic = useAt(Ax.Dnotequal)
     /** Dless: <' derives less-than `(f(x)⟨g(x))'` to obtain `f(x)'<=g(x)'` */
-    lazy val Dless              : DependentPositionTactic = useAt(DerivedAxioms.Dless)
+    lazy val Dless              : DependentPositionTactic = useAt(Ax.Dless)
     /** Dlessequal: <=' derives a less-or-equal `(f(x)<=g(x))'` to obtain `f(x)'<=g(x)'` */
-    lazy val Dlessequal         : DependentPositionTactic = useAt(DerivedAxioms.Dlessequal)
+    lazy val Dlessequal         : DependentPositionTactic = useAt(Ax.Dlessequal)
     /** Dgreater: >' derives greater-than `(f(x)>g(x))'` to obtain `f(x)'>=g(x)'` */
-    lazy val Dgreater           : DependentPositionTactic = useAt(DerivedAxioms.Dgreater)
+    lazy val Dgreater           : DependentPositionTactic = useAt(Ax.Dgreater)
     /** Dgreaterequal: >=' derives a greater-or-equal `(f(x)>=g(x))'` to obtain `f(x)'>=g(x)'` */
-    lazy val Dgreaterequal      : DependentPositionTactic = useAt(DerivedAxioms.Dgreaterequal)
+    lazy val Dgreaterequal      : DependentPositionTactic = useAt(Ax.Dgreaterequal)
     /** Dforall: \forall' derives an all quantifier `(\forall x p(x))'` to obtain `\forall x (p(x)')` */
-    lazy val Dforall            : DependentPositionTactic = useAt(DerivedAxioms.Dforall)
+    lazy val Dforall            : DependentPositionTactic = useAt(Ax.Dforall)
     /** Dexists: \exists' derives an exists quantifier */
-    lazy val Dexists            : DependentPositionTactic = useAt(DerivedAxioms.Dexists)
+    lazy val Dexists            : DependentPositionTactic = useAt(Ax.Dexists)
   }
 
   //
@@ -423,16 +424,16 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //
 
   /** boxAnd: splits `[a](p&q)` into `[a]p & [a]q` */
-  lazy val boxAnd             : DependentPositionTactic = useAt(DerivedAxioms.boxAnd)
+  lazy val boxAnd             : DependentPositionTactic = useAt(Ax.boxAnd)
   /** diamondOr: splits `⟨a⟩(p|q)` into `⟨a⟩p | ⟨a⟩q` */
-  lazy val diamondOr          : DependentPositionTactic = useAt(DerivedAxioms.diamondOr)
+  lazy val diamondOr          : DependentPositionTactic = useAt(Ax.diamondOr)
   /** boxImpliesAnd: splits `[a](p->q&r)` into `[a](p->q) & [a](p->r)` */
-  lazy val boxImpliesAnd      : DependentPositionTactic = useAt(DerivedAxioms.boxImpliesAnd)
+  lazy val boxImpliesAnd      : DependentPositionTactic = useAt(Ax.boxImpliesAnd)
 
   // def ind
 
   /** boxTrue: proves `[a]true` directly for hybrid systems `a` that are not hybrid games. */
-  val boxTrue                : DependentPositionTactic = useAt(DerivedAxioms.boxTrue)
+  val boxTrue                : DependentPositionTactic = useAt(Ax.boxTrue)
 
 
   /*******************************************************************
@@ -440,13 +441,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
     *******************************************************************/
 
   /** allV: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val allV               : DependentPositionTactic = useAt(DerivedAxioms.allV)
+  lazy val allV               : DependentPositionTactic = useAt(Ax.allV)
   /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val existsV            : DependentPositionTactic = useAt(DerivedAxioms.existsV)
+  lazy val existsV            : DependentPositionTactic = useAt(Ax.existsV)
   //@todo document and unclear what it really does depending on the index
-  lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDist)
+  lazy val allDist            : DependentPositionTactic = useAt(Ax.allDist)
 
   //@todo document and unclear what it really does depending on the index
-  lazy val existsE            : DependentPositionTactic = useAt(DerivedAxioms.existse)
+  lazy val existsE            : DependentPositionTactic = useAt(Ax.existse)
 
 }

@@ -57,7 +57,7 @@ import scala.collection.immutable.{List, _}
   * @see [[DifferentialEquationCalculus]]
   * @see [[HybridProgramCalculus]]
   * @see [[UnifyUSCalculus]]
-  * @see [[DerivedAxioms]]
+  * @see [[Ax]]
   * @see [[AxiomInfo]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   * @see [[ToolProvider]]

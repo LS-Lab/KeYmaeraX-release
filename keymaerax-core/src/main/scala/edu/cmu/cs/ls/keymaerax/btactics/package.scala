@@ -219,7 +219,7 @@ package edu.cmu.cs.ls.keymaerax
   * which is, in turn, easy to prove by pointing to the assignments using "[:=] assign" axioms
   * and ultimately asking propositional logic.
   *
-  * More proofs by pointing are shown in [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]] source code.
+  * More proofs by pointing are shown in [[edu.cmu.cs.ls.keymaerax.btactics.Ax]] source code.
   *
   *
   * ===Proof by Congruence===

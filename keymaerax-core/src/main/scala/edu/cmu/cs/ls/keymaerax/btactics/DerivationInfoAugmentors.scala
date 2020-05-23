@@ -42,14 +42,14 @@ object DerivationInfoAugmentors {
       pi match {
         case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
         case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
-        case dai: DerivedAxiomInfo => DerivedAxioms.derivedAxiomOrRule(dai.canonicalName)
-        case dari: DerivedRuleInfo => DerivedAxioms.derivedAxiomOrRule(dari.canonicalName)
+        case dai: DerivedAxiomInfo => Ax.derivedAxiomOrRule(dai.canonicalName)
+        case dari: DerivedRuleInfo => Ax.derivedAxiomOrRule(dari.canonicalName)
       }
     }
 
     def formula: Formula = {
       pi match {
-        case dai: DerivedAxiomInfo => DerivedAxioms.derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
+        case dai: DerivedAxiomInfo => Ax.derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
         case cai: CoreAxiomInfo =>
           ProvableSig.axiom.get(pi.canonicalName) match {
             case Some(fml) => fml

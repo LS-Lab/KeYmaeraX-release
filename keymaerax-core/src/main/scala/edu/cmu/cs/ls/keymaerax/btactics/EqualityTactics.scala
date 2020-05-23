@@ -99,7 +99,7 @@ private object EqualityTactics {
           else (equivifyR('Rlast), LastSucc(0))
         cut(condEquiv) < (
           /* use */ implyL('Llast) < (closeIdWith('Rlast), cutLR(repl)(pos) < (hide('Llast), equivifyCommute & closeIdWith(closeWhere))),
-          /* show */ cohide('Rlast) & by(DerivedAxioms.constFormulaCongruence, RenUSubst(
+          /* show */ cohide('Rlast) & by(Ax.constFormulaCongruence, RenUSubst(
           (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
             (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
             (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl) :: Nil))
@@ -115,7 +115,7 @@ private object EqualityTactics {
     require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
     sequent.sub(eqPos) match {
       case Some(Equal(lhs, rhs)) =>
-        useAt(DerivedAxioms.equalCommute)(eqPos) & eqL2R(eqPos)(pos) & useAt(DerivedAxioms.equalCommute)('L, Equal(rhs, lhs))
+        useAt(Ax.equalCommute)(eqPos) & eqL2R(eqPos)(pos) & useAt(Ax.equalCommute)('L, Equal(rhs, lhs))
       case Some(e) => throw new TacticInapplicableFailure("eqR2L only applicable to equalities l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
@@ -162,7 +162,7 @@ private object EqualityTactics {
    */
   lazy val exhaustiveEqR2L: DependentPositionTactic = "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(lhs, rhs)) =>
-      useAt(DerivedAxioms.equalCommute)(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt(DerivedAxioms.equalCommute)(pos, Equal(rhs, lhs))
+      useAt(Ax.equalCommute)(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt(Ax.equalCommute)(pos, Equal(rhs, lhs))
   })
 
 
@@ -254,8 +254,8 @@ private object EqualityTactics {
       cutAt(cutFml)(pos) <(
         /* use */ skip,
         /* show */ cohidePos & CMon(pos.inExpr) & implyR(1) &
-        (if (polarity >= 0) allL(t)(-1) & implyL(-1) <(cohide(2) & byUS(DerivedAxioms.equalReflexive), closeId)
-         else existsR(t)(1) & andR(1) <(cohide(1) & byUS(DerivedAxioms.equalReflexive), closeId)) &
+        (if (polarity >= 0) allL(t)(-1) & implyL(-1) <(cohide(2) & byUS(Ax.equalReflexive), closeId)
+         else existsR(t)(1) & andR(1) <(cohide(1) & byUS(Ax.equalReflexive), closeId)) &
         done
       )
   })
@@ -275,8 +275,8 @@ private object EqualityTactics {
         val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
         val absVar = Variable(fn, freshAbsIdx)
         abbrv(abs, Some(absVar)) &
-          useAt(DerivedAxioms.equalCommute)('L, Equal(absVar, abs)) &
-          useAt(DerivedAxioms.abs)('L, Equal(abs, absVar))
+          useAt(Ax.equalCommute)('L, Equal(absVar, abs)) &
+          useAt(Ax.abs)('L, Equal(abs, absVar))
       } else {
         absAt(pos)
       }
@@ -348,11 +348,11 @@ private object EqualityTactics {
         val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
         val minmaxVar = Variable(fn, freshMinMaxIdx)
         abbrv(minmax, Some(minmaxVar)) &
-          useAt(DerivedAxioms.equalCommute)('L, Equal(minmaxVar, minmax)) &
+          useAt(Ax.equalCommute)('L, Equal(minmaxVar, minmax)) &
         //@todo IDE check if this key is working correctly?
           (fn match {
-            case "min" => useAt(DerivedAxioms.min)('L, Equal(minmax, minmaxVar))
-            case "max" => useAt(DerivedAxioms.max)('L, Equal(minmax, minmaxVar))
+            case "min" => useAt(Ax.min)('L, Equal(minmax, minmaxVar))
+            case "max" => useAt(Ax.max)('L, Equal(minmax, minmaxVar))
             case _ => throw new AssertionError("Cannot happen")
           })
       } else {

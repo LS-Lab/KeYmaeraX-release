@@ -28,14 +28,30 @@ import scala.reflect.runtime.{universe => ru}
   * This registry of [[[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]] also provides meta information for matching keys and recursors for unificiation and chasing
   * using the [[[edu.cmu.cs.ls.keymaerax.macros.Axiom @Axiom]] annotation.
   *
-  * Core Axioms are loaded from the core and their meta information is annotated e.g. as follows:
+  * = Using Axioms and Axiomatic Rules =
+  * Using a (derived) axiom merely requires indicating the position where to use it:
+  * {{{
+  *   UnifyUSCalculus.useAt(Ax.choiceb)(1)
+  * }}}
+  * Closing a proof or using an axiomatic rule after unification works as follows:
+  * {{{
+  *   UnifyUSCalculus.byUS(Ax.choiceb)
+  * }}}
+  * Closing a proof or using an axiomatic rule verbatim without unification works as follows:
+  * {{{
+  *   UnifyUSCalculus.by(Ax.choiceb)
+  * }}}
+  * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS`.
+  *
+  * = Adding Derived Axioms and Derived Axiomatic Rules =
+  * Core Axioms are loaded from the core and their meta information is annotated in this file e.g. as follows:
   * {{{
   *   @Axiom(("[∪]", "[++]"), formula = "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P", unifier = "linear",
   *          key = "0", recursor = "0;1")
   *   val choiceb = coreAxiom("[++] choice")
   * }}}
   *
-  * Derived Axioms are proved with a tactic and their meta information is annotated e.g. as follows:
+  * Derived Axioms are proved with a tactic and their meta information is annotated in this file e.g. as follows:
   * {{{
   *   @Axiom("V", formula = "p→<span class=\"k4-axiom-key\">[a]p</span>",
   *          key = "1", recursor = "*")
@@ -56,7 +72,7 @@ import scala.reflect.runtime.{universe => ru}
   * @note Lemmas are lazy vals, since their proofs may need a fully setup prover with QE
   * @note Derived axioms use the Provable facts of other derived axioms in order to avoid initialization cycles with AxiomInfo's contract checking.
   */
-object DerivedAxioms extends Logging {
+object Ax extends Logging {
 
   val DerivedAxiomProvableSig = ProvableSig//NoProofTermProvable
   /** Database for derived axioms */
@@ -242,11 +258,11 @@ object DerivedAxioms extends Logging {
 
     val mirror = ru.runtimeMirror(getClass.getClassLoader)
     // access the singleton object
-    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val moduleMirror = mirror.reflectModule(ru.typeOf[Ax.type].termSymbol.asModule)
     val im = mirror.reflect(moduleMirror.instance)
 
     //@note lazy vals have a "hidden" getter method that does the initialization
-    val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
     var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
@@ -1141,7 +1157,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};]p(||) -> (<a{|^@|};>q(||) -> <a{|^@|};>(p(||)&q(||)))".asFormula)),
     useExpansionAt(diamond)(1, 1::0::Nil) &
       useExpansionAt(diamond)(1, 1::1::Nil) &
-      useAt(DerivedAxioms.converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(Ax.converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(K, PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(K, PosInExpr(1::Nil))(1) &
       useAt(proveBy("(p_() -> !(p_()&q_()) -> !q_()) <-> true".asFormula, prop))(1, 1::Nil) &

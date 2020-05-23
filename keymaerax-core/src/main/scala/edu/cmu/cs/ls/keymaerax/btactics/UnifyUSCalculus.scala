@@ -98,7 +98,8 @@ trait UnifyUSCalculus {
     *******************************************************************/
 
   /** by(pi) uses the given provable with its information literally to continue or close the proof (if it fits to what has been proved).
-    * @param pi the information for the Provable to use, e.g., from [[DerivedAxioms]]. */
+ *
+    * @param pi the information for the Provable to use, e.g., from [[Ax]]. */
   def by(pi: ProvableInfo)                 : BelleExpr = by(pi.provable, pi.codeName)
 
   /** by(provable) uses the given Provable literally to continue or close the proof (if it fits to what has been proved so far)
@@ -697,7 +698,7 @@ trait UnifyUSCalculus {
             //ProvableSig.startProof(Equiv(r, l))(CommuteEquivRight(SuccPos(0)), 0)(fact, 0)
             fact(Sequent(IndexedSeq(), IndexedSeq(Equiv(r, l))) , CommuteEquivRight(SuccPos(0)))
           case Sequent(IndexedSeq(), IndexedSeq(Equal(l, r))) =>
-            useFor(DerivedAxioms.equalCommute)(SuccPos(0))(fact)
+            useFor(Ax.equalCommute)(SuccPos(0))(fact)
           //case _ => throw new UnsupportedTacticFeature("Unsupported shape of fact to commute: " + fact.prettyString)
         }
 
@@ -828,37 +829,37 @@ trait UnifyUSCalculus {
   /* Specialized congruence reasoning for the questions arising in the axiomatic ODE solver DC step */
   private def condEquivCongruence(context: Formula, towards: PosInExpr, subPos: PosInExpr, commute: Boolean, op: (Formula, Formula) => Formula): BelleExpr = context match {
     case Box(_, p) if towards.head == 1 =>
-      useAt(DerivedAxioms.boxAnd, PosInExpr(1::Nil))(1, subPos ++ 0) &
-      useAt(DerivedAxioms.K, PosInExpr(1::Nil))(1, subPos) &
+      useAt(Ax.boxAnd, PosInExpr(1::Nil))(1, subPos ++ 0) &
+      useAt(Ax.K, PosInExpr(1::Nil))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
-      useAt(DerivedAxioms.boxTrueTrue)(1, subPos)
+      useAt(Ax.boxTrueTrue)(1, subPos)
     case Imply(_, p) if towards.head == 1 =>
-      useAt(DerivedAxioms.impliesRightAnd)(1, subPos ++ 0) &
-      useAt(DerivedAxioms.sameImpliesImplies)(1, subPos) &
+      useAt(Ax.impliesRightAnd)(1, subPos ++ 0) &
+      useAt(Ax.sameImpliesImplies)(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
-      useAt(DerivedAxioms.implyTrue)(1, subPos)
+      useAt(Ax.implyTrue)(1, subPos)
     case And(p, _) if towards.head == 0 =>
-      useAt(DerivedAxioms.factorAndRight)(1, subPos ++ 0) &
-      useAt(DerivedAxioms.impliesMonAndLeft, PosInExpr(1::Nil))(1, subPos) &
+      useAt(Ax.factorAndRight)(1, subPos ++ 0) &
+      useAt(Ax.impliesMonAndLeft, PosInExpr(1::Nil))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos, commute, op)
     case And(_, p) if towards.head == 1 =>
-      useAt(DerivedAxioms.factorAndLeft)(1, subPos ++ 0) &
-      useAt(DerivedAxioms.impliesMonAndRight, PosInExpr(1::Nil))(1, subPos) &
+      useAt(Ax.factorAndLeft)(1, subPos ++ 0) &
+      useAt(Ax.impliesMonAndRight, PosInExpr(1::Nil))(1, subPos) &
       condEquivCongruence(p, towards.child, subPos, commute, op)
     case Or(p, _) if towards.head == 0 =>
-      useAt(DerivedAxioms.factorOrRight)(1, subPos ++ 0) &
-      useAt(DerivedAxioms.factorImpliesOrRight)(1, subPos) &
+      useAt(Ax.factorOrRight)(1, subPos ++ 0) &
+      useAt(Ax.factorImpliesOrRight)(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 0, commute, op) &
-      useAt(DerivedAxioms.trueOr)(1, subPos)
+      useAt(Ax.trueOr)(1, subPos)
     case Or(_, p) if towards.head == 1 =>
-      useAt(DerivedAxioms.factorOrLeft)(1, subPos ++ 0) &
-      useAt(DerivedAxioms.factorImpliesOrLeft)(1, subPos) &
+      useAt(Ax.factorOrLeft)(1, subPos ++ 0) &
+      useAt(Ax.factorImpliesOrLeft)(1, subPos) &
       condEquivCongruence(p, towards.child, subPos ++ 1, commute, op) &
-      useAt(DerivedAxioms.orTrue)(1, subPos)
+      useAt(Ax.orTrue)(1, subPos)
     case Forall(x, p) if towards.head == 0 =>
-      useAt(DerivedAxioms.randomb, PosInExpr(1::Nil))(1, subPos ++ 0 ++ 0) &
-      useAt(DerivedAxioms.randomb, PosInExpr(1::Nil))(1, subPos ++ 0 ++ 1) &
-      useAt(DerivedAxioms.randomb, PosInExpr(1::Nil))(1, subPos ++ 1) &
+      useAt(Ax.randomb, PosInExpr(1::Nil))(1, subPos ++ 0 ++ 0) &
+      useAt(Ax.randomb, PosInExpr(1::Nil))(1, subPos ++ 0 ++ 1) &
+      useAt(Ax.randomb, PosInExpr(1::Nil))(1, subPos ++ 1) &
       condEquivCongruence(Box(AssignAny(x.head), p), PosInExpr(towards.pos.updated(0, 1)), subPos, commute, op)
     case DotFormula =>
       val p = "p_()".asFormula
@@ -1476,7 +1477,7 @@ trait UnifyUSCalculus {
               if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
             (ProvableSig.startProof(Sequent(ante, succ))
-            (DerivedAxioms.monb.provable(USubst(
+            (Ax.monb.provable(USubst(
               SubstitutionPair(ProgramConst("a_"), a)
                 :: SubstitutionPair(UnitPredicational("p_", AnyArg), Context(c)(bleft))
                 :: SubstitutionPair(UnitPredicational("q_", AnyArg), Context(c)(bright))
@@ -1522,7 +1523,7 @@ trait UnifyUSCalculus {
               case _ => us
             }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
             // NB: all eliminate axiom not implemented
-            useFor(DerivedAxioms.alle, PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
+            useFor(Ax.alle, PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(SuccPos(0))
             )
@@ -1549,7 +1550,7 @@ trait UnifyUSCalculus {
                   sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
               case _ => us
             }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
-            useFor(DerivedAxioms.existse, PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
+            useFor(Ax.existse, PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
               Sequent(ante, succ),
               Skolemize(AntePos(0))
             )
@@ -2019,9 +2020,9 @@ trait UnifyUSCalculus {
         // reflexive setup corresponds to no-progress chase
         val initial: ProvableSig = e match {
           case t: Term =>      // t=t
-            DerivedAxioms.equalReflexive.provable(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
+            Ax.equalReflexive.provable(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
           case f: Formula =>   // f<->f
-            DerivedAxioms.equivReflexive.provable(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
+            Ax.equivReflexive.provable(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
         }
         Predef.assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1,
           "Proved reflexive start " + initial + " for " + e)

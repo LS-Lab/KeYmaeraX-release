@@ -693,7 +693,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     // branches in reverse order
     proveBy(entry.model.asInstanceOf[Formula],
-      implyR(1) & choiceb(1) & useAt(DerivedAxioms.andCommute)(1) & andR(1) <(
+      implyR(1) & choiceb(1) & useAt(Ax.andCommute)(1) & andR(1) <(
         testb(1) & implyR(1) & closeId
         ,
         assignb(1) &

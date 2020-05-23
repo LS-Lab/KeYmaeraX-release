@@ -1066,15 +1066,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case And(LessEqual(_, _), Less(_, _)) => fromAxIndex("& recursor")::Nil
       case And(Less(_, _), LessEqual(_, _)) => fromAxIndex("& recursor")::Nil
       case And(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("& recursor")::Nil
-      case And(_: BinaryCompositeFormula, _) => (DerivedAxioms.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
-      case And(_, _: BinaryCompositeFormula) => (DerivedAxioms.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case And(_: BinaryCompositeFormula, _) => (Ax.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case And(_, _: BinaryCompositeFormula) => (Ax.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
       case Or(Less(_, _), Less(_, _)) => fromAxIndex("metric < | <")::Nil
       case Or(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= | <=")::Nil
       case Or(LessEqual(_, _), Less(_, _)) => fromAxIndex("| recursor")::Nil
       case Or(Less(_, _), LessEqual(_, _)) => fromAxIndex("| recursor")::Nil
       case Or(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("| recursor")::Nil
-      case Or(_: BinaryCompositeFormula, _) => (DerivedAxioms.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
-      case Or(_, _: BinaryCompositeFormula) => (DerivedAxioms.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
+      case Or(_: BinaryCompositeFormula, _) => (Ax.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
+      case Or(_, _: BinaryCompositeFormula) => (Ax.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
       case _ => Nil
     })
 

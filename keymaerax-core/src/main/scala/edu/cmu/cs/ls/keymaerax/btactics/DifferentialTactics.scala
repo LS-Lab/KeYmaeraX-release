@@ -54,17 +54,17 @@ private object DifferentialTactics extends Logging {
           //@todo unification fails
           // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
-          useAt(DerivedAxioms.DE)(pos)
+          useAt(Ax.DE)(pos)
         }
       } else {
         import ProofRuleTactics.contextualize
         if (isODESystem(sequent, pos)) {
-          if (HilbertCalculus.INTERNAL) TactixLibrary.useAt(DerivedAxioms.DEs)(pos)*getODEDim(sequent, pos)
+          if (HilbertCalculus.INTERNAL) TactixLibrary.useAt(Ax.DEs)(pos)*getODEDim(sequent, pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)*getODEDim(sequent, pos)
           //@todo unification fails
           // TactixLibrary.useAt(DerivedAxioms.DEsys)(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
-          if (HilbertCalculus.INTERNAL) useAt(DerivedAxioms.DE)(pos)
+          if (HilbertCalculus.INTERNAL) useAt(Ax.DE)(pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)
         }
       }
@@ -126,9 +126,9 @@ private object DifferentialTactics extends Logging {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
           case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
-            useAt(DerivedAxioms.DEs)(pos)
+            useAt(Ax.DEs)(pos)
           case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
-            useAt(DerivedAxioms.DE)(pos)
+            useAt(Ax.DE)(pos)
           case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to formulas, but got " + e.prettyString)
           case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
@@ -344,8 +344,8 @@ private object DifferentialTactics extends Logging {
     "dR" byWithInputs (f::/* todo unsupported argument type (argument not used from UI yet) hide::*/Nil,(pos,sequent) => {
     require(pos.isTopLevel, "dR only at top-level succedents/antecedents")
     val (newFml,ax) = sequent.sub(pos) match {
-      case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DRd)
-      case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DR)
+      case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),Ax.DRd)
+      case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),Ax.DR)
       case Some(e) => throw new TacticInapplicableFailure("dR only applicable to box/diamond ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
@@ -378,7 +378,7 @@ private object DifferentialTactics extends Logging {
           else Imply(last, Imply(fml, ctx(fml.replaceAt(PosInExpr(0::1::Nil), remainder))))
         proveBy(factFml,
           implyR(1)*2 & diffCut(last)(if (polarity > 0) -2 else 1) <(
-            Idioms.?(useAt(DerivedAxioms.trueAnd)(-2, PosInExpr(0::1::Nil))) & close
+            Idioms.?(useAt(Ax.trueAnd)(-2, PosInExpr(0::1::Nil))) & close
             ,
             cohideOnlyR('Rlast) & diffInd()(1) & DebuggingTactics.done
           )
@@ -531,19 +531,19 @@ private object DifferentialTactics extends Logging {
             val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
-            useAt(DerivedAxioms.DGC, PosInExpr(0::Nil), subst)(pos)
+            useAt(Ax.DGC, PosInExpr(0::Nil), subst)(pos)
           case (_, Neg(Number(n))) =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(-n)) :: Nil)
-            useAt(DerivedAxioms.DGa, PosInExpr(0::Nil), subst)(pos)
+            useAt(Ax.DGa, PosInExpr(0::Nil), subst)(pos)
           case _ =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), b) :: Nil)
-            useAt(DerivedAxioms.DGa, PosInExpr(0::Nil), subst)(pos)
+            useAt(Ax.DGa, PosInExpr(0::Nil), subst)(pos)
         }
 
       case Some(Box(ode@ODESystem(c, h), p)) if StaticSemantics(ode).bv.contains(y) =>
@@ -618,11 +618,11 @@ private object DifferentialTactics extends Logging {
       case Some(f@Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
         TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
-          HilbertCalculus.useExpansionAt(DerivedAxioms.DGi)(pos)
+          HilbertCalculus.useExpansionAt(Ax.DGi)(pos)
           ,
           (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
-            HilbertCalculus.useAt(DerivedAxioms.alle)(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
-            TactixLibrary.useAt(DerivedAxioms.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
+            HilbertCalculus.useAt(Ax.alle)(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
+            TactixLibrary.useAt(Ax.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
         )
       case Some(Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
         //@note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
@@ -638,7 +638,7 @@ private object DifferentialTactics extends Logging {
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then rewrite.
         HilbertCalculus.useAt(", commute", PosInExpr(1::Nil))(pos) &
           TactixLibrary.cutAt(Exists(y_DE.xp.x::Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) <(
-            HilbertCalculus.useAt(DerivedAxioms.DGC, PosInExpr(1::Nil), subst)(pos)
+            HilbertCalculus.useAt(Ax.DGC, PosInExpr(1::Nil), subst)(pos)
             ,
             (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
               TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
@@ -655,7 +655,7 @@ private object DifferentialTactics extends Logging {
   //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("Dvariable") {
     private val OPTIMIZED = true
-    private val axiom: AxiomInfo = DerivedAxioms.DvariableCommutedAxiom
+    private val axiom: AxiomInfo = Ax.DvariableCommutedAxiom
     private val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(1::Nil))
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
 
@@ -671,8 +671,8 @@ private object DifferentialTactics extends Logging {
             cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
               /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.top), pos.inExpr)) & cut(axiom) <(
-              useAt(DerivedAxioms.alle)(-1) & eqL2R(-1)(1) & useAt(DerivedAxioms.implySelf)(1) & close,
-              cohide('Rlast) & byUS(DerivedAxioms.DvariableAxiom))
+              useAt(Ax.alle)(-1) & eqL2R(-1)(1) & useAt(Ax.implySelf)(1) & close,
+              cohide('Rlast) & byUS(Ax.DvariableAxiom))
               )
           }
         case Some(e) => throw new TacticInapplicableFailure("Dvariable only applicable to Differentials, but got " + e.prettyString)
@@ -721,7 +721,7 @@ private object DifferentialTactics extends Logging {
           filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
         constFacts.map(diffCut(_)(pos) <(skip, V(pos) & prop & done)).getOrElse(skip) & DW(pos) & G(pos)
       } else {
-        useAt(DerivedAxioms.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
+        useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
     case Some(e) => throw new TacticInapplicableFailure("dW only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -764,7 +764,7 @@ private object DifferentialTactics extends Logging {
 
         rewriteExistingGhosts & storeInitialVals & cutAllAntes & dw
       } else {
-        useAt(DerivedAxioms.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
+        useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
     case Some(e) => throw new TacticInapplicableFailure("dWplus only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)

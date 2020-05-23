@@ -185,12 +185,12 @@ object ComponentSystem {
                     cohideR(1) & dW(1) & prop & done
                   )
                 )
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexive))
+              case None => proveBy(Equiv(have, have), byUS(Ax.equivReflexive))
             }
           case Some(xsys) if StaticSemantics.boundVars(xsys).toSet.forall(_.name == "t") =>
             ys.reduceOption(DifferentialProduct.apply) match {
               case Some(ysys) => ???
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexive))
+              case None => proveBy(Equiv(have, have), byUS(Ax.equivReflexive))
             }
           case None =>
             ys.reduceOption(DifferentialProduct.apply) match {
@@ -214,7 +214,7 @@ object ComponentSystem {
                     cohideR(1) & dW(1) & prop & done
                   )
                 )
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexive))
+              case None => proveBy(Equiv(have, have), byUS(Ax.equivReflexive))
             }
         }
       case Some(e) => throw new TacticInapplicableFailure("Lemma 3 only applicable to box ODEs, but got " + e.prettyString)
@@ -369,7 +369,7 @@ object ComponentSystem {
           composeb(1, 1::Nil) & dropControl(1, 1::Nil) & DebuggingTactics.print("Dropped delta1") &
           cutAt(Diamond(Compose(in2, cp2), foutSafety))(1, 1::1::1::1::1::Nil) <(
             // use
-            useAt(DerivedAxioms.boxDiamondSubstPropagation, PosInExpr(1::1::Nil))(1, 1::1::1::1::1::Nil) <(
+            useAt(Ax.boxDiamondSubstPropagation, PosInExpr(1::1::Nil))(1, 1::1::1::1::1::Nil) <(
               DebuggingTactics.print("Strengthen") & /* todo: hide all non-const factcs */ hideL(-1) /* End todo */ &
                 generalize(c2inv)(1, 1::1::1::1::1::Nil) <(
                   DebuggingTactics.print("Close by C2 induction step") &
@@ -388,7 +388,7 @@ object ComponentSystem {
                       DebuggingTactics.done("Close by C2 induction step")
                     ,
                     DebuggingTactics.print("Proving C2 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
-                      useAt(DerivedAxioms.DR, PosInExpr(1::Nil))(1) &
+                      useAt(Ax.DR, PosInExpr(1::Nil))(1) &
                       dW(1) & prop & DebuggingTactics.done("Proving C2 diff. refine")
                   )
                   ,
@@ -398,7 +398,7 @@ object ComponentSystem {
               DebuggingTactics.print("Close by communication guarantee liveness") &
                 implyR(1) & ((abstractionb(1) & SaturateTactic(allR(1)))*4) &
                 //@todo use communication guarantees of internal ports
-                composed(1) & testd(1, 1::Nil) & useAt(DerivedAxioms.trueAnd)(1, 1::Nil) &
+                composed(1) & testd(1, 1::Nil) & useAt(Ax.trueAnd)(1, 1::Nil) &
                 DebuggingTactics.print("Close by Communication Guarantee Liveness lemma") & useLemma(comGuaranteeLiveness, Some(prop)) & DebuggingTactics.done("Close by communication guarantee liveness")
             )
             ,
@@ -483,7 +483,7 @@ object ComponentSystem {
                   DebuggingTactics.done("Close by C1 induction step")
                 ,
                 DebuggingTactics.print("Proving C1 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
-                  composeb(1, 0::1::Nil) & useAt(DerivedAxioms.DR, PosInExpr(1::Nil))(1) &
+                  composeb(1, 0::1::Nil) & useAt(Ax.DR, PosInExpr(1::Nil))(1) &
                   dW(1) & prop & DebuggingTactics.done("Proving C1 diff. refine")
               ) &
               DebuggingTactics.print("Step done") & DebuggingTactics.done("Step")

@@ -114,7 +114,7 @@ class PrimeSubstituterTest extends TacticTestBase {
       TactixLibrary.cut("true".asFormula) < (TactixLibrary.implyRi, prop) &
         TactixLibrary.cut("[{x'=1&true}]x'=1".asFormula) < (
           TactixLibrary.implyRi & byUS("DX differential skip"),
-          TactixLibrary.cohide(2) & DE(1) & chase(1, 1 :: Nil) & V(1) & byUS(DerivedAxioms.equalReflexive))
+          TactixLibrary.cohide(2) & DE(1) & chase(1, 1 :: Nil) & V(1) & byUS(Ax.equalReflexive))
     )
     result should not be 'proved
     result.isProved shouldBe false

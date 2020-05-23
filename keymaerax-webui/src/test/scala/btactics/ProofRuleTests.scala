@@ -37,7 +37,7 @@ class ProofRuleTests extends TacticTestBase {
   it should "support axioms" in {
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ x_>0 -> z>0".asFormula)),
-      TactixLibrary.by(DerivedAxioms.allInst,
+      TactixLibrary.by(Ax.allInst,
         USubst(
           SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm))::
           SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))
@@ -46,11 +46,11 @@ class ProofRuleTests extends TacticTestBase {
 
   it should "support derived axioms" in {
     val theSubst = USubst(SubstitutionPair(UnitPredicational("p_", AnyArg), Greater("x_".asVariable, "0".asTerm))::Nil)
-    val theAxiom = DerivedAxioms.notAll.provable
+    val theAxiom = Ax.notAll.provable
 
     val result = proveBy(
       Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("(!\\forall x_ x_>0) <-> (\\exists x_ !x_>0)".asFormula)),
-      TactixLibrary.by(DerivedAxioms.notAll, //(!\forall x (p(||))) <-> \exists x (!p(||))
+      TactixLibrary.by(Ax.notAll, //(!\forall x (p(||))) <-> \exists x (!p(||))
         theSubst))
 
     result shouldBe 'proved

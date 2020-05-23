@@ -129,12 +129,12 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "introduce differential assignments whatever the names (manual useAt)" in {
-    val result = proveBy("[{z'=5, y'=z}]z>0".asFormula, useAt(DerivedAxioms.DEs)(1))
+    val result = proveBy("[{z'=5, y'=z}]z>0".asFormula, useAt(Ax.DEs)(1))
     result.subgoals.loneElement shouldBe "==> [{y'=z,z'=5}][z':=5;]z>0".asSequent
   }
 
   it should "introduce differential assignments in long cases whatever the names (manual useAt)" in {
-    val result = proveBy("[{z'=5, y'=z, u'=v}]z>0".asFormula, useAt(DerivedAxioms.DEs)(1))
+    val result = proveBy("[{z'=5, y'=z, u'=v}]z>0".asFormula, useAt(Ax.DEs)(1))
     result.subgoals.loneElement shouldBe "==> [{y'=z,u'=v,z'=5}][z':=5;]z>0".asSequent
   }
 
@@ -858,7 +858,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "let us directly prove variable x+y^2*3-z = x+y^2*3-z by abbreviation" in withQE { _ =>
-    proveBy("x+y^2*3-z=x+y^2*3-z".asFormula, let(FuncOf(Function("s_",None,Unit,Real),Nothing), "x+y^2*3-z".asTerm, by(DerivedAxioms.equalReflexive))) shouldBe 'proved
+    proveBy("x+y^2*3-z=x+y^2*3-z".asFormula, let(FuncOf(Function("s_",None,Unit,Real),Nothing), "x+y^2*3-z".asTerm, by(Ax.equalReflexive))) shouldBe 'proved
   }
 
   it should "prove const [x':=5;](x+c())'>=0 directly" in withQE { _ =>

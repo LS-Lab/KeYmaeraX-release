@@ -95,7 +95,7 @@ class BTacticExamples extends TacticTestBase  {
 
   "Proof by Pointing" should "prove <v:=2*v+1;>q(v) <-> q(2*v+1)" in {
     import TactixLibrary._
-    import DerivedAxioms._
+    import Ax._
     // Proof by pointing of  |- <v:=2*v+1;>v!=0 <-> 2*v+1!=0
     val proof = TactixLibrary.proveBy(
       Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula)),
