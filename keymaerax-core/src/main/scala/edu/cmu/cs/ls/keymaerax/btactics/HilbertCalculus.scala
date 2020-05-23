@@ -99,11 +99,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * {{{
     *      p(x) |- q(x)
     *   ------------------- M
-    *   [a]p(x) |- [a]q(x)
+    *   ⟨a⟩p(x) |- ⟨a⟩q(x)
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-  lazy val mond               : BelleExpr         = byUS("<> monotone")
+  lazy val mond               : BelleExpr         = byUS(DerivedAxioms.mondrule)
 
   //
   // axioms
@@ -221,6 +221,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val DWd                 : DependentPositionTactic = useAt(DerivedAxioms.DWd)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
+    //@todo ODE is axiomIndex still needed?
     useAt(DerivedAxioms.DC,
       AxiomIndex.axiomIndex("DC differential cut")._1,
       (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
@@ -228,6 +229,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   })
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DCd(invariant: Formula)  : DependentPositionTactic = useAt(DerivedAxioms.DCd,
+    //@todo ODE is axiomIndex still needed?
     AxiomIndex.axiomIndex("DCd diamond differential cut")._1,
     (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
   )

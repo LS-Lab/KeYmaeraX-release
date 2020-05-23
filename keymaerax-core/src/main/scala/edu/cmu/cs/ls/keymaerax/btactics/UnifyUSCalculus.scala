@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, _}
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutLR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
@@ -240,7 +240,7 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: AxiomInfo): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, axiom.key, linear=axiom.linear,
-      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification for " + axiom.codeName + ", fix axiom key or try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
@@ -248,7 +248,7 @@ trait UnifyUSCalculus {
     case ax: AxiomInfo => useAt(ax)
     case _ =>
     useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
-      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification for " + axiom.codeName + ", fix axiom key or try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
 
@@ -304,7 +304,7 @@ trait UnifyUSCalculus {
     * @param inst  transformation augmenting or replacing the uniform substitutions after unification with additional information. */
   def useAt(axiom: AxiomInfo, inst: Option[Subst]=>Subst): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, axiom.key, linear=axiom.linear,
-      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification for " + axiom.codeName + ", fix axiom key or try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
 
@@ -313,7 +313,7 @@ trait UnifyUSCalculus {
     * @param key the optional position of the key in the axiom to unify with. */
   def useAt(axiom: ProvableInfo, key:PosInExpr): DependentPositionTactic = {
     useAt(axiom.codeName, axiom.provable, key, linear=axiom.linear,
-      us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
+      us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification for " + axiom.codeName + ", fix axiom key or try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
 
@@ -334,7 +334,7 @@ trait UnifyUSCalculus {
       logger.info("INFO: useAt of an anonymous lemma may disable tactic extraction")
       useAt(lem.fact, key, inst)
   }
-  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")))
+  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification for " + lem + ", fix axiom key or try to patch locally with own substitution")))
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma)               : DependentPositionTactic = lem.name match {
     case Some(name) if ProvableInfo.existsStoredName(name) =>
@@ -528,7 +528,7 @@ trait UnifyUSCalculus {
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
     useAt("ANON", fact, key, linear=false, inst, serializeByCodeName=true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic =
-    useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")))
+    useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification, fix given key " + key + " or try to patch locally with own substitution")))
   private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic =
     useAt(fact, PosInExpr(0::Nil))
 
@@ -581,9 +581,9 @@ trait UnifyUSCalculus {
     */
   @deprecated("useAt(DerivedAxioms.<codeName>/Provable,...) instead of useAt(String,...)")
   private[this] def useAt(codeName: String, fact: ProvableSig, key: PosInExpr,
-            linear: Boolean,
-            inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new TacticInapplicableFailure("No substitution found by unification, try to patch locally with own substitution")),
-            serializeByCodeName: Boolean = false): DependentPositionTactic = {
+                          linear: Boolean,
+                          inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification, fix axiom key or try to patch locally with own substitution")),
+                          serializeByCodeName: Boolean = false): DependentPositionTactic = {
     val (name, inputs) =
       if (serializeByCodeName) (codeName, Nil)
       else {
@@ -602,9 +602,12 @@ trait UnifyUSCalculus {
           // unify keyPart against target expression by single-sided matching
           val subst = if (exploitLinearity && linear)
             inst(LinearMatcher.unifiable(keyPart, expr))
-          else
+          else try {
             inst(matcher.unifiable(keyPart, expr))
-          logger.debug("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
+          } catch {
+            case ex: InapplicableUnificationKeyFailure => throw ex.inContext("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  of:      " + codeName + "\n  unsuccessful")
+          }
+          logger.debug("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  by:      " + subst)
           Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
           //val keyCtxMatched = Context(subst(keyCtx.ctx))
           useAt(subst, keyCtx, keyPart, pos, ctx, expr, sequent)
@@ -669,7 +672,7 @@ trait UnifyUSCalculus {
               assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) & (
               if (other.kind == FormulaKind) CE(p.inExpr)
               else if (other.kind == TermKind) CQ(p.inExpr)
-              else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
+              else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other)) &
               by(subst.toForward(fact))
           )
         }
@@ -695,7 +698,7 @@ trait UnifyUSCalculus {
             fact(Sequent(IndexedSeq(), IndexedSeq(Equiv(r, l))) , CommuteEquivRight(SuccPos(0)))
           case Sequent(IndexedSeq(), IndexedSeq(Equal(l, r))) =>
             useFor(DerivedAxioms.equalCommute)(SuccPos(0))(fact)
-          //case _ => throw new IllegalArgumentException("Unsupported shape of fact to commute: " + fact.prettyString)
+          //case _ => throw new UnsupportedTacticFeature("Unsupported shape of fact to commute: " + fact.prettyString)
         }
 
         K.ctx match {
@@ -727,7 +730,7 @@ trait UnifyUSCalculus {
           //@note all DotTerms are equal
           case Imply(prereq, remainder) =>
             if (!StaticSemantics.signature(prereq).intersect(Set(DotFormula, DotTerm())).isEmpty)
-              throw new IllegalArgumentException("Unimplemented case which works at a negative polarity position: " + K.ctx)
+              throw new UnsupportedTacticFeature("Unimplemented case which works at a negative polarity position: " + K.ctx)
             // try to prove prereq globally
             /* {{{
            *                                         fact
@@ -917,7 +920,7 @@ trait UnifyUSCalculus {
             val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
             logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
             if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
-            if (fmlPos == HereP) throw new IllegalStateException("CQ split void, would cause infinite loop unless stopped")
+            if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
             //@todo could optimize to build directly since ctx already known
             CE(fmlPos) & CQ(termPos)
           }
@@ -1068,7 +1071,7 @@ trait UnifyUSCalculus {
       case Equal(l,r) => (l, r, equivifyR(SuccPos(0)), CQ)
       case Equiv(l,r) => (l, r, equivifyR(SuccPos(0)), CE)
       case Imply(l,r) => (l, r, ident, CMon)
-      case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
+      case _ => throw new UnsupportedTacticFeature("CE expects equivalence or equality or implication fact " + fact)
     }
     val (otherInit, keyInit, equivify, tactic) = splitFact
 
@@ -1133,7 +1136,7 @@ trait UnifyUSCalculus {
       case Equal(l,r) => (l, r, equivifyR(SuccPos(0)), CE) //@note this CE can also use CQ
       case Equiv(l,r) => (l, r, equivifyR(SuccPos(0)), CE)
       case Imply(l,r) => (l, r, implyR(1), ((c:Context[Formula]) => inverseImplyR.andThen(CMon(c)) ))
-      case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
+      case _ => throw new UnsupportedTacticFeature("CE expects equivalence or equality or implication fact " + fact)
     }
     val (otherInit, keyInit, equivify, tactic) = splitFact
 
@@ -1152,7 +1155,7 @@ trait UnifyUSCalculus {
           if (fact.conclusion.succ.head.isInstanceOf[Imply]) {
             //Polarity of the combined context
             val polarity = FormulaTools.polarityAt(ctx.ctx, FormulaTools.posOf(ctx.ctx, DotFormula).getOrElse(
-              throw new IllegalArgumentException(s"Context should contain DotFormula, but is ${C.ctx}")))
+              throw new TacticAssertionError(s"Context should contain DotFormula, but is ${C.ctx}")))
             //polarity really shouldn't end up being 0 here..
             if (pos.isAnte && polarity < 0 || pos.isSucc && polarity > 0) (otherInit,keyInit) //positive polarity
             else (keyInit,otherInit) //negative
@@ -1308,7 +1311,7 @@ trait UnifyUSCalculus {
               SubstitutionPair(UnitFunctional("g_", AnyArg, Real), right) ::
               Nil))
         )
-      case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv.conclusion)
+      case _ => throw new TacticInapplicableFailure("expected equivalence or equality fact " + equiv.conclusion)
     }
   }
 
@@ -1332,7 +1335,7 @@ trait UnifyUSCalculus {
 
     // global polarity switch for all cases, except Modal and Equiv, which modify this switch if necessary
     val polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
-      throw new IllegalArgumentException(s"Context should contain DotFormula, but is ${C.ctx}")))
+      throw new TacticAssertionError(s"Context should contain DotFormula, but is ${C.ctx}")))
     val (left, right) =
       if (polarity < 0) (impl.conclusion.succ.head, impl.conclusion.ante.head)
       else (impl.conclusion.ante.head, impl.conclusion.succ.head)
@@ -1345,7 +1348,7 @@ trait UnifyUSCalculus {
       logger.debug("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
 
       val localPolarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
-        throw new IllegalArgumentException("Context should contain DotFormula")))
+        throw new TacticAssertionError("Context should contain DotFormula")))
       val (ante, succ) =
         if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (IndexedSeq(C(right)), IndexedSeq(C(left)))
         else (IndexedSeq(C(left)), IndexedSeq(C(right)))
@@ -1428,14 +1431,14 @@ trait UnifyUSCalculus {
             // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
             // and polarity of o in that will be -1
             val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
-              throw new IllegalArgumentException("Context should contain DotFormula")))
+              throw new TacticAssertionError("Context should contain DotFormula")))
             if (newPol<0) {
               // polarity of k in (Context(Imply(c,e))(k) will be +1
               // polarity of o in (Context(Imply(c,e))(o) will be -1
               monStep(Context(Imply(c, e)), mon)
             } else if (newPol>0) {
               Predef.assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
-                throw new IllegalArgumentException("Context should contain DotFormula")))<0)
+                throw new TacticAssertionError("Context should contain DotFormula")))<0)
               // polarity of k in (Context(Imply(e,c))(k) will be +1
               // polarity of o in (Context(Imply(e,c))(o) will be -1
               monStep(Context(Imply(e, c)), mon)
@@ -1449,14 +1452,14 @@ trait UnifyUSCalculus {
             // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
             // and polarity of o in that will be -1
             val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
-              throw new IllegalArgumentException("Context should contain DotFormula")))
+              throw new TacticAssertionError("Context should contain DotFormula")))
             if (newPol>0) {
               // polarity of k in (Context(Imply(c,e))(k) will be +1
               // polarity of o in (Context(Imply(c,e))(o) will be -1
               monStep(Context(Imply(c, e)), mon)
             } else if (newPol<0) {
               Predef.assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
-                throw new IllegalArgumentException("Context should contain DotFormula")))>0)
+                throw new TacticAssertionError("Context should contain DotFormula")))>0)
               // polarity of k in (Context(Imply(e,c))(k) will be +1
               // polarity of o in (Context(Imply(e,c))(o) will be -1
               monStep(Context(Imply(e, c)), mon)
@@ -1834,7 +1837,7 @@ trait UnifyUSCalculus {
 
           case Imply(prereq, remainder) =>
             if (!StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm())).isEmpty)
-              throw new IllegalArgumentException("Unimplemented case which works at a negative polarity position: " + K.ctx)
+              throw new UnsupportedTacticFeature("Unimplemented case which works at a negative polarity position: " + K.ctx)
             // try to prove prereq globally
             //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
             /* {{{
@@ -1871,9 +1874,9 @@ trait UnifyUSCalculus {
 
 
           case DotFormula =>
-            throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
+            throw new UnsupportedTacticFeature("Not implemented for other cases yet, see useAt: " + K)
 
-          case _ => throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
+          case _ => throw new UnsupportedTacticFeature("Not implemented for other cases yet, see useAt: " + K)
         }
       }
 

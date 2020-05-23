@@ -128,17 +128,17 @@ trait SequentCalculus {
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]])
     * Skolemization with bound renaming on demand.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
     * @example{{{
     *     y>5   |- x^2>=0
     *     --------------------------allSkolemize(1)
     *     y>5   |- \forall x x^2>=0
     * }}}
-    * @example Uniformly renames other occurrences of the quantified variable in the context on demand. {{{
+    * @example Uniformly renames other occurrences of the quantified variable in the context on demand to avoid [[SkolemClashException]]. {{{
     *     x_0>0 |- x^2>=0
     *     --------------------------allSkolemize(1)
     *     x>0   |- \forall x x^2>=0
     * }}}
-    * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
     */
   val allR                    : DependentPositionTactic = FOQuantifierTactics.allSkolemize
   /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */

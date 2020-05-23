@@ -349,7 +349,12 @@ private object EqualityTactics {
         val minmaxVar = Variable(fn, freshMinMaxIdx)
         abbrv(minmax, Some(minmaxVar)) &
           useAt(DerivedAxioms.equalCommute)('L, Equal(minmaxVar, minmax)) &
-          useAt(fn)('L, Equal(minmax, minmaxVar))
+        //@todo IDE check if this key is working correctly?
+          (fn match {
+            case "min" => useAt(DerivedAxioms.min)('L, Equal(minmax, minmaxVar))
+            case "max" => useAt(DerivedAxioms.max)('L, Equal(minmax, minmaxVar))
+            case _ => throw new AssertionError("Cannot happen")
+          })
       } else {
         minmaxAt(pos)
       }

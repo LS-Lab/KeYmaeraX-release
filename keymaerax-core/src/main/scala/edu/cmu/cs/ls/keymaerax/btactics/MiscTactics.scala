@@ -479,8 +479,10 @@ object TacticFactory {
       *         "andR" coreby((pr,pos)=> pr(AndRight(pos.top),0))
       *         }}}
       * @see [[Rule]]
+      * @see [[TacticInapplicableFailure]]
       */
     def coreby(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = new CoreRightTactic(name) {
+      /** @throws TacticInapplicableFailure if this tactic is not applicable at the indicated position `pos` in `provable` */
       @inline override def computeCoreResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)
@@ -505,8 +507,10 @@ object TacticFactory {
       *         "andL" coreby((pr,pos)=> pr(AndLeft(pos.top),0))
       *         }}}
       * @see [[Rule]]
+      * @see [[TacticInapplicableFailure]]
       */
     def coreby(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = new CoreLeftTactic(name) {
+      /** @throws TacticInapplicableFailure if this tactic is not applicable at the indicated position `pos` in `provable` */
       @inline override def computeCoreResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
         requireOneSubgoal(provable, name)
         t(provable, pos)

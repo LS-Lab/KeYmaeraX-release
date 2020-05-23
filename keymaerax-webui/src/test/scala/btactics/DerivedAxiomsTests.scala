@@ -15,6 +15,8 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
+
 import scala.collection.immutable
 import scala.collection.immutable.Map
 import scala.reflect.runtime.{universe => ru}
@@ -29,6 +31,7 @@ import scala.util.Try
 @UsualTest
 @IgnoreInBuildTest // otherwise it deletes derived lemmas while other tests are running
 class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
+  KeYmaeraXTool.init(Map.empty)
 
   // @TODO: Change everything to ProvableInfo
   private def check(lemma: Lemma): Sequent = {

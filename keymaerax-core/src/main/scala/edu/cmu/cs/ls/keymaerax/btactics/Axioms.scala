@@ -307,7 +307,8 @@ object DerivedAxioms extends Logging {
   @Axiom("DG", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∃y [{x'=f(x),y'=a*y+b&Q}]P")
   val DGa = coreAxiom("DG differential ghost")
   //@todo name: why inverse instead of universal?
-  @Axiom("DG inverse differential ghost")
+  @Axiom("DG inverse differential ghost", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
+    key = "0", recursor="0;")
   val DGpp = coreAxiom("DG inverse differential ghost")
   @Axiom("DG inverse differential ghost implicational")
   val DGi = coreAxiom("DG inverse differential ghost implicational")
@@ -418,15 +419,16 @@ object DerivedAxioms extends Logging {
     key = "1.1", recursor = "*")
   val K = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
-  @Axiom(("I<sub>→</sub>", "Iind"), formula = "P∧[a<sup>*</sup>](P→[a]P)→<span class=\"k4-axiom-key\">[a<sup>*</sup>]P</span>", displayLevel = "internal")
+  @Axiom(("I<sub>→</sub>", "Iind"), formula = "P∧[a<sup>*</sup>](P→[a]P)→<span class=\"k4-axiom-key\">[a<sup>*</sup>]P</span>", displayLevel = "internal",
+    key = "1", recursor="1;")
   val Iind = coreAxiom("I induction")
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
 
   @Axiom(("∀d", "alld"), formula = "<span class=\"k4-axiom-key\">¬∃x ¬P</span> ↔ ∀x P")
   val alld = coreAxiom("all dual")
-  @Axiom(("∀e","alle"), formula = "<span class=\"k4-axiom-key\">∀x P</span> → P", key = "0", recursor = "*")
-  lazy val alle = coreAxiom("all eliminate")
+  @Axiom(("∀e", "alle"), formula = "<span class=\"k4-axiom-key\">∀x P</span> → P", key = "0", recursor = "*")
+  val alle = coreAxiom("all eliminate")
 
 
   //***************
@@ -652,7 +654,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note Core axiom derivable thanks to [:=]= and [:=]
     */
-  @Axiom(("∀inst","allInst"), key = "0", recursor = "*")
+  @Axiom(("∀inst","allInst"), formula = "<span class=\"k4-axiom-key\">∀x p(x)</span> → p(f())", key = "0", recursor = "*")
   lazy val allInst = derivedFormula("all instantiate",
     "(\\forall x_ p(x_)) -> p(f())".asFormula,
     cutR("(\\forall x_ (x_=f()->p(x_))) -> p(f())".asFormula)(1) <(
@@ -3083,7 +3085,9 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-      useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      //@todo IDE why is the second argument necessary? It should be redundant?
+      //      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxiomIndex.axiomIndex("DG inverse differential ghost")._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3135,7 +3139,9 @@ object DerivedAxioms extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
       implyR(1) & implyR(1) &
         dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-        useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        //@todo IDE why is the second argument not redundant and both lines equivalent?
+        //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        useAt(CoreAxiomInfo("DG inverse differential ghost"), AxiomIndex.axiomIndex("DG inverse differential ghost")._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &

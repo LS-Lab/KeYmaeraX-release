@@ -191,8 +191,9 @@ trait StorableInfo extends DerivationInfo {
 
 // axioms
 
-/** Meta-Information for an axiom or derived axiom
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]] */
+/** Meta-Information for an axiom or derived axiom, as declared by an @[[Axiom]] annotation.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
+  * @see [[Axiom]] */
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula

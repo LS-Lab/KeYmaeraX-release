@@ -63,9 +63,12 @@ protected object FOQuantifierTactics {
           StaticSemantics.boundVars(qf).symbols.intersect(vars.toSet).isEmpty &&
           (quantified.isEmpty || vars.contains(quantified.get)) =>
           //@todo assumes any USubstAboveURen
+          //@todo IDE does not resolve method correctly when omitting second argument nor allows .key
+          import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors.AxiomInfoAugmentor
           useAt(DerivedAxioms.allInst, AxiomIndex.axiomIndex("all instantiate")._1, uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
-          require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity in antecedent")
+          if ((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) >= 0)
+            throw new TacticInapplicableFailure("\\forall must have negative polarity in antecedent")
           def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
           // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
           val x = vToInst(vars)
@@ -145,7 +148,7 @@ protected object FOQuantifierTactics {
     //@note could also try to skolemize directly and then skolemize to a fresh name index otherwise
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isSucc, "All skolemize only in succedent")
+        if (!pos.isSucc) throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
         val xs = sequent.sub(pos) match {
           case Some(Forall(vars, _)) => vars
           case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
