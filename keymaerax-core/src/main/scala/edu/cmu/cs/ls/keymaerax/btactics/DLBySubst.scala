@@ -422,7 +422,7 @@ private object DLBySubst {
 
           val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
-          def unstutterABV(pos: Position) = useAt("[:=] self assign")(pos)*abvVars.size
+          def unstutterABV(pos: Position) = useAt(DerivedAxioms.selfassignb)(pos)*abvVars.size
 
           cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <(
             stutter(ur.what)(pos ++ PosInExpr(0::0::Nil)) &
@@ -433,10 +433,10 @@ private object DLBySubst {
               existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
-              useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
+              useAt(DerivedAxioms.pVd, PosInExpr(1::Nil))(1, 1::Nil) &
               assignb(1, 1::0::1::Nil) &
               stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
-              useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
+              useAt(DerivedAxioms.pVd, PosInExpr(1::Nil))(1) &
               unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
               splitConsts & closeConsts(SuccPos(0)) &
               (assignd(1, 1 :: Nil) & uniformRename(ur) |

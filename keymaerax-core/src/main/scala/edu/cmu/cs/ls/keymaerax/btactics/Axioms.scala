@@ -1336,7 +1336,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     * @note unsound for hybrid games
     */
-  @Axiom("pVd")
+  @Axiom("pVd", key="1", recursor="0;1")
   lazy val pVd: Lemma = derivedAxiom("<> partial vacuous",
     Sequent(IndexedSeq(), IndexedSeq("(<a_{|^@|};>p_(||) & q_()) <-> <a_{|^@|};>(p_(||)&q_())".asFormula)),
       equivR(1) <(
