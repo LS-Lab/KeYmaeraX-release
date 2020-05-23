@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -637,11 +638,11 @@ class HilbertTests extends TacticTestBase {
   lazy val intervalify: DependentPositionTactic = chaseI(3, 3, (exp: Expression) => exp match {
     // base case //@todo check that right-hand side is transformed, too
     case LessEqual(_:Variable, _) => Nil
-    case LessEqual(Plus(_,_), _) => "+<= up" :: Nil
-    case LessEqual(Minus(_,_), _) => "-<= up" :: Nil
+    case LessEqual(Plus(_,_), _) => Ax.intervalUpPlus :: Nil
+    case LessEqual(Minus(_,_), _) => Ax.intervalUpMinus :: Nil
   },
-    (ax:String) => (us:Subst) => ax match {
-      case "+<= up" | "-<=up" => us ++ RenUSubst(
+    (ax:ProvableInfo) => (us:Subst) => ax match {
+      case Ax.intervalUpPlus| Ax.intervalUpMinus => us ++ RenUSubst(
         ("F_()".asTerm, FuncOf(Function("u",None,Real,Real), us("f_()".asTerm))) ::
           ("G_()".asTerm, FuncOf(Function("u",None,Real,Real), us("g_()".asTerm))) ::
           Nil)

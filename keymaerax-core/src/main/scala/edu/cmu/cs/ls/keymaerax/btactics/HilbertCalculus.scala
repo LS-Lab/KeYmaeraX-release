@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{chase, skip}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.skip
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 
 import scala.collection.immutable._

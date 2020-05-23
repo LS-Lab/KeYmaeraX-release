@@ -257,7 +257,7 @@ object TactixLibrary extends HilbertCalculus
     def composeChase: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
       val decompose = Idioms.mapSubpositions(pos, seq, {
         case (Box(Compose(_, _), _), pp: Position) => Some(chase(3, 3, (e: Expression) => e match {
-          case Box(Compose(_, _), _) => "[;] compose" :: Nil
+          case Box(Compose(_, _), _) => Ax.composeb :: Nil
           case _ => Nil
         })(pp))
         case _ => None

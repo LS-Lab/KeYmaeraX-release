@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
 
 /**
   * Created by yongkiat on 9/29/16.
@@ -352,7 +353,7 @@ object SimplifierV2 {
       case Not(u) =>
         //Apply deMorgan things to Not
         val id = proveBy(Sequent(IndexedSeq(),IndexedSeq(Equiv(Not(u),Not(u)))),prop & done)
-        val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
+        val cpr = chaseFor(3,3,e=>AxIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
         val nu = extract(cpr).asInstanceOf[Formula]
         //No deMorgan applies, just add to context
         if (nu == f)
@@ -804,7 +805,7 @@ object SimplifierV2 {
     }
 
     //Chase simplification
-    val chasepr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(proppr)
+    val chasepr = chaseFor(3,3,e=>AxIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(proppr)
     val chasef = extract(chasepr).asInstanceOf[Formula]
 
     //Normalise > to <, >= to <=
@@ -1016,13 +1017,13 @@ object SimplifierV2 {
 
   }
 
-  private def hideBox(e:Expression) : List[String] =
+  private def hideBox(e:Expression) : List[ProvableInfo] =
   {
     e match {
       //Ignore nested loops and ODEs in chase
       case Box(ODESystem(_,_),_) => Nil
       case Box(Loop(_),_) => Nil
-      case Box(_,_) => AxiomIndex.axiomsFor(e)
+      case Box(_,_) => AxIndex.axiomsFor(e)
       case  _ => Nil //AxiomIndex.axiomsFor(e)
     }
   }

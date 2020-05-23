@@ -568,7 +568,7 @@ object IntervalArithmetic extends Logging {
       DebuggingTactics.debug("Chasing away formula", doPrint=DEBUG) &
         useAt("<;> compose")(SuccPosition(1,0::Nil)) &
         //        chase(3,3, (e:Expression)=>chaseAtomic(e))(SuccPosition(1,0::Nil)) & ident)
-        chase(3,3, (e:Expression)=>hideDiamond(e))(SuccPosition(1,0::Nil)) &
+        chaseDeprecated(3,3, (e:Expression)=>hideDiamond(e))(SuccPosition(1,0::Nil)) &
         //Strip off all accumulated side conditions
         implyR(1) &
         //This is really slow if the goal splits a lot...

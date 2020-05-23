@@ -300,7 +300,8 @@ object Ax extends Logging {
   // Hybrid Programs / Hybrid Games
 
   //@note default key = 0::Nil, recursor = (Nil)::Nil for direct reduction of LHS to RHS without substructure.
-  @Axiom(("<·>", "<.>"), formula = "<span class=\"k4-axiom-key\">&not;[a]&not;P</span>↔&langle;a&rangle;P", unifier = "linear")
+  @Axiom(("<·>", "<.>"), formula = "<span class=\"k4-axiom-key\">&not;[a]&not;P</span>↔&langle;a&rangle;P", unifier = "linear",
+    key = "0", recursor = "*")
   val diamond = coreAxiom("<> diamond")
   @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)", unifier = "full",
     key = "0", recursor = "*")
@@ -2517,6 +2518,18 @@ object Ax extends Logging {
   @Axiom(("∧⊤","&T"), formula = "<span class=\"k4-axiom-key\">(p∧⊤)</span>↔p", unifier = "linear")
   lazy val andTrue = derivedAxiom("&true", Sequent(IndexedSeq(), IndexedSeq("(p_()&true) <-> p_()".asFormula)), prop)
 
+  /**
+    * {{{Axiom "&false".
+    *    (p()&false) <-> false
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom(("∧⊥","&false"), formula = "<span class=\"k4-axiom-key\">(p∧⊥)</span>↔⊥", unifier = "linear")
+  lazy val andFalse = derivedAxiom("&false", Sequent(IndexedSeq(), IndexedSeq("(p_()&false) <-> false".asFormula)), prop)
+
+
   /* inverse andtrue axiom for chase */
   @Axiom("&true inv", key = "0", recursor = "*")
   lazy val andTrueInv = derivedAxiom("&true inv", Sequent(IndexedSeq(), IndexedSeq("p_() <-> (p_()&true)".asFormula)), prop)
@@ -2531,6 +2544,17 @@ object Ax extends Logging {
    */
   @Axiom(("⊤∧","T&"), formula = "<span class=\"k4-axiom-key\">(⊤∧p)</span>↔p", unifier = "linear")
   lazy val trueAnd = derivedAxiom("true&", Sequent(IndexedSeq(), IndexedSeq("(true&p_()) <-> p_()".asFormula)), prop)
+
+  /**
+   * {{{Axiom "false&".
+   *    (false&p()) <-> false
+   * End.
+   * }}}
+    *
+    * @Derived
+   */
+  @Axiom(("⊥∧","false&"), formula = "<span class=\"k4-axiom-key\">(⊥∧p)</span>↔⊥", unifier = "linear")
+  lazy val falseAnd = derivedAxiom("true&", Sequent(IndexedSeq(), IndexedSeq("(false&p_()) <-> false".asFormula)), prop)
 
   /**
    * {{{Axiom "0*".

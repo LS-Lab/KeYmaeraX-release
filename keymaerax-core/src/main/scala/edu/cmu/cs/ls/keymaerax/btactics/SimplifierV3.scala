@@ -1017,7 +1017,7 @@ object SimplifierV3 {
 
   def chaseIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     val id = proveBy(Equiv(f,f),byUS(Ax.equivReflexive.provable))
-    val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
+    val cpr = chaseFor(3,3,e=>AxIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
     List(cpr)
   }
 
