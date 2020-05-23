@@ -23,18 +23,39 @@ import scala.collection.immutable._
 import scala.reflect.runtime.{universe => ru}
 
 /**
- * Database of Derived Axioms.
- *
- * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
- * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
- *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)
- *       as opposed to by referring to the names, which needs a map canonicalName->tacticOnDemand.
- * @note Lemmas are lazy vals, since their proofs may need a fully setup prover with QE
+  * Central Database of Derived Axioms and Derived Axiomatic Rules,
+  * including information about core axioms and axiomatic rules from [[[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
+  * This registry of [[[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]] also provides meta information for matching keys and recursors for unificiation and chasing
+  * using the [[[edu.cmu.cs.ls.keymaerax.macros.Axiom @Axiom]] annotation.
+  *
+  * Core Axioms are loaded from the core and their meta information is annotated e.g. as follows:
+  * {{{
+  *   @Axiom(("[∪]", "[++]"), formula = "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P", unifier = "linear",
+  *          key = "0", recursor = "0;1")
+  *   val choiceb = coreAxiom("[++] choice")
+  * }}}
+  *
+  * Derived Axioms are proved with a tactic and their meta information is annotated e.g. as follows:
+  * {{{
+  *   @Axiom("V", formula = "p→<span class=\"k4-axiom-key\">[a]p</span>",
+  *          key = "1", recursor = "*")
+  *   lazy val V = derivedAxiom("V vacuous",
+  *     "p() -> [a{|^@|};]p()".asFormula,
+  *     useAt(Ax.VK, PosInExpr(1::Nil))(1) &
+  *     useAt(Ax.boxTrue)(1)
+  *   )
+  * }}}
+  *
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
+  * @see [[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]]
+  * @see [[edu.cmu.cs.ls.keymaerax.macros.Axiom]]
+  * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
+  *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)
+  *       as opposed to by referring to the names, which needs a map canonicalName->tacticOnDemand.
+  * @note Lemmas are lazy vals, since their proofs may need a fully setup prover with QE
   * @note Derived axioms use the Provable facts of other derived axioms in order to avoid initialization cycles with AxiomInfo's contract checking.
- */
-
-
+  */
 object DerivedAxioms extends Logging {
 
   val DerivedAxiomProvableSig = ProvableSig//NoProofTermProvable
@@ -43,7 +64,7 @@ object DerivedAxioms extends Logging {
 
   type LemmaID = String
 
-  /** Look up a core axiom from [[Provable.axioms]] and wrap it into a Lemma */
+  /** Look up a core axiom from [[Provable.axioms]] and wrap it into a [[CoreAxiomInfo]] */
   private def coreAxiom(name: String): CoreAxiomInfo = {
     CoreAxiomInfo(name)
   }
