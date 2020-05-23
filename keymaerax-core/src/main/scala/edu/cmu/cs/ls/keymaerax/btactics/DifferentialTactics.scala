@@ -54,17 +54,17 @@ private object DifferentialTactics extends Logging {
           //@todo unification fails
           // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
-          useAt("DE differential effect")(pos)
+          useAt(DerivedAxioms.DE)(pos)
         }
       } else {
         import ProofRuleTactics.contextualize
         if (isODESystem(sequent, pos)) {
-          if (HilbertCalculus.INTERNAL) TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(sequent, pos)
+          if (HilbertCalculus.INTERNAL) TactixLibrary.useAt(DerivedAxioms.DEsysy)(pos)*getODEDim(sequent, pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)*getODEDim(sequent, pos)
           //@todo unification fails
-          // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
+          // TactixLibrary.useAt(DerivedAxioms.DEsys)(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
-          if (HilbertCalculus.INTERNAL) useAt("DE differential effect")(pos)
+          if (HilbertCalculus.INTERNAL) useAt(DerivedAxioms.DE)(pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)
         }
       }
@@ -138,7 +138,7 @@ private object DifferentialTactics extends Logging {
 
   /** @see [[TactixLibrary.dI]] */
   def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("dI") {
-    require(auto == 'full || auto == 'none || auto == 'diffInd || auto == 'cex, "Expected one of ['none, 'diffInd, 'full, 'cex] automation values, but got " + auto)
+    if (!(auto == 'full || auto == 'none || auto == 'diffInd || auto == 'cex)) throw new TacticRequirementError("Expected one of ['none, 'diffInd, 'full, 'cex] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         if (!pos.isSucc) throw new IllFormedTacticApplicationException("diffInd only applicable to succedent positions, but got " + pos.prettyString)

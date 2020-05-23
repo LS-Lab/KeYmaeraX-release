@@ -276,7 +276,7 @@ private object EqualityTactics {
         val absVar = Variable(fn, freshAbsIdx)
         abbrv(abs, Some(absVar)) &
           useAt(DerivedAxioms.equalCommute)('L, Equal(absVar, abs)) &
-          useAt(fn)('L, Equal(abs, absVar))
+          useAt(DerivedAxioms.abs)('L, Equal(abs, absVar))
       } else {
         absAt(pos)
       }

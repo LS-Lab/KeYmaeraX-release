@@ -94,6 +94,9 @@ class BelleUnexpectedProofStateError(message: => String, val proofState: Provabl
 class UnificationException(val shape: String, val input: String, info: String = "")
   extends BelleCriticalException("Un-Unifiable: " + shape + "\nfor:          " + input + "\n" + info) {}
 
+/** Tactic requirements that failed and indicate a critical logical error in using it. */
+class TacticRequirementError(message: => String) extends BelleCriticalException(message)
+
 /** Tactic assertions. */
 class TacticAssertionError(message: => String) extends BelleCriticalException(message)
 
