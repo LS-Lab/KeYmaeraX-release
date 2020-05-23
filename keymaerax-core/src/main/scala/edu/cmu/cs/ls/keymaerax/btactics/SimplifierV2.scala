@@ -228,11 +228,11 @@ object SimplifierV2 {
   private lazy val divideLemma =
     remember(
       "(A_() = B_()) & (X_() = Y_()) -> (A_()/X_() = B_()/Y_())".asFormula,
-      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"), namespace).fact
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
   private lazy val powerLemma =
     remember(
       "(A_() = B_()) & (X_() = Y_()) -> (A_()^X_() = B_()^Y_())".asFormula,
-      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"), namespace).fact
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
 
   /**
     * Takes a term t, with an equality context ctx and returns ctx |- t = t' using all equalities of the shape
@@ -260,7 +260,7 @@ object SimplifierV2 {
               eqL2R(-(i + 1))(1) & tac
             case _ => tac
           }
-      ) & cohideR(1) & byUS("= reflexive"))
+      ) & cohideR(1) & byUS(Ax.equalReflexive))
   }
 
   def termSimpWithRewrite(t:Term,ctx:IndexedSeq[Formula]): (Term,ProvableSig) =

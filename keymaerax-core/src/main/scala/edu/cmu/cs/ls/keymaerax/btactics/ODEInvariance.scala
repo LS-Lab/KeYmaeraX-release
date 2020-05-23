@@ -51,7 +51,7 @@ object ODEInvariance {
     remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
-        implyRi & byUS("Cont continuous existence"),
+        implyRi & byUS(Ax.Cont),
         DW(1) & G(1) & useAt("> flip")(1,0::Nil) & useAt(">= flip")(1,1::Nil) & useAt("<=")(1,1::Nil) & prop
       ), namespace)
 
@@ -59,12 +59,12 @@ object ODEInvariance {
   //Refine left/right disjunct
   private lazy val refOrL =
     remember("<{c& p(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   private lazy val refOrR =
     remember("<{c& q(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   //Refine or under box
@@ -249,7 +249,7 @@ object ODEInvariance {
           else {
             orL(-3) < (
               cohideOnlyL(-3) & lpgeq(r - 1),
-              implyRi()(-2, 1) & useAt("DR<> differential refine", PosInExpr(1 :: Nil))(1) &
+              implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
             )
           }
@@ -261,7 +261,7 @@ object ODEInvariance {
             closeF
           }
           else {
-            implyRi()(-2,1) & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
               dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
           }
         )
@@ -611,7 +611,7 @@ object ODEInvariance {
         cutL("<{c&q(||)}>(!r(||) | !p(||))".asFormula)(-2) <( skip , cohideR(2) & implyR(1) & mond & prop) &
         andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
-          implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+          implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
           cohideR(2) & implyR(1) & mond & prop)
       , namespace)
 
@@ -1185,12 +1185,12 @@ object ODEInvariance {
   //Refine left/right of max
   private lazy val refMaxL =
     remember("<{c&f(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
       namespace)
 
   private lazy val refMaxR =
     remember("<{c&g(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
       namespace)
 
   /** Given a bound i, generate the local progress formula up to that bound
@@ -1349,7 +1349,7 @@ object ODEInvariance {
         case Darboux(iseq,cofactor,pr) =>
           (if(iseq) useAt(refAbs)(1) else skip) &
             DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
-            implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
             dgDbx(cofactor)(1)
         case Disj(l,r) =>
           DebuggingTactics.debug("DISJ",doPrint = debugTactic) &

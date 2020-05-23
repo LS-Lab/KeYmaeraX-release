@@ -162,7 +162,7 @@ class BTacticExamples extends TacticTestBase  {
         // step "<> diamond" forward at the indicated position
         stepAt(1, 0::1::Nil) &
         // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
-        byUS("<-> reflexive")
+        byUS(Ax.equivReflexive)
     )
     proof shouldBe 'proved
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
@@ -230,7 +230,7 @@ class BTacticExamples extends TacticTestBase  {
       // chase the differential prime away in the left postcondition
       chase(1, 0:: 1 :: Nil) &
       // |- [{x'=22}]2*x'+(x'*y+x*y')>=0 <-> [{x'=22}]2*x'+(x'*y+x*y')>=0
-      byUS("<-> reflexive")
+      byUS(Ax.equivReflexive)
     )
     proof shouldBe 'proved
     proof.proved shouldBe "==> [{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0".asSequent

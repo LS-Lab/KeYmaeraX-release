@@ -517,7 +517,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   "useFor" should "use DX to forward (true&x=y) to <{x'=2}>x=y" in {
-    useFor(Ax.DX, PosInExpr(0::Nil),
+    useFor(Ax.Dskipd, PosInExpr(0::Nil),
       (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c", AnyArg), KeYmaeraXParser.differentialProgramParser("x'=2"))))
     )(SuccPosition(1, Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(true&x=y)".asFormula)))
@@ -525,13 +525,13 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use DX to forward <{x'=2}>x=y -> bla() to (true&x=y) -> bla()" in {
-    useFor(Ax.DX)(SuccPosition(1, 0::Nil)) (
+    useFor(Ax.Dskipd)(SuccPosition(1, 0::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
 
   it should "use DX to forward <{x'=2}>x=y <-> bla() to (true&x=y) -> bla()" in {
-    useFor(Ax.DX)(SuccPosition(1, 0::Nil)) (
+    useFor(Ax.Dskipd)(SuccPosition(1, 0::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
@@ -563,19 +563,19 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in {
-    useFor(Ax.DX, PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
+    useFor(Ax.Dskipd, PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{c}>x=y".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in {
-    useFor(Ax.DX)(SuccPosition(1, (0::1::Nil))) (
+    useFor(Ax.Dskipd(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in {
-    useFor(Ax.DX)(SuccPosition(1, (0::1::Nil))) (
+    useFor(Ax.Dskipd)(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }

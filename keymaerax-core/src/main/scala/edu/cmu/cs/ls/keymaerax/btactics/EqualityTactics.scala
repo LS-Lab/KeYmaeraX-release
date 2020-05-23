@@ -208,7 +208,7 @@ private object EqualityTactics {
 
         cut(Exists(v :: Nil, Equal(v, t))) <(
           /* use */ existsL('Llast) & exhaustiveEqR2L('Llast),
-          /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
+          /* show */ cohide('Rlast) & existsR(t)(1) & byUS(Ax.equalReflexive)
         )
       }
     }

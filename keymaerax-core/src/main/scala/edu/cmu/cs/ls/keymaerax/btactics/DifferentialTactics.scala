@@ -230,9 +230,9 @@ private object DifferentialTactics extends Logging {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc && pos.isTopLevel, "openDiffInd only at ODE system in succedent")
-        val (axUse,der) = sequent.sub(pos) match {
-          case Some(Box(_: ODESystem, _: Greater)) => ("DIo open differential invariance >",true)
-          case Some(Box(_: ODESystem, _: Less)) => ("DIo open differential invariance <",true)
+        val (axUse:AxiomInfo,der) = sequent.sub(pos) match {
+          case Some(Box(_: ODESystem, _: Greater)) => (Ax.DIogreater,true)
+          case Some(Box(_: ODESystem, _: Less)) => (Ax.DIoless,true)
           case Some(e) => throw new TacticInapplicableFailure("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g), but got " + e.prettyString)
           case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
@@ -286,6 +286,7 @@ private object DifferentialTactics extends Logging {
           case Some(e) => throw new TacticInapplicableFailure("diffVar currently only implemented at ODE system with postcondition f>=g or f<=g and domain true, but got " + e.prettyString)
           case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
+        //@todo these axioms don't exist?
         val t = (if (greater)
           useAt("DV differential variant >=")
         else
@@ -2247,7 +2248,7 @@ private object DifferentialTactics extends Logging {
                   cohideR(pos) & allR(pos)*vars.length &
                     useAt(post_semi._2.get, PosInExpr(0::Nil))(1, 0::Nil) &
                     useAt(p_prv, PosInExpr(0::Nil))(1, 0::Nil) &
-                    byUS("<-> reflexive") &
+                    byUS(Ax.equivReflexive) &
                     tocTac("== done") &
                     done
                 )

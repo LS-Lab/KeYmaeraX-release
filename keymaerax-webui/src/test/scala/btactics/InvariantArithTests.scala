@@ -39,7 +39,7 @@ class InvariantArithTests extends TacticTestBase {
     val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         normaliseAt(1, 0 :: Nil) &
-        normaliseAt(1, 1 :: Nil) & cohideR(1) & byUS("= reflexive")
+        normaliseAt(1, 1 :: Nil) & cohideR(1) & byUS(Ax.equalReflexive)
       )
 
     val res = problems.map(proveBy(_, tactic))

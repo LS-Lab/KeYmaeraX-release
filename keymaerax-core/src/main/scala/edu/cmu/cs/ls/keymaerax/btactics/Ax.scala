@@ -365,7 +365,7 @@ object Ax extends Logging {
   @Axiom(",", unifier = "linear", key = "0", recursor = "")
   val commaCommute = coreAxiom(", commute")
   @Axiom("DX", unifier = "linear", key = "0", recursor = "1")
-  val DX = coreAxiom("DX differential skip")
+  val DX = coreAxiom("differential skip")
   @Axiom("DIo >", unifier = "linear", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]g(x)>h(x)</span>↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0", recursor = "*")
   val DIogreater = coreAxiom("DIo open differential invariance >")
@@ -795,7 +795,7 @@ object Ax extends Logging {
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
-      byUS("<> monotone") &
+      byUS(mondrule) &
       //      ProofRuleTactics.axiomatic("<> monotone", USubst(
       //        SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
       //          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
@@ -3313,7 +3313,7 @@ object Ax extends Logging {
   //      // left branch
   //      (Axiom.axiom("x' derive variable"), 0)
   //    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
-  //      byUS("= reflexive")*/
+  //      byUS(Ax.equalReflexive)*/
   //  )
   //  lazy val DvarT = TactixLibrary.byUS(Dvar)
   /**

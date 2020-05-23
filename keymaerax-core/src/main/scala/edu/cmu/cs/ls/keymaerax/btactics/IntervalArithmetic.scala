@@ -657,13 +657,13 @@ object IntervalArithmetic extends Logging {
 
   private lazy val minusExpand = remember("f_()-g_() = f_() +(-g_())".asFormula, QE & done, namespace).fact
 
-  private lazy val plusRec = remember("f_() + g_() = f_() + g_()".asFormula, byUS("= reflexive"), namespace).fact
-  private lazy val timesRec = remember("f_() * g_() = f_() * g_()".asFormula, byUS("= reflexive"), namespace).fact
-  //private lazy val divRec = remember("f_() / g_() = f_() / g_()".asFormula,byUS("= reflexive"), namespace).fact
-  private lazy val powerRec = remember("f_() ^ g_() = f_() ^ g_()".asFormula, byUS("= reflexive"), namespace).fact
+  private lazy val plusRec = remember("f_() + g_() = f_() + g_()".asFormula, byUS(Ax.equalReflexive), namespace).fact
+  private lazy val timesRec = remember("f_() * g_() = f_() * g_()".asFormula, byUS(Ax.equalReflexive), namespace).fact
+  //private lazy val divRec = remember("f_() / g_() = f_() / g_()".asFormula,byUS(Ax.equalReflexive), namespace).fact
+  private lazy val powerRec = remember("f_() ^ g_() = f_() ^ g_()".asFormula, byUS(Ax.equalReflexive), namespace).fact
 
-  private lazy val lessEqualRec = remember("f_() <= g_() <-> f_() <= g_()".asFormula, byUS("<-> reflexive"), namespace).fact
-  private lazy val lessRec = remember("f_() < g_() <-> f_() < g_()".asFormula, byUS("<-> reflexive"), namespace).fact
+  private lazy val lessEqualRec = remember("f_() <= g_() <-> f_() <= g_()".asFormula, byUS(Ax.equivReflexive), namespace).fact
+  private lazy val lessRec = remember("f_() < g_() <-> f_() < g_()".asFormula, byUS(Ax.equivReflexive), namespace).fact
 
   private def binaryDefault(ax: ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
   //Converts an input formula (FOL, no quantifiers) into a formula satisfying:
@@ -671,7 +671,7 @@ object IntervalArithmetic extends Logging {
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), custom rewrites of powers to squares
   def normalise(f:Formula): (Formula,ProvableSig) = {
-    val refl = proveBy(Equiv(f,f),byUS("<-> reflexive"))
+    val refl = proveBy(Equiv(f,f),byUS(Ax.equivReflexive))
     val nnf = chaseCustomFor((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil

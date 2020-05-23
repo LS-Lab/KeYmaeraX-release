@@ -335,7 +335,7 @@ object PolynomialArith extends Logging {
           val (rec,pr) = addPoly(l,nr,skip_proofs)
           val res = Plus(rec,Times(cr,mr))
           (res,prover(Equal(lhs,res), useAt(plusAssoc1)(SuccPosition(1,0::Nil))
-            & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS("= reflexive")))
+            & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS(Ax.equalReflexive)))
         }
         else if (cmp == 0) {
           val (rec,pr) = addPoly(nl,nr,skip_proofs)
@@ -380,7 +380,7 @@ object PolynomialArith extends Logging {
           val(rec,pr) = mulMono(l,nr,skip_proofs)
           val res = Times(rec,Power(sr,mr:Number))
           (res,prover(Equal(lhs,res), useAt(timesAssoc1)(SuccPosition(1,0::Nil))
-            & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS("= reflexive")))
+            & useAt(pr)(SuccPosition(1,0::0::Nil)) & byUS(Ax.equalReflexive)))
         }
         else if(cmp == 0) {
           val(rec,pr) = mulMono(nl,nr,skip_proofs)
@@ -713,7 +713,7 @@ object PolynomialArith extends Logging {
         case Some(Equal(t1, t2)) =>
           normaliseAt(pos++PosInExpr(0::Nil)) &
             normaliseAt(pos++PosInExpr(1::Nil)) &
-            cohideR(1) & byUS("= reflexive")
+            cohideR(1) & byUS(Ax.equalReflexive)
         case Some(e) => throw new TacticInapplicableFailure("equalityByNormalisation only applicable to equalities, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }

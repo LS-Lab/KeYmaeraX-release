@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
   */
 private object DLBySubst {
 
-  private[btactics] lazy val monb2 = byUS("[] monotone 2")
+  private[btactics] lazy val monb2 = byUS(Ax.monb2)
 
   /** whether games are currently allowed */
   private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
@@ -117,7 +117,7 @@ private object DLBySubst {
       val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
-        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS("[:=] self assign") & done
+        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS(Ax.selfassignb) & done
       )
     case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
   })
@@ -375,7 +375,7 @@ private object DLBySubst {
     cutR(invariant)(pos.checkSucc.top) <(
         ident & label(BelleLabels.initCase),
         cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
-          byUS("ind induction") & label(BelleLabels.indStep)
+          byUS(Ax.indrule) & label(BelleLabels.indStep)
           ,
           ident & label(BelleLabels.useCase)
         )

@@ -81,7 +81,7 @@ object ODELiveness {
       equivR(1) <(
         useAt("DG inverse differential ghost",PosInExpr(0::Nil))(-1) &
           useAt(", commute")(-1, 0::Nil) & implyRi &
-          byUS("all eliminate y")
+          byUS(Ax.ally)
         ,
         useAt("DG differential ghost",PosInExpr(0::Nil))(1) &
           useAt("exists eliminate y",PosInExpr(1::Nil))(1) & closeId
@@ -186,7 +186,7 @@ object ODELiveness {
           useAt(commute,PosInExpr(0::Nil))(1) &
           useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
           G(1) & DassignbCustom(1) &
-          byUS("= reflexive")
+          byUS(Ax.equalReflexive)
         ,
         QE))
     //, namespace).fact

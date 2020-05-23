@@ -151,7 +151,7 @@ package edu.cmu.cs.ls.keymaerax
   *   useAt("!! double negation")(1, 0::Nil) &
   *   // close by (an instance of) reflexivity |- p() <-> p()
   *   // |- q(2*v+1) <-> q(2*v+1)
-  *   byUS("<-> reflexive")
+  *   byUS(Ax.equivReflexive)
   * )
   * }}}
   * Another example is:
@@ -198,7 +198,7 @@ package edu.cmu.cs.ls.keymaerax
   *    // step "<> diamond" forward at the indicated position
   *    stepAt(1, 0::1::Nil) &
   *    // |- ⟨a⟩p(x) | ⟨b⟩p(x)  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
-  *    byUS("<-> reflexive")
+  *    byUS(Ax.equivReflexive)
   *  )
   * }}}
   *
@@ -278,7 +278,7 @@ package edu.cmu.cs.ls.keymaerax
   *   // chase the differential prime away in the left postcondition
   *   chase(1, 0:: 1 :: Nil) &
   *   // |- [{x'=22}]2*x'+(x'*y+x*y')>=0 <-> [{x'=22}]2*x'+(x'*y+x*y')>=0
-  *   byUS("<-> reflexive")
+  *   byUS(Ax.equivReflexive)
   * )
   * }}}
   * Yet [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]] is also useful to chase away other operators, say, modalities:
