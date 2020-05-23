@@ -1528,8 +1528,8 @@ trait UnifyUSCalculus {
             )
 
           /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).symbols.intersect(vars.toSet).isEmpty =>
-            useFor("vacuous all quantifier")(SuccPosition(0))(
-              useFor("vacuous all quantifier")(AntePosition(0))(monStep(Context(c), mon))
+            useFor(DerivedAxioms.allV)(SuccPosition(0))(
+              useFor(DerivedAxioms.allV)(AntePosition(0))(monStep(Context(c), mon))
             )*/
 
           case Exists(vars, c) =>
