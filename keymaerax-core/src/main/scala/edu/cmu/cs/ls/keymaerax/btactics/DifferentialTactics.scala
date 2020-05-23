@@ -59,7 +59,7 @@ private object DifferentialTactics extends Logging {
       } else {
         import ProofRuleTactics.contextualize
         if (isODESystem(sequent, pos)) {
-          if (HilbertCalculus.INTERNAL) TactixLibrary.useAt(DerivedAxioms.DEsysy)(pos)*getODEDim(sequent, pos)
+          if (HilbertCalculus.INTERNAL) TactixLibrary.useAt(DerivedAxioms.DEs)(pos)*getODEDim(sequent, pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)*getODEDim(sequent, pos)
           //@todo unification fails
           // TactixLibrary.useAt(DerivedAxioms.DEsys)(pos)*getODEDim(provable.subgoals.head, pos)
@@ -126,9 +126,9 @@ private object DifferentialTactics extends Logging {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
           case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
-            useAt("DE differential effect (system)")(pos)
+            useAt(DerivedAxioms.DEs)(pos)
           case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
-            useAt("DE differential effect")(pos)
+            useAt(DerivedAxioms.DE)(pos)
           case Some(e) => throw new TacticInapplicableFailure("DE system step only applicable to formulas, but got " + e.prettyString)
           case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
@@ -671,7 +671,7 @@ private object DifferentialTactics extends Logging {
             cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
               /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.top), pos.inExpr)) & cut(axiom) <(
-              useAt("all eliminate")(-1) & eqL2R(-1)(1) & useAt("-> self")(1) & close,
+              useAt(DerivedAxioms.alle)(-1) & eqL2R(-1)(1) & useAt(DerivedAxioms.implySelf)(1) & close,
               cohide('Rlast) & byUS(DerivedAxioms.DvariableAxiom))
               )
           }
@@ -721,7 +721,7 @@ private object DifferentialTactics extends Logging {
           filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
         constFacts.map(diffCut(_)(pos) <(skip, V(pos) & prop & done)).getOrElse(skip) & DW(pos) & G(pos)
       } else {
-        useAt("DW differential weakening")(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
+        useAt(DerivedAxioms.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
     case Some(e) => throw new TacticInapplicableFailure("dW only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -764,7 +764,7 @@ private object DifferentialTactics extends Logging {
 
         rewriteExistingGhosts & storeInitialVals & cutAllAntes & dw
       } else {
-        useAt("DW differential weakening")(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
+        useAt(DerivedAxioms.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
     case Some(e) => throw new TacticInapplicableFailure("dWplus only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
