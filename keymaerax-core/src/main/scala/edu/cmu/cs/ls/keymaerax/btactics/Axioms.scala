@@ -3085,9 +3085,9 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-      useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
       //@todo IDE why is the second argument necessary? It should be redundant?
-      //      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxiomIndex.axiomIndex("DG inverse differential ghost")._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxiomIndex.axiomIndex("DG inverse differential ghost")._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
