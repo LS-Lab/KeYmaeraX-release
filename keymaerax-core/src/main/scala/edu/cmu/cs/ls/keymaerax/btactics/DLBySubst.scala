@@ -213,7 +213,7 @@ private object DLBySubst {
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       ProofRuleTactics.boundRenaming(x, y)(pos) &
-      (if (universal) useAt("[:=] assign equality")(pos) else useAt("[:=] assign equality exists")(pos)) &
+      (if (universal) useAt(DerivedAxioms.assignbeq)(pos) else useAt(DerivedAxioms.assignbequalityexists)(pos)) &
       ProofRuleTactics.uniformRenaming(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
