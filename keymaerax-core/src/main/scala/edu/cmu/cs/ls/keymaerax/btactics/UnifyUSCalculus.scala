@@ -68,13 +68,14 @@ trait UnifyUSCalculus {
   /**
     * Make the canonical simplifying proof step based at the indicated position
     * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
-    * Using the provided [[AxiomIndex]].
+    * Using the provided [[AxIndex]].
     *
     * @author Andre Platzer
     * @note Efficient source-level indexing implementation.
-    * @see [[AxiomIndex]]
+    * @see [[AxIndex]]
+    * @see [[UnifyUSCalculus.chase]]
     */
-  def stepAt(axiomIndex: Expression => Option[String]): DependentPositionTactic = new DependentPositionTactic("stepAt") {
+  def stepAt(axiomIndex: Expression => Option[DerivationInfo]): DependentPositionTactic = new DependentPositionTactic("stepAt") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic("stepAt") {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val sub = sequent.sub(pos)
@@ -82,7 +83,7 @@ trait UnifyUSCalculus {
         axiomIndex(sub.get) match {
           case Some(axiom) =>
             logger.debug("stepAt " + axiom)
-            DerivationInfo(axiom).belleExpr match {
+            axiom.belleExpr match {
               case ap:AtPosition[_] => ap(pos)
               case expr:BelleExpr => expr
               case expr => throw new TacticInapplicableFailure("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)

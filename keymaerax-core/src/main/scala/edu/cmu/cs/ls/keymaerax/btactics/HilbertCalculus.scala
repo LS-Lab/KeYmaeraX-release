@@ -50,12 +50,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /**
     * Make the canonical simplifying proof step at the indicated position
     * except when a decision needs to be made (e.g. invariants for loops or for differential equations).
-    * Using the canonical [[AxiomIndex]].
+    * Using the canonical [[AxIndex]].
     * @author Andre Platzer
     * @note Efficient source-level indexing implementation.
-    * @see [[AxiomIndex]]
+    * @see [[AxIndex]]
     */
-  val stepAt: DependentPositionTactic = stepAt(AxiomIndex.axiomFor)
+  val stepAt: DependentPositionTactic = stepAt(AxIndex.axiomFor)
 
 
   //

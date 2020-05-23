@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
@@ -936,28 +937,28 @@ object TactixLibrary extends HilbertCalculus
   /** Axiom and tactic index for [[TactixLibrary.step]]
     * @param isAnte true if occurs at top-level in antecedent, false if top-level in succedent
     * @param expr the expression for which a canonical tactic step is sought.
-    * @see [[AxiomIndex]] */
-  private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[String] = (expr, isAnte) match {
-    case (True, false) => Some("closeTrue")
-    case (False, true) => Some("closeFalse")
+    * @see [[AxIndex]] */
+  private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[DerivationInfo] = (expr, isAnte) match {
+    case (True, false) => Some(TacticInfo("closeTrue"))
+    case (False, true) => Some(TacticInfo("closeFalse"))
     // prefer simplification over left-right-swaps
-    case (Not(Box(_,Not(_))), _) => Some("<> diamond")
-    case (Not(Diamond(_,Not(_))), _) => Some("[] box")
-    case (_: Not, true) => Some("notL")
-    case (_: Not, false) => Some("notR")
-    case (_: And, true) => Some("andL")
-    case (_: And, false) => Some("andR")
-    case (_: Or, true) => Some("orL")
-    case (_: Or, false) => Some("orR")
-    case (_: Imply, true) => Some("implyL")
-    case (_: Imply, false) => Some("implyR")
-    case (_: Equiv, true) => Some("equivL")
-    case (_: Equiv, false) => Some("equivR")
-    case (_: Forall, true) => Some("allL")
-    case (_: Forall, false) => Some("allR")
-    case (_: Exists, true) => Some("existsL")
-    case (_: Exists, false) => Some("existsR")
-    case _ => AxiomIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
+    case (Not(Box(_,Not(_))), _) => Some(Ax.diamond)
+    case (Not(Diamond(_,Not(_))), _) => Some(Ax.box)
+    case (_: Not, true) => Some(TacticInfo("notL"))
+    case (_: Not, false) => Some(TacticInfo("notR"))
+    case (_: And, true) => Some(TacticInfo("andL"))
+    case (_: And, false) => Some(TacticInfo("andR"))
+    case (_: Or, true) => Some(TacticInfo("orL"))
+    case (_: Or, false) => Some(TacticInfo("orR"))
+    case (_: Imply, true) => Some(TacticInfo("implyL"))
+    case (_: Imply, false) => Some(TacticInfo("implyR"))
+    case (_: Equiv, true) => Some(TacticInfo("equivL"))
+    case (_: Equiv, false) => Some(TacticInfo("equivR"))
+    case (_: Forall, true) => Some(TacticInfo("allL"))
+    case (_: Forall, false) => Some(TacticInfo("allR"))
+    case (_: Exists, true) => Some(TacticInfo("existsL"))
+    case (_: Exists, false) => Some(TacticInfo("existsR"))
+    case _ => AxIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
   }
 
 
