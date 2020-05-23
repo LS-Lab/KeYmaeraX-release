@@ -307,7 +307,7 @@ object Ax extends Logging {
     key = "0", recursor = "*")
   val assignbAxiom = coreAxiom("[:=] assign")
   @Axiom("[:=]=", formula = "<span class=\"k4-axiom-key\">[x:=e]P</span>↔∀x(x=e→P)",
-    key = "0", recursor = ";0.1")
+    key = "0", recursor = "*;0.1")
   val assignbeq = coreAxiom("[:=] assign equality")
   @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=x]P</span>↔P")
   val selfassignb = coreAxiom("[:=] self assign")
@@ -322,7 +322,7 @@ object Ax extends Logging {
     key = "0", recursor = "0;1")
   val choiceb = coreAxiom("[++] choice")
   @Axiom("[;]", formula = "<span class=\"k4-axiom-key\">[a;b]P</span>↔[a][b]P", unifier = "linear",
-    key = "0", recursor = "1;")
+    key = "0", recursor = "1;*")
   val composeb = coreAxiom("[;] compose")
   @Axiom("[*]", formula = "<span class=\"k4-axiom-key\">[a*]P</span>↔P∧[a][a*]P", unifier = "linear",
     key = "0", recursor = "1")
@@ -335,10 +335,10 @@ object Ax extends Logging {
     key = "", recursor = "")
   val DWbase = coreAxiom("DW base")
   @Axiom("DE", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔[x'=f(x)&Q][x':=f(x)]P",
-    key = "0", recursor = "1;")
+    key = "0", recursor = "1;*")
   val DE = coreAxiom("DE differential effect")
   @Axiom("DE", formula = "<span class=\"k4-axiom-key\">[{x'=F,c&Q}]P</span>↔[{c,x'=F&Q}][x':=f(x)]P",
-    key = "0", recursor = "1;")
+    key = "0", recursor = "1;*")
   val DEs = coreAxiom("DE differential effect (system)")
   /* @todo soundness requires only vectorial x in p(||) */
   @Axiom("DI", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')", unifier = "linear",
@@ -348,7 +348,7 @@ object Ax extends Logging {
   val DGa = coreAxiom("DG differential ghost")
   //@todo name: why inverse instead of universal?
   @Axiom("DG inverse differential ghost", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
-    key = "0", recursor="0;")
+    key = "0", recursor="0;*")
   val DGpp = coreAxiom("DG inverse differential ghost")
   @Axiom("DG inverse differential ghost implicational")
   val DGi = coreAxiom("DG inverse differential ghost implicational")
@@ -357,7 +357,7 @@ object Ax extends Logging {
   @Axiom("DGa", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{x'=f(x),y'=g()&Q}]P")
   val DGCa = coreAxiom("DG differential ghost constant all")
   @Axiom("DS&", formula = "<span class=\"k4-axiom-key\">[{x'=c()&q(x)}]P</span> ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
-    key = "0", recursor = "0.1.1;0.1;")
+    key = "0", recursor = "0.1.1;0.1;*")
   val DS = coreAxiom("DS& differential equation solution")
 
   /* @todo: , commute should be derivable from this + ghost */
@@ -407,7 +407,7 @@ object Ax extends Logging {
     key = "0", recursor = "0.0.0;0.1.1")
   val Dquotient = coreAxiom("/' derive quotient")
   @Axiom(("∘'", "o'"), formula = "[y:=g(x)][y':=1](<span class=\"k4-axiom-key\">(f(g(x)))'</span>=(f(y))'·(g(x))'",
-    key = "1.1.0", recursor = "1.1;1;")
+    key = "1.1.0", recursor = "1.1;1;*")
   val Dcompose = coreAxiom("chain rule")
   @Axiom("^'", formula = "<span class=\"k4-axiom-key\">(f(g)^n)'</span>=n·f(g)^(n-1)·(f(g))'←n≠0", unifier = "linear",
     key = "1.0", recursor = "1")
@@ -460,7 +460,7 @@ object Ax extends Logging {
   val K = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
   @Axiom(("I<sub>→</sub>", "Iind"), formula = "P∧[a<sup>*</sup>](P→[a]P)→<span class=\"k4-axiom-key\">[a<sup>*</sup>]P</span>", displayLevel = "internal",
-    key = "1", recursor="1;")
+    key = "1", recursor="1;*")
   val Iind = coreAxiom("I induction")
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
@@ -510,7 +510,7 @@ object Ax extends Logging {
     * @note needs semantic renaming
     */
   @Axiom("DEsysy", formula = "<span class=\"k4-axiom-key\">[{y'=F,c&Q}]P</span>↔[{c,y'=F&Q}][y':=f(x)]P"
-  ,  key = "0", recursor = "1;", displayLevel = "internal")
+  ,  key = "0", recursor = "1;*", displayLevel = "internal")
   lazy val DEsysy = derivedAxiomFromFact("DE differential effect (system) y",
     "[{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)".asFormula,
     ProvableSig.axioms("DE differential effect (system)")(URename("x_".asVariable,"y_".asVariable,semantic=true)))
@@ -1016,7 +1016,7 @@ object Ax extends Logging {
     * @Derived
     */
   @Axiom(("¬∃","!exists"), formula ="<span class=\"k4-axiom-key\">(¬∃x (p(x)))</span>↔∀x (¬p(x))"
-  , key = "0", recursor = "0;")
+  , key = "0", recursor = "0;*")
   lazy val notExists = derivedAxiom("!exists",
     Sequent(IndexedSeq(), IndexedSeq("(!\\exists x_ (p_(x_))) <-> \\forall x_ (!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
@@ -1033,7 +1033,7 @@ object Ax extends Logging {
     * @Derived
     */
   @Axiom(("¬∀", "!all"), formula = "<span class=\"k4-axiom-key\">¬∀x (p(x)))</span>↔∃x (¬p(x))"
-  , key = "0", recursor = "0;")
+  , key = "0", recursor = "0;*")
   lazy val notAll = derivedAxiom("!all",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (p_(||))) <-> \\exists x_ (!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
@@ -1049,7 +1049,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("¬[]","![]"), key = "0", recursor = "1;", unifier = "linear")
+  @Axiom(("¬[]","![]"), key = "0", recursor = "1;*", unifier = "linear")
   lazy val notBox = derivedAxiom("![]",
     Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
@@ -1065,7 +1065,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("¬<>","!<>"), key = "0", recursor = "1;", unifier = "linear")
+  @Axiom(("¬<>","!<>"), key = "0", recursor = "1;*", unifier = "linear")
   lazy val notDiamond = derivedAxiom("!<>",
     Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
@@ -1463,7 +1463,7 @@ object Ax extends Logging {
     * @Derived from [:=] assign equality, quantifier dualities
     * @Derived by ":= assign dual" from "[:=] assign equality exists".
     */
-  @Axiom("<:=>", key = "0", recursor = ";0.1")
+  @Axiom("<:=>", key = "0", recursor = "*;0.1")
   lazy val assigndEquality = derivedAxiom("<:=> assign equality",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1564,7 +1564,7 @@ object Ax extends Logging {
     * End.
     * }}}
     */
-  @Axiom("<:=>", key = "0", recursor = ";0.1")
+  @Axiom("<:=>", key = "0", recursor = "*;0.1")
   lazy val assigndEqualityAll = derivedAxiom("<:=> assign equality all",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\forall x_ (x_=f_() -> p_(||))".asFormula)),
     useAt(assignDual2, PosInExpr(0::Nil))(1, 0::Nil) &
@@ -1630,7 +1630,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("[:=]==", key = "0", recursor = ";0.1")
+  @Axiom("[:=]==", key = "0", recursor = "*;0.1")
   lazy val assignbequational =
     derivedAxiom("[:=] assign equational",
       Sequent(IndexedSeq(), IndexedSeq("[x_:=f();]p(x_) <-> \\forall x_ (x_=f() -> p(x_))".asFormula)),
@@ -1649,7 +1649,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("[:=]", key = "0", recursor = "1;")
+  @Axiom("[:=]", key = "0", recursor = "1;*")
   lazy val assignbup = derivedAxiom("[:=] assign update",
     Sequent(IndexedSeq(), IndexedSeq("[x_:=t_();]p_(x_) <-> [x_:=t_();]p_(x_)".asFormula)),
     byUS(equivReflexive)
@@ -1664,7 +1664,7 @@ object Ax extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("<:=>", key = "0", recursor = "1;")
+  @Axiom("<:=>", key = "0", recursor = "1;*")
   lazy val assigndup = derivedAxiom("<:=> assign update",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=t_();>p_(x_) <-> <x_:=t_();>p_(x_)".asFormula)),
     byUS(equivReflexive)
@@ -1758,7 +1758,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("<:*>", key = "0", recursor = "0;")
+  @Axiom("<:*>", key = "0", recursor = "0;*")
   lazy val randomd = derivedAxiom("<:*> assign nondet",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=*;>p_(||) <-> (\\exists x_ p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1832,7 +1832,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("<;>", key = "0", recursor = "1;", unifier = "linear")
+  @Axiom("<;>", key = "0", recursor = "1;*", unifier = "linear")
   lazy val composed = derivedAxiom("<;> compose",
     Sequent(IndexedSeq(), IndexedSeq("<a_;b_;>p_(||) <-> <a_;><b_;>p_(||)".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
