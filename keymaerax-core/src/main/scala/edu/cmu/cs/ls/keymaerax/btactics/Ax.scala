@@ -365,7 +365,7 @@ object Ax extends Logging {
   @Axiom(",", unifier = "linear", key = "0", recursor = "")
   val commaCommute = coreAxiom(", commute")
   @Axiom("DX", unifier = "linear", key = "0", recursor = "1")
-  val DX = coreAxiom("differential skip")
+  val DX = coreAxiom("DX differential skip")
   @Axiom("DIo >", unifier = "linear", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]g(x)>h(x)</span>↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0", recursor = "*")
   val DIogreater = coreAxiom("DIo open differential invariance >")
@@ -843,7 +843,7 @@ object Ax extends Logging {
     * @Derived
     * @see [[equalReflexive]]
     */
-  @Axiom(("↔R","<->R"),  unifier = "full")
+  @Axiom(("↔R","<->R"), formula = "p↔p", unifier = "full")
   lazy val equivReflexive = derivedFact("<-> reflexive",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
@@ -3384,7 +3384,7 @@ object Ax extends Logging {
  *
     * @see [[equivReflexive]]
    */
-  @Axiom("=R", unifier = "full")
+  @Axiom("=R", formula = "s=s", unifier = "full")
   lazy val equalReflexive =
     derivedAxiom("= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() = s_()".asFormula)),
       allInstantiateInverse(("s_()".asTerm, "x".asVariable))(1) &
@@ -3397,7 +3397,8 @@ object Ax extends Logging {
     * End.
     * }}}
     */
-  @Axiom("=C", unifier = "linear")
+  @Axiom("=C", formula="<span class=\"k4-axiom-key\">f=g</span> ↔ g=f", unifier = "linear",
+    key = "0", recursor = "*")
   lazy val equalCommute = derivedAxiom("= commute", Sequent(IndexedSeq(), IndexedSeq("(f_()=g_()) <-> (g_()=f_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x (x=y <-> y=x)".asFormula, TactixLibrary.RCF))

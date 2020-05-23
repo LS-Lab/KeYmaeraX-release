@@ -569,7 +569,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in {
-    useFor(Ax.Dskipd(SuccPosition(1, (0::1::Nil))) (
+    useFor(Ax.Dskipd)(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }

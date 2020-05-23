@@ -2003,7 +2003,8 @@ trait UnifyUSCalculus {
   def chase(keys: Expression=>List[String],
             modifier: (String,Position)=>ForwardTactic,
             inst: String=>(Subst=>Subst) = ax=>us=>us,
-            index: String=>(PosInExpr, List[PosInExpr]) = AxiomIndex.axiomIndex): DependentPositionTactic = chaseFor2Back("chase", chaseFor(keys, modifier, inst, index))
+            index: String=>(PosInExpr, List[PosInExpr]) = AxiomIndex.axiomIndex): DependentPositionTactic =
+      chaseFor2Back("chase", chaseFor(keys, modifier, inst, index))
 
 
   /** Converts a forward chase tactic into a backwards chase by CEat. */
