@@ -21,6 +21,12 @@ import org.scalatest.matchers.{MatchResult, Matcher}
   * Created by smitsch on 12/29/16.
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
+  private val parser =
+    KeYmaeraXArchiveParser
+    //DLArchiveParser
+
+  private def parse(input: String): List[KeYmaeraXArchiveParser.ParsedArchiveEntry] =
+    parser.parse(input)
 
   private def beDecl(right: Declaration) =
     new Matcher[Declaration] {
@@ -39,7 +45,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
@@ -60,7 +66,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
@@ -80,7 +86,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.
         |End b01_entry1.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
@@ -103,7 +109,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. p(x) & y>=0 -> q(x,y,f()) & [a;]p(x) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -129,7 +135,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real x; End.
         | Problem x=1 -> x<=x() End.
         |End.""".stripMargin
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input) should have message
+    the [ParseException] thrownBy parse(input) should have message
       """<somewhere> Semantic analysis error
         |semantics: Expect unique names_index that identify a unique type.
         |ambiguous: x:Unit->Real and x:Real
@@ -147,7 +153,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. p(x) & y>=0 -> q(x,y,f()) & [a;]p(x) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -175,7 +181,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem [a;]x<=2 End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -198,7 +204,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. R y. End.
         | Problem. f(x)>g(x,y) & h(x)>5 End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -221,7 +227,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                   | Definitions Real f() = 5; Bool p(R x) <-> x>0; End.
                   | Problem p(f()) End.
                   |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
 
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
@@ -243,7 +249,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables R x, y; End.
         | Problem x>y -> x>=y End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
@@ -259,7 +265,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "accept reserved identifiers" in {
-    KeYmaeraXArchiveParser.parse(
+    parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real Real; End.
         | Problem true End.
@@ -270,7 +276,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       ))
     )
 
-    KeYmaeraXArchiveParser.parse(
+    parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real R; End.
         | Problem true End.
@@ -281,7 +287,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       ))
     )
 
-    KeYmaeraXArchiveParser.parse(
+    parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real Bool; End.
         | Problem true End.
@@ -292,7 +298,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       ))
     )
 
-    KeYmaeraXArchiveParser.parse(
+    parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real HP; End.
         | Problem true End.
@@ -310,7 +316,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions. R f(). End.
         | Problem. f()>0 End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -329,7 +335,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Real f(), g; End.
         | Problem f()>g() End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -349,7 +355,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Bool p(), q(); End.
         | Problem p() & q() End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -368,7 +374,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """ArchiveEntry "Entry 1".
         | Problem. abs(-5)>0 End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -384,7 +390,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real x; End.
         | Problem [{x:=x;}*@invariant(old(x)=x)]x=x End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -402,7 +408,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """ArchiveEntry "Entry 1".
         | Problem. false -> true End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -417,7 +423,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """ProgramVariables. R x. R y. End.
         |Problem. x>y -> x>=y End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "<undefined>"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -434,7 +440,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "parse a plain formula" in {
     val input = "x>y -> x>=y"
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "<undefined>"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
@@ -459,7 +465,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |  Problem. x>0 End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input)
+    val ex = the [ParseException] thrownBy parse(input)
     ex.msg should include ("Archives that start with an anonymous entry may not contain any other entries, but found ArchiveEntry")
   }
 
@@ -471,7 +477,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>y -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input)
+    val ex = the [ParseException] thrownBy parse(input)
     ex.msg should include ("Duplicate variable 'x'")
   }
 
@@ -484,7 +490,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>y -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input)
+    val ex = the [ParseException] thrownBy parse(input)
     ex.msg should include ("Duplicate symbol 'f'")
   }
 
@@ -497,7 +503,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. p() -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input)
+    val ex = the [ParseException] thrownBy parse(input)
     ex.msg should include ("Duplicate symbol 'p'")
   }
 
@@ -510,7 +516,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. [a;]true End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input)
+    val ex = the [ParseException] thrownBy parse(input)
     ex.msg should include ("Duplicate symbol 'a'")
   }
 
@@ -523,7 +529,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Proof 1". implyR(1) & QE End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -550,7 +556,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic. implyR(1) & QE End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -578,7 +584,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Empty". /* a comment */ nil partial End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -601,7 +607,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Pending". implyR(1) ; pending({`QE`}) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -624,7 +630,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Pending". implyR(1) ; pending({`QE({`Mathematica`}) | QE({`Z3`})`}) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -647,7 +653,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Simple". implyR(1) ; dC("x>=old(x)", 1) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -671,7 +677,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Simple". implyR(1) ; dC("y=old(y)", 1) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -695,7 +701,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Simple". implyR(1) ; dC("y=old(y)", 1) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -718,7 +724,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Simple". implyR(1) ; pending("dC(\"x>=old(x)\", 1)") End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -742,7 +748,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Tactic "Proof 2". implyR('R) End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
@@ -775,7 +781,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |  Tactic "Prop Proof". prop End.
         |End.
       """.stripMargin
-    val entries = KeYmaeraXArchiveParser.parse(input)
+    val entries = parse(input)
     entries should have size 2
     val entry1 = entries.head
     entry1.name shouldBe "Entry 1"
@@ -836,7 +842,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |  Problem. x>4 -> x>=4 End.
         |End.
       """.stripMargin
-    val entries = KeYmaeraXArchiveParser.parse(input)
+    val entries = parse(input)
     entries should have size 4
 
     val entry1 = entries.head
@@ -928,7 +934,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |  Problem. x>4 -> x>=4 End.
         |End.
       """.stripMargin
-    val entries = KeYmaeraXArchiveParser.parse(input)
+    val entries = parse(input)
     entries should have size 4
 
     val entry1 = entries.head
@@ -1004,7 +1010,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>y -> x>=y End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "lemma"
     entry.fileContent shouldBe input.trim()
@@ -1026,7 +1032,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>y -> x>=y End.
         |End.
       """.stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim
@@ -1052,7 +1058,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. x>y -> x>=y End.
         | Tactic "Proof Entry 2". useLemma({`Entry 1`}) End.
         |End.""".stripMargin
-    val entries = KeYmaeraXArchiveParser.parse(input)
+    val entries = parse(input)
     entries should have size 2
 
     val entry1 = entries.head
@@ -1100,7 +1106,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> y<x End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "lemma"
     entry.fileContent shouldBe
@@ -1134,7 +1140,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Title "A short entry 1 title".
         | Illustration "https://lfcps.org/example.png".
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "lemma"
     entry.fileContent shouldBe
@@ -1163,7 +1169,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "replace tabs with spaces" in {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
-    val entry = KeYmaeraXArchiveParser.parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe
@@ -1186,7 +1192,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "replace tabs with spaces in model-only entry" in {
     // tabs throw off the position computation in the lexer (especially before \n). in archives without tactics, this leads to faulty model extraction.
-    val entry = KeYmaeraXArchiveParser.parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End. End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe
@@ -1251,7 +1257,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2". useLemma({`Entry 1`}) End.
         |End.""".stripMargin
-    val entries = KeYmaeraXArchiveParser.parse(input)
+    val entries = parse(input)
     entries should have size 2
 
     val entry1 = entries.head
@@ -1328,7 +1334,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2". expand "gt" ; useLemma({`Entry 1`}) End.
         |End.""".stripMargin
-    val entries = KeYmaeraXArchiveParser.parse(input)
+    val entries = parse(input)
     entries should have size 2
 
     val entry1 = entries.head
@@ -1406,7 +1412,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2". US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
         |End.""".stripMargin
-    val entries = KeYmaeraXArchiveParser.parse(input)
+    val entries = parse(input)
     entries should have size 2
 
     val entry1 = entries.head
@@ -1480,7 +1486,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. gt(x,y) -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input)
+    val ex = the [ParseException] thrownBy parse(input)
     ex.msg should include ("Symbol 'gt' overrides inherited definition; must declare override")
   }
 
@@ -1497,7 +1503,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem. gt(x,y) -> x>=y End.
         |End.
       """.stripMargin
-    val ex = the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(input)
+    val ex = the [ParseException] thrownBy parse(input)
     ex.msg should include ("Symbol 'gt' overrides inherited definition; must declare override")
   }
 
@@ -1512,7 +1518,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables. R x. R y. End.
         | Problem. gt(x,y) -> geq(x,y) End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "lemma"
     entry.fileContent shouldBe
@@ -1544,7 +1550,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Exercise 1"
     entry.kind shouldBe "exercise"
     entry.fileContent shouldBe
@@ -1571,7 +1577,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
         |End.""".stripMargin
-    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    val entry = parse(input).loneElement
     entry.name shouldBe "Exercise 1"
     entry.kind shouldBe "exercise"
     entry.fileContent shouldBe
@@ -1592,11 +1598,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   "Convenience wrappers" should "parse a plain formula" in {
-    KeYmaeraXArchiveParser.parseAsProblemOrFormula("x>0") shouldBe "x>0".asFormula
+    parser.parseAsProblemOrFormula("x>0") shouldBe "x>0".asFormula
   }
 
   "Archive parser error message" should "report an invalid meta info key" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | MetaInfo "Invalid key".
         | ProgramVariables. R x. End.
@@ -1608,7 +1614,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report invalid meta info value" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Title InvalidValue.
         | ProgramVariables R x. End.
@@ -1620,7 +1626,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report missing meta info delimiter" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Title "A title"
         | ProgramVariables. R x. End.
@@ -1633,7 +1639,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report missing or misplaced problem blocks" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables. R x. End.
         |End.""".stripMargin
@@ -1641,7 +1647,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    End at 3:1 to 3:3
                             |Expected: Problem""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables. R x. End.
         | Tactic "Proof". implyR(1) End.
@@ -1650,7 +1656,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                            |Found:    Tactic at 3:2 to 3:7
                            |Expected: Problem""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables. R x. End.
         | Tactic "Proof". implyR(1) End.
@@ -1662,7 +1668,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report misplaced variables or definitions" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. x>0 End.
         | ProgramVariables. R x. End.
@@ -1671,7 +1677,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    Problem at 2:2 to 2:8
                             |Expected: ProgramVariables""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. x>0 End.
         | Definitions. R f(). End.
@@ -1680,7 +1686,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    Problem at 2:2 to 2:8
                             |Expected: Definitions""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. x>0 End.
         | ProgramVariables. R x. End.
@@ -1692,7 +1698,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report missing archive names" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry.
         | ProgramVariables. R x. End.
         | Problem. x>0 End.
@@ -1703,7 +1709,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report a missing archive entry delimiter" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End.""".stripMargin
     ) should have message """2:20 ArchiveEntry has no matching End.
@@ -1712,7 +1718,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: End.
                             |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End.
         |Theorem "Entry 2".
@@ -1726,7 +1732,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report a missing definitions delimiter" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Definitions. R f().
         | Problem. true End.
@@ -1740,7 +1746,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report a missing program variables delimiter" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables R x.
         | Problem. true End.
@@ -1752,7 +1758,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report a missing problem delimiter" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. true
         | Tactic "Proof". close End.
@@ -1761,21 +1767,21 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    Tactic at 3:2 to 3:7
                             |Expected: End""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. true""".stripMargin
     ) should have message """2:15 Missing problem delimiter
                            |Found:    <EOF> at 2:15 to EOF$
                            |Expected: End""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End""".stripMargin
     ) should have message """2:19 Missing . after delimiter End
                             |Found:    <EOF> at 2:19 to EOF$
                             |Expected: .""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End
         |Tactic "My tactic" closeTrue End. """.stripMargin
@@ -1785,7 +1791,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
   
   it should "report semicolon instead of comma" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x, Real y; End.
         | Problem true End.
@@ -1796,7 +1802,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report parse errors in function definitions" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Real f() = 5*g() + *h(); End.
         | Problem. true End.
@@ -1807,7 +1813,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report parse errors in predicate definitions" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> f()+5^ > g(); End.
         | Problem. true End.
@@ -1818,7 +1824,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
   
   it should "report parse errors in program definitions" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions HP acc ::= { a:=* }; End.
         | Problem. true End.
@@ -1827,7 +1833,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    } at 2:32
                             |Expected: ;""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions HP acc ::= { x'= }; End.
         | Problem. true End.
@@ -1836,7 +1842,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    } at 2:31
                             |Expected: $$$T""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions HP acc ::= { x'=7* }; End.
         | Problem. true End.
@@ -1845,7 +1851,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    } at 2:33
                             |Expected: <BeginningOfTerm>""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions HP acc ::= { x'=x, t'= }; End.
         | Problem. true End.
@@ -1858,7 +1864,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   
 
   it should "report misplaced function, predicate, or program definitions" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables R f(). End.
         | Problem. true End.
@@ -1868,7 +1874,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: ;
                             |      or: ,""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables B p(). End.
         | Problem. true End.
@@ -1877,7 +1883,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    B at 2:19
                             |Expected: Real""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables HP a. End.
         | Problem. true End.
@@ -1886,7 +1892,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                            |Found:    HP at 2:19 to 2:20
                            |Expected: Real""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables R x &. End.
         | Problem. true End.
@@ -1896,7 +1902,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: ;
                             |      or: ,""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x Real y; End.
         | Problem true End.
@@ -1907,7 +1913,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report function definition errors" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Definitions R f() & . End.
         | Problem. true End.
@@ -1917,7 +1923,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: =
                             |      or: ;""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Definitions R f() <-> 5; End.
         | Problem. true End.
@@ -1926,7 +1932,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    <-> at 2:20 to 2:22
                             |Expected: =""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Definitions R f() = 5!=7; End.
         | Problem. true End.
@@ -1937,7 +1943,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report predicate definition errors" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Definitions B p() & . End.
         | Problem. true End.
@@ -1946,7 +1952,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    & at 2:20
                             |Expected: <->""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Definitions B p() = 5>0; End.
         | Problem. true End.
@@ -1955,7 +1961,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    = at 2:20
                             |Expected: <->""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | Definitions B p() <-> 5+7; End.
         | Problem. true End.
@@ -1966,7 +1972,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
   
   it should "report substitution errors" in {
-    val entries = KeYmaeraXArchiveParser.parse(
+    val entries = parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> y>=0; End.
         | ProgramVariables Real y; End.
@@ -1980,7 +1986,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report imbalanced parentheses in predicate definitions" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions B p() <-> ( true; End.
         | Problem true End.
@@ -1990,7 +1996,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    TRUE$ at 2:24 to 2:29
                             |Expected: )""".stripMargin
     
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions B p() <-> ( (true) | false; End.
         | Problem true End.
@@ -2002,7 +2008,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report tactic errors at the correct location" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1".
         | ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.
@@ -2014,7 +2020,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report a missing entry ID separator" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry entry1 "Entry 1"
         | ProgramVariables R x. R y. End.
         | Problem x>y -> x>=y End.
@@ -2023,7 +2029,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    <string> at 1:21 to 1:29
                             |Expected: :""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry entry1
         | ProgramVariables R x. R y. End.
         | Problem x>y -> x>=y End.
@@ -2034,7 +2040,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report a missing entry title" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry entry1 :
         | ProgramVariables R x. R y. End.
         | Problem x>y -> x>=y End.
@@ -2045,7 +2051,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report undefined entry IDs" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables R x. R y. End.
         | Problem x>y -> x>=y End.
@@ -2054,7 +2060,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    <unknown> at 4:5 to 4:10
                             |Expected: <unknown>""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry entry1 : "Entry 1"
         | ProgramVariables R x. R y. End.
         | Problem x>y -> x>=y End.
@@ -2065,7 +2071,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
   
   it should "report sort identifier mismatches" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ProgramVariables 
         |  Real x; 
         |  Rea y; 
@@ -2076,7 +2082,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: End
                             |      or: Real""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ProgramVariables 
         |  Real x; 
         |  Bool y; 
@@ -2088,7 +2094,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "type-analyze annotations" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """Definitions
         |  Real f;
         |  Real g;
@@ -2104,7 +2110,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report program constant and differential program constant mismatches" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ProgramVariables Real x; End.
         |Definitions HP inc ::= { x:=x+1; }; End.
         |Problem x>=0 -> [{inc}]x>=0 End.
@@ -2115,7 +2121,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Found:    {inc} at <somewhere>
         |Expected: inc;""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ProgramVariables Real x; End.
         |Definitions
         |  HP inc ::= { x:=x+1; };
@@ -2131,7 +2137,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report illegal name overloading" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Real f(Real x) = x+1; Real f(Real x, Real y) = x+y; Bool f(Real x) <-> x>0; End.
         | Problem f(f(f(2,3))) End.
@@ -2141,7 +2147,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Found:    <unknown> at 2:66 to 2:88
         |Expected: <unknown>""".stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions HP inc ::= { x:=x+1;}; HP inc ::= { {x'=1} }; End.
         | ProgramVariables Real x; End.
@@ -2154,7 +2160,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "report variables used as functions" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+    the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real x; End.
         | Problem x()>0 End.

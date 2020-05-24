@@ -42,8 +42,9 @@ import scala.collection.mutable.ListBuffer
   * @author Stefan Mitsch
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   */
-object KeYmaeraXArchiveParser {
+object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
   /** The entry name, kyx file content (model), definitions, parsed model, and parsed named tactics. */
+  //@todo move out of this object since the resulting data structure shouldn't be part of the parser (unlike internal data).
   case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, problemContent: String,
                                 defs: Declaration,
                                 model: Expression, tactics: List[(String, String, BelleExpr)],
