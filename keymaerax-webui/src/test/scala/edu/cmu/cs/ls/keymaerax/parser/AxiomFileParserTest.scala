@@ -12,10 +12,10 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
   * @author Nathan Fulton
  */
 @CheckinTest
-class AxiomFileParser extends FlatSpec with Matchers with PrivateMethodTester {
+class AxiomFileParserTest extends FlatSpec with Matchers with PrivateMethodTester {
   val loadAxiomString = PrivateMethod[String]('loadAxiomString)
 
-  "The AxiomFileParser" should "parse the axiom file" in {
+  "KeYmaeraXAxiomParser" should "parse the axiom file" in {
     // even AxiomBase is private[core], so get Class by Java reflection
     val clazz = Class.forName("edu.cmu.cs.ls.keymaerax.core.AxiomBase$")
     val axiomFile = clazz.getField("MODULE$").get() invokePrivate loadAxiomString()
@@ -23,5 +23,24 @@ class AxiomFileParser extends FlatSpec with Matchers with PrivateMethodTester {
     axioms.size shouldNot be <= 0
     // check for a sample
     axioms should contain ("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
+  }
+
+  "DLAxiomParser" should "parse the axiom file" in {
+    // even AxiomBase is private[core], so get Class by Java reflection
+    val clazz = Class.forName("edu.cmu.cs.ls.keymaerax.core.AxiomBase$")
+    val axiomFile = clazz.getField("MODULE$").get() invokePrivate loadAxiomString()
+    val axioms = DLAxiomParser(axiomFile)
+    axioms.size shouldNot be <= 0
+    // check for a sample
+    axioms should contain ("<> diamond", "![a;]!p(||) <-> <a;>p(||)".asFormula)
+  }
+
+  "Both parsers" should "agree on the outcome" in {
+    // even AxiomBase is private[core], so get Class by Java reflection
+    val clazz = Class.forName("edu.cmu.cs.ls.keymaerax.core.AxiomBase$")
+    val axiomFile = clazz.getField("MODULE$").get() invokePrivate loadAxiomString()
+    val axioms1 = KeYmaeraXAxiomParser(axiomFile)
+    val axioms2 = DLAxiomParser(axiomFile)
+    axioms1 shouldBe axioms2
   }
 }
