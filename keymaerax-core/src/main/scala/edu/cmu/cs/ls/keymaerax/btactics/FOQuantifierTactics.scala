@@ -65,7 +65,7 @@ protected object FOQuantifierTactics {
           //@todo assumes any USubstAboveURen
           //@todo IDE does not resolve method correctly when omitting second argument nor allows .key
           import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors.AxiomInfoAugmentor
-          useAt(Ax.allInst, AxiomIndex.axiomIndex("all instantiate")._1, uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
+          useAt(Ax.allInst, AxIndex.axiomIndex(Ax.allInst)._1, uso => uso match { case Some(us) => us ++ RenUSubst(("f()".asTerm, us.renaming(instance.get)) :: Nil) })(pos)
         case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
           if ((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) >= 0)
             throw new TacticInapplicableFailure("\\forall must have negative polarity in antecedent")

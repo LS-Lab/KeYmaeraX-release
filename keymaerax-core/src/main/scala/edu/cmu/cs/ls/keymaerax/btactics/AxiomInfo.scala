@@ -1164,17 +1164,17 @@ object DerivationInfoRegistry {
       , "useAt"
       , List(StringArg("axiom"), StringArg("key"))
       , _ => ((axiomName: String) => {
-        case None => TactixLibrary.useAt(axiomName) //@note serializes as codeName
+        case None => TactixLibrary.useAt(AxiomInfo(axiomName)) //@note serializes as codeName
         case Some(k: String) =>
           val key = PosInExpr(k.split("\\.").map(Integer.parseInt).toList)
-          val defaultKey = AxiomIndex.axiomIndex(axiomName)._1
+          val defaultKey = AxiomInfo(axiomName).key
           if (key != defaultKey) {
             //@note serializes as useAt({`axiomName`},{`k`})
             "useAt" byWithInputs (axiomName::k::Nil, (pos: Position, seq: Sequent) => {
               val axiom = ProvableInfo(axiomName)
               TactixLibrary.useAt(axiom.provable, key)(pos)
             })
-          } else TactixLibrary.useAt(axiomName) //@note serializes as codeName
+          } else TactixLibrary.useAt(AxiomInfo(axiomName)) //@note serializes as codeName
       }: TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputTacticInfo("useLemma"

@@ -36,6 +36,9 @@ object TacticIndex {
   val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.existsStutter)
 }
 
+/**
+  * @see [[AxIndex]]
+  */
 trait TacticIndex {
   /** Recursors pointing to the result positions of `tactic`. */
   def tacticRecursors(tactic: BelleExpr): TacticRecursors

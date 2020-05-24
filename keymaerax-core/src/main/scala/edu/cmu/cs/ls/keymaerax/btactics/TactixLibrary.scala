@@ -209,7 +209,7 @@ object TactixLibrary extends HilbertCalculus
              (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = "chaseAt" by ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(e) =>
-        if (AxiomIndex.axiomsFor(e).nonEmpty) {
+        if (AxIndex.axiomsFor(e).nonEmpty) {
           chase(pos)
         } else {
           val tactics = tacticIndex.tacticFor(e, restrictTo.toList)

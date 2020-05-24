@@ -3149,7 +3149,7 @@ object Ax extends Logging {
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
       //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
       //@todo IDE why is the second argument necessary? It should be redundant?
-      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxiomIndex.axiomIndex("DG inverse differential ghost")._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3203,7 +3203,7 @@ object Ax extends Logging {
         dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
         //@todo IDE why is the second argument not redundant and both lines equivalent?
         //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
-        useAt(CoreAxiomInfo("DG inverse differential ghost"), AxiomIndex.axiomIndex("DG inverse differential ghost")._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3287,7 +3287,8 @@ object Ax extends Logging {
   lazy val dualDirectd =
     derivedAxiom("<d> dual direct",
       Sequent(IndexedSeq(), IndexedSeq("<{a;}^@>p(||) <-> [a;]p(||)".asFormula)),
-      useAt(box, AxiomIndex.axiomIndex("box []")._1.sibling)(1, 1::Nil) &
+      useExpansionAt(box)(1, 1::Nil) &
+      //useAt(box, AxIndex.axiomIndex(box)._1.sibling)(1, 1::Nil) &
         byUS(duald)
     )
 

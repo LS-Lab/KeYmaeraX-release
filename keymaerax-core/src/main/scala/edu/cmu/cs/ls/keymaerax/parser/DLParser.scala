@@ -12,7 +12,8 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 import fastparse._
 import MultiLineWhitespace._
-import fastparse.Parsed.TracedFailure
+
+import scala.collection.immutable._
 
 /**
   * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
@@ -21,7 +22,7 @@ object DLParser extends DLParser {
 
   /** Converts Parsed.Failure to corresponding ParseException to throw. */
   private[parser] def parseException(f: Parsed.Failure): ParseException = {
-    val tr: TracedFailure = f.trace()
+    val tr: Parsed.TracedFailure = f.trace()
     val inputString = f.extra.input match {
       case IndexedParserInput(input) => input
       case _ => tr.input + ""
@@ -156,15 +157,18 @@ class DLParser extends Parser {
   // base parsers
   //*****************
 
+  /** parse a number literal */
   def number[_: P]: P[Number] = {
     import NoWhitespace._
     P(("-".? ~~ CharIn("0-9").rep(1) ~~ ("." ~~/ CharIn("0-9").rep(1)).?).!).
       map(s => Number(BigDecimal(s)))
   }
+  /** parse an identifier */
   def ident[_: P]: P[(String,Option[Int])] = {
     import NoWhitespace._
     P( (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").rep).! ~~
-      ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!.map(_.toInt)).?)
+      (("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!) | "_".!).? ).
+      map({case (s,None) => (s,None) case (s,Some("_")) => (s+"_",None) case (s,Some(n))=>(s,Some(n.toInt))})
   }
   def baseVariable[_: P]: P[BaseVariable] = ident.map(s => Variable(s._1,s._2,Real))
   def diffVariable[_: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
@@ -175,8 +179,8 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
-  def func[_: P]: P[FuncOf] = P(ident ~ termList).map({case (s,idx,ts) => FuncOf(Function(s,idx,ts.sort,Real), ts)})
-  def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
+  def func[_: P]: P[FuncOf] = P(ident ~~ termList).map({case (s,idx,ts) => FuncOf(Function(s,idx,ts.sort,Real), ts)})
+  def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
   def parenT[_: P]: P[Term] = P( "(" ~/ term ~ ")" )
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).
     map({case (t,None) => t case (t,Some("'")) => Differential(t)})
@@ -216,10 +220,10 @@ class DLParser extends Parser {
   // formula parser
   //*****************
 
-  def pred[_: P]: P[PredOf] = P(ident ~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
+  def pred[_: P]: P[PredOf] = P(ident ~~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
     map({case (s,idx,ts) => PredOf(Function(s,idx,ts.sort,Bool), ts)})
-  def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
-  def predicational[_: P]: P[PredicationalOf] = P(ident ~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
+  def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
+  def predicational[_: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
   def trueFalse[_: P]: P[Formula] = P("true".! | "false".!).map({case "true" => True case "false" => False})
   def comparison[_: P]: P[Formula] = P( term ~ ("=" | ">=" | "<=" | ">" | ("<" ~~ !"-") | "!=").! ~/ term ).
     map({case (l,"=",r) => Equal(l,r) case (l,">=",r) => GreaterEqual(l,r) case (l,"<=",r) => LessEqual(l,r)
@@ -268,6 +272,9 @@ class DLParser extends Parser {
   def programSymbol[_: P]: P[AtomicProgram] = P( ident  ~ ";").
     map({case (s,None) => ProgramConst(s) case (s,Some(i)) => throw ParseException("Program symbols cannot have an index: " + s + "_" + i)})
   //@todo could we call Fail(_) instead of throwing a ParseException to retain more context info?
+  //@todo combine system symbol and space taboo
+  def systemSymbol[_: P]: P[AtomicProgram] = P( ident  ~~ "{|^@|}" ~ ";").
+    map({case (s,None) => SystemConst(s) case (s,Some(i)) => throw ParseException("System symbols cannot have an index: " + s + "_" + i)})
 
   def assign[_: P]: P[Assign] = P( variable ~ ":=" ~/ term ~ ";").map({case (x,t) => Assign(x,t)})
   def assignany[_: P]: P[AssignAny] = P( variable ~ ":=" ~ "*" ~ ";").map({case x => AssignAny(x)})
@@ -277,7 +284,7 @@ class DLParser extends Parser {
     map({case (p,None) => ODESystem(p,True) case (p,Some(f)) => ODESystem(p,f)})
   def odesystem[_: P]: P[ODESystem] = P( "{" ~ odeprogram ~ "}" ~/ annotation.?).
     map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
-  def baseP[_: P]: P[Program] = P(( programSymbol | NoCut(assign) | assignany | test | NoCut(repeat) |
+  def baseP[_: P]: P[Program] = P(( systemSymbol | programSymbol | NoCut(assign) | assignany | test | NoCut(repeat) |
     NoCut(odesystem) | NoCut(braceP) |
     ifthen) ~ "^@".!.?).map({case (p,None) => p case (p,Some("^@")) => Dual(p)})
 

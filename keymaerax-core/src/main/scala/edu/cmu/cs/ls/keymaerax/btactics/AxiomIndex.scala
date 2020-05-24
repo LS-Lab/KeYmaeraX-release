@@ -38,6 +38,7 @@ object AxiomIndex extends Logging {
    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
    * @todo copy documentation from chase
    */
+  @deprecated("Use AxIndex.axiomIndex or simply Ax.codeName.key and Ax.codeName.recursor")
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
       //@todo axiom.intern() to @switch?
     // [a] modalities and <a> modalities
@@ -171,8 +172,9 @@ object AxiomIndex extends Logging {
 
   // lookup canonical axioms for an expression (index)
 
-  /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
-  def axiomFor(expr: Expression): Option[String] = axiomsFor(expr).headOption
+//  /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
+//  @deprecated("Use AxIndex.axiomFor instead")
+//  def axiomFor(expr: Expression): Option[String] = axiomsFor(expr).headOption
 
   //@todo add "ODE" or replace others with "ODE"
   private val odeList: List[String] = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
@@ -181,6 +183,7 @@ object AxiomIndex extends Logging {
   private val unknown = Nil
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression `expr`. */
+  @deprecated("Use AxIndex.axiomsFor instead")
   def axiomsFor(expr: Expression): List[String] = {
     if (expr.kind == TermKind) expr match {
       case Differential(t) => t match {
