@@ -52,7 +52,7 @@ private object DifferentialTactics extends Logging {
         if (isODESystem(sequent, pos)) {
           DESystemStep_SemRen(pos)*getODEDim(sequent, pos)
           //@todo unification fails
-          // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
+          // TactixLibrary.useAt(Ax.DEs)(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
           useAt(Ax.DE)(pos)
         }
@@ -275,7 +275,9 @@ private object DifferentialTactics extends Logging {
     }
   }
 
-  /** @see [[TactixLibrary.diffVar]] */
+  /** @see [[TactixLibrary.diffVar]]
+    * TODO: deprecate this
+    * */
   val diffVar: DependentPositionTactic = new DependentPositionTactic("diffVar") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -637,7 +639,7 @@ private object DifferentialTactics extends Logging {
               Nil)
 
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then rewrite.
-        HilbertCalculus.useAt(", commute", PosInExpr(1::Nil))(pos) &
+        HilbertCalculus.useAt(Ax.commaCommute, PosInExpr(1::Nil))(pos) &
           TactixLibrary.cutAt(Exists(y_DE.xp.x::Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) <(
             HilbertCalculus.useAt(Ax.DGC, PosInExpr(1::Nil), subst)(pos)
             ,
@@ -919,7 +921,7 @@ private object DifferentialTactics extends Logging {
         )(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
             case Some(ODESystem(_, extendedQ)) =>
-              if (q == True && extendedQ != True) useAt("true&")(ppos ++
+              if (q == True && extendedQ != True) useAt(Ax.trueAnd)(ppos ++
                 PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
               else skip
           })) (pos ++ PosInExpr(0 :: Nil))
@@ -1138,7 +1140,7 @@ private object DifferentialTactics extends Logging {
       )(pos) &
         ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
           case Some(ODESystem(_, extendedQ)) =>
-            if (sys.constraint == True && extendedQ != True) useAt("true&")(ppos ++
+            if (sys.constraint == True && extendedQ != True) useAt(Ax.trueAnd)(ppos ++
               PosInExpr(1 :: FormulaTools.posOf(extendedQ, sys.constraint).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
             else skip
           case Some(e) => throw new TacticInapplicableFailure("mathematicaODE.finish only applicable to box ODEs, but got " + e.prettyString)
@@ -1260,7 +1262,8 @@ private object DifferentialTactics extends Logging {
   })
 
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
-    * @todo make this happen by usubst. */
+    * @todo make this happen by usubst.
+    * */
   @deprecated
   def dgZeroMonomial: DependentPositionTactic = "dgZeroMonomial" by ((pos: Position, seq: Sequent) => {
     if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
@@ -2026,8 +2029,8 @@ private object DifferentialTactics extends Logging {
           hideR(2) & interiorImplication,
           hideR(1) & interiorImplication
         )
-      case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt("<=")(1) & orR(1) & closeId
-      case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(">=")(1) & orR(1) & closeId
+      case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt(Ax.lessEqual)(1) & orR(1) & closeId
+      case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(Ax.greaterEqual)(1) & orR(1) & closeId
       case (False, _) => closeF
       case (x, y) if x == y => closeId
       case _ =>
@@ -2101,7 +2104,7 @@ private object DifferentialTactics extends Logging {
       skip,
       // Turn postcondition into interior
       implyR(pos) & generalize(interior)(pos) <(
-        maxminGt & useAt("open invariant closure >")(pos) <(
+        maxminGt & useAt(Ax.openInvariantClosure)(pos) <(
           backGt & backGe1 & hideL('Llast),
           backGe2 &
             (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
@@ -2169,7 +2172,7 @@ private object DifferentialTactics extends Logging {
               done
           ) &
           TactixLibrary.generalize(nonneg(p(vars)))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
-          useAt("RI& closed real induction >=")(1) &
+          useAt(Ax.RIclosedgeq)(1) &
           andR(1) &
           Idioms.<(FOQuantifierTactics.allLs(vars)('Llast) & prop & done, skip) &
           composeb(1) &
@@ -2187,7 +2190,7 @@ private object DifferentialTactics extends Logging {
                 orL('Llast) < (
                   useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & prop & done,
                   dR(And(r(vars), nonneg(q(vars))), false)(1) & Idioms.<(
-                    useAt("Uniq uniqueness iff", PosInExpr(1 :: Nil))(1) &
+                    useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) &
                       andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId),
                     andL('L) &
                       TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &

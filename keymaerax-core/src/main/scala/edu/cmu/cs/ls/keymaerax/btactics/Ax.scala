@@ -2764,8 +2764,7 @@ object Ax extends Logging {
     * @Derived
     */
   @Axiom("DIo <", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]g(x)<h(x)</span>↔[?Q]g(x)<h(x))←(Q→[{x'=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))'))"
-    , unifier = "linear")
-  lazy val DIoless =
+    , unifier = "linear", key = "1.0", recursor = "*")  lazy val DIoless =
     derivedAxiom("DIo open differential invariance <",
       Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<g(||) <-> [?q(||);]f(||)<g(||)) <- (q(||) -> [{c&q(||)}](f(||)<g(||) -> (f(||)<g(||))'))".asFormula)),
       useAt(flipLess)(1, 1::0::1::Nil) &
