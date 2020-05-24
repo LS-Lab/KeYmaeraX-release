@@ -53,6 +53,12 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     def isExercise: Boolean = kind=="exercise"
     /** The model with all definitions expanded. */
     def expandedModel: Expression = defs.exhaustiveSubst(model)
+    /** Return an archive with modified problem contents, otherwise identical./ */
+    def withProblemContent(newProblemContent: String): ParsedArchiveEntry =
+      ParsedArchiveEntry(name, kind, fileContent, newProblemContent, defs, model, tactics, info)
+    /** Return an archive with modified file contents, otherwise identical./ */
+    def withFileContent(newFileContent: String): ParsedArchiveEntry =
+      ParsedArchiveEntry(name, kind, newFileContent, problemContent, defs, model, tactics, info)
   }
 
   /** Name is alphanumeric name and index. */
