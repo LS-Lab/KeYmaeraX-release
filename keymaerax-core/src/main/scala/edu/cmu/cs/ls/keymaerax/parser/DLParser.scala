@@ -209,12 +209,12 @@ class DLParser extends Parser {
 
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
-  def termList[_: P]: P[Term] = P("(" ~ (term ~ ("," ~/ term).rep).? ~ ")").
-    map({case Some((t,ts)) => (ts.+:(t)).reduceRight(Pair) case None => Nothing})
+  def termList[_: P]: P[Term] = P("(" ~ term.rep(sep=","./) ~ ")").
+    map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
-  def space[_: P]: P[Space] = P("(|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|)").
-    map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
+  def space[_: P]: P[Space] = P("(|" ~ variable.rep(sep=","./) ~ "|)").
+    map(ts => if (ts.isEmpty) AnyArg else Except(ts.to))
 
   //*****************
   // formula parser
