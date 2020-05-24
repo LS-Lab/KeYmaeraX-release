@@ -170,6 +170,12 @@ class DLParser extends Parser {
       (("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!) | "_".!).? ).
       map({case (s,None) => (s,None) case (s,Some("_")) => (s+"_",None) case (s,Some(n))=>(s,Some(n.toInt))})
   }
+  /** `.` or `._2`: dot parsing */
+  def dot[_:P]: P[DotTerm] = {
+    import NoWhitespace._
+    P( "." ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!.map(_.toInt)).? ).map(idx => DotTerm(Real, idx))
+  }
+
   def baseVariable[_: P]: P[BaseVariable] = ident.map(s => Variable(s._1,s._2,Real))
   def diffVariable[_: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
   def variable[_: P]: P[Variable] = P(diffVariable | baseVariable)
@@ -188,6 +194,7 @@ class DLParser extends Parser {
     //@todo numbers are absurd, fix and streamline
     //(number ~ "'").map(Differential) | number | ("(" ~ number ~ ")" ~ "'").map(Differential) | ("(" ~ number ~ ")") |
     (number ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) | ("(" ~ number ~ ")" ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) |
+    dot |
     differential)
 
   /** `-p`: negative occurrences of what is parsed by parser `p`. */
