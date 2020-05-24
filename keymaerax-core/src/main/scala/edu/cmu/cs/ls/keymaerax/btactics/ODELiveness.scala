@@ -79,12 +79,12 @@ object ODELiveness {
   private lazy val dgb =
     remember("[{c{|y_|}&q(|y_|)}]p(|y_|) <-> [{c{|y_|},y_'=a(|y_|)*y_+b(|y_|)&q(|y_|)}]p(|y_|)".asFormula,
       equivR(1) <(
-        useAt("DG inverse differential ghost",PosInExpr(0::Nil))(-1) &
-          useAt(", commute")(-1, 0::Nil) & implyRi &
+        useAt(Ax.DGpp,PosInExpr(0::Nil))(-1) &
+          useAt(Ax.commaCommute)(-1, 0::Nil) & implyRi &
           byUS(Ax.ally)
         ,
-        useAt("DG differential ghost",PosInExpr(0::Nil))(1) &
-          useAt("exists eliminate y",PosInExpr(1::Nil))(1) & closeId
+        useAt(Ax.DGa,PosInExpr(0::Nil))(1) &
+          useAt(Ax.existsey, PosInExpr(1::Nil))(1) & closeId
       ),
       namespace
     )
@@ -92,17 +92,17 @@ object ODELiveness {
   private lazy val dgd =
     remember("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> <{c{|y_|},y_'=a(|y_|)*y_+b(|y_|)&q(|y_|)}>p(|y_|)".asFormula,
       equivR(1) <(
-        useAt("<> diamond",PosInExpr(1::Nil))(1) &
-          useAt("<> diamond",PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & commuteEquivR(1) & byUS(dgb),
-        useAt("<> diamond",PosInExpr(1::Nil))(1) &
-          useAt("<> diamond",PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & byUS(dgb),
+        useAt(Ax.diamond,PosInExpr(1::Nil))(1) &
+          useAt(Ax.diamond,PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & commuteEquivR(1) & byUS(dgb),
+        useAt(Ax.diamond,PosInExpr(1::Nil))(1) &
+          useAt(Ax.diamond,PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & byUS(dgb),
       ),
       namespace
     )
 
   private lazy val getDDGhelperLemma =
     remember("[a_{|^@|};]d(||)=a(||)*z(||)+b(||) -> [a_{|^@|};]c(||) <= a(||)*f(||)+b(||) -> [a_{|^@|};]d(||)-c(||)>=a(||)*(z(||)-f(||))".asFormula,
-    implyR(1) & implyR(1) & andLi & useAt("[] split", PosInExpr(1::Nil))(-1) &
+    implyR(1) & implyR(1) & andLi & useAt(Ax.boxAnd, PosInExpr(1::Nil))(-1) &
       monb & andL(-1) & implyRi()(AntePosition(2),SuccPosition(1)) & implyRi &
       byUS(proveBy("d()=a()*z()+b()->c()<=a()*f()+b()->d()-c()>=a()*(z()-f())".asFormula,QE)),
       namespace
@@ -179,10 +179,10 @@ object ODELiveness {
         useAt(vdg,PosInExpr(1::Nil))(1) &
         generalize(inv)(1) <(
           implyRi & useAt(dbx,PosInExpr(1::Nil))(1) &
-          useAt("-' derive minus")(1,1::0::Nil) &
+          useAt(Ax.Dminus)(1,1::0::Nil) &
           implyRi &
           useAt(getDDGhelperLemma,PosInExpr(1::Nil))(1) &
-          useAt("x' derive var")(1,1::0::Nil) &
+          useAt(Ax.Dvar)(1,1::0::Nil) &
           useAt(commute,PosInExpr(0::Nil))(1) &
           useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
           G(1) & DassignbCustom(1) &
@@ -375,7 +375,7 @@ object ODELiveness {
 
   private lazy val ineqLem1 = remember("f_()=g_() -> f_()<=h_() ->  g_()<=h_()".asFormula,QE, namespace)
   private lazy val ineqLem = remember("[a_{|^@|};]f(||)=g(||) -> [a_{|^@|};]f(||) <= h(||) -> [a_{|^@|};]g(||)<=h(||)".asFormula,
-    implyR(1) & implyR(1) & andLi & useAt("[] split", PosInExpr(1::Nil))(-1) & monb & andL(-1) & implyRi()(AntePosition(2),SuccPosition(1)) & implyRi & byUS(ineqLem1), namespace)
+    implyR(1) & implyR(1) & andLi & useAt(Ax.boxAnd, PosInExpr(1::Nil))(-1) & monb & andL(-1) & implyRi()(AntePosition(2),SuccPosition(1)) & implyRi & byUS(ineqLem1), namespace)
 
   /**
     * Given ODE, returns the global existence axiom <t'=1,x'=f(x)>t>p() (if it proves)
@@ -424,9 +424,9 @@ object ODELiveness {
     val sortTac = AxiomaticODESolver.selectionSort(True, Not(post), resode, goal:+timevar, AntePosition(1))
 
     val res = proveBy(Diamond(ODESystem(resode,True), post),
-      useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) & sortTac &
-        useAt("[] box", PosInExpr(1::Nil))(-1) & notL(-1) &
-        useAt("!! double negation")(1, 1::Nil) & byUS(pr)
+      useAt(Ax.diamond, PosInExpr(1::Nil))(1) & notR(1) & sortTac &
+        useAt(Ax.box, PosInExpr(1::Nil))(-1) & notL(-1) &
+        useAt(Ax.doubleNegation)(1, 1::Nil) & byUS(pr)
     )
 
     Some(res)
@@ -637,12 +637,12 @@ object ODELiveness {
       //    val sortTac = AxiomaticODESolver.selectionSort(True, Not(post), resode, goal:+timevar, AntePosition(1))
 
       //Moves diamonds into anteposition and sorts
-      useAt("<> diamond", PosInExpr(1 :: Nil))(pos) & notR(pos) & sortTac &
+      useAt(Ax.diamond, PosInExpr(1 :: Nil))(pos) & notR(pos) & sortTac &
         // Apply the reduction
         red &
         //Moves back into diamond
-        useAt("[] box", PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) &
-        useAt("!! double negation")(seq.succ.length, 1 :: Nil) &
+        useAt(Ax.box, PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) &
+        useAt(Ax.doubleNegation)(seq.succ.length, 1 :: Nil) &
         ProofRuleTactics.exchangeR(Position(seq.succ.length),pos)
     }
   })
@@ -777,7 +777,7 @@ object ODELiveness {
 
     cutR(newfml)(pos) <(
       skip,
-      useAt("K<&>",PosInExpr(1::Nil))(pos) & compatCuts(pos)
+      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
   })
 
@@ -805,7 +805,7 @@ object ODELiveness {
 
     cutR(newfml)(pos) <(
       skip,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(pos) & compatCuts(pos)
+      useAt(Ax.DRd,PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
   })
 
@@ -862,16 +862,16 @@ object ODELiveness {
       case Imply(Box(proga,post),Box(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
         proveBy(Imply(Diamond(progb,post),Diamond(proga,post)),
           implyR(1) &
-            useAt("<> diamond", PosInExpr(1 :: Nil))(1) & notR(1) &
-            useAt("<> diamond", PosInExpr(1 :: Nil))(-1) & notL(-1) &
+            useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1) & notL(-1) &
           implyRi & byUS(pr)
         )
       }
       case Imply(Diamond(proga,post),Diamond(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
         proveBy(Imply(Box(progb,post),Box(proga,post)),
           implyR(1) &
-            useAt("[] box", PosInExpr(1 :: Nil))(1) & notR(1) &
-            useAt("[] box", PosInExpr(1 :: Nil))(-1) & notL(-1) &
+            useAt(Ax.box, PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt(Ax.box, PosInExpr(1 :: Nil))(-1) & notL(-1) &
             implyRi & byUS(pr)
         )
       }
@@ -1108,11 +1108,11 @@ object ODELiveness {
   private lazy val exRWgt = remember("e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t > 0".asFormula,
     implyR(1) & andL(-1) &
       cutR("<{t'=1,c&q_(||)}>(t>-p(||)/e() & e() > 0)".asFormula)(1) <(
-        implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
+        implyRi()(AntePosition(2),SuccPosition(1)) & useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
           cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e()&e()>0)) & e() > 0}](!t>-p(||)/e())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
+              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & closeId
           ) ,
         cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e()&e()>0 ==> p()+e()*t>0".asSequent,QE))
       ),
@@ -1122,11 +1122,11 @@ object ODELiveness {
   private lazy val exRWge = remember("e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t >= 0".asFormula,
     implyR(1) & andL(-1) &
       cutR("<{t'=1,c&q_(||)}>(t>=-p(||)/e() & e() > 0)".asFormula)(1) <(
-        implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
+        implyRi()(AntePosition(2),SuccPosition(1)) & useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
           cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e()&e()>0)) & e() > 0}](!t>=-p(||)/e())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
+              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & closeId
           ) ,
         cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e()&e()>0 ==> p()+e()*t>=0".asSequent,QE))
       ),
@@ -1136,24 +1136,24 @@ object ODELiveness {
   private lazy val DVgeq = remember(
     "(e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) < 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) >= 0".asFormula,
     implyR(1) & andL(-1) & useAt(exRWge.fact,PosInExpr(0::Nil))(-1) & implyRi &
-    useAt("K<&>",PosInExpr(1::Nil))(1) &
+    useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t >= 0)".asFormula)(1)<(
       DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0  ==>  f_()>=0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
-        useAt("DC differential cut",PosInExpr(1::Nil))(1) &
-        useAt("! >=",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+        useAt(Ax.DC,PosInExpr(1::Nil))(1) &
+        useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
     ), namespace
   )
 
   private lazy val DVgt = remember(
     "(e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) <= 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) > 0".asFormula,
     implyR(1) & andL(-1) & useAt(exRWgt.fact,PosInExpr(0::Nil))(-1) & implyRi &
-    useAt("K<&>",PosInExpr(1::Nil))(1) &
+    useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t > 0)".asFormula)(1)<(
       DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0  ==>  f_()>0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
-        useAt("DC differential cut",PosInExpr(1::Nil))(1) &
-        useAt("! >",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+        useAt(Ax.DC,PosInExpr(1::Nil))(1) &
+        useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
     ), namespace
   )
 
@@ -1252,7 +1252,7 @@ object ODELiveness {
 
     cut(Box(tarsys,Not(tarpost))) <(
       skip,
-      useAt("<> diamond",PosInExpr(1::Nil))(pos) & notR(pos) & closeId
+      useAt(Ax.diamond,PosInExpr(1::Nil))(pos) & notR(pos) & closeId
     )
   })
 
@@ -1264,7 +1264,7 @@ object ODELiveness {
     *
     * @return see rule above
     */
-  def dDX : DependentPositionTactic = useAt("DX diamond differential skip")
+  def dDX : DependentPositionTactic = useAt(Ax.DX)
 
   /** Refinement for a closed domain constraint (e.g. Q = p>=0)
     *
