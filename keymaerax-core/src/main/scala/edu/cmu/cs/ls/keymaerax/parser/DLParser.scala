@@ -87,28 +87,28 @@ class DLParser extends Parser {
 
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
-  val exprParser: String => Expression = (s => parse(s, fullExpression(_)) match {
+  val exprParser: String => Expression = (s => fastparse.parse(s, fullExpression(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
   })
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic term */
-  override val termParser: String => Term = (s => parse(s, fullTerm(_)) match {
+  override val termParser: String => Term = (s => fastparse.parse(s, fullTerm(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
-  override val formulaParser: String => Formula = (s => parse(s, fullFormula(_)) match {
+  override val formulaParser: String => Formula = (s => fastparse.parse(s, fullFormula(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic program */
-  override val programParser: String => Program = (s => parse(s, fullProgram(_)) match {
+  override val programParser: String => Program = (s => fastparse.parse(s, fullProgram(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
-  override val differentialProgramParser: String => DifferentialProgram = (s => parse(s, fullDifferentialProgram(_)) match {
+  override val differentialProgramParser: String => DifferentialProgram = (s => fastparse.parse(s, fullDifferentialProgram(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
   })

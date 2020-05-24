@@ -21,12 +21,16 @@ object DLAxiomParser extends (String => List[(String,Formula)]) {
     * @param input The contents of the axiom file.
     * @return A list of named axioms occurring in the string.
     */
-  def apply(input: String) : List[(String,Formula)] = parse(input, axiomList(_)) match {
+  def apply(input: String) : List[(String,Formula)] = axiomParser(input)
+
+
+  private val axiomParser: String => List[(String,Formula)] = input => fastparse.parse(input, axiomList(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f).inContext("<AxiomBase>"/*input*/)
   }
 
-  private def stringChars(c: Char) = c != '\"'
+
+  private def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
 
   /** "blabla": Parse a string literal */
   def string[_: P]: P[String] = P("\"" ~~/ CharsWhile(stringChars).! ~~ "\"")
@@ -37,6 +41,6 @@ object DLAxiomParser extends (String => List[(String,Formula)]) {
   /** axiom: Parses a dL axiom. */
   def axiomList[_: P]: P[List[(String,Formula)]] = P( Start ~ axiom.rep(1) ~ End ).map(_.toList)
 
-  /** formula: Parses a dL formula via DLParser. */
-  def formula[_: P]: P[Formula] = DLParser.formula
+  /** formula: Parses a dL formula via [[DLParser.formula]]. */
+  private def formula[_: P]: P[Formula] = DLParser.formula
 }
