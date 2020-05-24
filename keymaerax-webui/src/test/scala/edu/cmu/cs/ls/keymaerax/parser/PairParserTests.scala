@@ -73,6 +73,11 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x-y","(x)-(y)"),
     ("x+-y","x+(-y)"),
     ("x^-y/z","(x^(-y))/z"),
+    ("x*z/5az", unparseable),
+    ("x+y-a/b+9*x-5abacus", unparseable),
+    ("x+y-a/b+9*x-5+", unparseable),
+    ("x+y-a/b+9*x-5)", unparseable),
+    ("x+y-a/b+(9*x-5", unparseable),
     // from doc/dL-grammar.md or crucially important
     ("x-y-z","(x-y)-z"),
     ("x/y/z","(x/y)/z"),

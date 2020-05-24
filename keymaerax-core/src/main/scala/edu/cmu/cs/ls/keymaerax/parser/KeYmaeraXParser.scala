@@ -92,6 +92,8 @@ private object MORE extends ExpectNonterminal("<more>") {override def toString =
 /**
   * KeYmaera X parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
   *
+  * Also consider using the alternative parser [[DLParser]].
+  *
   * @example
   * Parsing formulas from strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]:
   * {{{
@@ -108,6 +110,7 @@ private object MORE extends ExpectNonterminal("<more>") {override def toString =
   * }}}
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser]]
+  * @see [[DLParser]]
   * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   */

@@ -65,13 +65,27 @@ object ParseException {
     new ParseException(msg, state.location, state.la.description, expect.mkString("\n      or: "), state.topString, state.toString /*, cause*/)
 
   def apply(msg: String, state: ParseState, found: Token, expect: String): ParseException =
-    new ParseException(msg, found.loc, found.description, expect, state.topString, state.toString)
+    new ParseException(msg, found.loc, found = found.description, expect = expect, after = state.topString, state = state.toString)
+
+  def apply(msg: String, loc: Location, found: String, expect: String): ParseException =
+    new ParseException(msg, loc, found = found, expect = expect, after = "<unknown>", state = "<unknown>")
+
+  def apply(msg: String, loc: Location, found: String, expect: String, after: String): ParseException =
+    new ParseException(msg, loc, found = found, expect = expect, after = after, state = "<unknown>")
+
+  def apply(msg: String, loc: Location, found: String, expect: String, after: String, hint: String): ParseException =
+    new ParseException(msg, loc, found = found, expect = expect, after = after, state = "<unknown>", hint = hint)
 
   def apply(msg: String, state: ParseState, expect: String): ParseException =
-    new ParseException(msg, state.location, state.la.description, expect, state.topString, state.toString)
+    new ParseException(msg, state.location, found = state.la.description, expect = expect, after = state.topString, state = state.toString)
 
   def apply(msg: String, after: Expression): ParseException =
-    new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", KeYmaeraXParser.printer.stringify(after), "")
+    new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", after = KeYmaeraXParser.printer.stringify(after), "")
+
+  /** Avoid throwing this unlocated errors */
+  @deprecated("Avoid throwing ParseException without location information")
+  def apply(msg: String): ParseException =
+    new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "", "")
 
   def apply(msg: String, loc: Location): ParseException =
     new ParseException(msg, loc, "<unknown>", "<unknown>", "", "")
@@ -84,7 +98,7 @@ object ParseException {
 
   /** Imbalanced parentheses parse errors */
   def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException =
-    imbalancedError(msg, unmatched, expect="", state)
+    imbalancedError(msg, unmatched, expect="", state = state)
 
   /** Imbalanced parentheses parse errors: opening `unmatched` expects closing `expect` at the latest at location of current parse state (location is unmatched) */
   def imbalancedError(msg: String, unmatched: Token, expect: String, state: ParseState, hint: String = ""): ParseException = if (state.la.tok == EOF)

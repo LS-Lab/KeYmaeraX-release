@@ -10,10 +10,46 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
+import fastparse._
+import MultiLineWhitespace._
+import fastparse.Parsed.TracedFailure
 
+/**
+  * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
+  */
+object DLParser extends DLParser {
 
-import fastparse._, MultiLineWhitespace._
+  /** Converts Parsed.Failure to corresponding ParseException to throw. */
+  private[parser] def parseException(f: Parsed.Failure): ParseException = {
+    val tr: TracedFailure = f.trace()
+    val inputString = f.extra.input match {
+      case IndexedParserInput(input) => input
+      case _ => tr.input + ""
+    }
+    /*@note tr.msg is redundant compared to the following and could be safely elided for higher-level messages */
+    /*@note tr.longMsg can be useful for debugging the parser */
+    ParseException(tr.label /*tr.msg*/,
+      location(f),
+      found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
+      expect = Parsed.Failure.formatStack(tr.input, List(tr.label -> f.index)),
+      after = "" + tr.stack.headOption.getOrElse(""),
+      state = tr.longMsg,
+      //state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
+      hint = "Try " + tr.groupAggregateString).inInput(inputString, None)
+  }
 
+  /** The location of a parse failure. */
+  private[parser] def location(f: Parsed.Failure): Location = try {
+    f.extra.input.prettyIndex(f.index).split(':').toList match {
+      case line::col::Nil => Region(line.toInt, col.toInt)
+      case line::col::unexpected => Region(line.toInt, col.toInt)
+      case unexpected => UnknownLocation
+    }
+  } catch {
+    case _: NumberFormatException => UnknownLocation
+  }
+
+}
 
 /**
   * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
@@ -39,6 +75,7 @@ import fastparse._, MultiLineWhitespace._
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   */
 class DLParser extends Parser {
+  import DLParser.parseException
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression
     *
     * @param input the string to parse as a dL formula, dL term, or dL program.
@@ -47,30 +84,32 @@ class DLParser extends Parser {
     */
   override def apply(input: String): Expression = exprParser(input)
 
+
+  /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   val exprParser: String => Expression = (s => parse(s, fullExpression(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic term */
   override val termParser: String => Term = (s => parse(s, fullTerm(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
   override val formulaParser: String => Formula = (s => parse(s, fullFormula(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic program */
   override val programParser: String => Program = (s => parse(s, fullProgram(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
   override val differentialProgramParser: String => DifferentialProgram = (s => parse(s, fullDifferentialProgram(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
 
 
@@ -81,8 +120,6 @@ class DLParser extends Parser {
   override lazy val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
 
-  private[parser] var annotationListener: ((Program,Formula) => Unit) = {(p,inv) => }
-
   /**
     * Register a listener for @annotations during the parse.
     *
@@ -91,12 +128,17 @@ class DLParser extends Parser {
   def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
     this.annotationListener = listener
 
+  // internals
+
+  private[parser] var annotationListener: ((Program,Formula) => Unit) = {(p,inv) => }
+
   /** Report an @invariant @annotation to interested parties */
   private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
 
   /** `true` has unary negation `-` bind weakly like binary subtraction.
     * `false` has unary negation `-` bind strong just shy of power `^`. */
   private val weakNeg: Boolean = true
+
 
   //*****************
   // implementation
@@ -219,8 +261,11 @@ class DLParser extends Parser {
   // program parser
   //*****************
 
+  //@todo add .opaque in some places to improve higher-level error quality
+
   def programSymbol[_: P]: P[AtomicProgram] = P( ident  ~ ";").
-    map({case (s,None) => ProgramConst(s) case (s,Some(i)) => ???})
+    map({case (s,None) => ProgramConst(s) case (s,Some(i)) => throw ParseException("Program symbols cannot have an index: " + s + "_" + i)})
+  //@todo could we call Fail(_) instead of throwing a ParseException to retain more context info?
 
   def assign[_: P]: P[Assign] = P( variable ~ ":=" ~/ term ~ ";").map({case (x,t) => Assign(x,t)})
   def assignany[_: P]: P[AssignAny] = P( variable ~ ":=" ~ "*" ~ ";").map({case x => AssignAny(x)})
@@ -261,7 +306,7 @@ class DLParser extends Parser {
 
   def ode[_: P]: P[AtomicODE] = P( diffVariable ~/ "=" ~/ term).map({case (x,t) => AtomicODE(x,t)})
   def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P( ident ).
-    map({case (s,None) => DifferentialProgramConst(s) case (s,Some(i)) => ???})
+    map({case (s,None) => DifferentialProgramConst(s) case (s,Some(i)) => throw ParseException("Differential program symbols cannot have an index: " + s + "_" + i)})
   def atomicDP[_: P]: P[AtomicDifferentialProgram] = P( ode | diffProgramSymbol )
 
 
@@ -273,4 +318,3 @@ class DLParser extends Parser {
 
 }
 
-object DLParser extends DLParser
