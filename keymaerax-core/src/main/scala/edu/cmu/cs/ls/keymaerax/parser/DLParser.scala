@@ -158,13 +158,13 @@ class DLParser extends Parser {
 
   def number[_: P]: P[Number] = {
     import NoWhitespace._
-    P("-".!.? ~ CharIn("0-9").rep(1) ~ ("." ~/ CharIn("0-9").rep(1)).?).!.
+    P(("-".? ~~ CharIn("0-9").rep(1) ~~ ("." ~~/ CharIn("0-9").rep(1)).?).!).
       map(s => Number(BigDecimal(s)))
   }
   def ident[_: P]: P[(String,Option[Int])] = {
     import NoWhitespace._
-    P( (CharIn("a-zA-Z") ~ CharIn("a-zA-Z0-9").rep).! ~
-      ("_" ~ ("0" | CharIn("1-9") ~ CharIn("0-9").rep).!.map(_.toInt)).?)
+    P( (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").rep).! ~~
+      ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!.map(_.toInt)).?)
   }
   def baseVariable[_: P]: P[BaseVariable] = ident.map(s => Variable(s._1,s._2,Real))
   def diffVariable[_: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
@@ -181,7 +181,9 @@ class DLParser extends Parser {
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).
     map({case (t,None) => t case (t,Some("'")) => Differential(t)})
   def baseT[_: P]: P[Term] = P( NoCut(func) | variable |
-    (number ~ "'").map(Differential) | number | ("(" ~ number ~ ")" ~ "'").map(Differential) | ("(" ~ number ~ ")") |
+    //@todo numbers are absurd, fix and streamline
+    //(number ~ "'").map(Differential) | number | ("(" ~ number ~ ")" ~ "'").map(Differential) | ("(" ~ number ~ ")") |
+    (number ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) | ("(" ~ number ~ ")" ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) |
     NoCut(unitFunctional) | differential)
 
   /** `-p`: negative occurrences of what is parsed by parser `p`. */
