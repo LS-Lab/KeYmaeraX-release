@@ -2032,17 +2032,6 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: .""".stripMargin
   }
   
-  it should "report semicolon instead of comma" in {
-    the [ParseException] thrownBy parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real x, Real y; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message """2:25 Unexpected declaration delimiter
-                            |Found:    , at 2:25
-                            |Expected: ;""".stripMargin
-  }
-
   it should "report parse errors in function definitions" in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"

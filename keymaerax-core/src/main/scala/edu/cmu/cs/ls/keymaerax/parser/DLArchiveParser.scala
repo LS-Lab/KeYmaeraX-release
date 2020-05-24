@@ -67,7 +67,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   // implementation
 
-  def sort[_: P]: P[Sort] = P( StringIn("Real", "Bool", "HP").! ).map({case "Real" => Real case "Bool" => Bool case "HP" => Trafo})
+  def sort[_: P]: P[Sort] = P( ("Real" | "Bool" | "HP").! ).map({case "Real" => Real case "Bool" => Bool case "HP" => Trafo})
 
   /** parse a label */
   def label[_: P]: P[String] = {
@@ -85,16 +85,17 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = P( Start ~ archiveEntry.rep(1) ~ End ).map(_.toList)
 
   /** Parse a single archive entry. */
-  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( StringIn("ArchiveEntry", "Lemma", "Theorem", "Exercise").!.
-    map({case "Exercise"=>"exercise" case _=>"theorem"}) ~
-    (label ~ ":").? ~
-    string ~
-    description.? ~
+  def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!.
+    map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"}) ~
+    (label ~ ":").? ~ string ~
+    metaInfo ~
     allDeclarations ~
     problem ~
     tactic.? ~
+    metaInfo ~
     ("End.".!.map(s=>None) | "End" ~ label.map(s=>Some(s)) ~ ".")).map(
-    {case (kind, label, name, desc, decl, prob, endlabel) =>
+    {case (kind, label, name, meta, decl, prob, moremeta, endlabel) =>
+      if (endlabel.isDefined && endlabel != label) throw ParseException("end label is optional but should be the same as the start label: " + label + " is not " + endlabel)
       ParsedArchiveEntry(
         name = name,
         kind = kind,
@@ -103,8 +104,20 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
         defs = decl,
         model = prob,
         tactics = Nil,
-        info = if (label.isEmpty) Map.empty else Map("id"->label.get))}
+        //@todo check that there are no contradictory facts in the meta and moremeta
+        info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
+      )}
   )
+
+  /** meta information */
+  def metaInfo[_: P]: P[Map[String,String]] = P(
+    description.? ~
+    title.? ~
+    link.?
+  ).map({case (desc, title, link) =>
+    (if (desc.isDefined) Map("Description"->desc.get) else Map.empty) ++
+      (if (title.isDefined) Map("Title"->title.get) else Map.empty) ++
+      (if (link.isDefined) Map("Link"->link.get) else Map.empty)})
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] = P(
@@ -116,8 +129,14 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   /** `Description "text".` parsed. */
   def description[_: P]: P[String] = P("Description" ~/ string ~ "." )
 
+  /** `Title "text".` parsed. */
+  def title[_: P]: P[String] = P("Title" ~/ string ~ "." )
+
+  /** `Link "text".` parsed. */
+  def link[_: P]: P[String] = P("Link" ~/ string ~ "." )
+
   /** `Functions declOrDef End.` parsed. */
-  def functions[_: P]: P[Declaration] = P(StringIn("Definitions") ~/ declOrDef.rep ~ "End." ).
+  def functions[_: P]: P[Declaration] = P("Definitions" ~/ declOrDef.rep ~ "End." ).
     map(list => Declaration(list.toMap, Map.empty))
 //      list.filter({case (id,sig) => sig._3.isEmpty}).toMap,
 //      list.filter({case (id,sig) => sig._3.isDefined}).toMap)
