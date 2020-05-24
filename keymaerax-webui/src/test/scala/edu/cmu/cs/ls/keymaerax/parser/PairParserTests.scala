@@ -358,6 +358,7 @@ class PairParserTests extends FlatSpec with Matchers {
   /** Formula cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParseFormula: immutable.List[(String,String)] = List(
     ("p()->q()->r()", "p()->(q()->r())"),
+    //@todo bad error message ("(p() <-> q()) <- (q() -> p()')", "((p()) <-> (q())) <- ((q()) -> ((p())'))"),
 
     ("-(x+5)^2+9>=7 & y>5 -> [x:=1;]x>=1", "((((-(x+5)^2)+9)>=7) & (y>5)) -> ([x:=1;](x>=1))"),
     ("[x:=1;x:=2;x:=3;]x=3", "[x:=1;{x:=2;x:=3;}]x=3"),
