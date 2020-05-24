@@ -184,11 +184,11 @@ class DLParser extends Parser {
   def parenT[_: P]: P[Term] = P( "(" ~/ term ~ ")" )
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).
     map({case (t,None) => t case (t,Some("'")) => Differential(t)})
-  def baseT[_: P]: P[Term] = P( NoCut(func) | variable |
+  def baseT[_: P]: P[Term] = P( NoCut(func) | NoCut(unitFunctional) | variable |
     //@todo numbers are absurd, fix and streamline
     //(number ~ "'").map(Differential) | number | ("(" ~ number ~ ")" ~ "'").map(Differential) | ("(" ~ number ~ ")") |
     (number ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) | ("(" ~ number ~ ")" ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) |
-    NoCut(unitFunctional) | differential)
+    differential)
 
   /** `-p`: negative occurrences of what is parsed by parser `p`. */
   def neg[_: P](p: => P[Term]): P[Term] = P(("-" ~~ !">") ~/ p).map(t => Neg(t))
@@ -225,7 +225,7 @@ class DLParser extends Parser {
   def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
   def predicational[_: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
   def trueFalse[_: P]: P[Formula] = P("true".! | "false".!).map({case "true" => True case "false" => False})
-  def comparison[_: P]: P[Formula] = P( term ~ ("=" | ">=" | "<=" | ">" | ("<" ~~ !"-") | "!=").! ~/ term ).
+  def comparison[_: P]: P[Formula] = P( term ~ ("=" | "!=" | ">=" | "<=" | ">" | ("<" ~~ !"-") ).! ~/ term ).
     map({case (l,"=",r) => Equal(l,r) case (l,">=",r) => GreaterEqual(l,r) case (l,"<=",r) => LessEqual(l,r)
     case (l,">",r) => Greater(l,r) case (l,"<",r) => Less(l,r) case (l,"!=",r) => NotEqual(l,r)})
   def parenF[_: P]: P[Formula] = P( "(" ~/ formula ~ ")" )
@@ -313,10 +313,16 @@ class DLParser extends Parser {
   // differential program parser
   //*****************
 
-  def ode[_: P]: P[AtomicODE] = P( diffVariable ~/ "=" ~/ term).map({case (x,t) => AtomicODE(x,t)})
-  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P( ident ).
-    map({case (s,None) => DifferentialProgramConst(s) case (s,Some(i)) => throw ParseException("Differential program symbols cannot have an index: " + s + "_" + i)})
+  def ode[_: P]: P[AtomicODE] = P( diffVariable ~ "=" ~ term).map({case (x,t) => AtomicODE(x,t)})
+  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P( ident ~~ odeSpace.?).
+    map({case (s, None, None)     => DifferentialProgramConst(s)
+         case (s, None, Some(sp)) => DifferentialProgramConst(s,sp)
+         case (s, Some(i), _)     => throw ParseException("Differential program symbols cannot have an index: " + s + "_" + i)})
   def atomicDP[_: P]: P[AtomicDifferentialProgram] = P( ode | diffProgramSymbol )
+
+  /** (|x1,x2,x3|) parses a space declaration */
+  def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
+    map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
 
 
   def diffProduct[_: P]: P[DifferentialProgram] = P( atomicDP ~ ("," ~/ atomicDP).rep ).
