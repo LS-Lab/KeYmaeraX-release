@@ -44,6 +44,8 @@ object UnknownLocation extends Location {
   def addLines(numLines: Int): Location = this
   def --(other: Location): Location = this
 }
+
+/** A region from line:column till endLine:endColumn, inclusive */
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   require(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
@@ -57,6 +59,11 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
   def addLines(numLines: Int): Location = Region(line + numLines, column, endLine + numLines, endColumn)
 
   override def toString = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
+}
+
+object Region {
+  /** A point Region consisting only of one line:column */
+  def apply(line: Int, column: Int): Region = Region(line, column, line, column)
 }
 /**
   * Like a region, but extends until the end of the input.

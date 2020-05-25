@@ -37,7 +37,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Selection sort" should "achieve intended permutation" in withMathematica { _ =>
     val ode = "{w' = 2,  x' = 0, y' = 3, z' = 1}".asDifferentialProgram
     val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
-    val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS("<-> reflexive")
+    val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS(Ax.equivReflexive)
     val fml = "[{w' = 2,  x' = 0, y' = 3, z' = 1}]true <-> [{x' = 0, z' = 1, w' = 2, y' = 3}]true".asFormula
     proveBy(fml, e) shouldBe 'proved
   }

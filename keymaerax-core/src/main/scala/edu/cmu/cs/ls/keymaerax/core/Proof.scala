@@ -1311,6 +1311,7 @@ object UniformRenaming {
   * @see [[URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(ren:edu\.cmu\.cs\.ls\.keymaerax\.core\.URename):edu\.cmu\.cs\.ls\.keymaerax\.core\.Provable*]]
   * @see [[BoundRenaming]]
+  * @see [[RenamingClashException]]
   * @note soundness-critical: For uniform renaming purposes the semantic renaming proof rule would be sound but not locally sound. The kernel is easier when keeping everything locally sound.
   */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
@@ -1369,6 +1370,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   * @author Stefan Mitsch
   * @note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
   * @see [[UniformRenaming]]
+  * @see [[RenamingClashException]]
   */
 final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   //@note implied: insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
@@ -1451,6 +1453,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   *  ---------------all generalize
   *  \forall x. p(x)
   * Kept because of the incurred cost.
+  * @see SkolemClashException
   */
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"

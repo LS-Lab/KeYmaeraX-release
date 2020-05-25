@@ -73,6 +73,11 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x-y","(x)-(y)"),
     ("x+-y","x+(-y)"),
     ("x^-y/z","(x^(-y))/z"),
+    ("x*z/5az", unparseable),
+    ("x+y-a/b+9*x-5abacus", unparseable),
+    ("x+y-a/b+9*x-5+", unparseable),
+    ("x+y-a/b+9*x-5)", unparseable),
+    ("x+y-a/b+(9*x-5", unparseable),
     // from doc/dL-grammar.md or crucially important
     ("x-y-z","(x-y)-z"),
     ("x/y/z","(x/y)/z"),
@@ -318,6 +323,10 @@ class PairParserTests extends FlatSpec with Matchers {
     ("a+2(b+1)", unparseable),
     ("a+2b+1", unparseable),
 
+    ("x_","x_"),
+    ("x_'","x_'"),
+    ("x_'+1","x_'+1"),
+
     ("z2'^4","(z2')^(4)"),
     ("(0)'-0+0*z4*(((z4'^3/z4'/gg()*-83)^2-(0)'-(-45)'-z1)/15)^4", "((0)'-0)+(0*z4)*(((((((((((z4')^3)/(z4'))/gg())*(-(83)))^2)-(0)')-((-45)'))-z1)/15)^4)"),
 
@@ -330,6 +339,8 @@ class PairParserTests extends FlatSpec with Matchers {
     ("-1*x", if (weakNeg || !numNeg) "-(1*x)" else "(-1)*x"),
     ("-10*x", if (weakNeg || !numNeg) "-(10*x)" else "(-10)*x"),
     ("0-2*x", "0-(2*x)"),
+    ("5'","((5))'"),
+    ("-5'","-((5)')"),
 
     ("001", "1"),
     ("000001", "1"),
@@ -347,6 +358,7 @@ class PairParserTests extends FlatSpec with Matchers {
   /** Formula cases: Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParseFormula: immutable.List[(String,String)] = List(
     ("p()->q()->r()", "p()->(q()->r())"),
+    //@todo bad error message ("(p() <-> q()) <- (q() -> p()')", "((p()) <-> (q())) <- ((q()) -> ((p())'))"),
 
     ("-(x+5)^2+9>=7 & y>5 -> [x:=1;]x>=1", "((((-(x+5)^2)+9)>=7) & (y>5)) -> ([x:=1;](x>=1))"),
     ("[x:=1;x:=2;x:=3;]x=3", "[x:=1;{x:=2;x:=3;}]x=3"),
@@ -425,6 +437,13 @@ class PairParserTests extends FlatSpec with Matchers {
     ("\\exists \\exists", unparseable),
     ("\\forall \\exists", unparseable),
     ("\\exists \\forall", unparseable),
+    ("\\forallx (x>0)", unparseable),
+    ("\\forallx(x>0)", unparseable),
+    ("\\forallx1>0", unparseable),
+    ("\\existsx (x>0)", unparseable),
+    ("\\existsx(x>0)", unparseable),
+    ("\\existsx1>0", unparseable),
+
 
     ("[x:=x+1;] p(x)&q(x)", "([x:=x+1;] p(x))&q(x)"),
     ("[x:=x+1;] p(x)|q(x)", "([x:=x+1;] p(x))|q(x)"),
@@ -474,6 +493,8 @@ class PairParserTests extends FlatSpec with Matchers {
     ("\\forall p(x())","\\forall p (x())"),   //@todo not a great test on string level
     ("\\forall x p(x)", "\\forall x (p(x))"),
     ("\\for all x p(x)", unparseable),
+    ("\\ex ists x p(x)", unparseable),
+    ("\\exist s x p(x)", unparseable),
 
 
     ("[x:=1;x:=2;++x:=3;]x>=5", "[{x:=1;x:=2;}++{x:=3;}]x>=5"),
@@ -647,9 +668,10 @@ class PairParserTests extends FlatSpec with Matchers {
 
     ("[{x:=x+1;}*@invariant(x>=1)]x>=0", "[{x:=x+1;}*@invariant(x>=1)](x>=0)"),
     ("[x:=0;](f())=16", "[x:=0;](((f()))=16)"),
-    ("z3>=-63'", "z3>=((-63))'"),
-    ("z3>=-63'", "z3>=(-63)'"),
-    ("(18'!=58-z2'&[z2':=(-57);]1>=(-86)<->(\\forall z2 1/1>=z3<->1<=1*1-z3'))<->-26'*z1>0", "((18)'!=58-(z2')&[z2':=(-57);](1>=(-86))<->((\\forall z2 ((1/1)>=z3))<->(1<=(1*1)-(z3'))))<->(((-26)')*z1)>0"),
+    ("z3>=((-63))'", "z3>=((-63))'"),
+    ("z3>=(-(63))'", "z3>=(-(63))'"),
+    ("z3>=(-63)'", "z3>=((-63))'"),
+    ("(18'!=58-z2'&[z2':=(-57);]1>=(-86)<->(\\forall z2 1/1>=z3<->1<=1*1-z3'))<->-26'*z1>0", "((18)'!=58-(z2')&[z2':=(-57);](1>=(-86))<->((\\forall z2 ((1/1)>=z3))<->(1<=(1*1)-(z3'))))<->(-(((26)')*z1))>0"),
 
     ("[x:=*;]x^2>=0","[x := * ;] x^2>=0"),  // issue #171 space within random assignments
     ("[x:=*;]x^2>=0","[x:= * ;] x^2>=0"),
@@ -657,6 +679,30 @@ class PairParserTests extends FlatSpec with Matchers {
     ("[x:=*;]x^2>=0","[x :=* ;] x^2>=0"),
     ("[x:=*;]x^2>=0","[x := *;] x^2>=0"),
     ("[x:=*;]x^2>=0","[x :=*;] x^2>=0"),
+
+    ("x=f()","x=f()"),
+    ("x=f(||)","x=f(||)"),
+    ("x'=f()","(x')=f()"),
+    ("x'=f(||)","(x')=f(||)"),
+    ("[{x'=f()}]p() <-> [{x'=f()}][x':=f();]p()", "([{x'=f()}]p()) <-> ([{x'=f()}]([x':=f();]p()))"),
+    ("[{x'=f()}]p(||) <-> [{x'=f()}][x':=f();]p(||)", "([{x'=f()}]p(||)) <-> ([{x'=f()}]([x':=f();]p(||)))"),
+    ("[{x'=f(||)}]p(||) <-> [{x'=f(||)}][x':=f(||);]p(||)", "([{x'=f(||)}]p(||)) <-> ([{x'=f(||)}]([x':=f(||);]p(||)))"),
+    ("[{x'=f(||)&q(||)}]p(||) <-> [{x'=f(||)&q(||)}][x':=f(||);]p(||)", "([{x'=f(||)&q(||)}]p(||)) <-> ([{x'=f(||)&q(||)}]([x':=f(||);]p(||)))"),
+    ("[{x'=f(||),c&q(||)}]p(||) <-> [{c,x'=f(||)&q(||)}][x':=f(||);]p(||)", "([{x'=f(||),c&q(||)}]p(||)) <-> ([{c,x'=f(||)&q(||)}]([x':=f(||);]p(||)))"),
+    ("[{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)", "([{x_'=f(||),c&q(||)}]p(||)) <-> ([{c,x_'=f(||)&q(||)}]([x_':=f(||);]p(||)))"),
+    ("(p() <-> q()) <- (q() -> q()&p())", "(p() <-> q()) <- (q() -> (q()&p()))"),
+    ("(p() <-> q()) <- (q() -> q()&p())", "(q() -> (q()&p())) -> (p() <-> q())"),
+    ("(p(||) <-> q(||)) <- (q(||) -> q(||)&p(||))", "(p(||) <-> q(||)) <- (q(||) -> (q(||)&p(||)))"),
+    ("[{c}]p(|y|) <-> \\exists y [{c}]p(|y|)", "([{c}]p(|y|)) <-> (\\exists y ([{c}]p(|y|)))"),
+    ("[{c{||}}]p(|y|) <-> \\exists y [{c{||}}]p(|y|)", "([{c{||}}]p(|y|)) <-> (\\exists y ([{c{||}}]p(|y|)))"),
+    ("[{c{|y|}}]p(|y|) <-> \\exists y [{c{|y|}}]p(|y|)", "([{c{|y|}}]p(|y|)) <-> (\\exists y ([{c{|y|}}]p(|y|)))"),
+    ("[{c{|y|}}]p(|y_|) <-> \\exists y_ [{c{|y|}}]p(|y_|)", "([{c{|y|}}]p(|y_|)) <-> (\\exists y_ ([{c{|y|}}]p(|y_|)))"),
+    ("[{c{|y_|}}]p(|y_|) <-> \\exists y_ [{c{|y_|}}]p(|y_|)", "([{c{|y_|}}]p(|y_|)) <-> (\\exists y_ ([{c{|y_|}}]p(|y_|)))"),
+    ("[{c{|y_|}}]p(|y_|) <-> \\exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)}]p(|y_|)", "([{c{|y_|}}]p(|y_|)) <-> (\\exists y_ ([{c{|y_|},y_'=((a(|y_|)*y_)+b(|y_|))}]p(|y_|)))"),
+    ("[{c{|y_|}&q(|y_|)}]p(|y_|) <-> \\exists y_ [{c{|y_|},y_'=(a(|y_|)*y_)+b(|y_|)&q(|y_|)}]p(|y_|)", "([{c{|y_|}&q(|y_|)}]p(|y_|)) <-> (\\exists y_ ([{c{|y_|},y_'=((a(|y_|)*y_)+b(|y_|))&q(|y_|)}]p(|y_|)))"),
+    ("([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))", "(([{c&q(||)}]p(||)) <-> ([?q(||);]p(||))) <- ((q(||)) -> ([{c&q(||)}](((p(||))'))))"),
+    //@todo unparseable is ok but bad error ("([{c}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c}](p(||)'))", "(([{c}]p(||)) <-> ([?q(||);]p(||))) <- ((q(||)) -> ([{c}]((p(||)'))))"),
+    //@todo unparseable is ok but bad error ("([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))", "(([{c&q(||)}]p(||)) <-> ([?q(||);]p(||))) <- ((q(||)) -> ([{c&q(||)}](((p(||))'))))"),
 
 
     // extra braces within ODEs ....

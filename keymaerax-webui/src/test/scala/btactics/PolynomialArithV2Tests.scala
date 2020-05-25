@@ -479,9 +479,9 @@ class PolynomialArithV2Tests extends TacticTestBase {
     /** hypothesis: USubst() is slower, because of USubstOne object creations ->  */
     val t = "1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 * 12 ^ 13 - 15 / 16 + 17 - 18 * 19 + 20".asTerm
     val f = "f_()".asTerm
-    val fastTimesIdentity = DerivedAxioms.timesIdentity.provable.apply(USubst(Seq("f_()~>f_(||)".asSubstitutionPair)))
+    val fastTimesIdentity = Ax.timesIdentity.provable.apply(USubst(Seq("f_()~>f_(||)".asSubstitutionPair)))
     val n = 100000
-    val timesIdentity = DerivedAxioms.timesIdentity.provable
+    val timesIdentity = Ax.timesIdentity.provable
     val s = Plus(t, t)
     val u = Times(s, s)
     val v = Times(u, u)

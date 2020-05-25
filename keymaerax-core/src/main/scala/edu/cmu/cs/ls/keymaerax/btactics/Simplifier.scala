@@ -28,40 +28,40 @@ object Simplifier {
 
   val timesZeroLeft:Simplification = {
     case Times(n: Number, t: Term) =>
-      if (n.value == 0) {Some(Number(0), useAt(DerivedAxioms.zeroTimes)(Position(1, 0::Nil)) & byUS("= reflexive"))} else None
+      if (n.value == 0) {Some(Number(0), useAt(Ax.zeroTimes)(Position(1, 0::Nil)) & byUS(Ax.equalReflexive))} else None
     case _ => None
   }
 
   val timesZeroRight:Simplification = {
     case Times(t: Term, n: Number) =>
-      if (n.value == 0) {Some((Number(0), useAt(DerivedAxioms.timesZero)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
+      if (n.value == 0) {Some((Number(0), useAt(Ax.timesZero)(Position(1, 0::Nil)) & byUS(Ax.equalReflexive)))} else None
     case _ => None
   }
 
   val timesOneLeft:Simplification = {
     case Times(n: Number, t: Term) =>
       if (n.value == 1) {Some((t,
-        useAt(DerivedAxioms.timesCommute)(1, 0::Nil) &
-        useAt(DerivedAxioms.timesIdentity)(Position(1, 0::Nil)) &
-        byUS("= reflexive")))} else None
+        useAt(Ax.timesCommute)(1, 0::Nil) &
+        useAt(Ax.timesIdentity)(Position(1, 0::Nil)) &
+        byUS(Ax.equalReflexive)))} else None
     case _ => None
   }
 
   val timesOneRight:Simplification = {
     case Times(t: Term, n: Number) =>
-      if (n.value == 1) {Some((t, useAt(DerivedAxioms.timesIdentity)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
+      if (n.value == 1) {Some((t, useAt(Ax.timesIdentity)(Position(1, 0::Nil)) & byUS(Ax.equalReflexive)))} else None
     case _ => None
   }
 
   val plusZeroRight:Simplification = {
     case Plus(t: Term, n: Number) =>
-      if (n.value == 0) {Some((t, useAt(DerivedAxioms.plusZero)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
+      if (n.value == 0) {Some((t, useAt(Ax.plusZero)(Position(1, 0::Nil)) & byUS(Ax.equalReflexive)))} else None
     case _ => None
   }
 
   val plusZeroLeft:Simplification = {
     case Plus(n: Number, t: Term) =>
-      if (n.value == 0) {Some((t, useAt(DerivedAxioms.zeroPlus)(Position(1, 0::Nil)) & byUS("= reflexive")))} else None
+      if (n.value == 0) {Some((t, useAt(Ax.zeroPlus)(Position(1, 0::Nil)) & byUS(Ax.equalReflexive)))} else None
     case _ => None
   }
 

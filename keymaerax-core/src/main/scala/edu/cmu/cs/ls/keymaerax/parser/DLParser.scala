@@ -10,10 +10,47 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
+import fastparse._
+import MultiLineWhitespace._
 
+import scala.collection.immutable._
 
-import fastparse._, MultiLineWhitespace._
+/**
+  * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
+  */
+object DLParser extends DLParser {
 
+  /** Converts Parsed.Failure to corresponding ParseException to throw. */
+  private[parser] def parseException(f: Parsed.Failure): ParseException = {
+    val tr: Parsed.TracedFailure = f.trace()
+    val inputString = f.extra.input match {
+      case IndexedParserInput(input) => input
+      case _ => tr.input + ""
+    }
+    /*@note tr.msg is redundant compared to the following and could be safely elided for higher-level messages */
+    /*@note tr.longMsg can be useful for debugging the parser */
+    ParseException(tr.label /*tr.msg*/,
+      location(f),
+      found = Parsed.Failure.formatTrailing(f.extra.input, f.index),
+      expect = Parsed.Failure.formatStack(tr.input, List(tr.label -> f.index)),
+      after = "" + tr.stack.headOption.getOrElse(""),
+      state = tr.longMsg,
+      //state = Parsed.Failure.formatMsg(tr.input, tr.stack ++ List(tr.label -> tr.index), tr.index),
+      hint = "Try " + tr.groupAggregateString).inInput(inputString, None)
+  }
+
+  /** The location of a parse failure. */
+  private[parser] def location(f: Parsed.Failure): Location = try {
+    f.extra.input.prettyIndex(f.index).split(':').toList match {
+      case line::col::Nil => Region(line.toInt, col.toInt)
+      case line::col::unexpected => Region(line.toInt, col.toInt)
+      case unexpected => UnknownLocation
+    }
+  } catch {
+    case _: NumberFormatException => UnknownLocation
+  }
+
+}
 
 /**
   * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
@@ -39,6 +76,7 @@ import fastparse._, MultiLineWhitespace._
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   */
 class DLParser extends Parser {
+  import DLParser.parseException
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression
     *
     * @param input the string to parse as a dL formula, dL term, or dL program.
@@ -47,30 +85,32 @@ class DLParser extends Parser {
     */
   override def apply(input: String): Expression = exprParser(input)
 
-  val exprParser: String => Expression = (s => parse(s, fullExpression(_)) match {
+
+  /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
+  val exprParser: String => Expression = (s => fastparse.parse(s, fullExpression(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic term */
-  override val termParser: String => Term = (s => parse(s, fullTerm(_)) match {
+  override val termParser: String => Term = (s => fastparse.parse(s, fullTerm(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
-  override val formulaParser: String => Formula = (s => parse(s, fullFormula(_)) match {
+  override val formulaParser: String => Formula = (s => fastparse.parse(s, fullFormula(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic program */
-  override val programParser: String => Program = (s => parse(s, fullProgram(_)) match {
+  override val programParser: String => Program = (s => fastparse.parse(s, fullProgram(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
-  override val differentialProgramParser: String => DifferentialProgram = (s => parse(s, fullDifferentialProgram(_)) match {
+  override val differentialProgramParser: String => DifferentialProgram = (s => fastparse.parse(s, fullDifferentialProgram(_)) match {
     case Parsed.Success(value, index) => value
-    case f@Parsed.Failure(str, i, extra) => throw ParseException(f.trace().longMsg + "\nin: " + f.extra.input, UnknownLocation)
+    case f: Parsed.Failure => throw parseException(f)
   })
 
 
@@ -81,8 +121,6 @@ class DLParser extends Parser {
   override lazy val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
 
-  private[parser] var annotationListener: ((Program,Formula) => Unit) = {(p,inv) => }
-
   /**
     * Register a listener for @annotations during the parse.
     *
@@ -91,12 +129,17 @@ class DLParser extends Parser {
   def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
     this.annotationListener = listener
 
+  // internals
+
+  private[parser] var annotationListener: ((Program,Formula) => Unit) = {(p,inv) => }
+
   /** Report an @invariant @annotation to interested parties */
   private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
 
   /** `true` has unary negation `-` bind weakly like binary subtraction.
     * `false` has unary negation `-` bind strong just shy of power `^`. */
   private val weakNeg: Boolean = true
+
 
   //*****************
   // implementation
@@ -111,19 +154,38 @@ class DLParser extends Parser {
 
 
   //*****************
+  // terminals
+  //*****************
+
+  //@todo how to ensure longest-possible match in all terminals everywhere? Avoid reading truenot as "true" "not"
+
+  /** Explicit nonempty whitespace terminal. */
+  def blank[_:P]: P[Unit] = P( CharsWhileIn(" \t\r\n", 1) )
+
+  /** parse a number literal */
+  def number[_: P]: P[Number] = {
+    import NoWhitespace._
+    P(("-".? ~~ CharIn("0-9").rep(1) ~~ ("." ~~/ CharIn("0-9").rep(1)).?).!).
+      map(s => Number(BigDecimal(s)))
+  }
+  /** parse an identifier */
+  def ident[_: P]: P[(String,Option[Int])] = {
+    import NoWhitespace._
+    P( (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").rep).! ~~
+      (("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!) | "_".!).? ).
+      map({case (s,None) => (s,None) case (s,Some("_")) => (s+"_",None) case (s,Some(n))=>(s,Some(n.toInt))})
+  }
+  /** `.` or `._2`: dot parsing */
+  def dot[_:P]: P[DotTerm] = {
+    import NoWhitespace._
+    P( "." ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!.map(_.toInt)).? ).map(idx => DotTerm(Real, idx))
+  }
+
+  //*****************
   // base parsers
   //*****************
 
-  def number[_: P]: P[Number] = {
-    import NoWhitespace._
-    P("-".!.? ~ CharIn("0-9").rep(1) ~ ("." ~/ CharIn("0-9").rep(1)).?).!.
-      map(s => Number(BigDecimal(s)))
-  }
-  def ident[_: P]: P[(String,Option[Int])] = {
-    import NoWhitespace._
-    P( (CharIn("a-zA-Z") ~ CharIn("a-zA-Z0-9").rep).! ~
-      ("_" ~ ("0" | CharIn("1-9") ~ CharIn("0-9").rep).!.map(_.toInt)).?)
-  }
+
   def baseVariable[_: P]: P[BaseVariable] = ident.map(s => Variable(s._1,s._2,Real))
   def diffVariable[_: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
   def variable[_: P]: P[Variable] = P(diffVariable | baseVariable)
@@ -133,14 +195,17 @@ class DLParser extends Parser {
   // term parser
   //*****************
 
-  def func[_: P]: P[FuncOf] = P(ident ~ termList).map({case (s,idx,ts) => FuncOf(Function(s,idx,ts.sort,Real), ts)})
-  def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
+  def func[_: P]: P[FuncOf] = P(ident ~~ termList).map({case (s,idx,ts) => FuncOf(Function(s,idx,ts.sort,Real), ts)})
+  def unitFunctional[_: P]: P[UnitFunctional] = P(ident ~~ space).map({case (s,None,sp) => UnitFunctional(s,sp,Real)})
   def parenT[_: P]: P[Term] = P( "(" ~/ term ~ ")" )
   def differential[_: P]: P[Term] = P( parenT ~ "'".!.?).
     map({case (t,None) => t case (t,Some("'")) => Differential(t)})
-  def baseT[_: P]: P[Term] = P( NoCut(func) | variable |
-    (number ~ "'").map(Differential) | number | ("(" ~ number ~ ")" ~ "'").map(Differential) | ("(" ~ number ~ ")") |
-    NoCut(unitFunctional) | differential)
+  def baseT[_: P]: P[Term] = P( NoCut(func) | NoCut(unitFunctional) | variable |
+    //@todo numbers are absurd, fix and streamline
+    //(number ~ "'").map(Differential) | number | ("(" ~ number ~ ")" ~ "'").map(Differential) | ("(" ~ number ~ ")") |
+    (number ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) | ("(" ~ number ~ ")" ~~ "'".!.?).map({case (n,None)=>n case (n,Some("'"))=>Differential(n)}) |
+    dot |
+    differential)
 
   /** `-p`: negative occurrences of what is parsed by parser `p`. */
   def neg[_: P](p: => P[Term]): P[Term] = P(("-" ~~ !">") ~/ p).map(t => Neg(t))
@@ -161,23 +226,23 @@ class DLParser extends Parser {
 
 
   /** (t1,t2,t3,...,tn) parenthesized list of terms */
-  def termList[_: P]: P[Term] = P("(" ~ (term ~ ("," ~/ term).rep).? ~ ")").
-    map({case Some((t,ts)) => (ts.+:(t)).reduceRight(Pair) case None => Nothing})
+  def termList[_: P]: P[Term] = P("(" ~ term.rep(sep=","./) ~ ")").
+    map(ts => ts.reduceRightOption(Pair).getOrElse(Nothing))
 
   /** (|x1,x2,x3|) parses a space declaration */
-  def space[_: P]: P[Space] = P("(|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|)").
-    map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
+  def space[_: P]: P[Space] = P("(|" ~ variable.rep(sep=","./) ~ "|)").
+    map(ts => if (ts.isEmpty) AnyArg else Except(ts.to))
 
   //*****************
   // formula parser
   //*****************
 
-  def pred[_: P]: P[PredOf] = P(ident ~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
+  def pred[_: P]: P[PredOf] = P(ident ~~ termList ~ (!CharIn("+\\-*/^!=><") | &("->" | "<-"))).
     map({case (s,idx,ts) => PredOf(Function(s,idx,ts.sort,Bool), ts)})
-  def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
-  def predicational[_: P]: P[PredicationalOf] = P(ident ~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
+  def unitPredicational[_: P]: P[UnitPredicational] = P(ident ~~ space).map({case (s,None,sp) => UnitPredicational(s,sp)})
+  def predicational[_: P]: P[PredicationalOf] = P(ident ~~ "{" ~/ formula ~ "}").map({case (s,idx,f) => PredicationalOf(Function(s,idx,Bool,Bool),f)})
   def trueFalse[_: P]: P[Formula] = P("true".! | "false".!).map({case "true" => True case "false" => False})
-  def comparison[_: P]: P[Formula] = P( term ~ ("=" | ">=" | "<=" | ">" | ("<" ~~ !"-") | "!=").! ~/ term ).
+  def comparison[_: P]: P[Formula] = P( term ~ ("=" | "!=" | ">=" | "<=" | ">" | ("<" ~~ !"-") ).! ~/ term ).
     map({case (l,"=",r) => Equal(l,r) case (l,">=",r) => GreaterEqual(l,r) case (l,"<=",r) => LessEqual(l,r)
     case (l,">",r) => Greater(l,r) case (l,"<",r) => Less(l,r) case (l,"!=",r) => NotEqual(l,r)})
   def parenF[_: P]: P[Formula] = P( "(" ~/ formula ~ ")" )
@@ -190,7 +255,7 @@ class DLParser extends Parser {
     map({case ("[",p,"]", f) => Box(p, f)
          case ("<",p,">", f) => Diamond(p, f)})
   //@todo block quantifier \\forall x,y,z Q
-  def quantified[_: P]: P[Formula] = P( ("\\forall"|"\\exists").! ~/ variable ~/ conjunct ).
+  def quantified[_: P]: P[Formula] = P( ("\\forall"|"\\exists").! ~~/ blank ~/ variable ~/ conjunct ).
     map({case ("\\forall",x, f) => Forall(x::Nil, f)
          case ("\\exists",x, f) => Exists(x::Nil, f)})
   def conjunct[_: P]: P[Formula] = P( not | quantified | modal | baseF)
@@ -219,8 +284,14 @@ class DLParser extends Parser {
   // program parser
   //*****************
 
+  //@todo add .opaque in some places to improve higher-level error quality
+
   def programSymbol[_: P]: P[AtomicProgram] = P( ident  ~ ";").
-    map({case (s,None) => ProgramConst(s) case (s,Some(i)) => ???})
+    map({case (s,None) => ProgramConst(s) case (s,Some(i)) => throw ParseException("Program symbols cannot have an index: " + s + "_" + i)})
+  //@todo could we call Fail(_) instead of throwing a ParseException to retain more context info?
+  //@todo combine system symbol and space taboo
+  def systemSymbol[_: P]: P[AtomicProgram] = P( ident  ~~ "{|^@|}" ~ ";").
+    map({case (s,None) => SystemConst(s) case (s,Some(i)) => throw ParseException("System symbols cannot have an index: " + s + "_" + i)})
 
   def assign[_: P]: P[Assign] = P( variable ~ ":=" ~/ term ~ ";").map({case (x,t) => Assign(x,t)})
   def assignany[_: P]: P[AssignAny] = P( variable ~ ":=" ~ "*" ~ ";").map({case x => AssignAny(x)})
@@ -230,7 +301,7 @@ class DLParser extends Parser {
     map({case (p,None) => ODESystem(p,True) case (p,Some(f)) => ODESystem(p,f)})
   def odesystem[_: P]: P[ODESystem] = P( "{" ~ odeprogram ~ "}" ~/ annotation.?).
     map({case (p,None) => p case (p,Some(inv)) => reportAnnotation(p,inv); p})
-  def baseP[_: P]: P[Program] = P(( programSymbol | NoCut(assign) | assignany | test | NoCut(repeat) |
+  def baseP[_: P]: P[Program] = P(( systemSymbol | programSymbol | NoCut(assign) | assignany | test | NoCut(repeat) |
     NoCut(odesystem) | NoCut(braceP) |
     ifthen) ~ "^@".!.?).map({case (p,None) => p case (p,Some("^@")) => Dual(p)})
 
@@ -259,10 +330,16 @@ class DLParser extends Parser {
   // differential program parser
   //*****************
 
-  def ode[_: P]: P[AtomicODE] = P( diffVariable ~/ "=" ~/ term).map({case (x,t) => AtomicODE(x,t)})
-  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P( ident ).
-    map({case (s,None) => DifferentialProgramConst(s) case (s,Some(i)) => ???})
+  def ode[_: P]: P[AtomicODE] = P( diffVariable ~ "=" ~ term).map({case (x,t) => AtomicODE(x,t)})
+  def diffProgramSymbol[_: P]: P[DifferentialProgramConst] = P( ident ~~ odeSpace.?).
+    map({case (s, None, None)     => DifferentialProgramConst(s)
+         case (s, None, Some(sp)) => DifferentialProgramConst(s,sp)
+         case (s, Some(i), _)     => throw ParseException("Differential program symbols cannot have an index: " + s + "_" + i)})
   def atomicDP[_: P]: P[AtomicDifferentialProgram] = P( ode | diffProgramSymbol )
+
+  /** (|x1,x2,x3|) parses a space declaration */
+  def odeSpace[_: P]: P[Space] = P("{|" ~ (variable ~ ("," ~/ variable).rep).? ~ "|}").
+    map({case Some((t,ts)) => Except((ts.+:(t)).to) case None => AnyArg})
 
 
   def diffProduct[_: P]: P[DifferentialProgram] = P( atomicDP ~ ("," ~/ atomicDP).rep ).
@@ -273,4 +350,3 @@ class DLParser extends Parser {
 
 }
 
-object DLParser extends DLParser

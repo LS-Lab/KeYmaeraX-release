@@ -32,12 +32,11 @@ import AnnotationCommon._
   *                 The resulting subexpressions will be considered in the order of the ;-separated list.
   *                 - Default recursor="" means no recursion so stop chasing.
   *                 - recursor="0;1" first considers the left child then the right child.
-  *                 - recursor="1;" first considers the right child then the whole subformula.
+  *                 - recursor="1;*" first considers the right child then the whole subformula.
   *                 - recursor="1" only considers the right child.
   *                 - recursor="0.0;1.1" first considers the left child of the left child, then the right child of the right child.
   *                 - recursor="0.1.1;0.1;" first considers the right child of the right child of the left child, then the right child of the left child, then the whole formula.
   *                 - recursor="*" considers the full resulting formula.
-  *                   In particular recursor="1;" and recursor="1;*" are equivalent.
   * @author Brandon Bohrer
   */
 class Axiom(val names: Any,

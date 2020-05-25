@@ -51,20 +51,21 @@ object ODEInvariance {
     remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
-        implyRi & byUS("Cont continuous existence"),
-        DW(1) & G(1) & useAt("> flip")(1,0::Nil) & useAt(">= flip")(1,1::Nil) & useAt("<=")(1,1::Nil) & prop
+        implyRi & byUS(Ax.Cont),
+        DW(1) & G(1) & useAt(Ax.flipGreater)(1,0::Nil) &
+          useAt(Ax.flipGreaterEqual)(1,1::Nil) & useAt(Ax.lessEqual)(1,1::Nil) & prop
       ), namespace)
 
   //Extra conversion rewrites for and/or
   //Refine left/right disjunct
   private lazy val refOrL =
     remember("<{c& p(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   private lazy val refOrR =
     remember("<{c& q(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   //Refine or under box
@@ -236,7 +237,7 @@ object ODEInvariance {
             useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpclosed(r))
       case ConjFml(l, r) =>
         DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
-          andL(-3) & useAt("Uniq uniqueness iff", PosInExpr(1 :: Nil))(1) & andR(1) < (
+          andL(-3) & useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) & andR(1) < (
           hideL(-4) & lpclosed(l),
           hideL(-3) & lpclosed(r)
         )
@@ -249,7 +250,7 @@ object ODEInvariance {
           else {
             orL(-3) < (
               cohideOnlyL(-3) & lpgeq(r - 1),
-              implyRi()(-2, 1) & useAt("DR<> differential refine", PosInExpr(1 :: Nil))(1) &
+              implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
             )
           }
@@ -261,7 +262,7 @@ object ODEInvariance {
             closeF
           }
           else {
-            implyRi()(-2,1) & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
               dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
           }
         )
@@ -337,7 +338,7 @@ object ODEInvariance {
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       tac1 & tac2 &
-      useAt("RI& closed real induction >=")(pos) &
+      useAt(Ax.RIclosedgeq)(pos) &
       DebuggingTactics.debug("Real Induction",doPrint = debugTactic) &
       andR(pos)<(
       //G |- P
@@ -605,13 +606,13 @@ object ODEInvariance {
   private lazy val stuckRefine =
     remember("<{c&!q(||) | r(||)}>!r(||) -> ([{c&r(||)}]p(||) -> [{c&q(||)}]p(||))".asFormula,
       implyR(1) & implyR(1) &
-        useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
+        useAt(Ax.box,PosInExpr(1::Nil))(-2) & notL(-2) &
         cutL("<{c&!q(||)|r(||)}>(!r(||) | !p(||))".asFormula)(-1) <( skip , cohideR(3) & implyR(1) & mond & prop) &
-        useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+        useAt(Ax.box,PosInExpr(1::Nil))(1) & notR(1) &
         cutL("<{c&q(||)}>(!r(||) | !p(||))".asFormula)(-2) <( skip , cohideR(2) & implyR(1) & mond & prop) &
-        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        andLi & useAt(Ax.Uniq)(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
-          implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+          implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
           cohideR(2) & implyR(1) & mond & prop)
       , namespace)
 
@@ -636,7 +637,7 @@ object ODEInvariance {
 
     // set up the time variable
     // commute it to the front to better match with realind/cont
-    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(", commute")(pos)) * odedim &
+    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(Ax.commaCommute)(pos)) * odedim &
     cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos)<(
       timeBound(pos), //closes assuming P(init)
       useAt(stuckRefine,PosInExpr(1::Nil))(pos) &
@@ -854,6 +855,7 @@ object ODEInvariance {
     } catch {
       case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
     }
+
     val conjs = flattenConjunctions(f2)
     val polys = {
       if (conjs.forall(f => f.isInstanceOf[Equal]))
@@ -1174,7 +1176,7 @@ object ODEInvariance {
     remember("-abs(f())>=0<->f()=0".asFormula,QE,namespace)
   private lazy val uniqMin =
     remember("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
-      useAt("Uniq uniqueness iff")(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
+      useAt(Ax.UniqIff)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
       namespace)
 
   private lazy val refAbs =
@@ -1185,12 +1187,12 @@ object ODEInvariance {
   //Refine left/right of max
   private lazy val refMaxL =
     remember("<{c&f(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
       namespace)
 
   private lazy val refMaxR =
     remember("<{c&g(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
       namespace)
 
   /** Given a bound i, generate the local progress formula up to that bound
@@ -1349,7 +1351,7 @@ object ODEInvariance {
         case Darboux(iseq,cofactor,pr) =>
           (if(iseq) useAt(refAbs)(1) else skip) &
             DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
-            implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
             dgDbx(cofactor)(1)
         case Disj(l,r) =>
           DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
@@ -1445,7 +1447,7 @@ object ODEInvariance {
     }
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
-      starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
+      starter & useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
       implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
         implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails

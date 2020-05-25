@@ -21,6 +21,7 @@ import scala.collection.immutable
   * @author Brandon Bohrer
  * @see [[ProofTerm]]
  * @see [[ProvableSig]]
+  * @todo Currently not operational: fixme
  */
 object ProofChecker {
   case class ProofCheckException(str: String) extends Exception {}

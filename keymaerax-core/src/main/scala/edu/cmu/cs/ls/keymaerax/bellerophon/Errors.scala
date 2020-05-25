@@ -28,6 +28,7 @@ abstract class BelleThrowable(message: => String, cause: Throwable = null) exten
   /* @note mutable state for gathering the logical context that led to this exception */
   private var tacticContext: BelleExpr = BelleDot  //@todo BelleUnknown?
   def context: BelleExpr = tacticContext
+  //@todo optimizable lazy String for speed?
   def inContext(context: BelleExpr, additionalMessage: String): BelleThrowable = {
     this.tacticContext = context
     super.inContext(context.prettyString, additionalMessage)
@@ -69,7 +70,10 @@ abstract class BelleProofSearchControl(message: => String, cause: Throwable = nu
 
 //<editor-fold desc="Critical exceptions">
 
-/** Ill-formed ways of applying tactics, such as missing position for a position tactic or supplying a term when a formula was expected. */
+/** Ill-formed ways of applying tactics, such as missing position for a position tactic or supplying a term when a formula was expected.
+  * Or applying a tactic at -1 that can only applied in the succedent or vice versa.
+  * This indicates a catastrophic logical error in the whole tactic implementation.
+  */
 class IllFormedTacticApplicationException(message: => String, cause: Throwable = null) extends BelleCriticalException(message, cause)
 
 /** Incorrect prover setup, such as insufficient stack size or missing tools. */
@@ -90,8 +94,14 @@ class BelleUnexpectedProofStateError(message: => String, val proofState: Provabl
 class UnificationException(val shape: String, val input: String, info: String = "")
   extends BelleCriticalException("Un-Unifiable: " + shape + "\nfor:          " + input + "\n" + info) {}
 
+/** Tactic requirements that failed and indicate a critical logical error in using it. */
+class TacticRequirementError(message: => String) extends BelleCriticalException(message)
+
 /** Tactic assertions. */
 class TacticAssertionError(message: => String) extends BelleCriticalException(message)
+
+/** Error indicates that a (critical) infinite tactic loop is detected indicating an implementation error. */
+class InfiniteTacticLoopError(message: => String) extends BelleCriticalException(message)
 
 /**
   * A Bellerophon exception that consists of two reasons why it is being raised, for example,
@@ -111,13 +121,18 @@ class CompoundCriticalException(val left: BelleThrowable, val right: BelleThrowa
   * BelleTacticFailures will be consumed by the BelleInterpreter which will try something else instead. */
 abstract class BelleTacticFailure(message: => String, cause: Throwable = null) extends BelleProofSearchControl(message, cause)
 
-/** Tactic is not applicable as indicated.
+/** Tactic happens to not be applicable as indicated in the present sequent.
   * For example, InapplicableTactic can be raised when trying to apply [[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.andR]]
   * at the correct position 2 in bounds on the right-hand side where it turns out there is an Or formula not an And formula.
   * This does not indicate a catastrophic failure in the tactic implementation, merely a promising but unsuccessful attempt of applying a tactic.
   */
 class TacticInapplicableFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
 
+
+/** Tactic was unable to unify with the given key and is, thus, inapplicable as indicated in the present sequent.
+  * Besides indicating genuine unifiable situations, this may indicate that the wrong key was chosen for the (derived) axiom in its [[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]].
+  */
+class InapplicableUnificationKeyFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
 
 /** Signaling that a tactic's implementation was incomplete and did not work out as planned, so tactic execution might continue,
   * but it is indicating a potential problem in the tactic's implementation. */

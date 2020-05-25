@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
   */
 private object DLBySubst {
 
-  private[btactics] lazy val monb2 = byUS("[] monotone 2")
+  private[btactics] lazy val monb2 = byUS(Ax.monb2)
 
   /** whether games are currently allowed */
   private[this] val isGame: Boolean = try {Dual(AssignAny(Variable("x"))); true} catch {case ignore: IllegalArgumentException => false }
@@ -36,7 +36,7 @@ private object DLBySubst {
       USubstPatternTactic(
         (pattern, (ru:RenUSubst) =>
           cut(ru.substitution.usubst("[a_;]true".asFormula)) <(
-            ru.getRenamingTactic & TactixLibrary.by("[] monotone 2", ru.substitution.usubst ++ USubst(
+            ru.getRenamingTactic & TactixLibrary.by(Ax.monb2, ru.substitution.usubst ++ USubst(
               SubstitutionPair(UnitPredicational("q_", AnyArg), True) :: Nil
             )) &
               hideL(-1, True)
@@ -48,7 +48,7 @@ private object DLBySubst {
         (pattern, (ru:RenUSubst) => {
           Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel")
           //ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
-          TactixLibrary.by(DerivedAxioms.Goedel, ru.usubst)
+          TactixLibrary.by(Ax.Goedel, ru.usubst)
         })::Nil
     )
   }
@@ -117,7 +117,7 @@ private object DLBySubst {
       val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
-        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS("[:=] self assign") & done
+        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS(Ax.selfassignb) & done
       )
     case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
   })
@@ -213,7 +213,7 @@ private object DLBySubst {
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       ProofRuleTactics.boundRenaming(x, y)(pos) &
-      (if (universal) useAt("[:=] assign equality")(pos) else useAt("[:=] assign equality exists")(pos)) &
+      (if (universal) useAt(Ax.assignbeq)(pos) else useAt(Ax.assignbequalityexists)(pos)) &
       ProofRuleTactics.uniformRenaming(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
@@ -230,7 +230,7 @@ private object DLBySubst {
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       ProofRuleTactics.boundRenaming(x, y)(pos) &
-      (if (universal) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos)) &
+      (if (universal) useAt(Ax.assigndEqualityAll)(pos) else useAt(Ax.assigndEquality)(pos)) &
       ProofRuleTactics.uniformRenaming(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
@@ -295,7 +295,7 @@ private object DLBySubst {
    * @todo same for diamonds by the dual of K
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
-  def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
+  def postCut(C: Formula): DependentPositionTactic = useAt(Ax.K, PosInExpr(1::Nil),
     (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
 
   private def constAnteConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
@@ -331,7 +331,7 @@ private object DLBySubst {
                   else And(oldified, True)
                 cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                   //@todo use useAt("I") instead of useAt("I induction"), because it's the more general equivalence
-                  /* c */ useAt(DerivedAxioms.I)(pos) & andR(pos) & Idioms.<(
+                  /* c */ useAt(Ax.I)(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
                       label(initCase),
                       (andR(pos) & Idioms.<(closeIdWith(pos), ident))*constAntes.size &
@@ -375,7 +375,7 @@ private object DLBySubst {
     cutR(invariant)(pos.checkSucc.top) <(
         ident & label(BelleLabels.initCase),
         cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
-          byUS("ind induction") & label(BelleLabels.indStep)
+          byUS(Ax.indrule) & label(BelleLabels.indStep)
           ,
           ident & label(BelleLabels.useCase)
         )
@@ -418,25 +418,25 @@ private object DLBySubst {
           val v0 = Variable(v.name, Some(v.index.getOrElse(-1)+1))  //@note want v__0 in result instead of x2
 
           def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(closeId, skip))*(consts.size-1) & close)
-          val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(DerivedAxioms.andTrue)('Llast)
+          val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(Ax.andTrue)('Llast)
 
           val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
-          def unstutterABV(pos: Position) = useAt("[:=] self assign")(pos)*abvVars.size
+          def unstutterABV(pos: Position) = useAt(Ax.selfassignb)(pos)*abvVars.size
 
           cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <(
             stutter(ur.what)(pos ++ PosInExpr(0::0::Nil)) &
-            useAt(DerivedAxioms.pexistsV)(pos) & closeConsts(pos) &
+            useAt(Ax.pexistsV)(pos) & closeConsts(pos) &
             assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(BelleLabels.initCase)
             ,
-            cohide(pp) & implyR(1) & byUS(DerivedAxioms.conflat) <(
+            cohide(pp) & implyR(1) & byUS(Ax.conflat) <(
               existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
               ,
               stutter(ur.what)(1, 1::1::0::Nil) &
-              useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
+              useAt(Ax.pVd, PosInExpr(1::Nil))(1, 1::Nil) &
               assignb(1, 1::0::1::Nil) &
               stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
-              useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
+              useAt(Ax.pVd, PosInExpr(1::Nil))(1) &
               unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
               splitConsts & closeConsts(SuccPos(0)) &
               (assignd(1, 1 :: Nil) & uniformRename(ur) |
@@ -468,7 +468,7 @@ private object DLBySubst {
       uniformRename(ur) & label(BelleLabels.initCase)
       ,
       cohide(pos) & implyR(1)
-        & byUS(DerivedAxioms.conflat) <(
+        & byUS(Ax.conflat) <(
         existsL(-1) & andL(-1) & uniformRename(ur) & label(BelleLabels.useCase)
         ,
         assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep)
@@ -512,7 +512,7 @@ private object DLBySubst {
             else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
           } else skip)
 
-        useAt("[:=] assign", PosInExpr(1::Nil), subst)(pos) &
+        useAt(Ax.assignbAxiom, PosInExpr(1::Nil), subst)(pos) &
           (if (assignInContext || pos.isTopLevel) execAssignment else skip)
       case Some(e) => throw new TacticInapplicableFailure("discreteGhost only applicable to formulas, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
@@ -552,7 +552,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt(DerivedAxioms.assignbexists, PosInExpr(1::Nil), subst)(pos)
+      useAt(Ax.assignbexists, PosInExpr(1::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -573,7 +573,7 @@ private object DLBySubst {
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
         s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
-      useAt(DerivedAxioms.assignball, PosInExpr(0::Nil), subst)(pos)
+      useAt(Ax.assignball, PosInExpr(0::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })

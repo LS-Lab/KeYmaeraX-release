@@ -266,13 +266,15 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
         (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
     case DifferentialSymbol(x)  => x.asString + ppOp(term)
     case x: Variable            => x.asString
-      // print as -2' not as (-2)'
-    case Differential(Number(n)) if negativeBrackets => n.bigDecimal.toPlainString + ppOp(term)
+    // disambiguate (-2)' versus (-(2))' versus ((-2))'
+    case Differential(Number(n)) if negativeBrackets =>
+      if (n < 0) "((" + n.bigDecimal.toPlainString + "))" + ppOp(term)
+      else n.bigDecimal.toPlainString + ppOp(term)
     case Differential(t)        => "(" + pp(q++0, t) + ")" + ppOp(term)
       // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
     case Number(n)              => if (negativeBrackets) {
       if (n < 0) "(" + n.bigDecimal.toPlainString + ")"
-      else {assert(n>=0 || OpSpec.negativeNumber); n.bigDecimal.toPlainString}
+      else n.bigDecimal.toPlainString
     } else n.bigDecimal.toPlainString
     case FuncOf(f, c)           => if (f.domain.isInstanceOf[Tuple]) f.asString + pp(q++0, c) else f.asString + "(" + pp(q++0, c) + ")"
     // special notation

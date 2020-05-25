@@ -53,13 +53,13 @@ class ModelplexTacticTests extends TacticTestBase {
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
       // no equational assignments
-      case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
-      case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
+      case Box(Assign(_, _), _) => Ax.assignbAxiom :: Ax.assignbup :: Nil
+      case Diamond(Assign(_, _), _) => Ax.assignd :: Ax.assigndup :: Nil
       // remove loops
-      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
       // remove ODEs for controller monitor
-      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-      case _ => AxiomIndex.axiomsFor(e)
+      case Diamond(ODESystem(_, _), _) => Ax.Dskipd :: Nil
+      case _ => AxIndex.axiomsFor(e)
     })
 
     val result = TactixLibrary.proveBy(modelplexInput, modelPlex(1))
@@ -78,8 +78,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val (modelplexInput, _) = createMonitorSpecificationConjecture(model, Variable("x"))
 
     def modelPlex: DependentPositionTactic = chase(3, 3, (e:Expression) => e match {
-      case Diamond(Loop(_), _) => "<*> approx" :: Nil
-      case _ => AxiomIndex.axiomsFor(e)
+      case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
+      case _ => AxIndex.axiomsFor(e)
     })
 
     val result = proveBy(modelplexInput, modelPlex(1))

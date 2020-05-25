@@ -97,6 +97,7 @@ private object PropositionalTactics extends Logging {
    * @param at Points to the position to unpeel.
    * @return The tactic.
    */
+  //@todo optimizable a lot by using technique from TactixLibrary.stepAt index instead of |
   def propCMon(at: PosInExpr): DependentTactic = new SingleGoalDependentTactic("Prop. CMon") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.length == 1 && sequent.succ.length == 1 &&

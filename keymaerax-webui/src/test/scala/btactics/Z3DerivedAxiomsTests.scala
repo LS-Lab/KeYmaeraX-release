@@ -5,7 +5,7 @@ import java.lang.reflect.InvocationTargetException
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
-import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
+import edu.cmu.cs.ls.keymaerax.btactics.Ax._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
@@ -21,7 +21,8 @@ import scala.collection.immutable
 import scala.collection.immutable.Map
 
 /**
-  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
+  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
+  *
   * @see [[CodeNameChecker]]
   * @see [[DerivedAxiomsTests]]
   * @note Must be separate test suite from same tests withZ3, otherwise lazy vals in DerivedAxioms corrupt tests.
@@ -70,7 +71,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
         // delete all stored lemmas
         LemmaDBFactory.lemmaDB.deleteDatabase()
         // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
-        val c = DerivedAxioms.getClass.getDeclaredConstructor()
+        val c = Ax.getClass.getDeclaredConstructor()
         c.setAccessible(true)
         withClue("Missing dependency in '" + name + "': inspect stack trace for occurrences of Axioms.scala for hints where to add missing dependency\n") {
           try {
@@ -278,9 +279,9 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val writeEffect = true
       // use a new instance of the DerivedAxioms singleton object to store all axioms to the lemma database
-      val c = DerivedAxioms.getClass.getDeclaredConstructor()
+      val c = Ax.getClass.getDeclaredConstructor()
       c.setAccessible(true)
-      c.newInstance().asInstanceOf[DerivedAxioms.type].prepopulateDerivedLemmaDatabase()
+      c.newInstance().asInstanceOf[Ax.type].prepopulateDerivedLemmaDatabase()
 
       val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
       // see [[FileLemmaDB.scala]] for path of actual lemma files
@@ -312,16 +313,16 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
 
   /** Returns the reflection mirrors to access the lazy vals in DerivedAxioms. */
   private def getDerivedAxiomsMirrors = {
-    val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val lemmas = Ax.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
 
     val mirror = ru.runtimeMirror(getClass.getClassLoader)
     // access the singleton object
-    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val moduleMirror = mirror.reflectModule(ru.typeOf[Ax.type].termSymbol.asModule)
     val im = mirror.reflect(moduleMirror.instance)
 
     //@note lazy vals have a "hidden" getter method that does the initialization
-    val fields = fns.map(fn => fn -> ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fields = fns.map(fn => fn -> ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     fields.map(f => f._2.toString -> im.reflectMethod(f._2))
   }
 }

@@ -23,19 +23,56 @@ import scala.collection.immutable._
 import scala.reflect.runtime.{universe => ru}
 
 /**
- * Database of Derived Axioms.
- *
- * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
- * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
- *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)
- *       as opposed to by referring to the names, which needs a map canonicalName->tacticOnDemand.
- * @note Lemmas are lazy vals, since their proofs may need a fully setup prover with QE
+  * Central Database of Derived Axioms and Derived Axiomatic Rules,
+  * including information about core axioms and axiomatic rules from [[[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
+  * This registry of [[[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]] also provides meta information for matching keys and recursors for unificiation and chasing
+  * using the [[[edu.cmu.cs.ls.keymaerax.macros.Axiom @Axiom]] annotation.
+  *
+  * = Using Axioms and Axiomatic Rules =
+  * Using a (derived) axiom merely requires indicating the position where to use it:
+  * {{{
+  *   UnifyUSCalculus.useAt(Ax.choiceb)(1)
+  * }}}
+  * Closing a proof or using an axiomatic rule after unification works as follows:
+  * {{{
+  *   UnifyUSCalculus.byUS(Ax.choiceb)
+  * }}}
+  * Closing a proof or using an axiomatic rule verbatim without unification works as follows:
+  * {{{
+  *   UnifyUSCalculus.by(Ax.choiceb)
+  * }}}
+  * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS`.
+  *
+  * = Adding Derived Axioms and Derived Axiomatic Rules =
+  * Core Axioms are loaded from the core and their meta information is annotated in this file e.g. as follows:
+  * {{{
+  *   @Axiom(("[∪]", "[++]"), formula = "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P", unifier = "linear",
+  *          key = "0", recursor = "0;1")
+  *   val choiceb = coreAxiom("[++] choice")
+  * }}}
+  *
+  * Derived Axioms are proved with a tactic and their meta information is annotated in this file e.g. as follows:
+  * {{{
+  *   @Axiom("V", formula = "p→<span class=\"k4-axiom-key\">[a]p</span>",
+  *          key = "1", recursor = "*")
+  *   lazy val V = derivedAxiom("V vacuous",
+  *     "p() -> [a{|^@|};]p()".asFormula,
+  *     useAt(Ax.VK, PosInExpr(1::Nil))(1) &
+  *     useAt(Ax.boxTrue)(1)
+  *   )
+  * }}}
+  *
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
+  * @see [[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]]
+  * @see [[edu.cmu.cs.ls.keymaerax.macros.Axiom]]
+  * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
+  *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)
+  *       as opposed to by referring to the names, which needs a map canonicalName->tacticOnDemand.
+  * @note Lemmas are lazy vals, since their proofs may need a fully setup prover with QE
   * @note Derived axioms use the Provable facts of other derived axioms in order to avoid initialization cycles with AxiomInfo's contract checking.
- */
-
-
-object DerivedAxioms extends Logging {
+  */
+object Ax extends Logging {
 
   val DerivedAxiomProvableSig = ProvableSig//NoProofTermProvable
   /** Database for derived axioms */
@@ -43,7 +80,7 @@ object DerivedAxioms extends Logging {
 
   type LemmaID = String
 
-  /** Look up a core axiom from [[Provable.axioms]] and wrap it into a Lemma */
+  /** Look up a core axiom from [[Provable.axioms]] and wrap it into a [[CoreAxiomInfo]] */
   private def coreAxiom(name: String): CoreAxiomInfo = {
     CoreAxiomInfo(name)
   }
@@ -197,6 +234,7 @@ object DerivedAxioms extends Logging {
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
+    //@todo change return type to DerivedAxiomInfo?
   private[btactics] def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma =
     derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic, codeNameOpt)
 
@@ -220,11 +258,11 @@ object DerivedAxioms extends Logging {
 
     val mirror = ru.runtimeMirror(getClass.getClassLoader)
     // access the singleton object
-    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val moduleMirror = mirror.reflectModule(ru.typeOf[Ax.type].termSymbol.asModule)
     val im = mirror.reflect(moduleMirror.instance)
 
     //@note lazy vals have a "hidden" getter method that does the initialization
-    val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
     var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
@@ -242,6 +280,19 @@ object DerivedAxioms extends Logging {
   }
 
 
+
+  //***************
+  // Core Axiomatic Rules   see [[AxiomBase]]
+  //***************
+
+  //@todo turn into ProvableInfo and annotate with @DerivedRule or better yet @AxiomaticRule
+  val CQrule = ProvableSig.rules("CQ equation congruence")
+  val CErule = ProvableSig.rules("CE congruence")
+  val mondrule = ProvableSig.rules("<> monotone")
+  val indrule = ProvableSig.rules("ind induction")
+  val conrule = ProvableSig.rules("con convergence")
+
+
   //***************
   // Core Axioms   see [[AxiomBase]]
   //***************
@@ -249,11 +300,14 @@ object DerivedAxioms extends Logging {
   // Hybrid Programs / Hybrid Games
 
   //@note default key = 0::Nil, recursor = (Nil)::Nil for direct reduction of LHS to RHS without substructure.
-  @Axiom(("<·>", "<.>"), formula = "<span class=\"k4-axiom-key\">&not;[a]&not;P</span>↔&langle;a&rangle;P", unifier = "linear")
+  @Axiom(("<·>", "<.>"), formula = "<span class=\"k4-axiom-key\">&not;[a]&not;P</span>↔&langle;a&rangle;P", unifier = "linear",
+    key = "0", recursor = "*")
   val diamond = coreAxiom("<> diamond")
-  @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)", unifier = "full")
+  @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)", unifier = "full",
+    key = "0", recursor = "*")
   val assignbAxiom = coreAxiom("[:=] assign")
-  @Axiom("[:=]=", formula = "<span class=\"k4-axiom-key\">[x:=e]P</span>↔∀x(x=e→P)", key = "0", recursor = ";0.1")
+  @Axiom("[:=]=", formula = "<span class=\"k4-axiom-key\">[x:=e]P</span>↔∀x(x=e→P)",
+    key = "0", recursor = "*;0.1")
   val assignbeq = coreAxiom("[:=] assign equality")
   @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=x]P</span>↔P")
   val selfassignb = coreAxiom("[:=] self assign")
@@ -268,7 +322,7 @@ object DerivedAxioms extends Logging {
     key = "0", recursor = "0;1")
   val choiceb = coreAxiom("[++] choice")
   @Axiom("[;]", formula = "<span class=\"k4-axiom-key\">[a;b]P</span>↔[a][b]P", unifier = "linear",
-    key = "0", recursor = "1;")
+    key = "0", recursor = "1;*")
   val composeb = coreAxiom("[;] compose")
   @Axiom("[*]", formula = "<span class=\"k4-axiom-key\">[a*]P</span>↔P∧[a][a*]P", unifier = "linear",
     key = "0", recursor = "1")
@@ -281,10 +335,10 @@ object DerivedAxioms extends Logging {
     key = "", recursor = "")
   val DWbase = coreAxiom("DW base")
   @Axiom("DE", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔[x'=f(x)&Q][x':=f(x)]P",
-    key = "0", recursor = "1;")
+    key = "0", recursor = "1;*")
   val DE = coreAxiom("DE differential effect")
   @Axiom("DE", formula = "<span class=\"k4-axiom-key\">[{x'=F,c&Q}]P</span>↔[{c,x'=F&Q}][x':=f(x)]P",
-    key = "0", recursor = "1;")
+    key = "0", recursor = "1;*")
   val DEs = coreAxiom("DE differential effect (system)")
   /* @todo soundness requires only vectorial x in p(||) */
   @Axiom("DI", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')", unifier = "linear",
@@ -293,7 +347,8 @@ object DerivedAxioms extends Logging {
   @Axiom("DG", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∃y [{x'=f(x),y'=a*y+b&Q}]P")
   val DGa = coreAxiom("DG differential ghost")
   //@todo name: why inverse instead of universal?
-  @Axiom("DG inverse differential ghost")
+  @Axiom("DG inverse differential ghost", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
+    key = "0", recursor="0;*")
   val DGpp = coreAxiom("DG inverse differential ghost")
   @Axiom("DG inverse differential ghost implicational")
   val DGi = coreAxiom("DG inverse differential ghost implicational")
@@ -302,7 +357,7 @@ object DerivedAxioms extends Logging {
   @Axiom("DGa", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{x'=f(x),y'=g()&Q}]P")
   val DGCa = coreAxiom("DG differential ghost constant all")
   @Axiom("DS&", formula = "<span class=\"k4-axiom-key\">[{x'=c()&q(x)}]P</span> ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
-    key = "0", recursor = "0.1.1;0.1;")
+    key = "0", recursor = "0.1.1;0.1;*")
   val DS = coreAxiom("DS& differential equation solution")
 
   /* @todo: , commute should be derivable from this + ghost */
@@ -352,7 +407,7 @@ object DerivedAxioms extends Logging {
     key = "0", recursor = "0.0.0;0.1.1")
   val Dquotient = coreAxiom("/' derive quotient")
   @Axiom(("∘'", "o'"), formula = "[y:=g(x)][y':=1](<span class=\"k4-axiom-key\">(f(g(x)))'</span>=(f(y))'·(g(x))'",
-    key = "1.1.0", recursor = "1.1;1;")
+    key = "1.1.0", recursor = "1.1;1;*")
   val Dcompose = coreAxiom("chain rule")
   @Axiom("^'", formula = "<span class=\"k4-axiom-key\">(f(g)^n)'</span>=n·f(g)^(n-1)·(f(g))'←n≠0", unifier = "linear",
     key = "1.0", recursor = "1")
@@ -404,15 +459,16 @@ object DerivedAxioms extends Logging {
     key = "1.1", recursor = "*")
   val K = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
-  @Axiom(("I<sub>→</sub>", "Iind"), formula = "P∧[a<sup>*</sup>](P→[a]P)→<span class=\"k4-axiom-key\">[a<sup>*</sup>]P</span>", displayLevel = "internal")
+  @Axiom(("I<sub>→</sub>", "Iind"), formula = "P∧[a<sup>*</sup>](P→[a]P)→<span class=\"k4-axiom-key\">[a<sup>*</sup>]P</span>", displayLevel = "internal",
+    key = "1", recursor="1;*")
   val Iind = coreAxiom("I induction")
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
 
   @Axiom(("∀d", "alld"), formula = "<span class=\"k4-axiom-key\">¬∃x ¬P</span> ↔ ∀x P")
   val alld = coreAxiom("all dual")
-  @Axiom(("∀e","alle"), formula = "<span class=\"k4-axiom-key\">∀x P</span> → P", key = "0", recursor = "*")
-  lazy val alle = coreAxiom("all eliminate")
+  @Axiom(("∀e", "alle"), formula = "<span class=\"k4-axiom-key\">∀x P</span> → P", key = "0", recursor = "*")
+  val alle = coreAxiom("all eliminate")
 
 
   //***************
@@ -454,7 +510,7 @@ object DerivedAxioms extends Logging {
     * @note needs semantic renaming
     */
   @Axiom("DEsysy", formula = "<span class=\"k4-axiom-key\">[{y'=F,c&Q}]P</span>↔[{c,y'=F&Q}][y':=f(x)]P"
-  ,  key = "0", recursor = "1;")
+  ,  key = "0", recursor = "1;*", displayLevel = "internal")
   lazy val DEsysy = derivedAxiomFromFact("DE differential effect (system) y",
     "[{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)".asFormula,
     ProvableSig.axioms("DE differential effect (system)")(URename("x_".asVariable,"y_".asVariable,semantic=true)))
@@ -638,7 +694,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note Core axiom derivable thanks to [:=]= and [:=]
     */
-  @Axiom(("∀inst","allInst"), key = "0", recursor = "*")
+  @Axiom(("∀inst","allInst"), formula = "<span class=\"k4-axiom-key\">∀x p(x)</span> → p(f())", key = "0", recursor = "*")
   lazy val allInst = derivedFormula("all instantiate",
     "(\\forall x_ p(x_)) -> p(f())".asFormula,
     cutR("(\\forall x_ (x_=f()->p(x_))) -> p(f())".asFormula)(1) <(
@@ -696,7 +752,7 @@ object DerivedAxioms extends Logging {
         byUS(equalReflexive)
         ,
         equivifyR(1) &
-          CQ(PosInExpr(0::0::Nil)) &
+          HilbertCalculus.CQ(PosInExpr(0::0::Nil)) &
           useAt(equalCommute)(1)
       )
     )
@@ -717,7 +773,8 @@ object DerivedAxioms extends Logging {
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
-      by("<> monotone", USubst(
+      //@todo use [[DerivedAxioms.mondrule]]
+      by(ProvableInfo("<> monotone"), USubst(
         SubstitutionPair(UnitPredicational("p_", AnyArg), Not(UnitPredicational("q_", AnyArg))) ::
           SubstitutionPair(UnitPredicational("q_", AnyArg), Not(UnitPredicational("p_", AnyArg))) :: Nil)) &
       notL(-1) & notR(1)
@@ -739,7 +796,7 @@ object DerivedAxioms extends Logging {
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
       notL(-1) & notR(1) &
-      byUS("<> monotone") &
+      byUS(mondrule) &
       //      ProofRuleTactics.axiomatic("<> monotone", USubst(
       //        SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Not(PredOf(Function("q_", None, Real, Bool), Anything))) ::
       //          SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Not(PredOf(Function("p_", None, Real, Bool), Anything))) :: Nil)) &
@@ -787,7 +844,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     * @see [[equalReflexive]]
     */
-  @Axiom(("↔R","<->R"),  unifier = "full")
+  @Axiom(("↔R","<->R"), formula = "p↔p", unifier = "full")
   lazy val equivReflexive = derivedFact("<-> reflexive",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
@@ -959,7 +1016,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     */
   @Axiom(("¬∃","!exists"), formula ="<span class=\"k4-axiom-key\">(¬∃x (p(x)))</span>↔∀x (¬p(x))"
-  , key = "0", recursor = "0;")
+  , key = "0", recursor = "0;*")
   lazy val notExists = derivedAxiom("!exists",
     Sequent(IndexedSeq(), IndexedSeq("(!\\exists x_ (p_(x_))) <-> \\forall x_ (!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
@@ -976,7 +1033,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     */
   @Axiom(("¬∀", "!all"), formula = "<span class=\"k4-axiom-key\">¬∀x (p(x)))</span>↔∃x (¬p(x))"
-  , key = "0", recursor = "0;")
+  , key = "0", recursor = "0;*")
   lazy val notAll = derivedAxiom("!all",
     Sequent(IndexedSeq(), IndexedSeq("(!\\forall x_ (p_(||))) <-> \\exists x_ (!p_(||))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::0::Nil) &
@@ -992,7 +1049,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  @Axiom(("¬[]","![]"), key = "0", recursor = "1;", unifier = "linear")
+  @Axiom(("¬[]","![]"), key = "0", recursor = "1;*", unifier = "linear")
   lazy val notBox = derivedAxiom("![]",
     Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
@@ -1008,7 +1065,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  @Axiom(("¬<>","!<>"), key = "0", recursor = "1;", unifier = "linear")
+  @Axiom(("¬<>","!<>"), key = "0", recursor = "1;*", unifier = "linear")
   lazy val notDiamond = derivedAxiom("!<>",
     Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
@@ -1101,7 +1158,7 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("[a{|^@|};]p(||) -> (<a{|^@|};>q(||) -> <a{|^@|};>(p(||)&q(||)))".asFormula)),
     useExpansionAt(diamond)(1, 1::0::Nil) &
       useExpansionAt(diamond)(1, 1::1::Nil) &
-      useAt(DerivedAxioms.converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt(Ax.converseImply, PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(K, PosInExpr(1::Nil))(1, 1::Nil) &
       useAt(K, PosInExpr(1::Nil))(1) &
       useAt(proveBy("(p_() -> !(p_()&q_()) -> !q_()) <-> true".asFormula, prop))(1, 1::Nil) &
@@ -1319,7 +1376,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     * @note unsound for hybrid games
     */
-  @Axiom("pVd")
+  @Axiom("pVd", key="1", recursor="0;1")
   lazy val pVd: Lemma = derivedAxiom("<> partial vacuous",
     Sequent(IndexedSeq(), IndexedSeq("(<a_{|^@|};>p_(||) & q_()) <-> <a_{|^@|};>(p_(||)&q_())".asFormula)),
       equivR(1) <(
@@ -1406,7 +1463,7 @@ object DerivedAxioms extends Logging {
     * @Derived from [:=] assign equality, quantifier dualities
     * @Derived by ":= assign dual" from "[:=] assign equality exists".
     */
-  @Axiom("<:=>", key = "0", recursor = ";0.1")
+  @Axiom("<:=>", key = "0", recursor = "*;0.1")
   lazy val assigndEquality = derivedAxiom("<:=> assign equality",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1507,7 +1564,7 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     */
-  @Axiom("<:=>", key = "0", recursor = ";0.1")
+  @Axiom("<:=>", key = "0", recursor = "*;0.1")
   lazy val assigndEqualityAll = derivedAxiom("<:=> assign equality all",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\forall x_ (x_=f_() -> p_(||))".asFormula)),
     useAt(assignDual2, PosInExpr(0::Nil))(1, 0::Nil) &
@@ -1573,7 +1630,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  @Axiom("[:=]==", key = "0", recursor = ";0.1")
+  @Axiom("[:=]==", key = "0", recursor = "*;0.1")
   lazy val assignbequational =
     derivedAxiom("[:=] assign equational",
       Sequent(IndexedSeq(), IndexedSeq("[x_:=f();]p(x_) <-> \\forall x_ (x_=f() -> p(x_))".asFormula)),
@@ -1592,7 +1649,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("[:=]", key = "0", recursor = "1;")
+  @Axiom("[:=]", key = "0", recursor = "1;*")
   lazy val assignbup = derivedAxiom("[:=] assign update",
     Sequent(IndexedSeq(), IndexedSeq("[x_:=t_();]p_(x_) <-> [x_:=t_();]p_(x_)".asFormula)),
     byUS(equivReflexive)
@@ -1607,7 +1664,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
     */
-  @Axiom("<:=>", key = "0", recursor = "1;")
+  @Axiom("<:=>", key = "0", recursor = "1;*")
   lazy val assigndup = derivedAxiom("<:=> assign update",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=t_();>p_(x_) <-> <x_:=t_();>p_(x_)".asFormula)),
     byUS(equivReflexive)
@@ -1701,7 +1758,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  @Axiom("<:*>", key = "0", recursor = "0;")
+  @Axiom("<:*>", key = "0", recursor = "0;*")
   lazy val randomd = derivedAxiom("<:*> assign nondet",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=*;>p_(||) <-> (\\exists x_ p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1775,7 +1832,7 @@ object DerivedAxioms extends Logging {
     *
     * @Derived
     */
-  @Axiom("<;>", key = "0", recursor = "1;", unifier = "linear")
+  @Axiom("<;>", key = "0", recursor = "1;*", unifier = "linear")
   lazy val composed = derivedAxiom("<;> compose",
     Sequent(IndexedSeq(), IndexedSeq("<a_;b_;>p_(||) <-> <a_;><b_;>p_(||)".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -2461,6 +2518,18 @@ object DerivedAxioms extends Logging {
   @Axiom(("∧⊤","&T"), formula = "<span class=\"k4-axiom-key\">(p∧⊤)</span>↔p", unifier = "linear")
   lazy val andTrue = derivedAxiom("&true", Sequent(IndexedSeq(), IndexedSeq("(p_()&true) <-> p_()".asFormula)), prop)
 
+  /**
+    * {{{Axiom "&false".
+    *    (p()&false) <-> false
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  @Axiom(("∧⊥","&false"), formula = "<span class=\"k4-axiom-key\">(p∧⊥)</span>↔⊥", unifier = "linear")
+  lazy val andFalse = derivedAxiom("&false", Sequent(IndexedSeq(), IndexedSeq("(p_()&false) <-> false".asFormula)), prop)
+
+
   /* inverse andtrue axiom for chase */
   @Axiom("&true inv", key = "0", recursor = "*")
   lazy val andTrueInv = derivedAxiom("&true inv", Sequent(IndexedSeq(), IndexedSeq("p_() <-> (p_()&true)".asFormula)), prop)
@@ -2475,6 +2544,17 @@ object DerivedAxioms extends Logging {
    */
   @Axiom(("⊤∧","T&"), formula = "<span class=\"k4-axiom-key\">(⊤∧p)</span>↔p", unifier = "linear")
   lazy val trueAnd = derivedAxiom("true&", Sequent(IndexedSeq(), IndexedSeq("(true&p_()) <-> p_()".asFormula)), prop)
+
+  /**
+   * {{{Axiom "false&".
+   *    (false&p()) <-> false
+   * End.
+   * }}}
+    *
+    * @Derived
+   */
+  @Axiom(("⊥∧","false&"), formula = "<span class=\"k4-axiom-key\">(⊥∧p)</span>↔⊥", unifier = "linear")
+  lazy val falseAnd = derivedAxiom("true&", Sequent(IndexedSeq(), IndexedSeq("(false&p_()) <-> false".asFormula)), prop)
 
   /**
    * {{{Axiom "0*".
@@ -2684,8 +2764,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     */
   @Axiom("DIo <", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]g(x)<h(x)</span>↔[?Q]g(x)<h(x))←(Q→[{x'=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))'))"
-    , unifier = "linear")
-  lazy val DIoless =
+    , unifier = "linear", key = "1.0", recursor = "*")  lazy val DIoless =
     derivedAxiom("DIo open differential invariance <",
       Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<g(||) <-> [?q(||);]f(||)<g(||)) <- (q(||) -> [{c&q(||)}](f(||)<g(||) -> (f(||)<g(||))'))".asFormula)),
       useAt(flipLess)(1, 1::0::1::Nil) &
@@ -3068,7 +3147,9 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
     implyR(1) & implyR(1) &
       dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-      useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+      //@todo IDE why is the second argument necessary? It should be redundant?
+      useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
         //(Variable("y_",None,Real), dbx_internal) ::
         (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
           (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3120,7 +3201,9 @@ object DerivedAxioms extends Logging {
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
       implyR(1) & implyR(1) &
         dG(AtomicODE(DifferentialSymbol(dbx_internal), Times(Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2)))), dbx_internal)), None /*Some("e(|y_|)*y_^2>0".asFormula)*/)(1) &
-        useAt(CoreAxiomInfo("DG inverse differential ghost"), (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        //@todo IDE why is the second argument not redundant and both lines equivalent?
+        //useAt(DGpp, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
+        useAt(CoreAxiomInfo("DG inverse differential ghost"), AxIndex.axiomIndex(DGpp)._1, (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("DG expects substitution result from unification")) ++ RenUSubst(
           //(Variable("y_",None,Real), dbx_internal) ::
           (UnitFunctional("a", Except(Variable("y_", None, Real)::Nil), Real), Neg(Divide("g(|y_|)".asTerm,Number(BigDecimal(2))))) ::
             (UnitFunctional("b", Except(Variable("y_", None, Real)::Nil), Real), Number(BigDecimal(0))) :: Nil))(-1) &
@@ -3187,7 +3270,7 @@ object DerivedAxioms extends Logging {
     , unifier = "linear", key = "0", recursor = "0")
   lazy val dualDirectb = derivedAxiom("[d] dual direct",
     Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> <a;>p(||)".asFormula)),
-    useExpansionAt("<> diamond")(1, 1::Nil) &
+    useExpansionAt(diamond)(1, 1::Nil) &
       byUS(dualb)
   )
 
@@ -3204,7 +3287,8 @@ object DerivedAxioms extends Logging {
   lazy val dualDirectd =
     derivedAxiom("<d> dual direct",
       Sequent(IndexedSeq(), IndexedSeq("<{a;}^@>p(||) <-> [a;]p(||)".asFormula)),
-      useAt(box, AxiomIndex.axiomIndex("box []")._1.sibling)(1, 1::Nil) &
+      useExpansionAt(box)(1, 1::Nil) &
+      //useAt(box, AxIndex.axiomIndex(box)._1.sibling)(1, 1::Nil) &
         byUS(duald)
     )
 
@@ -3217,7 +3301,7 @@ object DerivedAxioms extends Logging {
     * }}}
     */
   @Axiom("x',C", "DvariableCommutedAxiom", formula = "x'=<span class=\"k4-axiom-key\">(x)'</span>"
-    , unifier = "linear")
+    , unifier = "linear", key = "0", recursor="")
   lazy val DvariableCommutedAxiom = derivedAxiom("x' derive var commuted",
     Sequent(IndexedSeq(), IndexedSeq("(x_') = (x_)'".asFormula)),
     useAt(equalCommute)(1) &
@@ -3253,7 +3337,7 @@ object DerivedAxioms extends Logging {
   //      // left branch
   //      (Axiom.axiom("x' derive variable"), 0)
   //    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
-  //      byUS("= reflexive")*/
+  //      byUS(Ax.equalReflexive)*/
   //  )
   //  lazy val DvarT = TactixLibrary.byUS(Dvar)
   /**
@@ -3324,7 +3408,7 @@ object DerivedAxioms extends Logging {
  *
     * @see [[equivReflexive]]
    */
-  @Axiom("=R", unifier = "full")
+  @Axiom("=R", formula = "s=s", unifier = "full")
   lazy val equalReflexive =
     derivedAxiom("= reflexive", Sequent(IndexedSeq(), IndexedSeq("s_() = s_()".asFormula)),
       allInstantiateInverse(("s_()".asTerm, "x".asVariable))(1) &
@@ -3337,7 +3421,8 @@ object DerivedAxioms extends Logging {
     * End.
     * }}}
     */
-  @Axiom("=C", unifier = "linear")
+  @Axiom("=C", formula="<span class=\"k4-axiom-key\">f=g</span> ↔ g=f", unifier = "linear",
+    key = "0", recursor = "*")
   lazy val equalCommute = derivedAxiom("= commute", Sequent(IndexedSeq(), IndexedSeq("(f_()=g_()) <-> (g_()=f_())".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x (x=y <-> y=x)".asFormula, TactixLibrary.RCF))
@@ -4349,8 +4434,8 @@ object DerivedAxioms extends Logging {
     derivedAxiom("K<&>",
       "==> [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))".asSequent,
       implyR(1) & implyR(1) &
-        useExpansionAt("<> diamond")(1) &
-        useExpansionAt("<> diamond")(-2) &
+        useExpansionAt(diamond)(1) &
+        useExpansionAt(diamond)(-2) &
         notL(-2) & notR(1) & implyRi()(-1,1) &
         useAt(DR, PosInExpr(1::Nil))(1) & TactixLibrary.boxAnd(1) & andR(1) <(
         HilbertCalculus.DW(1) & G(1) & implyR(1) & closeId,

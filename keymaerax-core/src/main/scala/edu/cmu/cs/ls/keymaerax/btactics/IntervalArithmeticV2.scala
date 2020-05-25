@@ -816,34 +816,34 @@ object IntervalArithmeticV2 {
           case Not(fml) =>
             fml match {
               case And(f, g) =>
-                useAt(DerivedAxioms.notAnd, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notAnd, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Or(f, g) =>
-                useAt(DerivedAxioms.notOr, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notOr, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Imply(f, g) =>
-                useAt(DerivedAxioms.notImply, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notImply, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Equiv(f, g) =>
-                useAt(DerivedAxioms.notEquiv, PosInExpr(0 :: Nil))(pos) &
+                useAt(Ax.notEquiv, PosInExpr(0 :: Nil))(pos) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
                   intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
               case Not(f) =>
-                useAt(DerivedAxioms.doubleNegation, PosInExpr(0::Nil))(pos) &
+                useAt(Ax.doubleNegation, PosInExpr(0::Nil))(pos) &
                   intervalArithmeticPreproc(pos)
               case Equal(f, g) =>
                 useAt(notEqual, PosInExpr(0 :: Nil))(pos)
               case Less(a, b) =>
-                useAt(DerivedAxioms.notLess, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notLess, PosInExpr(0 :: Nil))(pos)
               case LessEqual(a, b) =>
-                useAt(DerivedAxioms.notLessEqual, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(pos)
               case Greater(a, b) =>
-                useAt(DerivedAxioms.notGreater, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notGreater, PosInExpr(0 :: Nil))(pos)
               case GreaterEqual(a, b) =>
-                useAt(DerivedAxioms.notGreaterEqual, PosInExpr(0 :: Nil))(pos)
+                useAt(Ax.notGreaterEqual, PosInExpr(0 :: Nil))(pos)
               case _ => unsupportedError(fml)
             }
           case Less(a, b) => nil

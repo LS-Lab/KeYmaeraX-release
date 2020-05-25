@@ -15,8 +15,8 @@ import scala.collection.immutable.HashMap
 ////////////////////////////////////////////////////////////
 
 
-/** Indicates that the axiom/rule/tactic of the given name could not be found. */
-case class AxiomNotFoundException(axiomName: String) extends Exception("Axiom with said name not found: " + axiomName)
+/** Indicates that the (derived) axiom/rule/tactic of the given name could not be found. */
+case class AxiomNotFoundException(axiomName: String) extends Exception("(Derived) Axiom or rule or tactic not found: " + axiomName)
 
 /** Central meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic.
  * Provides information such as unique canonical names, internal code names, display information, etc.
@@ -196,8 +196,9 @@ trait StorableInfo extends DerivationInfo {
 
 // axioms
 
-/** Meta-Information for an axiom or derived axiom
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]] */
+/** Meta-Information for an axiom or derived axiom, as declared by an @[[Axiom]] annotation.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
+  * @see [[Axiom]] */
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula
