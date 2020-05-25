@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{Expand, ExpandAll, PartialTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Function, Real, SubstitutionPair, Trafo, Tuple, USubst, USubstOne, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Assign, Bool, Function, Number, Plus, Real, SubstitutionPair, Trafo, Tuple, USubst, USubstOne, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.infrastruct.RenUSubst
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -270,6 +270,34 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
+  it should "parse an isolated simple definition assignment" in {
+    parser.expParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
+    parser.expParser.programParser("{ x:=x+1; }") shouldBe (parser.expParser.programParser("x:=x+1;"))
+    fastparse.parse( "HP a ::= { x:=x+1; };", parser.progDef(_)).get.value shouldBe (("a", None), (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))
+    fastparse.parse( "Definitions HP a ::= { x:=x+1; }; End.", parser.definitions(_)).get.value shouldBe (Declaration(Map(("a", None) -> (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation)), Map.empty))
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1; }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("a", None) -> (Some(Unit), Trafo, Some("x:=x+1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
   it should "parse simple program definition assignment before variables" in {
     val input =
       """
@@ -313,6 +341,54 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [?x>1;]x>1".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
+  it should "parse simple program definition ODE before variables" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { {x'=5} }; End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("a", None) -> (Some(Unit), Trafo, Some("{x'=5}".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.expandedModel shouldBe "x!=0 -> [{x'=5}]x>1".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
+  it should "parse simple program definition compose before variables" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { ?x>1;x:=x+1; } End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("a", None) -> (Some(Unit), Trafo, Some("?x>1;x:=x+1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.expandedModel shouldBe "x!=0 -> [?x>1;x:=x+1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()

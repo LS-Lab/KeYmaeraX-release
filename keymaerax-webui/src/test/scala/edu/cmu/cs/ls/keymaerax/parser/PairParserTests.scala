@@ -437,6 +437,13 @@ class PairParserTests extends FlatSpec with Matchers {
     ("\\exists \\exists", unparseable),
     ("\\forall \\exists", unparseable),
     ("\\exists \\forall", unparseable),
+    ("\\forallx (x>0)", unparseable),
+    ("\\forallx(x>0)", unparseable),
+    ("\\forallx1>0", unparseable),
+    ("\\existsx (x>0)", unparseable),
+    ("\\existsx(x>0)", unparseable),
+    ("\\existsx1>0", unparseable),
+
 
     ("[x:=x+1;] p(x)&q(x)", "([x:=x+1;] p(x))&q(x)"),
     ("[x:=x+1;] p(x)|q(x)", "([x:=x+1;] p(x))|q(x)"),
@@ -486,6 +493,8 @@ class PairParserTests extends FlatSpec with Matchers {
     ("\\forall p(x())","\\forall p (x())"),   //@todo not a great test on string level
     ("\\forall x p(x)", "\\forall x (p(x))"),
     ("\\for all x p(x)", unparseable),
+    ("\\ex ists x p(x)", unparseable),
+    ("\\exist s x p(x)", unparseable),
 
 
     ("[x:=1;x:=2;++x:=3;]x>=5", "[{x:=1;x:=2;}++{x:=3;}]x>=5"),

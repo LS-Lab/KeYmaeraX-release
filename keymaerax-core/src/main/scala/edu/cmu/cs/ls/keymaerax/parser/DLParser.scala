@@ -154,8 +154,13 @@ class DLParser extends Parser {
 
 
   //*****************
-  // base parsers
+  // terminals
   //*****************
+
+  //@todo how to ensure longest-possible match in all terminals everywhere? Avoid reading truenot as "true" "not"
+
+  /** Explicit nonempty whitespace terminal. */
+  def blank[_:P]: P[Unit] = P( CharsWhileIn(" \t\r\n", 1) )
 
   /** parse a number literal */
   def number[_: P]: P[Number] = {
@@ -175,6 +180,11 @@ class DLParser extends Parser {
     import NoWhitespace._
     P( "." ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!.map(_.toInt)).? ).map(idx => DotTerm(Real, idx))
   }
+
+  //*****************
+  // base parsers
+  //*****************
+
 
   def baseVariable[_: P]: P[BaseVariable] = ident.map(s => Variable(s._1,s._2,Real))
   def diffVariable[_: P]: P[DifferentialSymbol] = P(baseVariable ~ "'").map(DifferentialSymbol(_))
@@ -245,7 +255,7 @@ class DLParser extends Parser {
     map({case ("[",p,"]", f) => Box(p, f)
          case ("<",p,">", f) => Diamond(p, f)})
   //@todo block quantifier \\forall x,y,z Q
-  def quantified[_: P]: P[Formula] = P( ("\\forall"|"\\exists").! ~/ variable ~/ conjunct ).
+  def quantified[_: P]: P[Formula] = P( ("\\forall"|"\\exists").! ~~/ blank ~/ variable ~/ conjunct ).
     map({case ("\\forall",x, f) => Forall(x::Nil, f)
          case ("\\exists",x, f) => Exists(x::Nil, f)})
   def conjunct[_: P]: P[Formula] = P( not | quantified | modal | baseF)
