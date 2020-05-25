@@ -36,17 +36,18 @@ import scala.collection.immutable._
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   */
 object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
-  import DLAxiomParser.string
 
-  /** Which formula/term/program parser this archive parser uses */
+  /** Which formula/term/program parser this archive parser uses. */
   val expParser = DLParser
 
   /**
     * Parse an archive file string into a list of archive entries.
     * @param input The contents of the archive file.
     * @return A list of archive entries occurring in the string.
+    * @see [[parse()]]
     */
-  def apply(input: String) : List[ParsedArchiveEntry] = archiveParser(input)
+  def apply(input: String) : List[ParsedArchiveEntry] = parse(input)
+  /** Parse an archive file string into a list of archive entries, same as [[apply()]] */
   def parse(input: String) : List[ParsedArchiveEntry] = archiveParser(input)
 
   //@todo definitions elaboration to replace arguments by dots and do type analysis
@@ -196,6 +197,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def number[_: P]: P[Number] = expParser.number
   /** parse an identifier from [[expParser]] */
   def ident[_: P]: P[(String,Option[Int])] = expParser.ident
+  def string[_: P]: P[String] = expParser.string
 
   def baseVariable[_: P]: P[BaseVariable] = expParser.baseVariable
 

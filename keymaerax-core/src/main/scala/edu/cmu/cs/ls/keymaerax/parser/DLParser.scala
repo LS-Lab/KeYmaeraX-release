@@ -17,11 +17,12 @@ import scala.collection.immutable._
 
 /**
   * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
+  * @author Andre Platzer
   */
 object DLParser extends DLParser {
 
   /** Converts Parsed.Failure to corresponding ParseException to throw. */
-  private[parser] def parseException(f: Parsed.Failure): ParseException = {
+  private[keymaerax] def parseException(f: Parsed.Failure): ParseException = {
     val tr: Parsed.TracedFailure = f.trace()
     val inputString = f.extra.input match {
       case IndexedParserInput(input) => input
@@ -40,7 +41,7 @@ object DLParser extends DLParser {
   }
 
   /** The location of a parse failure. */
-  private[parser] def location(f: Parsed.Failure): Location = try {
+  private[keymaerax] def location(f: Parsed.Failure): Location = try {
     f.extra.input.prettyIndex(f.index).split(':').toList match {
       case line::col::Nil => Region(line.toInt, col.toInt)
       case line::col::unexpected => Region(line.toInt, col.toInt)
@@ -51,7 +52,7 @@ object DLParser extends DLParser {
   }
 
   /** parse from a parser with more friendly error reporting */
-  private[parser] def parseValue[T](input: String, parser: P[_] => P[T]): T = fastparse.parse(input, parser(_)) match {
+  private[keymaerax] def parseValue[T](input: String, parser: P[_] => P[T]): T = fastparse.parse(input, parser(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
   }
@@ -92,6 +93,7 @@ class DLParser extends Parser {
 
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
+    //@todo store the parser for speed
   val exprParser: String => Expression = (s => fastparse.parse(s, fullExpression(_)) match {
     case Parsed.Success(value, index) => value
     case f: Parsed.Failure => throw parseException(f)
@@ -173,18 +175,39 @@ class DLParser extends Parser {
     P(("-".? ~~ CharIn("0-9").rep(1) ~~ ("." ~~/ CharIn("0-9").rep(1)).?).!).
       map(s => Number(BigDecimal(s)))
   }
-  /** parse an identifier */
+  /** parse an identifier.
+    * @return the name and its index (if any).
+    * @note Index is normalized so that x_00 cannot be mentioned and confused with x_0.*/
   def ident[_: P]: P[(String,Option[Int])] = {
     import NoWhitespace._
-    P( (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").rep).! ~~
-      (("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!) | "_".!).? ).
+    P( (CharIn("a-zA-Z") ~~ CharIn("a-zA-Z0-9").repX).! ~~
+      (("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!) | "_".!).? ).
       map({case (s,None) => (s,None) case (s,Some("_")) => (s+"_",None) case (s,Some(n))=>(s,Some(n.toInt))})
   }
   /** `.` or `._2`: dot parsing */
   def dot[_:P]: P[DotTerm] = {
     import NoWhitespace._
-    P( "." ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").rep).!.map(_.toInt)).? ).map(idx => DotTerm(Real, idx))
+    P( "." ~~ ("_" ~~ ("0" | CharIn("1-9") ~~ CharIn("0-9").repX).!.map(_.toInt)).? ).map(idx => DotTerm(Real, idx))
   }
+
+  // terminals not used here but provided for other DL parsers
+  private def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
+
+  /** "whatevs": Parse a string literal. */
+  def string[_: P]: P[String] = P("\"" ~~/ CharsWhile(stringChars).! ~~ "\"")
+
+  /** "-532": Parse an integer literal, unnormalized. */
+  def integer[_: P]: P[Int] = {
+    import NoWhitespace._
+    ("-".? ~~ CharIn("0-9").rep(1)).!.map(s => s.toInt)
+  }
+  /** "532": Parse a (nonnegative) natural number literal, unnormalized. */
+  def natural[_: P]: P[Int] = {
+    import NoWhitespace._
+    CharIn("0-9").rep(1).!.map(s => s.toInt)
+  }
+
+
 
   //*****************
   // base parsers
