@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, Tactic}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -388,7 +388,6 @@ private object DifferentialTactics extends Logging {
         )
       case (_, e) => throw new TacticInapplicableFailure("dCi only applicable to modal box/diamond properties, but got " + e.prettyString)
     }
-
     useAt(fact, PosInExpr(1::(if (polarity > 0) 1 else 0)::Nil))(pos)
   })
 
