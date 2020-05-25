@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, Tactic}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -365,7 +365,8 @@ private object DifferentialTactics extends Logging {
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint. */
   // @see AxiomaticODESolver.inverseDiffCut
-  def inverseDiffCut: DependentPositionTactic = "dCi" by ((pos: Position, s: Sequent) => {
+  @Tactic("dCi")
+  def inverseDiffCut(pos: Position, s: Sequent): BelleExpr = {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val fact = s.at(pos) match {
       case (ctx, fml: Modal) =>
@@ -387,7 +388,7 @@ private object DifferentialTactics extends Logging {
     }
 
     useAt(fact, PosInExpr(1::(if (polarity > 0) 1 else 0)::Nil))(pos)
-  })
+  }
 
   /**
     * Turns things that are constant in ODEs into function symbols.

@@ -61,6 +61,11 @@ object DerivationInfo {
     di
   }
 
+  def registerPositionTactic[T](value: => T, pti: PositionTacticInfo): T = {
+    _allInfo = pti :: allInfo
+    value
+  }
+
   /** code name mapped to derivation information */
   def byCodeName: Map[String, DerivationInfo] =
   /* @todo Decide on a naming convention. Until then, making everything case insensitive */
