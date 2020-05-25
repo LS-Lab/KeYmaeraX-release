@@ -202,7 +202,7 @@ trait StorableInfo extends DerivationInfo {
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula
-  val theKey: ExprPos = Nil
+  val theKey: ExprPos = 0 :: Nil
   val theRecursor: List[ExprPos] = Nil
 }
 
@@ -217,7 +217,7 @@ case class CoreAxiomInfo(  override val canonicalName:String
                          , val unifier: Symbol
                          , val theExpr: Unit => Any
                          , val displayLevel: Symbol = 'all
-                         , override val theKey: ExprPos = Nil
+                         , override val theKey: ExprPos = 0 :: Nil
                          , override val theRecursor: List[ExprPos] = Nil
                         )
   extends AxiomInfo {
@@ -237,7 +237,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , val unifier: Symbol
                             , theExpr: Unit => Any
                             , val displayLevel: Symbol = 'all
-                            , override val theKey: ExprPos = Nil
+                            , override val theKey: ExprPos = 0 :: Nil
                             , override val theRecursor: List[ExprPos] = Nil
                             )
   extends AxiomInfo with StorableInfo {
