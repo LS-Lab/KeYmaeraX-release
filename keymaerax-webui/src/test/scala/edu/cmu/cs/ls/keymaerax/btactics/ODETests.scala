@@ -547,7 +547,7 @@ class ODETests extends TacticTestBase {
     //Abuse DS to show that solutions exist for all time
     val texists = "x0 > 0 -> <{t'=1}> 0<=x0-x1+x0*t".asFormula
     val pr1 = proveBy(texists,
-      implyR(1) & useAt("Dsol differential equation solution")(1) &
+      implyR(1) & useAt(Ax.DSdnodomain)(1) &
         chase(1, 0::1::Nil) & QE
     )
 
@@ -556,7 +556,7 @@ class ODETests extends TacticTestBase {
     val pr2 = proveBy(xexists,
       implyR(1) &
       universalGen(Some("x".asVariable),"x".asTerm)(1) &
-      useAt("DGd diamond differential ghost",PosInExpr(1::Nil))(1) &
+      useAt(Ax.DGd, PosInExpr(1::Nil))(1) &
       implyRi &
       by(pr1)
     )
@@ -565,10 +565,10 @@ class ODETests extends TacticTestBase {
     val pr = proveBy(fml, prop &
       cut("[{t'=1,x'=1*x+0 & true & x-x1 < 0}] 0 > (x0-x1)+x0*t".asFormula)
       <(
-        useAt("<> diamond",PosInExpr(1::Nil))(1) & notR(1)  & SimplifierV3.fullSimpTac() &
+        useAt(Ax.diamond, PosInExpr(1::Nil))(1) & notR(1)  & SimplifierV3.fullSimpTac() &
         //Inverse diff cut
         cut("[{t'=1,x'=1*x+0 & true}] 0 > (x0-x1)+x0*t".asFormula) <(
-          useAt("[] box",PosInExpr(1::Nil))(-6) & notL(-6) &
+          useAt(Ax.box, PosInExpr(1::Nil))(-6) & notL(-6) &
             chase(1, 1::Nil) & implyRi()(AntePos(2),SuccPos(0)) & cohideR(1) & byUS(pr2),
           dC("x-x1 < 0".asFormula)(1) < ( closeId,closeId) )
         ,
