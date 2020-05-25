@@ -319,22 +319,22 @@ class DLTests extends TacticTestBase {
 
   "postCut" should "introduce implication in simple example" in {
     val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1))
-    result.subgoals.loneElement shouldBe "==> [a:=5;](a>1->a>0) & [a:=5;]a>1".asSequent
+    result.subgoals shouldBe "==> [a:=5;]a>1".asSequent :: "==> [a:=5;](a>1->a>0)".asSequent :: Nil
   }
 
   it should "introduce implication" in {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, postCut("x>1".asFormula)(1))
-    result.subgoals.loneElement shouldBe "==> [x:=2;](x>1 -> [y:=x;]y>1) & [x:=2;]x>1".asSequent
+    result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "==> [x:=2;](x>1 -> [y:=x;]y>1)".asSequent :: Nil
   }
 
   it should "introduce implication in context" in {
     val result = proveBy("a=2 -> [z:=3;][x:=2;][y:=x;]y>1".asFormula, postCut("x>1".asFormula)(1, 1::1::Nil))
-    result.subgoals.loneElement shouldBe "==> a=2 -> [z:=3;]([x:=2;](x>1 -> [y:=x;]y>1) & [x:=2;]x>1)".asSequent
+    result.subgoals shouldBe "==> a=2 -> [z:=3;][x:=2;]x>1".asSequent :: "==> a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)".asSequent :: Nil
   }
 
   it should "work with non-empty antecedent" in {
     val result = proveBy("x=2 ==> [a:=5;]a>0".asSequent, postCut("a>1".asFormula)(1))
-    result.subgoals.loneElement shouldBe "x=2 ==> [a:=5;](a>1->a>0) & [a:=5;]a>1".asSequent
+    result.subgoals shouldBe "x=2 ==> [a:=5;]a>1".asSequent :: "x=2 ==> [a:=5;](a>1->a>0)".asSequent :: Nil
   }
 
   "I" should "work on a simple example" in {

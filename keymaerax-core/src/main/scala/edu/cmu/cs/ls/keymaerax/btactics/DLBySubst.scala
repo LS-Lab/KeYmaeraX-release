@@ -295,8 +295,8 @@ private object DLBySubst {
    * @todo same for diamonds by the dual of K
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
-  def postCut(C: Formula): DependentPositionTactic = useAt(Ax.K, PosInExpr(1::Nil),
-    (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
+  def postCut(C: Formula): DependentPositionTactic = useAt(Ax.K, PosInExpr(1::1::Nil),
+    (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p(||)".asFormula, C)::Nil))
 
   private def constAnteConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)

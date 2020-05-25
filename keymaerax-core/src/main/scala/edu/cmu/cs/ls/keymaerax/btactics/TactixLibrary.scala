@@ -551,21 +551,21 @@ object TactixLibrary extends HilbertCalculus
   /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
     * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
     * {{{
-    *   cutUseLbl:           cutShowLbl:
-    *   G |- [a](C->B), D    G |- [a]C, D
+    *   cutShowLbl:     cutUseLbl:
+    *   G |- [a]C, D    G |- [a](C->B), D
     *   ---------------------------------
     *          G |- [a]B, D
     * }}}
     *
     * @example{{{
-    *   cutUseLbl:                       cutShowLbl:
-    *   |- [x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
+    *   cutShowLbl:      cutUseLbl:
+    *   |- [x:=2;]x>1    |- [x:=2;](x>1 -> [y:=x;]y>1)
     *   -----------------------------------------------postCut("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
     * @example{{{
-    *   cutUseLbl:                                     cutShowLbl:
-    *   |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
+    *   cutShowLbl:      cutUseLbl:
+    *   |- [x:=2;]x>1    |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)
     *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
     *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
     * }}}
