@@ -368,8 +368,7 @@ private object DifferentialTactics extends Logging {
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint. */
   // @see AxiomaticODESolver.inverseDiffCut
-  @Tactic("dCi")
-  def inverseDiffCut(pos: Position, s: Sequent): BelleExpr = {
+  def inverseDiffCut: DependentPositionTactic = "dCi" by ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val fact = s.at(pos) match {
       case (ctx, fml: Modal) =>
@@ -389,9 +388,8 @@ private object DifferentialTactics extends Logging {
         )
       case (_, e) => throw new TacticInapplicableFailure("dCi only applicable to modal box/diamond properties, but got " + e.prettyString)
     }
-
     useAt(fact, PosInExpr(1::(if (polarity > 0) 1 else 0)::Nil))(pos)
-  }
+  })
 
   /**
     * Turns things that are constant in ODEs into function symbols.
