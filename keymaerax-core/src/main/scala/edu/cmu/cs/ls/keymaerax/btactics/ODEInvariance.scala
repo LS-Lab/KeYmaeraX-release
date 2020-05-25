@@ -1430,7 +1430,11 @@ object ODEInvariance {
     val f2 = fml.asInstanceOf[GreaterEqual]
     //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
 
-    val (pf,inst,qetac) = pStarHomPlus(ode,dom,f2.left,bound,Some(And(dom,post)))
+    val (pf,inst,qetac) = try {
+      pStarHomPlus(ode,dom,f2.left,bound,Some(And(dom,post)))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to compute p*", ex)
+    }
 
     //println("HOMPLUS:"+pf+" "+inst)
 
