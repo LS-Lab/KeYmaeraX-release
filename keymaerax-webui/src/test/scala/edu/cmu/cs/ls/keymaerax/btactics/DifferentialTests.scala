@@ -383,14 +383,14 @@ class DifferentialTests extends TacticTestBase {
       have message """After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition
                      |Provable{
                      |   -1:  x>0	Greater
-                     |   -2:  f((x,y()))>0	Greater
+                     |   -2:  f(x,y())>0	Greater
                      |   -3:  true	True$
-                     |==> 1:  [{x'=2&true}](f((x,y()))>0)'	Box
+                     |==> 1:  [{x'=2&true}](f(x,y())>0)'	Box
                      |  from
                      |   -1:  x>0	Greater
-                     |   -2:  f((x,y()))>0	Greater
+                     |   -2:  f(x,y())>0	Greater
                      |   -3:  true	True$
-                     |==> 1:  [{x'=2&true}][x':=2;](f((x,y())))'>=0	Box}""".stripMargin
+                     |==> 1:  [{x'=2&true}][x':=2;](f(x,y()))'>=0	Box}""".stripMargin
   }
 
   //@todo unsupported so far (substitution clash in derive)
