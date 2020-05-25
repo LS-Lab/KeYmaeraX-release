@@ -56,7 +56,7 @@ object ProofChecker {
             case e:Exception =>
               val axiomFml = AxiomInfo(axiomName).provable.conclusion
               val node = proofNode(axiomFml)
-              ?? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
+              ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
           }
         }
 
