@@ -50,6 +50,11 @@ object DLParser extends DLParser {
     case _: NumberFormatException => UnknownLocation
   }
 
+  /** parse from a parser with more friendly error reporting */
+  private[parser] def parseValue[T](input: String, parser: P[_] => P[T]): T = fastparse.parse(input, parser(_)) match {
+    case Parsed.Success(value, index) => value
+    case f: Parsed.Failure => throw parseException(f)
+  }
 }
 
 /**

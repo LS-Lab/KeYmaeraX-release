@@ -273,8 +273,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   it should "parse an isolated simple definition assignment" in {
     parser.expParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
     parser.expParser.programParser("{ x:=x+1; }") shouldBe (parser.expParser.programParser("x:=x+1;"))
-    fastparse.parse( "HP a ::= { x:=x+1; };", parser.progDef(_)).get.value shouldBe (("a", None), (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))
-    fastparse.parse( "Definitions HP a ::= { x:=x+1; }; End.", parser.definitions(_)).get.value shouldBe (Declaration(Map(("a", None) -> (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation)), Map.empty))
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", parser.progDef(_)) shouldBe (("a", None), (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))
+    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", parser.definitions(_)) shouldBe (Declaration(Map(("a", None) -> (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation)), Map.empty))
     val input =
       """
         |ArchiveEntry "Entry 1"

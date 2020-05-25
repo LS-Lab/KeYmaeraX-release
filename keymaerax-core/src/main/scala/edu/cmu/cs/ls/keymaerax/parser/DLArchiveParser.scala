@@ -36,8 +36,10 @@ import scala.collection.immutable._
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
   */
 object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
-  import DLParser.{formula, term, program, ident, baseVariable}
   import DLAxiomParser.string
+
+  /** Which formula/term/program parser this archive parser uses */
+  val expParser = DLParser
 
   /**
     * Parse an archive file string into a list of archive entries.
@@ -86,7 +88,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** Parse a single archive entry. */
   def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!.
-    map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"}) ~
+    map({case "Exercise"=>"exercise" case "Lemma" => "lemma" case _=>"theorem"}) ~~ blank ~
     (label ~ ":").? ~ string ~
     metaInfo ~
     allDeclarations ~
@@ -121,22 +123,22 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] = P(
-    NoCut(declarations ~ functions).map(p=>p._1++p._2) |
-    NoCut(functions.? ~ declarations.?).
+    //@todo NoCut(programVariables ~ definitions).map(p=>p._1++p._2) |
+    (definitions.? ~ programVariables.?).
       map({case (Some(a), Some(b)) => a++b case (None, Some(b)) => b case (Some(a), None) => a case (None, None) => Declaration(Map.empty, Map.empty)})
   )
 
   /** `Description "text".` parsed. */
-  def description[_: P]: P[String] = P("Description" ~/ string ~ "." )
+  def description[_: P]: P[String] = P("Description" ~~ blank~/ string ~ "." )
 
   /** `Title "text".` parsed. */
-  def title[_: P]: P[String] = P("Title" ~/ string ~ "." )
+  def title[_: P]: P[String] = P("Title" ~~ blank~/ string ~ "." )
 
   /** `Link "text".` parsed. */
-  def link[_: P]: P[String] = P("Link" ~/ string ~ "." )
+  def link[_: P]: P[String] = P("Link" ~~ blank~/ string ~ "." )
 
-  /** `Functions declOrDef End.` parsed. */
-  def functions[_: P]: P[Declaration] = P("Definitions" ~/ declOrDef.rep ~ "End." ).
+  /** `Definitions declOrDef End.` parsed. */
+  def definitions[_: P]: P[Declaration] = P("Definitions" ~~ blank ~/ declOrDef.rep ~ "End." ).
     map(list => Declaration(list.toMap, Map.empty))
 //      list.filter({case (id,sig) => sig._3.isEmpty}).toMap,
 //      list.filter({case (id,sig) => sig._3.isDefined}).toMap)
@@ -159,19 +161,19 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** `sort name(sort1 arg1, sorg2 arg2)` declaration part */
   def declPart[_: P]: P[(Name,Signature)] = P(
-    sort ~/ ident ~~ (
-      ("(" ~ (sort ~ ident.?).rep(sep=","./) ~ ")").
+    sort ~~ blank ~~/ ident ~~ (
+      ("(" ~ (sort ~~ blank ~ ident.?).rep(sep=","./) ~ ")").
         map(xs => xs.map(_._1).toList.reduceRightOption(Tuple).getOrElse(core.Unit))
       | "".!.map(_ => core.Unit)
     )
   ).map({case (ty,n,args) => (n, (Some(args), ty, None, UnknownLocation))})
 
   /** `HP name ::= program;` program definition. */
-  def progDef[_: P]: P[(Name,Signature)] = P( "HP" ~/ ident ~/ "::=" ~/ program ~ ";" ).
+  def progDef[_: P]: P[(Name,Signature)] = P( "HP" ~~ blank ~ ident ~ "::=" ~ (NoCut(program) | "{" ~ NoCut(program) ~ "}") ~ ";" ).
     map({case (s,idx,p) => ((s,idx),(None, Trafo, Some(p), UnknownLocation))})
 
-  /** `ProgramVariables declarationsOrDefinitions End.` parsed. */
-  def declarations[_: P]: P[Declaration] = P ("ProgramVariables" ~/
+  /** `ProgramVariables Real x; Real y,z; End.` parsed. */
+  def programVariables[_: P]: P[Declaration] = P ("ProgramVariables" ~~ blank ~/
     //@todo retain location information
     //@todo how to ensure there is some whitespace between sort and baseVariable?
     (sort ~ ident ~ ("," ~ ident).rep ~ ";").map({case (ty,x,xs) => (xs.+:(x)).toList.map(v=>v->ty)})
@@ -179,8 +181,30 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
     ~ "End." )
 
   /** `Problem  formula  End.` parsed. */
-  def problem[_: P]: P[Formula] = P("Problem" ~/ formula ~ "End." )
+  def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )
 
   //@todo tactic.rep needs tactic parser or skip ahead to End. and ask BelleParser.
-  def tactic[_: P]: P[Unit] = P( "Tactic" ~ "End.")
+  def tactic[_: P]: P[Unit] = P( "Tactic" ~~ blank ~/ "End.")
+
+
+  // externals
+
+  /** Explicit nonempty whitespace terminal from [[expParser]]. */
+  def blank[_:P]: P[Unit] = expParser.blank
+
+  /** parse a number literal from [[expParser]] */
+  def number[_: P]: P[Number] = expParser.number
+  /** parse an identifier from [[expParser]] */
+  def ident[_: P]: P[(String,Option[Int])] = expParser.ident
+
+  def baseVariable[_: P]: P[BaseVariable] = expParser.baseVariable
+
+  /** term: Parses a dL term from [[expParser]]. */
+  def term[_: P]: P[Term] = expParser.term
+
+  /** formula: Parses a dL formula from [[expParser]]. */
+  def formula[_: P]: P[Formula] = expParser.formula
+
+  /** program: Parses a dL program from [[expParser]]. */
+  def program[_: P]: P[Program] = expParser.program
 }
