@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, NamedBelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, DependentPositionTactic, NamedBelleExpr}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.macros._
@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import scala.collection.immutable.HashMap
 
 object DerivationInfoAugmentors {
+  def byPosition (name: String, expr: (Position, Sequent) => BelleExpr): DependentPositionTactic = name by expr
+
   /** Locally embed single string names into SimpleDisplayInfo. */
   implicit def displayInfo(name: String): SimpleDisplayInfo = {
     SimpleDisplayInfo(name, name)

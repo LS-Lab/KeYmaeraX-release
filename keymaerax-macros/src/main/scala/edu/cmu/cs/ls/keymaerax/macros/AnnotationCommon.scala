@@ -95,15 +95,15 @@ object AnnotationCommon {
   def convAI(ai: ArgInfo)(implicit c: whitebox.Context): c.universe.Tree = {
     import c.universe._
     ai match {
-      case VariableArg(name, allowsFresh) => q"""new VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case NumberArg(name, allowsFresh) => q"""new NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case StringArg(name, allowsFresh) => q"""new StringArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case SubstitutionArg(name, allowsFresh) => q"""new SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case OptionArg(arg) => q"""new OptionArg(${convAI(arg)})"""
-      case FormulaArg(name, allowsFresh) => q"""new FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case ListArg(name, sort, allowsFresh) => q"""new ListArg(${literal(name)}, ${literal(sort)}, ${literals(allowsFresh)})"""
-      case ta: TermArg => q"""new TermArg(${literal(ta.name)}, ${literals{ta.allowsFresh}})"""
-      case ea: ExpressionArg => q"""new ExpressionArg (${literal(ea.name)}, ${literals(ea.allowsFresh)})"""
+      case VariableArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case NumberArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case StringArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.StringArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case SubstitutionArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case OptionArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.OptionArg(${convAI(arg)})"""
+      case FormulaArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case ListArg(name, sort, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.ListArg(${literal(name)}, ${literal(sort)}, ${literals(allowsFresh)})"""
+      case ta: TermArg => q"""new edu.cmu.cs.ls.keymaerax.macros.TermArg(${literal(ta.name)}, ${literals{ta.allowsFresh}})"""
+      case ea: ExpressionArg => q"""new edu.cmu.cs.ls.keymaerax.macros.ExpressionArg (${literal(ea.name)}, ${literals(ea.allowsFresh)})"""
     }
   }
   def convSD(sd: SequentDisplay)(implicit c: whitebox.Context): c.universe.Tree = {
@@ -114,16 +114,16 @@ object AnnotationCommon {
   def convDI(di: DisplayInfo)(implicit c: whitebox.Context): c.universe.Tree = {
     import c.universe._
     di match {
-      case SimpleDisplayInfo(name, asciiName) => q"""new SimpleDisplayInfo(${literal(name)}, ${literal(asciiName)})"""
+      case SimpleDisplayInfo(name, asciiName) => q"""new edu.cmu.cs.ls.keymaerax.macros.SimpleDisplayInfo(${literal(name)}, ${literal(asciiName)})"""
       case RuleDisplayInfo(names, conclusion, premises)  =>
         val namesTree = convDI(names)
         val conclusionTree = convSD(conclusion)
         val premiseTrees = premises.map((sd: SequentDisplay) => convSD(sd))
-        q"""new RuleDisplayInfo(${namesTree}, ${conclusionTree}, ${premiseTrees})"""
+        q"""new edu.cmu.cs.ls.keymaerax.macros.RuleDisplayInfo(${namesTree}, ${conclusionTree}, ${premiseTrees})"""
       case AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) =>
-        q"""new AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
+        q"""new edu.cmu.cs.ls.keymaerax.macros.AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
       case InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) =>
-        q"""new InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
+        q"""new edu.cmu.cs.ls.keymaerax.macros.InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
     }
   }
   def sequentDisplayFromObj(a: Any)(implicit c: whitebox.Context): SequentDisplay = {
