@@ -455,7 +455,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //@todo unsound bananas in post condition
   "DS& differential equation solution" should "be careful in postcondition" in withMathematica { _ =>
     val fml = "[{x'=1}] t_>=0".asFormula
-    val result = proveBy(fml, useAt("DS& differential equation solution")(1) & normalize)
+    val result = proveBy(fml, useAt(Ax.DS)(1) & normalize)
     result shouldBe 'proved
   }
 
@@ -564,7 +564,6 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val t = implyR(1) & AxiomaticODESolver()(1)
     the [BelleThrowable] thrownBy proveBy(f, t) should have message
       """ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().
-        |The error occurred on
         |Provable{
         |==> 1:  x=1&v=2&a=0&t=0->[{x'=v,v'=x,t'=1&true}]x^3>=1	Imply
         |  from
