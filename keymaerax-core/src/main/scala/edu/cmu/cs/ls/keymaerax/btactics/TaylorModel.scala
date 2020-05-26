@@ -129,9 +129,9 @@ object TaylorModelTactics extends Logging {
               case _ => false
             })
             poss.foldRight(fail){ case (subpos, a) => useAt(prv, PosInExpr(0 :: Nil))(pos ++ subpos) | a }
-          case _ => throw new IllegalArgumentException("rewriteFormula not on Formula.")
+          case _ => throw new TacticInapplicableFailure("rewriteFormula not on Formula.")
         }
-      case _ => throw new IllegalArgumentException("rewriteFormula expects an Equiv as single conclusion of provable but got:\\n" + prv)
+      case _ => throw new InputFormatFailure("rewriteFormula expects an Equiv as single conclusion of provable but got:\\n" + prv)
     }
   }
 
@@ -420,7 +420,7 @@ object TaylorModelTactics extends Logging {
       seq.sub(pos) match {
         case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
           ProofRuleTactics.boundRenaming(vs.head, remainder(state.indexOf(v)))(pos) & existsL(pos)
-        case _ => throw new IllegalArgumentException("instLeq not on expected shape.")
+        case _ => throw new TacticInapplicableFailure("instLeq not on expected shape.")
       }
     }
 
@@ -433,9 +433,9 @@ object TaylorModelTactics extends Logging {
         boxTMEnclosure),
       debugTac("start") &
         implyR(1) &
-        // push in existencial quantifiers
-        SaturateTactic(rewriteFormula(partialVacuousExistsAxiom2.fact)(1) |
-          rewriteFormula(Ax.pexistsV.provable)(1) |
+        // push in existential quantifiers
+        SaturateTactic(rewriteFormula(partialVacuousExistsAxiom2.fact)(1) |!
+          rewriteFormula(Ax.pexistsV.provable)(1) |!
           rewriteFormula(TaylorModelTactics.unfoldExistsLemma.fact)(1)
         ) &
         tocTac("pre dIClosed") &
@@ -519,7 +519,7 @@ object TaylorModelTactics extends Logging {
         t1::getBoundees(ivls)
       case And(Less(_, t1), Less(t2, _)) if t1 == t2 =>
         t1::Nil
-      case _ => throw new IllegalArgumentException("getBoundees called on non-And")
+      case _ => throw new TacticInapplicableFailure("getBoundees called on non-And")
     }
 
     private def numericPicard(prec: Integer, boundees: IndexedSeq[Term], timebound: Term, right_bounds: List[Formula])
@@ -612,7 +612,7 @@ object TaylorModelTactics extends Logging {
                 )
               )
         }
-        case _ => throw new IllegalArgumentException("cutTM not on suitable Box(ODE)")
+        case _ => throw new TacticInapplicableFailure("cutTM not on suitable Box(ODE)")
       }
     }
   }
