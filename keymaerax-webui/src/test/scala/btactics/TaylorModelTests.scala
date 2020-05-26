@@ -12,12 +12,12 @@ import scala.collection.immutable._
 
 class TaylorModelTests extends TacticTestBase {
 
-  "coarsenTimesBounds" should "work" in withMathematica { _ =>
+  "coarsenTimesBounds" should "work" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     proveBy("0 <= t, t <= h(), t*f() <= xRem, xRem <= t*g(), p() ==> q()".asSequent, coarsenTimesBounds("t".asTerm)).
       subgoals.loneElement shouldBe ("0<=t, t<=h(), min((0,h()*f()))<=xRem, xRem<=max((0,h()*g())), p() ==>  q()".asSequent)
-  }
+  }}
 
-  "TaylorModel" should "prove the lemma in order 2" in withMathematica { _ =>
+  "TaylorModel" should "prove the lemma in order 2" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = 1 + y, y' = -x^2, t'=1}".asDifferentialProgram
     val tm = TaylorModel(ode, 2).lemma
     tm shouldBe 'proved
@@ -140,9 +140,9 @@ class TaylorModelTests extends TacticTestBase {
         |            s * iL1() <= Rem1 & Rem1 <= s * iU1()
         |          )
       """.stripMargin.asSequent
-  }
+  }}
 
-  it should "work for exp" in withMathematica { _ =>
+  it should "work for exp" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = x, t' = 1}".asDifferentialProgram
     val tm = TaylorModel(ode, 4).lemma
     tm shouldBe 'proved
@@ -173,26 +173,26 @@ class TaylorModelTests extends TacticTestBase {
         |          s * iL0() <= Rem0 & Rem0 <= s * iU0()
         |        )
       """.stripMargin.asSequent
-  }
+  }}
 
   val vdp = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
 
-  it should "prove a lemma about van der Pol" in withMathematica { _ =>
+  it should "prove a lemma about van der Pol" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val tm = TaylorModel(vdp, 1).lemma
     tm shouldBe 'proved
-  }
+  }}
 
-  it should "prove a lemma about Lotka-Volterra" in withMathematica { _ =>
+  it should "prove a lemma about Lotka-Volterra" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = 1.5*x - x*y, y'= -3*y + x*y, t' = 1}".asDifferentialProgram
     val tm = TaylorModel(ode, 2).lemma
     tm shouldBe 'proved
-  }
+  }}
 
-  it should "prove a lemma about Lorenz" in withMathematica { _ =>
+  it should "prove a lemma about Lorenz" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val ode = "{x' = 10 * (y - x), y' = -y*z + 8/3*x - y, z' = x*y - 8/3*z, t' = 1}".asDifferentialProgram
     val tm = TaylorModel(ode, 1).lemma
     tm shouldBe 'proved
-  }
+  }}
 
   "cutTM" should "cut a Taylor model for exp, sin, cos" in withMathematica { qeTool =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
