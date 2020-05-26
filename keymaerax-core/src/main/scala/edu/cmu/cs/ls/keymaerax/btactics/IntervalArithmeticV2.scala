@@ -720,8 +720,8 @@ object IntervalArithmeticV2 {
     le_prv.conclusion.succ(0) match {
       case Equiv(a, True) =>
       case _ =>
-        throw new BelleUnexpectedProofStateError("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
-          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion, le_prv.underlyingProvable)
+        throw new TacticInapplicableFailure("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
+          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion)
     }
     CutHide(leBoth.conclusion.ante(0))(provable).
       apply(AndRight(SuccPos(0)), 1).
@@ -868,7 +868,7 @@ object IntervalArithmeticV2 {
 
   lazy val intervalArithmetic: BelleExpr = "intervalArithmetic" by {
     val precision = 15
-    SaturateTactic(orRi) &
+    SaturateTactic((orRi |! skip)) &
       intervalArithmeticPreproc(1) &
       intervalArithmeticBool(precision, ToolProvider.qeTool().get)
   }
