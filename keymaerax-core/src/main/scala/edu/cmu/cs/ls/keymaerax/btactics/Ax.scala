@@ -17,7 +17,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
-
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
 import scala.reflect.runtime.{universe => ru}
@@ -99,18 +98,18 @@ object Ax extends Logging {
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[btactics] def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): Lemma = {
-    val storedName = storedNameOpt match {
+  private[btactics] def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): DerivedAxiomInfo = {
+    val dai = DerivedAxiomInfo(name)
+    val lemmaName = storedNameOpt match {
       case Some(storedName) => storedName
       case None =>
         try {
-          DerivedAxiomInfo(name).storedName
+          dai.storedName
         } catch {
-          case _: Throwable => throw new Exception(s"Derived axiom info for $name needs to exist or codeName needs to be explicitly passed")
+          case t: Throwable => throw new Exception(s"Derived axiom info for $name needs to exist or codeName needs to be explicitly passed", t)
         }
     }
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
-    val lemmaName = storedName // DerivedAxiomInfo.toStoredName(name)
     val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
@@ -122,28 +121,31 @@ object Ax extends Logging {
     val evidence = ToolEvidence(immutable.List("input" -> npt.toString, "output" -> "true")) :: Nil
     // Makes it so we have the same provablesig when loading vs. storing
     val lemma = Lemma(alternativeFact, Lemma.requiredEvidence(alternativeFact, evidence), Some(lemmaName))
-    if (!AUTO_INSERT) {
-      lemma
-    } else {
-      /* @todo BUG does not work at the moment because lemmaDB adds some evidence to the lemmas and thus equality
-      * (and thus contains) no longer means what this code thinks it means. */
-      // first check whether the lemma DB already contains identical lemma name
-      val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
-        // identical lemma contents with identical name, so reuse ID
-        derivedAxiomDB.get(lemmaName) match {
-          case Some(storedLemma) =>
-            if(storedLemma != lemma) {
-              throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instead of " + lemma )
-            } else {
-              lemma.name.get
-            }
-          case None => lemma.name.get
-        }
+    val insertedLemma =
+      if (!AUTO_INSERT) {
+        lemma
       } else {
-        derivedAxiomDB.add(lemma)
+        /* @todo BUG does not work at the moment because lemmaDB adds some evidence to the lemmas and thus equality
+        * (and thus contains) no longer means what this code thinks it means. */
+        // first check whether the lemma DB already contains identical lemma name
+        val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
+          // identical lemma contents with identical name, so reuse ID
+          derivedAxiomDB.get(lemmaName) match {
+            case Some(storedLemma) =>
+              if(storedLemma != lemma) {
+                throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instead of " + lemma )
+              } else {
+                lemma.name.get
+              }
+            case None => lemma.name.get
+          }
+        } else {
+          derivedAxiomDB.add(lemma)
+        }
+        derivedAxiomDB.get(lemmaID).get
       }
-      derivedAxiomDB.get(lemmaID).get
-    }
+    dai.theLemma = insertedLemma
+    dai
   }
 
   private[btactics] def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): Lemma = {
@@ -197,45 +199,49 @@ object Ax extends Logging {
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] = None): Lemma = {
+  private[btactics] def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
     val codeName =
       codeNameOpt match {
         case Some(codeName) => codeName
         case None => try {
-          DerivedAxiomInfo.apply(canonicalName).storedName
+          DerivedAxiomInfo.apply(canonicalName).codeName
         } catch {
           case _: Throwable => throw new Exception(s"""Derived axiom info for   '$canonicalName' needs to exist or codeName needs to be explicitly passed""")
         }
       }
     val storedName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedFact(canonicalName, fact, Some(storedName)) ensuring(lem => lem.fact.conclusion == Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)),
+    derivedFact(canonicalName, fact, Some(storedName)) ensuring(info => DerivationInfoAugmentors.ProvableInfoAugmentor(info).provable.conclusion == Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)),
       "derivedAxioms's fact indeed proved the expected formula.\n" + derived + "\nproved by\n" + fact)
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[btactics] def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
+  private[btactics] def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
+    val dai: DerivedAxiomInfo = DerivedAxiomInfo.apply(canonicalName)
     val codeName =
       codeNameOpt match {
         case Some(codeName) => codeName
         case None => try {
-          DerivedAxiomInfo.apply(canonicalName).storedName
+          dai.codeName
         } catch {
-          case t: Throwable => throw new Exception(s"Derived axiom info for $canonicalName needs to exist or codeName needs to be explicitly passed")
+          case t: Throwable => throw new Exception(s"Derived axiom info for $canonicalName needs to exist or codeName needs to be explicitly passed", t)
         }
       }
     val storedName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedAxiomDB.get(storedName) match {
-      case Some(lemma) => lemma
-      case None =>
-        val witness = TactixLibrary.proveBy(derived, tactic)
-        assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
-        derivedFact(canonicalName, witness, Some(storedName))
-    }
+    val lemma =
+      derivedAxiomDB.get(storedName) match {
+        case Some(lemma) => lemma
+        case None =>
+          val witness = TactixLibrary.proveBy(derived, tactic)
+          assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
+          derivedFact(canonicalName, witness, Some(storedName))
+      }
+    dai.theLemma = lemma
+    dai
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
     //@todo change return type to DerivedAxiomInfo?
-  private[btactics] def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma =
+  private[btactics] def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo =
     derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic, codeNameOpt)
 
   private val x = Variable("x_", None, Real)
