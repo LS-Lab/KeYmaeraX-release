@@ -167,25 +167,25 @@ object IntervalArithmeticV2 {
   private lazy val gtBound = proveBy("f_() > g_() ==> g_() <= f_()".asSequent, QE & done)
 
   private lazy val leRefl = proveBy("F_() <= F_()".asFormula,
-    useAt("<= refl", PosInExpr(0::Nil))(1) & prop & done)
+    useAt(Ax.lessEqualRefl, PosInExpr(0::Nil))(1) & prop & done)
   private lazy val negDownSeq = proveBy("f_()<=F_() & (h_()<=-F_()<->true) ==> h_()<=-f_()".asSequent,
-    useAt("<=neg down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownNeg, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val negUpSeq = proveBy("ff_()<=f_() & (-ff_()<=h_()<->true) ==> -f_()<=h_()".asSequent,
-    useAt("neg<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpNeg, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val plusDownSeq = proveBy("(ff_()<=f_() & gg_()<=g_()) & (h_()<=ff_()+gg_()<->true) ==> h_()<=f_()+g_()".asSequent,
-    useAt("<=+ down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownPlus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val plusUpSeq = proveBy("(f_()<=F_() & g_()<=G_()) & (F_()+G_()<=h_()<->true) ==> f_()+g_()<=h_()".asSequent,
-    useAt("+<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpPlus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val minusDownSeq = proveBy("(ff_()<=f_() & g_()<=G_()) & (h_()<=ff_()-G_()<->true) ==> h_()<=f_()-g_()".asSequent,
-    useAt("<=- down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownMinus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val minusUpSeq = proveBy("(f_()<=F_() & gg_()<=g_()) & (F_()-gg_()<=h_()<->true) ==> f_()-g_()<=h_()".asSequent,
-    useAt("-<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpMinus, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val multUpSeq = proveBy(
     "(((ff_()<=f_() & f_()<=F_()) & gg_()<=g_() & g_()<=G_()) & ((ff_()*gg_()<=h_() & ff_()*G_()<=h_() & F_()*gg_()<=h_() & F_()*G_()<=h_())<->true)) ==> f_()*g_()<=h_()".asSequent,
-    useAt("*<= up", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalUpTimes, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val multDownSeq = proveBy(
     "(((ff_()<=f_() & f_()<=F_()) & gg_()<=g_() & g_()<=G_()) & ((h_()<=ff_()*gg_() & h_()<=ff_()*G_() & h_()<=F_()*gg_() & h_()<=F_()*G_())<->true)) ==> h_()<=f_()*g_()".asSequent,
-    useAt("<=* down", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalDownTimes, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val divideUpSeq = proveBy(("((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) &" +
     "((" +
     "  ( G_()<0 & (ff_()>=h_()*gg_() & ff_()>=h_()*G_() & F_()>=h_()*gg_() & F_()>=h_()*G_())) |" +
@@ -197,19 +197,19 @@ object IntervalArithmeticV2 {
     "  ( 0<gg_() & (h_()*gg_()<=ff_() & h_()*G_()<=ff_() & h_()*gg_()<=F_() & h_()*G_()<=F_()))" +
     ")<->true) ==> h_()<=f_()/g_()").asSequent,
     QE & done)
-  private lazy val minUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() | G_()<=h_())<->true)) ==> min(f_(),g_())<=h_()".asSequent, useAt("min<= up", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val minDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() & h_()<=gg_())<->true)) ==> h_()<=min(f_(),g_())".asSequent, useAt("<=min down", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val maxUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() & G_()<=h_())<->true)) ==> max(f_(),g_())<=h_()".asSequent, useAt("max<= up", PosInExpr(1::Nil))(1) & prop & done)
-  private lazy val maxDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() | h_() <= gg_())<->true))==>h_() <= max(f_(),g_())".asSequent, useAt("<=max down", PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val minUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() | G_()<=h_())<->true)) ==> min(f_(),g_())<=h_()".asSequent, useAt(Ax.intervalUpMin, PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val minDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() & h_()<=gg_())<->true)) ==> h_()<=min(f_(),g_())".asSequent, useAt(Ax.intervalDownMin, PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val maxUpSeq = proveBy("((f_()<=F_() & g_()<=G_()) & ((F_() <= h_() & G_()<=h_())<->true)) ==> max(f_(),g_())<=h_()".asSequent, useAt(Ax.intervalUpMax, PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val maxDownSeq = proveBy("((ff_()<=f_() & gg_()<=g_()) & ((h_() <= ff_() | h_() <= gg_())<->true))==>h_() <= max(f_(),g_())".asSequent, useAt(Ax.intervalDownMax, PosInExpr(1::Nil))(1) & prop & done)
 
 
   // Formulas
   private lazy val leBothSeq = proveBy(
     "((f_()<=F_() & gg_()<=g_()) & (F_() <= gg_()<->true)) ==> f_()<=g_()".asSequent,
-    useAt("<= both", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalLEBoth, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val ltBothSeq = proveBy(
     "((f_()<=F_() & gg_()<=g_()) & (F_() < gg_()<->true)) ==> f_()<g_()".asSequent,
-    useAt("< both", PosInExpr(1::Nil))(1) & prop & done)
+    useAt(Ax.intervalLBoth, PosInExpr(1::Nil))(1) & prop & done)
   private lazy val geBothSeq = proveBy(
     "((g_()<=G_() & ff_()<=f_()) & (G_() <= ff_()<->true)) ==> f_()>=g_()".asSequent, QE & done)
   private lazy val gtBothSeq = proveBy(
@@ -720,8 +720,8 @@ object IntervalArithmeticV2 {
     le_prv.conclusion.succ(0) match {
       case Equiv(a, True) =>
       case _ =>
-        throw new BelleUnexpectedProofStateError("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
-          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion, le_prv.underlyingProvable)
+        throw new TacticInapplicableFailure("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
+          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion)
     }
     CutHide(leBoth.conclusion.ante(0))(provable).
       apply(AndRight(SuccPos(0)), 1).
@@ -804,7 +804,7 @@ object IntervalArithmeticV2 {
             intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
               intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
           case Imply(f, g) =>
-            useAt("-> expand", PosInExpr(0 :: Nil))(pos) &
+            useAt(Ax.implyExpand, PosInExpr(0 :: Nil))(pos) &
               intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
               intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
           case Equiv(f, g) =>
@@ -868,7 +868,7 @@ object IntervalArithmeticV2 {
 
   lazy val intervalArithmetic: BelleExpr = "intervalArithmetic" by {
     val precision = 15
-    SaturateTactic(orRi) &
+    SaturateTactic((orRi |! skip)) &
       intervalArithmeticPreproc(1) &
       intervalArithmeticBool(precision, ToolProvider.qeTool().get)
   }
@@ -987,36 +987,36 @@ object IntervalArithmeticV2 {
     }
 
     def negDown(bound: Term) =
-      useAt("<=neg down", usubst_append((t_F, bound) :: Nil)(_))(1)
+      useAt(Ax.intervalDownNeg, PosInExpr(1::Nil), usubst_append((t_F, bound) :: Nil)(_))(1)
 
     def negUp(bound: Term) =
-      useAt("neg<= up", usubst_append((t_ff, bound) :: Nil)(_))(1)
+      useAt(Ax.intervalUpNeg, PosInExpr(1::Nil), usubst_append((t_ff, bound) :: Nil)(_))(1)
 
     def plusDown(bound1: Term, bound2: Term) =
-      useAt("<=+ down", usubst_append((t_ff, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalDownPlus, PosInExpr(1::Nil), usubst_append((t_ff, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
 
     def plusUp(bound1: Term, bound2: Term) =
-      useAt("+<= up", usubst_append((t_F, bound1) :: (t_G, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalUpPlus, PosInExpr(1::Nil), usubst_append((t_F, bound1) :: (t_G, bound2) :: Nil)(_))(1)
 
     def minusDown(bound1: Term, bound2: Term) =
-      useAt("<=- down", usubst_append((t_ff, bound1) :: (t_G, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalDownMinus, PosInExpr(1::Nil), usubst_append((t_ff, bound1) :: (t_G, bound2) :: Nil)(_))(1)
 
     def minusUp(bound1: Term, bound2: Term) =
-      useAt("-<= up", usubst_append((t_F, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
+      useAt(Ax.intervalUpMinus, PosInExpr(1::Nil), usubst_append((t_F, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
 
     def timesDown(ff: Term, F: Term, gg: Term, G: Term) =
-      useAt("<=* down",
+      useAt(Ax.intervalDownTimes, PosInExpr(1::Nil),
         usubst_append((t_ff, ff) :: (t_F, F) :: (t_gg, gg) :: (t_G, G) :: Nil)(_))(1)
 
     def timesUp(ff: Term, F: Term, gg: Term, G: Term) =
-      useAt("*<= up",
+      useAt(Ax.intervalUpTimes, PosInExpr(1::Nil),
         usubst_append((t_ff, ff) :: (t_F, F) :: (t_gg, gg) :: (t_G, G) :: Nil)(_))(1)
 
     def leBoth(F: Term, gg: Term) =
-      useAt("<= both", usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
+      useAt(Ax.intervalLEBoth, PosInExpr(1::Nil), usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
 
     def lessBoth(F: Term, gg: Term) =
-      useAt("< both", usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
+      useAt(Ax.intervalLBoth, PosInExpr(1::Nil), usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
 
     def eqL2R_dep = "eqL2R_last" by { (pos: Position) =>
       eqL2R(pos.checkAnte)(1) // TODO: what about that subgoal 1?
