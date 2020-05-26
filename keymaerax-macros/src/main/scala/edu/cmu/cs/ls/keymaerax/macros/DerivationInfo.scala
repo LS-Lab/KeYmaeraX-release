@@ -47,22 +47,26 @@ object DerivationInfo {
   // @TODO: Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info
-  def registerCore[T](value: T, ci: CoreAxiomInfo): CoreAxiomInfo = {
+  def registerCore[T](value: => T, ci: CoreAxiomInfo): CoreAxiomInfo = {
     _allInfo = ci :: allInfo
+    val _ = value
     ci
   }
-  def registerDerived[T](value: T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
+  def registerDerived[T](value: => T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
     _allInfo = di :: allInfo
+    val _ = value
     di
   }
 
-  def registerDerivedRule[T](value: T, di: DerivedRuleInfo): DerivedRuleInfo = {
+  def registerDerivedRule[T](value: => T, di: DerivedRuleInfo): DerivedRuleInfo = {
     _allInfo = di :: allInfo
+    val _ = value
     di
   }
 
   def registerPositionTactic[T](value: => T, pti: PositionTacticInfo): T = {
     _allInfo = pti :: allInfo
+    val _ = value
     value
   }
 
@@ -192,6 +196,8 @@ trait ProvableInfo extends DerivationInfo {
  */
 trait StorableInfo extends DerivationInfo {
   val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
+  // Should be a [[Lemma]]
+  var theLemma: Any = None
 }
 
 // axioms
