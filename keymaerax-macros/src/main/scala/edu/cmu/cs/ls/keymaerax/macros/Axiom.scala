@@ -49,21 +49,29 @@ class Axiom(val names: Any,
             val recursor: String = ""
            ) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
-  def macroTransform(annottees: Any*): Any = macro Axiom.impl
+  def macroTransform(annottees: Any*): Any = macro AxiomImpl.apply
 }
 
 object Axiom {
-
-  // Would just use PosInExpr but can't pull in core
   type ExprPos = List[Int]
-  def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val u = c.universe
+}
+
+
+class AxiomImpl (val c: whitebox.Context) {
+  import c.universe._
+  // Would just use PosInExpr but can't pull in core
+  def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
     val paramNames = List("names", "codeName", "formula", "unifier", "displayLevel", "inputs", "key", "recursor")
+    def getLiteral(t: Tree): String = {
+      t match {
+        case Literal(Constant(s: String)) => s
+        case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
+      }
+    }
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
-    def getParams(implicit c: whitebox.Context): (String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
+    def getParams: (String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
       // @TODO: What do ASTs look like when option arguments are omitted or passed by name?
-      import c.universe._
       c.prefix.tree match {
         case q"new $annotation(..$params)" =>
           val defaultMap: Map[String, Tree] = Map(
@@ -76,19 +84,18 @@ object Axiom {
             "inputs" -> Literal(Constant(""))
           )
           val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-          val (displayObj, fml: String, inputString: String, codeName, unifier: String, displayLevel: String, keyString: String, recursorString: String)
-          = (c.eval[(Any, String, String, String, String, String, String, String)](c.Expr
-            (q"""(${paramMap("names")}, ${paramMap("formula")}, ${paramMap("inputs")}, ${paramMap("codeName")}, ${paramMap("unifier")},
-              ${paramMap("displayLevel")}, ${paramMap("key")}, ${paramMap("recursor")})""")))
-          val inputs: List[ArgInfo] = parseAIs(inputString)(c)
-          val key = parsePos(keyString)
-          val recursor = parsePoses(recursorString)
-          val simpleDisplay = displayObj match {
-            case s: String => SimpleDisplayInfo(s, s)
-            case (sl: String, sr: String) => SimpleDisplayInfo(sl, sr)
-            case sdi: SimpleDisplayInfo => sdi
+          val simpleDisplay = paramMap("names") match {
+            case q"""(${Literal(Constant(sl: String))}, ${Literal(Constant(sr: String))})""" => SimpleDisplayInfo(sl, sr)
+            case Literal(Constant(s: String)) => SimpleDisplayInfo(s, s)
+            //case sdi: SimpleDisplayInfo => sdi
             case di => c.abort(c.enclosingPosition, "@Axiom expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di)
           }
+          val (fml, inputString, codeName, unifier, displayLevel, keyString, recursorString) =
+            (getLiteral(paramMap("formula")), getLiteral(paramMap("inputs")), getLiteral(paramMap("codeName")), getLiteral(paramMap("unifier")),
+              getLiteral(paramMap("displayLevel")), getLiteral(paramMap("key")), getLiteral(paramMap("recursor")))
+          val inputs: List[ArgInfo] = parseAIs(inputString)(c)
+          val key = parsePos(keyString)(c)
+          val recursor = parsePoses(recursorString)(c)
           val displayInfo = (fml, inputs) match {
             case ("", Nil) => simpleDisplay
             case (fml, Nil) if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
@@ -100,10 +107,9 @@ object Axiom {
         case e => c.abort(c.enclosingPosition, "Excepted @Axiom(args), got: " + e)
       }
     }
-    val (codeNameParam: String, display: DisplayInfo, unifier: String, displayLevel: String, key, recursor) = getParams(c)
+    val (codeNameParam: String, display: DisplayInfo, unifier: String, displayLevel: String, key, recursor) = getParams
     // Annotation can only be attached to library functions for defining new axioms
-    def correctName(c: whitebox.Context)(t: c.universe.Tree): Boolean = {
-      import c.universe._
+    def correctName(t: c.universe.Tree): Boolean = {
       t match {
         case id: Ident => {
           if (Set("coreAxiom", "derivedAxiom", "derivedFormula", "derivedAxiomFromFact", "derivedFact").contains(id.name.decodedName.toString)) true
@@ -112,8 +118,7 @@ object Axiom {
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected axiom function, got: " + t + " of type " + t.getClass())
       }
     }
-    def paramCount(c: whitebox.Context)(t: c.universe.Tree): (Int, Int) = {
-      import c.universe._
+    def paramCount(t: c.universe.Tree): (Int, Int) = {
       t match {
         case id: Ident => {
           id.name.decodedName.toString match {
@@ -126,7 +131,6 @@ object Axiom {
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected derivedAxiom string, got: " + t + " of type " + t.getClass())
       }
     }
-    import c.universe._
     annottees map (_.tree) toList match {
       // Annottee must be a val declaration of an axiom
       case (valDecl: ValDef) :: Nil =>
@@ -134,9 +138,9 @@ object Axiom {
           // val declaration must be an invocation of one of the functions for defining derived axioms and optionally can
           // have modifiers and type annotations
           case q"$mods val $declName: $tpt = $functionName( ..$params )" =>
-            if (!correctName(c)(functionName))
+            if (!correctName(functionName))
               c.abort(c.enclosingPosition, "Invalid annottee: Expected val name = <derivedAxiomFunction>(x1, x2, x3), got: " + functionName + " of type " + functionName.getClass())
-            val (minParam, maxParam) = paramCount(c)(functionName)
+            val (minParam, maxParam) = paramCount(functionName)
             val isCore = (minParam == maxParam)
             if(params.length < minParam || params.length > maxParam)
               c.abort(c.enclosingPosition, s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam")
