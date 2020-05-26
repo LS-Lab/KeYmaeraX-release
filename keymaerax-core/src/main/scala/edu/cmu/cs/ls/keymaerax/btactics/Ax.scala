@@ -253,7 +253,7 @@ object Ax extends Logging {
   private[keymaerax] def prepopulateDerivedLemmaDatabase() = {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
 
-    val lemmas = getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val lemmas = getClass.getDeclaredFields.filter(f => classOf[StorableInfo].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
 
     val mirror = ru.runtimeMirror(getClass.getClassLoader)
@@ -485,7 +485,7 @@ object Ax extends Logging {
     * @note needs semantic renaming
     */
   @Axiom("[:=]=y")
-  val assignbeqy = derivedAxiomFromFact("[:=] assign equality y",
+  lazy val assignbeqy = derivedAxiomFromFact("[:=] assign equality y",
     "[y_:=f();]p(||) <-> \\forall y_ (y_=f() -> p(||))".asFormula,
     ProvableSig.axioms("[:=] assign equality")(URename("x_".asVariable, "y_".asVariable, semantic = true)))
 
