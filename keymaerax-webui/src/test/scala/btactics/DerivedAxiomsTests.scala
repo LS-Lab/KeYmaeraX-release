@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.Ax._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
+import edu.cmu.cs.ls.keymaerax.macros.{StorableInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
@@ -424,15 +424,14 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
       val lemmaFiles = new File(cache.getAbsolutePath + File.separator + "lemmadb").listFiles(new FilenameFilter() {
         override def accept(dir: File, name: String): Boolean = name.endsWith(".alp")
       }).map(_.getName.stripSuffix(".alp"))
-
-      val lemmas = getDerivedAxiomsMirrors.map({ case (valName, m) => valName -> m().asInstanceOf[Lemma] })
+      val infos = getDerivedAxiomsMirrors.map({ case (valName, m) => valName -> m().asInstanceOf[StorableInfo] })
       // we allow lazy val forwarding, but all of them have to refer to the same lemma
-      val forwards = lemmas.groupBy({ case (_, lemma) => lemma }).filter(_._2.length > 1)
-      println("Lemma forwards:\n" + forwards.map(f => f._1.name.getOrElse("<anonymous>") + " <- " + f._2.map(_._1).mkString("[", ",", "]")).mkString("\n"))
+      val forwards = infos.groupBy({ case (_, info) => info }).filter((kv: (StorableInfo, Array[(String, StorableInfo)])) => kv._2.length > 1)
+      println("Lemma forwards:\n" + forwards.map(f => f._1.storedName + " <- " + f._2.map(_._1).mkString("[", ",", "]")).mkString("\n"))
       // the lemma database only stores the one lemma referred to from one or more lazy vals
       lemmaFiles.length shouldBe lemmaFiles.distinct.length
       // the lemma database stores all the distinct lemmas in DerivedAxioms
-      forwards.keys.flatMap(_.name).toList.diff(lemmaFiles) shouldBe empty
+      forwards.keys.map(_.storedName).toList.diff(lemmaFiles) shouldBe empty
 
       if (writeEffect) {
         val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
@@ -449,7 +448,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 
   /** Returns the reflection mirrors to access the lazy vals in DerivedAxioms. */
   private def getDerivedAxiomsMirrors = {
-    val lemmas = Ax.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val lemmas = Ax.getClass.getDeclaredFields.filter(f => classOf[StorableInfo].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
 
     val mirror = ru.runtimeMirror(getClass.getClassLoader)

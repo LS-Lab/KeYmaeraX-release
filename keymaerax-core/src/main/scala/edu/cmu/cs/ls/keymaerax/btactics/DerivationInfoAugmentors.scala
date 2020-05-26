@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.HashMap
@@ -64,5 +65,9 @@ object DerivationInfoAugmentors {
   implicit class AxiomInfoAugmentor(val ai: AxiomInfo) {
     def key: PosInExpr = PosInExpr(ai.theKey)
     def recursor: List[PosInExpr] = ai.theRecursor.map(PosInExpr(_))
+  }
+
+  implicit class StorableInfoAugmentor(val si: StorableInfo) {
+    def lemma: Lemma = si.theLemma.asInstanceOf[Lemma]
   }
 }

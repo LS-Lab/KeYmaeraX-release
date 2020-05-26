@@ -16,6 +16,8 @@ import scala.collection.immutable._
   * @author Andre Platzer
   */
 object DLAxiomParser extends (String => List[(String,Formula)]) {
+  import DLParser.string
+
   /**
     * Parse an axiom string into a list of named axioms.
     * @param input The contents of the axiom file.
@@ -29,11 +31,6 @@ object DLAxiomParser extends (String => List[(String,Formula)]) {
     case f: Parsed.Failure => throw parseException(f).inContext("<AxiomBase>"/*input*/)
   }
 
-
-  private def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
-
-  /** "blabla": Parse a string literal */
-  def string[_: P]: P[String] = P("\"" ~~/ CharsWhile(stringChars).! ~~ "\"")
 
   /** axiom: Parses a dL axiom. */
   def axiom[_: P]: P[(String,Formula)] = P( "Axiom" ~ string ~ formula ~ "End.")
