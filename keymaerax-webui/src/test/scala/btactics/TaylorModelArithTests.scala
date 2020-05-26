@@ -42,7 +42,7 @@ class TaylorModelArithTests extends TacticTestBase {
     (tm1 +! tm100000).prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ (x+0.000001*x=1.000001*x0()+1.000001*y0()+err_&-0.010001<=err_&err_<=0.020001)".asFormula
     (tm1 + tm100000).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x+0.000001*x=x0()+1*y0()+err_&-0.010003<=err_&err_<=0.020003)".asFormula
+      "\\exists err_ (x+0.000001*x=x0()+y0()+err_&-0.010003<=err_&err_<=0.020003)".asFormula
   }
 
   it should "subtract exactly" in withMathematica { qeTool =>
@@ -59,7 +59,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "multiply exactly" in withMathematica { qeTool =>
     (tm1 *! tm2).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x*y=0.5*x0()^2+- 0.5*x0()*y0()+- 1*y0()^2+err_&-0.231<=err_&err_<=0.232)".asFormula
+      "\\exists err_ (x*y=0.5*x0()^2+- 0.5*x0()*y0()+- y0()^2+err_&-0.231<=err_&err_<=0.232)".asFormula
   }
 
   it should "multiply approximately" in withMathematica { qeTool =>
@@ -71,12 +71,12 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "negate" in withMathematica { qeTool =>
     (-tm1).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (-x=-x0()+- 1*y0()+err_&-0.02<=err_&err_<=0.01)".asFormula
+      "\\exists err_ (-x=-x0()+- y0()+err_&-0.02<=err_&err_<=0.01)".asFormula
   }
 
   it should "square exactly" in withMathematica { qeTool =>
     tm1.squareExact.prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^2=x0()^2+2*x0()*y0()+1*y0()^2+err_&-0.08<=err_&err_<=0.0804)".asFormula
+      "\\exists err_ (x^2=x0()^2+2*x0()*y0()+y0()^2+err_&-0.08<=err_&err_<=0.0804)".asFormula
   }
 
   it should "square approximately" in withMathematica { qeTool =>
@@ -88,16 +88,16 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "^1" in withMathematica { qeTool =>
     (tm1^1).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^1=x0()+1*y0()+err_&-0.01<=err_&err_<=0.02)".asFormula
+      "\\exists err_ (x^1=x0()+y0()+err_&-0.01<=err_&err_<=0.02)".asFormula
   }
 
   it should "^(2*n)" in withMathematica { qeTool =>
     (tm1^4).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^4=x0()^4+4*x0()^3*y0()+6*x0()^2*y0()^2+4*x0()*y0()^3+1*y0()^4+err_&-0.64<=err_&err_<=0.64967)".asFormula
+      "\\exists err_ (x^4=x0()^4+4*x0()^3*y0()+6*x0()^2*y0()^2+4*x0()*y0()^3+y0()^4+err_&-0.64<=err_&err_<=0.64967)".asFormula
   }
   it should "^(2*n + 1)" in withMathematica { qeTool =>
     (tm1^3).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^3=x0()^3+3*x0()^2*y0()+3*x0()*y0()^2+1*y0()^3+err_&-0.2024<=err_&err_<=0.24241)".asFormula
+      "\\exists err_ (x^3=x0()^3+3*x0()^2*y0()+3*x0()*y0()^2+y0()^3+err_&-0.2024<=err_&err_<=0.24241)".asFormula
   }
 
   it should "exponentiate approximately" in withMathematica { qeTool =>
