@@ -52,18 +52,18 @@ object PolynomialArith extends Logging {
   // Collection of all the axioms used
 
   //These are all basic re-association lemmas for the polynomial normalization
-  private lazy val plusAssoc1 = remember("(F_() + G_()) + (A_() + B_()) = ((F_()+G_())+A_())+B_()".asFormula, useAt("= commute")(1) & byUS("+ associative"), namespace).fact
+  private lazy val plusAssoc1 = remember("(F_() + G_()) + (A_() + B_()) = ((F_()+G_())+A_())+B_()".asFormula, useAt(Ax.equalCommute)(1) & byUS(Ax.plusAssociative), namespace).fact
   //todo: we might get this if the simplifier understood AC rewriting..
   private lazy val plusAssoc2 = remember("(F_() + K_()*M_()) + (A_() + L_()*M_()) = (F_()+A_())+(K_()+L_())*M_()".asFormula, QE & done, namespace).fact
 
   private lazy val plusCoeff1 = remember("K_() = 0 -> (F_() + K_()*M_() = F_())".asFormula, prop & exhaustiveEqL2R(-1) & SimplifierV3.simpTac()(1) & close, namespace).fact
-  private lazy val plusCoeff2 = remember("K_() = L_() -> (F_() + K_()*M_() = F_() + L_()*M_())".asFormula, byUS("const congruence"), namespace).fact
+  private lazy val plusCoeff2 = remember("K_() = L_() -> (F_() + K_()*M_() = F_() + L_()*M_())".asFormula, byUS(Ax.constCongruence), namespace).fact
 
   private lazy val onetimes = useFor(Ax.timesCommute, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(Ax.timesIdentity.provable)
   private lazy val timesone = Ax.timesIdentity
 
   private lazy val timesAssoc1 = remember("(F_() * G_()) * (A_() * B_()) = ((F_()*G_())*A_())*B_()".asFormula,
-    useAt("= commute")(1) & byUS("* associative"), namespace).fact
+    useAt(Ax.equalCommute)(1) & byUS(Ax.timesAssociative), namespace).fact
   //todo: we might get this if the simplifier understood AC rewriting..
   private lazy val timesAssoc2 = remember("(F_() * M_()^K_()) * (A_() * M_()^L_()) = (F_()*A_())*M_()^(K_()+L_())".asFormula, QE & done, namespace).fact
   private lazy val timesAssoc3 = remember(("(P_() + C_() * M_()) * (D_() * N_()) = " +
@@ -72,9 +72,9 @@ object PolynomialArith extends Logging {
   //QE has interesting ideas about X^0
   private lazy val timesCoeff1Lem = remember("F_() = F_() * M_() ^ 0".asFormula, SimplifierV3.simpTac()(1) & close, namespace).fact
   private lazy val timesCoeff1 = remember("K_() = 0 -> (F_() * M_()^K_() = F_() )".asFormula,
-    useAt(timesCoeff1Lem)(SuccPosition(1,1::1::Nil)) & byUS("const congruence"), namespace).fact
+    useAt(timesCoeff1Lem)(SuccPosition(1,1::1::Nil)) & byUS(Ax.constCongruence), namespace).fact
   private lazy val timesCoeff2 = remember("K_() = L_() -> (F_() * M_()^K_() = F_() * M_()^L_())".asFormula,
-    byUS("const congruence"), namespace).fact
+    byUS(Ax.constCongruence), namespace).fact
 
   //These are used for iterated squaring
   private lazy val powLem1 = Ax.powZero.provable
@@ -82,7 +82,7 @@ object PolynomialArith extends Logging {
   private lazy val powLem3 = remember("(F_()^K_())^2 = F_()^(2*K_())".asFormula, QE & done, namespace)
   private lazy val powLem4 = remember("(F_()^K_())^2 * F_() = F_()^(2*K_()+1)".asFormula, QE & done, namespace)
   private lazy val powLem5 = remember("K_() = L_() -> (M_()^K_() = M_()^L_())".asFormula,
-    byUS("const congruence"), namespace).fact
+    byUS(Ax.constCongruence), namespace).fact
 
   private lazy val negNormalise = remember("-P_() = P_() * (-1/1 * 1)".asFormula,SimplifierV3.simpTac()(1) & close, namespace).fact
   //todo: this could be added to simplifier
@@ -326,9 +326,9 @@ object PolynomialArith extends Logging {
     val prover = getProver(skip_proofs)
     val res: (Term, ProvableSig) = (l,r) match {
       case (n:Number,_) => //Left unit for addition
-        (r,prover(Equal(lhs,r), byUS("0+")))
+        (r,prover(Equal(lhs,r), byUS(Ax.zeroPlus)))
       case (_,n:Number) => //Right unit for addition
-        (l,prover(Equal(lhs,l), byUS("+0")))
+        (l,prover(Equal(lhs,l), byUS(Ax.plusZero)))
       case (Plus(nl,Times(cl,ml)),Plus(nr,Times(cr,mr))) => {
         val cmp = MonOrd.compare(ml,mr)
         if(cmp < 0) {
@@ -358,7 +358,7 @@ object PolynomialArith extends Logging {
         else {
           val (rec,pr) = addPoly(r,l,skip_proofs)
           //Flip the +
-          (rec,if (skip_proofs) Ax.equivReflexive.provable else useFor("+ commute")(SuccPosition(1,0::Nil))(pr))
+          (rec,if (skip_proofs) Ax.equivReflexive.provable else useFor(Ax.plusCommute)(SuccPosition(1,0::Nil))(pr))
         }
       }
       case _ => ???
@@ -403,7 +403,7 @@ object PolynomialArith extends Logging {
         else {
           val (rec,pr) = mulMono(r,l,skip_proofs)
           //Flip the *
-          (rec,if (skip_proofs) Ax.equivReflexive.provable else useFor("* commute")(SuccPosition(1,0::Nil))(pr))
+          (rec,if (skip_proofs) Ax.equivReflexive.provable else useFor(Ax.timesCommute)(SuccPosition(1,0::Nil))(pr))
         }
       case _ => ???
     }
@@ -427,7 +427,7 @@ object PolynomialArith extends Logging {
     val lhs = Times(l,Times(c,r))
     val prover = getProver(skip_proofs)
     l match {
-      case n:Number => (n,prover(Equal(lhs,n),byUS("0*"))) // Multiplication by 0 poly
+      case n:Number => (n,prover(Equal(lhs,n),byUS(Ax.zeroTimes))) // Multiplication by 0 poly
       case Plus(nl,Times(cl,ml)) =>
         val (rec1,pr1) = mulPolyMono(nl,c,r,skip_proofs)
         val (rec2,pr2) = mulMono(ml,r,skip_proofs)
@@ -449,12 +449,12 @@ object PolynomialArith extends Logging {
     val lhs = Times(l,r)
     val prover = getProver(skip_proofs)
     r match {
-      case n:Number => (n,prover(Equal(lhs,n),byUS("*0"))) //Multiplication by 0 poly
+      case n:Number => (n,prover(Equal(lhs,n),byUS(Ax.timesZero))) //Multiplication by 0 poly
       case Plus(nr,Times(cr,mr)) =>
         val (rec1,pr1) = mulPoly(l,nr,skip_proofs)
         val (rec2,pr2) = mulPolyMono(l,cr,mr,skip_proofs)
         val (res,pr3) = addPoly(rec1,rec2,skip_proofs)
-        (res,prover(Equal(lhs,res),useAt("distributive")(SuccPosition(1,0::Nil))
+        (res,prover(Equal(lhs,res),useAt(Ax.distributive)(SuccPosition(1,0::Nil))
           & useAt(pr1)(SuccPosition(1,0::0::Nil))
           & useAt(pr2)(SuccPosition(1,0::1::Nil))
           & by(pr3)
@@ -699,7 +699,7 @@ object PolynomialArith extends Logging {
           case Some(t:Term) =>
             val(tt,pr) = normalise(t,false)
             //println(tt,pr)
-            CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
+            CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos)
           case _ => ident
         }
       }
@@ -836,7 +836,7 @@ object PolynomialArith extends Logging {
         val res = Plus(rec,Times(a,Power(s,Number(2))))
           (res,proveBy(GreaterEqual(res,Number(0)), // (foo) + x^2 >0
             useAt(plusGeMono,PosInExpr(1::Nil))(1) & andR(1) <( by(pr),
-              useAt(timesPos,PosInExpr(1::Nil))(1) & andR(1) <( RCF, byUS("nonnegative squares") ) )))
+              useAt(timesPos,PosInExpr(1::Nil))(1) & andR(1) <( RCF, byUS(Ax.nonnegativeSquares) ) )))
     }
   }
 
