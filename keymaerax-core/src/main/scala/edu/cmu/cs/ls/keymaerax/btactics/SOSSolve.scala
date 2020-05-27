@@ -143,7 +143,7 @@ object SOSSolve {
       }
     } ++ seq.zipSuccWithPositions.map { case(fml, pos) =>
       SimplifierV3.baseNormalize(Not(fml)) match {
-        case (_, Some(prv)) => useAt(DerivedAxioms.doubleNegationAxiom, PosInExpr(1 :: Nil))(pos) & useAt(prv, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
+        case (_, Some(prv)) => useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(pos) & useAt(prv, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
         case _ => throw new RuntimeException("this should not happen because we expect baseNormalize to get rid of negations.")
       }
     }).foldLeft(skip)(_ & _) & SaturateTactic(notR('R))
