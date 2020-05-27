@@ -317,7 +317,8 @@ object Ax extends Logging {
   val assignbeq = coreAxiom("[:=] assign equality")
   @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=x]P</span>↔P")
   val selfassignb = coreAxiom("[:=] self assign")
-  @Axiom("[:=]", unifier = "full", formula = "<span class=\"k4-axiom-key\">[x':=c]p(x')</span>↔p(c)")
+  @Axiom("[:=]", unifier = "full", formula = "<span class=\"k4-axiom-key\">[x':=c]p(x')</span>↔p(c)",
+    key = "0", recursor = "*")
   val Dassignb = coreAxiom("[':=] differential assign")
   @Axiom("[:*]", formula = "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)")
   val randomb = coreAxiom("[:*] assign nondet")
