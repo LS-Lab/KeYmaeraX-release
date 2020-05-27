@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{RingsAlgebraTool, RingsLibrary}
+import org.scalatest.LoneElement._
 
 /** Tests for RingsAlgebraTool
   */
@@ -113,6 +114,14 @@ class RingsAlgebraToolTests extends TacticTestBase  {
       "1/2*r1()+2*r0()+-1/100*t*r1()^2+-1/5*t*r0()*r1()+(-t)*r0()^2+-3/50*t^2*r1()^2+-9/10*t^2*r0()*r1()+-3*t^2*r0()^2".asTerm ::
         "1/10*r1()+r0()+3/5*t*r1()+3*t*r0()+3/10*t^2*r1()+3/2*t^2*r0()+-1/200*t^2*r1()^2+-1/10*t^2*r0()*r1()+1/10*t^3*r1()+-1/2*t^2*r0()^2+1/2*t^3*r0()".asTerm ::
         Nil
+  }
+
+  it should "normalize with Rings" in withMathematica { _ =>
+    val R = new RingsLibrary("t,x,y,z,a(),b(),i,j,r0(),r1(),r2()".split(',').map(_.asTerm))
+    val seq = "A(), B() ==> C(), (t + x)*(i^4+r1()) - 234 <= 234 + a(), D()".asSequent
+    val res = proveBy(seq, R.normalizeLessEquals(TactixLibrary.QE)(2))
+    res.subgoals.loneElement.ante shouldBe seq.ante
+    res.subgoals.loneElement.succ shouldBe seq.succ.updated(1, "0<=468+a()+(-x)*r1()+(-t)*r1()+(-i^4)*x+(-i^4)*t".asFormula)
   }
 
 }

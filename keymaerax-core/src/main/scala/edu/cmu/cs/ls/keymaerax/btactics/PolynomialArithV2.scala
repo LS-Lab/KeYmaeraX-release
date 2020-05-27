@@ -114,6 +114,19 @@ object PolynomialArithV2 {
       case term: Term => Var(term)
     }
 
+    // subterms that are interpreted as variables
+    def symbols(t: Term) : Seq[Term] = t match {
+      case Plus(a, b)  => symbols(a) ++ symbols(b)
+      case Minus(a, b) => symbols(a) ++ symbols(b)
+      case Times(a, b) => symbols(a) ++ symbols(b)
+      case Neg(a)      => symbols(a)
+      case Power(a, Number(i)) if i.isValidInt && i >= 0 => symbols(a)
+      case Power(a, b) => symbols(a) ++ symbols(b)
+      case Divide(a, b) => symbols(a) ++ symbols(b)
+      case Number(n) => Seq()
+      case term: Term => Seq(term)
+    }
+
     implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
   }
 
