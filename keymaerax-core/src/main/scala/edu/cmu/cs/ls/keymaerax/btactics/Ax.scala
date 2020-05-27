@@ -1453,7 +1453,7 @@ object Ax extends Logging {
   lazy val assignDual2 = derivedFormula(":= assign dual 2",
     "<x_:=f();>p(||) <-> [x_:=f();]p(||)".asFormula,
     useAt(selfassignb, PosInExpr(1::Nil))(1, 0::1::Nil) &
-      useAt(assignd)(1, 0::Nil) &
+      useAt(assigndAxiom)(1, 0::Nil) &
       byUS(equivReflexive)
     // NOTE alternative proof:
     //    useAt("[:=] assign equality exists")(1, 1::Nil) &
@@ -1588,7 +1588,7 @@ object Ax extends Logging {
     */
   @Axiom("<:=>", formula ="<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)",
     key = "0", recursor = "*", unifier = "full")
-  lazy val assignd = derivedAxiom("<:=> assign",
+  lazy val assigndAxiom = derivedAxiom("<:=> assign",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> p(f())".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(assignbAxiom)(1, 0::0::Nil) &
@@ -1624,7 +1624,7 @@ object Ax extends Logging {
   @Axiom(":=D")
   lazy val assignDual = derivedAxiom(":= assign dual",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> [x_:=f();]p(x_)".asFormula)),
-    useAt(assignd)(1, 0::Nil) &
+    useAt(assigndAxiom)(1, 0::Nil) &
       useAt(assignbAxiom)(1, 1::Nil) &
       byUS(equivReflexive)
   )

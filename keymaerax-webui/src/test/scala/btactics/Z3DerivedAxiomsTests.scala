@@ -110,7 +110,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove [] conditional split" in {check(boxImpliesAnd)}
   it should "prove <> split" in {check(diamondOr)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
-  it should "prove <:=> assign" in {check(assignd)}
+  it should "prove <:=> assign" in {check(assigndAxiom)}
 //  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove := assign dual" in {check(assignDual)}
   it should "prove all substitute" in withZ3 { qeTool => check(allSubstitute)}
@@ -227,7 +227,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   ignore should "tactically prove exists eliminate" taggedAs OptimisticTest in {check(existse)}
   it should "tactically prove all distribute" in {check(allDist)}
   it should "tactically prove box dual" in {check(box)}
-  it should "tactically prove <:=> assign" in {check(assignd)}
+  it should "tactically prove <:=> assign" in {check(assigndAxiom)}
   it should "tactically prove [:=] equational" in withZ3 { qeTool => check(assignbequational)}
 //  it should "tactically prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
   it should "tactically prove [:=] vacuous assign" in {check(vacuousAssignb)}

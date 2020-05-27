@@ -152,7 +152,8 @@ object DerivationInfoRegistry {
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
     // @TODO: Has annotation, but keeping axiom info here because tests don't initialize axiom info correctly
     new DerivedAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt(Ax.selfassignby)}),
-    new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assignd", 'full, {case () => HilbertCalculus.assignd}),
+    new PositionTacticInfo("assignd", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assigndAxiom", 'full, {case () => HilbertCalculus.useAt("<:=> assign")}),
     new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", unsure, {case () => HilbertCalculus.useAt("<:=> self assign")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),

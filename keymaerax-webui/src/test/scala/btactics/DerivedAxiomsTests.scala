@@ -154,7 +154,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove [] conditional split" in {check(boxImpliesAnd)}
   it should "prove <> split" in {check(diamondOr)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
-  it should "prove <:=> assign" in {check(assignd)}
+  it should "prove <:=> assign" in {check(assigndAxiom)}
 //  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove := assign dual" in {check(assignDual)}
   it should "prove all substitute" in withMathematica { _ => check(allSubstitute)}
@@ -333,7 +333,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove exists eliminate" in {check(existse)}
   it should "tactically prove all distribute" in {check(allDist)}
   it should "tactically prove box dual" in {check(box)}
-  it should "tactically prove <:=> assign" in {check(assignd)}
+  it should "tactically prove <:=> assign" in {check(assigndAxiom)}
   it should "tactically prove [:=] equational" in withMathematica { _ => check(assignbequational)}
 //  it should "tactically prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
   it should "tactically prove [:=] vacuous assign" in {check(vacuousAssignb)}
