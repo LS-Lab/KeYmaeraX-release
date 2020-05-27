@@ -99,7 +99,7 @@ class Z3Solver(val z3Path: String, val converter: SMTConverter) extends ToolOper
     } catch {
       case ex: TimeoutException =>
         p.destroy()
-        throw ToolCommunicationException(s"Z3 timeout of ${timeout}s exceeded", ex)
+        throw SMTTimeoutException(s"Z3 timeout of ${timeout}s exceeded", ex)
       case ex: InterruptedException =>
         p.destroy
         throw ToolCommunicationException(s"Z3 interrupted", ex)

@@ -101,7 +101,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       "->" +
       "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
     implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2 = elem1_()^(2*m_())".asFormula) & Idioms.<(
-      eqL2R(-4)(-2) & hideL(-4) & useAt(DerivedAxioms.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
+      eqL2R(-4)(-2) & hideL(-4) & useAt(Ax.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
       cohideR(2) & QE & done
     )
   )
@@ -114,7 +114,7 @@ class TaylorModelArith(context: IndexedSeq[Formula],
       "->" +
       "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
     implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2*elem1_() = elem1_()^(2*m_() + 1)".asFormula) & Idioms.<(
-      eqL2R(-4)(-2) & hideL(-4) & useAt(DerivedAxioms.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
+      eqL2R(-4)(-2) & hideL(-4) & useAt(Ax.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
       cohideR(2) & QE & done
     )
   )

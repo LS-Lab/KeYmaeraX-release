@@ -32,10 +32,13 @@ object TacticIndex {
 
   lazy val default: TacticIndex = new DefaultTacticIndex
 
-  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.forallStutter)
-  val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.existsStutter)
+  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.allStutter)
+  val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(Ax.existsStutter)
 }
 
+/**
+  * @see [[AxIndex]]
+  */
 trait TacticIndex {
   /** Recursors pointing to the result positions of `tactic`. */
   def tacticRecursors(tactic: BelleExpr): TacticRecursors

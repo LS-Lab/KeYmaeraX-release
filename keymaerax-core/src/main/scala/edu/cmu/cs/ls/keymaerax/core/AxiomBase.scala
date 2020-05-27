@@ -36,7 +36,7 @@ import org.apache.logging.log4j.scala.Logging
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @author Andre Platzer
   * @author Yong Kiam Tan
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
   */
 private[core] object AxiomBase extends Logging {

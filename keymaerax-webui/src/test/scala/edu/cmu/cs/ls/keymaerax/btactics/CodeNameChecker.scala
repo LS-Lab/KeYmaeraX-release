@@ -41,16 +41,16 @@ class CodeNameChecker extends TacticTestBase with Matchers {
   }
 
   "Derived axioms" should "all be specified in AxiomInfo" in withMathematica { _ =>
-    val lemmas = DerivedAxioms.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
+    val lemmas = Ax.getClass.getDeclaredFields.filter(f => classOf[Lemma].isAssignableFrom(f.getType))
     val fns = lemmas.map(_.getName)
 
     val mirror = ru.runtimeMirror(getClass.getClassLoader)
     // access the singleton object
-    val moduleMirror = mirror.reflectModule(ru.typeOf[DerivedAxioms.type].termSymbol.asModule)
+    val moduleMirror = mirror.reflectModule(ru.typeOf[Ax.type].termSymbol.asModule)
     val im = mirror.reflect(moduleMirror.instance)
 
     //@note lazy vals have a "hidden" getter method that does the initialization
-    val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
+    val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
     Range(0, fieldMirrors.length-1).foreach(idx => {

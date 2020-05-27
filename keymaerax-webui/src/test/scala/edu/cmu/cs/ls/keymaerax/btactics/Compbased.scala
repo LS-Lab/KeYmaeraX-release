@@ -106,7 +106,7 @@ class Compbased extends TacticTestBase {
       Box(Choice(a,b), p),
       Box(Compose(Choice(Compose(a, Assign(s, Number(1))), Assign(s, Number(0))), Choice(Compose(Test(Equal(s, Number(0))), b), Compose(Test(Not(Equal(s, Number(0)))), Test(True)))), p))
 
-    val equalReflex = proveBy("true <-> s()=s()".asFormula, equivR(1) <(cohideR(1) & byUS("= reflexive") & done, prop & done))
+    val equalReflex = proveBy("true <-> s()=s()".asFormula, equivR(1) <(cohideR(1) & byUS(Ax.equalReflexive) & done, prop & done))
     equalReflex shouldBe 'proved
 
     val falseImplies = proveBy("true <-> (false -> p())".asFormula, prop & done)
@@ -156,6 +156,8 @@ class Compbased extends TacticTestBase {
         val repl = proveBy(Imply(p, Equiv(True, Diamond(Assign(margin, metric), LessEqual(margin, Number(0))))),
           assignd(1, 1::1::Nil) & QE & done)
         useAt(repl, PosInExpr(1::0::Nil))(pos ++ PosInExpr(0::0::1::0::Nil))
+      case Some(e) => throw new TacticInapplicableFailure("toMetric only applicable to diamond properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     })
 
     val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",
@@ -285,17 +287,17 @@ class Compbased extends TacticTestBase {
       /* base case */ print("Base case...") & simpQE & print("Base case done"),
       /* use case */ print("Use case...") & simpQE & print("Use case done"),
       /* induction step */ print("Induction step") & chase(1) & normalize(andR) & printIndexed("After normalize") <(
-      print("Braking branch 1") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Braking branch 1 done"),
-      print("Braking branch 2") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Braking branch 2 done"),
-      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Stopped branch 1 done"),
+      print("Braking branch 1") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 1 done"),
+      print("Braking branch 2") & di("-B()")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Braking branch 2 done"),
+      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Stopped branch 1 done"),
       print("Acceleration branch 1") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
-        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
+        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 1 done"),
-      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(simpQE) & print("Stopped branch 2 done"),
+      print("Stopped branch 1") & di("0")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(simpQE) & print("Stopped branch 2 done"),
       print("Acceleration branch 2") & hideL('L, "v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B())".asFormula) &
-        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS("= reflexive")) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
+        di("a")(1) & dw & prop & OnAll((cohide(1) & byUS(Ax.equalReflexive)) | skip) & OnAll(hideFactsAbout("dx", "dy", "dxo", "dyo", "k", "k_0", "dx_0", "dy_0")) <(
         hideFactsAbout("y", "yo") & accArithTactic,
         hideFactsAbout("x", "xo") & accArithTactic
         ) & print("Acceleration branch 2 done")

@@ -66,7 +66,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     }
   }
 
-  it should "compute with interpreted functions" in withMathematica { qeTool =>
+  it should "compute with interpreted functions" in withMathematica { qeTool => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     val assms = IndexedSeq("1 <= x", "x <= 2", "3 <= y", "y <= 5") map (_.asFormula)
     val t = "min(x, y) + max (x, y)".asTerm
     val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List(t))
@@ -76,6 +76,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     uppers(t) shouldBe 'proved
     uppers(t).conclusion.ante shouldBe assms
     uppers(t).conclusion.succ.loneElement shouldBe "min((x,y))+max((x,y))<=7*10^0".asFormula
+  }
   }
 
   val xyz_bounds = IndexedSeq("-10 <= f(x)", "f(x) <= 1", "-3 <= x", "x <= -1", "2 <= c()", "c() <= 4").map(_.asFormula)

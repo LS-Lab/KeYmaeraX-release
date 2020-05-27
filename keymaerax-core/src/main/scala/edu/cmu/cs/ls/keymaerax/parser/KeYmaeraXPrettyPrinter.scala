@@ -235,7 +235,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   }
 
   /** True if negative numbers should get extra parentheses */
-  private[parser] val negativeBrackets = false && OpSpec.negativeNumber
+  private[parser] val negativeBrackets = true && OpSpec.negativeNumber
 
   /**@note The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
@@ -266,13 +266,17 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
         (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
     case DifferentialSymbol(x)  => x.asString + ppOp(term)
     case x: Variable            => x.asString
+    // disambiguate (-2)' versus (-(2))' versus ((-2))'
+    case Differential(Number(n)) if negativeBrackets =>
+      if (n < 0) "((" + n.bigDecimal.toPlainString + "))" + ppOp(term)
+      else n.bigDecimal.toPlainString + ppOp(term)
     case Differential(t)        => "(" + pp(q++0, t) + ")" + ppOp(term)
       // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
     case Number(n)              => if (negativeBrackets) {
-      if (OpSpec.negativeNumber) "(" + n.bigDecimal.toPlainString + ")"
-      else assert(n>=0 || OpSpec.negativeNumber); n.bigDecimal.toPlainString
+      if (n < 0) "(" + n.bigDecimal.toPlainString + ")"
+      else n.bigDecimal.toPlainString
     } else n.bigDecimal.toPlainString
-    case FuncOf(f, c)           => f.asString + "(" + pp(q++0, c) + ")"
+    case FuncOf(f, c)           => if (f.domain.isInstanceOf[Tuple]) f.asString + pp(q++0, c) else f.asString + "(" + pp(q++0, c) + ")"
     // special notation
     case p: Pair                =>
       //@todo create positions when flattening pairs
@@ -305,7 +309,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
 
   protected def pp(q: PosInExpr, formula: Formula): String = emit(q, formula match {
     case True|False|DotFormula  => ppOp(formula)
-    case PredOf(p, c)           => p.asString + "(" + pp(q++0, c) + ")"
+    case PredOf(p, c)           => if (p.domain.isInstanceOf[Tuple]) p.asString + pp(q++0, c) else p.asString + "(" + pp(q++0, c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(q++0, c) + "}"
     // special case to disambiguate between x<-y as in x < -y compared to x REVIMPLY y
     case f: Less                => wrapLeft(f, pp(q++0, f.left)) + LEXSPACE + ppOp(formula) + LEXSPACE + wrapRight(f, pp(q++1, f.right))

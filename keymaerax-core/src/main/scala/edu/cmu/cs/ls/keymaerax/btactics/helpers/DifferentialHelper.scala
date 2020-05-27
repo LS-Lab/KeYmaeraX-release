@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
-import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
+import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -88,7 +88,7 @@ object DifferentialHelper {
     case ODESystem(odes, _) => getPrimedVariables(odes)
     case DifferentialProduct(l,r) => getPrimedVariables(l) ++ getPrimedVariables(r)
     case _: AtomicDifferentialProgram => ???
-    case _ => throw AxiomaticODESolverExn(s"Expected a differential program or ODE system but found ${ode.getClass}")
+    case _ => throw new TacticInapplicableFailure(s"Expected a differential program or ODE system but found ${ode.getClass}")
   }
 
   /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */

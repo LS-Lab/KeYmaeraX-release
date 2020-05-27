@@ -1,15 +1,18 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, NamedBelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, DependentPositionTactic, NamedBelleExpr}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.HashMap
 
 object DerivationInfoAugmentors {
+  def byPosition (name: String, expr: (Position, Sequent) => BelleExpr): DependentPositionTactic = name by expr
+
   /** Locally embed single string names into SimpleDisplayInfo. */
   implicit def displayInfo(name: String): SimpleDisplayInfo = {
     SimpleDisplayInfo(name, name)
@@ -42,14 +45,14 @@ object DerivationInfoAugmentors {
       pi match {
         case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
         case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
-        case dai: DerivedAxiomInfo => DerivedAxioms.derivedAxiomOrRule(dai.canonicalName)
-        case dari: DerivedRuleInfo => DerivedAxioms.derivedAxiomOrRule(dari.canonicalName)
+        case dai: DerivedAxiomInfo => Ax.derivedAxiomOrRule(dai.canonicalName)
+        case dari: DerivedRuleInfo => Ax.derivedAxiomOrRule(dari.canonicalName)
       }
     }
 
     def formula: Formula = {
       pi match {
-        case dai: DerivedAxiomInfo => DerivedAxioms.derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
+        case dai: DerivedAxiomInfo => Ax.derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
         case cai: CoreAxiomInfo =>
           ProvableSig.axiom.get(pi.canonicalName) match {
             case Some(fml) => fml
@@ -57,5 +60,14 @@ object DerivationInfoAugmentors {
           }
       }
     }
+  }
+
+  implicit class AxiomInfoAugmentor(val ai: AxiomInfo) {
+    def key: PosInExpr = PosInExpr(ai.theKey)
+    def recursor: List[PosInExpr] = ai.theRecursor.map(PosInExpr(_))
+  }
+
+  implicit class StorableInfoAugmentor(val si: StorableInfo) {
+    def lemma: Lemma = si.theLemma.asInstanceOf[Lemma]
   }
 }

@@ -133,26 +133,26 @@ object IntervalArithmetic extends Logging {
   //Arithmetic lemmas involving the interval axioms
   private lazy val PlusULem = remember(("((\\forall x \\forall y (x + y <= PlusU(x,y))) & f_() <= F_() & g_() <= G_()) ->" +
     "f_() + g_() <= PlusU(F_(),G_())").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("+<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   private lazy val PlusLLem = remember(("((\\forall x \\forall y (PlusL(x,y) <= x + y)) & ff_() <= f_() & gg_() <= g_()) ->" +
     "PlusL(ff_(),gg_()) <= f_() + g_()").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("<=+ down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   private lazy val MinusULem = remember(("((\\forall x \\forall y (x - y <= MinusU(x,y))) & f_() <= F_() & gg_() <= g_()) ->" +
     "f_() - g_() <= MinusU(F_(),gg_())").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("-<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   private lazy val MinusLLem = remember(("((\\forall x \\forall y (MinusL(x,y) <= x - y)) & ff_() <= f_() & g_() <= G_()) ->" +
     "MinusL(ff_(),G_()) <= f_() - g_()").asFormula,
-    useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+    useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
+      useAt(Ax.allInst, (us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("<=- down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   //Rewrites for max/min, not to be confused with the actual lemmas
@@ -568,7 +568,7 @@ object IntervalArithmetic extends Logging {
       DebuggingTactics.debug("Chasing away formula", doPrint=DEBUG) &
         useAt("<;> compose")(SuccPosition(1,0::Nil)) &
         //        chase(3,3, (e:Expression)=>chaseAtomic(e))(SuccPosition(1,0::Nil)) & ident)
-        chase(3,3, (e:Expression)=>hideDiamond(e))(SuccPosition(1,0::Nil)) &
+        chaseDeprecated(3,3, (e:Expression)=>hideDiamond(e))(SuccPosition(1,0::Nil)) &
         //Strip off all accumulated side conditions
         implyR(1) &
         //This is really slow if the goal splits a lot...
@@ -657,13 +657,13 @@ object IntervalArithmetic extends Logging {
 
   private lazy val minusExpand = remember("f_()-g_() = f_() +(-g_())".asFormula, QE & done, namespace).fact
 
-  private lazy val plusRec = remember("f_() + g_() = f_() + g_()".asFormula, byUS("= reflexive"), namespace).fact
-  private lazy val timesRec = remember("f_() * g_() = f_() * g_()".asFormula, byUS("= reflexive"), namespace).fact
-  //private lazy val divRec = remember("f_() / g_() = f_() / g_()".asFormula,byUS("= reflexive"), namespace).fact
-  private lazy val powerRec = remember("f_() ^ g_() = f_() ^ g_()".asFormula, byUS("= reflexive"), namespace).fact
+  private lazy val plusRec = remember("f_() + g_() = f_() + g_()".asFormula, byUS(Ax.equalReflexive), namespace).fact
+  private lazy val timesRec = remember("f_() * g_() = f_() * g_()".asFormula, byUS(Ax.equalReflexive), namespace).fact
+  //private lazy val divRec = remember("f_() / g_() = f_() / g_()".asFormula,byUS(Ax.equalReflexive), namespace).fact
+  private lazy val powerRec = remember("f_() ^ g_() = f_() ^ g_()".asFormula, byUS(Ax.equalReflexive), namespace).fact
 
-  private lazy val lessEqualRec = remember("f_() <= g_() <-> f_() <= g_()".asFormula, byUS("<-> reflexive"), namespace).fact
-  private lazy val lessRec = remember("f_() < g_() <-> f_() < g_()".asFormula, byUS("<-> reflexive"), namespace).fact
+  private lazy val lessEqualRec = remember("f_() <= g_() <-> f_() <= g_()".asFormula, byUS(Ax.equivReflexive), namespace).fact
+  private lazy val lessRec = remember("f_() < g_() <-> f_() < g_()".asFormula, byUS(Ax.equivReflexive), namespace).fact
 
   private def binaryDefault(ax: ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
   //Converts an input formula (FOL, no quantifiers) into a formula satisfying:
@@ -671,7 +671,7 @@ object IntervalArithmetic extends Logging {
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), custom rewrites of powers to squares
   def normalise(f:Formula): (Formula,ProvableSig) = {
-    val refl = proveBy(Equiv(f,f),byUS("<-> reflexive"))
+    val refl = proveBy(Equiv(f,f),byUS(Ax.equivReflexive))
     val nnf = chaseCustomFor((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil

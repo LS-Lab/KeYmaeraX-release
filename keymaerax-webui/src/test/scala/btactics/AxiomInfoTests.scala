@@ -19,7 +19,7 @@ class AxiomInfoTests extends TacticTestBase with Matchers with BeforeAndAfterEac
  "Axiom Info" should "exist for all axioms" in withZ3 { _ =>
    try {
      DerivationInfoRegistry.init
-     DerivedAxioms.prepopulateDerivedLemmaDatabase
+     Ax.prepopulateDerivedLemmaDatabase
      ProvableSig.axiom.keys.forall({ case axiomName => AxiomInfo(axiomName); true }) shouldBe true
    } catch {
      case e:AxiomNotFoundException =>

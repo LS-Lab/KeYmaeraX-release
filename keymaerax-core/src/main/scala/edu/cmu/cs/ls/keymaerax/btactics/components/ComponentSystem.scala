@@ -118,6 +118,8 @@ object ComponentSystem {
             (dots.foldLeft[Formula](q)({ case (qq, (v,d)) => qq.replaceAll(v, d) }) -> dots.foldLeft(p)({ case (pp, (v,d)) => pp.replaceFree(v, d) }))
         )
         useAt(swapped, PosInExpr(1::Nil), rensubst)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("programIndepedence only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -138,6 +140,8 @@ object ComponentSystem {
         StaticSemantics.freeVars(p).intersect(StaticSemantics.boundVars(a)).isEmpty &&
         StaticSemantics.freeVars(a).intersect(StaticSemantics.boundVars(a)).isEmpty =>
         proveBy(Imply(p, have), implyR(1) & abstractionb(1) & closeId & done)
+      case Some(e) => throw new TacticInapplicableFailure("dropControl only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     useAt(lemma2, PosInExpr(1::Nil))(pos)
   })
@@ -181,12 +185,12 @@ object ComponentSystem {
                     cohideR(1) & dW(1) & prop & done
                   )
                 )
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+              case None => proveBy(Equiv(have, have), byUS(Ax.equivReflexive))
             }
           case Some(xsys) if StaticSemantics.boundVars(xsys).toSet.forall(_.name == "t") =>
             ys.reduceOption(DifferentialProduct.apply) match {
               case Some(ysys) => ???
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+              case None => proveBy(Equiv(have, have), byUS(Ax.equivReflexive))
             }
           case None =>
             ys.reduceOption(DifferentialProduct.apply) match {
@@ -210,9 +214,11 @@ object ComponentSystem {
                     cohideR(1) & dW(1) & prop & done
                   )
                 )
-              case None => proveBy(Equiv(have, have), byUS(DerivedAxioms.equivReflexiveAxiom))
+              case None => proveBy(Equiv(have, have), byUS(Ax.equivReflexive))
             }
         }
+      case Some(e) => throw new TacticInapplicableFailure("Lemma 3 only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     useAt(lemma3, PosInExpr(1::Nil))(pos)
   })
@@ -232,6 +238,8 @@ object ComponentSystem {
           Imply(Box(abv.map(AssignAny).reduceRightOption(Compose).getOrElse(Test(True)), p), have),
           implyR(1) & abstractionb(1) & approximate & decompose & closeId)
         useAt(lemma4, PosInExpr(1::Nil))(pos)
+      case Some(e) => throw new TacticInapplicableFailure("higherdV only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -252,6 +260,8 @@ object ComponentSystem {
             "q(||)".asFormula -> f :: Nil
         )
         useAt(introduceTestLemma, PosInExpr(1::1::Nil), subst)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("introduceTest only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -270,6 +280,8 @@ object ComponentSystem {
             "q_()".asFormula -> f :: Nil
         )
         useAt(weakenTestLemma, PosInExpr(1::1::Nil), subst)(pos)
+      case Some(e) => throw new TacticInapplicableFailure("weakenTest only applicable to box tests, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -284,6 +296,8 @@ object ComponentSystem {
         dropControl(pos ++ PosInExpr(1::Nil)) &
         dropControl(pos) & DebuggingTactics.print("Dropped all statements except port memory") &
         chase(1) & prop & DebuggingTactics.done("Fig. 12 done")
+    case Some(e) => throw new TacticInapplicableFailure("Fig. 12 only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
   
   /** Communication liveness for empty connections */
@@ -311,6 +325,8 @@ object ComponentSystem {
         useAt("[;] compose", PosInExpr(1::Nil))(pos) & useAt("[;] compose", PosInExpr(1::Nil))(pos.topLevel ++ pos.inExpr.parent) &
         // recurse until done
         proveSystemCompStep4(inputAssumptions, outputGuarantees, plant1Vars, compatibility, remainingCons-1)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("proveSystemCompStep4 only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
 
   private def leftAssignments(program: Program, length: Int = -1): List[Program] = {
@@ -353,7 +369,7 @@ object ComponentSystem {
           composeb(1, 1::Nil) & dropControl(1, 1::Nil) & DebuggingTactics.print("Dropped delta1") &
           cutAt(Diamond(Compose(in2, cp2), foutSafety))(1, 1::1::1::1::1::Nil) <(
             // use
-            useAt(DerivedAxioms.boxDiamondSubstPropagation, PosInExpr(1::1::Nil))(1, 1::1::1::1::1::Nil) <(
+            useAt(Ax.boxDiamondSubstPropagation, PosInExpr(1::1::Nil))(1, 1::1::1::1::1::Nil) <(
               DebuggingTactics.print("Strengthen") & /* todo: hide all non-const factcs */ hideL(-1) /* End todo */ &
                 generalize(c2inv)(1, 1::1::1::1::1::Nil) <(
                   DebuggingTactics.print("Close by C2 induction step") &
@@ -372,7 +388,7 @@ object ComponentSystem {
                       DebuggingTactics.done("Close by C2 induction step")
                     ,
                     DebuggingTactics.print("Proving C2 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
-                      useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+                      useAt(Ax.DR, PosInExpr(1::Nil))(1) &
                       dW(1) & prop & DebuggingTactics.done("Proving C2 diff. refine")
                   )
                   ,
@@ -382,7 +398,7 @@ object ComponentSystem {
               DebuggingTactics.print("Close by communication guarantee liveness") &
                 implyR(1) & ((abstractionb(1) & SaturateTactic(allR(1)))*4) &
                 //@todo use communication guarantees of internal ports
-                composed(1) & testd(1, 1::Nil) & useAt(DerivedAxioms.trueAnd)(1, 1::Nil) &
+                composed(1) & testd(1, 1::Nil) & useAt(Ax.trueAnd)(1, 1::Nil) &
                 DebuggingTactics.print("Close by Communication Guarantee Liveness lemma") & useLemma(comGuaranteeLiveness, Some(prop)) & DebuggingTactics.done("Close by communication guarantee liveness")
             )
             ,
@@ -392,6 +408,8 @@ object ComponentSystem {
               abstractionb(2) & prop & DebuggingTactics.done("Show InCp")
           )
           ) & DebuggingTactics.done("Justify Fout")
+    case Some(e) => throw new TacticInapplicableFailure("justifyFout only applicable to implications, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
 
   /** STTT Fig. 11: Component 1 */
@@ -465,7 +483,7 @@ object ComponentSystem {
                   DebuggingTactics.done("Close by C1 induction step")
                 ,
                 DebuggingTactics.print("Proving C1 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
-                  composeb(1, 0::1::Nil) & useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+                  composeb(1, 0::1::Nil) & useAt(Ax.DR, PosInExpr(1::Nil))(1) &
                   dW(1) & prop & DebuggingTactics.done("Proving C1 diff. refine")
               ) &
               DebuggingTactics.print("Step done") & DebuggingTactics.done("Step")
@@ -473,6 +491,8 @@ object ComponentSystem {
             // show
             justifyFout(fout, plant2Vars, c2ComGuaranteeLiveness, c2use, c2step)('Rlast)
           ) & DebuggingTactics.print("Done disassembling system into components") & DebuggingTactics.done("Disassembling system into components")
+      case Some(e) => throw new TacticInapplicableFailure("proveSystemCompStep only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   })
 
@@ -523,6 +543,8 @@ object ComponentSystem {
             DebuggingTactics.done("Proving communication guarantee (zeta step)")
         )
       ) & DebuggingTactics.print("Done proving component loops and communication guarantees") & DebuggingTactics.done("Proving component loops and communication guarantees")
+    case Some(e) => throw new TacticInapplicableFailure("proveSystemStep only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
 
   /** STTT Fig. 9 */
@@ -562,6 +584,8 @@ object ComponentSystem {
           compatibility,
           comGuaranteeSafety, comGuaranteeLiveness)(1) & DebuggingTactics.done("Component system step", Some("user/" + systemName + " Step"))
       )
+    case Some(e) => throw new TacticInapplicableFailure("proveSystem only applicable to box properties, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
   })
   
   private val shapeMsg =
@@ -623,26 +647,26 @@ object ComponentSystem {
                         case Some(comLiveness) => 
                           proveSystem(systemName, c1base, c1use, c1step, c2base, c2use, c2step,
                             compatibility, comSafety, comLiveness)(pos)
-                        case None => throw new BelleIllFormedError("Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first")
+                        case None => throw new InputFormatFailure("Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first")
                       }
-                      case None => throw new BelleIllFormedError("Unknown lemma " + comGuaranteeSafetyLemma + "; please prove first")
+                      case None => throw new InputFormatFailure("Unknown lemma " + comGuaranteeSafetyLemma + "; please prove first")
                     }
-                    case None => throw new BelleIllFormedError("Unknown lemma " + compatibilityLemma + "; please prove first")
+                    case None => throw new InputFormatFailure("Unknown lemma " + compatibilityLemma + "; please prove first")
                   }
-                  case None => throw new BelleIllFormedError("Unknown lemma " + c2stepLemma + "; please prove first")
+                  case None => throw new InputFormatFailure("Unknown lemma " + c2stepLemma + "; please prove first")
                 }
-                case None => throw new BelleIllFormedError("Unknown lemma " + c2useLemma + "; please prove first")
+                case None => throw new InputFormatFailure("Unknown lemma " + c2useLemma + "; please prove first")
               }
-              case None => throw new BelleIllFormedError("Unknown lemma " + c2baseLemma + "; please prove first")
+              case None => throw new InputFormatFailure("Unknown lemma " + c2baseLemma + "; please prove first")
             }
-            case None => throw new BelleIllFormedError("Unknown lemma " + c1stepLemma + "; please prove first")
+            case None => throw new InputFormatFailure("Unknown lemma " + c1stepLemma + "; please prove first")
           }
-          case None => throw new BelleIllFormedError("Unknown lemma " + c1useLemma + "; please prove first")
+          case None => throw new InputFormatFailure("Unknown lemma " + c1useLemma + "; please prove first")
         }
-        case None => throw new BelleIllFormedError("Unknown lemma " + c1baseLemma + "; please prove first")
+        case None => throw new InputFormatFailure("Unknown lemma " + c1baseLemma + "; please prove first")
       }
-    case Some(fml) => throw new BelleIllFormedError("Unexpected formula shape.\n" + shapeMsg + "\nBut got " + fml.prettyString)
-    case None => throw new BelleIllFormedError("Position points outside formula")
+    case Some(fml) => throw new TacticInapplicableFailure("Unexpected formula shape.\n" + shapeMsg + "\nBut got " + fml.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position points outside formula")
   })
   
   private def checkComponentLemmas(cbase: Lemma, cuse: Lemma, cstep: Lemma): Unit = {
@@ -658,14 +682,14 @@ object ComponentSystem {
       if (cstep.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head
       else cstep.fact.conclusion.toFormula
 
-    if ((FormulaTools.conjuncts(invbase).toSet -- FormulaTools.conjuncts(invuse)).nonEmpty) throw new BelleIllFormedError("Component invariants in base case and use case do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invuse.prettyString)
-    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invbase)).nonEmpty) throw new BelleIllFormedError("Component invariants in base case and step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
-    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invstepa)).nonEmpty) throw new BelleIllFormedError("Component invariants in step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
+    if ((FormulaTools.conjuncts(invbase).toSet -- FormulaTools.conjuncts(invuse)).nonEmpty) throw new InputFormatFailure("Component invariants in base case and use case do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invuse.prettyString)
+    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invbase)).nonEmpty) throw new InputFormatFailure("Component invariants in base case and step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
+    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invstepa)).nonEmpty) throw new InputFormatFailure("Component invariants in step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
     
     if (StaticSemantics.freeVars((FormulaTools.conjuncts(invuse).toSet -- FormulaTools.conjuncts(invbase)).
-      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new BelleIllFormedError("Component use case makes additional non-global assumptions")
+      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new InputFormatFailure("Component use case makes additional non-global assumptions")
     if (StaticSemantics.freeVars((FormulaTools.conjuncts(invstepa).toSet -- FormulaTools.conjuncts(invbase)).
-      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new BelleIllFormedError("Component step makes additional non-global assumptions")
+      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw new InputFormatFailure("Component step makes additional non-global assumptions")
   }
   
   private def checkSysC1Programs(step: Lemma, sys: Program): Unit = {
@@ -688,14 +712,14 @@ object ComponentSystem {
                             plant: (ODESystem, ODESystem),
                             in: (Program, Program),
                             cp: (Program, Program)): Unit = {
-    if (mem._1 != mem._2) throw new BelleIllFormedError("System and component port memories must agree, but " + mem._1 + " <> " + mem._2)
-    if (ctrl._1 != ctrl._2) throw new BelleIllFormedError("System and component controllers must agree, but " + ctrl._1 + " <> " + ctrl._2)
-    if (t._1 != t._2) throw new BelleIllFormedError("System and component time memory must agree, but " + t._1 + " <> " + t._2)
-    if (!DifferentialHelper.atomicOdes(plant._2).toSet.subsetOf(DifferentialHelper.atomicOdes(plant._1).toSet)) throw new BelleIllFormedError("System plant must contain component plant, but " + plant._1.prettyString + " does not contain all of " + plant._2)
-    if (!ports(in._1).toSet.subsetOf(ports(in._2).toSet)) throw new BelleIllFormedError("System input ports must be subset of component input ports, but " +
+    if (mem._1 != mem._2) throw new InputFormatFailure("System and component port memories must agree, but " + mem._1 + " <> " + mem._2)
+    if (ctrl._1 != ctrl._2) throw new InputFormatFailure("System and component controllers must agree, but " + ctrl._1 + " <> " + ctrl._2)
+    if (t._1 != t._2) throw new InputFormatFailure("System and component time memory must agree, but " + t._1 + " <> " + t._2)
+    if (!DifferentialHelper.atomicOdes(plant._2).toSet.subsetOf(DifferentialHelper.atomicOdes(plant._1).toSet)) throw new InputFormatFailure("System plant must contain component plant, but " + plant._1.prettyString + " does not contain all of " + plant._2)
+    if (!ports(in._1).toSet.subsetOf(ports(in._2).toSet)) throw new InputFormatFailure("System input ports must be subset of component input ports, but " +
       ports(in._1).map(p => p._1.prettyString + " (" + p._2.prettyString + ")").mkString(",") + " not subset of " +
       ports(in._2).map(p => p._1.prettyString + " (" + p._2.prettyString + ")").mkString(","))
-    if (cp._1 != cp._2) throw new BelleIllFormedError("System and component internal connections must agree, but " + cp._1 + " <> " + cp._2)
+    if (cp._1 != cp._2) throw new InputFormatFailure("System and component internal connections must agree, but " + cp._1 + " <> " + cp._2)
     //@todo check that connections cover remaining (non-open) input ports
   }
 }

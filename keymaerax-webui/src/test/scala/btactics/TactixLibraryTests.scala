@@ -134,7 +134,7 @@ class TactixLibraryTests extends TacticTestBase {
         }
         ,
         existsR("j()".asTerm)(1) & SaturateTactic(step(1, 0::Nil))
-      ) & byUS("= reflexive")
+      ) & byUS(Ax.equalReflexive)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
     proof shouldBe 'proved
@@ -148,7 +148,7 @@ class TactixLibraryTests extends TacticTestBase {
         }
         ,
         existsR("j(||)".asTerm)(1) & SaturateTactic(step(1, 0::Nil))
-      ) & byUS("= reflexive")
+      ) & byUS(Ax.equalReflexive)
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
     proof shouldBe 'proved
@@ -163,7 +163,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j(x)".asTerm)(1) &
         derive(1, 0::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x)'=jj".asFormula))
     proof shouldBe 'proved
   }
@@ -178,7 +178,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j()".asTerm)(1) &
           derive(1, 0::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
     proof shouldBe 'proved
   }
@@ -193,7 +193,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j()".asTerm)(1) &
         derive(1, 1::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj jj=(x+x*y)'".asFormula))
     proof shouldBe 'proved
   }
@@ -207,7 +207,7 @@ class TactixLibraryTests extends TacticTestBase {
         ,
         existsR("j(||)".asTerm)(1) &
           derive(1, 0::Nil))
-        & byUS("= reflexive"))
+        & byUS(Ax.equalReflexive))
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj (x+x*y)'=jj".asFormula))
     proof shouldBe 'proved
   }
@@ -217,7 +217,7 @@ class TactixLibraryTests extends TacticTestBase {
     (_,e) => println("SnR loop status " + e)
       rem match {
         case hd::tail => rem = tail; hd :: Nil
-        case _ => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
+        case _ => throw new BelleNoProgress("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
 

@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import DerivationInfoAugmentors._
 
 import scala.collection.immutable._
 
@@ -215,7 +216,8 @@ object PolynomialArithV2 {
           case None => throw new IllegalArgumentException("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
           case Some(prv) => cohideR(pos) & by(prv)
         }
-      case e => throw new IllegalArgumentException("equate must be applied at a term or equality but was applied at " + e)
+      case Some(e) => throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -234,7 +236,8 @@ object PolynomialArithV2 {
         useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
       case Some(t: Term) =>
         useAt(normalize(t), PosInExpr(0::Nil))(pos)
-      case e => throw new IllegalArgumentException("normalizeAt must be applied at a term or equality but was applied at " + e)
+      case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -260,7 +263,7 @@ object PolynomialArithV2Helpers {
     prv(us)
   }
 
-  val equalReflex = anyArgify(DerivedAxioms.equalReflex.fact)
+  val equalReflex = anyArgify(Ax.equalReflexive.provable)
   val spat = "s_(||)".asTerm
   def equalReflex(t: Term) : ProvableSig = equalReflex(USubst(Seq(SubstitutionPair(spat, t))))
 
@@ -766,7 +769,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def compare(that: Monomial): Int = monomialOrdering.compare(this.powers, that.powers)
   }
 
-  val zez = rememberAny("0 = 0".asFormula, byUS(DerivedAxioms.equalReflex))
+  val zez = rememberAny("0 = 0".asFormula, byUS(Ax.equalReflexive))
 
   val emptySprout = rememberAny("s_() = 0 & t_() = u_() -> s_() + t_() = 0 + u_() + 0".asFormula, QE & done)
 
@@ -840,7 +843,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   val powerEven = rememberAny(("((n_() = 2*m_() <-> true) & t_()^m_() = p_() & p_()*p_() = r_()) ->" +
     "t_() ^ n_() = r_()").asFormula,
     implyR(1) & andL(-1) & andL(-2) &
-      useAt(DerivedAxioms.equivTrue, PosInExpr(0::Nil))(-1) &
+      useAt(Ax.equivTrue, PosInExpr(0::Nil))(-1) &
       eqL2R(-1)(1) & hideL(-1) &
       cutR("t_() ^ (2*m_()) = (t_()^m_())^2".asFormula)(1) & Idioms.<(
       QE & done,
@@ -850,7 +853,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   val powerOdd = rememberAny(("((n_() = 2*m_() + 1 <-> true) & t_()^m_() = p_() & p_()*p_()*t_() = r_()) ->" +
     "t_() ^ n_() = r_()").asFormula,
     implyR(1) & andL(-1) & andL(-2) &
-      useAt(DerivedAxioms.equivTrue, PosInExpr(0::Nil))(-1) &
+      useAt(Ax.equivTrue, PosInExpr(0::Nil))(-1) &
       eqL2R(-1)(1) & hideL(-1) &
       cutR("t_() ^ (2*m_() + 1) = (t_()^m_())^2*t_()".asFormula)(1) & Idioms.<(
       QE & done,

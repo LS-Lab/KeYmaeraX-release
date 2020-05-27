@@ -128,17 +128,17 @@ trait SequentCalculus {
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]])
     * Skolemization with bound renaming on demand.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
     * @example{{{
     *     y>5   |- x^2>=0
     *     --------------------------allSkolemize(1)
     *     y>5   |- \forall x x^2>=0
     * }}}
-    * @example Uniformly renames other occurrences of the quantified variable in the context on demand. {{{
+    * @example Uniformly renames other occurrences of the quantified variable in the context on demand to avoid [[SkolemClashException]]. {{{
     *     x_0>0 |- x^2>=0
     *     --------------------------allSkolemize(1)
     *     x>0   |- \forall x x^2>=0
     * }}}
-    * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
     */
   val allR                    : DependentPositionTactic = FOQuantifierTactics.allSkolemize
   /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
@@ -151,6 +151,8 @@ trait SequentCalculus {
   //@todo turn this into a more general function that obtains data from the sequent.
   def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => allL(t)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("all instantiate pos only applicable to terms, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
   val existsL                         : DependentPositionTactic = "existsL" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsSkolemize(pos))
@@ -163,6 +165,8 @@ trait SequentCalculus {
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
+    case Some(e) => throw new TacticInapplicableFailure("exists instantiate pos only applicable to terms, but got " + e.prettyString)
+    case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
 
@@ -204,7 +208,7 @@ trait SequentCalculus {
     pos.top match {
       case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
       case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)
-      case _ => throw new BelleTacticFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
+      case _ => throw new TacticInapplicableFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
     }
   })
   //@note do not forward to closeIdWith (performance)
@@ -214,8 +218,7 @@ trait SequentCalculus {
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         val fmls = s.ante.intersect(s.succ)
-        require(fmls.nonEmpty, "Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
-        val fml = fmls.head
+        val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString))
         close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
     }
   }
@@ -244,6 +247,6 @@ trait SequentCalculus {
   /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]] */
   val commuteEquivR: CoreRightTactic = "commuteEquivR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
-  lazy val commuteEqual       : DependentPositionTactic = useAt(DerivedAxioms.equalCommute)
+  lazy val commuteEqual       : DependentPositionTactic = useAt(Ax.equalCommute)
 
 }

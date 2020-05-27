@@ -37,7 +37,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Selection sort" should "achieve intended permutation" in withMathematica { _ =>
     val ode = "{w' = 2,  x' = 0, y' = 3, z' = 1}".asDifferentialProgram
     val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
-    val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS("<-> reflexive")
+    val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS(Ax.equivReflexive)
     val fml = "[{w' = 2,  x' = 0, y' = 3, z' = 1}]true <-> [{x' = 0, z' = 1, w' = 2, y' = 3}]true".asFormula
     proveBy(fml, e) shouldBe 'proved
   }
@@ -455,7 +455,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   //@todo unsound bananas in post condition
   "DS& differential equation solution" should "be careful in postcondition" in withMathematica { _ =>
     val fml = "[{x'=1}] t_>=0".asFormula
-    val result = proveBy(fml, useAt("DS& differential equation solution")(1) & normalize)
+    val result = proveBy(fml, useAt(Ax.DS)(1) & normalize)
     result shouldBe 'proved
   }
 
@@ -562,9 +562,8 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Precondition check" should "fail early when the ODE doesn't have the correct shape" in withMathematica { _ =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=x,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
-    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message
-      """[Bellerophon Runtime] [Bellerophon User-Generated Message] ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().
-        |The error occurred on
+    the [BelleThrowable] thrownBy proveBy(f, t) should have message
+      """ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().
         |Provable{
         |==> 1:  x=1&v=2&a=0&t=0->[{x'=v,v'=x,t'=1&true}]x^3>=1	Imply
         |  from

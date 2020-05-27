@@ -21,6 +21,7 @@ import scala.collection.immutable
   * @author Brandon Bohrer
  * @see [[ProofTerm]]
  * @see [[ProvableSig]]
+  * @todo Currently not operational: fixme
  */
 object ProofChecker {
   case class ProofCheckException(str: String) extends Exception {}
@@ -49,13 +50,14 @@ object ProofChecker {
             val node = proofNode(axiomFml)
             //@TODO: Why?
             //Just do an empty uniform substitution...
-            proveBy(node, US(USubst(scala.collection.immutable.Seq()), info.canonicalName))
+            //
+            ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), info.canonicalName))
           } catch {
             // If derived axioms didn't do it, try core axioms too
             case e:Exception =>
               val axiomFml = AxiomInfo(axiomName).provable.conclusion
               val node = proofNode(axiomFml)
-              proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
+              ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
           }
         }
 

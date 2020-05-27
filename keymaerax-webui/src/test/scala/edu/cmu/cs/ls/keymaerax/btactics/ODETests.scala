@@ -53,6 +53,12 @@ class ODETests extends TacticTestBase {
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
   }}
 
+  it should "prove STTT tutorial 3a cases" in withQE { _ =>
+    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), x+v^2/(2*B()) < S()\n  ==>  [{x'=v,v'=A()&v>=0&x+v^2/(2*B())<=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), x+v^2/(2*B()) < S()\n  ==>  [{x'=v,v'=A()&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe 'proved
+    proveBy("A()>0, B()>0, v>=0, x+v^2/(2*B())<=S(), v=0\n  ==>  [{x'=v,v'=0&v>=0&x+v^2/(2*B())>=S()}](v>=0&x+v^2/(2*B())<=S())".asSequent, ODE(1)) shouldBe 'proved
+  }
+
   it should "prove a barrier certificate" in withQE { _ =>
     val fml =
       """
@@ -81,10 +87,14 @@ class ODETests extends TacticTestBase {
 
   "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3 { _ =>
     the [BelleThrowable] thrownBy TactixLibrary.proveBy("\\forall x_0 (x_0>0&true->\\forall x (x>0->-x>=0))".asFormula, QE) should have message
-      "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall x_0 \\forall x (x_0>0&x>0->-x>=0)\n"
+      "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall x_0 \\forall x (x_0>0&x>0->-x>=0)\n"
     TactixLibrary.proveBy("\\forall y__0 \\forall x_0 (x_0*y__0^2>0->x_0>0)".asFormula, QE) shouldBe 'proved
     TactixLibrary.proveBy("true->2!=0".asFormula, QE) shouldBe 'proved
     TactixLibrary.proveBy("\\forall x_0 (x_0>0->\\exists y_ (true->x_0*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula, QE) shouldBe 'proved
+  }
+
+  it should "prove a postcondition invariant that requires trying hard" in withZ3 { _ =>
+    proveBy("u^2<=v^2+9/2 ==> [{u'=-v+u/4*(1-u^2-v^2),v'=u+v/4*(1-u^2-v^2)}]u^2<=v^2+9/2".asSequent, ODE(1)) shouldBe 'proved
   }
 
   "QE" should "be able to prove the arithmetic subgoal from x'=-x case" in withQE { _ =>
@@ -178,7 +188,7 @@ class ODETests extends TacticTestBase {
   }
 
   it should "split* and on all prove x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)" in withQE { _ =>
-    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & SaturateTactic(boxAnd(1) & andR(1)) & onAll(
+    proveBy("x^3>5 & y>2 -> [{x'=x^3+x^4,y'=5*y+y^2}](x^3>5&y>2)".asFormula, implyR(1) & SaturateTactic(onAll(Idioms.?(boxAnd(1) & andR(1)))) & onAll(
       ODE(1)
     )) shouldBe 'proved
   }
@@ -227,7 +237,7 @@ class ODETests extends TacticTestBase {
   it should "neither stutter nor fail evolution domain simplification on empty evolution domain constraint with Z3" in withZ3 { _ =>
     //@note now throws exception instead of stuttering
     the [BelleThrowable] thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1)) should have message
-      """[Bellerophon Runtime] [Bellerophon User-Generated Message] ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.
+      """ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants. Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut.
         |An (internal) check failed at the subgoal formula [{x'=x^x&true}]x>0""".stripMargin
   }
 
@@ -537,7 +547,7 @@ class ODETests extends TacticTestBase {
     //Abuse DS to show that solutions exist for all time
     val texists = "x0 > 0 -> <{t'=1}> 0<=x0-x1+x0*t".asFormula
     val pr1 = proveBy(texists,
-      implyR(1) & useAt("Dsol differential equation solution")(1) &
+      implyR(1) & useAt(Ax.DSdnodomain)(1) &
         chase(1, 0::1::Nil) & QE
     )
 
@@ -546,7 +556,7 @@ class ODETests extends TacticTestBase {
     val pr2 = proveBy(xexists,
       implyR(1) &
       universalGen(Some("x".asVariable),"x".asTerm)(1) &
-      useAt("DGd diamond differential ghost",PosInExpr(1::Nil))(1) &
+      useAt(Ax.DGd, PosInExpr(1::Nil))(1) &
       implyRi &
       by(pr1)
     )
@@ -555,10 +565,10 @@ class ODETests extends TacticTestBase {
     val pr = proveBy(fml, prop &
       cut("[{t'=1,x'=1*x+0 & true & x-x1 < 0}] 0 > (x0-x1)+x0*t".asFormula)
       <(
-        useAt("<> diamond",PosInExpr(1::Nil))(1) & notR(1)  & SimplifierV3.fullSimpTac() &
+        useAt(Ax.diamond, PosInExpr(1::Nil))(1) & notR(1)  & SimplifierV3.fullSimpTac() &
         //Inverse diff cut
         cut("[{t'=1,x'=1*x+0 & true}] 0 > (x0-x1)+x0*t".asFormula) <(
-          useAt("[] box",PosInExpr(1::Nil))(-6) & notL(-6) &
+          useAt(Ax.box, PosInExpr(1::Nil))(-6) & notL(-6) &
             chase(1, 1::Nil) & implyRi()(AntePos(2),SuccPos(0)) & cohideR(1) & byUS(pr2),
           dC("x-x1 < 0".asFormula)(1) < ( closeId,closeId) )
         ,

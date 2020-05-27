@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.macros
 
-import edu.cmu.cs.ls.keymaerax.macros.DerivedAxiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
 
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
@@ -15,8 +15,8 @@ import scala.collection.immutable.HashMap
 ////////////////////////////////////////////////////////////
 
 
-/** Indicates that the axiom/rule/tactic of the given name could not be found. */
-case class AxiomNotFoundException(axiomName: String) extends Exception("Axiom with said name not found: " + axiomName)
+/** Indicates that the (derived) axiom/rule/tactic of the given name could not be found. */
+case class AxiomNotFoundException(axiomName: String) extends Exception("(Derived) Axiom or rule or tactic not found: " + axiomName)
 
 /** Central meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic.
  * Provides information such as unique canonical names, internal code names, display information, etc.
@@ -47,8 +47,26 @@ object DerivationInfo {
   // @TODO: Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info
-  def register[T](value: => T, di: DerivationInfo): T = {
+  def registerCore[T](value: => T, ci: CoreAxiomInfo): CoreAxiomInfo = {
+    _allInfo = ci :: allInfo
+    val _ = value
+    ci
+  }
+  def registerDerived[T](value: => T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
     _allInfo = di :: allInfo
+    val _ = value
+    di
+  }
+
+  def registerDerivedRule[T](value: => T, di: DerivedRuleInfo): DerivedRuleInfo = {
+    _allInfo = di :: allInfo
+    val _ = value
+    di
+  }
+
+  def registerPositionTactic[T](value: => T, pti: PositionTacticInfo): T = {
+    _allInfo = pti :: allInfo
+    val _ = value
     value
   }
 
@@ -178,15 +196,20 @@ trait ProvableInfo extends DerivationInfo {
  */
 trait StorableInfo extends DerivationInfo {
   val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
+  // Should be a [[Lemma]]
+  var theLemma: Any = None
 }
 
 // axioms
 
-/** Meta-Information for an axiom or derived axiom
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]] */
+/** Meta-Information for an axiom or derived axiom, as declared by an @[[Axiom]] annotation.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
+  * @see [[Axiom]] */
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula
+  val theKey: ExprPos = 0 :: Nil
+  val theRecursor: List[ExprPos] = Nil
 }
 
 /** Meta-Information for an axiom from the prover core
@@ -198,7 +221,11 @@ case class CoreAxiomInfo(  override val canonicalName:String
                          , override val display: DisplayInfo
                          , override val codeName: String
                          , val unifier: Symbol
-                         , val theExpr: Unit => Any)
+                         , val theExpr: Unit => Any
+                         , val displayLevel: Symbol = 'all
+                         , override val theKey: ExprPos = 0 :: Nil
+                         , override val theRecursor: List[ExprPos] = Nil
+                        )
   extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   override val numPositionArgs = 1
@@ -216,8 +243,8 @@ case class DerivedAxiomInfo(  override val canonicalName: String
                             , val unifier: Symbol
                             , theExpr: Unit => Any
                             , val displayLevel: Symbol = 'all
-                            , val key: ExprPos = Nil
-                            , val recursor: List[ExprPos] = Nil
+                            , override val theKey: ExprPos = 0 :: Nil
+                            , override val theRecursor: List[ExprPos] = Nil
                             )
   extends AxiomInfo with StorableInfo {
   override val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
@@ -251,7 +278,7 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
 /** Information for a derived rule proved from the core
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  * @see [[AxiomaticRuleInfo]] */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any)
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any, val displayLevel: Symbol = 'all)
   extends ProvableInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   //def belleExpr = expr()

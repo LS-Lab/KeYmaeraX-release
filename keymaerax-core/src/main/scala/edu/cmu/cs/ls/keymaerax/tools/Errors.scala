@@ -37,3 +37,6 @@ case class MathematicaComputationFailedException(msg: String, cause: Throwable =
 
 /** Reports QE errors from Z3. */
 case class SMTQeException(msg: String, cause: Throwable = null) extends ToolExternalException(msg, cause)
+
+/** Reports timeouts from Z3. */
+case class SMTTimeoutException(msg: String, cause: Throwable = null) extends ToolInternalException(msg, cause)

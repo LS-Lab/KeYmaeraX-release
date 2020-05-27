@@ -60,7 +60,7 @@ object InvariantProvers {
         //@todo switch to quickstop mode
         OnAll(master()) & done
       )
-    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
+    case e => throw new TacticInapplicableFailure("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
 
   private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Seq[Expression] = {
@@ -68,7 +68,7 @@ object InvariantProvers {
       if (gen.hasNext)
         gen.next() :: Nil
       else
-        throw new BelleThrowable("loopSR ran out of loop invariant candidates")
+        throw new BelleNoProgress("loopSR ran out of loop invariant candidates")
   }
 
 
@@ -193,9 +193,9 @@ object InvariantProvers {
               c :: True :: Nil
             case None =>
               if (sawODE)
-                throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
+                throw new BelleNoProgress("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
               else
-                throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
+                throw new BelleNoProgress("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
       }
@@ -216,7 +216,7 @@ object InvariantProvers {
         finishOff
       )
 
-    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
+    case e => throw new TacticInapplicableFailure("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
 
 }

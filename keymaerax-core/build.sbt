@@ -28,6 +28,8 @@ libraryDependencies += "io.spray" %% "spray-json" % "1.3.4"
 
 libraryDependencies += "cc.redberry" %% "rings.scaladsl" % "2.5.2"
 
+libraryDependencies += "com.lihaoyi" %% "fastparse" % "2.2.2"
+
 resolvers += Resolver.sonatypeRepo("releases")
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 

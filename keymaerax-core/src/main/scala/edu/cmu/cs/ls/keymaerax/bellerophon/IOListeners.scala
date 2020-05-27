@@ -37,7 +37,7 @@ object IOListeners {
         }
       case _ => // do nothing
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {}
     override def kill(): Unit = {}
   }
 
@@ -61,7 +61,7 @@ object IOListeners {
         start = Some((p, expr), System.currentTimeMillis())
       case _ => // do nothing
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = (input, start) match {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = (input, start) match {
       // do not record time in nested calls
       case (BelleProvable(p, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
         recordedDuration += System.currentTimeMillis() - startTime
@@ -105,7 +105,7 @@ object IOListeners {
       }
     }
 
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
       if (executionStack.nonEmpty && expr.eq(executionStack.head._1)) {
         executionStack = executionStack.tail
 
@@ -178,14 +178,14 @@ object IOListeners {
   }
 
   /** A progresss listener that collects the top-level tactic progress in a buffer. */
-  case class CollectProgressListener(progress: mutable.Buffer[(BelleExpr, Either[BelleValue, BelleThrowable])] = mutable.Buffer.empty) extends IOListener() {
+  case class CollectProgressListener(progress: mutable.Buffer[(BelleExpr, Either[BelleValue, Throwable])] = mutable.Buffer.empty) extends IOListener() {
     private var current: Option[(BelleExpr, Long)] = None
     override def begin(input: BelleValue, expr: BelleExpr): Unit = {
       if (current.isEmpty) {
         current = Some(expr, System.currentTimeMillis())
       }
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, Throwable]): Unit = {
       if (current.map(_._1).contains(expr)) {
         progress.append((expr, output))
         current = None

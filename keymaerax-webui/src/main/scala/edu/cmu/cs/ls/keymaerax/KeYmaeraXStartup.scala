@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfoRegistry, DerivedAxioms}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfoRegistry, Ax}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.macros.DerivationInfo
 
@@ -22,7 +22,7 @@ object KeYmaeraXStartup {
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database
       Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+      Ax.prepopulateDerivedLemmaDatabase()
       DerivationInfoRegistry.init
     } catch {
       case e: Exception =>

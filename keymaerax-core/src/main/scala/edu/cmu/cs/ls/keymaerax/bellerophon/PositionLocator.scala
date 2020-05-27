@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, _}
 sealed trait PositionLocator {
   def prettyString: String
 
-  def toPosition(p: ProvableSig): Position
+  def toPosition(p: ProvableSig): Option[Position]
 }
 
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
@@ -29,7 +29,7 @@ case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = Non
     case (Some(fml), false) => "~=\"" + fml.prettyString + "\""
     case (None, _) => ""
   })
-  override def toPosition(p: ProvableSig): Position = pos
+  override def toPosition(p: ProvableSig): Option[Position] = Some(pos)
 }
 object Fixed {
   def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)
@@ -52,21 +52,27 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
     case (_, Some(s), false) => "'_~=\"" + s.prettyString + "\""
   }
 
-  override def toPosition(p: ProvableSig): Position = findPosition(p, start)
+  override def toPosition(p: ProvableSig): Option[Position] = findPosition(p, start)
 
   /** Finds a position in the provable `p` at or after `pos` that matches the `shape`. */
-  def findPosition(p: ProvableSig, pos: Position): Position = {
+  def findPosition(p: ProvableSig, pos: Position): Option[Position] = {
     require(start.isIndexDefined(p.subgoals(goal)), "Find must point to a valid position in the sequent, but " + start.prettyString + " is undefined in " + p.subgoals(goal).prettyString)
     shape match {
-      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isDefined => pos
-      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isEmpty => findPosition(p, pos.advanceIndex(1))
-      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) == f => pos
-      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) != f => findPosition(p, pos.advanceIndex(1))
+      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isDefined => Some(pos)
+      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isEmpty =>
+        val nextPos = pos.advanceIndex(1)
+        if (nextPos.isIndexDefined(p.subgoals(goal))) findPosition(p, nextPos)
+        else None
+      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) == f => Some(pos)
+      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) != f =>
+        val nextPos = pos.advanceIndex(1)
+        if (nextPos.isIndexDefined(p.subgoals(goal))) findPosition(p, nextPos)
+        else None
       case Some(t: Term) =>
         val tPos = FormulaTools.posOf(p.subgoals(goal)(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
         if (tPos.isEmpty) findPosition(p, pos.advanceIndex(1))
-        else pos.topLevel ++ tPos.head
-      case None => pos
+        else Some(pos.topLevel ++ tPos.head)
+      case None => Some(pos)
     }
   }
 }
@@ -81,13 +87,21 @@ object Find {
 /** 'Llast Locates the last position in the antecedent. */
 case class LastAnte(goal: Int, inExpr: PosInExpr = PosInExpr.HereP) extends PositionLocator {
   override def prettyString: String = "'Llast" + (if (inExpr != PosInExpr.HereP) inExpr.prettyString else "")
-  override def toPosition(p: ProvableSig): Position = AntePosition.base0(p.subgoals(goal).ante.length - 1, inExpr)
+  override def toPosition(p: ProvableSig): Option[Position] = {
+    val pos = AntePosition.base0(p.subgoals(goal).ante.length - 1, inExpr)
+    if (pos.isIndexDefined(p.subgoals(goal))) Some(pos)
+    else None
+  }
 }
 
 /** 'Rlast Locates the last position in the succedent. */
 case class LastSucc(goal: Int, inExpr: PosInExpr = PosInExpr.HereP) extends PositionLocator {
   override def prettyString: String = "'Rlast" + (if (inExpr != PosInExpr.HereP) inExpr.prettyString else "")
-  override def toPosition(p: ProvableSig): Position = SuccPosition.base0(p.subgoals(goal).succ.length - 1, inExpr)
+  override def toPosition(p: ProvableSig): Option[Position] = {
+    val pos = SuccPosition.base0(p.subgoals(goal).succ.length - 1, inExpr)
+    if (pos.isIndexDefined(p.subgoals(goal))) Some(pos)
+    else None
+  }
 }
 
 ///**

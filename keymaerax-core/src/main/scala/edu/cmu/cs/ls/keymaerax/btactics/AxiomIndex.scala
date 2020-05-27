@@ -12,17 +12,19 @@ import scala.annotation.switch
 
 /**
   * Central Axiom Indexing data structures for canonical proof strategies, including
-  * [[UnifyUSCalculus.chase]], [[UnifyUSCalculus.chaseFor()]]  and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
+  * [[UnifyUSCalculus.chase]], [[UnifyUSCalculus.chaseFor()]] and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
   * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see [[AxIndex]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
   * @see [[TactixLibrary.step]]
   * @see [[TactixLibrary.sequentStepIndex]]
- */
+  */
+@deprecated("Use AxIndex instead of AxiomIndex.axiomFor.\nUse AxiomInfo.key and AxiomInfo.recursor instead of AxiomIndex.axiomIndex")
 object AxiomIndex extends Logging {
 
   /**
@@ -36,6 +38,7 @@ object AxiomIndex extends Logging {
    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
    * @todo copy documentation from chase
    */
+  @deprecated("Use AxIndex.axiomIndex or simply Ax.codeName.key and Ax.codeName.recursor")
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
       //@todo axiom.intern() to @switch?
     // [a] modalities and <a> modalities
@@ -68,7 +71,7 @@ object AxiomIndex extends Logging {
     case "DG inverse differential ghost system" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
     case "DG inverse differential ghost" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil) //todo copies from DG inverse differential ghost system. Not sure if this is correct.
     case ", commute" => (PosInExpr(0::Nil), Nil)
-    case "DS& differential equation solution" => (PosInExpr(0::Nil), PosInExpr(0::1::1::Nil)::PosInExpr(Nil)::Nil)
+    case "DS& differential equation solution" => (PosInExpr(0::Nil), PosInExpr(0::1::1::Nil)::/*@todo PosInExpr(0::1::Nil)::*/PosInExpr(Nil)::Nil)
     case "DX differential skip" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "DX diamond differential skip" => (PosInExpr(1::Nil), PosInExpr(1::Nil)::Nil)
 
@@ -91,7 +94,7 @@ object AxiomIndex extends Logging {
     case "*' derive product" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(1::1::Nil)::Nil)
     case "/' derive quotient" => (PosInExpr(0::Nil), PosInExpr(0::0::0::Nil)::PosInExpr(0::1::1::Nil)::Nil)
     case "^' derive power" => (PosInExpr(1::0::Nil), PosInExpr(1::Nil)::Nil)
-    case "chain rule" => (PosInExpr(1::1::0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+    //@todo case "chain rule" => (PosInExpr(1::1::0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "x' derive var"   => nullaryDefault
 
     case "all instantiate" | "all eliminate"
@@ -169,8 +172,9 @@ object AxiomIndex extends Logging {
 
   // lookup canonical axioms for an expression (index)
 
-  /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
-  def axiomFor(expr: Expression): Option[String] = axiomsFor(expr).headOption
+//  /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
+//  @deprecated("Use AxIndex.axiomFor instead")
+//  def axiomFor(expr: Expression): Option[String] = axiomsFor(expr).headOption
 
   //@todo add "ODE" or replace others with "ODE"
   private val odeList: List[String] = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
@@ -179,6 +183,7 @@ object AxiomIndex extends Logging {
   private val unknown = Nil
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression `expr`. */
+  @deprecated("Use AxIndex.axiomsFor instead")
   def axiomsFor(expr: Expression): List[String] = {
     if (expr.kind == TermKind) expr match {
       case Differential(t) => t match {

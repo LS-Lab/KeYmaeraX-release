@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.{Configuration, core}
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{RenamingClashException, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
@@ -26,7 +26,7 @@ private object ProofRuleTactics extends Logging {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
-    if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
+    if(provable.subgoals.length != 1) throw new IllFormedTacticApplicationException(s"Expected exactly one subgoal sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
     override def result(provable: ProvableSig): ProvableSig = {
@@ -116,10 +116,14 @@ private object ProofRuleTactics extends Logging {
     * @param what What variable to replace (along with its associated DifferentialSymbol).
     * @param repl The target variable to replace what with.
     * @return
+    * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
   def uniformRenaming(what: Variable, repl: Variable): InputTactic = "uniformRename" byWithInputs(what::repl::Nil,
     new BuiltInTactic("UniformRenaming") {
+      /**
+        * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
+        */
       override def result(provable: ProvableSig): ProvableSig = {
         requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
         provable(core.UniformRenaming(what, repl), 0)
@@ -137,6 +141,10 @@ private object ProofRuleTactics extends Logging {
     * @incontext
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
     * @see [[UnifyUSCalculus.boundRename()]]
+    * @throws RenamingClashException if this bound renaming is not admissible for s at the indicated position
+    *                                because repl,repl',what' already occurred, or
+    *                                because a semantic symbol occurs, or
+    *                                because the formula at `pos` has the wrong shape.
     */
   def boundRenaming(what: Variable, repl: Variable): DependentPositionTactic = "boundRename" byWithInputs (List(what, repl), (pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)
@@ -221,6 +229,9 @@ private object ProofRuleTactics extends Logging {
       shapeCheck(TactixLibrary.proveBy(fml, tactic(1))).subgoals.head.succ.head
     })
 
+  /** @throws SkolemClashException if the quantified variable that is to be Skolemized already occurs free in the sequent.
+    *                              Use [[BoundRenaming]] to resolve.
+    */
   def skolemizeR = new BuiltInRightTactic("skolemizeR") {
     override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)

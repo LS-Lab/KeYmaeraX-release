@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
-
+import DerivationInfoAugmentors._
 import scala.collection.immutable
 import scala.collection.immutable.Nil
 import scala.collection.mutable.ListBuffer
@@ -79,12 +79,12 @@ object ODELiveness {
   private lazy val dgb =
     remember("[{c{|y_|}&q(|y_|)}]p(|y_|) <-> [{c{|y_|},y_'=a(|y_|)*y_+b(|y_|)&q(|y_|)}]p(|y_|)".asFormula,
       equivR(1) <(
-        useAt("DG inverse differential ghost",PosInExpr(0::Nil))(-1) &
-          useAt(", commute")(-1, 0::Nil) & implyRi &
-          byUS("all eliminate y")
+        useAt(Ax.DGpp,PosInExpr(0::Nil))(-1) &
+          useAt(Ax.commaCommute)(-1, 0::Nil) & implyRi &
+          byUS(Ax.ally)
         ,
-        useAt("DG differential ghost",PosInExpr(0::Nil))(1) &
-          useAt("exists eliminate y",PosInExpr(1::Nil))(1) & closeId
+        useAt(Ax.DGa,PosInExpr(0::Nil))(1) &
+          useAt(Ax.existsey, PosInExpr(1::Nil))(1) & closeId
       ),
       namespace
     )
@@ -92,17 +92,17 @@ object ODELiveness {
   private lazy val dgd =
     remember("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> <{c{|y_|},y_'=a(|y_|)*y_+b(|y_|)&q(|y_|)}>p(|y_|)".asFormula,
       equivR(1) <(
-        useAt("<> diamond",PosInExpr(1::Nil))(1) &
-          useAt("<> diamond",PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & commuteEquivR(1) & byUS(dgb),
-        useAt("<> diamond",PosInExpr(1::Nil))(1) &
-          useAt("<> diamond",PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & byUS(dgb),
+        useAt(Ax.diamond,PosInExpr(1::Nil))(1) &
+          useAt(Ax.diamond,PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & commuteEquivR(1) & byUS(dgb),
+        useAt(Ax.diamond,PosInExpr(1::Nil))(1) &
+          useAt(Ax.diamond,PosInExpr(1::Nil))(-1) & prop & implyRi & equivifyR(1) & byUS(dgb),
       ),
       namespace
     )
 
   private lazy val getDDGhelperLemma =
     remember("[a_{|^@|};]d(||)=a(||)*z(||)+b(||) -> [a_{|^@|};]c(||) <= a(||)*f(||)+b(||) -> [a_{|^@|};]d(||)-c(||)>=a(||)*(z(||)-f(||))".asFormula,
-    implyR(1) & implyR(1) & andLi & useAt("[] split", PosInExpr(1::Nil))(-1) &
+    implyR(1) & implyR(1) & andLi & useAt(Ax.boxAnd, PosInExpr(1::Nil))(-1) &
       monb & andL(-1) & implyRi()(AntePosition(2),SuccPosition(1)) & implyRi &
       byUS(proveBy("d()=a()*z()+b()->c()<=a()*f()+b()->d()-c()>=a()*(z()-f())".asFormula,QE)),
       namespace
@@ -164,7 +164,7 @@ object ODELiveness {
 
     //g(|y_|) is the cofactor from darbouxGt
     val unifC = UnificationMatch.unifiable("g(|y_|)".asTerm, cofA).get.usubst
-    val dbx = DerivedAxioms.darbouxGt.fact(unifC)
+    val dbx = Ax.DBXgt.provable(unifC)
 
     val unifD = UnificationMatch.unifiable("c".asDifferentialProgram,extODE).get.usubst
     val commute = ElidingProvable(Provable.axioms(", commute")(unifD))
@@ -179,14 +179,14 @@ object ODELiveness {
         useAt(vdg,PosInExpr(1::Nil))(1) &
         generalize(inv)(1) <(
           implyRi & useAt(dbx,PosInExpr(1::Nil))(1) &
-          useAt("-' derive minus")(1,1::0::Nil) &
+          useAt(Ax.Dminus)(1,1::0::Nil) &
           implyRi &
           useAt(getDDGhelperLemma,PosInExpr(1::Nil))(1) &
-          useAt("x' derive var")(1,1::0::Nil) &
+          useAt(Ax.Dvar)(1,1::0::Nil) &
           useAt(commute,PosInExpr(0::Nil))(1) &
           useAt(ElidingProvable(Provable.axioms("DE differential effect (system)")(URename("x_".asVariable,ghostvar,semantic=true))))(1) &
           G(1) & DassignbCustom(1) &
-          byUS("= reflexive")
+          byUS(Ax.equalReflexive)
         ,
         QE))
     //, namespace).fact
@@ -375,7 +375,7 @@ object ODELiveness {
 
   private lazy val ineqLem1 = remember("f_()=g_() -> f_()<=h_() ->  g_()<=h_()".asFormula,QE, namespace)
   private lazy val ineqLem = remember("[a_{|^@|};]f(||)=g(||) -> [a_{|^@|};]f(||) <= h(||) -> [a_{|^@|};]g(||)<=h(||)".asFormula,
-    implyR(1) & implyR(1) & andLi & useAt("[] split", PosInExpr(1::Nil))(-1) & monb & andL(-1) & implyRi()(AntePosition(2),SuccPosition(1)) & implyRi & byUS(ineqLem1), namespace)
+    implyR(1) & implyR(1) & andLi & useAt(Ax.boxAnd, PosInExpr(1::Nil))(-1) & monb & andL(-1) & implyRi()(AntePosition(2),SuccPosition(1)) & implyRi & byUS(ineqLem1), namespace)
 
   /**
     * Given ODE, returns the global existence axiom <t'=1,x'=f(x)>t>p() (if it proves)
@@ -424,9 +424,9 @@ object ODELiveness {
     val sortTac = AxiomaticODESolver.selectionSort(True, Not(post), resode, goal:+timevar, AntePosition(1))
 
     val res = proveBy(Diamond(ODESystem(resode,True), post),
-      useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) & sortTac &
-        useAt("[] box", PosInExpr(1::Nil))(-1) & notL(-1) &
-        useAt("!! double negation")(1, 1::Nil) & byUS(pr)
+      useAt(Ax.diamond, PosInExpr(1::Nil))(1) & notR(1) & sortTac &
+        useAt(Ax.box, PosInExpr(1::Nil))(-1) & notL(-1) &
+        useAt(Ax.doubleNegation)(1, 1::Nil) & byUS(pr)
     )
 
     Some(res)
@@ -439,11 +439,12 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("removeODEUnivariate only applicable to box ODE")
+      case Some(e) => throw new TacticInapplicableFailure("removeODEUnivariate only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     if(!ode.head.isInstanceOf[AtomicODE])
-      throw new BelleThrowable("removeODEUnivariate only applies to univariate ODE")
+      throw new TacticInapplicableFailure("removeODEUnivariate only applies to univariate ODE")
 
     val uode = ode.head.asInstanceOf[AtomicODE]
 
@@ -454,7 +455,7 @@ object ODELiveness {
 
     if(!deps.isEmpty)
       // This is not a proper univariate case, forward to the nonlinear tactic instead
-       throw new BelleThrowable("removeODEUnivariate only applies to univariate ODE (independent of subsequent ODEs). Found incorrect dependencies on variables: "+deps)
+       throw new TacticInapplicableFailure("removeODEUnivariate only applies to univariate ODE (independent of subsequent ODEs). Found incorrect dependencies on variables: "+deps)
 
     val deg = ToolTactics.varDegree(rhs,x)
     val coeff1 = (1 to (deg-1)).map(i => Variable("coeff", Some(i)))
@@ -479,7 +480,7 @@ object ODELiveness {
     val starter = proveBy( Sequent(seq.ante, seq.succ :+ precond), ToolTactics.hideNonFOL & QE)
 
     if(!starter.isProved) {
-      throw new BelleThrowable("Initial conditions insufficient for global existence on variable: "+x)
+      throw new TacticInapplicableFailure("Initial conditions insufficient for global existence on variable: "+x)
     }
 
     // Forcing darboux format
@@ -551,7 +552,7 @@ object ODELiveness {
 
     ind match {
       case None =>
-        if (strict) throw new BelleThrowable("odeReduce failed to autoremove: " + ode + ". Try to add an assumption to the antecedents of either this form: " + vdgasm +" or this form: " + ddgasm)
+        if (strict) throw new TacticInapplicableFailure("odeReduce failed to autoremove: " + ode + ". Try to add an assumption to the antecedents of either this form: " + vdgasm +" or this form: " + ddgasm)
         else skip
       case Some((unif,b)) =>
         val finalrw = if(b) vdg(unif.usubst) else ddg(unif.usubst)
@@ -589,14 +590,15 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("odeReduce only applicable to diamond ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("odeReduce only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val ode = sys.ode
 
     val odels = DifferentialProduct.listify(ode).map{
       case ve@AtomicODE(x,e) => (x.x,ve)
-      case _ => throw new BelleThrowable("odeReduce only applicable to concrete ODEs")
+      case _ => throw new TacticInapplicableFailure("odeReduce only applicable to concrete ODEs")
     }.toMap
 
     // The set of variables transitively depended on by the postcondition and domain constraint
@@ -635,12 +637,12 @@ object ODELiveness {
       //    val sortTac = AxiomaticODESolver.selectionSort(True, Not(post), resode, goal:+timevar, AntePosition(1))
 
       //Moves diamonds into anteposition and sorts
-      useAt("<> diamond", PosInExpr(1 :: Nil))(pos) & notR(pos) & sortTac &
+      useAt(Ax.diamond, PosInExpr(1 :: Nil))(pos) & notR(pos) & sortTac &
         // Apply the reduction
         red &
         //Moves back into diamond
-        useAt("[] box", PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) &
-        useAt("!! double negation")(seq.succ.length, 1 :: Nil) &
+        useAt(Ax.box, PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) &
+        useAt(Ax.doubleNegation)(seq.succ.length, 1 :: Nil) &
         ProofRuleTactics.exchangeR(Position(seq.succ.length),pos)
     }
   })
@@ -700,7 +702,8 @@ object ODELiveness {
 
     val (tarsys,tarpost) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("compatCuts only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("compatCuts only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     // Loop through compatible assumptions and track the effect of DC
@@ -766,14 +769,15 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("kDomD only applicable to diamond ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("kDomD only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val newfml = Diamond(sys,target)
 
     cutR(newfml)(pos) <(
       skip,
-      useAt("K<&>",PosInExpr(1::Nil))(pos) & compatCuts(pos)
+      useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
   })
 
@@ -793,14 +797,15 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dDR only applicable to diamond ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dDR only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val newfml = Diamond(ODESystem(sys.ode,target),post)
 
     cutR(newfml)(pos) <(
       skip,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(pos) & compatCuts(pos)
+      useAt(Ax.DRd,PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
   })
 
@@ -827,7 +832,9 @@ object ODELiveness {
     val (sys,post,isBox) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post,false)
       case Some(Box(sys:ODESystem,post)) => (sys,post,true)
-      case _ => throw new BelleThrowable("vDG only applicable to box ODE in antecedents or diamond ODE in succedents")
+      //@todo IllFormed if diamond in ante or box in succ?
+      case Some(e) => throw new TacticInapplicableFailure("vDG only applicable to box ODEs in antecedent or diamond ODE in succedents, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     //@todo: Check that ghosts are sufficiently fresh and return a nice error
@@ -855,16 +862,16 @@ object ODELiveness {
       case Imply(Box(proga,post),Box(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
         proveBy(Imply(Diamond(progb,post),Diamond(proga,post)),
           implyR(1) &
-            useAt("<> diamond", PosInExpr(1 :: Nil))(1) & notR(1) &
-            useAt("<> diamond", PosInExpr(1 :: Nil))(-1) & notL(-1) &
+            useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt(Ax.diamond, PosInExpr(1 :: Nil))(-1) & notL(-1) &
           implyRi & byUS(pr)
         )
       }
       case Imply(Diamond(proga,post),Diamond(progb,post2)) if post==post2 && post.isInstanceOf[UnitPredicational] => {
         proveBy(Imply(Box(progb,post),Box(proga,post)),
           implyR(1) &
-            useAt("[] box", PosInExpr(1 :: Nil))(1) & notR(1) &
-            useAt("[] box", PosInExpr(1 :: Nil))(-1) & notL(-1) &
+            useAt(Ax.box, PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt(Ax.box, PosInExpr(1 :: Nil))(-1) & notL(-1) &
             implyRi & byUS(pr)
         )
       }
@@ -896,7 +903,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("dV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (property, propt) = ineqNormalize(post)
@@ -955,12 +964,14 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond on antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("dV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val odels = DifferentialProduct.listify(sys.ode).map {
       case AtomicODE(x,e) => (x,e)
-      case _ => throw new BelleThrowable("dVAuto only applicable to concrete ODEs")
+      case _ => throw new TacticInapplicableFailure("dVAuto only applicable to concrete ODEs")
     }
 
     val eps = TacticHelper.freshNamedSymbol("epsilon_".asVariable, seq)
@@ -974,7 +985,7 @@ object ODELiveness {
       case GreaterEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(l,r),None),eps)
       case Less(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
       case LessEqual(l, r) => GreaterEqual(simplifiedLieDerivative(sys.ode,Minus(r,l),None),eps)
-      case _ => throw new BelleThrowable("dVAuto expects only atomic inequality (>,>=,<,<=) in succedent")
+      case _ => throw new TacticInapplicableFailure("dVAuto expects only atomic inequality (>,>=,<,<=) in succedent")
     }
 
     // (Q & p < 0 -> p' >= e)
@@ -995,7 +1006,7 @@ object ODELiveness {
     val pr = proveBy(seq.updated(pos.checkTop,qe), ToolTactics.hideNonFOL & QE)
 
     if(!pr.isProved)
-      throw new BelleThrowable("dVAuto failed to prove arithmetic condition: " + qe)
+      throw new TacticInapplicableFailure("dVAuto failed to prove arithmetic condition: " + qe)
 
     cutR(qe)(pos) <(
       by(pr),
@@ -1027,7 +1038,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("semialgdV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (property, propt) = SimplifierV3.semiAlgNormalize(post)
@@ -1095,11 +1108,11 @@ object ODELiveness {
   private lazy val exRWgt = remember("e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t > 0".asFormula,
     implyR(1) & andL(-1) &
       cutR("<{t'=1,c&q_(||)}>(t>-p(||)/e() & e() > 0)".asFormula)(1) <(
-        implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
+        implyRi()(AntePosition(2),SuccPosition(1)) & useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
           cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e()&e()>0)) & e() > 0}](!t>-p(||)/e())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
+              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & closeId
           ) ,
         cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e()&e()>0 ==> p()+e()*t>0".asSequent,QE))
       ),
@@ -1109,11 +1122,11 @@ object ODELiveness {
   private lazy val exRWge = remember("e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t >= 0".asFormula,
     implyR(1) & andL(-1) &
       cutR("<{t'=1,c&q_(||)}>(t>=-p(||)/e() & e() > 0)".asFormula)(1) <(
-        implyRi()(AntePosition(2),SuccPosition(1)) & useAt("K<&>",PosInExpr(1::Nil))(1) &
+        implyRi()(AntePosition(2),SuccPosition(1)) & useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
           cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e()&e()>0)) & e() > 0}](!t>=-p(||)/e())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt("DC differential cut",PosInExpr(1::Nil))(1) & V(1) & closeId
+              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & closeId
           ) ,
         cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e()&e()>0 ==> p()+e()*t>=0".asSequent,QE))
       ),
@@ -1123,24 +1136,24 @@ object ODELiveness {
   private lazy val DVgeq = remember(
     "(e() > 0 & <{t'=1, c &q_(||)}> t >= -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) < 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) >= 0".asFormula,
     implyR(1) & andL(-1) & useAt(exRWge.fact,PosInExpr(0::Nil))(-1) & implyRi &
-    useAt("K<&>",PosInExpr(1::Nil))(1) &
+    useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>=0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t >= 0)".asFormula)(1)<(
       DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0  ==>  f_()>=0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
-        useAt("DC differential cut",PosInExpr(1::Nil))(1) &
-        useAt("! >=",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+        useAt(Ax.DC,PosInExpr(1::Nil))(1) &
+        useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
     ), namespace
   )
 
   private lazy val DVgt = remember(
     "(e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e()) & [{t'=1, c & q_(||) & f_(||) <= 0}] f_(||) >= p(||) + e() * t -> <{t'=1, c & q_(||)}> f_(||) > 0".asFormula,
     implyR(1) & andL(-1) & useAt(exRWgt.fact,PosInExpr(0::Nil))(-1) & implyRi &
-    useAt("K<&>",PosInExpr(1::Nil))(1) &
+    useAt(Ax.KDomD,PosInExpr(1::Nil))(1) &
     cutR("[{t'=1,c&(q_(||)&!f_(||)>0)&f_(||) >= p(||) + e() * t}](!p(||) + e()* t > 0)".asFormula)(1)<(
       DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0  ==>  f_()>0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
-        useAt("DC differential cut",PosInExpr(1::Nil))(1) &
-        useAt("! >",PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+        useAt(Ax.DC,PosInExpr(1::Nil))(1) &
+        useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
     ), namespace
   )
 
@@ -1162,7 +1175,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("Higher dV only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("higherdV only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val (property, propt) = ineqNormalize(post)
@@ -1230,12 +1245,14 @@ object ODELiveness {
 
     val (tarsys, tarpost) = seq.sub(pos) match {
       case Some(Diamond(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new BelleThrowable("saveBox only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("saveBox only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     cut(Box(tarsys,Not(tarpost))) <(
       skip,
-      useAt("<> diamond",PosInExpr(1::Nil))(pos) & notR(pos) & closeId
+      useAt(Ax.diamond,PosInExpr(1::Nil))(pos) & notR(pos) & closeId
     )
   })
 
@@ -1247,7 +1264,7 @@ object ODELiveness {
     *
     * @return see rule above
     */
-  def dDX : DependentPositionTactic = useAt("DX diamond differential skip")
+  def dDX : DependentPositionTactic = useAt(Ax.DX)
 
   /** Refinement for a closed domain constraint (e.g. Q = p>=0)
     *
@@ -1264,7 +1281,9 @@ object ODELiveness {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("closedRef only applicable to diamond ODE in succedent")
+      //@todo Illformed if diamond in antecedent?
+      case Some(e) => throw new TacticInapplicableFailure("closedRef only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     saveBox(pos) & dDR(target)(pos) < (

@@ -92,32 +92,20 @@ class DLTests extends TacticTestBase {
     //@todo need a better way of naming internal tactics, ideally with location where allocated (but avoid
     // performance penalty of accessing stack trace elements)
     the [BelleThrowable] thrownBy proveBy("[?x>0;]x>0".asFormula, DLBySubst.safeabstractionb(1)) should have message
-      """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
-        |    [?x>0;]x>0
-        |at position 1
-        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+      "Abstraction would lose information from tests and/or evolution domain constraints"
     // tests could be unsatisfiable
     the [BelleThrowable] thrownBy proveBy("[?false;]x>0".asFormula, DLBySubst.safeabstractionb(1)) should have message
-      """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
-        |    [?false;]x>0
-        |at position 1
-        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+      "Abstraction would lose information from tests and/or evolution domain constraints"
   }
 
   it should "not lose information from evolution domain constraints" in {
     proveBy("[{y'=3 & x>0}]x>0".asFormula, abstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
     the [BelleThrowable] thrownBy proveBy("[{y'=3 & x>0}]x>0".asFormula, DLBySubst.safeabstractionb(1)) should have message
-      """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
-        |    [{y'=3&x>0}]x>0
-        |at position 1
-        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+      "Abstraction would lose information from tests and/or evolution domain constraints"
     proveBy("[{y'=3 & y>0}]x>0".asFormula, abstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
     // evolution domain constraint could be unsatisfiable or not hold initially
     the [BelleThrowable] thrownBy proveBy("[{y'=3 & 0>1}]x>0".asFormula, DLBySubst.safeabstractionb(1)) should have message
-      """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
-        |    [{y'=3&0>1}]x>0
-        |at position 1
-        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+      "Abstraction would lose information from tests and/or evolution domain constraints"
     proveBy("[{y'=3}]x>0".asFormula, DLBySubst.safeabstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
   }
 
@@ -127,10 +115,7 @@ class DLTests extends TacticTestBase {
 
   it should "only abstract if no overlap between bound variables of program and free variables of postcondition" in {
     the [BelleThrowable] thrownBy proveBy("[x:=3;]x>0".asFormula, DLBySubst.safeabstractionb(1)) should have message
-      """[Bellerophon Runtime] Tactic ANON(1) is not applicable for
-        |    [x:=3;]x>0
-        |at position 1
-        |because Abstraction would lose information from program""".stripMargin
+      "Abstraction would lose information from program"
   }
 
   "withAbstraction" should "work on top-level when abstraction produces no quantifiers" in {
@@ -334,22 +319,22 @@ class DLTests extends TacticTestBase {
 
   "postCut" should "introduce implication in simple example" in {
     val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1))
-    result.subgoals.loneElement shouldBe "==> [a:=5;](a>1->a>0) & [a:=5;]a>1".asSequent
+    result.subgoals shouldBe "==> [a:=5;]a>1".asSequent :: "==> [a:=5;](a>1->a>0)".asSequent :: Nil
   }
 
   it should "introduce implication" in {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, postCut("x>1".asFormula)(1))
-    result.subgoals.loneElement shouldBe "==> [x:=2;](x>1 -> [y:=x;]y>1) & [x:=2;]x>1".asSequent
+    result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "==> [x:=2;](x>1 -> [y:=x;]y>1)".asSequent :: Nil
   }
 
   it should "introduce implication in context" in {
     val result = proveBy("a=2 -> [z:=3;][x:=2;][y:=x;]y>1".asFormula, postCut("x>1".asFormula)(1, 1::1::Nil))
-    result.subgoals.loneElement shouldBe "==> a=2 -> [z:=3;]([x:=2;](x>1 -> [y:=x;]y>1) & [x:=2;]x>1)".asSequent
+    result.subgoals shouldBe "==> a=2 -> [z:=3;][x:=2;]x>1".asSequent :: "==> a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)".asSequent :: Nil
   }
 
   it should "work with non-empty antecedent" in {
     val result = proveBy("x=2 ==> [a:=5;]a>0".asSequent, postCut("a>1".asFormula)(1))
-    result.subgoals.loneElement shouldBe "x=2 ==> [a:=5;](a>1->a>0) & [a:=5;]a>1".asSequent
+    result.subgoals shouldBe "x=2 ==> [a:=5;]a>1".asSequent :: "x=2 ==> [a:=5;](a>1->a>0)".asSequent :: Nil
   }
 
   "I" should "work on a simple example" in {

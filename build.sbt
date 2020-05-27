@@ -39,6 +39,7 @@ lazy val root = (project in file("."))
 
 // extra runtime checks for initialization order: "-Xcheckinit"
 scalacOptions in Compile ++= Seq("-doc-root-content", "rootdoc.txt")
+scalacOptions in Compile += "-Ystatistics:typer"
 
 target in Compile in doc := baseDirectory.value / "api"
 

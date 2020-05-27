@@ -257,19 +257,19 @@ object IsabelleSyntax {
   private val minusExpand = proveBy("f_()-g_() = f_() +(-g_())".asFormula,QE & done)
   private val powExpand = proveBy("f_()^2 = f_() * f_()".asFormula,QE & done)
 
-  private val plusRec = proveBy("f_() + g_() = f_() + g_()".asFormula,byUS("= reflexive"))
-  private val timesRec = proveBy("f_() * g_() = f_() * g_()".asFormula,byUS("= reflexive"))
-  //private val divRec = proveBy("f_() / g_() = f_() / g_()".asFormula,byUS("= reflexive"))
-  private val powerRec = proveBy("f_() ^ g_() = f_() ^ g_()".asFormula,byUS("= reflexive"))
+  private val plusRec = proveBy("f_() + g_() = f_() + g_()".asFormula,byUS(Ax.equalReflexive))
+  private val timesRec = proveBy("f_() * g_() = f_() * g_()".asFormula,byUS(Ax.equalReflexive))
+  //private val divRec = proveBy("f_() / g_() = f_() / g_()".asFormula,byUS(Ax.equalReflexive))
+  private val powerRec = proveBy("f_() ^ g_() = f_() ^ g_()".asFormula,byUS(Ax.equalReflexive))
 
   //Single arg functions
-  private val fun1Rec = proveBy("f_(x_()) = f_(x_())".asFormula,byUS("= reflexive"))
-  private val fun2Rec = proveBy("f_(x_(),y_()) = f_(x_(),y_())".asFormula,byUS("= reflexive"))
+  private val fun1Rec = proveBy("f_(x_()) = f_(x_())".asFormula,byUS(Ax.equalReflexive))
+  private val fun2Rec = proveBy("f_(x_(),y_()) = f_(x_(),y_())".asFormula,byUS(Ax.equalReflexive))
 
-  private val equalRec = proveBy("f_() = g_() <-> f_() = g_()".asFormula,byUS("<-> reflexive"))
-  private val notEqualRec = proveBy("f_() != g_() <-> f_() != g_()".asFormula,byUS("<-> reflexive"))
-  private val lessEqualRec = proveBy("f_() <= g_() <-> f_() <= g_()".asFormula,byUS("<-> reflexive"))
-  private val lessRec = proveBy("f_() < g_() <-> f_() < g_()".asFormula,byUS("<-> reflexive"))
+  private val equalRec = proveBy("f_() = g_() <-> f_() = g_()".asFormula,byUS(Ax.equivReflexive))
+  private val notEqualRec = proveBy("f_() != g_() <-> f_() != g_()".asFormula,byUS(Ax.equivReflexive))
+  private val lessEqualRec = proveBy("f_() <= g_() <-> f_() <= g_()".asFormula,byUS(Ax.equivReflexive))
+  private val lessRec = proveBy("f_() < g_() <-> f_() < g_()".asFormula,byUS(Ax.equivReflexive))
 
   private def binaryDefault(ax:ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
 
@@ -278,7 +278,7 @@ object IsabelleSyntax {
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), p_()^2 -> p_() * p_()
   def normalise(f:Formula) : (Formula,ProvableSig) = {
-    val refl = proveBy(Equiv(f,f),byUS("<-> reflexive"))
+    val refl = proveBy(Equiv(f,f),byUS(Ax.equivReflexive))
     val nnf = chaseCustomFor((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil

@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
+import DerivationInfoAugmentors._
 import scala.collection.immutable._
 import org.scalatest.LoneElement._
 
@@ -76,7 +76,7 @@ class SimplifierV3Tests extends TacticTestBase {
     //Force any =0s to be rewritten
     val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,TactixLibrary.QE)
     //Get rid of deMorgan once
-    val custom2 = DerivedAxioms.notNotEqual.fact
+    val custom2 = Ax.notNotEqual.provable
 
     val fml = " 0 > x -> x <= 0 & y = 0 & z<x -> x != y+z | x >= 5 -> 5 < x | (x !=5 -> 5<x ) & a = 0 & y = z+a+b & a+z+b = y".asFormula
     val result = proveBy(fml,

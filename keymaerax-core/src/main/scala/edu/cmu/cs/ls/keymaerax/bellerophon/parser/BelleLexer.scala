@@ -110,7 +110,6 @@ object BelleLexer extends (String => List[BelleToken]) with Logging {
     SEQ_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SEQ_COMBINATOR, loc))),
     DEPRECATED_SEQ_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, DEPRECATED_SEQ_COMBINATOR, loc))),
     EITHER_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, EITHER_COMBINATOR, loc))),
-    AFTER_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, AFTER_COMBINATOR, loc))),
     KLEENE_STAR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, KLEENE_STAR, loc))),
     SATURATE.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, SATURATE, loc))),
     BRANCH_COMBINATOR.startPattern -> ((s: String, loc: Location, _: String) => Right(consumeTerminalLength(s, BRANCH_COMBINATOR, loc))),

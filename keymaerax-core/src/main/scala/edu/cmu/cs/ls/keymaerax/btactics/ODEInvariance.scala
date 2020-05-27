@@ -51,20 +51,21 @@ object ODEInvariance {
     remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
-        implyRi & byUS("Cont continuous existence"),
-        DW(1) & G(1) & useAt("> flip")(1,0::Nil) & useAt(">= flip")(1,1::Nil) & useAt("<=")(1,1::Nil) & prop
+        implyRi & byUS(Ax.Cont),
+        DW(1) & G(1) & useAt(Ax.flipGreater)(1,0::Nil) &
+          useAt(Ax.flipGreaterEqual)(1,1::Nil) & useAt(Ax.lessEqual)(1,1::Nil) & prop
       ), namespace)
 
   //Extra conversion rewrites for and/or
   //Refine left/right disjunct
   private lazy val refOrL =
     remember("<{c& p(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   private lazy val refOrR =
     remember("<{c& q(||)}>r(||) -> <{c& p(||) | q(||)}>r(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
       namespace)
 
   //Refine or under box
@@ -181,7 +182,8 @@ object ODEInvariance {
 
     val (p: Term, ode: DifferentialProgram) = seq.sub(pos) match {
       case Some(Diamond(ODESystem(o, GreaterEqual(p,_)), _)) => (p, o)
-      case e => throw new BelleThrowable("Unknown shape: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("lpstep only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //Maybe pass this as an argument to avoid recomputing
     val lie = lieDer(ode, p)
@@ -235,7 +237,7 @@ object ODEInvariance {
             useAt(refOrR, PosInExpr(1 :: Nil))(1) & lpclosed(r))
       case ConjFml(l, r) =>
         DebuggingTactics.debug("CONJ", doPrint = debugTactic) &
-          andL(-3) & useAt("Uniq uniqueness iff", PosInExpr(1 :: Nil))(1) & andR(1) < (
+          andL(-3) & useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) & andR(1) < (
           hideL(-4) & lpclosed(l),
           hideL(-3) & lpclosed(r)
         )
@@ -248,7 +250,7 @@ object ODEInvariance {
           else {
             orL(-3) < (
               cohideOnlyL(-3) & lpgeq(r - 1),
-              implyRi()(-2, 1) & useAt("DR<> differential refine", PosInExpr(1 :: Nil))(1) &
+              implyRi()(-2, 1) & useAt(Ax.DRd, PosInExpr(1 :: Nil))(1) &
                 dgVdbx(cofs, gs)(1) & DW(1) & G(1) & timeoutQE & done
             )
           }
@@ -260,7 +262,7 @@ object ODEInvariance {
             closeF
           }
           else {
-            implyRi()(-2,1) & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi()(-2,1) & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
               dgVdbx(cofs,gs)(1) & DW(1) & G(1) & timeoutQE & done
           }
         )
@@ -294,12 +296,21 @@ object ODEInvariance {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
-      case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIc only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (fml,propt1) = semiAlgNormalize(post)
+    val (fml,propt1) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
-    val (fmlMM,propt2) = maxMinGeqNormalize(fml)
+    val (fmlMM,propt2) = try {
+      maxMinGeqNormalize(fml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to max/min/>=", ex)
+    }
 
     require(fmlMM.isInstanceOf[GreaterEqual], "Normalization failed to reach max/min normal form "+fmlMM)
 
@@ -319,11 +330,15 @@ object ODEInvariance {
         useAt(pr,PosInExpr(1::Nil))(1,PosInExpr(0::1::Nil)))
     }
 
-    val (pf,inst) = fStar(sys,fml)
+    val (pf,inst) = try {
+      fStar(sys,fml)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to generate formula f*", ex)
+    }
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       tac1 & tac2 &
-      useAt("RI& closed real induction >=")(pos) &
+      useAt(Ax.RIclosedgeq)(pos) &
       DebuggingTactics.debug("Real Induction",doPrint = debugTactic) &
       andR(pos)<(
       //G |- P
@@ -349,7 +364,8 @@ object ODEInvariance {
     val boundPr = remember(("f_()-g_()^"+(2*bound).toString()+">=0 -> f_()>0 | g_()=0").asFormula, QE, namespace)
     val (p,t) = seq.succ(0).sub(PosInExpr(0::1::Nil)) match {
       case Some(Or(Greater(p,_),Equal(t,_))) => (p,t)
-      case e => throw new BelleThrowable("lpgt called with incorrect result at expected position: " + e)
+      case Some(e) => throw new TacticInapplicableFailure("lpgt only applicable to disjunction of strict inequality and equality, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position does not point to a valid position in sequent " + seq.prettyString)
     }
     //println(p,t)
     val unlocked = GreaterEqual(Minus(p,Power(t,Number(2*bound))),Number(0))
@@ -366,7 +382,11 @@ object ODEInvariance {
     f match {
       case cf:ComparisonFormula =>
         //findDbx
-        val (pr, cofactor, rem) = findDbx(ode, dom, cf,false)
+        val (pr, cofactor, rem) = try {
+          findDbx(ode, dom, cf,false)
+        } catch {
+          case _: IllegalArgumentException => return None
+        }
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
@@ -456,13 +476,18 @@ object ODEInvariance {
     */
   def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+    if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIR1 only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
-    val (f2, propt) = semiAlgNormalize(post)
+    val (f2, propt) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
 
     val (starter, imm) = propt match {
       case None => (skip, skip)
@@ -487,7 +512,7 @@ object ODEInvariance {
     else {
       val f3 =
         rankOneFml(ode, dom, f2) match {
-          case None => throw new BelleThrowable("Unable to re-order to recursive rank 1 form: " + f2)
+          case None => throw new TacticInapplicableFailure("Unable to re-order to recursive rank 1 form: " + f2)
           case Some(f) => f
         }
 
@@ -521,7 +546,8 @@ object ODEInvariance {
     require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("time bound only at box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("timeBound only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     //Check that the domain at least freezes one of the coordinates
     val domConj = flattenConjunctions(dom)
@@ -541,7 +567,7 @@ object ODEInvariance {
       case _ => false})
 
     constRHS match {
-      case Nil => throw new BelleThrowable("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+      case Nil => throw new TacticInapplicableFailure("time bound requires at least one time-like coordinate to be frozen in domain, found none")
       case Equal(t,d)::_ =>
         //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
         val left = freeAtoms.map(f =>
@@ -580,13 +606,13 @@ object ODEInvariance {
   private lazy val stuckRefine =
     remember("<{c&!q(||) | r(||)}>!r(||) -> ([{c&r(||)}]p(||) -> [{c&q(||)}]p(||))".asFormula,
       implyR(1) & implyR(1) &
-        useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
+        useAt(Ax.box,PosInExpr(1::Nil))(-2) & notL(-2) &
         cutL("<{c&!q(||)|r(||)}>(!r(||) | !p(||))".asFormula)(-1) <( skip , cohideR(3) & implyR(1) & mond & prop) &
-        useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+        useAt(Ax.box,PosInExpr(1::Nil))(1) & notR(1) &
         cutL("<{c&q(||)}>(!r(||) | !p(||))".asFormula)(-2) <( skip , cohideR(2) & implyR(1) & mond & prop) &
-        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        andLi & useAt(Ax.Uniq)(-1) & DWd(-1) &
         cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
-          implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+          implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
           cohideR(2) & implyR(1) & mond & prop)
       , namespace)
 
@@ -596,7 +622,8 @@ object ODEInvariance {
       //needs to be dualized
       case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
       //todo: case Some(Diamond(sys:ODESystem,post)) if pos.isAnte => (sys.ode, sys.constraint, post)
-      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent or diamond ODE in antecedent")
+      case Some(e) => throw new TacticInapplicableFailure("domainStuck only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val tvName = "stuck_"
@@ -610,7 +637,7 @@ object ODEInvariance {
 
     // set up the time variable
     // commute it to the front to better match with realind/cont
-    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(", commute")(pos)) * odedim &
+    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(Ax.commaCommute)(pos)) * odedim &
     cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos)<(
       timeBound(pos), //closes assuming P(init)
       useAt(stuckRefine,PosInExpr(1::Nil))(pos) &
@@ -628,7 +655,7 @@ object ODEInvariance {
   */
   def rank(ode:ODESystem, polys:List[Term]) : (Int, List[Term], List[List[Term]]) = {
     if (ToolProvider.algebraTool().isEmpty)
-      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+      throw new ProverSetupException("rank computation requires a AlgebraTool, but got None")
 
     val algTool = ToolProvider.algebraTool().get
 
@@ -684,7 +711,8 @@ object ODEInvariance {
 
     val (ode,dom) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,_)) => (sys.ode,sys.constraint)
-      case _ => throw new BelleThrowable("dgVdbx only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dgVdbx only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val zero = Number(0)
@@ -818,17 +846,27 @@ object ODEInvariance {
 
     val (sys, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new BelleThrowable("dRI only applicable for box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("dRI only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (f2, _) = semiAlgNormalize(post)
+    val (f2, _) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition to semi-algebraic set", ex)
+    }
+
     val conjs = flattenConjunctions(f2)
     val polys = {
       if (conjs.forall(f => f.isInstanceOf[Equal]))
         conjs.map(f => f.asInstanceOf[Equal].left)
       else {
         //TODO: this is not the best way to go about proving this
-        val (f2, _) = algNormalize(post)
+        val (f2, _) = try {
+          algNormalize(post)
+        } catch {
+          case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to normalize postcondition", ex)
+        }
         require(f2.isInstanceOf[Equal], "dRI requires only equations in postcondition")
         List(f2.asInstanceOf[Equal].left)
       }
@@ -1091,7 +1129,10 @@ object ODEInvariance {
   private val sqPos2 = remember("a_()*a_() >= 0".asFormula,QE)
   private val plusPos = remember("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
   private def prove_sos_positive : BelleExpr = {
-    SaturateTactic(OnAll(andR(1) | byUS(sqPos1) | byUS(sqPos2) | useAt(plusPos,PosInExpr(1::Nil))(1)))
+    SaturateTactic(OnAll(andR(1) |
+    TryCatch(byUS(sqPos1), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with sqPos1", ex)) |
+    TryCatch(byUS(sqPos2), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with sqPos2", ex)) |
+    useAt(plusPos,PosInExpr(1::Nil))(1)))
   }
 
   /**
@@ -1135,7 +1176,7 @@ object ODEInvariance {
     remember("-abs(f())>=0<->f()=0".asFormula,QE,namespace)
   private lazy val uniqMin =
     remember("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
-      useAt("Uniq uniqueness iff")(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
+      useAt(Ax.UniqIff)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
       namespace)
 
   private lazy val refAbs =
@@ -1146,12 +1187,12 @@ object ODEInvariance {
   //Refine left/right of max
   private lazy val refMaxL =
     remember("<{c&f(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
       namespace)
 
   private lazy val refMaxR =
     remember("<{c&g(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
+      useAt(Ax.DRd,PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
       namespace)
 
   /** Given a bound i, generate the local progress formula up to that bound
@@ -1272,7 +1313,7 @@ object ODEInvariance {
             if(prf.isProved)
               (prop, inst, by(prf))
             else
-              throw new BelleThrowable("QE failed")
+              throw new TacticInapplicableFailure("QE failed")
           }
           else
             (prop, inst, timeoutQE)
@@ -1285,9 +1326,8 @@ object ODEInvariance {
             val prop = GreaterEqual(p, Number(0))
             val (pr, cofactor, rem) = findDbx(ode, dom, prop)
             (prop, Darboux(false, cofactor, pr))
-          }
-          catch {
-            case e: BelleThrowable => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
+          } catch {
+            case _: IllegalArgumentException => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
           }
 
         if(context.isDefined)
@@ -1296,7 +1336,7 @@ object ODEInvariance {
           if(prf.isProved)
             (prop, inst, by(prf))
           else
-            throw new BelleThrowable("QE failed")
+            throw new TacticInapplicableFailure("QE failed")
         }
         else
           (prop, inst, QE)
@@ -1311,7 +1351,7 @@ object ODEInvariance {
         case Darboux(iseq,cofactor,pr) =>
           (if(iseq) useAt(refAbs)(1) else skip) &
             DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
-            implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+            implyRi & useAt(Ax.DRd,PosInExpr(1::Nil))(1) &
             dgDbx(cofactor)(1)
         case Disj(l,r) =>
           DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
@@ -1368,12 +1408,21 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("sAIc only applicable to ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    val (fml1,propt1) = semiAlgNormalize(post)
+    val (fml1,propt1) = try {
+      semiAlgNormalize(post)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition to semi-algebraic set")
+    }
 
-    val (fml,propt2) = maxMinGeqNormalize(fml1)
+    val (fml,propt2) = try {
+      maxMinGeqNormalize(fml1)
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to normalize postcondition", ex)
+    }
 
     val propt = compose_equiv(propt1,propt2)
 
@@ -1381,7 +1430,11 @@ object ODEInvariance {
     val f2 = fml.asInstanceOf[GreaterEqual]
     //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
 
-    val (pf,inst,qetac) = pStarHomPlus(ode,dom,f2.left,bound,Some(And(dom,post)))
+    val (pf,inst,qetac) = try {
+      pStarHomPlus(ode,dom,f2.left,bound,Some(And(dom,post)))
+    } catch {
+      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("sAI is unable to compute p*", ex)
+    }
 
     //println("HOMPLUS:"+pf+" "+inst)
 
@@ -1398,7 +1451,7 @@ object ODEInvariance {
     }
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
-      starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
+      starter & useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
       implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
         implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
@@ -1544,23 +1597,24 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("nilpotent solve only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("nilpotentSolve only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     if(TacticHelper.names(seq).contains(nilpotentSolveTimeVar))
-      throw new BelleThrowable("nilpotent solve should not be called twice (solution already available from prior call)")
+      throw new IllFormedTacticApplicationException("nilpotent solve should not be called twice (solution already available from prior call)")
 
     val t = nilpotentSolveTimeVar //explicitly non-idempotent
     //val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)
-    if (linForm.isEmpty) throw new BelleThrowable("ODE " + ode + " could not be put into linear form x'=Ax")
+    if (linForm.isEmpty) throw new TacticInapplicableFailure("ODE " + ode + " could not be put into linear form x'=Ax")
     val (m, b, x) = linForm.get
 
     val npopt = nilpotentIndex(m)
 
-    if (npopt.isEmpty) throw new BelleThrowable("Coefficient matrix for " + ode + " is not nilpotent.")
+    if (npopt.isEmpty) throw new TacticInapplicableFailure("Coefficient matrix for " + ode + " is not nilpotent.")
     val np = npopt.get
 
     val bsimp = b.map(t => simpWithTool(ToolProvider.simplifierTool(), t))
@@ -1661,7 +1715,8 @@ object ODEInvariance {
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("DDC only applicable to box ODE in succedent")
+      case Some(e) => throw new TacticInapplicableFailure("diffDivConquer only applicable to box ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val zero = Number(0)

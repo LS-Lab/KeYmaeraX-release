@@ -12,6 +12,8 @@ import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
 
 /**
   * Created by yongkiat on 9/29/16.
@@ -125,7 +127,7 @@ object SimplifierV2 {
   //Fold constants
   def reassoc(t:Term): ProvableSig =
   {
-    val init = DerivedAxioms.equalReflex.fact(
+    val init = Ax.equalReflexive.provable(
       USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     t match {
       case Plus(_,_) =>
@@ -178,22 +180,22 @@ object SimplifierV2 {
         val nt = bop.reapply(lt,rt)
         proveBy(Equal(t, nt),
           CEat(lpr)(SuccPosition(1,1::0::Nil))&
-            CEat(rpr)(SuccPosition(1,1::1::Nil))& byUS(DerivedAxioms.equalReflex))
+            CEat(rpr)(SuccPosition(1,1::1::Nil))& byUS(Ax.equalReflexive))
       case uop: UnaryCompositeTerm =>
         val u = uop.child
         val (ut,upr) = termSimp(u)
         val nt = uop.reapply(ut)
         proveBy(Equal(t,nt),
-          CEat(upr)(SuccPosition(1,1::0::Nil)) & byUS(DerivedAxioms.equalReflex))
+          CEat(upr)(SuccPosition(1,1::0::Nil)) & byUS(Ax.equalReflexive))
       case FuncOf(fn, c) if c != Nothing =>
         val args = FormulaTools.argumentList(c)
         val simp = args.map(termSimp)
         val nArgs = simp.map(_._1).reduce[Term](Pair)
         val pref = if (args.size <= 1) 0::Nil else 0::0::Nil
         val tactic = simp.zipWithIndex.map({ case ((_, eqPr), i) => useAt(eqPr)(1, pref ++ PosInExpr.parseInt(i).pos) }).
-          reduce[BelleExpr](_&_) & byUS(DerivedAxioms.equalReflex)
+          reduce[BelleExpr](_&_) & byUS(Ax.equalReflexive)
         proveBy(Equal(t, FuncOf(fn, nArgs)), tactic)
-      case _ => DerivedAxioms.equalReflex.fact(
+      case _ => Ax.equalReflexive.provable(
         USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
     }
 
@@ -227,11 +229,11 @@ object SimplifierV2 {
   private lazy val divideLemma =
     remember(
       "(A_() = B_()) & (X_() = Y_()) -> (A_()/X_() = B_()/Y_())".asFormula,
-      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"), namespace).fact
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
   private lazy val powerLemma =
     remember(
       "(A_() = B_()) & (X_() = Y_()) -> (A_()^X_() = B_()^Y_())".asFormula,
-      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"), namespace).fact
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS(Ax.equalReflexive), namespace).fact
 
   /**
     * Takes a term t, with an equality context ctx and returns ctx |- t = t' using all equalities of the shape
@@ -259,7 +261,7 @@ object SimplifierV2 {
               eqL2R(-(i + 1))(1) & tac
             case _ => tac
           }
-      ) & cohideR(1) & byUS("= reflexive"))
+      ) & cohideR(1) & byUS(Ax.equalReflexive))
   }
 
   def termSimpWithRewrite(t:Term,ctx:IndexedSeq[Formula]): (Term,ProvableSig) =
@@ -351,7 +353,7 @@ object SimplifierV2 {
       case Not(u) =>
         //Apply deMorgan things to Not
         val id = proveBy(Sequent(IndexedSeq(),IndexedSeq(Equiv(Not(u),Not(u)))),prop & done)
-        val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
+        val cpr = chaseFor(3,3,e=>AxIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
         val nu = extract(cpr).asInstanceOf[Formula]
         //No deMorgan applies, just add to context
         if (nu == f)
@@ -363,7 +365,7 @@ object SimplifierV2 {
           //Adds f to the context, but also all of its deMorganed things
           val(ctxU,tacU) = addContext(nu,ctx:+f)
           (ctxU,
-            useAt(DerivedAxioms.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('Llast) &
+            useAt(Ax.andReflexive,PosInExpr(1::Nil))(AntePos(ctx.length)) & andL('Llast) &
               implyRi()(AntePos(ctx.length), SuccPos(0)) & useAt(cpr,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) & implyR('_) & tacU)
         }
       case Equal(n:Number,r) =>
@@ -777,12 +779,12 @@ object SimplifierV2 {
             equivR(1) & onAll(instantiate & implyRi()(AntePos(remainingCtx.length), SuccPos(0)) & equivifyR(1)) <(skip, commuteEquivR(1)) & onAll(by(upr))))
       case m:Modal =>
         val (uf,upr) = formulaSimp(m.child,IndexedSeq())
-        val init = weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
+        val init = weaken(ctx)(Ax.equivReflexive.provable(
           USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
         val pr = useFor(upr, PosInExpr(0 :: Nil))(SuccPosition(1, 1:: 1 :: Nil))(init)
         (extract(pr).asInstanceOf[Formula],pr)
       case _ =>
-        (f,weaken(ctx)(DerivedAxioms.equivReflexiveAxiom.fact(
+        (f,weaken(ctx)(Ax.equivReflexive.provable(
           USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil))))
     }
 
@@ -803,7 +805,7 @@ object SimplifierV2 {
     }
 
     //Chase simplification
-    val chasepr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(proppr)
+    val chasepr = chaseFor(3,3,e=>AxIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(proppr)
     val chasef = extract(chasepr).asInstanceOf[Formula]
 
     //Normalise > to <, >= to <=
@@ -1015,13 +1017,13 @@ object SimplifierV2 {
 
   }
 
-  private def hideBox(e:Expression) : List[String] =
+  private def hideBox(e:Expression) : List[ProvableInfo] =
   {
     e match {
       //Ignore nested loops and ODEs in chase
       case Box(ODESystem(_,_),_) => Nil
       case Box(Loop(_),_) => Nil
-      case Box(_,_) => AxiomIndex.axiomsFor(e)
+      case Box(_,_) => AxIndex.axiomsFor(e)
       case  _ => Nil //AxiomIndex.axiomsFor(e)
     }
   }

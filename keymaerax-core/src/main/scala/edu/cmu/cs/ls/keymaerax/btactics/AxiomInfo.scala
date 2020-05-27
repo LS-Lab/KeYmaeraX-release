@@ -111,7 +111,7 @@ object DerivationInfoRegistry {
 
 
 
-  private def useAt(l:Lemma):DependentPositionTactic = HilbertCalculus.useAt(l)
+  private def useAt(pi: ProvableInfo):DependentPositionTactic = HilbertCalculus.useAt(pi)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
   /** Alphanumeric letter or digit parts of a name, skipping all other characters or spaces. */
@@ -138,32 +138,32 @@ object DerivationInfoRegistry {
       , "diamond", 'linear, {case () => HilbertCalculus.diamond}),
     PositionTacticInfo("diamondd"
       , AxiomDisplayInfo(("<·>d", "<.>d"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ &not;[a]&not;P")
-      , {case () => HilbertCalculus.useAt("<> diamond", PosInExpr(1::Nil))}),
+      , {case () => HilbertCalculus.useAt(Ax.diamond, PosInExpr(1::Nil))}),
     new DerivedAxiomInfo("[] box"
       , AxiomDisplayInfo(("[·]", "[.]"), "<span class=\"k4-axiom-key\">&not;&langle;a&rangle;&not;P</span> ↔ &langle;a&rangle;P")
-      , "box", 'linear, {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
+      , "box", 'linear, {case () => HilbertCalculus.useAt(Ax.box)}),
     PositionTacticInfo("boxd"
       , AxiomDisplayInfo(("[·]d", "[.]d"), "<span class=\"k4-axiom-key\">[a]P</span> ↔ &not;&langle;a&rangle;&not;P")
-      , {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
+      , {case () => HilbertCalculus.useAt(Ax.box, PosInExpr(1::Nil))}),
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
       , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", 'full, {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
     // @TODO: Has annotation, but keeping axiom info here because tests don't initialize axiom info correctly
-    new DerivedAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.selfAssign_y)}),
+    new DerivedAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt(Ax.selfassignby)}),
     new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assignd", 'full, {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", unsure, {case () => HilbertCalculus.useAt("<:=> self assign")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     // @TODO: Has annotation, but keeping axiom info here because tests don't initialize axiom info correctly
-    new DerivedAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbEquality_y)}),
+    new DerivedAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt(Ax.assignbeqy)}),
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
     // @TODO: Has annotation, but keeping axiom info here because tests don't initialize axiom info correctly
-    new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
-    new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
+    new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(Ax.assignbexists) }),
+    new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", unsure, {case () => HilbertCalculus.useAt(Ax.assignball) }),
     // @TODO: Has annotation, but keeping axiom info here because tests don't initialize axiom info correctly
-    new DerivedAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbEquationalAxiom) }),
+    new DerivedAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", unsure, {case () => HilbertCalculus.useAt(Ax.assignbequational) }),
     new InputPositionTacticInfo("assignbExistsRule",
       RuleDisplayInfo(
         "[:=] assign exists",
@@ -178,7 +178,7 @@ object DerivationInfoRegistry {
       , "Dassignb", 'full, {case () => HilbertCalculus.Dassignb}),
     new DerivedAxiomInfo("[':=] differential assign y"
       , AxiomDisplayInfo(("[y′:=]","[y':=]"), "<span class=\"k4-axiom-key\">[y′:=c]p(y′)</span>↔p(c)")
-      , "Dassignby", 'full, {case () => useAt(DerivedAxioms.assignDAxiomby)}),
+      , "Dassignby", 'full, {case () => useAt(Ax.Dassignby)}),
     new CoreAxiomInfo("[:*] assign nondet"
       , AxiomDisplayInfo("[:*]", "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)")
       , "randomb", unren, {case () => HilbertCalculus.randomb}),
@@ -186,8 +186,8 @@ object DerivationInfoRegistry {
       , AxiomDisplayInfo("[?]", "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)")
       , "testb", 'linear, {case () => HilbertCalculus.testb}),
     new DerivedAxiomInfo("<?> test", "<?>", "testd", 'linear, {case () => HilbertCalculus.testd}),
-    new DerivedAxiomInfo("<?> combine", "<?> combine", "testdcombine", 'linear, {case () => useAt(DerivedAxioms.combineTestdAxiom)}),
-    new DerivedAxiomInfo("<?> invtest", "<?>i", "invtestd", 'linear, {case () => useAt(DerivedAxioms.invTestdAxiom)}),
+    new DerivedAxiomInfo("<?> combine", "<?> combine", "testdcombine", 'linear, {case () => useAt(Ax.testdcombine)}),
+    new DerivedAxiomInfo("<?> invtest", "<?>i", "invtestd", 'linear, {case () => useAt(Ax.invtestd)}),
     new CoreAxiomInfo("[++] choice"
       , AxiomDisplayInfo(("[∪]", "[++]"), "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P"), "choiceb", 'linear, {case () => HilbertCalculus.choiceb}),
     new DerivedAxiomInfo("<++> choice", ("<∪>", "<++>"), "choiced", 'linear, {case () => HilbertCalculus.choiced}),
@@ -204,9 +204,9 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo("[d] dual"
       , AxiomDisplayInfo(("[d]", "[d]"), "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔¬[a]¬P"), "dualb", 'linear, {case () => HilbertCalculus.dualb}),
     new DerivedAxiomInfo("[d] dual direct"
-      , AxiomDisplayInfo(("[d]", "[d]"), "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔&langle;a&rangle;P"), "dualDirectb", 'linear, {case () => HilbertCalculus.useAt(DerivedAxioms.dualbDirectAxiom)}),
+      , AxiomDisplayInfo(("[d]", "[d]"), "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔&langle;a&rangle;P"), "dualDirectb", 'linear, {case () => HilbertCalculus.useAt(Ax.dualDirectb)}),
     new DerivedAxiomInfo("<d> dual direct"
-      , AxiomDisplayInfo(("<d>", "<d>"), "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔[a]P"), "dualDirectd", 'linear, {case () => HilbertCalculus.useAt(DerivedAxioms.dualdDirectAxiom)}),
+      , AxiomDisplayInfo(("<d>", "<d>"), "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔[a]P"), "dualDirectd", 'linear, {case () => HilbertCalculus.useAt(Ax.dualDirectd)}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", 'linear, {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
     CoreAxiomInfo("I induction"
@@ -216,7 +216,7 @@ object DerivationInfoRegistry {
       , "VK", unsure, {case () => HilbertCalculus.VK}),
     new DerivedAxiomInfo("V vacuous"
       , AxiomDisplayInfo("V", "p→<span class=\"k4-axiom-key\">[a]p</span>")
-      , "V", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.vacuousAxiom)}),
+      , "V", unsure, {case () => HilbertCalculus.useAt(Ax.V)}),
     new CoreAxiomInfo("[]T system"
       , AxiomDisplayInfo("[]T", "[a]true")
       , "boxTrue", 'linear, {case () => HilbertCalculus.boxTrue})
@@ -445,7 +445,7 @@ object DerivationInfoRegistry {
       , "DEs", unsure, {case () => HilbertCalculus.DE}),
     new DerivedAxiomInfo("DE differential effect (system) y"
       , AxiomDisplayInfo("DEsysy", "<span class=\"k4-axiom-key\">[{y′=F,c&Q}]P</span>↔[{c,y′=F&Q}][y′:=f(x)]P")
-      , "DEsysy", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.DEdifferentialEffectSystem_y)}),
+      , "DEsysy", unsure, {case () => HilbertCalculus.useAt(Ax.DEsysy)}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
       , "DIequiv", 'linear, {case () => HilbertCalculus.useAt("DI differential invariance")}),
@@ -493,10 +493,10 @@ object DerivationInfoRegistry {
       , "Dvar", 'linear, {case () => HilbertCalculus.Derive.Dvar}),
     new DerivedAxiomInfo("x' derive variable"
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
-      , "DvariableAxiom", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
+      , "DvariableAxiom", unsure, {case () => HilbertCalculus.useAt(Ax.DvariableAxiom)}),
     new DerivedAxiomInfo("x' derive var commuted"
       ,  AxiomDisplayInfo(("x′,C","x',C"), "x′=<span class=\"k4-axiom-key\">(x)′</span>")
-      , "DvariableCommutedAxiom", 'linear, {case () => HilbertCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
+      , "DvariableCommutedAxiom", 'linear, {case () => HilbertCalculus.useAt(Ax.DvariableCommutedAxiom)}),
     new PositionTacticInfo("Dvariable"
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
       , {case () => DifferentialTactics.Dvariable}),
@@ -563,19 +563,19 @@ object DerivationInfoRegistry {
   //<editor-fold desc="First-order quantifiers">
   /** First-order logic quantifier cases of [[allInfo]] */
   private[this] lazy val foInfos: List[DerivationInfo] = List(
-    new DerivedAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allInstantiate)}),
+    new DerivedAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt(Ax.allInst)}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", unsure, {case () => HilbertCalculus.allDist}),
-    new DerivedAxiomInfo("all distribute elim", ("∀→","all->"), "allDistElim", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allDistributeElim)}),
-    new DerivedAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.vacuousAllAxiom)}),
+    new DerivedAxiomInfo("all distribute elim", ("∀→","all->"), "allDistElim", unsure, {case () => HilbertCalculus.useAt(Ax.allDistElim)}),
+    new DerivedAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.useAt(Ax.allV)}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", unsure, {case () => HilbertCalculus.existsV}),
     new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", unsure, {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
-    new DerivedAxiomInfo("all then exists", ("∀→∃","allThenExists"), "allThenExists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allThenExists)}),
-    new DerivedAxiomInfo("exists eliminate y", ("∃ey","existsey"), "existsey", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.existsEliminatey)}),
+    new DerivedAxiomInfo("all then exists", ("∀→∃","allThenExists"), "allThenExists", unsure, {case () => HilbertCalculus.useAt(Ax.allThenExists)}),
+    new DerivedAxiomInfo("exists eliminate y", ("∃ey","existsey"), "existsey", unsure, {case () => HilbertCalculus.useAt(Ax.existsey)}),
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", unsure, {case () => posnil}),
-    new DerivedAxiomInfo("all dual time", ("∀d","alldt"), "alldt", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allDual_time)}),
-    new DerivedAxiomInfo("all dual y", ("∀d","alldy"), "alldy", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allDual_y)}),
+    new DerivedAxiomInfo("all dual time", ("∀d","alldt"), "alldt", unsure, {case () => HilbertCalculus.useAt(Ax.alldt)}),
+    new DerivedAxiomInfo("all dual y", ("∀d","alldy"), "alldy", unsure, {case () => HilbertCalculus.useAt(Ax.alldy)}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", unsure, {case () => posnil}),
-    new DerivedAxiomInfo("all eliminate y", ("∀y","ally"), "ally", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.allEliminate_y)})
+    new DerivedAxiomInfo("all eliminate y", ("∀y","ally"), "ally", unsure, {case () => HilbertCalculus.useAt(Ax.ally)})
   )
 
   /** Miscellaneous cases of [[allInfo]] that don't really fit anywhere else.   */
@@ -587,69 +587,69 @@ object DerivationInfoRegistry {
 
   /** Derived axiom cases of [[allInfo]] but [[DerivedAxiomInfo]] can also be filed elsewhere. */
   private[this] lazy val derivedAxiomsInfos: List[DerivedAxiomInfo] = List(
-    new DerivedAxiomInfo("const congruence", "CCE", "constCongruence", 'full, {case () => HilbertCalculus.useAt(DerivedAxioms.constCongruence)}),
-    new DerivedAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", 'full, {case () => HilbertCalculus.useAt(DerivedAxioms.constFormulaCongruence)}),
+    new DerivedAxiomInfo("const congruence", "CCE", "constCongruence", 'full, {case () => HilbertCalculus.useAt(Ax.constCongruence)}),
+    new DerivedAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", 'full, {case () => HilbertCalculus.useAt(Ax.constFormulaCongruence)}),
     new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", unsure, {case () => HilbertCalculus.existsE}),
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", unsure, {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", unsure, {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", unren, {case () => HilbertCalculus.randomd}),
     new DerivedAxiomInfo("[:=] assign equational", "[:=]==", "assignbequational", unsure, {case () => HilbertCalculus.assignb}),
     /* @todo replace all the axioms with useAt(axiom) */
-    new DerivedAxiomInfo("<':=> differential assign", ("<′:=>","<':=>"), "Dassignd", unsure, {case () => useAt(DerivedAxioms.assignDAxiom)}),
-    new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", 'linear, {case () => useAt(DerivedAxioms.DSnodomain)}),
-    new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", 'linear, {case () => useAt(DerivedAxioms.DSddomain)}),
-    new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", 'linear, {case () => useAt(DerivedAxioms.DSdnodomain)}),
-    new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", unsure, {case () => useAt(DerivedAxioms.DGpreghost)}),
+    new DerivedAxiomInfo("<':=> differential assign", ("<′:=>","<':=>"), "Dassignd", unsure, {case () => useAt(Ax.Dassignd)}),
+    new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", 'linear, {case () => useAt(Ax.DSnodomain)}),
+    new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", 'linear, {case () => useAt(Ax.DSddomain)}),
+    new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", 'linear, {case () => useAt(Ax.DSdnodomain)}),
+    new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", unsure, {case () => useAt(Ax.DGpreghost)}),
     new DerivedAxiomInfo("DW differential weakening"
       , AxiomDisplayInfo("DW","[x′=f(x)&Q]P↔[x′=f(x)&Q](Q→P)")
       , "DW", 'linear, {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DW differential weakening and"
       , AxiomDisplayInfo("DW∧","[x′=f(x)&Q]P→[x′=f(x)&Q](Q∧P)")
       , "DWeakenAnd", unsure, {case () => HilbertCalculus.DW}),
-    new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", 'linear, {case () => useAt(DerivedAxioms.Dskipd)}),
-    new DerivedAxiomInfo("DGd diamond differential ghost", "DGd", "DGd", unsure, {case () => useAt(DerivedAxioms.DGddifferentialghost)}),
-    new DerivedAxiomInfo("DGd diamond differential ghost constant", "DGCd", "DGCd", unsure, {case () => useAt(DerivedAxioms.DGCddifferentialghostconst)}),
-    new DerivedAxiomInfo("DGd diamond differential ghost constant converse", "DGCdc", "DGCdc", unsure, {case () => useAt(DerivedAxioms.DGCddifferentialghostconstconv)}),
-    new DerivedAxiomInfo("DGd diamond differential ghost constant exists", "DGCde", "DGCde", unsure, {case () => useAt(DerivedAxioms.DGCddifferentialghostconstexists)}),
-    new DerivedAxiomInfo("DCd diamond differential cut", "DCd", "DCd", unsure, {case () => useAt(DerivedAxioms.DCddifferentialcut)}),
-    new DerivedAxiomInfo("leave within closed <=", "leaveWithinClosed", "leaveWithinClosed", unsure, {case () => useAt(DerivedAxioms.leaveWithinClosed)}),
-    new DerivedAxiomInfo("open invariant closure >", "openInvariantClosure", "openInvariantClosure", unsure, {case () => useAt(DerivedAxioms.openInvariantClosure)}),
-    new DerivedAxiomInfo("DWd diamond differential weakening", "DWd", "DWd", unsure, {case () => useAt(DerivedAxioms.DWddifferentialweakening)}),
-    new DerivedAxiomInfo("DWd2 diamond differential weakening", "DWd2", "DWd2", unsure, {case () => useAt(DerivedAxioms.DWd2differentialweakening)}),
-    new DerivedAxiomInfo(",d commute", "commaCommuted", "commaCommuted", unsure, {case () => useAt(DerivedAxioms.commaCommuted)}),
-    new DerivedAxiomInfo("DGd diamond inverse differential ghost implicational", "DGdi", "DGdi", unsure, {case () => useAt(DerivedAxioms.DGdinversedifferentialghostimplicational)}),
-    new DerivedAxiomInfo("Uniq uniqueness iff", "UniqIff", "UniqIff", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.uniquenessIff)}),
-    new DerivedAxiomInfo("DBX>", "DBXgt", "DBXgt", unsure, {case () => useAt(DerivedAxioms.darbouxGt)}),
-    new DerivedAxiomInfo("DBX> open", "DBXgtOpen", "DBXgtOpen", unsure, {case () => useAt(DerivedAxioms.darbouxOpenGt)}),
+    new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", 'linear, {case () => useAt(Ax.Dskipd)}),
+    new DerivedAxiomInfo("DGd diamond differential ghost", "DGd", "DGd", unsure, {case () => useAt(Ax.DGd)}),
+    new DerivedAxiomInfo("DGd diamond differential ghost constant", "DGCd", "DGCd", unsure, {case () => useAt(Ax.DGCd)}),
+    new DerivedAxiomInfo("DGd diamond differential ghost constant converse", "DGCdc", "DGCdc", unsure, {case () => useAt(Ax.DGCdc)}),
+    new DerivedAxiomInfo("DGd diamond differential ghost constant exists", "DGCde", "DGCde", unsure, {case () => useAt(Ax.DGCde)}),
+    new DerivedAxiomInfo("DCd diamond differential cut", "DCd", "DCd", unsure, {case () => useAt(Ax.DCd)}),
+    new DerivedAxiomInfo("leave within closed <=", "leaveWithinClosed", "leaveWithinClosed", unsure, {case () => useAt(Ax.leaveWithinClosed)}),
+    new DerivedAxiomInfo("open invariant closure >", "openInvariantClosure", "openInvariantClosure", unsure, {case () => useAt(Ax.openInvariantClosure)}),
+    new DerivedAxiomInfo("DWd diamond differential weakening", "DWd", "DWd", unsure, {case () => useAt(Ax.DWd)}),
+    new DerivedAxiomInfo("DWd2 diamond differential weakening", "DWd2", "DWd2", unsure, {case () => useAt(Ax.DWd2)}),
+    new DerivedAxiomInfo(",d commute", "commaCommuted", "commaCommuted", unsure, {case () => useAt(Ax.commaCommuted)}),
+    new DerivedAxiomInfo("DGd diamond inverse differential ghost implicational", "DGdi", "DGdi", unsure, {case () => useAt(Ax.DGdi)}),
+    new DerivedAxiomInfo("Uniq uniqueness iff", "UniqIff", "UniqIff", unsure, {case () => HilbertCalculus.useAt(Ax.UniqIff)}),
+    new DerivedAxiomInfo("DBX>", "DBXgt", "DBXgt", unsure, {case () => useAt(Ax.DBXgt)}),
+    new DerivedAxiomInfo("DBX> open", "DBXgtOpen", "DBXgtOpen", unsure, {case () => useAt(Ax.DBXgtOpen)}),
     //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
     //@note derived axiom exists eliminate not yet proven -> use core axiom instead
     //    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),
-    new DerivedAxiomInfo("\\exists& exists and", "∃∧", "existsAnd", unsure, {case () => useAt(DerivedAxioms.existsAndAxiom)}),
-    new DerivedAxiomInfo("\\forall-> forall implies", "∀→", "forallImplies", unsure, {case () => useAt(DerivedAxioms.forallImpliesAxiom)}),
-    new DerivedAxiomInfo("exists dual", ("∃d","existsd"), "existsDual", unsure, {case () => useAt(DerivedAxioms.existsDualAxiom)}),
-    new DerivedAxiomInfo("exists dual y", ("∃d","existsdy"), "existsDualy", unsure, {case () => useAt(DerivedAxioms.existsDualAxiomy)}),
-    new DerivedAxiomInfo("' linear", ("l′","l'"), "Dlinear", 'linear, {case () => useAt(DerivedAxioms.Dlinear)}),
-    new DerivedAxiomInfo("' linear right", ("l′","l'"), "DlinearRight", 'linear, {case () => useAt(DerivedAxioms.DlinearRight)}),
+    new DerivedAxiomInfo("\\exists& exists and", "∃∧", "existsAnd", unsure, {case () => useAt(Ax.existsAnd)}),
+    new DerivedAxiomInfo("\\forall-> forall implies", "∀→", "forallImplies", unsure, {case () => useAt(Ax.forallImplies)}),
+    new DerivedAxiomInfo("exists dual", ("∃d","existsd"), "existsDual", unsure, {case () => useAt(Ax.existsDual)}),
+    new DerivedAxiomInfo("exists dual y", ("∃d","existsdy"), "existsDualy", unsure, {case () => useAt(Ax.existsDualy)}),
+    new DerivedAxiomInfo("' linear", ("l′","l'"), "Dlinear", 'linear, {case () => useAt(Ax.Dlinear)}),
+    new DerivedAxiomInfo("' linear right", ("l′","l'"), "DlinearRight", 'linear, {case () => useAt(Ax.DlinearRight)}),
     new DerivedAxiomInfo("!& deMorgan"
       , AxiomDisplayInfo(("¬∧", "!&"), "<span class=\"k4-axiom-key\">¬(p∧q)</span>↔(¬p|¬q)")
-      , "notAnd", 'linear, {case () => useAt(DerivedAxioms.notAnd)}),
+      , "notAnd", 'linear, {case () => useAt(Ax.notAnd)}),
     new DerivedAxiomInfo("!| deMorgan"
       , AxiomDisplayInfo(("¬∨","!|"), "<span class=\"k4-axiom-key\">(¬(p|q))</span>↔(¬p∧¬q)")
-      , "notOr", 'linear, {case () => useAt(DerivedAxioms.notOr)}),
+      , "notOr", 'linear, {case () => useAt(Ax.notOr)}),
     new DerivedAxiomInfo("!-> deMorgan"
       , AxiomDisplayInfo(("¬→","!->"), "<span class=\"k4-axiom-key\">¬(p->q)</span>↔(p∧¬q)")
-      , "notImply", 'linear, {case () => useAt(DerivedAxioms.notImply)}),
+      , "notImply", 'linear, {case () => useAt(Ax.notImply)}),
     new DerivedAxiomInfo("!<-> deMorgan"
       , AxiomDisplayInfo(("¬↔", "!<->"), "<span class=\"k4-axiom-key\">¬(p↔q)</span>↔(p∧¬q)| (¬p∧q)")
-      , "notEquiv", 'linear, {case () => useAt(DerivedAxioms.notEquiv)}),
+      , "notEquiv", 'linear, {case () => useAt(Ax.notEquiv)}),
     new DerivedAxiomInfo("!all"
       , AxiomDisplayInfo(("¬∀", "!all"), "<span class=\"k4-axiom-key\">¬∀x (p(x)))</span>↔∃x (¬p(x))")
-      , "notAll", 'linear, {case () => useAt(DerivedAxioms.notAll)}),
+      , "notAll", 'linear, {case () => useAt(Ax.notAll)}),
     new DerivedAxiomInfo("!exists"
       , AxiomDisplayInfo(("¬∃","!exists"), "<span class=\"k4-axiom-key\">(¬∃x (p(x)))</span>↔∀x (¬p(x))")
-      , "notExists", 'linear, {case () => useAt(DerivedAxioms.notExists)}),
-    new DerivedAxiomInfo("![]", ("¬[]","![]"), "notBox", 'linear, {case () => useAt(DerivedAxioms.notBox)}),
-    new DerivedAxiomInfo("!<>", ("¬<>","!<>"), "notDiamond", 'linear, {case () => useAt(DerivedAxioms.notDiamond)}),
+      , "notExists", 'linear, {case () => useAt(Ax.notExists)}),
+    new DerivedAxiomInfo("![]", ("¬[]","![]"), "notBox", 'linear, {case () => useAt(Ax.notBox)}),
+    new DerivedAxiomInfo("!<>", ("¬<>","!<>"), "notDiamond", 'linear, {case () => useAt(Ax.notDiamond)}),
     new DerivedAxiomInfo("[] split"
       , AxiomDisplayInfo(("[]∧", "[]^"), "<span class=\"k4-axiom-key\">[a](P∧Q)</span>↔[a]P ∧ [a]Q")
       , "boxAnd", 'linear, {case () => HilbertCalculus.boxAnd}),
@@ -658,73 +658,67 @@ object DerivationInfoRegistry {
       , "boxImpliesAnd", 'linear, {case () => HilbertCalculus.boxImpliesAnd}),
     new DerivedAxiomInfo("<> split"
       , AxiomDisplayInfo(("<>∨","<>|"), "<span class=\"k4-axiom-key\">&langle;a&rangle;(P∨Q)</span>↔&langle;a&rangle;P ∨ &langle;a&rangle;Q")
-      , "diamondOr", 'linear, {case () => useAt(DerivedAxioms.diamondOr)}),
+      , "diamondOr", 'linear, {case () => useAt(Ax.diamondOr)}),
     new DerivedAxiomInfo("<> partial vacuous", ("pVd","pVd"), "pVd", unsure, {case () => HilbertCalculus.useAt("<> partial vacuous")}),
     //    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
     //    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
     //    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),
-    new DerivedAxiomInfo("<*> approx", "<*> approx", "loopApproxd", unsure, {case () => useAt(DerivedAxioms.loopApproxd)}),
-    new DerivedAxiomInfo("<*> stuck", "<*> stuck", "loopStuck", unsure, {case () => useAt(DerivedAxioms.loopStuck)}),
-    new DerivedAxiomInfo("<a> stuck", "<a> stuck", "programStuck", unsure, {case () => useAt(DerivedAxioms.programStuck)}),
-    new DerivedAxiomInfo("<'> stuck", ("<′> stuck","<'> stuck"), "odeStuck", unsure, {case () => useAt(DerivedAxioms.odeStuck)}),
-    new DerivedAxiomInfo("all stutter", "all stutter", "allStutter", unsure, {case () => useAt(DerivedAxioms.forallStutter)}),
-    new DerivedAxiomInfo("exists stutter", "exists stutter", "existsStutter", unsure, {case () => useAt(DerivedAxioms.existsStutter)}),
-    new DerivedAxiomInfo("[] post weaken", "[]PW", "postWeaken", unsure, {case () => useAt(DerivedAxioms.postconditionWeaken)}),
-    new DerivedAxiomInfo("<-> reflexive", ("↔R","<->R"), "equivReflexive", 'full, {case () => useAt(DerivedAxioms.equivReflexiveAxiom)}),
-    new DerivedAxiomInfo("<-> expand", ("↔2→←","<->2-><-"), "equivExpand", 'full, {case () => useAt(DerivedAxioms.equivExpand)}),
-    new DerivedAxiomInfo("-> distributes over &", ("→∧", "->&"), "implyDistAnd", unsure, {case () => useAt(DerivedAxioms.implyDistAndAxiom)}),
-    new DerivedAxiomInfo("-> distributes over <->", ("→↔","-><->"), "implyDistEquiv", unsure, {case () => useAt(DerivedAxioms.implyDistEquivAxiom)}),
-    new DerivedAxiomInfo("-> weaken", ("→W","->W"), "implyWeaken", unsure, {case () => useAt(DerivedAxioms.implWeaken)}),
+    new DerivedAxiomInfo("<*> approx", "<*> approx", "loopApproxd", unsure, {case () => useAt(Ax.loopApproxd)}),
+    new DerivedAxiomInfo("<*> stuck", "<*> stuck", "loopStuck", unsure, {case () => useAt(Ax.loopStuck)}),
+    new DerivedAxiomInfo("<a> stuck", "<a> stuck", "programStuck", unsure, {case () => useAt(Ax.programStuck)}),
+    new DerivedAxiomInfo("<'> stuck", ("<′> stuck","<'> stuck"), "odeStuck", unsure, {case () => useAt(Ax.odeStuck)}),
+    new DerivedAxiomInfo("all stutter", "all stutter", "allStutter", unsure, {case () => useAt(Ax.allStutter)}),
+    new DerivedAxiomInfo("exists stutter", "exists stutter", "existsStutter", unsure, {case () => useAt(Ax.existsStutter)}),
+    new DerivedAxiomInfo("[] post weaken", "[]PW", "postWeaken", unsure, {case () => useAt(Ax.postWeaken)}),
+    new DerivedAxiomInfo("<-> reflexive", ("↔R","<->R"), "equivReflexive", 'full, {case () => useAt(Ax.equivReflexive)}),
+    new DerivedAxiomInfo("<-> expand", ("↔2→←","<->2-><-"), "equivExpand", 'full, {case () => useAt(Ax.equivExpand)}),
+    new DerivedAxiomInfo("-> distributes over &", ("→∧", "->&"), "implyDistAnd", unsure, {case () => useAt(Ax.implyDistAnd)}),
+    new DerivedAxiomInfo("-> distributes over <->", ("→↔","-><->"), "implyDistEquiv", unsure, {case () => useAt(Ax.implyDistEquiv)}),
+    new DerivedAxiomInfo("-> weaken", ("→W","->W"), "implyWeaken", unsure, {case () => useAt(Ax.implyWeaken)}),
     new DerivedAxiomInfo("!! double negation"
       , AxiomDisplayInfo(("¬¬","!!"), "¬¬p↔p")
-      , "doubleNegation", 'linear, {case () => useAt(DerivedAxioms.doubleNegationAxiom)}),
-    new DerivedAxiomInfo(":= assign dual", ":=D", "assignDual", unsure, {case () => useAt(DerivedAxioms.assignDualAxiom)}),
-    new DerivedAxiomInfo(":= assign dual 2", ":=D", "assignDual2", unsure, {case () => useAt(DerivedAxioms.assignDual2Axiom)}),
-    new DerivedAxiomInfo("[:=] vacuous assign", "V[:=]", "vacuousAssignb", unsure, {case () => useAt(DerivedAxioms.vacuousAssignbAxiom)}),
-    new DerivedAxiomInfo("<:=> vacuous assign", "V<:=>", "vacuousAssignd", unsure, {case () => useAt(DerivedAxioms.vacuousAssigndAxiom)}),
-    new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", unsure, {case () => useAt(DerivedAxioms.loopApproxb)}),
-    new DerivedAxiomInfo("[*] merge", "[*] merge", "loopMergeb", unsure, {case () => useAt(DerivedAxioms.loopMergeb)}),
-    new DerivedAxiomInfo("<*> merge", "<*> merge", "loopMerged", unsure, {case () => useAt(DerivedAxioms.loopMerged)}),
-    new DerivedAxiomInfo("[**] iterate iterate", "[**]", "iterateiterateb", 'full, {case () => useAt(DerivedAxioms.iterateiterateb)}),
-    new DerivedAxiomInfo("<**> iterate iterate", "<**>", "iterateiterated", 'full, {case () => useAt(DerivedAxioms.iterateiterated)}),
-    new DerivedAxiomInfo("[*-] backiterate", "[*-]", "backiterateb", 'linear, {case () => useAt(DerivedAxioms.backiterateb)}),
-    new DerivedAxiomInfo("[*-] backiterate necessity", "[*-] backiterate necessity", "backiteratebnecc", unsure, {case () => useAt(DerivedAxioms.backiteratebnecc)}),
-    new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-] backiterate sufficiency", "backiteratebsuff", unsure, {case () => useAt(DerivedAxioms.backiteratebsuff)}),
-    new DerivedAxiomInfo("II induction", "II induction", "IIinduction", unsure, {case () => useAt(DerivedAxioms.iiinduction)}),
+      , "doubleNegation", 'linear, {case () => useAt(Ax.doubleNegation)}),
+    new DerivedAxiomInfo(":= assign dual", ":=D", "assignDual", unsure, {case () => useAt(Ax.assignDual)}),
+    new DerivedAxiomInfo(":= assign dual 2", ":=D", "assignDual2", unsure, {case () => useAt(Ax.assignDual2)}),
+    new DerivedAxiomInfo("[:=] vacuous assign", "V[:=]", "vacuousAssignb", unsure, {case () => useAt(Ax.vacuousAssignb)}),
+    new DerivedAxiomInfo("<:=> vacuous assign", "V<:=>", "vacuousAssignd", unsure, {case () => useAt(Ax.vacuousAssignd)}),
+    new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", unsure, {case () => useAt(Ax.loopApproxb)}),
+    new DerivedAxiomInfo("[*] merge", "[*] merge", "loopMergeb", unsure, {case () => useAt(Ax.loopMergeb)}),
+    new DerivedAxiomInfo("<*> merge", "<*> merge", "loopMerged", unsure, {case () => useAt(Ax.loopMerged)}),
+    new DerivedAxiomInfo("[**] iterate iterate", "[**]", "iterateiterateb", 'full, {case () => useAt(Ax.iterateiterateb)}),
+    new DerivedAxiomInfo("<**> iterate iterate", "<**>", "iterateiterated", 'full, {case () => useAt(Ax.iterateiterated)}),
+    new DerivedAxiomInfo("[*-] backiterate", "[*-]", "backiterateb", 'linear, {case () => useAt(Ax.backiterateb)}),
+    new DerivedAxiomInfo("[*-] backiterate necessity", "[*-] backiterate necessity", "backiteratebnecc", unsure, {case () => useAt(Ax.backiteratebnecc)}),
+    new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-] backiterate sufficiency", "backiteratebsuff", unsure, {case () => useAt(Ax.backiteratebsuff)}),
+    new DerivedAxiomInfo("II induction", "II induction", "IIinduction", unsure, {case () => useAt(Ax.IIinduction)}),
     new DerivedAxiomInfo("I"
-      , AxiomDisplayInfo(("I", "I"), "<span class=\"k4-axiom-key\">[a*]P</span>↔P∧[a*](P→[a]P)"), "I", 'linear, {case () => useAt(DerivedAxioms.Ieq)}),
+      , AxiomDisplayInfo(("I", "I"), "<span class=\"k4-axiom-key\">[a*]P</span>↔P∧[a*](P→[a]P)"), "I", 'linear, {case () => useAt(Ax.I)}),
     //@todo might have a better name
-    new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", unsure, {case () => useAt(DerivedAxioms.existsGeneralize)}),
-    new DerivedAxiomInfo("exists generalize y", ("∃Gy","existsGy"), "existsGeneralizey", unsure, {case () => useAt(DerivedAxioms.existsGeneralizey)}),
-    new DerivedAxiomInfo("all substitute", ("∀S","allS"), "allSubstitute", unsure, {case () => useAt(DerivedAxioms.allSubstitute)}),
-    new DerivedAxiomInfo("V[:*] vacuous assign nondet", "V[:*]", "vacuousBoxAssignNondet", unsure, {case () => useAt(DerivedAxioms.vacuousBoxAssignNondetAxiom)}),
-    new DerivedAxiomInfo("V<:*> vacuous assign nondet", "V<:*>", "vacuousDiamondAssignNondet", unsure, {case () => useAt(DerivedAxioms.vacuousDiamondAssignNondetAxiom)}),
-    new DerivedAxiomInfo("Domain Constraint Conjunction Reordering", ("{∧}C","{&}C"), "domainCommute", unsure, {case () => useAt(DerivedAxioms.domainCommute)}), //@todo shortname
-    new DerivedAxiomInfo("& commute", ("∧C","&C"), "andCommute", 'linear, {case () => useAt(DerivedAxioms.andCommute)}),
-    new DerivedAxiomInfo("& reflexive", ("∧R","&R"), "andReflexive", 'full, {case () => useAt(DerivedAxioms.andReflexive)}),
-    new DerivedAxiomInfo("& associative", ("∧A","&A"), "andAssoc", 'linear, {case () => useAt(DerivedAxioms.andAssoc)}),
-    new DerivedAxiomInfo("-> expand", ("→E","->E"), "implyExpand", 'linear, {case () => useAt(DerivedAxioms.implyExpand)}),
-    new DerivedAxiomInfo("-> tautology", ("→taut","->taut"), "implyTautology", 'full, {case () => useAt(DerivedAxioms.implyTautology)}),
-    new DerivedAxiomInfo("\\forall->\\exists", ("∀→∃","all->exists"), "forallThenExists", unsure, {case () => useAt(DerivedAxioms.forallThenExistsAxiom)}),
+    new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", unsure, {case () => useAt(Ax.existsGeneralize)}),
+    new DerivedAxiomInfo("exists generalize y", ("∃Gy","existsGy"), "existsGeneralizey", unsure, {case () => useAt(Ax.existsGeneralizey)}),
+    new DerivedAxiomInfo("all substitute", ("∀S","allS"), "allSubstitute", unsure, {case () => useAt(Ax.allSubstitute)}),
+    new DerivedAxiomInfo("V[:*] vacuous assign nondet", "V[:*]", "vacuousBoxAssignNondet", unsure, {case () => useAt(Ax.vacuousBoxAssignNondet)}),
+    new DerivedAxiomInfo("V<:*> vacuous assign nondet", "V<:*>", "vacuousDiamondAssignNondet", unsure, {case () => useAt(Ax.vacuousDiamondAssignNondet)}),
+    new DerivedAxiomInfo("Domain Constraint Conjunction Reordering", ("{∧}C","{&}C"), "domainCommute", unsure, {case () => useAt(Ax.domainCommute)}), //@todo shortname
+    new DerivedAxiomInfo("& commute", ("∧C","&C"), "andCommute", 'linear, {case () => useAt(Ax.andCommute)}),
+    new DerivedAxiomInfo("& reflexive", ("∧R","&R"), "andReflexive", 'full, {case () => useAt(Ax.andReflexive)}),
+    new DerivedAxiomInfo("& associative", ("∧A","&A"), "andAssoc", 'linear, {case () => useAt(Ax.andAssoc)}),
+    new DerivedAxiomInfo("-> expand", ("→E","->E"), "implyExpand", 'linear, {case () => useAt(Ax.implyExpand)}),
+    new DerivedAxiomInfo("-> tautology", ("→taut","->taut"), "implyTautology", 'full, {case () => useAt(Ax.implyTautology)}),
+    new DerivedAxiomInfo("\\forall->\\exists", ("∀→∃","all->exists"), "forallThenExists", unsure, {case () => useAt(Ax.forallThenExists)}),
     new DerivedAxiomInfo("->true"
       , AxiomDisplayInfo(("→⊤","->T"), "<span class=\"k4-axiom-key\">(p→⊤)</span>↔⊤")
-      , "implyTrue", 'linear, {case () => useAt(DerivedAxioms.impliesTrue)}),
+      , "implyTrue", 'linear, {case () => useAt(Ax.implyTrue)}),
     new DerivedAxiomInfo("true->"
       , AxiomDisplayInfo(("⊤→", "T->"), "<span class=\"k4-axiom-key\">(⊤→p)</span>↔p")
-      , "trueImply", 'linear, {case () => useAt(DerivedAxioms.trueImplies)}),
+      , "trueImply", 'linear, {case () => useAt(Ax.trueImply)}),
     new DerivedAxiomInfo("&true"
       , AxiomDisplayInfo(("∧⊤","&T"), "<span class=\"k4-axiom-key\">(p∧⊤)</span>↔p")
-      , "andTrue", 'linear, {case () => useAt(DerivedAxioms.andTrue)}),
-    new DerivedAxiomInfo("&true inv", "&true inv", "andTrueInv", unsure, {case () => useAt(DerivedAxioms.invAndTrue)}),
+      , "andTrue", 'linear, {case () => useAt(Ax.andTrue)}),
+    new DerivedAxiomInfo("&true inv", "&true inv", "andTrueInv", unsure, {case () => useAt(Ax.andTrueInv)}),
     new DerivedAxiomInfo("true&"
       , AxiomDisplayInfo(("⊤∧","T&"), "<span class=\"k4-axiom-key\">(⊤∧p)</span>↔p")
       , "trueAnd", 'linear, {case () => useAt(DerivedAxioms.trueAnd)}),
-    new DerivedAxiomInfo("&false"
-      , AxiomDisplayInfo(("∧F","&F"), "<span class=\"k4-axiom-key\">(p∧⊥)</span>↔⊥")
-      , "andFalse", 'linear, {case () => useAt(DerivedAxioms.andFalse)}),
-    new DerivedAxiomInfo("false&"
-      , AxiomDisplayInfo(("⊥∧","⊥&"), "<span class=\"k4-axiom-key\">(⊥∧p)</span>↔⊥")
-      , "falseAnd", 'linear, {case () => useAt(DerivedAxioms.falseAnd)}),
     new DerivedAxiomInfo("0*", "0*", "zeroTimes", 'linear, {case () => useAt(DerivedAxioms.zeroTimes)}),
     new DerivedAxiomInfo("0+", "0+", "zeroPlus", 'linear, {case () => useAt(DerivedAxioms.zeroPlus)}),
     new DerivedAxiomInfo("*0", "*0", "timesZero", 'linear, {case () => useAt(DerivedAxioms.timesZero)}),
@@ -736,124 +730,124 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo(">=", ">=", "greaterEqual", 'linear, {case () => useAt(DerivedAxioms.greaterEqual)}),
     new DerivedAxiomInfo("! <"
       , AxiomDisplayInfo(("¬<","!<"), "<span class=\"k4-axiom-key\">¬(f<g)</span>↔(f≥g)")
-      , "notLess", 'linear, {case () => useAt(DerivedAxioms.notLess)}),
+      , "notLess", 'linear, {case () => useAt(Ax.notLess)}),
     new DerivedAxiomInfo("! >"
       , AxiomDisplayInfo(("¬>","!>"), "<span class=\"k4-axiom-key\">¬(f>g)</span>↔(f≤g)")
-      , "notGreater", 'linear, {case () => useAt(DerivedAxioms.notGreater)}),
-    new DerivedAxiomInfo("! >=", ("¬≥","!>="), "notGreaterEqual", 'linear, {case () => useAt(DerivedAxioms.notGreaterEqual)}),
-    new DerivedAxiomInfo(">= flip", ">=F", "flipGreaterEqual", 'linear, {case () => useAt(DerivedAxioms.flipGreaterEqual)}),
-    new DerivedAxiomInfo("> flip", ">F", "flipGreater", 'linear, {case () => useAt(DerivedAxioms.flipGreater)}),
-    new DerivedAxiomInfo("<= flip", "<=F", "flipLessEqual", 'linear, {case () => useAt(DerivedAxioms.flipLessEqual)}),
-    new DerivedAxiomInfo("< flip", "<F", "flipLess", 'linear, {case () => useAt(DerivedAxioms.flipLess)}),
-    new DerivedAxiomInfo("<", "<", "less", 'linear, {case () => useAt(DerivedAxioms.less)}),
-    new DerivedAxiomInfo(">", ">", "greater", 'linear, {case () => useAt(DerivedAxioms.greater)}),
+      , "notGreater", 'linear, {case () => useAt(Ax.notGreater)}),
+    new DerivedAxiomInfo("! >=", ("¬≥","!>="), "notGreaterEqual", 'linear, {case () => useAt(Ax.notGreaterEqual)}),
+    new DerivedAxiomInfo(">= flip", ">=F", "flipGreaterEqual", 'linear, {case () => useAt(Ax.flipGreaterEqual)}),
+    new DerivedAxiomInfo("> flip", ">F", "flipGreater", 'linear, {case () => useAt(Ax.flipGreater)}),
+    new DerivedAxiomInfo("<= flip", "<=F", "flipLessEqual", 'linear, {case () => useAt(Ax.flipLessEqual)}),
+    new DerivedAxiomInfo("< flip", "<F", "flipLess", 'linear, {case () => useAt(Ax.flipLess)}),
+    new DerivedAxiomInfo("<", "<", "less", 'linear, {case () => useAt(Ax.less)}),
+    new DerivedAxiomInfo(">", ">", "greater", 'linear, {case () => useAt(Ax.greater)}),
 
     //    new DerivedAxiomInfo("!= elimination", ("≠", "!="), "notEqualElim", {case () => useAt(DerivedAxioms.notEqualElim)}),
     //    new DerivedAxiomInfo(">= elimination", ("≥", ">="), "greaterEqualElim", {case () => useAt(DerivedAxioms.greaterEqualElim)}),
     //    new DerivedAxiomInfo("> elimination", ">", "greaterElim", {case () => useAt(DerivedAxioms.greaterElim)}),
-    new DerivedAxiomInfo("1>0", "1>0", "oneGreaterZero", 'linear, {case () => useAt(DerivedAxioms.oneGreaterZero)}),
-    new DerivedAxiomInfo("nonnegative squares", "^2>=0", "nonnegativeSquares", 'linear, {case () => useAt(DerivedAxioms.nonnegativeSquares)}),
-    new DerivedAxiomInfo(">2!=", ">2!=", "greaterImpliesNotEqual", unsure, {case () => useAt(DerivedAxioms.greaterImpliesNotEqual)}),
-    new DerivedAxiomInfo("> monotone", ">mon", "greaterMonotone", unsure, {case () => useAt(DerivedAxioms.greaterMonotone)}),
+    new DerivedAxiomInfo("1>0", "1>0", "oneGreaterZero", 'linear, {case () => useAt(Ax.oneGreaterZero)}),
+    new DerivedAxiomInfo("nonnegative squares", "^2>=0", "nonnegativeSquares", 'linear, {case () => useAt(Ax.nonnegativeSquares)}),
+    new DerivedAxiomInfo(">2!=", ">2!=", "greaterImpliesNotEqual", unsure, {case () => useAt(Ax.greaterImpliesNotEqual)}),
+    new DerivedAxiomInfo("> monotone", ">mon", "greaterMonotone", unsure, {case () => useAt(Ax.greaterMonotone)}),
 
-    new DerivedAxiomInfo("abs", "abs", "abs", unsure, {case () => useAt(DerivedAxioms.absDef)}),
-    new DerivedAxiomInfo("min", "min", "min", unsure, {case () => useAt(DerivedAxioms.minDef)}),
-    new DerivedAxiomInfo("max", "max", "max", unsure, {case () => useAt(DerivedAxioms.maxDef)}),
-    new DerivedAxiomInfo("& recursor", "& recursor", "andRecursor", 'linear, {case () => useAt(DerivedAxioms.andRecursor)}),
-    new DerivedAxiomInfo("| recursor", "| recursor", "orRecursor", 'linear, {case () => useAt(DerivedAxioms.orRecursor)}),
-    new DerivedAxiomInfo("<= both", "<= both", "intervalLEBoth", unsure, {case () => useAt(DerivedAxioms.intervalLEBoth)}),
-    new DerivedAxiomInfo("< both", "< both", "intervalLBoth", unsure, {case () => useAt(DerivedAxioms.intervalLBoth)}),
-    new DerivedAxiomInfo("neg<= up", "neg<=", "intervalUpNeg", unsure, {case () => useAt(DerivedAxioms.intervalUpNeg)}),
-    new DerivedAxiomInfo("abs<= up", "abs<=", "intervalUpAbs", unsure, {case () => useAt(DerivedAxioms.intervalUpAbs)}),
-    new DerivedAxiomInfo("max<= up", "max<=", "intervalUpMax", unsure, {case () => useAt(DerivedAxioms.intervalUpMax)}),
-    new DerivedAxiomInfo("min<= up", "min<=", "intervalUpMin", unsure, {case () => useAt(DerivedAxioms.intervalUpMin)}),
-    new DerivedAxiomInfo("+<= up", "+<=", "intervalUpPlus", unsure, {case () => useAt(DerivedAxioms.intervalUpPlus)}),
-    new DerivedAxiomInfo("-<= up", "-<=", "intervalUpMinus", unsure, {case () => useAt(DerivedAxioms.intervalUpMinus)}),
-    new DerivedAxiomInfo("*<= up", "*<=", "intervalUpTimes", unsure, {case () => useAt(DerivedAxioms.intervalUpTimes)}),
-    new DerivedAxiomInfo("1Div<= up", "1/<=", "intervalUp1Divide", unsure, {case () => useAt(DerivedAxioms.intervalUp1Divide)}),
+    new DerivedAxiomInfo("abs", "abs", "abs", unsure, {case () => useAt(Ax.abs)}),
+    new DerivedAxiomInfo("min", "min", "min", unsure, {case () => useAt(Ax.min)}),
+    new DerivedAxiomInfo("max", "max", "max", unsure, {case () => useAt(Ax.max)}),
+    new DerivedAxiomInfo("& recursor", "& recursor", "andRecursor", 'linear, {case () => useAt(Ax.andRecursor)}),
+    new DerivedAxiomInfo("| recursor", "| recursor", "orRecursor", 'linear, {case () => useAt(Ax.orRecursor)}),
+    new DerivedAxiomInfo("<= both", "<= both", "intervalLEBoth", unsure, {case () => useAt(Ax.intervalLEBoth)}),
+    new DerivedAxiomInfo("< both", "< both", "intervalLBoth", unsure, {case () => useAt(Ax.intervalLBoth)}),
+    new DerivedAxiomInfo("neg<= up", "neg<=", "intervalUpNeg", unsure, {case () => useAt(Ax.intervalUpNeg)}),
+    new DerivedAxiomInfo("abs<= up", "abs<=", "intervalUpAbs", unsure, {case () => useAt(Ax.intervalUpAbs)}),
+    new DerivedAxiomInfo("max<= up", "max<=", "intervalUpMax", unsure, {case () => useAt(Ax.intervalUpMax)}),
+    new DerivedAxiomInfo("min<= up", "min<=", "intervalUpMin", unsure, {case () => useAt(Ax.intervalUpMin)}),
+    new DerivedAxiomInfo("+<= up", "+<=", "intervalUpPlus", unsure, {case () => useAt(Ax.intervalUpPlus)}),
+    new DerivedAxiomInfo("-<= up", "-<=", "intervalUpMinus", unsure, {case () => useAt(Ax.intervalUpMinus)}),
+    new DerivedAxiomInfo("*<= up", "*<=", "intervalUpTimes", unsure, {case () => useAt(Ax.intervalUpTimes)}),
+    new DerivedAxiomInfo("1Div<= up", "1/<=", "intervalUp1Divide", unsure, {case () => useAt(Ax.intervalUp1Divide)}),
     //    new DerivedAxiomInfo("Div<= up", "/<=", "intervalUpDivide", {case () => useAt(DerivedAxioms.intervalUpDivide)}),
-    new DerivedAxiomInfo("pow<= up", "pow<=", "intervalUpPower", unsure, {case () => useAt(DerivedAxioms.intervalUpPower)}),
-    new DerivedAxiomInfo("<=neg down", "<=neg", "intervalDownNeg", unsure, {case () => useAt(DerivedAxioms.intervalDownNeg)}),
-    new DerivedAxiomInfo("<=abs down", "<=abs", "intervalDownAbs", unsure, {case () => useAt(DerivedAxioms.intervalDownAbs)}),
-    new DerivedAxiomInfo("<=max down", "<=max", "intervalDownMax", unsure, {case () => useAt(DerivedAxioms.intervalDownMax)}),
-    new DerivedAxiomInfo("<=min down", "<=min", "intervalDownMin", unsure, {case () => useAt(DerivedAxioms.intervalDownMin)}),
-    new DerivedAxiomInfo("<=+ down", "<=+", "intervalDownPlus", unsure, {case () => useAt(DerivedAxioms.intervalDownPlus)}),
-    new DerivedAxiomInfo("<=- down", "<=-", "intervalDownMinus", unsure, {case () => useAt(DerivedAxioms.intervalDownMinus)}),
-    new DerivedAxiomInfo("<=* down", "<=*", "intervalDownTimes", unsure, {case () => useAt(DerivedAxioms.intervalDownTimes)}),
-    new DerivedAxiomInfo("<=1Div down", "<=1/", "intervalDown1Divide", unsure, {case () => useAt(DerivedAxioms.intervalDown1Divide)}),
+    new DerivedAxiomInfo("pow<= up", "pow<=", "intervalUpPower", unsure, {case () => useAt(Ax.intervalUpPower)}),
+    new DerivedAxiomInfo("<=neg down", "<=neg", "intervalDownNeg", unsure, {case () => useAt(Ax.intervalDownNeg)}),
+    new DerivedAxiomInfo("<=abs down", "<=abs", "intervalDownAbs", unsure, {case () => useAt(Ax.intervalDownAbs)}),
+    new DerivedAxiomInfo("<=max down", "<=max", "intervalDownMax", unsure, {case () => useAt(Ax.intervalDownMax)}),
+    new DerivedAxiomInfo("<=min down", "<=min", "intervalDownMin", unsure, {case () => useAt(Ax.intervalDownMin)}),
+    new DerivedAxiomInfo("<=+ down", "<=+", "intervalDownPlus", unsure, {case () => useAt(Ax.intervalDownPlus)}),
+    new DerivedAxiomInfo("<=- down", "<=-", "intervalDownMinus", unsure, {case () => useAt(Ax.intervalDownMinus)}),
+    new DerivedAxiomInfo("<=* down", "<=*", "intervalDownTimes", unsure, {case () => useAt(Ax.intervalDownTimes)}),
+    new DerivedAxiomInfo("<=1Div down", "<=1/", "intervalDown1Divide", unsure, {case () => useAt(Ax.intervalDown1Divide)}),
     //    new DerivedAxiomInfo("<=Div down", "<=/", "intervalDownDivide", {case () => useAt(DerivedAxioms.intervalDownDivide)}),
-    new DerivedAxiomInfo("<=pow down", "<=pow", "intervalDownPower", unsure, {case () => useAt(DerivedAxioms.intervalDownPower)}),
+    new DerivedAxiomInfo("<=pow down", "<=pow", "intervalDownPower", unsure, {case () => useAt(Ax.intervalDownPower)}),
     new DerivedAxiomInfo("! !="
       , AxiomDisplayInfo(("¬≠","!!="), "<span class=\"k4-axiom-key\">(¬(f≠g)</span>↔(f=g))")
-      , "notNotEqual", 'linear, {case () => useAt(DerivedAxioms.notNotEqual)}),
+      , "notNotEqual", 'linear, {case () => useAt(Ax.notNotEqual)}),
     new DerivedAxiomInfo("! ="
       , AxiomDisplayInfo(("¬ =","! ="), "<span class=\"k4-axiom-key\">(¬(f=g))</span>↔(f≠g)")
-      , "notEqual", 'linear, {case () => useAt(DerivedAxioms.notEqual)}),
+      , "notEqual", 'linear, {case () => useAt(Ax.notEqual)}),
     new DerivedAxiomInfo("! <="
       , AxiomDisplayInfo(("¬≤","!<="), "<span class=\"k4-axiom-key\">(¬(f≤g)</span>↔(f>g)")
-      , "notLessEqual", 'linear, {case () => useAt(DerivedAxioms.notLessEqual)}),
-    new DerivedAxiomInfo("* associative", "*A", "timesAssociative", 'linear, {case () => useAt(DerivedAxioms.timesAssociative)}),
-    new DerivedAxiomInfo("* commute", "*C", "timesCommute", 'linear, {case () => useAt(DerivedAxioms.timesCommutative)}),
-    new DerivedAxiomInfo("* inverse", "*i", "timesInverse", 'full, {case () => useAt(DerivedAxioms.timesInverse)}),
-    new DerivedAxiomInfo("* closed", "*c", "timesClosed", unsure, {case () => useAt(DerivedAxioms.timesClosed)}),
-    new DerivedAxiomInfo("* identity", "*I", "timesIdentity", unsure, {case () => useAt(DerivedAxioms.timesIdentity)}),
-    new DerivedAxiomInfo("+ associative", "+A", "plusAssociative", 'linear, {case () => useAt(DerivedAxioms.plusAssociative)}),
-    new DerivedAxiomInfo("+ commute", "+C", "plusCommute", 'linear, {case () => useAt(DerivedAxioms.plusCommutative)}),
-    new DerivedAxiomInfo("+ inverse", "+i", "plusInverse", 'full, {case () => useAt(DerivedAxioms.plusInverse)}),
-    new DerivedAxiomInfo("+ closed", "+c", "plusClosed", unsure, {case () => useAt(DerivedAxioms.plusClosed)}),
-    new DerivedAxiomInfo("positivity", "Pos", "positivity", unsure, {case () => useAt(DerivedAxioms.positivity)}),
-    new DerivedAxiomInfo("distributive", "*+", "distributive", unsure, {case () => useAt(DerivedAxioms.distributive)}),
-    new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", unsure, {case () => useAt(DerivedAxioms.boxDiamondPropagation)}),
-    new DerivedAxiomInfo("[]~><> subst propagation", "[]~><> subst", "boxDiamondSubstPropagation", unsure, {case () => useAt(DerivedAxioms.boxDiamondSubstPropagation)}),
-    new DerivedAxiomInfo("-> self", ("→self","-> self"), "implySelf", unsure, {case () => useAt(DerivedAxioms.implySelf)}),
-    new DerivedAxiomInfo("-> converse", ("→conv","-> conv"), "converseImply", unsure, {case () => useAt(DerivedAxioms.converseImply)}),
-    new DerivedAxiomInfo("<-> true", ("↔true","<-> true"), "equivTrue", 'linear, {case () => useAt(DerivedAxioms.equivTrue)}),
-    new DerivedAxiomInfo("Kd diamond modus ponens", "Kd", "Kd", unsure, {case () => useAt(DerivedAxioms.KdAxiom)}),
-    new DerivedAxiomInfo("Kd2 diamond modus ponens", "Kd2", "Kd2", unsure, {case () => useAt(DerivedAxioms.Kd2Axiom)}),
+      , "notLessEqual", 'linear, {case () => useAt(Ax.notLessEqual)}),
+    new DerivedAxiomInfo("* associative", "*A", "timesAssociative", 'linear, {case () => useAt(Ax.timesAssociative)}),
+    new DerivedAxiomInfo("* commute", "*C", "timesCommute", 'linear, {case () => useAt(Ax.timesCommute)}),
+    new DerivedAxiomInfo("* inverse", "*i", "timesInverse", 'full, {case () => useAt(Ax.timesInverse)}),
+    new DerivedAxiomInfo("* closed", "*c", "timesClosed", unsure, {case () => useAt(Ax.timesClosed)}),
+    new DerivedAxiomInfo("* identity", "*I", "timesIdentity", unsure, {case () => useAt(Ax.timesIdentity)}),
+    new DerivedAxiomInfo("+ associative", "+A", "plusAssociative", 'linear, {case () => useAt(Ax.plusAssociative)}),
+    new DerivedAxiomInfo("+ commute", "+C", "plusCommute", 'linear, {case () => useAt(Ax.plusCommute)}),
+    new DerivedAxiomInfo("+ inverse", "+i", "plusInverse", 'full, {case () => useAt(Ax.plusInverse)}),
+    new DerivedAxiomInfo("+ closed", "+c", "plusClosed", unsure, {case () => useAt(Ax.plusClosed)}),
+    new DerivedAxiomInfo("positivity", "Pos", "positivity", unsure, {case () => useAt(Ax.positivity)}),
+    new DerivedAxiomInfo("distributive", "*+", "distributive", unsure, {case () => useAt(Ax.distributive)}),
+    new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", unsure, {case () => useAt(Ax.boxDiamondPropagation)}),
+    new DerivedAxiomInfo("[]~><> subst propagation", "[]~><> subst", "boxDiamondSubstPropagation", unsure, {case () => useAt(Ax.boxDiamondSubstPropagation)}),
+    new DerivedAxiomInfo("-> self", ("→self","-> self"), "implySelf", unsure, {case () => useAt(Ax.implySelf)}),
+    new DerivedAxiomInfo("-> converse", ("→conv","-> conv"), "converseImply", unsure, {case () => useAt(Ax.converseImply)}),
+    new DerivedAxiomInfo("<-> true", ("↔true","<-> true"), "equivTrue", 'linear, {case () => useAt(Ax.equivTrue)}),
+    new DerivedAxiomInfo("Kd diamond modus ponens", "Kd", "Kd", unsure, {case () => useAt(Ax.Kd)}),
+    new DerivedAxiomInfo("Kd2 diamond modus ponens", "Kd2", "Kd2", unsure, {case () => useAt(Ax.Kd2)}),
     //@todo internal only
     //    new DerivedAxiomInfo("K1", "K1", "K1", {case () => useAt(DerivedAxioms.K1)}),
     //    new DerivedAxiomInfo("K2", "K2", "K2", {case () => useAt(DerivedAxioms.K2)}),
-    new DerivedAxiomInfo("PC1", "PC1", "PC1", 'full, {case () => useAt(DerivedAxioms.PC1)}),
-    new DerivedAxiomInfo("PC2", "PC2", "PC2", 'full, {case () => useAt(DerivedAxioms.PC2)}),
-    new DerivedAxiomInfo("PC3", "PC3", "PC3", 'full, {case () => useAt(DerivedAxioms.PC3)}),
-    new DerivedAxiomInfo("PC9", "PC9", "PC9", 'full, {case () => useAt(DerivedAxioms.PC9)}),
-    new DerivedAxiomInfo("PC10", "PC10", "PC10", 'full, {case () => useAt(DerivedAxioms.PC10)}),
-    new DerivedAxiomInfo("K modal modus ponens &", "K&", "Kand", unsure, {case () => useAt(DerivedAxioms.Kand)}),
-    new DerivedAxiomInfo("&->", "&->", "andImplies", unsure, {case () => useAt(DerivedAxioms.andImplies)}),
+    new DerivedAxiomInfo("PC1", "PC1", "PC1", 'full, {case () => useAt(Ax.PC1)}),
+    new DerivedAxiomInfo("PC2", "PC2", "PC2", 'full, {case () => useAt(Ax.PC2)}),
+    new DerivedAxiomInfo("PC3", "PC3", "PC3", 'full, {case () => useAt(Ax.PC3)}),
+    new DerivedAxiomInfo("PC9", "PC9", "PC9", 'full, {case () => useAt(Ax.PC9)}),
+    new DerivedAxiomInfo("PC10", "PC10", "PC10", 'full, {case () => useAt(Ax.PC10)}),
+    new DerivedAxiomInfo("K modal modus ponens &", "K&", "Kand", unsure, {case () => useAt(Ax.Kand)}),
+    new DerivedAxiomInfo("&->", "&->", "andImplies", unsure, {case () => useAt(Ax.andImplies)}),
 
     // metric axioms
-    new DerivedAxiomInfo("= expand", "equalExpand", "equalExpand", unsure, {case () => useAt(DerivedAxioms.equalExpand)}),
-    new DerivedAxiomInfo("!= expand", "notEqualExpand", "notEqualExpand", unsure, {case () => useAt(DerivedAxioms.notEqualExpand)}),
-    new DerivedAxiomInfo("<= to <", "leApprox", "leApprox", 'linear, {case () => useAt(DerivedAxioms.le2l)}),
-    new DerivedAxiomInfo("metric <=", "metricLe", "metricLe", unsure, {case () => useAt(DerivedAxioms.metricLessEqual)}),
-    new DerivedAxiomInfo("metric <", "metricLt", "metricLt", unsure, {case () => useAt(DerivedAxioms.metricLess)}),
-    new DerivedAxiomInfo("metric <= & <=", "metricAndLe", "metricAndLe", unsure, {case () => useAt(DerivedAxioms.metricAndLe)}),
-    new DerivedAxiomInfo("metric < & <", "metricAndLt", "metricAndLt", unsure, {case () => useAt(DerivedAxioms.metricAndLt)}),
-    new DerivedAxiomInfo("metric <= | <=", "metricOrLe", "metricOrLe", unsure, {case () => useAt(DerivedAxioms.metricOrLe)}),
-    new DerivedAxiomInfo("metric < | <", "metricOrLt", "metricOrLt", unsure, {case () => useAt(DerivedAxioms.metricOrLt)}),
+    new DerivedAxiomInfo("= expand", "equalExpand", "equalExpand", unsure, {case () => useAt(Ax.equalExpand)}),
+    new DerivedAxiomInfo("!= expand", "notEqualExpand", "notEqualExpand", unsure, {case () => useAt(Ax.notEqualExpand)}),
+    new DerivedAxiomInfo("<= to <", "leApprox", "leApprox", 'linear, {case () => useAt(Ax.leApprox)}),
+    new DerivedAxiomInfo("metric <=", "metricLe", "metricLe", unsure, {case () => useAt(Ax.metricLe)}),
+    new DerivedAxiomInfo("metric <", "metricLt", "metricLt", unsure, {case () => useAt(Ax.metricLt)}),
+    new DerivedAxiomInfo("metric <= & <=", "metricAndLe", "metricAndLe", unsure, {case () => useAt(Ax.metricAndLe)}),
+    new DerivedAxiomInfo("metric < & <", "metricAndLt", "metricAndLt", unsure, {case () => useAt(Ax.metricAndLt)}),
+    new DerivedAxiomInfo("metric <= | <=", "metricOrLe", "metricOrLe", unsure, {case () => useAt(Ax.metricOrLe)}),
+    new DerivedAxiomInfo("metric < | <", "metricOrLt", "metricOrLt", unsure, {case () => useAt(Ax.metricOrLt)}),
 
     //Extra SimplifierV3 axioms
-    new DerivedAxiomInfo("* identity neg", "timesIdentityNeg", "timesIdentityNeg", unsure, {case () => useAt(DerivedAxioms.timesIdentityNeg)}),
-    new DerivedAxiomInfo("-0", "minusZero", "minusZero", 'linear, {case () => useAt(DerivedAxioms.minusZero)}),
-    new DerivedAxiomInfo("0-", "zeroMinus", "zeroMinus", 'linear, {case () => useAt(DerivedAxioms.zeroMinus)}),
-    new DerivedAxiomInfo(">0 -> !=0" ,"gtzImpNez" , "gtzImpNez"  ,unsure, {case () => useAt(DerivedAxioms.gtzImpNez)}),
-    new DerivedAxiomInfo("<0 -> !=0" ,"ltzImpNez" , "ltzImpNez"  ,unsure, {case () => useAt(DerivedAxioms.ltzImpNez)}),
-    new DerivedAxiomInfo("!=0 -> 0/F","zeroDivNez", "zeroDivNez" ,unsure, {case () => useAt(DerivedAxioms.zeroDivNez)}),
-    new DerivedAxiomInfo("F^0","powZero", "powZero" ,unsure, {case () => useAt(DerivedAxioms.powZero)}),
-    new DerivedAxiomInfo("F^1","powOne"    , "powOne"     ,unsure, {case () => useAt(DerivedAxioms.powOne)}),
-    new DerivedAxiomInfo("< irrefl", "lessNotRefl", "lessNotRefl", 'full, {case () => useAt(DerivedAxioms.lessNotRefl)}),
-    new DerivedAxiomInfo("> irrefl", "greaterNotRefl", "greaterNotRefl", 'full, {case () => useAt(DerivedAxioms.greaterNotRefl)}),
-    new DerivedAxiomInfo("!= irrefl", "notEqualNotRefl", "notEqualNotRefl", 'full, {case () => useAt(DerivedAxioms.notEqualNotRefl)}),
-    new DerivedAxiomInfo("= refl", "equalRefl", "equalRefl", 'full, {case () => useAt(DerivedAxioms.equalRefl)}),
-    new DerivedAxiomInfo("<= refl", "lessEqualRefl", "lessEqualRefl", 'full, {case () => useAt(DerivedAxioms.lessEqualRefl)}),
-    new DerivedAxiomInfo(">= refl", "greaterEqualRefl", "greaterEqualRefl", 'full, {case () => useAt(DerivedAxioms.greaterEqualRefl)}),
-    new DerivedAxiomInfo("= sym", "equalSym", "equalSym", unsure, {case () => useAt(DerivedAxioms.equalSym)}),
-    new DerivedAxiomInfo("!= sym", "notEqualSym", "notEqualSym", unsure, {case () => useAt(DerivedAxioms.notEqualSym)}),
-    new DerivedAxiomInfo("> antisym", "greaterNotSym", "greaterNotSym", unsure, {case () => useAt(DerivedAxioms.greaterNotSym)}),
-    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)}),
+    new DerivedAxiomInfo("* identity neg", "timesIdentityNeg", "timesIdentityNeg", unsure, {case () => useAt(Ax.timesIdentityNeg)}),
+    new DerivedAxiomInfo("-0", "minusZero", "minusZero", 'linear, {case () => useAt(Ax.minusZero)}),
+    new DerivedAxiomInfo("0-", "zeroMinus", "zeroMinus", 'linear, {case () => useAt(Ax.zeroMinus)}),
+    new DerivedAxiomInfo(">0 -> !=0" ,"gtzImpNez" , "gtzImpNez"  ,unsure, {case () => useAt(Ax.gtzImpNez)}),
+    new DerivedAxiomInfo("<0 -> !=0" ,"ltzImpNez" , "ltzImpNez"  ,unsure, {case () => useAt(Ax.ltzImpNez)}),
+    new DerivedAxiomInfo("!=0 -> 0/F","zeroDivNez", "zeroDivNez" ,unsure, {case () => useAt(Ax.zeroDivNez)}),
+    new DerivedAxiomInfo("F^0","powZero", "powZero" ,unsure, {case () => useAt(Ax.powZero)}),
+    new DerivedAxiomInfo("F^1","powOne"    , "powOne"     ,unsure, {case () => useAt(Ax.powOne)}),
+    new DerivedAxiomInfo("< irrefl", "lessNotRefl", "lessNotRefl", 'full, {case () => useAt(Ax.lessNotRefl)}),
+    new DerivedAxiomInfo("> irrefl", "greaterNotRefl", "greaterNotRefl", 'full, {case () => useAt(Ax.greaterNotRefl)}),
+    new DerivedAxiomInfo("!= irrefl", "notEqualNotRefl", "notEqualNotRefl", 'full, {case () => useAt(Ax.notEqualNotRefl)}),
+    new DerivedAxiomInfo("= refl", "equalRefl", "equalRefl", 'full, {case () => useAt(Ax.equalRefl)}),
+    new DerivedAxiomInfo("<= refl", "lessEqualRefl", "lessEqualRefl", 'full, {case () => useAt(Ax.lessEqualRefl)}),
+    new DerivedAxiomInfo(">= refl", "greaterEqualRefl", "greaterEqualRefl", 'full, {case () => useAt(Ax.greaterEqualRefl)}),
+    new DerivedAxiomInfo("= sym", "equalSym", "equalSym", unsure, {case () => useAt(Ax.equalSym)}),
+    new DerivedAxiomInfo("!= sym", "notEqualSym", "notEqualSym", unsure, {case () => useAt(Ax.notEqualSym)}),
+    new DerivedAxiomInfo("> antisym", "greaterNotSym", "greaterNotSym", unsure, {case () => useAt(Ax.greaterNotSym)}),
+    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(Ax.lessNotSym)}),
 
     // Extra liveness axioms
-    new DerivedAxiomInfo("K<&>", "KDomD", "KDomD", unsure, {case () => useAt(DerivedAxioms.kDomD)})
+    new DerivedAxiomInfo("K<&>", "KDomD", "KDomD", unsure, {case () => useAt(Ax.KDomD)})
 
   )
   //</editor-fold>
@@ -1170,17 +1164,17 @@ object DerivationInfoRegistry {
       , "useAt"
       , List(StringArg("axiom"), StringArg("key"))
       , _ => ((axiomName: String) => {
-        case None => TactixLibrary.useAt(axiomName) //@note serializes as codeName
+        case None => TactixLibrary.useAt(AxiomInfo(axiomName)) //@note serializes as codeName
         case Some(k: String) =>
           val key = PosInExpr(k.split("\\.").map(Integer.parseInt).toList)
-          val defaultKey = AxiomIndex.axiomIndex(axiomName)._1
+          val defaultKey = AxiomInfo(axiomName).key
           if (key != defaultKey) {
             //@note serializes as useAt({`axiomName`},{`k`})
             "useAt" byWithInputs (axiomName::k::Nil, (pos: Position, seq: Sequent) => {
               val axiom = ProvableInfo(axiomName)
               TactixLibrary.useAt(axiom.provable, key)(pos)
             })
-          } else TactixLibrary.useAt(axiomName) //@note serializes as codeName
+          } else TactixLibrary.useAt(AxiomInfo(axiomName)) //@note serializes as codeName
       }: TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputTacticInfo("useLemma"
@@ -1201,6 +1195,7 @@ object DerivationInfoRegistry {
             case Equiv(l, r) => (l, r)
             case s => throw new IllegalArgumentException("Expected substitution of the shape t=s or p<->q, but got " + s.prettyString)
           }))
+          //@todo
           TactixLibrary.byUS(axiomName, (_: UnificationMatch.Subst) => subst)
       }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
     InputTacticInfo("US"
@@ -1312,22 +1307,22 @@ object DerivationInfoRegistry {
     // Derived axiomatic rules
     new DerivedRuleInfo("all generalization"
       , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall x P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
-      , "allGeneralize", {case () => HilbertCalculus.useAt(DerivedAxioms.allGeneralize)}),
+      , "allGeneralize", {case () => HilbertCalculus.useAt(Ax.allGeneralize)}),
     new DerivedRuleInfo("[] monotone"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]P"::Nil, "[a;]Q"::Nil), SequentDisplay("P"::Nil, "Q"::Nil)::Nil)
-      , "monb", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone)}),
+      , "monb", {case () => HilbertCalculus.useAt(Ax.monb)}),
     new DerivedRuleInfo("[] monotone 2"
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]Q"::Nil, "[a;]P"::Nil), SequentDisplay("Q"::Nil, "P"::Nil)::Nil)
-      , "monb2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
+      , "monb2", {case () => HilbertCalculus.useAt(Ax.monb2)}),
     new DerivedRuleInfo("Goedel"
       , RuleDisplayInfo(SimpleDisplayInfo("G", "G"), SequentDisplay(Nil, "[a;]P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
-      , "Goedel", {case () => HilbertCalculus.useAt(DerivedAxioms.Goedel)}),
+      , "Goedel", {case () => HilbertCalculus.useAt(Ax.Goedel)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
-      , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)}),
+      , "CTtermCongruence", {case () => HilbertCalculus.useAt(Ax.CTtermCongruence)}),
     new DerivedRuleInfo("con convergence flat"
       , RuleDisplayInfo(SimpleDisplayInfo("con flat", "conflat"), SequentDisplay("J"::Nil, "<a*>P"::Nil), SequentDisplay("\\exists v (v<=0&J)"::Nil, "P"::Nil)::SequentDisplay("v > 0"::"J"::Nil ,"<a>J(v-1)"::Nil)::Nil)
-      , "conflat", {case () => HilbertCalculus.useAt(DerivedAxioms.convergenceFlat)}),
+      , "conflat", {case () => HilbertCalculus.useAt(Ax.conflat)}),
 
     // numerical bound tactics
     new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}, needsTool = true),

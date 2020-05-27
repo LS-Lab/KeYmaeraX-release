@@ -222,7 +222,7 @@ object CoasterXMain {
       if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
-      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+      Ax.prepopulateDerivedLemmaDatabase()
       DerivationInfoRegistry.init
     } catch {
       case e : Exception =>

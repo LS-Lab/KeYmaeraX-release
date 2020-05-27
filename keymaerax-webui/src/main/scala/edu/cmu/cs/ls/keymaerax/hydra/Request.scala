@@ -455,13 +455,13 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
   private def transform(simSpec: Diamond): Formula = {
     val stateRelation = TactixLibrary.proveBy(simSpec, TactixLibrary.chase(3, 3, (e: Expression) => e match {
       // no equational assignments
-      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
-      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      case Box(Assign(_,_),_) => Ax.assignbAxiom :: Ax.assignbup :: Nil
+      case Diamond(Assign(_,_),_) => Ax.assignd :: Ax.assigndup :: Nil
       // remove loops
-      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
       //@note: do nothing, should be gone already
       case Diamond(ODESystem(_, _), _) => Nil
-      case _ => AxiomIndex.axiomsFor(e)
+      case _ => AxIndex.axiomsFor(e)
     })('R))
     assert(stateRelation.subgoals.size == 1 &&
       stateRelation.subgoals.head.ante.isEmpty &&
@@ -2141,7 +2141,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                       //@note display progress of inner (Let) proof, works only in stepwise execution (step details dialog)
                       val innerTrace = db.getExecutionTrace(innerId)
                       if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
-                      else throw new BelleTacticFailure("No progress", ex)
+                      else throw new BelleNoProgress("No progress", ex)
                     case None => throw ex
                   }
                 }
