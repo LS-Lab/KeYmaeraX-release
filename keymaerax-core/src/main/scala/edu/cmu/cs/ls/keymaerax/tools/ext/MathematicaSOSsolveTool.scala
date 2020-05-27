@@ -14,7 +14,7 @@ object SOSsolveTool {
   trait Result
   final case object Aborted extends Result
   final case object NoSOS extends Result
-  final case class Witness(sos: Term, cofactors: List[Term]) extends Result
+  final case class Witness(sos: Term, cofactors: List[Term], lininst: List[(Int,Term,Term,Term)]) extends Result
   final case class Exception(exception: Throwable) extends Result
 }
 
@@ -39,24 +39,33 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
 
   import SOSsolveTool._
 
-  private val SOSSOLVE_NAMESPACE = "SOSsolve`"
+  private val SOSSOLVE_NAMESPACE = "sossolve`"
 
   private val sossolvePath = SOSsolveInstaller.sossolveRelativeResourcePath
   private val pathSegments = scala.reflect.io.File(sossolvePath).segments.map(string)
   private val joinedPath = fileNameJoin(list(homeDirectory.op :: pathSegments:_*))
   private val setPathsCmd = compoundExpression(setDirectory(joinedPath), appendTo(path.op, joinedPath))
 
-  val sossolveMain = Configuration.SOSsolve.mainFile("SOSsolve.wl")
+  val sossolveMain = Configuration.SOSsolve.mainFile("sossolve.wl")
   val setOptions = applyFunc(symbol("SetOptions"))
   private def ssymbol(s: String) = symbol(SOSSOLVE_NAMESPACE + s)
 
-  private def decodeWitness(result: Expression): (Term, List[Term]) = result match {
-    case Pair(g,Pair(coeff,Pair(st, Pair(cofactors, Nothing)))) => {
+  private def decodeLin(tt:Term) : (Int,Term,Term,Term) = tt match {
+    case Pair(n:Number, Pair(a, Pair(b, Pair(c, Nothing)))) if n.value.isValidInt => {
+      (n.value.intValue(),a,b,c)
+    }
+    case e =>
+      throw new IllegalArgumentException("Unable to decode linear instruction: " + e)
+  }
+  private def decodeWitness(result: Expression): (Term, List[Term], List[(Int,Term,Term,Term)]) = result match {
+    case Pair(g,Pair(coeff,Pair(st, Pair(cofactors, Pair(lin,Nothing))))) => {
       val sos =
         (PegasusM2KConverter.decodeTermList(coeff) zip PegasusM2KConverter.decodeTermList(st)).map(
           {cs => Times(cs._1,Power(cs._2,Number(2)))}
         ).foldLeft(g)(Plus.apply)
-      (sos, PegasusM2KConverter.decodeTermList(cofactors))
+      val linls = PegasusM2KConverter.decodeTermList(lin)
+
+      (sos, PegasusM2KConverter.decodeTermList(cofactors), linls.map(decodeLin))
     }
     case e =>
       throw new IllegalArgumentException("Expected pair of sos and cofactors but got " + e)
@@ -87,11 +96,11 @@ class MathematicaSOSsolveTool(override val link: MathematicaLink)
     try {
       val (output, result) = run(command)
       logger.debug("Found witness: " + result.prettyString + " from raw output " + output)
-      val (sos, cofactors) = decodeWitness(result)
+      val (sos, cofactors, lininst) = decodeWitness(result)
       sos match {
         case Number(n) if n.compareTo(0) <= 0 =>
           NoSOS
-        case _ => Witness(sos, cofactors)
+        case _ => Witness(sos, cofactors, lininst)
       }
     } catch {
       case _: MathematicaComputationAbortedException =>

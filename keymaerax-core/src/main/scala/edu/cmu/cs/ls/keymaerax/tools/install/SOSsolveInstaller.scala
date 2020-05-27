@@ -27,7 +27,8 @@ object SOSsolveInstaller extends Logging {
 
     val sossolveResourcePath = "/SOSsolve/"
     val sossolveResourceNames =
-        "SOSsolve.wl" ::
+        "sossolve.wl" ::
+        "NDConvexHull.wl" ::
         Nil
 
     sossolveResourceNames.foreach(n => {

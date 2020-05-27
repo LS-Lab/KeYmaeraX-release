@@ -84,23 +84,15 @@ object SOSSolve {
   case class SOSSolveAborted() extends BelleProofSearchControl("sossolve aborted")
   case class SOSSolveNoSOS() extends BelleProofSearchControl("sossolve did not find sos")
 
-  def witnessSOS(degree: Int, timeout: Option[Int] = None, sosTimer: Timer = NoTimer, witnessTimer: Timer = NoTimer) : DependentTactic = {
-    val name = "witnessSOS"
+  private def witnessSOSaux(sos :Term, cofactors: List[Term],witnessTimer: Timer) : DependentTactic = {
+    val name = "witnessSOSaux"
     name by { (seq: Sequent) =>
-      require(seq.succ.isEmpty, name + " requires succedent to be empty")
+
       val polys = seq.ante.map{
         case Equal(p, Number(n)) if n.compareTo(0) == 0 => p
         case fml => throw new IllegalArgumentException(name + " requires only formulas of the form 'poly = 0' in the antecedent but got " + fml)
       }.toList
-      val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct
-      val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
-      val (sos, cofactors) = sosTimer.time {
-        sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
-          case Witness(sos, cofactors) => (sos, cofactors)
-          case NoSOS => throw new SOSSolveNoSOS
-          case Aborted => throw new SOSSolveAborted
-        }
-      }
+
       witnessTimer.time {
         val sosPos = proveBy(Greater(sos, Number(0)), sosPosTac & done)
         TaylorModelTactics.Timing.toc("sosPos")
@@ -110,11 +102,36 @@ object SOSSolve {
         TaylorModelTactics.Timing.toc("PolynomialArithV2.equate")
         val zeroPrv = proveBy(Sequent(seq.ante, IndexedSeq(Equal(combination, Number(0)))), eqZeroTac & done)
         TaylorModelTactics.Timing.toc("eqZeroTac")
+
         cut(False) & Idioms.<(
-          closeF,
-          useAt(witnessSOSLemma.fact(USubst(Seq(SubstitutionPair("sos_()".asTerm, sos), SubstitutionPair("comb_()".asTerm, combination)))), PosInExpr(1 :: Nil))(1) &
-            andR(1) & Idioms.<(cohideR(1) & by(sosPos), andR(1) & Idioms.<(cohideR(1) & by(witnessPrv), by(zeroPrv))))
+        closeF,
+        useAt(witnessSOSLemma.fact(USubst(Seq(SubstitutionPair("sos_()".asTerm, sos), SubstitutionPair("comb_()".asTerm, combination)))), PosInExpr(1 :: Nil))(1) &
+          andR(1) & Idioms.<(cohideR(1) & by(sosPos), andR(1) & Idioms.<(cohideR(1) & by(witnessPrv), by(zeroPrv))))
       }
+    }
+  }
+
+  def witnessSOS(degree: Int, timeout: Option[Int] = None, sosTimer: Timer = NoTimer, witnessTimer: Timer = NoTimer) : DependentTactic = {
+    val name = "witnessSOS"
+    name by { (seq: Sequent) =>
+      require(seq.succ.isEmpty, name + " requires succedent to be empty")
+      val polys = seq.ante.map {
+        case Equal(p, Number(n)) if n.compareTo(0) == 0 => p
+        case fml => throw new IllegalArgumentException(name + " requires only formulas of the form 'poly = 0' in the antecedent but got " + fml)
+      }.toList
+      val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct
+      val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
+      val (sos, cofactors, lininst) = sosTimer.time {
+        sosSolveTool.sosSolve(polys, vars, degree, timeout) match {
+          case Witness(sos, cofactors, lininst) => (sos, cofactors, lininst)
+          case NoSOS => throw new SOSSolveNoSOS
+          case Aborted => throw new SOSSolveAborted
+        }
+      }
+
+      // Apply the linear instructions first then do the auxiliary
+      PolynomialArith.linearElim(lininst) &
+        witnessSOSaux(sos, cofactors, witnessTimer)
     }
   }
 
