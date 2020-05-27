@@ -2103,12 +2103,17 @@ private object DifferentialTactics extends Logging {
       skip,
       // Turn postcondition into interior
       implyR(pos) & generalize(interior)(pos) <(
-        maxminGt & useAt(Ax.openInvariantClosure)(pos) <(
-          backGt & backGe1 & hideL('Llast),
-          backGe2 &
-            (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
-            else closeId)
-        ),
+        //@todo check always with doIfElse or use TryCatch exception?
+        maxminGt & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
+          useAt(Ax.openInvariantClosure)(pos) <(
+            backGt & backGe1 & hideL('Llast),
+            backGe2 &
+              (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
+              else closeId)
+          ),
+          DebuggingTactics.error("Inapplicable: t_ occurs")
+        )
+        ,
         cohideOnlyL('Llast) & interiorImplication
       )
     )
@@ -2171,38 +2176,45 @@ private object DifferentialTactics extends Logging {
               done
           ) &
           TactixLibrary.generalize(nonneg(p(vars)))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
-          useAt(Ax.RIclosedgeq)(1) &
-          andR(1) &
-          Idioms.<(FOQuantifierTactics.allLs(vars)('Llast) & prop & done, skip) &
-          composeb(1) &
-          DW(1) &
-          TactixLibrary.generalize(pos(q(vars)))(1) &
-          Idioms.<(
-            closeId,
-            implyR(1) &
-              assignb(1) &
+          //@todo always check with doIfElse or TryCatch instead?
+          Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(SuccPos(0))).contains("t_".asVariable)))(
+            useAt(Ax.RIclosedgeq)(1) &
+            andR(1) &
+            Idioms.<(FOQuantifierTactics.allLs(vars)('Llast) & prop & done, skip) &
+            composeb(1) &
+            DW(1) &
+            TactixLibrary.generalize(pos(q(vars)))(1) &
+            Idioms.<(
+              closeId,
               implyR(1) &
-              /* @TODO: the following is somewhat close to ODEInvariance.lpstep */
-              cutR(Or(pos(p(vars)), Equal(p(vars), Number(0))))(1) & Idioms.<(
-              useAt(ODEInvariance.geq, PosInExpr(1 :: Nil))(1) & prop & done,
-              implyR(1) &
+                assignb(1) &
+                implyR(1) &
+                /* @TODO: the following is somewhat close to ODEInvariance.lpstep */
+                cutR(Or(pos(p(vars)), Equal(p(vars), Number(0))))(1) & Idioms.<(
+                useAt(ODEInvariance.geq, PosInExpr(1 :: Nil))(1) & prop & done,
+                implyR(1) &
                 orL('Llast) < (
                   useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & prop & done,
-                  dR(And(r(vars), nonneg(q(vars))), false)(1) & Idioms.<(
+                  dR(And(r(vars), nonneg(q(vars))), hide=false)(1) & Idioms.<(
                     useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) &
-                      andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId),
+                    andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId)
+                    ,
                     andL('L) &
-                      TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
-                      DI(1) & implyR(1) & andR(1) & Idioms.<(
-                      FOQuantifierTactics.allLs(vars)(-7) & prop & done,
+                    TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
+                    DI(1) & implyR(1) & andR(1) & Idioms.<(
+                      FOQuantifierTactics.allLs(vars)(-7) & prop & done
+                      ,
                       cohideOnlyL(-6) &
-                        FOQuantifierTactics.allLs(vars)(-1) &
-                        DifferentialTactics.inverseDiffGhost(1) &
-                        derive(1, 1 :: Nil) &
-                        closeId)
+                      FOQuantifierTactics.allLs(vars)(-1) &
+                      DifferentialTactics.inverseDiffGhost(1) &
+                      derive(1, 1 :: Nil) &
+                      closeId
+                    )
                   )
                 )
-            )
+              )
+            ),
+            DebuggingTactics.error("Inapplicable: t_ occurs")
           )
       )
 

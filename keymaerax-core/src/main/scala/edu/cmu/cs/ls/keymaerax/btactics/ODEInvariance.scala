@@ -338,21 +338,29 @@ object ODEInvariance {
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       tac1 & tac2 &
-      useAt(Ax.RIclosedgeq)(pos) &
-      DebuggingTactics.debug("Real Induction",doPrint = debugTactic) &
-      andR(pos)<(
-      //G |- P
-      implyR(pos) & tac21 & ?(closeId) & timeoutQE & done,
-      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) &
-      //Cut P*
-      cutR(pf)(1)<(
-        hideL(-3) & tac22 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) & //Don't bother running the rest if QE fails
-      hideL(-1) & DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) &
-      tac23 &
-      //At this point, the sequent should be EXACTLY the following (where P is rewritten back to semialgebraic normal form):
-      //t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
-      lpclosed(inst)
+      //@todo always check with doIfElse or TryCatch instead?
+      Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
+        useAt(Ax.RIclosedgeq)(pos) &
+        DebuggingTactics.debug("Real Induction",doPrint = debugTactic) &
+        andR(pos) <(
+          //G |- P
+          implyR(pos) & tac21 & ?(closeId) & timeoutQE & done
+          ,
+          cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+          implyR(1) &
+          //Cut P*
+          cutR(pf)(1) <(
+            hideL(-3) & tac22 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done,
+            skip
+          ) & //Don't bother running the rest if QE fails
+          hideL(-1) & DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) &
+          tac23 &
+          //At this point, the sequent should be EXACTLY the following (where P is rewritten back to semialgebraic normal form):
+          //t_=0, <x'=f(x)&Q>t_!=0, P* |- <x'=f(x)&P>t_!=0
+          lpclosed(inst)
+        )
+        ,
+        DebuggingTactics.error("Inapplicable: t_ occurs")
       )
   })
 
@@ -1451,11 +1459,16 @@ object ODEInvariance {
     }
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
-      starter & useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
-      implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
-      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-        implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
-        & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
+      //@todo always check with doIfElse vs. trycatch space compatible exception?
+      starter & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
+        useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
+        implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
+        cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
+          implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
+          & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
+      )
+      ,
+      DebuggingTactics.error("Inapplicable: t_ occurs")
     )
   })
 
