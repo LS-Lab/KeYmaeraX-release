@@ -4584,6 +4584,12 @@ object Ax extends Logging {
   @Axiom("lessNotSym")
   lazy val lessNotSym = derivedAxiom("< antisym", implySequent("F_() < G_()","G_() < F_()","false"), propQE)
 
+  //totality axioms
+  @Axiom("lessEqualTotal")
+  lazy val lessEqualTotal = derivedAxiom("<= total", "==> F_() <= G_() | G_() <= F_()".asSequent, propQE)
+  @Axiom("greaterEqualTotal")
+  lazy val greaterEqualTotal = derivedAxiom(">= total", "==> F_() >= G_() | G_() >= F_()".asSequent, propQE)
+
 
   /**
     * {{{Axiom "all stutter".
