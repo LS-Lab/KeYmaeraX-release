@@ -87,6 +87,9 @@ object PolynomialArithV2 {
       //   where the coefficients p1 are rounded to (decimal) precision [[prec]]
       def approx(prec: Int) : (ProvableSig, Polynomial, Polynomial)
 
+      // degree with respect to the variables for which "include" is true
+      def degree(include: Term=>Boolean = _ => true) : Int
+
     }
 
     // result.term = n
@@ -780,6 +783,12 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     def isConstant = powers.forall{case (t, i) => i == 0 } || coeff.num.compare(0) == 0
 
     override def compare(that: Monomial): Int = monomialOrdering.compare(this.powers, that.powers)
+
+    def degree(include: Term=>Boolean = _ => true) : Int =
+      if (coeff.num.compare(0) != 0)
+        powers.map{ case (t, p) => if (include(t)) p else 0 }.sum
+      else 0
+
   }
 
   val zez = rememberAny("0 = 0".asFormula, byUS(Ax.equalReflexive))
@@ -1644,6 +1653,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     val prv = prvO.getOrElse(defaultPrv)
     override def forgetPrv = Empty(None)
     override def treeSketch: String = "."
+    override def degree(include: Term => Boolean) = 0
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus))
@@ -1652,6 +1662,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     override def forgetPrv: TreePolynomial = Branch2(left, value, right, None)
     override def treeSketch: String = "[" + left.treeSketch + ", " + value.powersString + ", " + right.treeSketch + "]"
+    override def degree(include: Term => Boolean) : Int =
+      left.degree(include) max value.degree(include) max right.degree(include)
   }
   case class Branch3(left: TreePolynomial, value1: Monomial, mid: TreePolynomial, value2: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus))
@@ -1660,6 +1672,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     override def forgetPrv: TreePolynomial = Branch3(left, value1, mid, value2, right, None)
     override def treeSketch: String = "{" + left.treeSketch + ", " + value1.powersString + ", " + mid.treeSketch + ", " + value2.powersString + ", " + right.treeSketch + "}"
+    override def degree(include: Term => Boolean) : Int =
+      left.degree(include) max value1.degree(include) max mid.degree(include) max value2.degree(include) max right.degree(include)
   }
 
 }

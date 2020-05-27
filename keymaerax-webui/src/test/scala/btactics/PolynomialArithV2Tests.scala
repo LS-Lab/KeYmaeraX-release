@@ -372,6 +372,18 @@ class PolynomialArithV2Tests extends TacticTestBase {
     rhsOf(prv) shouldBe Plus(pos.term, neg.term)
   }
 
+  it should "degree" in withMathematica { _ =>
+    import ring23._
+    val t1 = "2*x + 3*x*y + 4*y^2 + 2*x^2 + x^2*y^2 + x^3 + 4*x^4".asTerm
+    val t2 = "0*x^4".asTerm
+    val poly1 = ofTerm(t1)
+    val poly2 = ofTerm(t2)
+    poly1.degree() shouldBe 4
+    poly1.degree(_ == "x".asTerm) shouldBe 4
+    poly1.degree(_ == "y".asTerm) shouldBe 2
+    poly2.degree() shouldBe 0
+  }
+
   "Normalization" should "normalize Coefficients" in withMathematica { _ =>
     import ring23._
     Coefficient(0, 1, None).normalized._1.conclusion.succ(0) shouldBe "0/1=0".asFormula
