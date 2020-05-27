@@ -32,9 +32,6 @@ libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0"
 
 libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2"
 
-resolvers += Resolver.sonatypeRepo("releases")
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-
 ////////////////////////////////////////////////////////////////////////////////
 // HyDRA Settings
 // Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt
