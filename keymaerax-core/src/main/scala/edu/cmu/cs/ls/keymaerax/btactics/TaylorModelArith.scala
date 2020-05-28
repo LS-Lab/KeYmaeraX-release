@@ -267,12 +267,13 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     }
 
     /** prove interval enclosure of Taylor model */
-    def interval(implicit options: TaylorModelOptions) : ProvableSig = {
+    def interval(implicit options: TaylorModelOptions) : (Term, Term, ProvableSig) = {
       val hornerPrv = toHorner(poly)
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
-      useDirectlyConst(weakenWith(context, intervalPrv.fact), Seq(
+      (l, u,
+        useDirectlyConst(weakenWith(context, intervalPrv.fact), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -283,7 +284,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
         ("u_", u)
       ), Seq(prv,
         weakenWith(context, hornerPrv),
-        newIvlPrv))
+        newIvlPrv)))
     }
 
     /** exact multiplication */

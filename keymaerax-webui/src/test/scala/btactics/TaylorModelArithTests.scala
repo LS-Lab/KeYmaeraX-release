@@ -159,7 +159,9 @@ class TaylorModelArithTests extends TacticTestBase {
     import ta3._
     import ta3.polynomialRing._
     val tm = (tm3 + tm2 + third) ^ 3
-    tm.interval.conclusion.succ.loneElement shouldBe
+    tm.interval._1 shouldBe "(-68034)*10^(-4)".asTerm
+    tm.interval._2 shouldBe "73086*10^(-4)".asTerm
+    tm.interval._3.conclusion.succ.loneElement shouldBe
       "(-68034)*10^(-4)<=(1/3*x+y+1/3)^3&(1/3*x+y+1/3)^3<=73086*10^(-4)".asFormula
   }
 
