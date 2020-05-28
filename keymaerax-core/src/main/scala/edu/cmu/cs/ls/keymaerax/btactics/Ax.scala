@@ -4253,7 +4253,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("leApprox", unifier = "linear", key = "1", recursor = "")
-  lazy val leApprox: Lemma = derivedAxiom("<= to <", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 <- f_()<0".asFormula)), QE & done)
+  lazy val leApprox: DerivedAxiomInfo = derivedAxiom("<= to <", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 <- f_()<0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <".
@@ -4262,7 +4262,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("metricLt", key = "0", recursor = "")
-  lazy val metricLt: Lemma = derivedAxiom("metric <", Sequent(IndexedSeq(), IndexedSeq("f_()<g_() <-> f_()-g_()<0".asFormula)), QE & done)
+  lazy val metricLt: DerivedAxiomInfo = derivedAxiom("metric <", Sequent(IndexedSeq(), IndexedSeq("f_()<g_() <-> f_()-g_()<0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <=".
@@ -4271,7 +4271,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("metricLe", key = "0", recursor = "")
-  lazy val metricLe: Lemma = derivedAxiom("metric <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=g_() <-> f_()-g_()<=0".asFormula)), QE & done)
+  lazy val metricLe: DerivedAxiomInfo = derivedAxiom("metric <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=g_() <-> f_()-g_()<=0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <= & <=".
@@ -4280,7 +4280,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("metricAndLe", key = "0", recursor = "")
-  lazy val metricAndLe: Lemma = derivedAxiom("metric <= & <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0".asFormula)), QE & done)
+  lazy val metricAndLe: DerivedAxiomInfo = derivedAxiom("metric <= & <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 & g_()<=0 <-> max(f_(), g_())<=0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric < & <".
@@ -4289,7 +4289,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("metricAndLt", key = "0", recursor = "")
-  lazy val metricAndLt: Lemma = derivedAxiom("metric < & <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 & g_()<0 <-> max(f_(), g_())<0".asFormula)), QE & done)
+  lazy val metricAndLt: DerivedAxiomInfo = derivedAxiom("metric < & <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 & g_()<0 <-> max(f_(), g_())<0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric <= | <=".
@@ -4298,7 +4298,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("metricOrLe", key = "0", recursor = "")
-  lazy val metricOrLe: Lemma = derivedAxiom("metric <= | <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0".asFormula)), QE & done)
+  lazy val metricOrLe: DerivedAxiomInfo = derivedAxiom("metric <= | <=", Sequent(IndexedSeq(), IndexedSeq("f_()<=0 | g_()<=0 <-> min(f_(), g_())<=0".asFormula)), QE & done)
 
   /**
     * {{{Axiom "metric < | <".
@@ -4307,7 +4307,7 @@ object Ax extends Logging {
     * }}}
     */
   @Axiom("metricOrLt",  key = "0", recursor = "")
-  lazy val metricOrLt: Lemma = derivedAxiom("metric < | <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 | g_()<0 <-> min(f_(), g_())<0".asFormula)), QE & done)
+  lazy val metricOrLt: DerivedAxiomInfo = derivedAxiom("metric < | <", Sequent(IndexedSeq(), IndexedSeq("f_()<0 | g_()<0 <-> min(f_(), g_())<0".asFormula)), QE & done)
 
   //Extra arithmetic axioms for SimplifierV3 not already included above
 
