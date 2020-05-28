@@ -1189,7 +1189,7 @@ object DerivationInfoRegistry {
         List((List(), List("P"))))
       , List(StringArg("P"), FormulaArg("S"))
       , _ => ((axiomName: String) => ({
-        case None => TactixLibrary.byUS(axiomName)
+        case None => TactixLibrary.byUS(AxiomInfo(axiomName), us=>us)
         case Some(substFml: Formula) =>
           val subst = RenUSubst(FormulaTools.conjuncts(substFml).map({
             case Equal(l, r) => (l, r)
@@ -1197,7 +1197,7 @@ object DerivationInfoRegistry {
             case s => throw new IllegalArgumentException("Expected substitution of the shape t=s or p<->q, but got " + s.prettyString)
           }))
           //@todo
-          TactixLibrary.byUS(axiomName, (_: UnificationMatch.Subst) => subst)
+          TactixLibrary.byUS(AxiomInfo(axiomName), (_: UnificationMatch.Subst) => subst)
       }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
     InputTacticInfo("US"
       , RuleDisplayInfo(("US", "US"), (List(),List("S(P)")),

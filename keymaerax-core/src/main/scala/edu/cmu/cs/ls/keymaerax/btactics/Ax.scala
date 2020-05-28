@@ -5,14 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry.{unren, unsure}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import edu.cmu.cs.ls.keymaerax.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -40,7 +38,7 @@ import scala.reflect.runtime.{universe => ru}
   * {{{
   *   UnifyUSCalculus.by(Ax.choiceb)
   * }}}
-  * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS`.
+  * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS` because [[TactixLibrary]] extends [[UnifyUSCalculus]].
   *
   * = Adding Derived Axioms and Derived Axiomatic Rules =
   * Core Axioms are loaded from the core and their meta information is annotated in this file e.g. as follows:
@@ -835,7 +833,7 @@ object Ax extends Logging {
           // existsL(-1)
           //useAt("exists eliminate", PosInExpr(1::Nil))(-1) & andL(-1)
         ,
-        hideR(1) & by(ProvableSig.rules("con convergence"))
+        hideR(1) & by(Ax.conrule)
         )
     )
 
@@ -2727,7 +2725,8 @@ object Ax extends Logging {
     * @Derived
     */
   private lazy val DIinvarianceF = "([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))".asFormula
-  lazy val DIinvariance = DerivedAxiomProvableSig.axioms("DI differential invariance") /*derivedAxiom("DI differential invariance",
+  lazy val DIinvariance = DIequiv
+    /*DerivedAxiomProvableSig.axioms("DI differential invariance")*/ /*derivedAxiom("DI differential invariance",
     Sequent(IndexedSeq(), IndexedSeq(DIinvarianceF)),
     implyR(1) & equivR(1) <(
       testb(1) &

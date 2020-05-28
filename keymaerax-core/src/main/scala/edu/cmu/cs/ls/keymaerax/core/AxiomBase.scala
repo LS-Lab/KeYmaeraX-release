@@ -320,7 +320,7 @@ End.
 
 /* @todo soundness requires only vectorial x in p(||) */
 Axiom "DI differential invariance"
-  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
+  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
 End.
 
@@ -394,7 +394,7 @@ End.
 /** DIFFERENTIAL AXIOMS */
 
 Axiom "c()' derive constant fn"
-  c()' = 0
+  (c())' = 0
 End.
 
 Axiom "x' derive var"
@@ -406,71 +406,71 @@ Axiom "-' derive neg"
 End.
 
 Axiom "+' derive sum"
-  (f(||) + g(||))' = f(||)' + g(||)'
+  (f(||) + g(||))' = (f(||))' + (g(||))'
 End.
 
 Axiom "-' derive minus"
-  (f(||) - g(||))' = f(||)' - g(||)'
+  (f(||) - g(||))' = (f(||))' - (g(||))'
 End.
 
 Axiom "*' derive product"
-  (f(||) * g(||))' = f(||)'*g(||) + f(||)*g(||)'
+  (f(||) * g(||))' = (f(||))'*g(||) + f(||)*(g(||))'
 End.
 
 Axiom "/' derive quotient"
-  (f(||) / g(||))' = (f(||)'*g(||) - f(||)*g(||)') / (g(||)^2)
+  (f(||) / g(||))' = ((f(||))'*g(||) - f(||)*(g(||))') / (g(||)^2)
 End.
 
 Axiom "chain rule"
-	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = f(y_)' * g(x_)' )
+	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = (f(y_))' * (g(x_))' )
 End.
 
 Axiom "^' derive power"
-	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*(f(||)')) <- c()!=0
+	((f(||)^(c()))' = (c()*(f(||)^(c()-1)))*((f(||))')) <- c()!=0
 End.
 
 Axiom "=' derive ="
-  (f(||) = g(||))' <-> f(||)' = g(||)'
+  (f(||) = g(||))' <-> ((f(||))' = (g(||))')
 End.
 
 Axiom ">=' derive >="
-  (f(||) >= g(||))' <-> f(||)' >= g(||)'
+  (f(||) >= g(||))' <-> ((f(||))' >= (g(||))')
 End.
 
 Axiom ">' derive >"
-  (f(||) > g(||))' <-> f(||)' >= g(||)'
+  (f(||) > g(||))' <-> ((f(||))' >= (g(||))')
   /* sic! easier */
 End.
 
 Axiom "<=' derive <="
-  (f(||) <= g(||))' <-> f(||)' <= g(||)'
+  (f(||) <= g(||))' <-> ((f(||))' <= (g(||))')
 End.
 
 Axiom "<' derive <"
-  (f(||) < g(||))' <-> f(||)' <= g(||)'
+  (f(||) < g(||))' <-> ((f(||))' <= (g(||))')
   /* sic! easier */
 End.
 
 Axiom "!=' derive !="
-  (f(||) != g(||))' <-> f(||)' = g(||)'
+  (f(||) != g(||))' <-> ((f(||))' = (g(||))')
   /* sic! */
 End.
 
 Axiom "&' derive and"
-  (p(||) & q(||))' <-> p(||)' & q(||)'
+  (p(||) & q(||))' <-> ((p(||))' & (q(||))')
 End.
 
 Axiom "|' derive or"
-  (p(||) | q(||))' <-> p(||)' & q(||)'
+  (p(||) | q(||))' <-> ((p(||))' & (q(||))')
   /* sic! yet <- */
 End.
 
 Axiom "forall' derive forall"
-  (\forall x_ p(||))' <-> \forall x_ p(||)'
+  (\forall x_ p(||))' <-> \forall x_ ((p(||))')
 End.
 
 Axiom "exists' derive exists"
-  (\exists x_ p(||))' <-> \forall x_ p(||)'
+  (\exists x_ p(||))' <-> \forall x_ ((p(||))')
   /* sic! yet <- */
 End.
 

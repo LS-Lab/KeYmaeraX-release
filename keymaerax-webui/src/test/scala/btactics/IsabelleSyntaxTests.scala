@@ -13,23 +13,24 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val fml = "a+b <= c -> !(c>b) | a > 0 & a+5 >= 0 <-> (c = 0 -> b >= 5 & c <= 5)".asFormula
     val (f,pf) = normalise(fml)
     pf shouldBe 'proved
-    f shouldBe "(a+b<=c&b < c&(a<=0|a+5 < 0)|c!=0|5<=b&c<=5)&(c=0&(b < 5|5 < c)|c < a+b|c<=b|0 < a&0<=a+5)".asFormula
+    f shouldBe "(a+b-c>0|b-c>=0|a>0&a+5>=0)&(c!=0|b-5>=0&5-c>=0)|(c-(a+b)>=0&c-b>0&(0-a>=0|0-(a+5)>0))&c=0&(5-b>0|c-5>0)".asFormula
   }
 
   it should "re-write terms into accepted subset" in withMathematica { qeTool =>
     val fml = "a-(a+b) <= a*(b-c-d)^2 & (a-b-c)!=0 | (b-(c-d))=0".asFormula
     val (f,pf) = normalise(fml)
     pf shouldBe 'proved
-    f shouldBe "a+-(a+b)<=a*((b+-c+-d)*(b+-c+-d))&(0 < a+-b+-c|a+-b+-c < 0)|b+-(c+-d)=0".asFormula
+    f shouldBe "a*(b-c-d)^2-(a-(a+b))>=0&a-b-c!=0|b-(c-d)=0".asFormula
   }
 
+  /*
   it should "re-write terms under special functions" in withMathematica { qeTool =>
     val fml = "max(min(a+b,(c-d)^2+(a-b)^2),c-d) <= abs(f()-g(a-d,b-a,c-d,c-d))".asFormula
     val (f,pf) = normalise(fml)
     pf shouldBe 'proved
     //Note that the right tuple rewrite under g fails because it doesn't recurse into pairs
     f shouldBe "max((min((a+b,(c+-d)*(c+-d)+(a+-b)*(a+-b))),c+-d))<=abs(f()+-g((a+-d,(b-a,(c-d,c-d)))))".asFormula
-  }
+  } */
 
   it should "derive negation bounds" in withMathematica { qeTool =>
     val fml = "a-(x*z+y) > b-(y*z+x)".asFormula
@@ -51,7 +52,7 @@ class IsabelleSyntaxTests extends TacticTestBase  {
     val fml = "x^2<=xopost()^2 & (a+b)^2 <= c^2 | (a+b)^2 <= (c+d)^2".asFormula
     val (prog, pff) = isarSyntax(fml)
     println(pff)
-    println(prettyProg(prog))
+    //println(prettyProg(prog))
     pff shouldBe 'proved
   }
 
