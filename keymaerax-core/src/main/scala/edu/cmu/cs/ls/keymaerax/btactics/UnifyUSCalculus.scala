@@ -40,7 +40,49 @@ object UnifyUSCalculus extends UnifyUSCalculus
   * Provides a tactic framework for automatically applying axioms and axiomatic rules
   * by matching inputs against them by unification according to the axiom's [[AxIndex]].
   *
+  * This central collection of unification-based algorithms for focused proof strategies
+  * is the basis for using axioms and axiomatic proof rules in flexible ways.
+  * It is also central for deciding upon their succession in proof strategies, e.g., which steps to take next.
+  *
+  * The most important algorithms are:
+  * - [[UnifyUSCalculus.useAt()]] makes use of a (derived) axiom or axiomatic rule in any position
+  *   and logically transforms the goal to prove what is required for the transformation.
+  * - [[UnifyUSCalculus.chase]] chains together a sequence of canonical useAt inferences to make a formula
+  *   disappear (chase it away) as far as possible.
+  *
+  * Which part of a (derived) axiom to latch on to during a `useAt` is determined by the unification keys in the [[AxiomInfo.theKey]].
+  * Which resulting subexpressions to consider next during a `chase` is determined by the recursors in the [[AxiomInfo.theRecursor]].
+  * What unifier is used for the default key is, in turn, determined by [[AxiomInfo.unifier]].
+  * Which (derived) axiom is the canonical one to decompose a given expression is determined by [[AxIndex.axiomsFor()]]
+  * Default keys and default recursors and default axiom indices can be overwritten by specifing extra arguments.
+  * This can be useful for noncanonical useAts or chases.
+  *
+  * The combination of the UnifyUSCalculus algorithms make it possible to implement a tactic for using an axiom as follows:
+  * {{{
+  *   useAt(Ax.composeb)
+  * }}}
+  * Such a tactic can then be applied in different positions of a sequent, e.g.:
+  * {{{
+  *   useAt(Ax.composeb)(1)
+  *   useAt(Ax.composeb)(-2)
+  *   useAt(Ax.composeb)(1, 1::0::Nil)
+  * }}}
+  *
+  * The combination of the UnifyUSCalculus algorithms also make it possible to implement longer proof strategies.
+  * For example, completely chasing away a formula by successively using the canonical axioms on the resulting formulas is:
+  * {{{
+  *   chase
+  * }}}
+  * Applying it at different positions of a sequent proceeds as follows, e.g.:
+  * {{{
+  *   chase(1)
+  *   chase(-2)
+  *   chase(1, 1::0::Nil)
+  * }}}
+  *
+  *
   * @author Andre Platzer
+  * @see [[AxiomInfo]]
   * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.UnificationMatch]]
   * @see [[AxIndex]]
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. arXiv:1601.06183

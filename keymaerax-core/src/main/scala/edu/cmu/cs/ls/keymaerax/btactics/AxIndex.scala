@@ -39,6 +39,8 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
     * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., for chasing after useAt/useFor.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
+    * @see [[AxiomInfo.theKey]]
+    * @see [[AxiomInfo.theRecursor]]
     * @todo copy documentation from chase
     */
   def axiomIndex(axiom: ProvableInfo): AxiomIndex = axiom match {
