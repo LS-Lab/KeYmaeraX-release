@@ -187,6 +187,7 @@ trait ProvableInfo extends DerivationInfo {
   /** `true` indicates that the key of this axiom/axiomatic proof rule can be matched linearly [[LinearMatcher]].
    * For completeness, this linearity declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
    * @see [[LinearMatcher]] */
+  //@todo replace by "def unifier: Symbol"
   def linear: Boolean
 }
 
@@ -210,6 +211,7 @@ trait AxiomInfo extends ProvableInfo {
   //def formula: Formula
   val theKey: ExprPos = 0 :: Nil
   val theRecursor: List[ExprPos] = Nil
+  //@todo lift unifier and displayLevel from CoreAxiomInfo to here
 }
 
 /** Meta-Information for an axiom from the prover core
