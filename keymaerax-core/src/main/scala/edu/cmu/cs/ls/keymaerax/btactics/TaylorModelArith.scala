@@ -74,6 +74,16 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     QE & done
   )
 
+  private val intervalPrv = AnonymousLemmas.remember(
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "poly1_() = rem_() &" +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= rem_() + i1_ & rem_() + i1_  <= u_())))" +
+      ") ->" +
+      "l_() <= elem1_() & elem1_() <= u_()").asFormula,
+    QE & done
+  )
+
   private val timesPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
@@ -253,6 +263,26 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
         weakenWith(context, hornerPrv),
         newIvlPrv))
       TM(elem, polyLow.resetTerm, l, u, newPrv)
+    }
+
+    /** prove interval enclosure of Taylor model */
+    def interval(implicit options: TaylorModelOptions) : ProvableSig = {
+      val hornerPrv = toHorner(poly)
+      val rem = rhsOf(hornerPrv)
+      val poly1 = rhsOf(poly.representation)
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
+      useDirectlyConst(weakenWith(context, intervalPrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", poly1),
+        ("l1_", lower),
+        ("u1_", upper),
+
+        ("rem_", rem),
+        ("l_", l),
+        ("u_", u)
+      ), Seq(prv,
+        weakenWith(context, hornerPrv),
+        newIvlPrv))
     }
 
     /** exact multiplication */

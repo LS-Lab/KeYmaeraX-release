@@ -155,4 +155,12 @@ class TaylorModelArithTests extends TacticTestBase {
       "\\exists err_ ((1/3*x+y+1/3)^3=0.2776*x0()+-(0.2222*y0())+0.03699+err_&(-6.3405)<=err_&err_<=6.7718)".asFormula
   }
 
+  it should "interval" in withMathematica { qeTool =>
+    import ta3._
+    import ta3.polynomialRing._
+    val tm = (tm3 + tm2 + third) ^ 3
+    tm.interval.conclusion.succ.loneElement shouldBe
+      "(-68034)*10^(-4)<=(1/3*x+y+1/3)^3&(1/3*x+y+1/3)^3<=73086*10^(-4)".asFormula
+  }
+
 }
