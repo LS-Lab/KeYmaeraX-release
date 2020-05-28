@@ -391,7 +391,7 @@ object TacticFactory {
   /**
    * Creates named dependent tactics.
    * @example{{{
-   *  "[:=] assign" by (pos => useAt("[:=] assign")(pos))
+   *  "[:=] assign" by (pos => useAt(Ax.assignbAxiom)(pos))
    * }}}
    * @param name The tactic name.
     *             Use the special name "ANON" to indicate that this is an anonymous inner tactic that needs no storage.
