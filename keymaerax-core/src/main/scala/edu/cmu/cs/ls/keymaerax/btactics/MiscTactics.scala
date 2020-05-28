@@ -73,39 +73,41 @@ object DebuggingTactics {
     * @param msg The message to display.
     * @param assertion The assertion.
     */
-  def assertAt(msg: Expression => String, assertion: Expression => Boolean): BuiltInPositionTactic = new BuiltInPositionTactic("ANON") with NoOpTactic {
+  def assertAt(msg: Expression => String, assertion: Expression => Boolean, ex: String => Throwable = new TacticAssertionError(_)): BuiltInPositionTactic = new BuiltInPositionTactic("ANON") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       val ctx = provable.subgoals.head.at(pos)
-      if (!assertion(ctx._2))
-        throw new TacticAssertionError("Assertion Failed: " + msg(ctx._2) + "\nAt:\n" + ctx)
+      if (!assertion(ctx._2)) throw ex("Assertion Failed: " + msg(ctx._2) + "\nAt:\n" + ctx)
       provable
     }
   }
 
-  def assertAt(msg: => String, assertion: Expression => Boolean): BuiltInPositionTactic = assertAt((e:Expression) => msg, assertion)
+  def assertAt(msg: => String, assertion: Expression => Boolean, ex: String => Throwable): BuiltInPositionTactic = assertAt((_: Expression) => msg, assertion, ex)
 
   /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
-  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
+  def assert(anteSize: Int, succSize: Int, msg: => String, ex: String => Throwable): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.ante.size != anteSize ||
         provable.subgoals.head.succ.size != succSize) {
-        throw new TacticAssertionError(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
+        throw ex(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with: " + provable.subgoals.head.ante.size + "antecedent and " +
           provable.subgoals.head.succ.size + " succedent formulas)")
       }
       provable
     }
   }
+  /** assert is a no-op tactic that raises a tactic assertion error if the provable is not of the expected size. */
+  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = assert(anteSize, succSize, msg, new TacticAssertionError(_))
 
   //@todo rename to something else otherwise scala assert no longer works!
   /** assert is a no-op tactic that raises an error if the provable has not the expected formula at the specified position. */
-  def assert(fml: Formula, message: => String): DependentPositionWithAppliedInputTactic = {
+  def assert(fml: Formula, message: => String, ex: String => Throwable): DependentPositionWithAppliedInputTactic = {
     import TacticFactory._
+    //@todo serialize exception
     ("assert" byWithInputs (fml :: message :: Nil, (pos: Position, seq: Sequent) => {
       (new BuiltInPositionTactic("ANON") {
         override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
           if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != fml) {
-            throw new TacticAssertionError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
+            throw ex(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
               provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.sub(pos) + " at position " + pos + ")")
           }
           provable
@@ -113,59 +115,67 @@ object DebuggingTactics {
       })(pos)
     })) :: NoOpTactic
   }
+  /** assert is a no-op tactic that raises a tactic assertion error if the provable has not the expected formula at the specified position. */
+  def assert(fml: Formula, message: => String): DependentPositionWithAppliedInputTactic = assert(fml, message, new TacticAssertionError(_))
 
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition on the sole subgoal. */
-  def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
+  def assert(cond: Sequent=>Boolean, message: => String, ex: String => Throwable): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
-        throw new TacticAssertionError(message + "\nExpected 1 subgoal matching a condition but got " +
+        throw ex(message + "\nExpected 1 subgoal matching a condition but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
            else provable.subgoals.head.prettyString))
       }
       provable
     }
   }
+  /** assert is a no-op tactic that raises a tactic assertion error if the provable does not satisfy a condition on the sole subgoal. */
+  def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = assert(cond, message, new TacticAssertionError(_))
 
   /** assertOnAll is a no-op tactic that raises an error the provable does not satisfy a condition on all subgoals. */
-  def assertOnAll(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
+  def assertOnAll(cond: Sequent=>Boolean, message: => String, ex: String => Throwable = new TacticAssertionError(_)): BuiltInTactic = new BuiltInTactic("ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (!provable.subgoals.forall(cond(_))) {
-        throw new TacticAssertionError(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
+        throw ex(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
           provable.subgoals.filter(!cond(_)).mkString("\n") + " do not match")
       }
       provable
     }
   }
 
-  def assertProvableSize(provableSize: Int): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
+  /** asserts that the provable has `provableSize` many subgoals. */
+  def assertProvableSize(provableSize: Int, ex: String => Throwable = new TacticAssertionError(_)): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.length != provableSize)
-        throw new TacticAssertionError(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
+        throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
       provable
     }
   }
 
   /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition at position pos. */
-  def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("ANON") with NoOpTactic {
+  def assert(cond: (Sequent,Position)=>Boolean, message: => String, ex: String => Throwable): BuiltInPositionTactic = new BuiltInPositionTactic("ANON") with NoOpTactic {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       if (provable.subgoals.size != 1) {
-        throw new TacticAssertionError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
+        throw ex(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
           provable.subgoals.size + " subgoals")
       } else if (!cond(provable.subgoals.head, pos)) {
-        throw new TacticAssertionError(message + "\nAn (internal) check failed at the subgoal formula " + provable.subgoals.head.at(pos)._2)
+        throw ex(message + "\nAn (internal) check failed at the subgoal formula " + provable.subgoals.head.at(pos)._2)
       }
       provable
     }
   }
+  /** assert is a no-op tactic that raises a tactic assertion error if the provable does not satisfy a condition at position pos. */
+  def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = assert(cond, message, new TacticAssertionError(_))
 
   /** assertE is a no-op tactic that raises an error if the provable has not the expected expression at the specified position. */
-  def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic = {
+  def assertE(expected: => Expression, message: => String, ex: String => Throwable): DependentPositionWithAppliedInputTactic = {
     import TacticFactory._
+    //@todo serialize exception
     ("assert" byWithInputs (expected :: message :: Nil, (pos: Position, seq: Sequent) => {
       (new BuiltInPositionTactic("ANON") {
         override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
           if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != expected) {
-            throw new TacticAssertionError(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
+            throw ex(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
               provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
           }
           provable
@@ -173,6 +183,8 @@ object DebuggingTactics {
     })(pos)
   })) :: NoOpTactic
   }
+  /** assertE is a no-op tactic that raises a tactic assertion error if the provable has not the expected expression at the specified position. */
+  def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic = assertE(expected, message, new TacticAssertionError(_))
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
@@ -291,7 +303,7 @@ object Idioms {
 
   /** Repeats t while condition at position is true. */
   def repeatWhile(condition: Expression => Boolean)(t: BelleExpr): DependentPositionTactic = "loopwhile" by {(pos: Position) =>
-    SaturateTactic(DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)
+    SaturateTactic(DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition, new TacticInapplicableFailure(_))(pos) & t)
   }
 
   /** Executes t if condition is true. */
