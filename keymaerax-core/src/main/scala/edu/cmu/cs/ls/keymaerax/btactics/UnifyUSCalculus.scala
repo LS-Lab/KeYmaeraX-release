@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, CoreAxiomInfo, DerivationInfo, DerivedAxiomInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -201,13 +201,13 @@ trait UnifyUSCalculus {
         }) :: Nil
     )
 
-  //@todo delete since only used in one AxiomInfo
-  @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
-  private[btactics]
-  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
-    val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
-    byUS(fact, inst)
-  })
+//  //@todo delete since only used in one AxiomInfo
+//  @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
+//  private[btactics]
+//  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
+//    val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
+//    byUS(fact, inst)
+//  })
   private[btactics]
   def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
 
@@ -587,7 +587,7 @@ trait UnifyUSCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
     */
-  @deprecated("useAt(DerivedAxioms.<codeName>/Provable,...) instead of useAt(String,...)")
+  @deprecated("maybe reimplement directly using DerivationInfo")
   private[this] def useAtImpl(codeName: String, fact: ProvableSig, key: PosInExpr,
                           linear: Boolean,
                           inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification, fix axiom key or try to patch locally with own substitution")),
@@ -2033,7 +2033,7 @@ trait UnifyUSCalculus {
   /** Converts a forward chase tactic into a backwards chase by a single CEat.
     * @author Andre Platzer
     */
-  private def chaseFor2Back(name: String, forward: ForwardPositionTactic): DependentPositionTactic = new DependentPositionTactic(name) {
+  private[this] def chaseFor2Back(name: String, forward: ForwardPositionTactic): DependentPositionTactic = new DependentPositionTactic(name) {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         if (sequent.sub(pos).isEmpty) throw new IllFormedTacticApplicationException("ill-positioned " + pos + " in " + sequent + "\nin " +
