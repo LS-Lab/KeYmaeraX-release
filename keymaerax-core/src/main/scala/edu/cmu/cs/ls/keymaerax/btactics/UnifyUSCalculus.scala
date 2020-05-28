@@ -111,6 +111,7 @@ trait UnifyUSCalculus {
     * @param name the name to use/record for the tactic
     * @migration If possible use by(ProvableInfo) instead, which is faster and more robust. */
   //@todo auto-weaken as needed (maybe even exchangeleft)
+  @deprecated("use by(ProvableInfo) instead if possible.")
   def by(fact: ProvableSig, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
     override def result(provable: ProvableSig): ProvableSig = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
@@ -158,13 +159,6 @@ trait UnifyUSCalculus {
   def byUS(provable: ProvableSig): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr = byUS(lemma.fact)
-//  /** byUS(name) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
-//    * @see [[UnifyUSCalculus.byUS()]]
-//    */
-//    //@todo delete since only used in AxiomInfo.byUS and only seemingly so
-//  @deprecated("byUS(DerivedAxioms.<codeName>/Provable) instead of byUS(String)")
-//  private[btactics]
-//  def byUS(name: String)     : BelleExpr = new NamedTactic(ProvableInfo(name).codeName, byUS(ProvableInfo(name).provable))
 
   /**
     * rule(pi,inst) uses the given axiom or axiomatic rule to prove the sequent.
@@ -201,13 +195,6 @@ trait UnifyUSCalculus {
         }) :: Nil
     )
 
-//  //@todo delete since only used in one AxiomInfo
-//  @deprecated("byUS(DerivedAxioms.<codeName>/Provable,...) instead of byUS(String,...)")
-//  private[btactics]
-//  def byUS(name: String, inst: Subst=>Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
-//    val fact = ProvableSig.rules.getOrElse(name, ProvableInfo(name).provable)
-//    byUS(fact, inst)
-//  })
   private[btactics]
   def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
 
@@ -363,28 +350,6 @@ trait UnifyUSCalculus {
 //    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, key)(pos))
 
 
-  /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting).
-    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
-    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-//  private[btactics]
-//  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
-//    useAt(ProvableInfo(axiom), key, inst)
-  //private[btactics]
-//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-//  private def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
-//    useAt(ProvableInfo(axiom), key)
-//  //@todo delete, only IntervalArithmetic violates
-//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-//  private[btactics]
-//  def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
-//    useAt(AxiomInfo(axiom), inst)
-  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
-//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-//  private
-//  def useAt(axiom: String): DependentPositionTactic =
-//    useAt(ProvableInfo(axiom))
-
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting)
     * in the direction that expands as opposed to simplifies operators.
     * @see [[useAtImpl(AxiomInfo)]] */
@@ -398,13 +363,21 @@ trait UnifyUSCalculus {
 
 
   /** US(subst, fact) reduces the proof to the given fact, whose uniform substitution instance under `subst` the current goal is.
+    * When `fact` is an axiom:
     * {{{
     *       *              *
     *   ---------   if  -------- fact
     *     G |- D         g |- d
     *   where G=s(g) and D=s(d)
     * }}}
-    * @param subst the substitution `s` that instantiates fact `g |- d` to the present goal `G |- D`.
+    * When `fact` is an axiomatic rule:
+    * {{{
+    *   s(g1) |- s(d1) ... s(gn) |- s(dn)        g1 |- d1 ... gn |- dn
+    *   ---------------------------------   if  ----------------------- fact
+    *           G |- D                                   g |- d
+    *   where G=s(g) and D=s(d)
+    * }}}
+    * @param subst the substitution s` that instantiates fact `g |- d` to the present goal `G |- D`.
     * @param fact the provable for the axiom `g |- d` to reduce the proof to (accordingly for axiomatic rules).
     * @see [[US(USubst,ProvableSig)]]
     */
@@ -422,20 +395,6 @@ trait UnifyUSCalculus {
     * @see [[US(USubst,String)]]
     */
   def US(subst: USubst, fact: ProvableSig): BuiltInTactic = by(fact(subst))
-//  /** US(subst, axiom) reduces the proof to the given axiom, whose uniform substitution instance under `subst` the current goal is.
-//    * {{{
-//    *       *              *
-//    *   ---------   if  -------- axiom
-//    *     G |- D         g |- d
-//    *   where G=s(g) and D=s(d)
-//    * }}}
-//    * @param subst the substitution `s` that instantiates fact `g |- d` to the present goal `G |- D`.
-//    * @param axiom the canonical name for the axiom `g |- d` to reduce the proof to.
-//    * @see [[US(USubst,ProvableSig)]]
-//    */
-//  @deprecated("US(USubst, DerivedAxioms.<codeName>/Provable) instead of US(USubst,String)")
-//  private[btactics]
-//  def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, ProvableInfo(axiom).provable)
 
   //*********************
   // main implementations
@@ -1266,24 +1225,12 @@ trait UnifyUSCalculus {
     useFor(dai.provable, key)
   }
 
-//  /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
-//  //@todo delete, only used in SimplifierV2/3
-//  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
-//  private[btactics]
-//  def useFor(axiom: String): ForwardPositionTactic = useFor(ProvableInfo(axiom))
-
-//  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-//  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
-//  private[btactics]
-//  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false)
-//  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable
-//    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
-//    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-//  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
-//  private[btactics] def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false, inst)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   private[btactics]
   def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(axiom.fact, key, linear=false, inst)
+  /** useFor(pi, key) use the key part of the given axiom or provable info forward for the selected position in the given Provable to conclude a new Provable
+    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomInfo.key]]
+    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. Defaults to no change. */
   private[btactics]
   def useFor(pi: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(pi.provable, key, linear=false, inst)
   private[btactics]
@@ -1961,9 +1908,6 @@ trait UnifyUSCalculus {
     */
   def chase(breadth: Int, giveUp: Int): DependentPositionTactic = chase(breadth, giveUp, AxIndex.axiomsFor (_:Expression))
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[ProvableInfo]): DependentPositionTactic = chase(breadth, giveUp, keys, (ax,pos) => pr=>pr)
-//  @deprecated("Use chase(Int,Int,Expression=>List[ProvableInfo]) instead. Scheduled for removal.")
-//  def chaseDeprecated(breadth: Int, giveUp: Int, keys: Expression=>List[String]): DependentPositionTactic =
-//    chase(breadth, giveUp, (e:Expression) => keys(e).map(ProvableInfo(_)))
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[ProvableInfo], modifier: (ProvableInfo,Position)=>ForwardTactic): DependentPositionTactic =
     chaseI(breadth, giveUp,keys, modifier, ax=>us=>us)
   def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[ProvableInfo], inst: ProvableInfo=>(Subst=>Subst)): DependentPositionTactic =
@@ -2135,58 +2079,6 @@ trait UnifyUSCalculus {
     } ensures(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
     doChase(de,pos)
   }
-
-//  @deprecated("Use chaseFor(Expression=>List[ProvableInfo]...) instead based on AxIndex.")
-//  def chaseFor(keys: Expression=>List[String],
-//               modifier: (String,Position)=>ForwardTactic,
-//               inst: String=>(Subst=>Subst) = ax=>us=>us,
-//               index: String=>(PosInExpr, List[PosInExpr])): ForwardPositionTactic =
-//    chaseFor((e:Expression) => keys(e).map(ProvableInfo(_)),
-//      (m:(ProvableInfo,Position))=>modifier(m._1.canonicalName,m._2),
-//      (pi:ProvableInfo)=>inst(pi.canonicalName),
-//      (pi:ProvableInfo)=>index(pi.canonicalName))
-  // equivalent alternative implementation
-//    pos => de => {
-//      /** Recursive chase implementation */
-//      def doChase(de: ProvableSig, pos: Position): ProvableSig = {
-//        logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
-//        // generic recursor
-//        keys(de.conclusion.sub(pos).get) match {
-//          case Nil =>
-//            logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
-//            de
-//          /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
-//          case List(ax) =>
-//            val (key, recursor) = index(ax)
-//            try {
-//              val axUse = modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de))
-//              recursor.foldLeft(axUse)(
-//                (pf, cursor) => doChase(pf, pos ++ cursor)
-//              )
-//            } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion.sub(pos).get.prettyString + ")")}
-//          // take the first axiom among breadth that works for one useFor step
-//          case l: List[String] =>
-//            // useFor the first applicable axiom if any, or None
-//            def firstAxUse: Option[(ProvableSig,List[PosInExpr])] = {
-//              for (ax <- l) try {
-//                val (key, recursor) = index(ax)
-//                return Some((modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de)), recursor))
-//              } catch {case _: ProverException => /* ignore and try next */}
-//              None
-//            }
-//            firstAxUse match {
-//              case None =>
-//                logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
-//                de
-//              case Some((axUse, recursor)) =>
-//                recursor.foldLeft(axUse)(
-//                  (pf, cursor) => doChase(pf, pos ++ cursor)
-//                )
-//            }
-//        }
-//      } ensures(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")\nhad subgoals: " + de.subgoals)
-//      doChase(de,pos)
-//    }
 
   /** chaseCustom: Unrestricted form of chaseFor, where AxiomIndex is not built in,
     * i.e. it takes keys of the form Expression => List[(Provable,PosInExpr, List[PosInExpr])]
