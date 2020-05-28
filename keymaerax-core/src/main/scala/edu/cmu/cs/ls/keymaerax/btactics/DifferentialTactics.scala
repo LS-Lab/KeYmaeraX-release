@@ -817,7 +817,7 @@ private object DifferentialTactics extends Logging {
         }
         case _ => false
       }
-    }, "Invariant fast-check failed")
+    }, "Invariant fast-check failed", new TacticInapplicableFailure(_))
   }
 
   /** Invariance check
@@ -1203,7 +1203,7 @@ private object DifferentialTactics extends Logging {
       )
       ,
       (hide(pos.topLevel) & QE & done) | //@todo write a hideNonArithmetic tactic.
-      DebuggingTactics.assert(_=>false, s"splitWeakInequality failed because $caseDistinction does not hold initially.")
+      DebuggingTactics.error(s"splitWeakInequality failed because $caseDistinction does not hold initially.")
     )
   })
 
@@ -1843,8 +1843,8 @@ private object DifferentialTactics extends Logging {
     }
 
     odeInvariant(tryHard=true)(pos) |
-    DebuggingTactics.assert( s =>
-      if(!s.equals(seq)) true // should never happen
+    DebuggingTactics.assert(s =>
+      if (s != seq) true // should never happen
       else {
         ToolProvider.invGenTool() match {
           case None => throw new UnsupportedTacticFeature("odeInvC was unable to prove postcondition invariant for ODE nor disprove its invariance." +
@@ -1852,7 +1852,7 @@ private object DifferentialTactics extends Logging {
             " Please submit a bug report if you are sure that "+post+" is an ODE invariant for "+ode)
           case Some(tool) =>
             val(nec,_) = tool.genODECond(ode, s.ante, post)
-            val pr = proveBy(nec.tail.foldLeft(nec.head)(And(_,_)),?(timeoutQE))
+            val pr = proveBy(nec.tail.foldLeft(nec.head)(And),?(timeoutQE))
             if(pr.isProved)
               throw new UnsupportedTacticFeature("The ODE postcondition "+post+" is invariant but odeInvC could not prove it." +
                 " This is a completeness bug in the implementation. Please submit a bug report.")
@@ -1862,7 +1862,7 @@ private object DifferentialTactics extends Logging {
                 " Please submit a bug report if you are sure that "+post+" is an ODE invariant for "+ode)
         }
       }
-      , "")
+      , "", new TacticInapplicableFailure(_))
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
