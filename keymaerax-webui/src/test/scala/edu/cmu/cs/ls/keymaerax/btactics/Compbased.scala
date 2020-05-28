@@ -121,11 +121,11 @@ class Compbased extends TacticTestBase {
         composeb(1) & assignb(1, 1::Nil) & choiceb(1, 1::Nil) & composeb(1, 1::0::Nil) & testb(1, 1::0::Nil) & chase(1, 1::1::Nil) &
           useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::0::0::Nil) & useAt(falseImplies, PosInExpr(1::Nil))(1, 1::0::Nil) &
           useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::1::0::0::Nil) & useAt(notTrue, PosInExpr(0::Nil))(1, 1::1::0::0::Nil) &
-          useAt("!! double negation")(1, 1::1::0::Nil) & useAt("true->", PosInExpr(0::Nil))(1, 1::1::Nil) &
-          useAt("true&", PosInExpr(0::Nil))(1, 1::Nil) & closeId
+          useAt(Ax.doubleNegation)(1, 1::1::0::Nil) & useAt(Ax.trueImply, PosInExpr(0::Nil))(1, 1::1::Nil) &
+          useAt(Ax.trueAnd, PosInExpr(0::Nil))(1, 1::Nil) & closeId
         ,
         assignb(1) & choiceb(1) & andR(1) <(
-          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::Nil) & useAt("true->")(1) & closeId
+          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::Nil) & useAt(Ax.trueImply)(1) & closeId
           ,
           composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::0::Nil) &
             useAt(notTrue, PosInExpr(1::Nil))(1, 0::Nil) &
