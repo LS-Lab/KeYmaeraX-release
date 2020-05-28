@@ -1188,7 +1188,8 @@ object DerivationInfoRegistry {
         List((List(), List("P"))))
       , List(StringArg("P"), FormulaArg("S"))
       , _ => ((axiomName: String) => ({
-        case None => TactixLibrary.byUS(axiomName)
+            //@todo fix this and mke it more general
+        case None => TactixLibrary.byUS(axiomName, us=>us)
         case Some(substFml: Formula) =>
           val subst = RenUSubst(FormulaTools.conjuncts(substFml).map({
             case Equal(l, r) => (l, r)

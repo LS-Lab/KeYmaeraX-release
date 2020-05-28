@@ -158,12 +158,13 @@ trait UnifyUSCalculus {
   def byUS(provable: ProvableSig): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr = byUS(lemma.fact)
-  /** byUS(name) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
-    * @see [[UnifyUSCalculus.byUS()]]
-    */
-  @deprecated("byUS(DerivedAxioms.<codeName>/Provable) instead of byUS(String)")
-  //private[btactics]
-  def byUS(name: String)     : BelleExpr = new NamedTactic(ProvableInfo(name).codeName, byUS(ProvableInfo(name).provable))
+//  /** byUS(name) proves by a uniform substitution instance of a (derived) axiom or (derived) axiomatic rule.
+//    * @see [[UnifyUSCalculus.byUS()]]
+//    */
+//    //@todo delete since only used in AxiomInfo.byUS and only seemingly so
+//  @deprecated("byUS(DerivedAxioms.<codeName>/Provable) instead of byUS(String)")
+//  private[btactics]
+//  def byUS(name: String)     : BelleExpr = new NamedTactic(ProvableInfo(name).codeName, byUS(ProvableInfo(name).provable))
 
   /**
     * rule(pi,inst) uses the given axiom or axiomatic rule to prove the sequent.
@@ -373,11 +374,11 @@ trait UnifyUSCalculus {
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
     useAt(ProvableInfo(axiom), key)
-  //@todo delete, only IntervalArithmetic violates
-  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-  private[btactics]
-  def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(AxiomInfo(axiom), inst)
+//  //@todo delete, only IntervalArithmetic violates
+//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
+//  private[btactics]
+//  def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
+//    useAt(AxiomInfo(axiom), inst)
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
   private[btactics]
@@ -421,20 +422,20 @@ trait UnifyUSCalculus {
     * @see [[US(USubst,String)]]
     */
   def US(subst: USubst, fact: ProvableSig): BuiltInTactic = by(fact(subst))
-  /** US(subst, axiom) reduces the proof to the given axiom, whose uniform substitution instance under `subst` the current goal is.
-    * {{{
-    *       *              *
-    *   ---------   if  -------- axiom
-    *     G |- D         g |- d
-    *   where G=s(g) and D=s(d)
-    * }}}
-    * @param subst the substitution `s` that instantiates fact `g |- d` to the present goal `G |- D`.
-    * @param axiom the canonical name for the axiom `g |- d` to reduce the proof to.
-    * @see [[US(USubst,ProvableSig)]]
-    */
-  @deprecated("US(USubst, DerivedAxioms.<codeName>/Provable) instead of US(USubst,String)")
-  private[btactics]
-  def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, ProvableInfo(axiom).provable)
+//  /** US(subst, axiom) reduces the proof to the given axiom, whose uniform substitution instance under `subst` the current goal is.
+//    * {{{
+//    *       *              *
+//    *   ---------   if  -------- axiom
+//    *     G |- D         g |- d
+//    *   where G=s(g) and D=s(d)
+//    * }}}
+//    * @param subst the substitution `s` that instantiates fact `g |- d` to the present goal `G |- D`.
+//    * @param axiom the canonical name for the axiom `g |- d` to reduce the proof to.
+//    * @see [[US(USubst,ProvableSig)]]
+//    */
+//  @deprecated("US(USubst, DerivedAxioms.<codeName>/Provable) instead of US(USubst,String)")
+//  private[btactics]
+//  def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, ProvableInfo(axiom).provable)
 
   //*********************
   // main implementations
@@ -1266,6 +1267,7 @@ trait UnifyUSCalculus {
   }
 
   /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
+  //@todo delete, only used in SimplifierV2/3
   @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
   private[btactics]
   def useFor(axiom: String): ForwardPositionTactic = useFor(ProvableInfo(axiom))
@@ -1274,11 +1276,11 @@ trait UnifyUSCalculus {
 //  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
 //  private[btactics]
 //  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false)
-  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable
-    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
-    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
-  private[btactics] def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false, inst)
+//  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable
+//    * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
+//    * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
+//  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
+//  private[btactics] def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false, inst)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   private[btactics]
   def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(axiom.fact, key, linear=false, inst)
@@ -2224,6 +2226,7 @@ trait UnifyUSCalculus {
     doChase(de,pos)
   }
 
+  //@todo delete since only used in outdated IsabelleSyntax, IntervalArithmetic, ModelPlex
   @deprecated("Undocumented and incorrect code in wrong place, scheduled for removal")
   private[btactics]
   def fromAxIndex(s:String) : (ProvableSig,PosInExpr, List[PosInExpr]) = {
