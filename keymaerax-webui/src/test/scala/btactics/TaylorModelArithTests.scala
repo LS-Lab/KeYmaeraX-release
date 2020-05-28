@@ -1,5 +1,6 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
@@ -28,6 +29,9 @@ class TaylorModelArithTests extends TacticTestBase {
   implicit val defaultOptions = new TaylorModelOptions {
     override val precision = 5
     override val order = 4
+  }
+  implicit val defaultTimeStepOptions = new TimeStepOptions {
+    def remainderEstimation(i: Integer) = (0.0001, 0.0001)
   }
   lazy val tma = new TaylorModelArith()
   lazy val x0 = ring.ofTerm("x0()".asTerm)
@@ -170,4 +174,46 @@ class TaylorModelArithTests extends TacticTestBase {
     x.dropEmptyInterval.get.conclusion.succ.loneElement shouldBe "x=0+0.15/1*(1*e0^1)+0+1.4/1*1+0".asFormula
   }
 
+  "timeStep" should "van der Pol" in withMathematica { qeTool =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      // TODO: generate a context like this from "x : [1.25, 1.55]" and "y : [2.35, 2.45]"?!
+      val context = "t = 0, x = 1.4 + 0.15 * e0, y = 2.4 + 0.05 * e1, -1 <= e0, e0 <= 1, -1 <= e1, e1 <= 1".split(',').map(_.asFormula).toIndexedSeq
+      val vdp = new tma.TemplateLemmas("{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram, 3)
+      val x = tma.TM("x".asTerm, ring.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
+      val y = tma.TM("y".asTerm, ring.ofTerm("2.4 + 0.05 * e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 = tma.TM("e0".asTerm, ring.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 = tma.TM("e1".asTerm, ring.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val res = vdp.timeStepPreconditionedODE(Seq(x, y), Seq(r0, r1), t, 0.01)
+      // println(new KeYmaeraXPrettierPrinter(100).stringify(res.conclusion.succ.loneElement))
+      res.conclusion.succ.loneElement shouldBe
+        """[{x'=y, y'=(1 - x^2) * y - x, t'=1 & 0 <= t & t <= 0 + 0.01}]
+          |  \exists s
+          |    \exists Rem0
+          |      \exists Rem1
+          |        (
+          |          t = 0 + s &
+          |          (
+          |            x =
+          |            1.4 + 0.15 * e0 + 0 * e1 + 2.4 * s + 0.05 * (s * e1) + (-1.8520) * s^2 + 0 * (s * e0) +
+          |            (-0.02400) * (s^2 * e1) +
+          |            (-2.4954) * s^3 +
+          |            (-0.5790) * (s^2 * e0) +
+          |            Rem0 &
+          |            s * ((-8724) * 10^(-7)) + 0.00 <= Rem0 & Rem0 <= s * (4131 * 10^(-7)) + 0.00
+          |          ) &
+          |          y =
+          |          2.4 + 0 * e0 + 0.05 * e1 + (-3.704) * s + (-0.0480) * (s * e1) + (-7.48605) * s^2 +
+          |          (-1.1580) * (s * e0) +
+          |          (-0.33796) * (s^2 * e1) +
+          |          (-0.05400) * (s * e0^2) +
+          |          10.850 * s^3 +
+          |          0.46965 * (s^2 * e0) +
+          |          (-0.02100) * (s * e0 * e1) +
+          |          0.000 * (s * e1^2) +
+          |          Rem1 &
+          |          s * ((-3991) * 10^(-6)) + 0.00 <= Rem1 & Rem1 <= s * (1096 * 10^(-5)) + 0.00
+          |        )""".stripMargin.asFormula
+    }
+  }
 }
