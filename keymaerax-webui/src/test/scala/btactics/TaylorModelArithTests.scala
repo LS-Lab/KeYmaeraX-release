@@ -33,7 +33,8 @@ class TaylorModelArithTests extends TacticTestBase {
   lazy val y0 = ta3.polynomialRing.ofTerm("y0()".asTerm)
   lazy val tm1 = ta3.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
   lazy val tm2 = ta3.TM("y".asTerm, ta3.polynomialRing.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
-  lazy val tm3 = ta3.Exact(ta3.polynomialRing.ofTerm("1/3".asTerm), context3) *! tm1
+  lazy val third = ta3.Exact(ta3.polynomialRing.ofTerm("1/3".asTerm), context3)
+  lazy val tm3 = third *! tm1
   lazy val tm100000 = ta3.Exact(ta3.polynomialRing.ofTerm("0.000001".asTerm), context3) *! tm1
   lazy val tm1234 = ta3.Exact(ta3.polynomialRing.ofTerm("12.34".asTerm), context3) *! tm2
 
@@ -140,6 +141,18 @@ class TaylorModelArithTests extends TacticTestBase {
     hornerPrv.conclusion.ante shouldBe 'empty
     hornerPrv.conclusion.succ.loneElement shouldBe
       "(x0()+y0()+z0())^2=z0()*z0()+y0()*(z0()*2+y0())+x0()*(z0()*2+y0()*2+x0())".asFormula
+  }
+
+  it should "collect higher order terms" in withMathematica { qeTool =>
+    import ta3._
+    import ta3.polynomialRing._
+    val tm = (tm3 + tm2 + third) ^ 3
+    val res0 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 0})
+    val res1 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 1})
+    res0.prettyPrv.conclusion.succ.loneElement shouldBe
+      "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+err_&(-6.8403)<=err_&err_<=7.2716)".asFormula
+    res1.prettyPrv.conclusion.succ.loneElement shouldBe
+      "\\exists err_ ((1/3*x+y+1/3)^3=0.2776*x0()+-(0.2222*y0())+0.03699+err_&(-6.3405)<=err_&err_<=6.7718)".asFormula
   }
 
 }
