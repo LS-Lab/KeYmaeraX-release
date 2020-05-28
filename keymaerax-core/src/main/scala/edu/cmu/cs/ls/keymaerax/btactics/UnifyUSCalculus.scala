@@ -366,7 +366,7 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
+//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
 //  private[btactics]
 //  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
 //    useAt(ProvableInfo(axiom), key, inst)
@@ -1266,11 +1266,11 @@ trait UnifyUSCalculus {
     useFor(dai.provable, key)
   }
 
-  /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
-  //@todo delete, only used in SimplifierV2/3
-  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
-  private[btactics]
-  def useFor(axiom: String): ForwardPositionTactic = useFor(ProvableInfo(axiom))
+//  /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
+//  //@todo delete, only used in SimplifierV2/3
+//  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
+//  private[btactics]
+//  def useFor(axiom: String): ForwardPositionTactic = useFor(ProvableInfo(axiom))
 
 //  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
 //  @deprecated("useFor(DerivedAxioms.<codeName>/ProvableInfo,...) instead of useFor(String,...)")
@@ -1961,9 +1961,9 @@ trait UnifyUSCalculus {
     */
   def chase(breadth: Int, giveUp: Int): DependentPositionTactic = chase(breadth, giveUp, AxIndex.axiomsFor (_:Expression))
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[ProvableInfo]): DependentPositionTactic = chase(breadth, giveUp, keys, (ax,pos) => pr=>pr)
-  @deprecated("Use chase(Int,Int,Expression=>List[ProvableInfo]) instead. Scheduled for removal.")
-  def chaseDeprecated(breadth: Int, giveUp: Int, keys: Expression=>List[String]): DependentPositionTactic =
-    chase(breadth, giveUp, (e:Expression) => keys(e).map(ProvableInfo(_)))
+//  @deprecated("Use chase(Int,Int,Expression=>List[ProvableInfo]) instead. Scheduled for removal.")
+//  def chaseDeprecated(breadth: Int, giveUp: Int, keys: Expression=>List[String]): DependentPositionTactic =
+//    chase(breadth, giveUp, (e:Expression) => keys(e).map(ProvableInfo(_)))
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[ProvableInfo], modifier: (ProvableInfo,Position)=>ForwardTactic): DependentPositionTactic =
     chaseI(breadth, giveUp,keys, modifier, ax=>us=>us)
   def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[ProvableInfo], inst: ProvableInfo=>(Subst=>Subst)): DependentPositionTactic =
