@@ -82,6 +82,9 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     QE & done
   )
 
+  private val emptyIntervalPrv = AnonymousLemmas.remember(
+    ("(\\exists err_ (elem1_() = poly1_() + err_ & 0 <= err_ & err_ <= 0)) -> elem1_() = poly1_()").asFormula, QE & done)
+
   private val timesPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
       "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
@@ -284,6 +287,15 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
         weakenWith(context, hornerPrv),
         newIvlPrv)))
     }
+
+    /** returns an equality, no quantifiers */
+    def dropEmptyInterval: Option[ProvableSig] = if (lower == Number(0) && upper == Number(0)) Some {
+      val poly1 = rhsOf(poly.representation)
+      useDirectlyConst(weakenWith(context, emptyIntervalPrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", poly1)
+      ), Seq(prv))
+    } else None
 
     /** exact multiplication */
     def *!(other: TM)(implicit options: TaylorModelOptions) : TM = {

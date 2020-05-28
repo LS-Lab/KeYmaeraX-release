@@ -164,4 +164,10 @@ class TaylorModelArithTests extends TacticTestBase {
       "(-68034)*10^(-4)<=(1/3*x+y+1/3)^3&(1/3*x+y+1/3)^3<=73086*10^(-4)".asFormula
   }
 
+  it should "drop empty interval" in withMathematica { qeTool =>
+    val context = IndexedSeq("x = 1.4 + 0.15 * e0".asFormula)
+    val x = tma.TM("x".asTerm, ring.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
+    x.dropEmptyInterval.get.conclusion.succ.loneElement shouldBe "x=0+0.15/1*(1*e0^1)+0+1.4/1*1+0".asFormula
+  }
+
 }
