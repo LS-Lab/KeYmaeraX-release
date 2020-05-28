@@ -264,6 +264,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
 /** Information for an axiomatic proof rule
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  * @see [[DerivedRuleInfo]] */
+//@todo add val theRecursor: List[Int] = Nil (so first number can have a sign) and unifier:Symbol into a joint common supertype of AxiomaticRuleInfo and DerivedRuleInfo that maybe should be called AxiomaticRuleInfo, CoreAxiomaticRuleInfo, DerivedAxiomaticRuleInfo or elide the axiomatic.
 case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, theExpr: Unit => Any)
   extends ProvableInfo {
   // lazy to avoid circular initializer call
