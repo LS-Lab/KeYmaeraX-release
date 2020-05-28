@@ -1051,9 +1051,9 @@ object SimplifierV2 {
         val seq = proveBy(Sequent(IndexedSeq(f),IndexedSeq(tar)),
           loop(f)(1) <
             (close,
-              useAt("[*] iterate")(-1) & andL(-1) & close,
+              useAt(Ax.iterateb)(-1) & andL(-1) & close,
               //Crucial case, fails if the rewrite was bad:
-              useAt("[*] iterate")(-1) & andL(-1) &
+              useAt(Ax.iterateb)(-1) & andL(-1) &
                 chase(3,3, (e:Expression)=>hideBox(e))(SuccPosition(1,Nil)) &
                 chase(3,3, (e:Expression)=>hideBox(e))(AntePosition(2,Nil)) &
                 (? (close) )))
