@@ -290,16 +290,16 @@ private object DifferentialTactics extends Logging {
         }
         //@todo these axioms don't exist?
         val t = (if (greater)
-          useAt("DV differential variant >=")
+          ??? //useAt("DV differential variant >=")
         else
-          useAt("DV differential variant <="))(pos) & (
+          ??? /* useAt("DV differential variant <="))(pos) & (
           // \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
           derive(pos ++ PosInExpr(0::1::1::1::0::Nil)) &
             derive(pos ++ PosInExpr(0::1::1::1::1::0::Nil)) &
             DE(pos ++ PosInExpr(0::1::Nil)) &
             (Dassignb(pos ++ PosInExpr(0::1::1::Nil))*getODEDim(sequent, pos) &
               abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE & done
-              )
+              )*/
           )
         t
       }
@@ -1323,7 +1323,7 @@ private object DifferentialTactics extends Logging {
     //@todo massage the other cases into a useAt.
     //@note it's more robust if we do the | backupTactic, but I'm ignore thins so that we can find and fix the bug in (this use of) useAt.
     if(c.isDefined && n.isDefined) //if has correct shape for using the derived axiom
-      TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
+      ??? // TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
     else
       backupTactic
   })
