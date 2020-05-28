@@ -78,7 +78,7 @@ object PolynomialArithV2 {
       // Some(proof of "term = other.term") by equating coefficients
       def equate(other: Polynomial) : Option[ProvableSig]
 
-      // partition monomials (where (num, denom, powers) represents num/denom*(vars(i)^powers(i))_(i))
+      // partition monomials (where (num, denom, (x_i, p_i)_(i)) represents num/denom*(x_1^p^1 * ... * x_n^p_n)
       // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where p1's monomials satisfy P and p2's monomials satisfy !P
       def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
