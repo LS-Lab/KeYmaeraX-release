@@ -239,6 +239,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     /** approximate subtraction */
     def -(other: TM)(implicit options: TaylorModelOptions) : TM = (this -!other).approx
 
+    /** collect terms of higher order in interval remainder */
     def collectHigherOrderTerms(implicit options: TaylorModelOptions) : TM = {
       val (polyLow, polyHigh, partitionPrv) = poly.resetTerm.partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
       val hornerPrv = toHorner(polyHigh)
