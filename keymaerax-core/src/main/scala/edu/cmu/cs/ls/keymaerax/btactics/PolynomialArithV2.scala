@@ -81,7 +81,7 @@ object PolynomialArithV2 {
       // partition monomials (where (num, denum, powers) represents num/denum*(vars(i)^powers(i))_(i))
       // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where p1's monomials satisfy P and p2's monomials satisfy !P
-      def partition(P: (BigDecimal, BigDecimal, IndexedSeq[(Term, Int)]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
+      def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
 
       // approx(prec) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where the coefficients p1 are rounded to (decimal) precision [[prec]]
@@ -1577,7 +1577,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     def ofMonomials(monomials: Seq[Monomial]): TreePolynomial = monomials.foldLeft[TreePolynomial](Empty(None))(_ + _)
 
-    def partition(P: (BigDecimal, BigDecimal, IndexedSeq[(Term, Int)]) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
+    def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
       def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denum, m.powers)
       val (pos, neg) = partitionMonomials(PMonomial)(Seq(), Seq())
       val p1 = ofMonomials(pos)
