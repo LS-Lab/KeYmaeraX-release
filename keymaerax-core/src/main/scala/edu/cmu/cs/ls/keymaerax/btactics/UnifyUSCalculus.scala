@@ -111,7 +111,7 @@ trait UnifyUSCalculus {
     * @param name the name to use/record for the tactic
     * @migration If possible use by(ProvableInfo) instead, which is faster and more robust. */
   //@todo auto-weaken as needed (maybe even exchangeleft)
-  private[this] def by(fact: ProvableSig, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
+  def by(fact: ProvableSig, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
     override def result(provable: ProvableSig): ProvableSig = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
