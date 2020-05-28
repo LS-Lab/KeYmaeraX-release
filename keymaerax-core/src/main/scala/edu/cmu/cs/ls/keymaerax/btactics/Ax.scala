@@ -833,7 +833,7 @@ object Ax extends Logging {
           // existsL(-1)
           //useAt("exists eliminate", PosInExpr(1::Nil))(-1) & andL(-1)
         ,
-        hideR(1) & by(ProvableSig.rules("con convergence"))
+        hideR(1) & by(Ax.conrule)
         )
     )
 
@@ -2725,7 +2725,8 @@ object Ax extends Logging {
     * @Derived
     */
   private lazy val DIinvarianceF = "([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))".asFormula
-  lazy val DIinvariance = DerivedAxiomProvableSig.axioms("DI differential invariance") /*derivedAxiom("DI differential invariance",
+  lazy val DIinvariance = DIequiv
+    /*DerivedAxiomProvableSig.axioms("DI differential invariance")*/ /*derivedAxiom("DI differential invariance",
     Sequent(IndexedSeq(), IndexedSeq(DIinvarianceF)),
     implyR(1) & equivR(1) <(
       testb(1) &

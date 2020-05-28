@@ -111,7 +111,7 @@ trait UnifyUSCalculus {
     * @param name the name to use/record for the tactic
     * @migration If possible use by(ProvableInfo) instead, which is faster and more robust. */
   //@todo auto-weaken as needed (maybe even exchangeleft)
-  def by(fact: ProvableSig, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
+  private[this] def by(fact: ProvableSig, name:String="by")  : BuiltInTactic = new BuiltInTactic(name) {
     override def result(provable: ProvableSig): ProvableSig = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
@@ -371,19 +371,19 @@ trait UnifyUSCalculus {
 //  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
 //    useAt(ProvableInfo(axiom), key, inst)
   //private[btactics]
-  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-  def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
-    useAt(ProvableInfo(axiom), key)
+//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
+//  private def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
+//    useAt(ProvableInfo(axiom), key)
 //  //@todo delete, only IntervalArithmetic violates
 //  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
 //  private[btactics]
 //  def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
 //    useAt(AxiomInfo(axiom), inst)
   /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
-  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
-  private[btactics]
-  def useAt(axiom: String): DependentPositionTactic =
-    useAt(ProvableInfo(axiom))
+//  @deprecated("useAt(DerivedAxioms.<codeName>,...) instead of useAt(String,...)")
+//  private
+//  def useAt(axiom: String): DependentPositionTactic =
+//    useAt(ProvableInfo(axiom))
 
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting)
     * in the direction that expands as opposed to simplifies operators.
@@ -2226,11 +2226,4 @@ trait UnifyUSCalculus {
     doChase(de,pos)
   }
 
-  //@todo delete since only used in outdated IsabelleSyntax, IntervalArithmetic, ModelPlex
-  @deprecated("Undocumented and incorrect code in wrong place, scheduled for removal")
-  private[btactics]
-  def fromAxIndex(s:String) : (ProvableSig,PosInExpr, List[PosInExpr]) = {
-    val (ax,rec) = AxiomIndex.axiomIndex(s)
-    (ProvableInfo(s).provable,ax,rec)
-  }
 }
