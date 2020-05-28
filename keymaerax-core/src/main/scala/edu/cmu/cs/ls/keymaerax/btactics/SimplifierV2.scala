@@ -538,7 +538,7 @@ object SimplifierV2 {
               closeHeuristics(ctx, Greater(r, l), false) match{
                 case None => None
                 case Some(pr) => {
-                  Some (useFor("> flip")(SuccPosition(1, 0 :: Nil))(pr))
+                  Some (useFor(Ax.flipGreater)(SuccPosition(1, 0 :: Nil))(pr))
                 }
               }
             }
@@ -552,7 +552,7 @@ object SimplifierV2 {
               closeHeuristics(ctx, GreaterEqual(r, l), false) match{
                 case None => None
                 case Some(pr) => {
-                  Some (useFor(">= flip")(SuccPosition(1, 0 :: Nil))(pr))
+                  Some (useFor(Ax.flipGreaterEqual)(SuccPosition(1, 0 :: Nil))(pr))
                 }
               }
             }
@@ -566,7 +566,7 @@ object SimplifierV2 {
               closeHeuristics(ctx, Less(r, l), false) match{
                 case None => None
                 case Some(pr) => {
-                  Some (useFor("< flip")(SuccPosition(1, 0 :: Nil))(pr))
+                  Some (useFor(Ax.flipLess)(SuccPosition(1, 0 :: Nil))(pr))
                 }
               }
             }
@@ -580,7 +580,7 @@ object SimplifierV2 {
               closeHeuristics(ctx, LessEqual(r, l), false) match{
                 case None => None
                 case Some(pr) => {
-                  Some (useFor("<= flip")(SuccPosition(1, 0 :: Nil))(pr))
+                  Some (useFor(Ax.flipLessEqual)(SuccPosition(1, 0 :: Nil))(pr))
                 }
               }
             }
@@ -810,8 +810,8 @@ object SimplifierV2 {
 
     //Normalise > to <, >= to <=
     //    val (normpr,normf) = chasef match {
-    //      case Greater(l, r) => (useFor("> flip")(SuccPosition(1, 1 :: Nil))(chasepr), Less(r, l))
-    //      case GreaterEqual(l, r) => (useFor(">= flip")(SuccPosition(1, 1 :: Nil))(chasepr), LessEqual(r, l))
+    //      case Greater(l, r) => (useFor(Ax.flipGreater)(SuccPosition(1, 1 :: Nil))(chasepr), Less(r, l))
+    //      case GreaterEqual(l, r) => (useFor(Ax.flipGreaterEqual)(SuccPosition(1, 1 :: Nil))(chasepr), LessEqual(r, l))
     //      case _ => (chasepr,chasef)
     //    }
     val (normpr,normf) = (chasepr,chasef)
@@ -874,7 +874,7 @@ object SimplifierV2 {
         }
       case Some(t:Term) =>
         val(tt,pr) = termSimp(t)
-        CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
+        CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos)
       case _ => ident
     }
   })
