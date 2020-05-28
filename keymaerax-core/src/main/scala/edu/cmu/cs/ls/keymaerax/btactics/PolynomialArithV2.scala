@@ -569,7 +569,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     * rhs: representation of `coeff*powers.map(^)`
     *
     * */
-  case class Monomial(coeff: Coefficient, powers: IndexedSeq[(Term, Int)], prvO: Option[ProvableSig] = None) extends Ordered[Monomial] {
+  case class Monomial(coeff: Coefficient, powers: IndexedSeq[(Term, Int)], prvO: Option[ProvableSig] = None) {
     assert(powers.map(_._1).sorted(variableOrdering) == powers.map(_._1))
     assert(powers.map(_._1).distinct == powers.map(_._1))
     assert(powers.forall(_._2 > 0))
@@ -781,8 +781,6 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     }
 
     def isConstant = powers.forall{case (t, i) => i == 0 } || coeff.num.compare(0) == 0
-
-    override def compare(that: Monomial): Int = monomialOrdering.compare(this.powers, that.powers)
 
     def degree(include: Term=>Boolean = _ => true) : Int =
       if (coeff.num.compare(0) != 0)
@@ -1055,17 +1053,17 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     lazy val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs) => (eq, lhs, rhs) }
     lazy val term = lhs
 
-    def lookup(x: Monomial) : Option[Monomial] = this match {
+    def lookup(x: IndexedSeq[(Term, Int)]) : Option[Monomial] = this match {
       case Empty(_) => None
-      case Branch2(left, v, right, _) => x.compare(v) match {
+      case Branch2(left, v, right, _) => monomialOrdering.compare(x, v.powers) match {
         case 0 => Some(v)
         case c if c < 0 => left.lookup(x)
         case c if c > 0 => right.lookup(x)
       }
-      case Branch3(left, v1, mid, v2, right, _) => x.compare(v1) match {
+      case Branch3(left, v1, mid, v2, right, _) => monomialOrdering.compare(x, v1.powers)  match {
         case 0 => Some(v1)
         case c if c < 0 => left.lookup(x)
-        case c if c > 0 => x.compare(v2) match {
+        case c if c > 0 => monomialOrdering.compare(x, v2.powers)  match {
           case 0 => Some(v2)
           case c if c < 0 => mid.lookup(x)
           case c if c > 0 => right.lookup(x)
@@ -1089,7 +1087,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           ("l_", left.rhs),
           ("r_", right.rhs)
         )
-        x.compare(v) match {
+        monomialOrdering.compare(x.powers, v.powers)  match {
         case 0 =>
           val vx = (v.forgetPrv+x).get
           val newRhs = Plus(Plus(left.rhs, vx.rhs), right.rhs)
@@ -1137,7 +1135,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           ("w_", w.rhs),
           ("r_", right.rhs)
         )
-        x.compare(v) match {
+        monomialOrdering.compare(x.powers, v.powers)  match {
           case 0 =>
             val vx = (v.forgetPrv + x).get
             val newRhs = Seq(left.rhs, vx.rhs, mid.rhs, w.rhs, right.rhs).reduceLeft(Plus)
@@ -1157,7 +1155,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
               Sprout(Branch2(lx, v, Branch2(mid, w, right, None), Some(newPrv)))
           }
           case c if c > 0 =>
-            x.compare(w) match {
+            monomialOrdering.compare(x.powers, w.powers)  match {
               case 0 =>
                 val wx = (w.forgetPrv + x).get
                 val newRhs = Seq(left.rhs, v.rhs, mid.rhs, wx.rhs, right.rhs).reduceLeft(Plus)
