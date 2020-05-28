@@ -111,7 +111,8 @@ object DerivationInfoRegistry {
 
 
 
-  private def useAt(pi: ProvableInfo):DependentPositionTactic = HilbertCalculus.useAt(pi)
+  private def useAt(pi: ProvableInfo): DependentPositionTactic = HilbertCalculus.useAt(pi)
+  private def useAt(l: Lemma): DependentPositionTactic = HilbertCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
   /** Alphanumeric letter or digit parts of a name, skipping all other characters or spaces. */
@@ -148,15 +149,15 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
       , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
-    new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", 'full, {case () => HilbertCalculus.useAt("[:=] assign")}),
-    new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
+    new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", 'full, {case () => HilbertCalculus.useAt(Ax.assignbAxiom)}),
+    new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt(Ax.selfassignb)}),
     // @TODO: Has annotation, but keeping axiom info here because tests don't initialize axiom info correctly
     new DerivedAxiomInfo("[:=] self assign y", "[:=]y", "selfassignby", unsure, {case () => HilbertCalculus.useAt(Ax.selfassignby)}),
     new PositionTacticInfo("assignd", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), {case () => HilbertCalculus.assignd}),
-    new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assigndAxiom", 'full, {case () => HilbertCalculus.useAt("<:=> assign")}),
-    new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", unsure, {case () => HilbertCalculus.useAt("<:=> self assign")}),
-    new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
-    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
+    new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assigndAxiom", 'full, {case () => HilbertCalculus.useAt(Ax.assigndAxiom)}),
+    new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", unsure, {case () => HilbertCalculus.useAt(Ax.selfassignd)}),
+    new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt(Ax.assigndEqualityAll)}),
+    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt(Ax.assignbeq)}),
     // @TODO: Has annotation, but keeping axiom info here because tests don't initialize axiom info correctly
     new DerivedAxiomInfo("[:=] assign equality y", "[:=]=y", "assignbeqy", unsure, {case () => HilbertCalculus.useAt(Ax.assignbeqy)}),
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
@@ -211,7 +212,7 @@ object DerivationInfoRegistry {
     new CoreAxiomInfo("K modal modus ponens", "K", "K", 'linear, {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
     CoreAxiomInfo("I induction"
-      , AxiomDisplayInfo(("I<sub>→</sub>", "Iimp"), "P∧[a*](P→[a]P)→<span class=\"k4-axiom-key\">[a*]P</span>"), "Iind", unsure, {case () => HilbertCalculus.useAt("I induction") }),
+      , AxiomDisplayInfo(("I<sub>→</sub>", "Iimp"), "P∧[a*](P→[a]P)→<span class=\"k4-axiom-key\">[a*]P</span>"), "Iind", unsure, {case () => HilbertCalculus.useAt(Ax.Iind) }),
     new CoreAxiomInfo("VK vacuous"
       , AxiomDisplayInfo("VK", "(p→<span class=\"k4-axiom-key\">[a]p</span>)←[a]T")
       , "VK", unsure, {case () => HilbertCalculus.VK}),
@@ -240,7 +241,7 @@ object DerivationInfoRegistry {
       , {case () => DifferentialTactics.diffWeakenPlus}, revealInternalSteps = true),
     new DerivedAxiomInfo("DC differential cut"
       , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-      , "DC", 'linear, {case () => HilbertCalculus.useAt("DC differential cut")}),
+      , "DC", 'linear, {case () => HilbertCalculus.useAt(Ax.DC)}),
     InputPositionTacticInfo("dC"
       , RuleDisplayInfo("Differential Cut"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
@@ -264,19 +265,19 @@ object DerivationInfoRegistry {
       , _ => DifferentialTactics.inverseDiffCut),
     new CoreAxiomInfo("DMP differential modus ponens"
       , InputAxiomDisplayInfo("DMP","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←[{x′=f(x)&R}]P)←[{x′=f(x)&Q}](Q→R)", List(FormulaArg("R")))
-      , "DMP", 'linear, {case () => HilbertCalculus.useAt("DMP differential modus ponens")}),
+      , "DMP", 'linear, {case () => HilbertCalculus.useAt(Ax.DMP)}),
     new DerivedAxiomInfo("DR differential refine"
       , InputAxiomDisplayInfo("DR","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←[{x′=f(x)&R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-      , "DR", 'linear, {case () => HilbertCalculus.useAt("DR differential refine")}),
+      , "DR", 'linear, {case () => HilbertCalculus.useAt(Ax.DR)}),
     new DerivedAxiomInfo("DR<> differential refine"
       , InputAxiomDisplayInfo("DRd","(<span class=\"k4-axiom-key\"><{x′=f(x)&Q}>P</span>←<{x′=f(x)&R}>P)←[{x′=f(x)&R}]Q", List(FormulaArg("R")))
-      , "DRd", 'linear, {case () => HilbertCalculus.useAt("DR<> differential refine")}),
+      , "DRd", 'linear, {case () => HilbertCalculus.useAt(Ax.DRd)}),
     new CoreAxiomInfo("RI& closed real induction >=", "RI& >=", "RIclosedgeq", unsure,
-      {case () => HilbertCalculus.useAt("RI& closed real induction >=")}),
+      {case () => HilbertCalculus.useAt(Ax.RIclosedgeq)}),
     new CoreAxiomInfo("Cont continuous existence", "Cont", "Cont", unsure,
-      {case () => HilbertCalculus.useAt("Cont continuous existence")}),
+      {case () => HilbertCalculus.useAt(Ax.Cont)}),
     new CoreAxiomInfo("Uniq uniqueness", "Uniq", "Uniq", unsure,
-      {case () => HilbertCalculus.useAt("Uniq uniqueness")}),
+      {case () => HilbertCalculus.useAt(Ax.Uniq)}),
     {
       // @TODO: Is converter necessary?
       val converter = (e: Expression) => e match {
@@ -449,31 +450,31 @@ object DerivationInfoRegistry {
       , "DEsysy", unsure, {case () => HilbertCalculus.useAt(Ax.DEsysy)}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
-      , "DIequiv", 'linear, {case () => HilbertCalculus.useAt("DI differential invariance")}),
+      , "DIequiv", 'linear, {case () => HilbertCalculus.useAt(Ax.DIinvariance)}),
     new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←(Q→P∧[{x′=f(x)&Q}](P)′)")
       , "DI", 'linear, {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
-      , "DGa", unsure, {case () => HilbertCalculus.useAt("DG differential ghost")}),
+      , "DGa", unsure, {case () => HilbertCalculus.useAt(Ax.DGa)}),
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
-      , "DGC", unsure, {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
+      , "DGC", unsure, {case () => HilbertCalculus.useAt(Ax.DGC)}),
     new CoreAxiomInfo("DG differential ghost constant all"
       , AxiomDisplayInfo("DGa", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∀y [{x′=f(x),y′=g()&Q}]P")
-      , "DGCa", unsure, {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
+      , "DGCa", unsure, {case () => HilbertCalculus.useAt(Ax.DGCa)}),
     //@todo name: why inverse instead of universal?
-    new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost") }),
-    new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost implicational") }),
-    new CoreAxiomInfo(", commute", ",", "commaCommute", 'linear, {case () => HilbertCalculus.useAt(", commute")}),
-    new CoreAxiomInfo(", sort", ",", "commaSort", 'linear, {case () => HilbertCalculus.useAt(", sort")}),
+    new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", unsure, {case () => HilbertCalculus.useAt(Ax.DGpp) }),
+    new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", unsure, {case () => HilbertCalculus.useAt(Ax.DGi) }),
+    new CoreAxiomInfo(", commute", ",", "commaCommute", 'linear, {case () => HilbertCalculus.useAt(Ax.commaCommute)}),
+    new CoreAxiomInfo(", sort", ",", "commaSort", 'linear, {case () => HilbertCalculus.useAt(Ax.commaSort)}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", unren, {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo >", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]g(x)>h(x)</span>↔[?Q]g(x)>h(x))←(Q→[{x′=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))′))")
-      , "DIogreater", 'linear, {case () => HilbertCalculus.useAt("DIo open differential invariance >")}),
+      , "DIogreater", 'linear, {case () => HilbertCalculus.useAt(Ax.DIogreater)}),
     new DerivedAxiomInfo("DIo open differential invariance <"
       , AxiomDisplayInfo("DIo <", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]g(x)<h(x)</span>↔[?Q]g(x)<h(x))←(Q→[{x′=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))′))")
-      , "DIoless", 'linear, {case () => HilbertCalculus.useAt("DIo open differential invariance <")})
+      , "DIoless", 'linear, {case () => HilbertCalculus.useAt(Ax.DIoless)})
 //    new CoreAxiomInfo("DV differential variant >="
 //      , AxiomDisplayInfo("DVgeq", "todo DVgeq")
 //      , "DVgeq", unsure, {case () => HilbertCalculus.useAt("DV differential variant >=")}),
@@ -569,7 +570,7 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo("all distribute elim", ("∀→","all->"), "allDistElim", unsure, {case () => HilbertCalculus.useAt(Ax.allDistElim)}),
     new DerivedAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.useAt(Ax.allV)}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", unsure, {case () => HilbertCalculus.existsV}),
-    new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", unsure, {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
+    new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", unsure, {case () => HilbertCalculus.useAt(Ax.pexistsV)}),
     new DerivedAxiomInfo("all then exists", ("∀→∃","allThenExists"), "allThenExists", unsure, {case () => HilbertCalculus.useAt(Ax.allThenExists)}),
     new DerivedAxiomInfo("exists eliminate y", ("∃ey","existsey"), "existsey", unsure, {case () => HilbertCalculus.useAt(Ax.existsey)}),
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", unsure, {case () => posnil}),
@@ -660,7 +661,7 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo("<> split"
       , AxiomDisplayInfo(("<>∨","<>|"), "<span class=\"k4-axiom-key\">&langle;a&rangle;(P∨Q)</span>↔&langle;a&rangle;P ∨ &langle;a&rangle;Q")
       , "diamondOr", 'linear, {case () => useAt(Ax.diamondOr)}),
-    new DerivedAxiomInfo("<> partial vacuous", ("pVd","pVd"), "pVd", unsure, {case () => HilbertCalculus.useAt("<> partial vacuous")}),
+    new DerivedAxiomInfo("<> partial vacuous", ("pVd","pVd"), "pVd", unsure, {case () => HilbertCalculus.useAt(Ax.pVd)}),
     //    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
     //    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
     //    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),
@@ -668,8 +669,8 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo("<*> stuck", "<*> stuck", "loopStuck", unsure, {case () => useAt(Ax.loopStuck)}),
     new DerivedAxiomInfo("<a> stuck", "<a> stuck", "programStuck", unsure, {case () => useAt(Ax.programStuck)}),
     new DerivedAxiomInfo("<'> stuck", ("<′> stuck","<'> stuck"), "odeStuck", unsure, {case () => useAt(Ax.odeStuck)}),
-    new DerivedAxiomInfo("all stutter", "all stutter", "allStutter", unsure, {case () => useAt(Ax.allStutter)}),
-    new DerivedAxiomInfo("exists stutter", "exists stutter", "existsStutter", unsure, {case () => useAt(Ax.existsStutter)}),
+    new DerivedAxiomInfo("all stutter", "all stutter", "allStutter", unsure, {case () => HilbertCalculus.useAt(Ax.allStutter)}),
+    new DerivedAxiomInfo("exists stutter", "exists stutter", "existsStutter", unsure, {case () => HilbertCalculus.useAt(Ax.existsStutter)}),
     new DerivedAxiomInfo("[] post weaken", "[]PW", "postWeaken", unsure, {case () => useAt(Ax.postWeaken)}),
     new DerivedAxiomInfo("<-> reflexive", ("↔R","<->R"), "equivReflexive", 'full, {case () => useAt(Ax.equivReflexive)}),
     new DerivedAxiomInfo("<-> expand", ("↔2→←","<->2-><-"), "equivExpand", 'full, {case () => useAt(Ax.equivExpand)}),
