@@ -19,6 +19,7 @@ import org.scalatest.LoneElement._
   */
 class TaylorModelArithTests extends TacticTestBase {
 
+  import PolynomialArithV2._
   import PolynomialArithV2Helpers._
 
   val context3 = ("-1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1, -1 <= z0(), z0() <= 1," +
@@ -29,14 +30,14 @@ class TaylorModelArithTests extends TacticTestBase {
     override val order = 4
   }
   lazy val tma = new TaylorModelArith()
-  lazy val x0 = tma.polynomialRing.ofTerm("x0()".asTerm)
-  lazy val y0 = tma.polynomialRing.ofTerm("y0()".asTerm)
+  lazy val x0 = ring.ofTerm("x0()".asTerm)
+  lazy val y0 = ring.ofTerm("y0()".asTerm)
   lazy val tm1 = tma.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
-  lazy val tm2 = tma.TM("y".asTerm, tma.polynomialRing.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
-  lazy val third = tma.Exact(tma.polynomialRing.ofTerm("1/3".asTerm), context3)
+  lazy val tm2 = tma.TM("y".asTerm, ring.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
+  lazy val third = tma.Exact(ring.ofTerm("1/3".asTerm), context3)
   lazy val tm3 = third *! tm1
-  lazy val tm100000 = tma.Exact(tma.polynomialRing.ofTerm("0.000001".asTerm), context3) *! tm1
-  lazy val tm1234 = tma.Exact(tma.polynomialRing.ofTerm("12.34".asTerm), context3) *! tm2
+  lazy val tm100000 = tma.Exact(ring.ofTerm("0.000001".asTerm), context3) *! tm1
+  lazy val tm1234 = tma.Exact(ring.ofTerm("12.34".asTerm), context3) *! tm2
 
   "Taylor models" should "add exactly" in withMathematica { qeTool =>
     (tm1 +! tm2).prettyPrv.conclusion.succ(0) shouldBe
@@ -112,7 +113,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "exact" in withMathematica { qeTool =>
     import tma._
-    import tma.polynomialRing._
+    import ring._
     val a = ofTerm("x0()".asTerm)
     val b = ofTerm("1".asTerm)
     val c = ofTerm("1/3".asTerm)
@@ -125,8 +126,6 @@ class TaylorModelArithTests extends TacticTestBase {
   }
 
   it should "approx" in withMathematica { qeTool =>
-    import tma._
-    import polynomialRing._
     val tm = (tm3 +! tm2).squareExact
     val tmA = tm.approx
     tmA.prettyPrv.conclusion.succ(0) shouldBe
@@ -135,7 +134,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "form Horner" in withMathematica { qeTool =>
     import tma._
-    import tma.polynomialRing._
+    import ring._
     val hornerPrv = toHorner(ofTerm("(x0()+y0()+z0())^2".asTerm))
     hornerPrv shouldBe 'proved
     hornerPrv.conclusion.ante shouldBe 'empty
@@ -145,7 +144,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "collect higher order terms" in withMathematica { qeTool =>
     import tma._
-    import tma.polynomialRing._
+    import ring._
     val tm = (tm3 + tm2 + third) ^ 3
     val res0 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 0})
     val res1 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 1})
@@ -157,7 +156,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "interval" in withMathematica { qeTool =>
     import tma._
-    import tma.polynomialRing._
+    import ring._
     val tm = (tm3 + tm2 + third) ^ 3
     tm.interval._1 shouldBe "(-68034)*10^(-4)".asTerm
     tm.interval._2 shouldBe "73086*10^(-4)".asTerm

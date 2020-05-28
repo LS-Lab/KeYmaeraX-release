@@ -24,9 +24,7 @@ trait TaylorModelOptions {
   *
   * */
 class TaylorModelArith { // @note a class and not an object in order to initialize everything when constructing the class (@derive could help)
-  val polynomialRing = PolynomialArithV2.ring
-
-  import polynomialRing._
+  import PolynomialArithV2.ring._
   import PolynomialArithV2Helpers._
 
   private def tmFormula(elem: Term, poly: Term, lower: Term, upper: Term) = {
