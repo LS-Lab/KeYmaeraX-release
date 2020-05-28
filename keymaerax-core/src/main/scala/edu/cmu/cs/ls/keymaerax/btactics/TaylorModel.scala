@@ -349,14 +349,14 @@ object TaylorModelTactics extends Logging {
     * A class capturing all lemmas and tactics for Taylor models for the given ode
     * */
   case class TaylorModel(ode: DifferentialProgram, order: Int, names: TMNames = TMNames("a", "r", "i", "Rem", "h", "tm")) {
-    private val time = getTime(ode)
+    protected val time = getTime(ode)
     private val time0 = "t0()".asTerm // TODO: parameterize!
     private val localTime = "s".asVariable // TODO: parameterize!
 
     // State Variables of Expansion and Actual Evolution
-    private val vars = DifferentialHelper.getPrimedVariables(ode)
-    private val state = vars.filterNot(_ == time)
-    private val dim = state.length
+    protected val vars = DifferentialHelper.getPrimedVariables(ode)
+    protected val state = vars.filterNot(_ == time)
+    protected val dim = state.length
     private val timestep = names.timestep
     private val remainder = names.remainder(_)
     private val tdL = names.lower(_)
@@ -626,7 +626,7 @@ object TaylorModelTactics extends Logging {
       )
     }
 
-    private def getBoundees(fml: Formula): List[Term] = fml match {
+    protected def getBoundees(fml: Formula): List[Term] = fml match {
       case And(And(Less(_, t1), Less(t2, _)), ivls) if t1 == t2 =>
         t1::getBoundees(ivls)
       case And(Less(_, t1), Less(t2, _)) if t1 == t2 =>
@@ -697,7 +697,7 @@ object TaylorModelTactics extends Logging {
                          precondC: Integer => Term,
                          lowers: Integer => Term,
                          uppers: Integer => Term,
-                         remainder_estimation : IndexedSeq[(BigDecimal, BigDecimal)]
+                         remainder_estimation : Integer => (BigDecimal, BigDecimal)
                         ) = {
       val subst0 = USubst(
         Seq(SubstitutionPair(time0, t0),SubstitutionPair(names.timestep, timebound))++
@@ -727,7 +727,9 @@ object TaylorModelTactics extends Logging {
       val initApproxInstantiations = instantiationForBounds(prec, right_bounds, approxCoeffSubst(initApprox))
       val initApproxSubst = USubst(initApproxInstantiations.flatMap{case ((t, x), (u, y)) => SubstitutionPair(t, Number(x))::SubstitutionPair(u, Number(y))::Nil})
       val constant_errors = initApproxInstantiations.map{case ((a, b), (c, d)) => (b, d)}
-      val subst_remainders = numericPicardIteration(prec, boundees.map(approxCoeffSubst(_)).toIndexedSeq, timebound, concrete_right_bound, remainder_estimation, constant_errors.toIndexedSeq) match {
+      val subst_remainders = numericPicardIteration(
+        prec - 1, // TODO: sometimes the same precision yields unprovable (for IA) goals of the form number<number... perhaps something rounds differently?,
+        boundees.map(approxCoeffSubst(_)).toIndexedSeq, timebound, concrete_right_bound, (0 until dim).map(remainder_estimation(_)).toIndexedSeq, constant_errors.toIndexedSeq) match {
         case None => throw new RuntimeException("Picard Iteration did not converge")
         case Some(remainders) =>
           USubst(remainders.zipWithIndex.map{case ((l, _), i) => SubstitutionPair(names.lower(i), IntervalArithmeticV2.mathematicaFriendly(l))} ++
@@ -755,7 +757,7 @@ object TaylorModelTactics extends Logging {
             i => um(names.precondC(i)),
             i => um(names.rightL(i)),
             i => um(names.rightU(i)),
-            remainder_estimation
+            i => remainder_estimation(i)
           ))
           require(lemma2.conclusion.succ.length == 1)
           val cut_fml = lemma2.conclusion.succ(0) match {
