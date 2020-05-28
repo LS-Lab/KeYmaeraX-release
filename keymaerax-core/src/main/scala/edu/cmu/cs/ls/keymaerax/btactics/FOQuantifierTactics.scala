@@ -233,7 +233,7 @@ protected object FOQuantifierTactics {
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
             /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
-            /* show */ cohide('Rlast) & TactixLibrary.by(Ax.existsGeneralize.provable(subst))
+            /* show */ cohide('Rlast) & TactixLibrary.by(Ax.existsGeneralize, subst)
             )
         case Some(e) => throw new TacticInapplicableFailure("existsGeneralize only applicable to formulas, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
