@@ -384,6 +384,18 @@ class PolynomialArithV2Tests extends TacticTestBase {
     poly2.degree() shouldBe 0
   }
 
+  it should "coefficient" in withMathematica { _ =>
+    import ring23._
+    val poly = ofTerm("2*x + 3*x*y + 4/3*y^2 + 0*x^2".asTerm)
+    poly.coefficient(Seq(("x".asTerm, 1))) shouldBe (2, 1)
+    poly.coefficient(Seq(("x".asTerm, 1), ("y".asTerm, 0))) shouldBe (2, 1)
+    poly.coefficient(Seq(("x".asTerm, 1), ("y".asTerm, 1))) shouldBe (3, 1)
+    poly.coefficient(Seq(("x".asTerm, 1), ("z".asTerm, 0))) shouldBe (2, 1)
+    poly.coefficient(Seq(("z".asTerm, 0))) shouldBe (0, 1)
+    poly.coefficient(Seq(("x".asTerm, 2))) shouldBe (0, 1)
+    poly.coefficient(Seq(("y".asTerm, 2))) shouldBe (4, 3)
+  }
+
   "Normalization" should "normalize Coefficients" in withMathematica { _ =>
     import ring23._
     Coefficient(0, 1, None).normalized._1.conclusion.succ(0) shouldBe "0/1=0".asFormula

@@ -90,6 +90,8 @@ object PolynomialArithV2 {
       // degree with respect to the variables for which "include" is true
       def degree(include: Term=>Boolean = _ => true) : Int
 
+      // coefficient (numerator, denominator) of monomial (x_i, p_i)_(i) x_i^p_i:
+      def coefficient(monomial: Seq[(Term, Int)]) : (BigDecimal, BigDecimal)
     }
 
     // result.term = n
@@ -1619,6 +1621,14 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           Branch3(l1, v11, m1, v21, r1, None),
           Branch3(l2, v12, m2, v22, r2, None))
     }
+
+    override def coefficient(monomial: Seq[(Term, Int)]): (BigDecimal, BigDecimal) = {
+      lookup(monomial.toIndexedSeq) match {
+        case None => (0, 1)
+        case Some(v) => (v.coeff.num, v.coeff.denom)
+      }
+    }
+
 
   }
 
