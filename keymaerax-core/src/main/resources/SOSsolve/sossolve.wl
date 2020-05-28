@@ -134,17 +134,19 @@ RoundResult[res_,monbasis_,gtrm_,gb_,vars_,skipround_]:= Module[{
 	If[Not[skipround],
 		matrix=1/2*(matrix+Transpose[matrix]);
 		matrix=Rationalize[Round[matrix,power]]];
-(*	Print[Chop[matrix-Inverse[eigvec].DiagonalMatrix[Chop[eigval,power]].eigvec]];*)
+	(*Print[Chop[matrix-Inverse[eigvec].DiagonalMatrix[Chop[eigval,power]].eigvec]];*)
 	(*Print[Inverse[eigvec].Dot[DiagonalMatrix[eigval],eigvec]-matrix];*)
 	(* matrix = L * Diag[vals] * L^T *)
 	{L,vals}=LDLT[matrix];
-	If[Not[AllTrue[vals, # >= 0&]], Continue[]];
+	If[Not[AllTrue[vals, # >= 0&]],
+		(*Print["LDLT failed. ",vals];*)
+		If[skipround,Return[{}],Continue[]]];
 	(* The polynomials in the SOS are given by *)
 	sos = Dot[Transpose[L],monbasis];
 	(* This is the thing that must reduce to zero *)
 	fin = gtrm+Dot[vals,Map[#^2&,sos]];
 	{seq,rem} = PolynomialReduce[fin,gb,vars,MonomialOrder->monOrder];
-	Print["Rounding: ",power," SOS: ",fin," Remainder: ",rem];
+	(*Print["Rounding: ",power," SOS: ",fin," Remainder: ",rem];*)
 	If[rem===0,Return[{vals,sos,seq}]];
 	If[skipround,Return[{}]]
 	];
@@ -302,7 +304,7 @@ ConvertPrimalRaw[constraints_,cs_,k_]:=Module[{prim,ns,sol},
 	1) Minimizes those monomials
 	2) Solves the resulting constraints
 *)
-MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_]:=Module[{
+MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_]:=Module[{
 	redseq,redg,
 	prem, monbasis, R, coeffs, umonomials,
 	constraints, cs, k, tt, res, i},
@@ -352,22 +354,29 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_]:=Module[{
 	Print["Total constraints: ",Length[constraints]];
 	Print["Dimension: ",Length[monbasis]];
 	
-	(* Solving in primal
+	(* Solving in primal *)
+	If[primal,
+		Block[{},
 		Print["Solving in primal form"];
-		{ns,sol}=ConvertPrimal[constraints,cs,k];
+		{ns,bs}=ConvertPrimalRaw[constraints,cs,k];
+		bs = ExpandSymmetric[bs,k];
+		ns = Map[ExpandSymmetric[#,k]&,ns];
 		If[Length[ns]===0,Return[{}]];
 	
 		{tt,res}=Timing[
-			SemidefiniteOptimization[ConstantArray[1,Length[ns]],
-			Join[{sol},ns],
+			SemidefiniteOptimization[ConstantArray[0,Length[ns]],
+			Join[{bs},ns],
 			{"DualityGap","PrimalMinimizer"}]
-		]
+		];
 		Print["SDP time: ",tt];
 		Print["Duality gap: ",res[[1]]];
 		If[MemberQ[res[[2]],Indeterminate],
 			Print["No solution"];
 			Return[{}]];
-	 *)
+		Print["Primal solution: ", res[[2]]];
+		Return[{bs,ns,res[[2]],monbasis,constraints,cs}];
+		]
+	];
 
 	(* Solving in dual form *)
 	{tt,res}=Timing[
@@ -449,6 +458,7 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	gtrm,gcoeff,gmc,gmons,cs,tt,pos,rres,trivseq,trivg,ivars,replacement,lininst},
 
 	maxcofdeg=20;
+	trunclim=20;
 	(* result type encoding of failure*)
 	failure = {0,{},{},{}};
 	
@@ -504,6 +514,10 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	Print["Using polytope: ",polytope];
 	firstskip=True;
 	For[deg=1,deg<=degBound,deg++,
+	
+	
+	Print["Degree bound: ",deg];
+	
 	(* All monomials up to degree bound *)
 	(* Only consider those variables occuring in the groebner basis or g *)
 	prem = allMonomials[ivars,deg];
@@ -514,48 +528,92 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	done=Join[{prem},done];
 	firstskip=False;
 	
-	rm = MonSolve[gb, vars,gcoeff, prem, True];
+	rm = MonSolve[gb, vars,gcoeff, prem, True, False];
 	If[rm==={},Continue[]];
 	{res,monbasis,constraints,cs}=rm;
 	(* Print[Normal[res]//MatrixForm]; *)
 	(* Round the result *)
 	rres = RoundResult[Normal[res],monbasis,gtrm,gb,vars,False];
-	
+
 	If[Length[rres]==0,
-		Print["Rounding heuristic failed, attempt resolve."];
-		(* Attempt to resolve *)
+	Print["Rounding heuristic failed, attempt resolve."];
+	(* Attempt to resolve by truncating "zeros" *)
+	prev={};
+	For[i=0,i<=trunclim,i++,
 		Block[{diag,thresh,goodpos},
 		diag=Normal[Diagonal[res]];
-		thresh=10^-6;
+		thresh=2^-i;
 		goodpos=Position[diag,_?(#>thresh&)]//Flatten;
-		Print["Keeping monomials: ", monbasis[[goodpos]]];
-		rm = MonSolve[gb, vars,gcoeff, monbasis[[goodpos]], False];
+		If[monbasis[[goodpos]]===prev, Continue[]];
+		prev=monbasis[[goodpos]];
+		Print["Truncating (and re-solve) at: ",thresh];
+		Print["Keeping monomials: ", prev];
+		rm = MonSolve[gb, vars,gcoeff, prev, False, False];
 		If[rm==={},Continue[]];
 		{res,monbasis,constraints,cs}=rm;
 		rres = RoundResult[Normal[res],monbasis,gtrm,gb,vars,False];
+		
+		(* Try in primal *)
 		If[Length[rres]==0,
-			Print["Attempting projection"];
-			{ns,bs}=ConvertPrimalRaw[constraints,cs,Length[monbasis]];
-			Print["ns: ",ns];
-			(*foo=1+monbasis.ExpandSymmetric[bs+ns[[1]],Length[monbasis]].monbasis;
-			Print[foo];
-			Print[PolynomialReduce[foo,gb,vars,monOrder]];*)
-			Print["bs: ",ExpandSymmetric[bs,Length[monbasis]]//MatrixForm];
-			rs=FlattenSymmetric[Rationalize[Round[Normal[res],10^-10]],Length[monbasis]];
+			rm = MonSolve[gb, vars,gcoeff, prev, False, True];
+			If[rm==={},,
+			{bs,ns,ys,monbasis,constraints,cs}=rm;
+			For[j=1,j<=10,j++,
+				yss = Rationalize[Round[Normal[ys],10^-j]];
+				rr = bs+yss.ns;
+				rres = RoundResult[rr,monbasis,gtrm,gb,vars,True];
+				];
+			]
+		];
+		If[Length[rres]==0, Continue[],Break[]]
+		]];
+		(* Doesn't work well
+		If[Length[rres]\[Equal]0,
+			Print["Attempting to resolve in polynomials"];
+			{vals,vecc}=Eigensystem[Normal[res],UpTo[4]];
+			vecc=Rationalize[Round[vecc,10^-3]];
+			newpolys=vecc.monbasis;
+			rm = MonSolve[gb, vars,gcoeff, newpolys, False];
+			If[rm==={},,
+			{res,monbasis,constraints,cs}=rm;
+			rres = RoundResult[Normal[res],monbasis,gtrm,gb,vars,False];
+			];
+		]; *)
+		(* 
+		If[Length[rres]==0,
+			Print["(Last resort) attempting projection"];
+			{ns,bs}=ConvertPrimalRaw[Rationalize[constraints],cs,Length[monbasis]];
+			rs=FlattenSymmetric[Rationalize[Round[Normal[res],10^-8]],Length[monbasis]];
 			css=rs-bs;
-			ts=Total[Map[Projection[css,#]&,ns]];
-			Print["ts: ",ts];
+			mmm=Transpose[ns];
+			ts=Dot[LeastSquares[mmm,css],ns];
+			(* ts=Total[Map[Projection[css,#]/Norm[#]&,ns]]; *)
+			Print["r: ",N[rs]];
+			Print["rr: ",N[bs+ts]];
+			(* foo=1+monbasis.ExpandSymmetric[bs+ts,Length[monbasis]].monbasis;
+			Print[foo];
+			Print[PolynomialReduce[foo,gb,vars,monOrder]]; *)
+			(*
+			Print["ns: ",ns];
+			foo=1+monbasis.ExpandSymmetric[bs+ns[[1]],Length[monbasis]].monbasis;
+			Print[foo];
+			Print[PolynomialReduce[foo,gb,vars,monOrder]];
+			Print["bs: ",ExpandSymmetric[bs,Length[monbasis]]//MatrixForm]; *)
+			(* Print["ts: ",ts];
 			Print["ns: ",ns[[1]]];
 			Print["css: ",css];
-			Print["projs: ",ts];
+			Print["projs: ",ts]; *)
 			pss = ExpandSymmetric[bs+ts,Length[monbasis]];
 			rres = RoundResult[pss,monbasis,gtrm,gb,vars,True];
 			Print["rres: ",rres];
 			If[Length[rres]==0,Continue[]];
-		]
-		]
+			Print["done"];
+			Break[];
+		];
+		Print["Solved."];
+		Break[];
+		]] *)
 	];
-		
 	{soscoeff,sos,seq} = rres;
 	pos=Position[soscoeff, x_ /; ! TrueQ[x == 0], {1}, Heads -> False]//Flatten;
 	Return[{
