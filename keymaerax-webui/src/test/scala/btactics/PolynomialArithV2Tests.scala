@@ -120,11 +120,11 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val c2 = Coefficient(BigDecimal("123.12"), BigDecimal("2"))
     val res = (c1*c2)*(c1*c2*c2)
     res.num shouldBe BigDecimal("18663.18755328")
-    res.denum shouldBe BigDecimal("72")
+    res.denom shouldBe BigDecimal("72")
     res.prv shouldBe 'proved
     res.prv.conclusion.ante shouldBe 'empty
     res.prv.conclusion.succ.loneElement shouldBe Equal(Times(Times(c1.lhs, c2.lhs), (Times(Times(c1.lhs, c2.lhs), c2.lhs))),
-      Divide(res.numN, res.denumN)
+      Divide(res.numN, res.denomN)
     )
   }
 
@@ -134,11 +134,11 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val c2 = Coefficient(BigDecimal("123.12"), BigDecimal("2"))
     val res = (c1+c2)+(c2+c2)
     res.num shouldBe BigDecimal("4433.12")
-    res.denum shouldBe BigDecimal("24")
+    res.denom shouldBe BigDecimal("24")
     res.prv shouldBe 'proved
     res.prv.conclusion.ante shouldBe 'empty
     res.prv.conclusion.succ.loneElement shouldBe Equal(Plus(Plus(c1.lhs, c2.lhs), (Plus(c2.lhs, c2.lhs))),
-      Divide(res.numN, res.denumN))
+      Divide(res.numN, res.denomN))
   }
 
   it should "represent as bigDecimal" in withMathematica { _ =>
