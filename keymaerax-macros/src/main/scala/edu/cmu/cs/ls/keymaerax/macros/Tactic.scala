@@ -153,7 +153,7 @@ class TacticImpl(val c: whitebox.Context) {
           case OnePos(pname, sname) =>
             // @TODO: Check whether TacticForNameFactory.by is fine or whether overloading caused an issue
             // byPosition is a wrapper for TacticForNameFactory.by
-            val expr = q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byPosition($funStr, (($pname, $sname) =>  $acc))"""
+            val expr = q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)"""
             val ty = tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic"
             (expr, ty)
           case TwoPos(provable, pos1, pos2) =>
