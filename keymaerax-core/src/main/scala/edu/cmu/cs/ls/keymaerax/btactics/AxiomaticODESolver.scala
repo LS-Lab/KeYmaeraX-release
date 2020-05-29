@@ -118,6 +118,11 @@ object AxiomaticODESolver {
 
     val osize = odeSize(ode)
 
+    val ord = dfs(ode) match {
+      case None => throw new TacticInapplicableFailure("ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().")
+      case Some(ord) => ord
+    }
+
     //The position of the ODE after introducing all [x_0:=x;] assignments
     val odePosAfterInitialVals = pos ++ PosInExpr(List.fill(osize + 2)(1))
     //The position of the [kyxtime:=...;] assignment after using the DS& axiom.
@@ -197,7 +202,7 @@ object AxiomaticODESolver {
       DebuggingTactics.debug("AFTER preserving consts", ODE_DEBUGGER) &
       addTimeVar(pos) &
       DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
-      odeSolverPreconds(pos ++ PosInExpr(1 :: Nil)) &
+      odeSolverPreconds(ord)(pos ++ PosInExpr(1 :: Nil)) &
       DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
       (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)) &
       DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
@@ -242,7 +247,7 @@ object AxiomaticODESolver {
 
   //region Preconditions
 
-   class Cycle extends Exception {}
+  class Cycle extends Exception {}
 
   private def myFreeVars(term:Term): SetLattice[Variable] = {
     term match {
@@ -399,25 +404,27 @@ object AxiomaticODESolver {
   }
 
   /* Produces a tactic that permutes ODE into canonical ordering or a tacatic that errors if ode contains cycles */
-  def makeCanonical(ode: DifferentialProgram, dom: Formula, post: Formula, pos: Position): BelleExpr = {
-    dfs(ode) match {
-      case None => DebuggingTactics.error("ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().")
-      case Some(ord) => DebuggingTactics.debug("Sorting to " + ord.mkString("::"), ODE_DEBUGGER) & selectionSort(dom, post, ode, ord, pos)
-    }
+  def makeCanonical(ode: DifferentialProgram, ord: List[Variable], dom: Formula, post: Formula, pos: Position): BelleExpr = {
+    DebuggingTactics.debug("Sorting to " + ord.mkString("::"), ODE_DEBUGGER) & selectionSort(dom, post, ode, ord, pos)
   }
 
-  val odeSolverPreconds: DependentPositionTactic =  TacticFactory.anon ((pos: Position, s: Sequent) => {
-    val (ode: DifferentialProgram, dom:Formula, post:Formula) = s.sub(pos) match {
+  def odeSolverPreconds(ord: List[Variable]): DependentPositionTactic =  TacticFactory.anon ((pos: Position, s: Sequent) => {
+    val (ode: DifferentialProgram, dom: Formula, post: Formula) = s.sub(pos) match {
       case Some(Box(ODESystem(o, q), p)) => (o, q, p)
       case Some(sub) => throw new TacticInapplicableFailure("Expected [] or <> modality at position " + pos + ", but got " + sub.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + s.prettyString)
     }
 
+    val bv = StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v})
+    val timeExtendedOrd = bv.find(_.name == TIMEVAR.name) match {
+      case None => ord
+      case Some(v) => ord :+ v
+    }
+
     DebuggingTactics.debug("Before Canonicalization") &
-    makeCanonical(ode, dom, post, pos) &
+    makeCanonical(ode, timeExtendedOrd, dom, post, pos) &
     DebuggingTactics.debug("After Canonicalization") &
-    StaticSemantics.boundVars(ode).symbols.filter(_.isInstanceOf[DifferentialSymbol]).map({case DifferentialSymbol(v) => v}).
-      foldLeft[BelleExpr](Idioms.nil)((a, b) => a & DLBySubst.discreteGhost(b, None, assignInContext=false)(pos))
+    bv.foldLeft[BelleExpr](Idioms.nil)((a, b) => a & DLBySubst.discreteGhost(b, None, assignInContext=false)(pos))
   })
 
   //endregion
