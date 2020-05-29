@@ -1614,11 +1614,10 @@ object ODEInvariance {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    if(TacticHelper.names(seq).contains(nilpotentSolveTimeVar))
+    if (StaticSemantics.symbols(dom).exists(_.name == nilpotentSolveTimeVar.name))
       throw new IllFormedTacticApplicationException("nilpotent solve should not be called twice (solution already available from prior call)")
 
-    val t = nilpotentSolveTimeVar //explicitly non-idempotent
-    //val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
+    val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)

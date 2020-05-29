@@ -217,15 +217,16 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "FEATURE_REQUEST: work with nested ODEs" taggedAs TodoTest ignore withQE { _ =>
-    //@note stuck in ODE because ODE no longer solves
-    proveBy("x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula, (unfoldProgramNormalize & ODE(1))*3) shouldBe 'proved
+  it should "work with nested ODEs" in withQE { _ =>
+    proveBy("x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula, (unfoldProgramNormalize & ODE(1) & dWPlus(1))*3) shouldBe 'proved
   }
 
-  it should "FEATURE_REQUEST: work with solvable maybe bound" taggedAs TodoTest ignore withQE { _ =>
-    //@note stuck in ODE because ODE no longer solves
+  it should "work with solvable maybe bound" in withQE { _ =>
     val result = proveBy("[{x'=5}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, ODE(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asSequent
+    result.subgoals.loneElement should
+      (   be("true, time_=0, x_0=x ==> [{x'=5,time_'=1 & true & time_>=0&x=5*time_+x_0}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent)
+       //Z3
+       or be("true, time_=0, x_0=x ==> [{x'=5,time_'=1 & true & time_>=0&x=x_0+5*(time_^1/1)}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent))
   }
 
   it should "work with maybe bound" in withMathematica { _ =>

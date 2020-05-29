@@ -1147,33 +1147,35 @@ private object DifferentialTactics extends Logging {
         })) (pos ++ PosInExpr(0 :: Nil))
     )
 
-    if (StaticSemantics.symbols(seq).contains(ODEInvariance.nilpotentSolveTimeVar)) {
-      diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
-    } else seq.sub(pos) match {
-      case Some(b@Box(sys: ODESystem, _)) =>
-        // Try to prove postcondition invariant. If we don't have an invariant generator, try hard immediately.
-        (if (ToolProvider.invGenTool().isEmpty) odeInvariant(tryHard = true, useDw = true)(pos) & done
-         else odeInvariant()(pos) & done) |
-        // Counterexample check
-        cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
-          // Some additional cases
-          //(solve(pos) & ?(timeoutQE)) |
-          doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
-          ODEInvariance.dRI(pos) |
-          invCheck(
-            //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
-            //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
-            //  "ODE invariant generation skipped.")
-            //@note ODEInvariance not yet proving all invariance questions: try if Pegasus finds simpler invariants
-            odeWithInvgen(sys, InvariantGenerator.pegasusInvariants,
-              //@note ran out of options on generator error
-              (ex: Throwable) => throw new BelleNoProgress("Detected an invariant-only question at " +
-                b.prettyString + " but ODE automation was unable to prove it.", ex)
-            )(pos)
-            ,
-            odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
-          )(pos)
-        )
+    seq.sub(pos) match {
+      case Some(b@Box(sys@ODESystem(_, q), _)) =>
+        if (StaticSemantics.symbols(q).exists(_.name == ODEInvariance.nilpotentSolveTimeVar.name)) {
+          diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
+        } else {
+          // Try to prove postcondition invariant. If we don't have an invariant generator, try hard immediately.
+          (if (ToolProvider.invGenTool().isEmpty) odeInvariant(tryHard = true, useDw = true)(pos) & done
+          else odeInvariant()(pos) & done) |
+            // Counterexample check
+            cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
+              // Some additional cases
+              //(solve(pos) & ?(timeoutQE)) |
+              doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
+                ODEInvariance.dRI(pos) |
+                invCheck(
+                  //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
+                  //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
+                  //  "ODE invariant generation skipped.")
+                  //@note ODEInvariance not yet proving all invariance questions: try if Pegasus finds simpler invariants
+                  odeWithInvgen(sys, InvariantGenerator.pegasusInvariants,
+                    //@note ran out of options on generator error
+                    (ex: Throwable) => throw new BelleNoProgress("Detected an invariant-only question at " +
+                      b.prettyString + " but ODE automation was unable to prove it.", ex)
+                  )(pos)
+                  ,
+                  odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
+                )(pos)
+            )
+        }
       case Some(e) => throw new TacticInapplicableFailure("ODE automation only applicable to box ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
