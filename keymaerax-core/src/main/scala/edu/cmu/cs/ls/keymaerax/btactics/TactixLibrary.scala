@@ -165,8 +165,8 @@ object TactixLibrary extends HilbertCalculus
 
     /** Do all the tactics of a branch in sequence. */
     def applyBranchRecursor(rec: TacticIndex.Branch): BelleExpr =
-      //@note onAll tries on too many branches, but skip in atOrSearch compensates for this
-      rec.map(r => onAll(atOrSearch(r))).reduce(_&_)
+      //@note onAll tries on too many branches, but optional atOrSearch compensates for this
+      rec.map(r => onAll(?(atOrSearch(r)))).reduce(_&_)
 
     /** Turn branches (if any) into a branching tactic. */
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
@@ -177,13 +177,13 @@ object TactixLibrary extends HilbertCalculus
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
-      val recursors = tacticIndex.tacticRecursors(t)
+      val recursors = tacticIndex.tacticRecursors(t).map(_(s, pos)).filter(_.nonEmpty)
       if (recursors.nonEmpty) t(new Fixed(pos)) & Idioms.doIf(!_.isProved)(recursors.map(r =>
         DebuggingTactics.assertOnAll(_ != s ||
           //@note allow recursing on subposition after no-op steps that supply recursors
-          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })),
+          r.exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })),
           "No progress, stopping recursion", new BelleNoProgress(_)) &
-        applyRecursor(r(s, pos))
+        applyRecursor(r)
       ).reduce(_&_))
       else t(new Fixed(pos))
     }
@@ -213,7 +213,7 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
-  /** Chases program operators according to [[AxiomIndex]] or tactics according to `tacticIndex` (restricted to tactics
+  /** Chases program operators according to [[AxIndex]] or tactics according to `tacticIndex` (restricted to tactics
     * in `restrictTo`) at a position. */
   def chaseAt(tacticIndex: TacticIndex = new DefaultTacticIndex)
              (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = "chaseAt" by ((pos: Position, seq: Sequent) => {
