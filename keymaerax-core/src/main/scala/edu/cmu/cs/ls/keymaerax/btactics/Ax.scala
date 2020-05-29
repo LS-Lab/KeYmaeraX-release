@@ -2804,7 +2804,7 @@ object Ax extends Logging {
     * @Derived
     */
   @Axiom("DIo <", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]g(x)<h(x)</span>↔[?Q]g(x)<h(x))←(Q→[{x'=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))'))"
-    , unifier = "linear", key = "1.0", recursor = "*")
+    , unifier = "surjlinear", key = "1.0", recursor = "*")
   lazy val DIoless =
     derivedAxiom("DIo open differential invariance <",
       Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<g(||) <-> [?q(||);]f(||)<g(||)) <- (q(||) -> [{c&q(||)}](f(||)<g(||) -> (f(||)<g(||))'))".asFormula)),
@@ -2843,7 +2843,8 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("DX", unifier = "linear", key = "1", recursor = "1")
+  @Axiom("DX", formula = "Q∧P → <x'=f(x)&Q>P",
+    key = "1", recursor = "1", unifier = "surjlinear")
   lazy val Dskipd = derivedAxiom("DX diamond differential skip",
     Sequent(IndexedSeq(), IndexedSeq("<{c&q(||)}>p(||) <- q(||)&p(||)".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -2862,7 +2863,8 @@ object Ax extends Logging {
     * @Derived
     * @TODO postcondition formulation is weaker than that of DS&
     */
-  @Axiom("DS", unifier = "linear")
+  @Axiom("DS", formula = "<span class=\"k4-axiom-key\">[{x'=c()}]P</span> ↔ ∀t≥0 [x:=x+c()*t;]P",
+    key = "0", recursor = "0.1.1;*", unifier = "surjlinearpretend")
   lazy val DSnodomain =
     derivedAxiom("DS differential equation solution",
       Sequent(IndexedSeq(), IndexedSeq("[{x_'=c_()}]p_(x_) <-> \\forall t_ (t_>=0 -> [x_:=x_+(c_()*t_);]p_(x_))".asFormula)),
@@ -2883,7 +2885,8 @@ object Ax extends Logging {
     * @Derived
     * @TODO postcondition formulation is weaker than that of DS&
     */
-  @Axiom("DS", unifier = "linear")
+  @Axiom("DS", formula = "<span class=\"k4-axiom-key\"><{x'=c()}>P</span> ↔ ∃t≥0 <x:=x+c()*t;>P",
+    key = "0", recursor = "0.1.1;*", unifier = "surjlinearpretend")
   lazy val DSdnodomain =
     derivedAxiom("Dsol differential equation solution",
     Sequent(IndexedSeq(), IndexedSeq("<{x_'=c_()}>p_(x_) <-> \\exists t_ (t_>=0 & <x_:=x_+(c_()*t_);>p_(x_))".asFormula)),
@@ -3182,7 +3185,8 @@ object Ax extends Logging {
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgtOpen]]
     */
-  @Axiom("DBX>")
+  @Axiom("DBX>", formula = "(e>0 → <span class=k4-axiom-key>[x'=f(x)&Q]e>0</span>) ← [x'=f(x)&Q](e)'≥ge",
+    key = "1.1", unifier = "surjlinearpretend")
   lazy val DBXgt =
     derivedAxiom("DBX>",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
@@ -3236,7 +3240,8 @@ object Ax extends Logging {
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
-  @Axiom("DBX> open")
+  @Axiom("DBX> open", formula = "(e>0 → <span class=k4-axiom-key>[x'=f(x)&Q]e>0</span>) ← [x'=f(x)&Q](e>0→(e)'≥ge)",
+    key = "1.1", unifier = "surjlinearpretend")
   lazy val DBXgtOpen =
     derivedAxiom("DBX> open",
       Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
@@ -3289,8 +3294,8 @@ object Ax extends Logging {
     * }}}
     * @derived
     */
-  @Axiom("[d]", formula = "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔¬[a]¬P", unifier = "linear",
-    key =  "0", recursor = "0")
+  @Axiom("[d]", formula = "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔¬[a]¬P",
+    key =  "0", recursor = "0", unifier = "surjlinear")
   lazy val dualb =
     derivedAxiom("[d] dual",
       Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> ![a;]!p(||)".asFormula)),
@@ -3308,7 +3313,7 @@ object Ax extends Logging {
     * @derived
     */
   @Axiom("[d]", formula = "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔&langle;a&rangle;P"
-    , unifier = "linear", key = "0", recursor = "0")
+    , key = "0", recursor = "0", unifier = "surjlinear")
   lazy val dualDirectb = derivedAxiom("[d] dual direct",
     Sequent(IndexedSeq(), IndexedSeq("[{a;}^@]p(||) <-> <a;>p(||)".asFormula)),
     useExpansionAt(diamond)(1, 1::Nil) &
@@ -3323,8 +3328,8 @@ object Ax extends Logging {
     * }}}
     * @derived
     */
-  @Axiom("<d>",formula = "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔[a]P"
-    , unifier = "linear", key = "0", recursor = "0")
+  @Axiom("<d>",formula = "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔[a]P",
+    key = "0", recursor = "0", unifier = "surjlinear")
   lazy val dualDirectd =
     derivedAxiom("<d> dual direct",
       Sequent(IndexedSeq(), IndexedSeq("<{a;}^@>p(||) <-> [a;]p(||)".asFormula)),
