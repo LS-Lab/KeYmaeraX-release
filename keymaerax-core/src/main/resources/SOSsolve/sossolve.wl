@@ -496,7 +496,6 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	
 	(* Solve for the Groebner basis and its conversion matrix *)
 	{gb,conv} = GroebnerBasis`BasisAndConversionMatrix[polys, vars, MonomialOrder -> monOrder];
-	Print[GroebnerBasis[polys,vars,{vars[[1]]},MonomialOrder->EliminationOrder]];
 	(* Check that the Groebner basis does not already trivially reduce the non-zero term *)
 	{redseq,redg} = PolynomialReduce[gtrm,gb,vars,MonomialOrder -> monOrder];
 	If[redg===0,
@@ -568,7 +567,7 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 			If[Length[rres]==0,, Print["done."]; Break[]];
 		,
 		(* No truncate or (dual) resolve on last iteration *)
-			If[monbasis===prev, Continue[]];
+			If[monbasisgv===prev, Continue[]];
 			Print["Final iteration, skipping truncation"];
 			prev=monbasis;
 		];
@@ -580,7 +579,7 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 			yss = Rationalize[Round[Normal[ys],10^-j]];
 			rr = bs+yss.ns;
 			rres = RoundResult[rr,monbasisloc,gtrm,gb,vars,True];
-			Print["primal trunc iteration: ",j," ",rres," ",N[Eigenvalues[rr]]];
+			(* Print["primal trunc iteration: ",j," ",rres," ",N[Eigenvalues[rr]]]; *)
 			If[Length[rres]==0, Continue[], Print["done."];Break[]]
 		];
 		If[Length[rres]==0, Continue[], Print["done."];Break[]];
@@ -594,7 +593,7 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 		soscoeff[[pos]]/.replacement,
 		sos[[pos]]/.replacement,
 		Dot[seq,conv]/.replacement,
-		lininst}]
+		lininst/.replacement}]
 	];
 	
 	fvv=Function[{a},Map[#+a&,vv]];
