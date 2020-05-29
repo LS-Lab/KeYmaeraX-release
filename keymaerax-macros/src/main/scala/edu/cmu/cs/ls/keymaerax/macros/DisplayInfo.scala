@@ -35,7 +35,9 @@ object AxiomDisplayInfo {
     names,
     displayFormula.
       replaceFirst("__", "<span class=\"k4-axiom-key\">").
-      replaceFirst("__", "</span>")
+      replaceFirst("__", "</span>").
+      replaceAll("<","&lt;").
+      replaceAll(">","&gt;")
   )
 }
 
