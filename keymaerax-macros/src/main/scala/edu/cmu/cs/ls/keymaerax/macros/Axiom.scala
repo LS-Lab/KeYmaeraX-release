@@ -157,8 +157,14 @@ class AxiomImpl (val c: whitebox.Context) {
             val fullParams = if(isCore) params else params.take(minParam).:+(q"Some($storageString)")
             val fullRhs = q"$functionName( ..$fullParams)"
             // Tactic implementation of derived axiom is always useAt
-            val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus.useAt($canonString)})""" // : (Unit => Any)
-            val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
+            val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonString))})""" // : (Unit => Any)
+            val unif = unifier match {
+              case "surjective" => 'surjective
+              case "surjlinear" => 'surlinear
+              case "full" => 'full
+              case "linear" => 'linear
+              case "surjlinearpretend" => 'surlinearpretend
+              case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
             val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
               case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
             val info =

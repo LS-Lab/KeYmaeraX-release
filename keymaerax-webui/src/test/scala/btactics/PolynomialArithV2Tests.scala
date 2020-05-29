@@ -120,11 +120,11 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val c2 = Coefficient(BigDecimal("123.12"), BigDecimal("2"))
     val res = (c1*c2)*(c1*c2*c2)
     res.num shouldBe BigDecimal("18663.18755328")
-    res.denum shouldBe BigDecimal("72")
+    res.denom shouldBe BigDecimal("72")
     res.prv shouldBe 'proved
     res.prv.conclusion.ante shouldBe 'empty
     res.prv.conclusion.succ.loneElement shouldBe Equal(Times(Times(c1.lhs, c2.lhs), (Times(Times(c1.lhs, c2.lhs), c2.lhs))),
-      Divide(res.numN, res.denumN)
+      Divide(res.numN, res.denomN)
     )
   }
 
@@ -134,11 +134,11 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val c2 = Coefficient(BigDecimal("123.12"), BigDecimal("2"))
     val res = (c1+c2)+(c2+c2)
     res.num shouldBe BigDecimal("4433.12")
-    res.denum shouldBe BigDecimal("24")
+    res.denom shouldBe BigDecimal("24")
     res.prv shouldBe 'proved
     res.prv.conclusion.ante shouldBe 'empty
     res.prv.conclusion.succ.loneElement shouldBe Equal(Plus(Plus(c1.lhs, c2.lhs), (Plus(c2.lhs, c2.lhs))),
-      Divide(res.numN, res.denumN))
+      Divide(res.numN, res.denomN))
   }
 
   it should "represent as bigDecimal" in withMathematica { _ =>
@@ -370,6 +370,31 @@ class PolynomialArithV2Tests extends TacticTestBase {
     rhsOf(neg.prettyRepresentation) shouldBe "4*x^4+x^3+x^2*y^2+3*x*y+4*y^2".asTerm
     lhsOf(prv) shouldBe t
     rhsOf(prv) shouldBe Plus(pos.term, neg.term)
+  }
+
+  it should "degree" in withMathematica { _ =>
+    import ring23._
+    val t1 = "2*x + 3*x*y + 4*y^2 + 2*x^2 + x^2*y^2 + x^3 + 4*x^4".asTerm
+    val t2 = "0*x^4".asTerm
+    val poly1 = ofTerm(t1)
+    val poly2 = ofTerm(t2)
+    poly1.degree() shouldBe 4
+    poly1.degree(_ == "x".asTerm) shouldBe 4
+    poly1.degree(_ == "y".asTerm) shouldBe 2
+    poly2.degree() shouldBe 0
+  }
+
+  it should "coefficient" in withMathematica { _ =>
+    import ring23._
+    val poly = ofTerm("2*x + 3*x*y + 4/3*y^2 + 0*x^2 + 42".asTerm)
+    poly.coefficient(Seq(("x".asTerm, 1))) shouldBe (2, 1)
+    poly.coefficient(Seq(("x".asTerm, 1), ("y".asTerm, 0))) shouldBe (2, 1)
+    poly.coefficient(Seq(("x".asTerm, 1), ("y".asTerm, 1))) shouldBe (3, 1)
+    poly.coefficient(Seq(("x".asTerm, 1), ("z".asTerm, 0))) shouldBe (2, 1)
+    poly.coefficient(Seq(("z".asTerm, 1))) shouldBe (0, 1)
+    poly.coefficient(Seq(("x".asTerm, 2))) shouldBe (0, 1)
+    poly.coefficient(Seq(("y".asTerm, 2))) shouldBe (4, 3)
+    poly.coefficient(Seq()) shouldBe (42, 1)
   }
 
   "Normalization" should "normalize Coefficients" in withMathematica { _ =>

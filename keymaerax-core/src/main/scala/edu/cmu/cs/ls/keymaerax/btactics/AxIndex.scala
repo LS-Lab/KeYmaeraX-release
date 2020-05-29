@@ -39,6 +39,8 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
     * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., for chasing after useAt/useFor.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
+    * @see [[AxiomInfo.theKey]]
+    * @see [[AxiomInfo.theRecursor]]
     * @todo copy documentation from chase
     */
   def axiomIndex(axiom: ProvableInfo): AxiomIndex = axiom match {
@@ -132,7 +134,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
         case _: Compose => Ax.composed :: Nil
         case _: Choice => Ax.choiced :: Nil
           //@todo optimizable the last two seem redundant
-        case Assign(_: BaseVariable, _) => Ax.assignd :: Ax.assigndEqualityAll :: Ax.assigndEquality :: Nil
+        case Assign(_: BaseVariable, _) => Ax.assigndAxiom :: Ax.assigndEqualityAll :: Ax.assigndEquality :: Nil
         case Assign(_: DifferentialSymbol, _) => Ax.Dassignd :: Nil
         case _: AssignAny => Ax.randomd :: Nil
         case _: Test => Ax.testd :: Nil

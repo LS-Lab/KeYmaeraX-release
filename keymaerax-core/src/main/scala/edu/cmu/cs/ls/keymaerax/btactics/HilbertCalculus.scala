@@ -176,7 +176,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val box                : DependentPositionTactic = useAt(Ax.box)
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   lazy val assignd            : DependentPositionTactic = "assignd" by { (pos:Position) =>
-    useAt(Ax.assignd)(pos) |! useAt(Ax.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
+    useAt(Ax.assigndAxiom)(pos) |! useAt(Ax.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
   }
 
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */

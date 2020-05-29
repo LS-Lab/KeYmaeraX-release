@@ -21,12 +21,11 @@ protected object FOQuantifierTactics {
   //@todo use "exists eliminate" instead
   def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
     TacticFactory.anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(Exists(vars, p)) =>
+      case Some(Exists(vars, _)) =>
         require(vars.size == 1, "Exists by duality does not support block quantifiers")
-        val v = vars.head
         useAt(Ax.existsDual, PosInExpr(1::Nil))(pos) &
           (if (atTopLevel || pos.isTopLevel) {
-            if (pos.isAnte) notL(pos) & base('Rlast) & notR('Rlast) else notR(pos) & base('Llast) & notL('Llast)
+            if (pos.isAnte) notL(pos.top) & base('Rlast) & notR('Rlast) else notR(pos.top) & base('Llast) & notL('Llast)
           } else base(pos++PosInExpr(0::Nil)) & useAt(Ax.doubleNegation)(pos))
       case Some(e) => throw new TacticInapplicableFailure("existsByDuality only applicable to existential quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -234,7 +233,7 @@ protected object FOQuantifierTactics {
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
             /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
-            /* show */ cohide('Rlast) & TactixLibrary.by(Ax.existsGeneralize.provable(subst))
+            /* show */ cohide('Rlast) & TactixLibrary.by(Ax.existsGeneralize, subst)
             )
         case Some(e) => throw new TacticInapplicableFailure("existsGeneralize only applicable to formulas, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)

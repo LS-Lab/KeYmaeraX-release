@@ -456,7 +456,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
     val stateRelation = TactixLibrary.proveBy(simSpec, TactixLibrary.chase(3, 3, (e: Expression) => e match {
       // no equational assignments
       case Box(Assign(_,_),_) => Ax.assignbAxiom :: Ax.assignbup :: Nil
-      case Diamond(Assign(_,_),_) => Ax.assignd :: Ax.assigndup :: Nil
+      case Diamond(Assign(_,_),_) => Ax.assigndAxiom :: Ax.assigndup :: Nil
       // remove loops
       case Diamond(Loop(_), _) => Ax.loopApproxd :: Nil
       //@note: do nothing, should be gone already

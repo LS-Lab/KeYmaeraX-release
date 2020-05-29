@@ -290,16 +290,16 @@ private object DifferentialTactics extends Logging {
         }
         //@todo these axioms don't exist?
         val t = (if (greater)
-          useAt("DV differential variant >=")
+          ??? //useAt("DV differential variant >=")
         else
-          useAt("DV differential variant <="))(pos) & (
+          ??? /* useAt("DV differential variant <="))(pos) & (
           // \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
           derive(pos ++ PosInExpr(0::1::1::1::0::Nil)) &
             derive(pos ++ PosInExpr(0::1::1::1::1::0::Nil)) &
             DE(pos ++ PosInExpr(0::1::Nil)) &
             (Dassignb(pos ++ PosInExpr(0::1::1::Nil))*getODEDim(sequent, pos) &
               abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE & done
-              )
+              )*/
           )
         t
       }
@@ -817,7 +817,7 @@ private object DifferentialTactics extends Logging {
         }
         case _ => false
       }
-    }, "Invariant fast-check failed")
+    }, "Invariant fast-check failed", new TacticInapplicableFailure(_))
   }
 
   /** Invariance check
@@ -1203,7 +1203,7 @@ private object DifferentialTactics extends Logging {
       )
       ,
       (hide(pos.topLevel) & QE & done) | //@todo write a hideNonArithmetic tactic.
-      DebuggingTactics.assert(_=>false, s"splitWeakInequality failed because $caseDistinction does not hold initially.")
+      DebuggingTactics.error(s"splitWeakInequality failed because $caseDistinction does not hold initially.")
     )
   })
 
@@ -1323,7 +1323,7 @@ private object DifferentialTactics extends Logging {
     //@todo massage the other cases into a useAt.
     //@note it's more robust if we do the | backupTactic, but I'm ignore thins so that we can find and fix the bug in (this use of) useAt.
     if(c.isDefined && n.isDefined) //if has correct shape for using the derived axiom
-      TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
+      ??? // TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
     else
       backupTactic
   })
@@ -1843,8 +1843,8 @@ private object DifferentialTactics extends Logging {
     }
 
     odeInvariant(tryHard=true)(pos) |
-    DebuggingTactics.assert( s =>
-      if(!s.equals(seq)) true // should never happen
+    DebuggingTactics.assert(s =>
+      if (s != seq) true // should never happen
       else {
         ToolProvider.invGenTool() match {
           case None => throw new UnsupportedTacticFeature("odeInvC was unable to prove postcondition invariant for ODE nor disprove its invariance." +
@@ -1852,7 +1852,7 @@ private object DifferentialTactics extends Logging {
             " Please submit a bug report if you are sure that "+post+" is an ODE invariant for "+ode)
           case Some(tool) =>
             val(nec,_) = tool.genODECond(ode, s.ante, post)
-            val pr = proveBy(nec.tail.foldLeft(nec.head)(And(_,_)),?(timeoutQE))
+            val pr = proveBy(nec.tail.foldLeft(nec.head)(And),?(timeoutQE))
             if(pr.isProved)
               throw new UnsupportedTacticFeature("The ODE postcondition "+post+" is invariant but odeInvC could not prove it." +
                 " This is a completeness bug in the implementation. Please submit a bug report.")
@@ -1862,7 +1862,7 @@ private object DifferentialTactics extends Logging {
                 " Please submit a bug report if you are sure that "+post+" is an ODE invariant for "+ode)
         }
       }
-      , "")
+      , "", new TacticInapplicableFailure(_))
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -2103,12 +2103,17 @@ private object DifferentialTactics extends Logging {
       skip,
       // Turn postcondition into interior
       implyR(pos) & generalize(interior)(pos) <(
-        maxminGt & useAt(Ax.openInvariantClosure)(pos) <(
-          backGt & backGe1 & hideL('Llast),
-          backGe2 &
-            (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
-            else closeId)
-        ),
+        //@todo check always with doIfElse or use TryCatch exception?
+        maxminGt & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
+          useAt(Ax.openInvariantClosure)(pos) <(
+            backGt & backGe1 & hideL('Llast),
+            backGe2 &
+              (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
+              else closeId)
+          ),
+          DebuggingTactics.error("Inapplicable: t_ occurs")
+        )
+        ,
         cohideOnlyL('Llast) & interiorImplication
       )
     )
@@ -2171,38 +2176,45 @@ private object DifferentialTactics extends Logging {
               done
           ) &
           TactixLibrary.generalize(nonneg(p(vars)))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
-          useAt(Ax.RIclosedgeq)(1) &
-          andR(1) &
-          Idioms.<(FOQuantifierTactics.allLs(vars)('Llast) & prop & done, skip) &
-          composeb(1) &
-          DW(1) &
-          TactixLibrary.generalize(pos(q(vars)))(1) &
-          Idioms.<(
-            closeId,
-            implyR(1) &
-              assignb(1) &
+          //@todo always check with doIfElse or TryCatch instead?
+          Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(SuccPos(0))).contains("t_".asVariable)))(
+            useAt(Ax.RIclosedgeq)(1) &
+            andR(1) &
+            Idioms.<(FOQuantifierTactics.allLs(vars)('Llast) & prop & done, skip) &
+            composeb(1) &
+            DW(1) &
+            TactixLibrary.generalize(pos(q(vars)))(1) &
+            Idioms.<(
+              closeId,
               implyR(1) &
-              /* @TODO: the following is somewhat close to ODEInvariance.lpstep */
-              cutR(Or(pos(p(vars)), Equal(p(vars), Number(0))))(1) & Idioms.<(
-              useAt(ODEInvariance.geq, PosInExpr(1 :: Nil))(1) & prop & done,
-              implyR(1) &
+                assignb(1) &
+                implyR(1) &
+                /* @TODO: the following is somewhat close to ODEInvariance.lpstep */
+                cutR(Or(pos(p(vars)), Equal(p(vars), Number(0))))(1) & Idioms.<(
+                useAt(ODEInvariance.geq, PosInExpr(1 :: Nil))(1) & prop & done,
+                implyR(1) &
                 orL('Llast) < (
                   useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & prop & done,
-                  dR(And(r(vars), nonneg(q(vars))), false)(1) & Idioms.<(
+                  dR(And(r(vars), nonneg(q(vars))), hide=false)(1) & Idioms.<(
                     useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) &
-                      andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId),
+                    andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId)
+                    ,
                     andL('L) &
-                      TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
-                      DI(1) & implyR(1) & andR(1) & Idioms.<(
-                      FOQuantifierTactics.allLs(vars)(-7) & prop & done,
+                    TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
+                    DI(1) & implyR(1) & andR(1) & Idioms.<(
+                      FOQuantifierTactics.allLs(vars)(-7) & prop & done
+                      ,
                       cohideOnlyL(-6) &
-                        FOQuantifierTactics.allLs(vars)(-1) &
-                        DifferentialTactics.inverseDiffGhost(1) &
-                        derive(1, 1 :: Nil) &
-                        closeId)
+                      FOQuantifierTactics.allLs(vars)(-1) &
+                      DifferentialTactics.inverseDiffGhost(1) &
+                      derive(1, 1 :: Nil) &
+                      closeId
+                    )
                   )
                 )
-            )
+              )
+            ),
+            DebuggingTactics.error("Inapplicable: t_ occurs")
           )
       )
 

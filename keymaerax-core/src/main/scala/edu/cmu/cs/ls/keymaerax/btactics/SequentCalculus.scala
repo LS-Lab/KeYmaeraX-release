@@ -194,15 +194,20 @@ trait SequentCalculus {
     }
   })
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  def close(a: AntePos, s: SuccPos) : BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
+  def close(a: AntePos, s: SuccPos): BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     //@note same name (closeId) as SequentCalculus.closeId for serialization
     new BuiltInTactic("closeId") {
-      override def result(provable: ProvableSig) = {
+      override def result(provable: ProvableSig): ProvableSig = {
         ProofRuleTactics.requireOneSubgoal(provable, "closeId(" + a + "," + s + ")")
-        provable(Close(a, s), 0)
+        try {
+          provable(Close(a, s), 0)
+        } catch {
+          case ex: NoncriticalCoreException => throw new TacticInapplicableFailure("Tactic " + name +
+            " applied at " + a + " and " + s + " is inapplicable in " + provable.prettyString, ex)
+        }
       }
     }
-  def close(a: Int, s: Int)  : BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
+  def close(a: Int, s: Int): BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   val closeIdWith: DependentPositionTactic = "idWith" by ((pos: Position, s: Sequent) => {
     pos.top match {

@@ -349,14 +349,14 @@ object TaylorModelTactics extends Logging {
     * A class capturing all lemmas and tactics for Taylor models for the given ode
     * */
   case class TaylorModel(ode: DifferentialProgram, order: Int, names: TMNames = TMNames("a", "r", "i", "Rem", "h", "tm")) {
-    private val time = getTime(ode)
+    protected val time = getTime(ode)
     private val time0 = "t0()".asTerm // TODO: parameterize!
     private val localTime = "s".asVariable // TODO: parameterize!
 
     // State Variables of Expansion and Actual Evolution
-    private val vars = DifferentialHelper.getPrimedVariables(ode)
-    private val state = vars.filterNot(_ == time)
-    private val dim = state.length
+    protected val vars = DifferentialHelper.getPrimedVariables(ode)
+    protected val state = vars.filterNot(_ == time)
+    protected val dim = state.length
     private val timestep = names.timestep
     private val remainder = names.remainder(_)
     private val tdL = names.lower(_)
@@ -626,7 +626,7 @@ object TaylorModelTactics extends Logging {
       )
     }
 
-    private def getBoundees(fml: Formula): List[Term] = fml match {
+    protected def getBoundees(fml: Formula): List[Term] = fml match {
       case And(And(Less(_, t1), Less(t2, _)), ivls) if t1 == t2 =>
         t1::getBoundees(ivls)
       case And(Less(_, t1), Less(t2, _)) if t1 == t2 =>
@@ -692,6 +692,52 @@ object TaylorModelTactics extends Logging {
       cremainders
     }
 
+    def instantiateLemma(prec: Integer, t0: Term, timebound: Term,
+                         precond: (Integer, Integer) => Term,
+                         precondC: Integer => Term,
+                         lowers: Integer => Term,
+                         uppers: Integer => Term,
+                         remainder_estimation : Integer => (BigDecimal, BigDecimal)
+                        ) = {
+      val subst0 = USubst(
+        Seq(SubstitutionPair(time0, t0),SubstitutionPair(names.timestep, timebound))++
+          (0 until dim).flatMap(i =>
+            Seq(SubstitutionPair(names.precondC(i), precondC(i)),
+              SubstitutionPair(names.rightL(i), lowers(i)),
+              SubstitutionPair(names.rightU(i), uppers(i))
+            ) ++
+            (0 until dim).map(j => SubstitutionPair(names.precond(i, j), precond(i, j)))))
+      val lemma1 = lemma(subst0)
+      require(lemma1.conclusion.succ.length == 1)
+      val (boundees, initApprox, concrete_right_bound) = lemma1.conclusion.succ(0) match {
+        case Imply(And(And(_, crb), And(initApprox, fml : Forall)), _) => stripForalls(fml) match {
+          case Imply(bound_fml, conclusion) => (getBoundees(conclusion), initApprox, FormulaTools.conjuncts(crb))
+          case _ => throw new RuntimeException("Taylor model lemma not of expected shape (inner)")
+        }
+        case _ => throw new RuntimeException("Taylor model lemma not of expected shape")
+      }
+      val right_bounds = IntervalArithmeticV2.collect_bounds(prec, concrete_right_bound)
+
+      // Approximate values for coefficients
+      def midpoint(ivl: (BigDecimal, BigDecimal)) : BigDecimal = (ivl._1 + ivl._2)/2
+      val approxCoeffs = exactCoefficients.map(_.mapValues(t => midpoint(IntervalArithmeticV2.eval_ivl(prec)(IntervalArithmeticV2.DecimalBounds())(subst0(t)))))
+      val approxCoeffSubst = USubst(approxCoeffs.zipWithIndex.flatMap{ case (coeffs, i) =>
+        coeffs.map{case (e, t) => SubstitutionPair(names.postCoeff(i, e), Number(t)) }
+      })
+      val initApproxInstantiations = instantiationForBounds(prec, right_bounds, approxCoeffSubst(initApprox))
+      val initApproxSubst = USubst(initApproxInstantiations.flatMap{case ((t, x), (u, y)) => SubstitutionPair(t, Number(x))::SubstitutionPair(u, Number(y))::Nil})
+      val constant_errors = initApproxInstantiations.map{case ((a, b), (c, d)) => (b, d)}
+      val subst_remainders = numericPicardIteration(
+        prec - 1, // TODO: sometimes the same precision yields unprovable (for IA) goals of the form number<number... perhaps something rounds differently?,
+        boundees.map(approxCoeffSubst(_)).toIndexedSeq, timebound, concrete_right_bound, (0 until dim).map(remainder_estimation(_)).toIndexedSeq, constant_errors.toIndexedSeq) match {
+        case None => throw new RuntimeException("Picard Iteration did not converge")
+        case Some(remainders) =>
+          USubst(remainders.zipWithIndex.map{case ((l, _), i) => SubstitutionPair(names.lower(i), IntervalArithmeticV2.mathematicaFriendly(l))} ++
+            remainders.zipWithIndex.map{case ((_, u), i) => SubstitutionPair(names.upper(i), IntervalArithmeticV2.mathematicaFriendly(u))})
+      }
+      subst0 ++ subst_remainders ++ approxCoeffSubst ++ initApproxSubst
+    }
+
     def cutTM(prec: Integer, antepos: AntePosition,
               qeTool: QETacticTool,
               remainder_estimation : IndexedSeq[(BigDecimal, BigDecimal)] = (0 until dim).map(_ => (BigDecimal(-0.001),BigDecimal(0.001))))
@@ -705,35 +751,14 @@ object TaylorModelTactics extends Logging {
         {
           require(seq.sub(antepos).isDefined)
           val concrete_initial_condition = seq.sub(antepos).get
-          val subst0 = USubst(SubstitutionPair(time0, t0)::SubstitutionPair(names.timestep, timebound)::Nil)++UnificationMatch(And(initial_condition, right_tm_domain), concrete_initial_condition).usubst
-          val lemma1 = lemma(subst0)
-          require(lemma1.conclusion.succ.length == 1)
-          val (boundees, initApprox, concrete_right_bound) = lemma1.conclusion.succ(0) match {
-            case Imply(And(And(_, crb), And(initApprox, fml : Forall)), _) => stripForalls(fml) match {
-              case Imply(bound_fml, conclusion) => (getBoundees(conclusion), initApprox, FormulaTools.conjuncts(crb))
-              case _ => throw new RuntimeException("Taylor model lemma not of expected shape (inner)")
-            }
-            case _ => throw new RuntimeException("Taylor model lemma not of expected shape")
-          }
-          val right_bounds = IntervalArithmeticV2.collect_bounds(prec, concrete_right_bound)
-
-          // Approximate values for coefficients
-          def midpoint(ivl: (BigDecimal, BigDecimal)) : BigDecimal = (ivl._1 + ivl._2)/2
-          val approxCoeffs = exactCoefficients.map(_.mapValues(t => midpoint(IntervalArithmeticV2.eval_ivl(prec)(IntervalArithmeticV2.DecimalBounds())(subst0(t)))))
-          val approxCoeffSubst = USubst(approxCoeffs.zipWithIndex.flatMap{ case (coeffs, i) =>
-            coeffs.map{case (e, t) => SubstitutionPair(names.postCoeff(i, e), Number(t)) }
-          })
-          val initApproxInstantiations = instantiationForBounds(prec, right_bounds, approxCoeffSubst(initApprox))
-          val initApproxSubst = USubst(initApproxInstantiations.flatMap{case ((t, x), (u, y)) => SubstitutionPair(t, Number(x))::SubstitutionPair(u, Number(y))::Nil})
-          val constant_errors = initApproxInstantiations.map{case ((a, b), (c, d)) => (b, d)}
-          val subst_remainders = numericPicardIteration(prec, boundees.map(approxCoeffSubst(_)).toIndexedSeq, timebound, concrete_right_bound, remainder_estimation, constant_errors.toIndexedSeq) match {
-            case None => throw new RuntimeException("Picard Iteration did not converge")
-            case Some(remainders) =>
-              USubst(remainders.zipWithIndex.map{case ((l, _), i) => SubstitutionPair(names.lower(i), IntervalArithmeticV2.mathematicaFriendly(l))} ++
-                remainders.zipWithIndex.map{case ((_, u), i) => SubstitutionPair(names.upper(i), IntervalArithmeticV2.mathematicaFriendly(u))})
-          }
-          val subst1 = subst_remainders ++ approxCoeffSubst ++ initApproxSubst
-          val lemma2 = lemma1(subst1)
+          val um = UnificationMatch(And(initial_condition, right_tm_domain), concrete_initial_condition)
+          val lemma2 = lemma(instantiateLemma(prec, t0, timebound,
+            (i, j) => um(names.precond(i, j)),
+            i => um(names.precondC(i)),
+            i => um(names.rightL(i)),
+            i => um(names.rightU(i)),
+            i => remainder_estimation(i)
+          ))
           require(lemma2.conclusion.succ.length == 1)
           val cut_fml = lemma2.conclusion.succ(0) match {
             case Imply(_, Box(_, cut_fml)) => cut_fml

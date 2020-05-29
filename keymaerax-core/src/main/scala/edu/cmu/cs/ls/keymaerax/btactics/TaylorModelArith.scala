@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics.TaylorModel
+import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics.{TaylorModel, debugTac}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -17,6 +17,10 @@ trait TaylorModelOptions {
   val order: Integer
 }
 
+trait TimeStepOptions {
+  def remainderEstimation(i: Integer) : (BigDecimal, BigDecimal)
+}
+
 /**
   * Taylor model arithmetic
   *
@@ -24,9 +28,7 @@ trait TaylorModelOptions {
   *
   * */
 class TaylorModelArith { // @note a class and not an object in order to initialize everything when constructing the class (@derive could help)
-  val polynomialRing = PolynomialArithV2.ring
-
-  import polynomialRing._
+  import PolynomialArithV2.ring._
   import PolynomialArithV2Helpers._
 
   private def tmFormula(elem: Term, poly: Term, lower: Term, upper: Term) = {
@@ -61,6 +63,31 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       "  (l_() <= i1_ - i2_ & i1_ - i2_ <= u_())))" +
       ") ->" +
       "\\exists err_ (elem1_() - elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
+
+  private val collectPrv = AnonymousLemmas.remember(
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "poly1_() = polyLow_() + polyHigh_() &" +
+      "polyLow_() = poly_() &" +
+      "polyHigh_() = rem_() & " +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= rem_() + i1_ & rem_() + i1_  <= u_())))" +
+      ") ->" +
+      "\\exists err_ (elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    QE & done
+  )
+
+  private val intervalPrv = AnonymousLemmas.remember(
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "poly1_() = rem_() &" +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= rem_() + i1_ & rem_() + i1_  <= u_())))" +
+      ") ->" +
+      "l_() <= elem1_() & elem1_() <= u_()").asFormula,
+    QE & done
+  )
+
+  private val emptyIntervalPrv = AnonymousLemmas.remember(
+    ("(\\exists err_ (elem1_() = poly1_() + err_ & 0 <= err_ & err_ <= 0)) -> elem1_() = poly1_()").asFormula, QE & done)
 
   private val timesPrv = AnonymousLemmas.remember(
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
@@ -216,6 +243,63 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     }
     /** approximate subtraction */
     def -(other: TM)(implicit options: TaylorModelOptions) : TM = (this -!other).approx
+
+    /** collect terms of higher order in interval remainder */
+    def collectHigherOrderTerms(implicit options: TaylorModelOptions) : TM = {
+      val (polyLow, polyHigh, partitionPrv) = poly.resetTerm.partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
+      val hornerPrv = toHorner(polyHigh)
+      val rem = rhsOf(hornerPrv)
+      val poly1 = rhsOf(poly.representation)
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
+      val newPrv = useDirectlyConst(weakenWith(context, collectPrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", poly1),
+        ("l1_", lower),
+        ("u1_", upper),
+
+        ("polyLow_", polyLow.term),
+        ("poly_", rhsOf(polyLow.representation)),
+        ("polyHigh_", polyHigh.term),
+        ("rem_", rem),
+        ("l_", l),
+        ("u_", u)
+      ), Seq(prv,
+        weakenWith(context, partitionPrv),
+        weakenWith(context, polyLow.representation),
+        weakenWith(context, hornerPrv),
+        newIvlPrv))
+      TM(elem, polyLow.resetTerm, l, u, newPrv)
+    }
+
+    /** prove interval enclosure of Taylor model */
+    def interval(implicit options: TaylorModelOptions) : (Term, Term, ProvableSig) = {
+      val hornerPrv = toHorner(poly.resetTerm)
+      val rem = rhsOf(hornerPrv)
+      val poly1 = rhsOf(poly.representation)
+      val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
+      (l, u,
+        useDirectlyConst(weakenWith(context, intervalPrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", poly1),
+        ("l1_", lower),
+        ("u1_", upper),
+
+        ("rem_", rem),
+        ("l_", l),
+        ("u_", u)
+      ), Seq(prv,
+        weakenWith(context, hornerPrv),
+        newIvlPrv)))
+    }
+
+    /** returns an equality, no quantifiers */
+    def dropEmptyInterval: Option[ProvableSig] = if (lower == Number(0) && upper == Number(0)) Some {
+      val poly1 = rhsOf(poly.representation)
+      useDirectlyConst(weakenWith(context, emptyIntervalPrv.fact), Seq(
+        ("elem1_", elem),
+        ("poly1_", poly1)
+      ), Seq(prv))
+    } else None
 
     /** exact multiplication */
     def *!(other: TM)(implicit options: TaylorModelOptions) : TM = {
@@ -410,6 +494,106 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       Seq(weakenWith(context, elem.representation))
     )
     TM(elem.term, elem.resetTerm, Number(0), Number(0), newPrv)
+  }
+
+  // combines provables
+  private def mkAndPrv(p1: ProvableSig, p2: ProvableSig) : ProvableSig = {
+    assert(p1.conclusion.succ.length==1, "mkAndPrv singleton succedent 1")
+    assert(p2.conclusion.succ.length==1, "mkAndPrv singleton succedent 2")
+    assert(p1.conclusion.ante == p2.conclusion.ante, "mkAndPrv same antes")
+    proveBy(Sequent(p1.conclusion.ante, IndexedSeq(And(p1.conclusion.succ(0), p2.conclusion.succ(0)))),
+      andR(1) & Idioms.<(by(p1), by(p2))
+    )
+  }
+
+  // combines provables
+  private def equalTrans(p1: ProvableSig, p2: ProvableSig) : ProvableSig = {
+    assert(p1.conclusion.succ.length==1, "mkAndPrv singleton succedent 1")
+    assert(p2.conclusion.succ.length==1, "mkAndPrv singleton succedent 2")
+    assert(p1.conclusion.ante == p2.conclusion.ante, "mkAndPrv same antes")
+    val Llast = -p1.conclusion.ante.length - 1
+    proveBy(Sequent(p1.conclusion.ante, IndexedSeq(Equal(lhsOf(p1), rhsOf(p2)))),
+        cutR(p1.conclusion.succ(0))(1) &
+        Idioms.<(
+          by(p1),
+            implyR(1) &
+            eqL2R(Llast)(1) &
+            hideL(Llast) &
+            by(p2)
+        )
+    )
+  }
+
+  /* @todo: naming... */
+  class TemplateLemmas(ode: DifferentialProgram, order: Int) extends TaylorModel(ode, order) {
+    /* time step for the left Taylor model of a (linearly) preconditioned flow pipe (x0 o r0) */
+    def timeStepPreconditionedODE(x0: Seq[TM], r0: Seq[TM], t0: ProvableSig, h: BigDecimal)
+                                 (implicit options: TaylorModelOptions, timeStepOptions: TimeStepOptions)
+    = {
+      val qeTool = new BigDecimalTool
+      // x0 is the initial state of the ODE
+      require(x0.map(_.elem) == state, "require x0 to be the initial state of the ODE")
+      // x0 is the *linear* preconditioning, without interval uncertainty
+      require(x0.forall(_.poly.degree() <= 1), "require x0 to be linear")
+      require(x0.forall(_.lower == Number(0)), "require zero interval uncertainty(lower)")
+      require(x0.forall(_.upper == Number(0)), "require zero interval uncertainty(upper)")
+
+      val context = x0(0).context
+      require(x0.forall(_.context == context), "require compatible contexts")
+
+      require(lhsOf(t0) == time)
+
+      val rvars = r0.map(_.elem).toIndexedSeq
+      val rIntervals = r0.map(_.interval).toIndexedSeq
+
+      def mkTerm(coeff: (BigDecimal, BigDecimal)) : Term = Divide(Number(coeff._1), Number(coeff._2))
+      val instantiation = instantiateLemma(options.precision,
+        rhsOf(t0),
+        Number(h),
+        (i, j) => mkTerm(x0(i).poly.coefficient(Seq((rvars(j), 1)))),
+        i => mkTerm(x0(i).poly.coefficient(Seq())),
+        i => rIntervals(i)._1,
+        i => rIntervals(i)._2,
+        timeStepOptions.remainderEstimation
+      ) ++ USubst(rvars.zipWithIndex.map{ case (r, i) => SubstitutionPair(names.right(i), r) })
+      val lemma1 = lemma(instantiation)
+
+      // now discharge assumptions
+      val (initialConditionFmls, concl) = lemma1.conclusion.succ(0) match {
+        case Imply(And(And(initial_condition, _), _), concl) =>
+          (FormulaTools.conjuncts(initial_condition), concl)
+        case _ => throw new RuntimeException("Taylor model lemma not of expected shape")
+      }
+      val rightTmDomain = rIntervals.map(rIvl => rIvl._3).reduceRight(mkAndPrv)
+      val initialStateEqs = (x0, initialConditionFmls.tail).zipped.map{ case (x, Equal(y, t)) if x.elem == y =>
+        val eq1 = x.dropEmptyInterval.getOrElse(throw new RuntimeException("intervals have been checked for emptiness"))
+        val eq2 = weakenWith(x.context, x.poly.resetTerm.equate(ofTerm(t)).getOrElse(throw new RuntimeException("this equality should hold by construction")))
+        equalTrans(eq1, eq2)
+        case e => throw new RuntimeException("Taylor model lemma (initial condition) not of expected shape: " + e)
+      }
+      val initialCondition = (Seq(t0)++initialStateEqs).reduceRight(mkAndPrv)
+      proveBy(Sequent(context, IndexedSeq(concl)),
+        useAt(lemma1, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
+          andR(1) & Idioms.<(
+            by(initialCondition),
+            by(rightTmDomain)
+          ),
+          andR(1) & Idioms.<(
+            debugTac("Initial Numberic condition") &
+              SaturateTactic(andL('L)) &
+              IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
+              done,
+            SaturateTactic(allR(1)) &
+              SaturateTactic(implyR(1)) &
+              SaturateTactic(andL('L)) &
+              debugTac("Numberic condition") &
+              IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
+              done
+          )
+        )
+      )
+    }
+
   }
 
 }

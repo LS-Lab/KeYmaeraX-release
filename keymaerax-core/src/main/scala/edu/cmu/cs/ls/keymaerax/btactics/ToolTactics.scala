@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, SMTTimeoutException, ToolInternalException}
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolInternalException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
@@ -249,6 +249,7 @@ private object ToolTactics {
     } catch {
       case ex: SMTQeException => throw new TacticInapplicableFailure(ex.getMessage, ex)
       case ex: SMTTimeoutException => throw new TacticInapplicableFailure(ex.getMessage, ex)
+      case ex: MathematicaInapplicableMethodException => throw new TacticInapplicableFailure(ex.getMessage, ex)
     }
     val Equiv(_, result) = qeFact.conclusion.succ.head
 
@@ -294,20 +295,20 @@ private object ToolTactics {
             case FuncOf(Function(name, None, _, _, _), _) => name == "abbrv" || name == "expand"
             case _ => false
           })) skip
-          else transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
+          else transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
         } catch {
           case ex: UnificationException =>
             //@note looks for specific transform position until we have better formula diff
             //@note Exception reports variable unifications and function symbol unifications swapped
             if (ex.input.asExpr.isInstanceOf[FuncOf] && !ex.shape.asExpr.isInstanceOf[FuncOf]) {
               FormulaTools.posOf(e, ex.shape.asExpr) match {
-                case Some(pp) => transform(ex.input.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
-                case _ => transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
+                case Some(pp) => transform(ex.input.asExpr)(pos.topLevel ++ pp) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) | transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                case _ => transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
               }
             } else {
               FormulaTools.posOf(e, ex.input.asExpr) match {
-                case Some(pp) => transform(ex.shape.asExpr)(pos.topLevel ++ pp) & assertE(expandTo, "Unexpected edit result")(pos) | transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
-                case _ => transform(expandTo)(pos) & assertE(expandTo, "Unexpected edit result")(pos)
+                case Some(pp) => transform(ex.shape.asExpr)(pos.topLevel ++ pp) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos) | transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
+                case _ => transform(expandTo)(pos) & DebuggingTactics.assertE(expandTo, "Unexpected edit result", new TacticInapplicableFailure(_))(pos)
               }
             }
         }
@@ -442,7 +443,7 @@ private object ToolTactics {
         useAt(propPushLeftIn(left.reapply), PosInExpr(1::Nil))(pp)
       case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.right ==right.right =>
         useAt(propPushRightIn(left.reapply), PosInExpr(1::Nil))(pp)
-      case Some(Imply(Box(a, _), Box(b, _))) if a==b => useAt("K modal modus ponens", PosInExpr(1::Nil))(pp)
+      case Some(Imply(Box(a, _), Box(b, _))) if a==b => useAt(Ax.K, PosInExpr(1::Nil))(pp)
       case Some(Imply(Forall(lv, _), Forall(rv, _))) if lv==rv => useAt(Ax.allDist, PosInExpr(1::Nil))(pp)
       case Some(Imply(Exists(lv, _), Exists(rv, _))) if lv==rv => useAt(existsDistribute, PosInExpr(1::Nil))(pp)
       case Some(Imply(_, _)) => useAt(implyFact, PosInExpr(1::Nil))(pos)

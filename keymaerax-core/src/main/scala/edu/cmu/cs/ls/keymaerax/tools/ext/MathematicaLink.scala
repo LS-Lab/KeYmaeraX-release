@@ -324,6 +324,10 @@ class JLinkMathematicaLink(val engineName: String) extends MathematicaLink with 
           executor.remove(taskId)
           throw ex
         case ex: ToolExternalException =>
+          // external but Mathematica still functional
+          executor.remove(taskId)
+          throw ex
+        case ex: ToolCriticalException =>
           logger.warn(ex)
           executor.remove(taskId, force = true)
           try {
