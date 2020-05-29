@@ -95,7 +95,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
   }
   def denominators(seq: Sequent) : Seq[Term] = (seq.ante++seq.succ).flatMap(denominators)
 
-  lazy val preprocess = ?(useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(1) & notR(1)) &
+  lazy val preprocess = SaturateTactic((useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(1) & notR(1))|!skip) &
     fullSimpTac(faxs = composeIndex(defaultFaxs, chaseIndex), taxs = emptyTaxs) &
     SaturateTactic(onAll(?(alphaRule | betaRule | existsL('L) | closeF)
       /* @note it seems weird to have to use the ?, but there are cases where this fails with positions locating outside a goal.
