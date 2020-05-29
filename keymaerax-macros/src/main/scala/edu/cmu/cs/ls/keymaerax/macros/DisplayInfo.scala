@@ -25,7 +25,20 @@ case class SequentDisplay(ante: List[String], succ: List[String], isClosed: Bool
 case class AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) extends DisplayInfo {
   override def name = names.name
   override def asciiName = names.asciiName
+
 }
+object AxiomDisplayInfo {
+  /**
+    * Elaborate the display formula from a raw unicode string to html.
+    */
+  def render(names: SimpleDisplayInfo, displayFormula: String): AxiomDisplayInfo = AxiomDisplayInfo(
+    names,
+    displayFormula.
+      replaceFirst("__", "<span class=\"k4-axiom-key\">").
+      replaceFirst("__", "</span>")
+  )
+}
+
 /** Render an axiom that has a name and a UI string formula but needs a list of inputs filled in first. */
 case class InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) extends DisplayInfo {
   override def name = names.name

@@ -98,7 +98,7 @@ class AxiomImpl (val c: whitebox.Context) {
           val recursor = parsePoses(recursorString)(c)
           val displayInfo = (fml, inputs) match {
             case ("", Nil) => simpleDisplay
-            case (fml, Nil) if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
+            case (fml, Nil) if fml != "" => AxiomDisplayInfo.render(simpleDisplay, fml)
             case (fml, args) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
             //case ("", Nil, premises, Some(conclusion)) => RuleDisplayInfo(simpleDisplay, conclusion, premises)
             case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Axiom: either specify premisses and conclusion, or formula optionally with inputs, not both")
