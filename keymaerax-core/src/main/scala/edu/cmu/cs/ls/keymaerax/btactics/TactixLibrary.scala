@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -138,22 +138,29 @@ object TactixLibrary extends HilbertCalculus
       if (except.contains(pos)) skip
       else s.sub(pos) match {
         case Some(fml) =>
-          if (pos.isAnte && s.succ.contains(fml)) close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml)))
-          else if (pos.isSucc && s.ante.contains(fml)) close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top)
+          val si = s.succ.indexOf(fml)
+          if (pos.isAnte && si >= 0) close(pos.checkAnte.top, SuccPos(si))
           else {
-            val (ta, ts) = tacticIndex.tacticsFor(fml)
-            if (pos.isAnte) ta.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
-            else ts.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+            val ai = s.ante.indexOf(fml)
+            if (pos.isSucc && ai >= 0) close(AntePos(ai), pos.checkSucc.top)
+            else {
+              val (ta, ts) = tacticIndex.tacticsFor(fml)
+              if (pos.isAnte) ta.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+              else ts.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+            }
           }
         case _ => skip
       }
     })
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
-    def atOrSearch(p: PositionLocator): BelleExpr = atPos(None)(p) | (p match {
-      case Fixed(pp, Some(fml), exact) if pp.isAnte => ?(atPos(Some(pp))(Find.FindL(0, Some(fml), exact=exact)))
-      case Fixed(pp, Some(fml), exact) if pp.isSucc => ?(atPos(Some(pp))(Find.FindR(0, Some(fml), exact=exact)))
-      case _ => skip
+    def atOrSearch(p: PositionLocator): DependentTactic = "ANON" by ((s: Sequent) => p match {
+      case Fixed(pp, Some(fml), exact) =>
+        if (( exact && s.sub(pp).contains(fml)) ||
+            (!exact && s.sub(pp).exists(UnificationMatch.unifiable(fml, _).isDefined))) atPos(None)(Fixed(pp))
+        else if (pp.isAnte) atPos(Some(pp))(Find.FindL(0, Some(fml), exact=exact))
+        else                atPos(Some(pp))(Find.FindR(0, Some(fml), exact=exact))
+      case _ => atPos(None)(p)
     })
 
     /** Do all the tactics of a branch in sequence. */
@@ -175,18 +182,20 @@ object TactixLibrary extends HilbertCalculus
         DebuggingTactics.assertOnAll(_ != s ||
           //@note allow recursing on subposition after no-op steps that supply recursors
           r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })),
-          "Stopping to recurse on unchanged sequent", new TacticInapplicableFailure(_)) &
+          "No progress, stopping recursion", new BelleNoProgress(_)) &
         applyRecursor(r(s, pos))
       ).reduce(_&_))
       else t(new Fixed(pos))
     }
 
     seq.sub(pos) match {
-      case Some(fml: Formula) if expected.isEmpty || expected.contains(fml) => onAll(atPos(None)(pos, fml))
-      case Some(fml: Formula) if !expected.contains(fml) => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-      case None if expected.isDefined => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-      case None if expected.isEmpty => throw new IllFormedTacticApplicationException("Position " + pos + " points outside sequent")
-      case _ => throw new TacticInapplicableFailure("TacticChase is only applicable at formulas")
+      case Some(fml: Formula) =>
+        if (expected.isEmpty || expected.contains(fml)) onAll(atPos(None)(pos, fml))
+        else onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
+      case Some(e) => throw new TacticInapplicableFailure("TacticChase is only applicable at formulas, but got " + e.prettyString)
+      case None =>
+        if (expected.isDefined) onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
+        else throw new IllFormedTacticApplicationException("Position " + pos + " points outside sequent")
     }
   })
 

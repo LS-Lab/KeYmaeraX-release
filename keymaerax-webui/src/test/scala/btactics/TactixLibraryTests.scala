@@ -260,13 +260,13 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
-  it should "eventually run out of ideas" taggedAs SlowTest in {
+  it should "eventually run out of ideas" taggedAs SlowTest in withQE { _ =>
     val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
     failAfter(20 seconds) {
       val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(invGenerator)(1))
-      result.getMessage should include("[Bellerophon Runtime] loopPostMaster: Invariant generator ran out of ideas")
+      result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
     }
   }
 
@@ -374,7 +374,7 @@ class TactixLibraryTests extends TacticTestBase {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
       origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
-      proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Fail")
+      proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Skip QE", new TacticInapplicableFailure(_))
           & QE(Nil, None, Some(7))) | new BuiltInTactic("ANON") {
         def result(provable: ProvableSig): ProvableSig = {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
@@ -384,13 +384,14 @@ class TactixLibraryTests extends TacticTestBase {
     case _ => // nothing to test
   }
 
-  "Tactic chase" should "not infinite recurse" in {
+  "Tactic chase" should "not infinite recurse" in withQE { _ =>
     var i = 0
     val count = "ANON" by ((_: Position, _: Sequent) => { i=i+1; skip })
 
-    failAfter(1 second) {
+    failAfter(2 seconds) {
       val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto(), count, keepQEFalse=false))
-      result.subgoals.loneElement shouldBe "==> [{x'=1}]x>0".asSequent
+      // master uses solve after count does not make progress
+      result.subgoals.loneElement shouldBe "t_>=0 ==> t_+x>0".asSequent
     }
 
     i shouldBe 2 /* decomposeToODE calls ODE, and so is master after decomposeToODE is done */
