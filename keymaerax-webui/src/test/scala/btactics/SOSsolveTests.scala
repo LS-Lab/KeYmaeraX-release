@@ -250,7 +250,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
             ???
         }
 
-        val expected = aborted.count + noSos.count + ratTacFailure.count
+        val expected = aborted.count + noSos.count + ratTacFailure.count + unknown.count
         println("Success  : " + success.count)
         println("Expected : " + expected)
         println("Success %: " + (success.count * 100 / (success.count + expected)) + "%")
