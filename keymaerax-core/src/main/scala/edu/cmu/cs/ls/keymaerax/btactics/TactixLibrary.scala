@@ -246,7 +246,7 @@ object TactixLibrary extends HilbertCalculus
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(l: Loop, p) => (Nil, DLBySubst.safeabstractionb::loop::Nil)
-        case Box(ode: ODESystem, p) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::Nil)
+        case Box(ode: ODESystem, p) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::dWPlus::Nil)
         case f@Not(_)      if f.isFOL => (Nil, Nil)
         case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
         case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
@@ -297,7 +297,7 @@ object TactixLibrary extends HilbertCalculus
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWPlus, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
           (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
   }
