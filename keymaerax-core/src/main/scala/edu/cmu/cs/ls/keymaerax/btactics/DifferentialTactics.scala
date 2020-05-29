@@ -915,8 +915,8 @@ private object DifferentialTactics extends Logging {
     case Some(Box(sys@ODESystem(ode, q), _)) =>
       lazy val recurseODE = ODE(useOdeInvariant = false, introduceStuttering = true,
         //@note abort if unchanged
-        assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
-          failureMessage
+        DebuggingTactics.assert((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
+          failureMessage, new BelleNoProgress(_)
         )(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
             case Some(ODESystem(_, extendedQ)) =>
@@ -1134,8 +1134,8 @@ private object DifferentialTactics extends Logging {
       }
     )(
       //@note aborts with error if the ODE was left unchanged -- invariant generators failed
-      assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0 :: Nil)).contains(sys),
-        failureMessage
+      DebuggingTactics.assert((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0 :: Nil)).contains(sys),
+        failureMessage, new BelleNoProgress(_)
       )(pos) &
         ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
           case Some(ODESystem(_, extendedQ)) =>
