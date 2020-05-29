@@ -706,7 +706,8 @@ object PolynomialArith extends Logging {
     }
   }
 
-  lazy val equalityByNormalisation = "equalityByNormalisation" by { (pos: Position, seq: Sequent) =>
+  lazy val equalityByNormalisation = PolynomialArithV2.equate
+  /*"equalityByNormalisation" by { (pos: Position, seq: Sequent) =>
       pos.checkTop
       pos.checkSucc
       seq.sub(pos) match {
@@ -717,7 +718,7 @@ object PolynomialArith extends Logging {
         case Some(e) => throw new TacticInapplicableFailure("equalityByNormalisation only applicable to equalities, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }
-    }
+    } */
 
   //Polynomial division: no proof needed, although the polynomials need to be pre-normalised
   //todo: Might this be implemented in terms of mulMono with -ve power? (probably not because ordering gets messed up)
