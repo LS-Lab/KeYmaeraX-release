@@ -383,15 +383,6 @@ trait UnifyUSCalculus {
     case _ => useAt(lem, PosInExpr(0 :: Nil))
   }
 
-//  /** Lazy useAt of a lemma by name. For use with ProveAs. */
-//  private[keymaerax]
-//  def lazyUseAt(lemmaName: String) : DependentPositionTactic =
-//    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, PosInExpr(Nil))(pos))
-//  private[keymaerax]
-//  def lazyUseAt(lemmaName: String, key:PosInExpr) : DependentPositionTactic =
-//    "lazyUseAt" by ((pos: Position, s:Sequent) => useAt(LemmaDBFactory.lemmaDB.get(lemmaName).get, key)(pos))
-
-
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting)
     * in the direction that expands as opposed to simplifies operators.
     * @see [[useAtImpl(AxiomInfo)]] */
@@ -434,7 +425,7 @@ trait UnifyUSCalculus {
     * @param subst the substitution `s` that instantiates fact `g |- d` to the present goal `G |- D`.
     * @param fact the fact `g |- d` to reduce the proof to. Facts do not have to be proved yet.
     * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(USubst)]]
-    * @see [[US(USubst,String)]]
+    * @see [[US(USubst, ProvableInfo)]]
     */
   def US(subst: USubst, fact: ProvableSig): BuiltInTactic = by(fact(subst))
 
@@ -452,7 +443,7 @@ trait UnifyUSCalculus {
     *
     * @param subst The uniform substitution `s` (of no free variables) to be used on the premises and conclusion of the provable.
     * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(USubst)]]
-    * @see [[US(USubst,String)]]
+    * @see [[US(USubst, ProvableInfo)]]
     */
   def US(subst: USubst): BuiltInTactic = new BuiltInTactic("US") {
     override def result(provable: ProvableSig): ProvableSig = provable(subst)
@@ -1277,8 +1268,6 @@ trait UnifyUSCalculus {
   def useFor(pi: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(pi.provable, key, linear=false, inst)
   private[btactics]
   def useFor(dai: AxiomInfo, inst: Subst=>Subst): ForwardPositionTactic = useFor(dai.provable, dai.key, dai.linear, inst)
-  ////  /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
-//  def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
 
 
   /** CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C.
