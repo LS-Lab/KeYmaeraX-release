@@ -455,10 +455,14 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	failure, gb, conv, monbasis, kp, R, coeffs,
 	umonomials,constraints,i,k,res,y, matrix, result,gtrm1,
 	sos, soscoeff, seq,bla,vec,prem,check,redseq,redg,deg,rm,
-	gtrm,gcoeff,gmc,gmons,cs,tt,pos,rres,trivseq,trivg,ivars,replacement,lininst},
+	gtrm,gcoeff,gmc,gmons,cs,tt,pos,rres,trivseq,trivg,ivars,replacement,lininst,
+	trunclim,hullbound,maxcofdeg,ms,msco,hull,vv,done,polytope,prevdeg,polydeg,
+	primaltrunclim},
 
 	maxcofdeg=20;
 	trunclim=20;
+	primaltrunclim=15;
+	hullbound=300; (* stops using convex hull if no.points * dimension is above this number *)
 	(* result type encoding of failure*)
 	failure = {0,{},{},{}};
 	
@@ -506,15 +510,18 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	ms = Map[CoefficientRules[#,ivars,monOrder]&,gb];
 	msco = Flatten[Map[#[[1]]&,ms,{2}],1];
 	hull=If[Length[ivars]<=2,ConvexHullCorners,#[[(NDConvexHull`CHNQuickHull[#][[1]])]]&];
-	polytope = hull[msco];
+	If[Length[msco]*Length[ivars]>hullbound,
+		Print["Too many points / dimensions, switching to bounding box ",Length[msco]," ",Length[ivars]];
+		polytope=Join[{ConstantArray[0,Length[ivars]]},DiagonalMatrix[Max /@ Transpose[msco]]],
+		polytope = hull[msco];
+	];
 	vv = Map[CoefficientRules[#,ivars,monOrder][[1]][[1]]&, Join[{1},ivars]];
 	done = {};
 	
+	prevdeg=1;
 	For[polydeg=0,polydeg<=maxcofdeg,polydeg++,
 	Print["Using polytope: ",polytope];
-	firstskip=True;
 	For[deg=1,deg<=degBound,deg++,
-	
 	
 	Print["Degree bound: ",deg];
 	
@@ -522,11 +529,12 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	(* Only consider those variables occuring in the groebner basis or g *)
 	prem = allMonomials[ivars,deg];
 	prem = FilterPolytope[prem,ivars,polytope];
-	If[MemberQ[done,prem] || Length[prem]===0,Print["Skipping"];
-		If[firstskip, Continue[], Break[]]];
+	If[MemberQ[done,prem] || Length[prem]===0,
+		Print["Skipping (prev max deg: ",prevdeg,")"];
+		If[deg <= prevdeg, Continue[], Break[]]];
 	(* TODO: it should be possible to exit the inner loop when no further monomials are possible *)
 	done=Join[{prem},done];
-	firstskip=False;
+	prevdeg=Max[{prevdeg,deg}];
 	
 	rm = MonSolve[gb, vars,gcoeff, prem, True, False];
 	If[rm==={},Continue[]];
@@ -536,84 +544,49 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	rres = RoundResult[Normal[res],monbasis,gtrm,gb,vars,False];
 
 	If[Length[rres]==0,
-	Print["Rounding heuristic failed, attempt resolve."];
-	(* Attempt to resolve by truncating "zeros" *)
-	prev={};
-	For[i=0,i<=trunclim,i++,
-		Block[{diag,thresh,goodpos},
+		Print["Rounding heuristic failed, attempt resolve."];
+		(* Attempt to resolve by truncating "zeros" *)
+		Block[{diag,thresh,goodpos,prev, rmloc,
+			resloc,monbasisloc,constraintsloc,csloc,
+			bs,ns,ys,j,yss,rr
+		},
 		diag=Normal[Diagonal[res]];
-		thresh=2^-i;
-		goodpos=Position[diag,_?(#>thresh&)]//Flatten;
-		If[monbasis[[goodpos]]===prev, Continue[]];
-		prev=monbasis[[goodpos]];
-		Print["Truncating (and re-solve) at: ",thresh];
-		Print["Keeping monomials: ", prev];
-		rm = MonSolve[gb, vars,gcoeff, prev, False, False];
-		If[rm==={},Continue[]];
-		{res,monbasis,constraints,cs}=rm;
-		rres = RoundResult[Normal[res],monbasis,gtrm,gb,vars,False];
-		
-		(* Try in primal *)
-		If[Length[rres]==0,
-			rm = MonSolve[gb, vars,gcoeff, prev, False, True];
-			If[rm==={},,
-			{bs,ns,ys,monbasis,constraints,cs}=rm;
-			For[j=1,j<=10,j++,
-				yss = Rationalize[Round[Normal[ys],10^-j]];
-				rr = bs+yss.ns;
-				rres = RoundResult[rr,monbasis,gtrm,gb,vars,True];
-				];
-			]
+		prev={};
+		For[i=0,i <= trunclim, i++,
+		If[i<trunclim,
+		(* Truncate *)
+			thresh=10^-i;
+			goodpos=Position[diag,_?(#>thresh&)]//Flatten;
+			If[monbasis[[goodpos]]===prev, Continue[]];
+			Print["Truncating (and re-solve) at: ",thresh];
+			prev=monbasis[[goodpos]];
+			Print["Keeping monomials: ", prev];
+			rmloc = MonSolve[gb,vars,gcoeff, prev, False, False];
+			If[rmloc==={},Continue[]];
+			{resloc,monbasisloc,constraintsloc,csloc}=rm;
+			rres = RoundResult[Normal[resloc],monbasisloc,gtrm,gb,vars,False];
+			If[Length[rres]==0,, Print["done."]; Break[]];
+		,
+		(* No truncate or (dual) resolve on last iteration *)
+			If[monbasis===prev, Continue[]];
+			Print["Final iteration, skipping truncation"];
+			prev=monbasis;
 		];
-		If[Length[rres]==0, Continue[],Break[]]
-		]];
-		(* Doesn't work well
-		If[Length[rres]\[Equal]0,
-			Print["Attempting to resolve in polynomials"];
-			{vals,vecc}=Eigensystem[Normal[res],UpTo[4]];
-			vecc=Rationalize[Round[vecc,10^-3]];
-			newpolys=vecc.monbasis;
-			rm = MonSolve[gb, vars,gcoeff, newpolys, False];
-			If[rm==={},,
-			{res,monbasis,constraints,cs}=rm;
-			rres = RoundResult[Normal[res],monbasis,gtrm,gb,vars,False];
-			];
-		]; *)
-		(* 
-		If[Length[rres]==0,
-			Print["(Last resort) attempting projection"];
-			{ns,bs}=ConvertPrimalRaw[Rationalize[constraints],cs,Length[monbasis]];
-			rs=FlattenSymmetric[Rationalize[Round[Normal[res],10^-8]],Length[monbasis]];
-			css=rs-bs;
-			mmm=Transpose[ns];
-			ts=Dot[LeastSquares[mmm,css],ns];
-			(* ts=Total[Map[Projection[css,#]/Norm[#]&,ns]]; *)
-			Print["r: ",N[rs]];
-			Print["rr: ",N[bs+ts]];
-			(* foo=1+monbasis.ExpandSymmetric[bs+ts,Length[monbasis]].monbasis;
-			Print[foo];
-			Print[PolynomialReduce[foo,gb,vars,monOrder]]; *)
-			(*
-			Print["ns: ",ns];
-			foo=1+monbasis.ExpandSymmetric[bs+ns[[1]],Length[monbasis]].monbasis;
-			Print[foo];
-			Print[PolynomialReduce[foo,gb,vars,monOrder]];
-			Print["bs: ",ExpandSymmetric[bs,Length[monbasis]]//MatrixForm]; *)
-			(* Print["ts: ",ts];
-			Print["ns: ",ns[[1]]];
-			Print["css: ",css];
-			Print["projs: ",ts]; *)
-			pss = ExpandSymmetric[bs+ts,Length[monbasis]];
-			rres = RoundResult[pss,monbasis,gtrm,gb,vars,True];
-			Print["rres: ",rres];
-			If[Length[rres]==0,Continue[]];
-			Print["done"];
-			Break[];
+		Print["Resolving in primal"];
+		rmloc = MonSolve[gb, vars,gcoeff, prev, False, True];
+		If[rmloc==={},Continue[]];
+		{bs,ns,ys,monbasisloc,constraintsloc,csloc}=rmloc;
+		For[j=1,j<=primaltrunclim,j++,
+			yss = Rationalize[Round[Normal[ys],10^-j]];
+			rr = bs+yss.ns;
+			rres = RoundResult[rr,monbasisloc,gtrm,gb,vars,True];
+			Print["primal trunc iteration: ",j," ",rres," ",N[Eigenvalues[rr]]];
+			If[Length[rres]==0, Continue[], Print["done."];Break[]]
 		];
-		Print["Solved."];
-		Break[];
-		]] *)
-	];
+		If[Length[rres]==0, Continue[], Print["done."];Break[]];
+		];
+	]];
+	If[Length[rres]==0,Continue[]];
 	{soscoeff,sos,seq} = rres;
 	pos=Position[soscoeff, x_ /; ! TrueQ[x == 0], {1}, Heads -> False]//Flatten;
 	Return[{
@@ -627,9 +600,10 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	fvv=Function[{a},Map[#+a&,vv]];
 	msco=Flatten[Map[fvv[#]&,polytope],1]//DeleteDuplicates;
 	(* TODO: Arbitrary threshold for switching into non-convex hull mode *)
-	If[Length[msco]>150,
-	polytope=Join[{ConstantArray[0,Length[ivars]]},DiagonalMatrix[Max /@ Transpose[msco]]],
-	polytope = hull[msco];
+	If[Length[msco]>hullbound,
+		Print["Too many points / dimensions, switching to bounding box ",Length[msco]," ",Length[ivars]];
+		polytope=Join[{ConstantArray[0,Length[ivars]]},DiagonalMatrix[Max /@ Transpose[msco]]],
+		polytope = hull[msco];
 	]];
 	
 	Return[failure];
