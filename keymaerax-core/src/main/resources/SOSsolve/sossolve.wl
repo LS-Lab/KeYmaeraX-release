@@ -466,15 +466,16 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	(* result type encoding of failure*)
 	failure = {0,{},{},{}};
 	
-	(* TODO: doesn't work in ineq case for now  *)
-	{polys,vars,replacement}=If[ineqs==={},
-		Pvars[polysPre,varsPre],
-		{polysPre,varsPre,{}}
-	];
 
 	(* TODO: this somehow needs to return a interpretable result *)
 	{polys,vars,lininst}=If[ineqs==={},
-		ElimLinear[polys,vars],
+		ElimLinear[polysPre,varsPre],
+		{polysPre,varsPre,{}}
+	];
+	
+	(* TODO: doesn't work in ineq case for now  *)
+	{polys,vars,replacement}=If[ineqs==={},
+		Pvars[polys,vars],
 		{polys,vars,{}}
 	];
 
