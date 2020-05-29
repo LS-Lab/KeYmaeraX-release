@@ -375,7 +375,8 @@ object Ax extends Logging {
   val commaSort = coreAxiom(", sort")
   @Axiom(",", unifier = "linear", key = "0", recursor = "")
   val commaCommute = coreAxiom(", commute")
-  @Axiom("DX", unifier = "linear", key = "0", recursor = "1")
+  @Axiom("DX",
+    key = "0", recursor = "1", unifier = "surjlinear")
   val DX = coreAxiom("DX differential skip")
   @Axiom("DIo >", unifier = "linear", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]g(x)>h(x)</span>↔[?Q]g(x)>h(x))←(Q→[{x'=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))'))",
     key = "1.0", recursor = "*")
@@ -446,11 +447,11 @@ object Ax extends Logging {
   @Axiom(("∨'", "|'"), formula = "<span class=\"k4-axiom-key\">(P|Q)'</span>↔P'∧Q'",
     key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dor = coreAxiom("|' derive or")
-  @Axiom(("∀'", "all'"), formula = "<span class=\"k4-axiom-key\">(∀x p(x))'</span>↔∀x (p(x))'", unifier = "linear",
-    key = "0", recursor = "0")
+  @Axiom(("∀'", "all'"), formula = "<span class=\"k4-axiom-key\">(∀x p(x))'</span>↔∀x (p(x))'",
+    key = "0", recursor = "0", unifier = "surjlinear")
   val Dforall = coreAxiom("forall' derive forall")
-  @Axiom(("∃'", "exists'"), formula = "<span class=\"k4-axiom-key\">(∃x p(x))'</span>↔∀x (p(x))'", unifier = "linear",
-    key = "0", recursor = "0")
+  @Axiom(("∃'", "exists'"), formula = "<span class=\"k4-axiom-key\">(∃x p(x))'</span>↔∀x (p(x))'",
+    key = "0", recursor = "0", unifier = "surjlinear")
   val Dexists = coreAxiom("exists' derive exists")
 
   /* HYBRID PROGRAMS / GAMES */
@@ -475,9 +476,11 @@ object Ax extends Logging {
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
 
-  @Axiom(("∀d", "alld"), formula = "<span class=\"k4-axiom-key\">¬∃x ¬P</span> ↔ ∀x P")
+  @Axiom(("∀d", "alld"), formula = "<span class=\"k4-axiom-key\">¬∃x ¬P</span> ↔ ∀x P",
+    key = "0", recursor = "*", unifier = "surjlinear")
   val alld = coreAxiom("all dual")
-  @Axiom(("∀e", "alle"), formula = "<span class=\"k4-axiom-key\">∀x P</span> → P", key = "0", recursor = "*")
+  @Axiom(("∀e", "alle"), formula = "<span class=\"k4-axiom-key\">∀x P</span> → P",
+    key = "0", recursor = "*", unifier = "surjlinear")
   val alle = coreAxiom("all eliminate")
 
 
@@ -2118,7 +2121,8 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("∃e","existse"), key = "1", recursor = "*")
+  @Axiom(("∃e","existse"),
+    key = "1", recursor = "*", unifier = "surjlinear")
   lazy val existse = derivedAxiom("exists eliminate",
     Sequent(IndexedSeq(), IndexedSeq("p_(||) -> (\\exists x_ p_(||))".asFormula)),
     useAt(existsDual, PosInExpr(1::Nil))(1, 1::Nil) &

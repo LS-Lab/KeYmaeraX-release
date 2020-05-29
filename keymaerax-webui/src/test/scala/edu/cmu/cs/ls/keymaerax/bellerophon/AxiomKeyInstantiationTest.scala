@@ -1,12 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
-import edu.cmu.cs.ls.keymaerax.core.{AnyArg, CoreException, Formula, UnitPredicational}
-import edu.cmu.cs.ls.keymaerax.tags.{ SummaryTest}
+import edu.cmu.cs.ls.keymaerax.core.{CoreException, Formula}
+import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import org.scalatest.BeforeAndAfterAll
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{LinearMatcher, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
@@ -337,4 +336,18 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
       }
     }
   }
+
+
+//  /** the names of axioms in AxiomInfo that not quite schematic because compatibility is required, in reality only a subset. */
+//  private val limitedSchematicAxioms = Ax.assignbeq :: Ax.assignbAxiom :: "[:=] assign equality exists" ::
+//    Ax.selfassignb :: "[':=] differential assign" :: "[:*] assign nondet" :: "[?] test" ::
+//    "DE differential effect" :: Ax.DGa :: Ax.DGC ::
+//    "DG inverse differential ghost" ::
+//    Ax.DS ::
+//    //"c()' derive constant fn" :: //@todo would need to avoid all variables here
+//    "x' derive var" ::
+//    "VK vacuous" :: "V vacuous" :: "vacuous all quantifier" ::
+//    "const congruence" :: "const formula congruence" ::
+//    Nil
+
 }
