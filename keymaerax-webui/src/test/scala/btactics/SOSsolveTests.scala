@@ -266,6 +266,9 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
       }
     val logfilename = "haveqe_20200121.txt"
 
+//    val seq = "==>\\forall F_ (F_!=0->F_^0=1)".asSequent
+//    processEntry(10, 600)(("test", seq, seq))
+
     withTemporaryConfig(Map(Configuration.Keys.DEBUG -> "false")){
       QELogger.processLog(QELogger.parseStr, processEntry(10, 600), logPath + logfilename)
     }
