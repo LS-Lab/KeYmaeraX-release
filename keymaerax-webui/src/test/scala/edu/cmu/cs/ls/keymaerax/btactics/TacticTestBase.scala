@@ -136,31 +136,41 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    *    }
    * }}}
    * */
-  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1): Unit = mathematicaProvider.synchronized {
+  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1, initLibrary: Boolean = true): Unit = mathematicaProvider.synchronized {
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-    withTemporaryConfig(Map(
-        Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
-        Configuration.Keys.QE_TOOL -> "mathematica",
-        Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
+    val common = Map(
+      Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
+      Configuration.Keys.QE_TOOL -> "mathematica")
+    val interp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")
+    val uninterp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")
+    withTemporaryConfig(common) {
       val provider = mathematicaProvider()
       ToolProvider.setProvider(provider)
       val tool = provider.defaultTool() match {
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
-
-      val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-      implicit val signaler: Signaler = (t: Thread) => {
-        theInterpreter.kill()
-        tool.cancel()
-        tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
-        mathematicaProvider.synchronized {
-          mathematicaProvider().doShutdown() //@note see [[afterAll]]
-          provider.shutdown()
-          mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+      if(initLibrary) {
+        withTemporaryConfig(interp) {
+          Ax.prepopulateDerivedLemmaDatabase()
         }
       }
-      failAfter(to) { testcode(tool) }
+      withTemporaryConfig(uninterp) {
+        val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
+        implicit val signaler: Signaler = (t: Thread) => {
+          theInterpreter.kill()
+          tool.cancel()
+          tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
+          mathematicaProvider.synchronized {
+            mathematicaProvider().doShutdown() //@note see [[afterAll]]
+            provider.shutdown()
+            mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+          }
+        }
+        failAfter(to) {
+          testcode(tool)
+        }
+      }
     }
   }
 
