@@ -304,65 +304,70 @@ object Ax extends Logging {
   // Hybrid Programs / Hybrid Games
 
   //@note default key = 0::Nil, recursor = (Nil)::Nil for direct reduction of LHS to RHS without substructure.
-  @Axiom(("<·>", "<.>"), formula = "<span class=\"k4-axiom-key\">&not;[a]&not;P</span>↔&langle;a&rangle;P", unifier = "linear",
-    key = "0", recursor = "*")
+  @Axiom(("<·>", "<.>"), formula = "<span class=\"k4-axiom-key\">&not;[a]&not;P</span>↔&langle;a&rangle;P",
+    key = "0", recursor = "*", unifier = "surjlinear")
   val diamond = coreAxiom("<> diamond")
-  @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)", unifier = "full",
-    key = "0", recursor = "*")
+  @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)",
+    key = "0", recursor = "*", unifier = "full")
   val assignbAxiom = coreAxiom("[:=] assign")
   @Axiom("[:=]=", formula = "<span class=\"k4-axiom-key\">[x:=e]P</span>↔∀x(x=e→P)",
-    key = "0", recursor = "*;0.1")
+    key = "0", recursor = "*;0.1", unifier = "surjlinearpretend")
   val assignbeq = coreAxiom("[:=] assign equality")
   @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x:=x]P</span>↔P")
   val selfassignb = coreAxiom("[:=] self assign")
-  @Axiom("[:=]", unifier = "full", formula = "<span class=\"k4-axiom-key\">[x':=c]p(x')</span>↔p(c)",
-    key = "0", recursor = "*")
+  @Axiom("[:=]", formula = "<span class=\"k4-axiom-key\">[x':=c]p(x')</span>↔p(c)",
+    key = "0", recursor = "*", unifier = "full")
   val Dassignb = coreAxiom("[':=] differential assign")
-  @Axiom("[:*]", formula = "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)")
+  @Axiom("[:*]", formula = "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)",
+    key = "0", recursor = "0;*", unifier = "surjlinear")
   val randomb = coreAxiom("[:*] assign nondet")
-  @Axiom("[?]", formula = "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)", unifier = "linear",
-    key = "0", recursor = "1")
+  @Axiom("[?]", formula = "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)",
+    key = "0", recursor = "1", unifier = "surjlinear")
   val testb = coreAxiom("[?] test")
-  @Axiom(("[∪]", "[++]"), formula = "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom(("[∪]", "[++]"), formula = "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val choiceb = coreAxiom("[++] choice")
-  @Axiom("[;]", formula = "<span class=\"k4-axiom-key\">[a;b]P</span>↔[a][b]P", unifier = "linear",
-    key = "0", recursor = "1;*")
+  @Axiom("[;]", formula = "<span class=\"k4-axiom-key\">[a;b]P</span>↔[a][b]P",
+    key = "0", recursor = "1;*", unifier = "surjlinear")
   val composeb = coreAxiom("[;] compose")
-  @Axiom("[*]", formula = "<span class=\"k4-axiom-key\">[a*]P</span>↔P∧[a][a*]P", unifier = "linear",
-    key = "0", recursor = "1")
+  @Axiom("[*]", formula = "<span class=\"k4-axiom-key\">[a*]P</span>↔P∧[a][a*]P",
+    key = "0", recursor = "1", unifier = "surjlinear")
   val iterateb = coreAxiom("[*] iterate")
 
   // Differential Equations
 
   // @TODO: Old AxiomInfo calls DWeakening
-  @Axiom("DW base", unifier = "linear",
-    key = "", recursor = "")
+  @Axiom("DW base", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]Q</span>",
+    key = "", recursor = "", unifier = "surjlinear")
   val DWbase = coreAxiom("DW base")
   @Axiom("DE", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔[x'=f(x)&Q][x':=f(x)]P",
-    key = "0", recursor = "1;*")
+    key = "0", recursor = "1;*", unifier = "surjlinear")
   val DE = coreAxiom("DE differential effect")
   @Axiom("DE", formula = "<span class=\"k4-axiom-key\">[{x'=F,c&Q}]P</span>↔[{c,x'=F&Q}][x':=f(x)]P",
-    key = "0", recursor = "1;*")
+    key = "0", recursor = "1;*", unifier = "surjlinear")
   val DEs = coreAxiom("DE differential effect (system)")
   /* @todo soundness requires only vectorial x in p(||) */
-  @Axiom("DI", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')", unifier = "linear",
-    key = "1.0", recursor = "*")
+  @Axiom("DI", formula = "(<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x'=f(x)&Q}](P)')",
+    key = "1.0", recursor = "*", unifier = "surjlinear")
   val DIequiv = coreAxiom("DI differential invariance")
-  @Axiom("DG", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∃y [{x'=f(x),y'=a*y+b&Q}]P")
+  @Axiom("DG", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∃y [{x'=f(x),y'=a*y+b&Q}]P",
+    key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGa = coreAxiom("DG differential ghost")
   //@todo name: why inverse instead of universal?
   @Axiom("DG inverse differential ghost", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{y'=a*y+b,x'=f(x)&Q}]P",
-    key = "0", recursor="0;*")
+    key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGpp = coreAxiom("DG inverse differential ghost")
-  @Axiom("DG inverse differential ghost implicational")
+  @Axiom("DG inverse differential ghost implicational", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>→∀y [{y'=g(x,y),x'=f(x)&Q}]P",
+    key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGi = coreAxiom("DG inverse differential ghost implicational")
-  @Axiom("DG", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∃y [{x'=f(x),y'=g()&Q}]P")
+  @Axiom("DG", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∃y [{x'=f(x),y'=g()&Q}]P",
+    key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGC = coreAxiom("DG differential ghost constant")
-  @Axiom("DGa", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{x'=f(x),y'=g()&Q}]P")
+  @Axiom("DGa", formula = "<span class=\"k4-axiom-key\">[{x'=f(x)&Q}]P</span>↔∀y [{x'=f(x),y'=g()&Q}]P",
+    key = "0", recursor = "0;*", unifier = "surjlinear")
   val DGCa = coreAxiom("DG differential ghost constant all")
   @Axiom("DS&", formula = "<span class=\"k4-axiom-key\">[{x'=c()&q(x)}]P</span> ↔ ∀t≥0 (∀0≤s≤t q(x+c()*s)) → [x:=x+c()*t;]P)",
-    key = "0", recursor = "0.1.1;0.1;*")
+    key = "0", recursor = "0.1.1;0.1;*", unifier = "surjlinearpretend")
   val DS = coreAxiom("DS& differential equation solution")
 
   /* @todo: , commute should be derivable from this + ghost */
@@ -396,20 +401,20 @@ object Ax extends Logging {
   @Axiom("x'", formula = "<span class=\"k4-axiom-key\">(x)'</span>=x'", unifier = "linear",
     key = "0", recursor = "")
   val Dvar = coreAxiom("x' derive var")
-  @Axiom("-'", formula = "<span class=\"k4-axiom-key\">(-f(x))'</span>=-(f(x))'", unifier = "linear",
-    key = "0", recursor = "0")
+  @Axiom("-'", formula = "<span class=\"k4-axiom-key\">(-f(x))'</span>=-(f(x))'",
+    key = "0", recursor = "0", unifier = "surjlinear")
   val Dneg = coreAxiom("-' derive neg")
-  @Axiom("+'", formula = "<span class=\"k4-axiom-key\">(f(x)+g(x))'</span>=f(x)'+g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom("+'", formula = "<span class=\"k4-axiom-key\">(f(x)+g(x))'</span>=f(x)'+g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dplus = coreAxiom("+' derive sum")
-  @Axiom("-'", formula = "<span class=\"k4-axiom-key\">(f(x)-g(x))'</span>=f(x)'-g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom("-'", formula = "<span class=\"k4-axiom-key\">(f(x)-g(x))'</span>=f(x)'-g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dminus = coreAxiom("-' derive minus")
-  @Axiom(("·'", "*'"), formula = "<span class=\"k4-axiom-key\">(f(x)·g(x))'</span>=(f(x))'·g(x)+f(x)·(g(x))'", unifier = "linear",
-    key = "0", recursor = "0.0;1.1")
+  @Axiom(("·'", "*'"), formula = "<span class=\"k4-axiom-key\">(f(x)·g(x))'</span>=(f(x))'·g(x)+f(x)·(g(x))'",
+    key = "0", recursor = "0.0;1.1", unifier = "surjlinear")
   val Dtimes = coreAxiom("*' derive product")
-  @Axiom("/'", formula = "<span class=\"k4-axiom-key\">(f(g)/g(x))'</span>=(g(x)·(f(x))-f(x)·(g(x))')/g(x)<sup>2</sup>", unifier = "linear",
-    key = "0", recursor = "0.0.0;0.1.1")
+  @Axiom("/'", formula = "<span class=\"k4-axiom-key\">(f(g)/g(x))'</span>=(g(x)·(f(x))-f(x)·(g(x))')/g(x)<sup>2</sup>",
+    key = "0", recursor = "0.0.0;0.1.1", unifier = "surjlinear")
   val Dquotient = coreAxiom("/' derive quotient")
   @Axiom(("∘'", "o'"), formula = "[y:=g(x)][y':=1](<span class=\"k4-axiom-key\">(f(g(x)))'</span>=(f(y))'·(g(x))'",
     key = "1.1.0", recursor = "1.1;1;*")
@@ -417,29 +422,29 @@ object Ax extends Logging {
   @Axiom("^'", formula = "<span class=\"k4-axiom-key\">(f(g)^n)'</span>=n·f(g)^(n-1)·(f(g))'←n≠0", unifier = "linear",
     key = "1.0", recursor = "1")
   val Dpower = coreAxiom("^' derive power")
-  @Axiom("='", formula = "<span class=\"k4-axiom-key\">(f(x)=g(x))'</span>↔f(x)'=g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom("='", formula = "<span class=\"k4-axiom-key\">(f(x)=g(x))'</span>↔f(x)'=g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dequal = coreAxiom("=' derive =")
-  @Axiom(("≥'", ">='"), formula = "<span class=\"k4-axiom-key\">(f(x)≥g(x))'</span>↔f(x)'≥g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom(("≥'", ">='"), formula = "<span class=\"k4-axiom-key\">(f(x)≥g(x))'</span>↔f(x)'≥g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dgreaterequal = coreAxiom(">=' derive >=")
-  @Axiom(">'", formula = "<span class=\"k4-axiom-key\">(f(x)>g(x))'</span>↔f(x)'≥g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom(">'", formula = "<span class=\"k4-axiom-key\">(f(x)>g(x))'</span>↔f(x)'≥g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dgreater = coreAxiom(">' derive >")
-  @Axiom(("≤'", "<='"), formula = "<span class=\"k4-axiom-key\">(f(x)≤g(x))'</span>↔f(x)'≤g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom(("≤'", "<='"), formula = "<span class=\"k4-axiom-key\">(f(x)≤g(x))'</span>↔f(x)'≤g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dlessequal = coreAxiom("<=' derive <=")
-  @Axiom("<'", formula = "<span class=\"k4-axiom-key\">(f(x)<g(m))'</span>↔f(x)'≤g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom("<'", formula = "<span class=\"k4-axiom-key\">(f(x)<g(m))'</span>↔f(x)'≤g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dless = coreAxiom("<' derive <")
-  @Axiom(("≠'", "!='"), formula = "<span class=\"k4-axiom-key\">(f(x)≠g(x))'</span>↔f(x)'=g(x)'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom(("≠'", "!='"), formula = "<span class=\"k4-axiom-key\">(f(x)≠g(x))'</span>↔f(x)'=g(x)'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dnotequal = coreAxiom("!=' derive !=")
-  @Axiom(("∧'", "&'"), formula = "<span class=\"k4-axiom-key\">(P&Q)'</span>↔P'∧Q'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom(("∧'", "&'"), formula = "<span class=\"k4-axiom-key\">(P&Q)'</span>↔P'∧Q'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dand = coreAxiom("&' derive and")
-  @Axiom(("∨'", "|'"), formula = "<span class=\"k4-axiom-key\">(P|Q)'</span>↔P'∧Q'", unifier = "linear",
-    key = "0", recursor = "0;1")
+  @Axiom(("∨'", "|'"), formula = "<span class=\"k4-axiom-key\">(P|Q)'</span>↔P'∧Q'",
+    key = "0", recursor = "0;1", unifier = "surjlinear")
   val Dor = coreAxiom("|' derive or")
   @Axiom(("∀'", "all'"), formula = "<span class=\"k4-axiom-key\">(∀x p(x))'</span>↔∀x (p(x))'", unifier = "linear",
     key = "0", recursor = "0")
@@ -450,22 +455,22 @@ object Ax extends Logging {
 
   /* HYBRID PROGRAMS / GAMES */
 
-  @Axiom(("&langle;<sup>d</sup>&rangle;", "<d>"), formula = "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔¬&langle;a&rangle;¬P", unifier = "linear",
-    key = "0", recursor = "0")
+  @Axiom(("&langle;<sup>d</sup>&rangle;", "<d>"), formula = "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔¬&langle;a&rangle;¬P",
+    key = "0", recursor = "0", unifier = "surjlinear")
   val duald = coreAxiom("<d> dual")
 
   @Axiom("VK", formula = "(p→<span class=\"k4-axiom-key\">[a]p</span>)←[a]⊤",
-    key = "1.1", recursor = "*")
+    key = "1.1", recursor = "*", unifier = "surjlinear")
   val VK = coreAxiom("VK vacuous")
-  @Axiom("[]T", formula = "<span class=\"k4-axiom-key\">[a]⊤</span>", unifier = "linear",
-    key = "", recursor = "")
+  @Axiom("[]T", formula = "<span class=\"k4-axiom-key\">[a]⊤</span>",
+    key = "", recursor = "", unifier = "surjlinear")
   val boxTrue = coreAxiom("[]T system")
-  @Axiom("K", formula = "[a](P→Q) → ([a]P → <span class=\"k4-axiom-key\">[a]Q</span>)", unifier = "linear",
-    key = "1.1", recursor = "*")
+  @Axiom("K", formula = "[a](P→Q) → ([a]P → <span class=\"k4-axiom-key\">[a]Q</span>)",
+    key = "1.1", recursor = "*", unifier = "surjlinear")
   val K = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
   @Axiom(("I<sub>→</sub>", "Iind"), formula = "P∧[a<sup>*</sup>](P→[a]P)→<span class=\"k4-axiom-key\">[a<sup>*</sup>]P</span>", displayLevel = "internal",
-    key = "1", recursor="1;*")
+    key = "1", recursor="1;*", unifier = "surjlinear")
   val Iind = coreAxiom("I induction")
 
   /* FIRST-ORDER QUANTIFIER AXIOMS */
@@ -3352,6 +3357,7 @@ object Ax extends Logging {
     * End.
     * }}}
     */
+    //@todo unifier = "full" for better error handling because of c?
   @Axiom("l'", unifier = "linear", key = "0", recursor = "1")
   lazy val Dlinear =
     derivedAxiom("' linear",
