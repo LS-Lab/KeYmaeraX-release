@@ -137,12 +137,13 @@ object TactixLibrary extends HilbertCalculus
     def atPos(except: Option[Position]): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
       if (except.contains(pos)) skip
       else s.sub(pos) match {
-        case Some(fml) if pos.isAnte && s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
-        case Some(fml) if pos.isSucc && s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(fml) =>
-          tacticIndex.tacticsFor(fml) match {
-            case (t, _) if pos.isAnte => t.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
-            case (_, t) if pos.isSucc => t.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+          if (pos.isAnte && s.succ.contains(fml)) close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml)))
+          else if (pos.isSucc && s.ante.contains(fml)) close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top)
+          else {
+            val (ta, ts) = tacticIndex.tacticsFor(fml)
+            if (pos.isAnte) ta.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+            else ts.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
           }
         case _ => skip
       }
@@ -177,7 +178,6 @@ object TactixLibrary extends HilbertCalculus
           "Stopping to recurse on unchanged sequent", new TacticInapplicableFailure(_)) &
         applyRecursor(r(s, pos))
       ).reduce(_&_))
-
       else t(new Fixed(pos))
     }
 
@@ -270,13 +270,13 @@ object TactixLibrary extends HilbertCalculus
 
     def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
       val solvers = Idioms.mapSubpositions(pos, seq, {
-        case (Box(ODESystem(_, _), q), pp: Position) if pp.isTopLevel =>
-          if (q.isFOL) Some(odeR(pp))
-          else Some(chase(pp ++ PosInExpr(1::Nil)) & odeR(pp))
-        case (Box(ODESystem(_, _), q), pp: Position) if !pp.isTopLevel => Some(solve(pp))
+        case (Box(ODESystem(_, _), q), pp: Position) =>
+          if (pp.isTopLevel) {
+            if (q.isFOL) Some(odeR(pp))
+            else Some(chase(pp ++ PosInExpr(1::Nil)) & odeR(pp))
+          } else Some(solve(pp))
         case _ => None
       })
-
       solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
