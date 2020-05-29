@@ -693,7 +693,8 @@ object Ax extends Logging {
     * }}}
     * @note unsound for hybrid games
     */
-  @Axiom("V", formula = "p→<span class=\"k4-axiom-key\">[a]p</span>", key = "1", recursor = "*")
+  @Axiom("V", formula = "p→<span class=\"k4-axiom-key\">[a]p</span>",
+    key = "1", recursor = "*", unifier = "surjlinearpretend")
   lazy val V = derivedAxiom("V vacuous",
     Sequent(IndexedSeq(), IndexedSeq("p() -> [a{|^@|};]p()".asFormula)),
     useAt(VK, PosInExpr(1::Nil))(1) &
@@ -857,7 +858,8 @@ object Ax extends Logging {
     * @Derived
     * @see [[equalReflexive]]
     */
-  @Axiom(("↔R","<->R"), formula = "p↔p", unifier = "full")
+  @Axiom(("↔R","<->R"), formula = "<span class=\"k4-axiom-key\">p↔p</span>",
+    key = "", recursor = "", unifier = "full")
   lazy val equivReflexive = derivedFact("<-> reflexive",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
@@ -970,7 +972,8 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("¬¬","!!"), formula ="¬¬p↔p", unifier = "linear")
+  @Axiom(("¬¬","!!"), formula ="<span class=\"k4-axiom-key\">¬¬p</span>↔p",
+    key = "0", recursor = "*", unifier = "surjlinear")
   lazy val doubleNegation = derivedFact("!! double negation",
     DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
@@ -1056,13 +1059,14 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "![]".
-    *   ![a;]p(x) <-> <a;>!p(x)
+    *   ![a;]P <-> <a;>!P
     * End.
     * }}}
     *
     * @Derived
     */
-  @Axiom(("¬[]","![]"), key = "0", recursor = "1;*", unifier = "linear")
+  @Axiom(("¬[]","![]"), formula = "<span class=\"k4-axiom-key\">¬[a]P</span>↔<a>¬P",
+    key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notBox = derivedAxiom("![]",
     Sequent(IndexedSeq(), IndexedSeq("(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
@@ -1078,7 +1082,8 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("¬<>","!<>"), key = "0", recursor = "1;*", unifier = "linear")
+  @Axiom(("¬<>","!<>"), formula = "<span class=\"k4-axiom-key\">¬<a>P</span>↔[a]¬P",
+    key = "0", recursor = "1;*", unifier = "surjlinear")
   lazy val notDiamond = derivedAxiom("!<>",
     Sequent(IndexedSeq(), IndexedSeq("(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula)),
     useAt(doubleNegation, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
@@ -1098,7 +1103,9 @@ object Ax extends Logging {
     *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
     * }}}
     */
-  @Axiom(("∀→","all->"))
+  @Axiom(("∀→","all->"), formula = "(∀x (p(x)→q(x))) → (∀x p(x) → <span class=\"k4-axiom-key\">∀x q(x)</span>)",
+    key = "1.1"
+  )
   lazy val allDist = derivedAxiom("all distribute",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p(x_)->q(x_))) -> ((\\forall x_ p(x_))->(\\forall x_ q(x_)))".asFormula)),
     implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
@@ -1108,7 +1115,8 @@ object Ax extends Logging {
     *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
     * }}}
     */
-  @Axiom(("∀→","all->"))
+  @Axiom(("∀→","all->"), formula = "(∀x (P→Q)) → (∀x P → <span class=\"k4-axiom-key\">∀x Q</span>)",
+    key = "1.1", unifier = "surjlinear")
   lazy val allDistElim = derivedAxiom("all distribute elim",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p_(||)->q_(||))) -> ((\\forall x_ p_(||))->(\\forall x_ q_(||)))".asFormula)),
     implyR(1) & implyR(1) & ProofRuleTactics.skolemizeR(1) & useAt(alle)(-1) & useAt(alle)(-2) & prop)
@@ -3379,7 +3387,8 @@ object Ax extends Logging {
     * End.
     * }}}
     */
-  @Axiom("l'", unifier = "linear", key = "0", recursor = "0")
+  @Axiom("l'",
+    key = "0", recursor = "0", unifier = "surjlinearpretend")
   lazy val DlinearRight = derivedAxiom("' linear right",
     Sequent(IndexedSeq(), IndexedSeq("(f(||)*c())' = (f(||))'*c()".asFormula)),
     useAt(Dtimes)(1, 0:: Nil) &

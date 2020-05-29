@@ -25,7 +25,7 @@ import DerivationInfoAugmentors._
 @SummaryTest
 class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
-  private val randomTrials = 10
+  private val randomTrials = 2
   private val randomComplexity = 4
   private val rand = new RandomFormula()
 
