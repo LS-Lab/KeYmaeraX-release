@@ -241,8 +241,8 @@ object DerivationInfoRegistry {
       , {case () => DifferentialTactics.diffWeakenPlus}, revealInternalSteps = true),
     /*new DerivedAxiomInfo("DC differential cut"
       , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
-      , "DC", 'linear, {case () => HilbertCalculus.useAt(Ax.DC)}),
-    InputPositionTacticInfo("dC"
+      , "DC", 'linear, {case () => HilbertCalculus.useAt(Ax.DC)}), */
+    InputPositionTacticInfo("dC" 
       , RuleDisplayInfo("Differential Cut"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
