@@ -450,7 +450,7 @@ object DerivationInfoRegistry {
       , "DEsysy", unsure, {case () => HilbertCalculus.useAt(Ax.DEsysy)}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
-      , "DIequiv", 'linear, {case () => HilbertCalculus.useAt(Ax.DIinvariance)}),
+      , "DIequiv", 'linear, {case () => HilbertCalculus.useAt(Ax.DIequiv)}),
     new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←(Q→P∧[{x′=f(x)&Q}](P)′)")
       , "DI", 'linear, {case () => HilbertCalculus.DI}),

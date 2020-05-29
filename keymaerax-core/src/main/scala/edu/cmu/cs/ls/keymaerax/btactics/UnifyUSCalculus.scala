@@ -2138,6 +2138,7 @@ trait UnifyUSCalculus {
     *   so those obtained by uniformly replacing program constant symbols by hybrid games and unit predicationals by formulas.
     *   If no arguments occur, so no function or predicate symbols or predicationals, then the axiom is surjective.
     *   UnitFunctional, UnitPredicational, ProgramConst etc. can still occur.
+    *   Function or predicate symbols that occur in a context without any bound variables are exempt. For example [[Ax.testb]].
     *   [[UniformMatcher]]
     * - 'linear: No symbol can occur twice in the shape.
     *   If a symbol does occur twice, it is assumed that the identical match is found in all use cases,
