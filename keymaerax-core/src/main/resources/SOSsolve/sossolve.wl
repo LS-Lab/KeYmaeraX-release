@@ -422,7 +422,7 @@ ConvexHullCorners[data_] := Module[
    corners = {};
    Do[
     corners = 
-      Join[corners, 
+      Join[corners,
        Select[data, 
         Min[data[[;; , i]]] == #[[i]] || 
           Max[data[[;; , i]]] == #[[i]] &]];
@@ -492,7 +492,7 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	{trivseq,trivg} = PolynomialReduce[gtrm,polys,vars,MonomialOrder -> monOrder];
 	If[trivg===0,
 		Print["Assumptions contradictory"];
-		Return[{gtrm,{},{}, trivseq, lininst}]]];
+		Return[{gtrm,{},{}, trivseq, lininst}/.replacement]]];
 	
 	(* Solve for the Groebner basis and its conversion matrix *)
 	{gb,conv} = GroebnerBasis`BasisAndConversionMatrix[polys, vars, MonomialOrder -> monOrder];
@@ -500,7 +500,7 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	{redseq,redg} = PolynomialReduce[gtrm,gb,vars,MonomialOrder -> monOrder];
 	If[redg===0,
 		Print["Assumptions contradictory"];
-		Return[{gtrm,{},{},Dot[redseq,conv],lininst}]];
+		Return[{gtrm,{},{},Dot[redseq,conv],lininst}/.replacement]];
 
 	Print["Using g: ", gtrm, " Reducing to: ",redg];
 	gcoeff=CoefficientRules[redg,vars,monOrder];
@@ -589,11 +589,11 @@ FindWitness[polysPre_List, ineqs_List, varsPre_List, degBound_Integer, monomials
 	{soscoeff,sos,seq} = rres;
 	pos=Position[soscoeff, x_ /; ! TrueQ[x == 0], {1}, Heads -> False]//Flatten;
 	Return[{
-		gtrm/.replacement,
-		soscoeff[[pos]]/.replacement,
-		sos[[pos]]/.replacement,
-		Dot[seq,conv]/.replacement,
-		lininst/.replacement}]
+		gtrm,
+		soscoeff[[pos]],
+		sos[[pos]],
+		Dot[seq,conv],
+		lininst}/.replacement]
 	];
 	
 	fvv=Function[{a},Map[#+a&,vv]];
