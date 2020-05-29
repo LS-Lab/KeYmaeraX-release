@@ -19,6 +19,8 @@ import DerivationInfoAugmentors._
   * @see [[UnificationMatch]]
   * @see [[UnifyAxiomInstantiationTest]]
   * @see [[UnificationMatchTest]]
+  * @see [[AxiomInfo.theKey]]
+  * @see [[AxiomInfo.unifier]]
   */
 @SummaryTest
 class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
