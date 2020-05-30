@@ -264,13 +264,14 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
         println("QE false  : " + qeFalse.count)
         println("QE timeout: " + qeTimeout.count)
       }
-    val logfilename = "haveqe_20200121.txt"
+    val logfilename = Configuration(Configuration.Keys.SOSSOLVE_LOG_INPUT)
+    val logtimeout = Configuration(Configuration.Keys.SOSSOLVE_LOG_TIMEOUT).toInt
 
 //    val seq = "==>\\forall F_ (F_!=0->F_^0=1)".asSequent
 //    processEntry(10, 600)(("test", seq, seq))
 
     withTemporaryConfig(Map(Configuration.Keys.DEBUG -> "false")){
-      QELogger.processLog(QELogger.parseStr, processEntry(10, 600), logPath + logfilename)
+      QELogger.processLog(QELogger.parseStr, processEntry(10, logtimeout), logPath + logfilename)
     }
   }
 
