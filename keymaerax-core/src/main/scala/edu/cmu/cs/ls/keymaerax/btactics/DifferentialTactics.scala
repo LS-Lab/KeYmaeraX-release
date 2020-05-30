@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -1351,6 +1352,11 @@ private object DifferentialTactics extends Logging {
   lazy val dbxEqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() = 0 -> z_() = 0".asFormula,QE,namespace).fact
   lazy val dbxNeqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() != 0 -> z_() != 0".asFormula,QE,namespace).fact
 
+  private lazy val dbxEqOne: ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, "1*1^2=1".asFormula)
+  // Darboux ghost variables
+  private lazy val gvy: Variable = BaseVariable("dbxy_")
+  private lazy val gvz: Variable = BaseVariable("dbxz_")
+
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
@@ -1390,13 +1396,8 @@ private object DifferentialTactics extends Logging {
       if(isOpen) openDiffInd(pos) else dI('full)(pos)
     }
     else {
-      /** The ghost variable */
-      val gvy = "dbxy_".asVariable
       require(!StaticSemantics.vars(system).contains(gvy), "fresh ghost " + gvy + " in " + system.prettyString)
       //@todo should not occur anywhere else in the sequent either...
-
-      /** Another ghost variable */
-      val gvz = "dbxz_".asVariable
       require(!StaticSemantics.vars(system).contains(gvz), "fresh ghost " + gvz + " in " + system.prettyString)
       //@todo should not occur anywhere else in the sequent either...
 
@@ -1430,7 +1431,7 @@ private object DifferentialTactics extends Logging {
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
             diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
               <(
-              hideL('Llast) & QE,
+              hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
               cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
             )
         )
@@ -1450,6 +1451,10 @@ private object DifferentialTactics extends Logging {
 
   private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
   private lazy val barrierCond2: ProvableSig = remember("h_() = k_() -> max(g_()*g_(),h_()) > 0 -> f_() > 0 ->  ((-(g_()*h_())/max(g_()*g_(),h_())) * f_() + 0) * g_() + f_() * k_() >=0".asFormula,QE,namespace).fact
+
+  private val zero = Number(0)
+  private val one = Number(1)
+  private val two = Number(2)
 
   private def dgBarrierAux : DependentPositionTactic = "barrieraux" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
@@ -1488,7 +1493,6 @@ private object DifferentialTactics extends Logging {
 
     val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
 
-    val zero = Number(0)
     //The special max term
     val barrierAlg = FuncOf(maxF, Pair(Times(barrier, barrier), lie))
     val barrierFml = Greater(barrierAlg, zero)
@@ -1504,14 +1508,7 @@ private object DifferentialTactics extends Logging {
     ) &
     starter
 
-    // Same as dgDbx but bypasses extra checks since we already know
-    /** The ghost variable */
-    val gvy = "dbxy_".asVariable
-    /** Another ghost variable */
-    val gvz = "dbxz_".asVariable
-
-    val one = Number(1)
-    val two = Number(2)
+    // reuse dgDbx ghosts dbxy_ and dbxz_, but bypass extra checks since we already know
 
     //Postcond:
     val gtz = Greater(gvy, zero)
@@ -1549,7 +1546,7 @@ private object DifferentialTactics extends Logging {
           existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
           // Closes z > 0 invariant with another diff ghost
           diffInd('diffInd)(pos) <(
-            hideL('Llast) & QE & done,
+            hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
             cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond) & done
           )
       )
