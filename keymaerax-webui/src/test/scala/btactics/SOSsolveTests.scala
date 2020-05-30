@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 import org.scalatest.PrivateMethodTester
-import org.scalatest.time.{Hours, Span}
+import org.scalatest.time.{Days, Hours, Span}
 
 import scala.collection.immutable._
 
