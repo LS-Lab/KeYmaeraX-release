@@ -110,7 +110,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     import java.util.Date
     import java.util.Calendar
 
-    val logPath = Configuration.path(Configuration.Keys.QE_LOG_PATH)
+    val logPath = Configuration.path(Configuration.Keys.SOSSOLVE_LOG_PATH)
     val dateStr = new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(Calendar.getInstance.getTime)
 
     trait Status { val name: String; val message: String}

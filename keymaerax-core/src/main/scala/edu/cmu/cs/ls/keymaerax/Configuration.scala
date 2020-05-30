@@ -43,6 +43,7 @@ object Configuration {
     val PORT = "PORT"
     val PROOF_TERM = "PROOF_TERM"
     val QE_LOG_PATH = "QE_LOG_PATH"
+    val SOSSOLVE_LOG_PATH = "SOSSOLVE_LOG_PATH"
     val QE_TOOL = "QE_TOOL"
     val CEX_SEARCH_DURATION = "CEX_SEARCH_DURATION"
     val MATHEMATICA_QE_METHOD = "QE_METHOD"
