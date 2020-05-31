@@ -63,7 +63,7 @@ import scala.reflect.runtime.{universe => ru}
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]]
   * @see [[edu.cmu.cs.ls.keymaerax.macros.Axiom]]
-  * @see [[matcherFor()]]
+  * @see [[UnifyUSCalculus.matcherFor()]]
   * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
   *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)
   *       as opposed to by referring to the names, which needs a map canonicalName->tacticOnDemand.
