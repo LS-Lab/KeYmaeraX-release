@@ -96,12 +96,12 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
+      TactixLibrary.QE) should have message "Unable to create dependent tactic 'rcf', cause: Name conversion of differential symbols not allowed: x'"
   }
 
   it should "not prove differential symbols by some hidden assumption in Z3" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall y \\forall x (x>=y->x'>=y')\n"
+      TactixLibrary.QE) should have message "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall y \\forall x (x>=y->x'>=y')\n"
   }
 
   it should "avoid name clashes with Mathematica" in withMathematica { _ =>
@@ -112,7 +112,7 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "avoid name clashes with Z3" in withZ3 { _ =>
     the [BelleThrowable] thrownBy proveBy("a=1, a()=2 ==> a=a()".asSequent, TactixLibrary.QE) should have message
-      "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\ntrue->1=2\n"
+      "QE with Z3 gives SAT. Cannot reduce the following formula to True:\ntrue->1=2\n"
     proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe 'proved
   }
 
