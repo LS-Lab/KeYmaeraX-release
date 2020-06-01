@@ -542,6 +542,7 @@ object TacticFactory {
     }
   }
 
+  def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Sequent => BelleExpr)): DependentTactic = "ANON" by t
 
