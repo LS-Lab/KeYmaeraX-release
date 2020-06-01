@@ -264,7 +264,7 @@ class TactixLibraryTests extends TacticTestBase {
     val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
-    failAfter(20 seconds) {
+    failAfter(50 seconds) {
       val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(invGenerator)(1))
       result.getMessage should include("[Bellerophon Runtime] loopPostMaster: Invariant generator ran out of ideas")
     }
@@ -384,7 +384,7 @@ class TactixLibraryTests extends TacticTestBase {
     case _ => // nothing to test
   }
 
-  "Tactic chase" should "not infinite recurse" in {
+  "Tactic chase" should "not infinite recurse" in withQE {_ =>
     var i = 0
     val count = "ANON" by ((_: Position, _: Sequent) => { i=i+1; skip })
 
