@@ -454,6 +454,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }
 
   it should "work with loop tactic" in withDatabase { db =>
+    withMathematica { qeTool =>
     val problem = "x>=0 -> [{x:=x+1;}*]x>=0"
     val modelContent = s"ProgramVariables. R x. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -478,9 +479,11 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |),
         |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; hideL('Llast) ; label("Post")
         |)""".stripMargin)
+    }
   }
 
   it should "work with loop tactic that preserves constants" in withDatabase { db =>
+    withMathematica { _ =>
     val problem = "x>=0 & A>0&B>0&C>0 -> [{x:=x+B;}*]x>=0"
     val modelContent = s"Definitions Real A,B,C; End. ProgramVariables Real x; End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -514,6 +517,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |),
         |cohide(1) ; CMonCongruence(".1") ; implyR(1) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; andL('Llast) ; hideL('Llast) ; label("Post")
         |)""".stripMargin)
+    }
   }
 
   it should "close left-over branching with follow-up branches" in withDatabase { db =>
