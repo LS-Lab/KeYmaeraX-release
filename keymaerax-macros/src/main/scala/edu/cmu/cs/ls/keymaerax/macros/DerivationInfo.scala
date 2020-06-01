@@ -211,6 +211,7 @@ trait AxiomInfo extends ProvableInfo {
   //def formula: Formula
   val theKey: ExprPos = 0 :: Nil
   val theRecursor: List[ExprPos] = Nil
+  def unifier: Symbol
   //@todo lift unifier and displayLevel from CoreAxiomInfo to here
 }
 

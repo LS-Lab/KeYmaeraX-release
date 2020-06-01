@@ -2151,7 +2151,7 @@ trait UnifyUSCalculus {
     */
   private[keymaerax]
   def matcherFor(pi: ProvableInfo): Matcher = pi match {
-    case ifo: CoreAxiomInfo => ifo.unifier match {
+    case ifo: AxiomInfo => ifo.unifier match {
       case 'surjective => UniformMatcher
       case 'surjlinear => UniformMatcher
       case 'linear => LinearMatcher
