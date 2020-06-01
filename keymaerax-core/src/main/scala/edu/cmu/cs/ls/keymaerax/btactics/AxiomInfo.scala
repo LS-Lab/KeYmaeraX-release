@@ -218,7 +218,8 @@ object DerivationInfoRegistry {
       , "VK", unsure, {case () => HilbertCalculus.VK}),
     new DerivedAxiomInfo("V vacuous"
       , AxiomDisplayInfo("V", "p→<span class=\"k4-axiom-key\">[a]p</span>")
-      , "V", unsure, {case () => HilbertCalculus.useAt(Ax.V)}),
+      , "V", unsure, {case () => HilbertCalculus.useAt(Ax.V)}
+      , theKey = 1:: Nil),
     new CoreAxiomInfo("[]T system"
       , AxiomDisplayInfo("[]T", "[a]true")
       , "boxTrue", 'linear, {case () => HilbertCalculus.boxTrue})
