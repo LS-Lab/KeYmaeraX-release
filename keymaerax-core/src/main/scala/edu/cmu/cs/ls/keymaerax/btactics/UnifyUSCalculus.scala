@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, CoreAxiomInfo, DerivationInfo, DerivedAxiomInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivationInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._

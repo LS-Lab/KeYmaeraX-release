@@ -34,7 +34,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
     new DerivedAxiomsTests().execute("The DerivedAxioms prepopulation procedure should not crash")
   }
 
-  /** Match given axiom directly against the given instance. */
+  /** Match given axiom directly against the given instance in full. */
   private def matchDirect(axiom: AxiomInfo, instance: Formula): Boolean = {
     val ax: Formula = axiom.formula
     val u = UnifyUSCalculus.matcherFor(axiom)(ax, instance)

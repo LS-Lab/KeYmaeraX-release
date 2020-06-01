@@ -9,6 +9,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 /**
  * Base class for KeYmaera X system tests without tactics need.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase]]
  */
 class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
