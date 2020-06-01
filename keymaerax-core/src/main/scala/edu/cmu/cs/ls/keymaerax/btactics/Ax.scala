@@ -4410,8 +4410,10 @@ object Ax extends Logging {
   @Axiom("powOne")
   lazy val powOne = derivedAxiom("F^1", Sequent(IndexedSeq(), IndexedSeq("f_()^1 = f_()".asFormula)), QE)
 
+  /** `t<->tt` equivalence */
   private def equivSequent(t: String, tt: String): Sequent =
     Sequent(IndexedSeq(),IndexedSeq(Equiv(t.asFormula,tt.asFormula)))
+  /** `f->(t<->tt)` conditional equivalence */
   private def implySequent(f: String, t: String, tt: String): Sequent =
     Sequent(IndexedSeq(),IndexedSeq(Imply(f.asFormula,Equiv(t.asFormula,tt.asFormula))))
   private def propQE: BelleExpr = prop & QE & done
@@ -4484,7 +4486,8 @@ object Ax extends Logging {
     * @Derived
     * @note postcondition refinement
     */
-  @Axiom("KDomD")
+  @Axiom("KDomD", formula = "[x'=f(x)&Q∧¬P]¬R → (__<x'=f(x)&Q>R → <x'=f(x)&Q>P__)",
+    key = "1", recursor = "*")
   lazy val KDomD: Lemma =
     derivedAxiom("K<&>",
       "==> [{c & q(||) & !p(||)}]!r(||) -> (<{c & q(||)}>r(||) -> <{c & q(||)}>p(||))".asSequent,
