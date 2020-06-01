@@ -78,22 +78,27 @@ object PolynomialArithV2 {
       // Some(proof of "term = other.term") by equating coefficients
       def equate(other: Polynomial) : Option[ProvableSig]
 
-      // partition monomials (where (num, denum, powers) represents num/denum*(vars(i)^powers(i))_(i))
+      // partition monomials (where (num, denom, (x_i, p_i)_(i)) represents num/denom*(x_1^p^1 * ... * x_n^p_n)
       // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where p1's monomials satisfy P and p2's monomials satisfy !P
-      def partition(P: (BigDecimal, BigDecimal, IndexedSeq[(Term, Int)]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
+      def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
 
       // approx(prec) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where the coefficients p1 are rounded to (decimal) precision [[prec]]
       def approx(prec: Int) : (ProvableSig, Polynomial, Polynomial)
 
+      // degree with respect to the variables for which "include" is true
+      def degree(include: Term=>Boolean = _ => true) : Int
+
+      // coefficient (numerator, denominator) of monomial (x_i, p_i)_(i) x_i^p_i:
+      def coefficient(monomial: Seq[(Term, Int)]) : (BigDecimal, BigDecimal)
     }
 
     // result.term = n
     def Const(n: BigDecimal) : Polynomial
 
-    // result.term = num/denum
-    def Const(num: BigDecimal, denum: BigDecimal) : Polynomial
+    // result.term = num/denom
+    def Const(num: BigDecimal, denom: BigDecimal) : Polynomial
 
     // result.term = t ^ n
     def Var(t: Term, n: Int) : Polynomial
@@ -112,6 +117,19 @@ object PolynomialArithV2 {
       case Divide(a, b) => ofTerm(a) / ofTerm(b)
       case Number(n) => Const(n)
       case term: Term => Var(term)
+    }
+
+    // subterms that are interpreted as variables
+    def symbols(t: Term) : Seq[Term] = t match {
+      case Plus(a, b)  => symbols(a) ++ symbols(b)
+      case Minus(a, b) => symbols(a) ++ symbols(b)
+      case Times(a, b) => symbols(a) ++ symbols(b)
+      case Neg(a)      => symbols(a)
+      case Power(a, Number(i)) if i.isValidInt && i >= 0 => symbols(a)
+      case Power(a, b) => symbols(a) ++ symbols(b)
+      case Divide(a, b) => symbols(a) ++ symbols(b)
+      case Number(n) => Seq()
+      case term: Term => Seq(term)
     }
 
     implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
@@ -323,7 +341,7 @@ object PolynomialArithV2Helpers {
 /**
 * A polynomial is represented as a set of monomials stored in a 2-3 Tree, the ordering is lexicographic
 * A monomial is represented as a coefficient and a power-product.
-* A coefficient is represented as a pair of BigDecimals for num/denum.
+* A coefficient is represented as a pair of BigDecimals for num/denom.
 * A power product is represented densely as a list of exponents
 *
 * All data-structures maintain a proof of
@@ -333,7 +351,7 @@ object PolynomialArithV2Helpers {
 *   - 3-Node (l, v1, m, v2, r) is "l + v1 + m + v2 + r"
 *   - 2-Node (l, v, r) is "l + v + r"
 *   - monomial (c, pp) is "c * pp"
-*   - coefficient (num, denum) is "num / denum"
+*   - coefficient (num, denom) is "num / denom"
 *   - power product [e1, ..., en] is "x1^e1 * ... * xn ^ en",
 *     where instead of "x^0", we write "1" in order to avoid trouble with 0^0, i.e., nonzero-assumptions on x or the like
 *
@@ -371,36 +389,36 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   /**
   * prv: lhs = rhs
   * lhs: input term (arbitrary, trace of construction)
-  * rhs: Divide(Number(num), Number(denum))
+  * rhs: Divide(Number(num), Number(denom))
   */
-  case class Coefficient(num: BigDecimal, denum: BigDecimal,
+  case class Coefficient(num: BigDecimal, denom: BigDecimal,
                          prvO: Option[ProvableSig] = None) {
     val numN = Number(num)
-    val denumN = Number(denum)
+    val denomN = Number(denom)
     // @note detour for "dependent" default argument
-    lazy val defaultPrv = equalReflex(Divide(numN, denumN))
+    lazy val defaultPrv = equalReflex(Divide(numN, denomN))
     val prv = prvO.getOrElse(defaultPrv)
-    def forgetPrv = Coefficient(num, denum, Some(defaultPrv))
+    def forgetPrv = Coefficient(num, denom, Some(defaultPrv))
     def rhsString = if (num.compareTo(0) == 0) "0"
-    else if (denum.compareTo(1) == 0) num.toString
-    else num.toString + "/" + denum.toString
+    else if (denom.compareTo(1) == 0) num.toString
+    else num.toString + "/" + denom.toString
 
     assert(prv.subgoals.isEmpty)
     assert(prv.conclusion.ante.isEmpty)
     assert(prv.conclusion.succ.length==1)
     assert(prv.conclusion.succ(0) match {
-      case Equal(lhs, Divide(Number(n), Number(d))) => n == num && d == denum
+      case Equal(lhs, Divide(Number(n), Number(d))) => n == num && d == denom
       case _ => false
     })
     val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs@Divide(n, d)) => (eq, lhs, rhs) }
 
     def unary_- : Coefficient = {
-      val negPrv = ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(Neg(numN), Number(-num)), NotEqual(denumN, Number(0))))
-      Coefficient(-num, denum, Some(useDirectly(coefficientNegPrv,
+      val negPrv = ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(Neg(numN), Number(-num)), NotEqual(denomN, Number(0))))
+      Coefficient(-num, denom, Some(useDirectly(coefficientNegPrv,
         Seq(
           ("x_", lhs),
           ("xn_", numN),
-          ("xd_", denumN),
+          ("xd_", denomN),
           ("nxn_", Number(-num))
         ),
         Seq(prv, negPrv)
@@ -408,63 +426,63 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     }
 
     def +(that: Coefficient) : Coefficient = {
-      val numRes = BigDecimalQETool.eval(Plus(Times(Number(num), Number(that.denum)), Times(Number(that.num), Number(denum))))
-      val denumRes = BigDecimalQETool.eval(Times(Number(denum), Number(that.denum)))
+      val numRes = BigDecimalQETool.eval(Plus(Times(Number(num), Number(that.denom)), Times(Number(that.num), Number(denom))))
+      val denomRes = BigDecimalQETool.eval(Times(Number(denom), Number(that.denom)))
       val inst = Seq(
         ("ln_", numN),
-          ("ld_", denumN),
+          ("ld_", denomN),
           ("rn_", that.numN),
-          ("rd_", that.denumN),
+          ("rd_", that.denomN),
           ("l_", lhs),
           ("r_", that.lhs),
           ("pn_", Number(numRes)),
-          ("pd_", Number(denumRes)))
+          ("pd_", Number(denomRes)))
       val numericPrv = ProvableSig.proveArithmetic(BigDecimalQETool,
         List(
-          Equal(Plus(Times(numN, that.denumN), Times(that.numN, denumN)), Number(numRes)),
-          Equal(Times(denumN, that.denumN), Number(denumRes)),
-          NotEqual(denumN, Number(0)),
-          NotEqual(that.denumN, Number(0)),
+          Equal(Plus(Times(numN, that.denomN), Times(that.numN, denomN)), Number(numRes)),
+          Equal(Times(denomN, that.denomN), Number(denomRes)),
+          NotEqual(denomN, Number(0)),
+          NotEqual(that.denomN, Number(0)),
         ).reduceRight(And)
       )
       val prvRes = useDirectly(coefficientPlusPrv, inst, Seq(prv, that.prv, numericPrv))
-      Coefficient(numRes, denumRes, Some(prvRes))
+      Coefficient(numRes, denomRes, Some(prvRes))
     }
 
     def *(that: Coefficient) : Coefficient = {
       val numRes = BigDecimalQETool.eval(Times(Number(num), Number(that.num)))
-      val denumRes = BigDecimalQETool.eval(Times(Number(denum), Number(that.denum)))
+      val denomRes = BigDecimalQETool.eval(Times(Number(denom), Number(that.denom)))
       val inst = Seq(
         ("ln_", numN),
-          ("ld_", denumN),
+          ("ld_", denomN),
           ("rn_", that.numN),
-          ("rd_", that.denumN),
+          ("rd_", that.denomN),
           ("l_", lhs),
           ("r_", that.lhs),
           ("pn_", Number(numRes)),
-          ("pd_", Number(denumRes)))
+          ("pd_", Number(denomRes)))
       val numericPrv = ProvableSig.proveArithmetic(BigDecimalQETool,
         List(
           Equal(Times(numN, that.numN), Number(numRes)),
-          Equal(Times(denumN, that.denumN), Number(denumRes)),
-          NotEqual(denumN, Number(0)),
-          NotEqual(that.denumN, Number(0)),
+          Equal(Times(denomN, that.denomN), Number(denomRes)),
+          NotEqual(denomN, Number(0)),
+          NotEqual(that.denomN, Number(0)),
         ).reduceRight(And)
       )
       val prvRes = useDirectly(coefficientTimesPrv, inst, Seq(prv, that.prv, numericPrv))
-      Coefficient(numRes, denumRes, Some(prvRes))
+      Coefficient(numRes, denomRes, Some(prvRes))
     }
 
     def bigDecimalOption : Option[ProvableSig] = {
-      val d = Divide(numN, denumN)
+      val d = Divide(numN, denomN)
       (try {
         Some(Number(BigDecimalQETool.eval(d)))
       } catch {
         case _: IllegalArgumentException => None
       }).map{bd =>
         useDirectly(coefficientBigDecimalPrv,
-          Seq(("x_", lhs), ("xn_", numN), ("xd_", denumN), ("bd_", bd)),
-          Seq(prv, ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(d, bd), NotEqual(denumN, Number(0))))))
+          Seq(("x_", lhs), ("xn_", numN), ("xd_", denomN), ("bd_", bd)),
+          Seq(prv, ProvableSig.proveArithmetic(BigDecimalQETool, And(Equal(d, bd), NotEqual(denomN, Number(0))))))
       }
     }
 
@@ -473,24 +491,24 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       *   n / d = bd
       * */
     def normalized : (ProvableSig, Term) = if (num.compareTo(0) == 0) {
-      (useDirectly(normalizeCoeff0, Seq(("c_", lhs), ("d_", denumN)), Seq(prv)), Number(0))
+      (useDirectly(normalizeCoeff0, Seq(("c_", lhs), ("d_", denomN)), Seq(prv)), Number(0))
     } else bigDecimalOption match {
       case Some(prv) => (prv, rhsOf(prv))
       case None => (prv, rhs)
     }
 
-    def split(newNum: BigDecimal, newDenum: BigDecimal) : (ProvableSig, Coefficient, Coefficient) = {
+    def split(newNum: BigDecimal, newdenom: BigDecimal) : (ProvableSig, Coefficient, Coefficient) = {
       val num1 = newNum
-      val denum1 = newDenum
-      val num2 = num * denum1 - num1 * denum
-      val denum2 = denum * denum1
+      val denom1 = newdenom
+      val num2 = num * denom1 - num1 * denom
+      val denom2 = denom * denom1
       val numericCondition = ProvableSig.proveArithmetic(BigDecimalQETool,
-        splitCoefficientNumericCondition(numN, denumN, Number(num1), Number(denum1), Number(num2), Number(denum2)))
-      (useDirectly(splitCoefficient, Seq(("c_", lhs), ("n_", numN), ("d_", denumN),
-        ("n1_", Number(num1)), ("d1_", Number(denum1)),
-        ("n2_", Number(num2)), ("d2_", Number(denum2)),
+        splitCoefficientNumericCondition(numN, denomN, Number(num1), Number(denom1), Number(num2), Number(denom2)))
+      (useDirectly(splitCoefficient, Seq(("c_", lhs), ("n_", numN), ("d_", denomN),
+        ("n1_", Number(num1)), ("d1_", Number(denom1)),
+        ("n2_", Number(num2)), ("d2_", Number(denom2)),
       ), Seq(prv, numericCondition)),
-        Coefficient(num1, denum1), Coefficient(num2, denum2))
+        Coefficient(num1, denom1), Coefficient(num2, denom2))
     }
 
     def approx(prec: Int) : (ProvableSig, Coefficient, Coefficient) = {
@@ -553,7 +571,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     * rhs: representation of `coeff*powers.map(^)`
     *
     * */
-  case class Monomial(coeff: Coefficient, powers: IndexedSeq[(Term, Int)], prvO: Option[ProvableSig] = None) extends Ordered[Monomial] {
+  case class Monomial(coeff: Coefficient, powers: IndexedSeq[(Term, Int)], prvO: Option[ProvableSig] = None) {
     assert(powers.map(_._1).sorted(variableOrdering) == powers.map(_._1))
     assert(powers.map(_._1).distinct == powers.map(_._1))
     assert(powers.forall(_._2 > 0))
@@ -564,8 +582,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     def powersString: String = {
       val sep = " " // nicer than "*" ?
-      (if (coeff.num.compareTo(1) == 0 && coeff.denum.compareTo(1) == 0 && powers.exists(_._2 > 0)) ""
-      else if (coeff.num.compareTo(-1) == 0 && coeff.denum.compareTo(1) == 0) "-"
+      (if (coeff.num.compareTo(1) == 0 && coeff.denom.compareTo(1) == 0 && powers.exists(_._2 > 0)) ""
+      else if (coeff.num.compareTo(-1) == 0 && coeff.denom.compareTo(1) == 0) "-"
       else coeff.rhsString + sep) +
         powers.map{case (v, p) => Power(v, Number(p))}.mkString(sep)
     }
@@ -696,7 +714,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       case Times(Number(one), t@Power(v, Number(n))) =>
         //assert(one.compareTo(1)==0)
         val (cdPrv, d) = c.normalized
-        if (c.num.compareTo(1) == 0 && c.denum.compareTo(1) == 0) {
+        if (c.num.compareTo(1) == 0 && c.denom.compareTo(1) == 0) {
           // c = 1
           if (n.compareTo(1) == 0) {
             (useDirectly(normalizePowers1V, Seq(("c_", c.lhs), ("v_", v)), Seq(cdPrv)), v)
@@ -766,7 +784,11 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     def isConstant = powers.forall{case (t, i) => i == 0 } || coeff.num.compare(0) == 0
 
-    override def compare(that: Monomial): Int = monomialOrdering.compare(this.powers, that.powers)
+    def degree(include: Term=>Boolean = _ => true) : Int =
+      if (coeff.num.compare(0) != 0)
+        powers.map{ case (t, p) => if (include(t)) p else 0 }.sum
+      else 0
+
   }
 
   val zez = rememberAny("0 = 0".asFormula, byUS(Ax.equalReflexive))
@@ -1033,17 +1055,17 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     lazy val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs) => (eq, lhs, rhs) }
     lazy val term = lhs
 
-    def lookup(x: Monomial) : Option[Monomial] = this match {
+    def lookup(x: IndexedSeq[(Term, Int)]) : Option[Monomial] = this match {
       case Empty(_) => None
-      case Branch2(left, v, right, _) => x.compare(v) match {
+      case Branch2(left, v, right, _) => monomialOrdering.compare(x, v.powers) match {
         case 0 => Some(v)
         case c if c < 0 => left.lookup(x)
         case c if c > 0 => right.lookup(x)
       }
-      case Branch3(left, v1, mid, v2, right, _) => x.compare(v1) match {
+      case Branch3(left, v1, mid, v2, right, _) => monomialOrdering.compare(x, v1.powers)  match {
         case 0 => Some(v1)
         case c if c < 0 => left.lookup(x)
-        case c if c > 0 => x.compare(v2) match {
+        case c if c > 0 => monomialOrdering.compare(x, v2.powers)  match {
           case 0 => Some(v2)
           case c if c < 0 => mid.lookup(x)
           case c if c > 0 => right.lookup(x)
@@ -1067,7 +1089,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           ("l_", left.rhs),
           ("r_", right.rhs)
         )
-        x.compare(v) match {
+        monomialOrdering.compare(x.powers, v.powers)  match {
         case 0 =>
           val vx = (v.forgetPrv+x).get
           val newRhs = Plus(Plus(left.rhs, vx.rhs), right.rhs)
@@ -1115,7 +1137,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           ("w_", w.rhs),
           ("r_", right.rhs)
         )
-        x.compare(v) match {
+        monomialOrdering.compare(x.powers, v.powers)  match {
           case 0 =>
             val vx = (v.forgetPrv + x).get
             val newRhs = Seq(left.rhs, vx.rhs, mid.rhs, w.rhs, right.rhs).reduceLeft(Plus)
@@ -1135,7 +1157,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
               Sprout(Branch2(lx, v, Branch2(mid, w, right, None), Some(newPrv)))
           }
           case c if c > 0 =>
-            x.compare(w) match {
+            monomialOrdering.compare(x.powers, w.powers)  match {
               case 0 =>
                 val wx = (w.forgetPrv + x).get
                 val newRhs = Seq(left.rhs, v.rhs, mid.rhs, wx.rhs, right.rhs).reduceLeft(Plus)
@@ -1555,8 +1577,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     def ofMonomials(monomials: Seq[Monomial]): TreePolynomial = monomials.foldLeft[TreePolynomial](Empty(None))(_ + _)
 
-    def partition(P: (BigDecimal, BigDecimal, IndexedSeq[(Term, Int)]) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
-      def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denum, m.powers)
+    def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
+      def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denom, m.powers)
       val (pos, neg) = partitionMonomials(PMonomial)(Seq(), Seq())
       val p1 = ofMonomials(pos)
       val p2 = ofMonomials(neg)
@@ -1600,6 +1622,14 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           Branch3(l2, v12, m2, v22, r2, None))
     }
 
+    override def coefficient(monomial: Seq[(Term, Int)]): (BigDecimal, BigDecimal) = {
+      lookup(monomial.toIndexedSeq) match {
+        case None => (0, 1)
+        case Some(v) => (v.coeff.num, v.coeff.denom)
+      }
+    }
+
+
   }
 
   lazy val varPowerLemma = rememberAny("v_()^n_() = 0 + 1 / 1 * (1 * v_()^n_()) + 0".asFormula, QE & done)
@@ -1618,9 +1648,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus)),
     QE & done)
 
-  def Const(num: BigDecimal, denum: BigDecimal) : TreePolynomial =
-    Branch2(Empty(None), Monomial(Coefficient(num, denum, None), IndexedSeq(), None), Empty(None),
-      Some(useDirectly(rationalLemma, Seq(("n_", Number(num)), ("d_", Number(denum))), Seq())))
+  def Const(num: BigDecimal, denom: BigDecimal) : TreePolynomial =
+    Branch2(Empty(None), Monomial(Coefficient(num, denom, None), IndexedSeq(), None), Empty(None),
+      Some(useDirectly(rationalLemma, Seq(("n_", Number(num)), ("d_", Number(denom))), Seq())))
   def Const(num: BigDecimal) : TreePolynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), IndexedSeq(), None), Empty(None),
     Some(constLemma(substAny("n_", Number(num)))))
 
@@ -1631,6 +1661,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     val prv = prvO.getOrElse(defaultPrv)
     override def forgetPrv = Empty(None)
     override def treeSketch: String = "."
+    override def degree(include: Term => Boolean) = 0
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus))
@@ -1639,6 +1670,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     override def forgetPrv: TreePolynomial = Branch2(left, value, right, None)
     override def treeSketch: String = "[" + left.treeSketch + ", " + value.powersString + ", " + right.treeSketch + "]"
+    override def degree(include: Term => Boolean) : Int =
+      left.degree(include) max value.degree(include) max right.degree(include)
   }
   case class Branch3(left: TreePolynomial, value1: Monomial, mid: TreePolynomial, value2: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus))
@@ -1647,6 +1680,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     override def forgetPrv: TreePolynomial = Branch3(left, value1, mid, value2, right, None)
     override def treeSketch: String = "{" + left.treeSketch + ", " + value1.powersString + ", " + mid.treeSketch + ", " + value2.powersString + ", " + right.treeSketch + "}"
+    override def degree(include: Term => Boolean) : Int =
+      left.degree(include) max value1.degree(include) max mid.degree(include) max value2.degree(include) max right.degree(include)
   }
 
 }

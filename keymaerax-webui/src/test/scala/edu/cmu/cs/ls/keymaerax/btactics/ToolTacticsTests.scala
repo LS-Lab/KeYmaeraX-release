@@ -46,12 +46,14 @@ class ToolTacticsTests extends TacticTestBase {
 
   it should "fail in the right way after all filters are unsuccessful" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("z<=5 ==> ".asSequent,
-      transform("z<=4".asFormula)(-1)) shouldNot have message "[Bellerophon Runtime] head of empty list"
-    inside(the [BelleThrowable] thrownBy proveBy("z<=5 ==> ".asSequent, transform("z<=4".asFormula)(-1))) {
-      case bt: BelleThrowable =>
-        bt should have message "[Bellerophon Runtime] Tactic transform(\"z<=4\",-1) is not applicable for\n    z<=5\nat position -1\nbecause Invalid transformation: cannot transform Some(z<=5) to z<=4"
-        bt.getCause should have message "[Bellerophon Runtime] Invalid transformation: cannot transform Some(z<=5) to z<=4"
-    }
+      transform("z<=4".asFormula)(-1)) shouldNot have message "head of empty list"
+    the [BelleThrowable] thrownBy proveBy("z<=5 ==> ".asSequent, transform("z<=4".asFormula)(-1)) should
+      have message "Invalid transformation: cannot transform Some(z<=5) to z<=4"
+  }
+
+  it should "fail non-critical on invalid transformation" in withQE { _ =>
+    proveBy("==> x<=5".asSequent, transform("x<=6".asFormula)(1) | transform("x<=4".asFormula)(1)).subgoals.
+      loneElement shouldBe "==> x<=4".asSequent
   }
 
   it should "work on the postcondition of a simple box property" in withQE { _ =>

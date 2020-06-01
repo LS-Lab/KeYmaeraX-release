@@ -256,7 +256,7 @@ class ODELivenessTests extends TacticTestBase {
         //Keep compactness assumption around, wrap into tactic
         cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
           skip,
-          useAt("<> diamond",PosInExpr(1::Nil))(1) & prop
+          useAt(Ax.diamond,PosInExpr(1::Nil))(1) & prop
         ) &
 
         // cut some extra information that will get auto DC-ed in K<&>

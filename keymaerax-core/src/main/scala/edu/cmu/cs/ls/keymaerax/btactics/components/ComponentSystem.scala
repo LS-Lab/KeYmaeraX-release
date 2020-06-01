@@ -97,7 +97,7 @@ object ComponentSystem {
       case Some(Box(_: Test, Box(_: Test, _))) => useAt(testIndependence)(pos)
       case Some(Box(_: Test, Box(_: Assign, _))) => useAt(assignmentIndependence4, PosInExpr(1::Nil))(pos)
       case Some(Box(Compose(a,b), p)) if swapCompose =>
-        composeb(pos) & programIndependence(swapCompose=false)(pos) & useAt("[;] compose", PosInExpr(1::Nil))(pos)
+        composeb(pos) & programIndependence(swapCompose=false)(pos) & useAt(Ax.composeb, PosInExpr(1::Nil))(pos)
       case Some(Box(a, Box(b, p))) =>
         val prgVars = StaticSemantics.freeVars(p).intersect(StaticSemantics.boundVars(a) ++ StaticSemantics.boundVars(b)).
           toSet[Variable].toList.sorted[NamedSymbol]
@@ -178,7 +178,7 @@ object ComponentSystem {
                       hideR(1) & useAt(partitionedOdeLemma, PosInExpr(1::Nil))(1, List.fill(ys.size)(0)) &
                         ys.indices.reverse.
                           map(i => PosInExpr(List.fill(i)(0))).
-                          map(useAt("DG inverse differential ghost implicational", PosInExpr(1::Nil))(1, _)).
+                          map(useAt(Ax.DGi, PosInExpr(1::Nil))(1, _)).
                           reduceOption[BelleExpr](_ & _).getOrElse(skip) &
                         closeId & done
                     ),
@@ -208,7 +208,7 @@ object ComponentSystem {
                       allL('Llast)*ys.size & closeId & done
                       ,
                       hideR(1) & useAt(partitionedOdeLemma, PosInExpr(1::Nil))(1, List.fill(ys.size)(0)) &
-                        allR(1)*ys.size & dW(1) & useAt("[?] test", PosInExpr(1::Nil))(1) &
+                        allR(1)*ys.size & dW(1) & useAt(Ax.testb, PosInExpr(1::Nil))(1) &
                         closeId & done
                     ),
                     cohideR(1) & dW(1) & prop & done
@@ -230,10 +230,10 @@ object ComponentSystem {
         val abv = StaticSemantics.boundVars(a).intersect(StaticSemantics.freeVars(p)).toSet.toList
         val approximate = abv.indices.reverse.
           map(i => PosInExpr(List.fill(i)(0))).
-          map(useAt("[:*] assign nondet", PosInExpr(1::Nil))(1, _)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+          map(useAt(Ax.randomb, PosInExpr(1::Nil))(1, _)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
         val decompose = Range(0, abv.size-1).
           map(i => PosInExpr(List.fill(i)(1))).
-          map(useAt("[;] compose")(-1, _)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+          map(useAt(Ax.composeb)(-1, _)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
         val lemma4 = proveBy(
           Imply(Box(abv.map(AssignAny).reduceRightOption(Compose).getOrElse(Test(True)), p), have),
           implyR(1) & abstractionb(1) & approximate & decompose & closeId)
@@ -249,7 +249,7 @@ object ComponentSystem {
     implyR(1) & equivR(1) <(
       testb(-2, 1::Nil),
       testb(1, 1::Nil)
-    ) & onAll(implyRi()(-2, 1) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & monb & prop & done), namespace)
+    ) & onAll(implyRi()(-2, 1) & useAt(Ax.K, PosInExpr(1::Nil))(1) & monb & prop & done), namespace)
 
   def introduceTest(f: Formula): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
@@ -322,7 +322,7 @@ object ComponentSystem {
         // Step 2.10
         overapproximateProgram(pos) & DebuggingTactics.print("Overapproximated program") &
         // Step 2.11
-        useAt("[;] compose", PosInExpr(1::Nil))(pos) & useAt("[;] compose", PosInExpr(1::Nil))(pos.topLevel ++ pos.inExpr.parent) &
+        useAt(Ax.composeb, PosInExpr(1::Nil))(pos) & useAt(Ax.composeb, PosInExpr(1::Nil))(pos.topLevel ++ pos.inExpr.parent) &
         // recurse until done
         proveSystemCompStep4(inputAssumptions, outputGuarantees, plant1Vars, compatibility, remainingCons-1)(pos)
     case Some(e) => throw new TacticInapplicableFailure("proveSystemCompStep4 only applicable to box properties, but got " + e.prettyString)
@@ -380,10 +380,10 @@ object ComponentSystem {
                     implyR(1) & andR(1) <(prop, nil) &
                     DebuggingTactics.print("Generalized C2 induction step") &
                     cutAt(Box(plant2, Box(Compose(in2, cp2), c2inv)))(1, 1::1::1::Nil) <(
-                    useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::Nil) &
-                      useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil) &
-                      useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil) &
-                      useAt("[;] compose", PosInExpr(1::Nil))(1) &
+                    useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::1::1::Nil) &
+                      useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::1::Nil) &
+                      useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::Nil) &
+                      useAt(Ax.composeb, PosInExpr(1::Nil))(1) &
                       DebuggingTactics.print("Close by C2 step lemma") & useLemma(c2step, Some(prop)) &
                       DebuggingTactics.done("Close by C2 induction step")
                     ,
@@ -404,7 +404,7 @@ object ComponentSystem {
             ,
             // show
             DebuggingTactics.print("Show InCp") & cohideR(1) &
-              CMon(1, 1::1::1::1::1::1::Nil) & implyR(1) & useAt("<> diamond", PosInExpr(1::Nil))(-1) & notL(-1) &
+              CMon(1, 1::1::1::1::1::1::Nil) & implyR(1) & useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & notL(-1) &
               abstractionb(2) & prop & DebuggingTactics.done("Show InCp")
           )
           ) & DebuggingTactics.done("Justify Fout")
@@ -475,10 +475,10 @@ object ComponentSystem {
               DebuggingTactics.print("Using step lemma") &
 
               cutAt(Box(plant1, Box(Compose(in1, cp1), inv1)))(1, 1::1::1::Nil) <(
-                useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::Nil) &
-                  useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil) &
-                  useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil) &
-                  useAt("[;] compose", PosInExpr(1::Nil))(1) &
+                useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::1::1::Nil) &
+                  useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::1::Nil) &
+                  useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::Nil) &
+                  useAt(Ax.composeb, PosInExpr(1::Nil))(1) &
                   DebuggingTactics.print("Close by C1 step lemma") & useLemma(c1step, Some(prop)) &
                   DebuggingTactics.done("Close by C1 induction step")
                 ,
@@ -526,9 +526,9 @@ object ComponentSystem {
             composeb(1, 1::1::1::1::1::Nil) &
             composeb(1, 1::1::1::1::1::1::Nil) &
             programIndependence()(1, 1::1::1::1::1::Nil) & // swap internal connections
-            useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::1::1::Nil) &
-            useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::1::Nil) &
-            useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::Nil) &
+            useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::1::1::1::1::1::Nil) &
+            useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::1::1::1::1::Nil) &
+            useAt(Ax.composeb, PosInExpr(1::Nil))(1, 1::1::1::1::Nil) &
             DebuggingTactics.print("Done reordering components") &
             proveSystemCompStep(c2step, c1use, c1step, compatibility, comGuaranteeLiveness, Imply(inv1, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi1Out))))))(pos) &
             DebuggingTactics.print("Done proving inv2") & DebuggingTactics.done("Proving inv2")

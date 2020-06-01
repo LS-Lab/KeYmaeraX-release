@@ -723,7 +723,7 @@ object SimplifierV3 {
             pr match {
               case None => ident
               case Some(pr) =>
-                CEat(useFor("= commute")(SuccPos(0))(pr))(pos)
+                CEat(useFor(Ax.equalCommute)(SuccPos(0))(pr))(pos)
             }
           }
           case _ => ident

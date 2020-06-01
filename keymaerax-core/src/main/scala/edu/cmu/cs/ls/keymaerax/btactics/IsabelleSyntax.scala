@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import DerivationInfoAugmentors._
 
 import scala.collection.immutable._
 
@@ -208,6 +209,7 @@ object IsabelleSyntax {
       case FuncOf(f,Nothing) => "Var ''func_"+f.name+"''"
       case v:Variable => "Var ''"+v.name+"''"
       case Plus(l,r) => "Plus ("+prettyTerm(l)+")"+" ("+prettyTerm(r)+")"
+      case Minus(l,r) => "Plus ("+prettyTerm(l)+")"+" ("+prettyTerm(Neg(r))+")"
       case Times(l,r) => "Times ("+prettyTerm(l)+")"+" ("+prettyTerm(r)+")"
       case FuncOf(f,Pair(l,r)) if (axFuncs.contains(f)) =>
         //For max,min
@@ -223,11 +225,11 @@ object IsabelleSyntax {
 
   def prettyFormula(f:Formula) : String = {
     f match {
-      case LessEqual(l,r) => "Leq ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
+      case GreaterEqual(l,r) => "Leq ("+prettyTerm(r)+") ("+prettyTerm(l)+")"
       case And(l,r) => "And ("+prettyFormula(l)+") ("+prettyFormula(r)+")"
 
       case Or(l,r) => "Or ("+prettyFormula(l)+") ("+prettyFormula(r)+")"
-      case Less(l,r) => "Le ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
+      case Greater(l,r) => "Le ("+prettyTerm(r)+") ("+prettyTerm(l)+")"
       case Equal(l,r) => "Equals ("+prettyTerm(l)+") ("+prettyTerm(r)+")"
       case NotEqual(l,r) => "Not( Equal ("+prettyTerm(l)+") ("+prettyTerm(r)+") )"
       case _ => throw new IllegalArgumentException("Unsupported formula: "+f.prettyString)
@@ -277,47 +279,15 @@ object IsabelleSyntax {
   //1) NNF (negations pushed into (in)equalities)
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), p_()^2 -> p_() * p_()
-  def normalise(f:Formula) : (Formula,ProvableSig) = {
-    val refl = proveBy(Equiv(f,f),byUS(Ax.equivReflexive))
-    val nnf = chaseCustomFor((exp: Expression) => exp match {
-      case And(_,_) => fromAxIndex("& recursor"):: Nil
-      case Or(_,_) => fromAxIndex("| recursor") :: Nil
-      case Imply(_,_) => fromAxIndex("-> expand") :: Nil
-      case Equiv(_,_) => binaryDefault(equivExpand)::Nil
-      case NotEqual(_,_) => binaryDefault(notEqualExpand)::Nil
-      case Not(_) => AxiomIndex.axiomsFor(exp).map(fromAxIndex)
-      case _ => Nil
-    })(SuccPosition(1,1::Nil))(refl)
-
-    val flip = chaseCustomFor((exp: Expression) => exp match {
-      case And(_,_) => fromAxIndex("& recursor"):: Nil
-      case Or(_,_) => fromAxIndex("| recursor") :: Nil
-      case Greater(_,_) => fromAxIndex("> flip")::Nil
-      case GreaterEqual(_,_) => fromAxIndex(">= flip")::Nil
-      case _ => Nil
-    })(SuccPosition(1,1::Nil))(nnf)
-
-    //Recurses into all sub terms
-    val arith = chaseCustomFor((exp:Expression) => exp match {
-      case And(_,_) => fromAxIndex("& recursor"):: Nil
-      case Or(_,_) => fromAxIndex("| recursor") :: Nil
-      case LessEqual(a,b) => binaryDefault(lessEqualRec)::Nil
-      case Less(a,b) => binaryDefault(lessRec)::Nil
-      case Equal(a,b) => binaryDefault(equalRec)::Nil
-      case NotEqual(a,b) => binaryDefault(notEqualRec)::Nil
-
-      case FuncOf(_,Pair(l,r)) => (fun2Rec,PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil) :: Nil
-      case FuncOf(_,_) => (fun1Rec,PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil):: Nil
-      case Plus(a,b) => binaryDefault(plusRec)::Nil
-      case Times(a,b) => binaryDefault(timesRec)::Nil
-      case Power(a,b) => binaryDefault(powExpand)::Nil
-      case Minus(a,b) => (minusExpand,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::0::Nil)::Nil) :: Nil
-      case _ => Nil
-    })(SuccPosition(1,1::Nil))(flip)
-
-    val fml = arith.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
-    return (fml,arith)
-  }
+  def normalise(f:Formula) : (Formula,ProvableSig) =
+    SimplifierV3.semiAlgNormalize(f) match {
+      case (ff,Some(pr)) => (ff,pr)
+      case (ff,None) => {
+        assert(f == ff)
+        (f, Ax.equivReflexive.provable(
+          USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), f) :: Nil)))
+      }
+    }
 
   //Merging everything together
   def isarSyntax(f:Formula) : (Program,ProvableSig) = {

@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools.qe
 
 import com.wolfram.jlink.{Expr, ExprFormatException, KernelLink, MathLinkException}
-import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, ToolCommunicationException, ToolExecutionException}
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, MathematicaComputationAbortedException, MathematicaInapplicableMethodException, MathematicaMathlinkException, MathematicaUnknownCauseCriticalException, ToolCommunicationException, ToolExecutionException}
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.qe.MathematicaConversion.MExpr
 import org.apache.logging.log4j.scala.Logging
@@ -107,7 +107,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
     try {
       ml.evaluate(cmd)
     } catch {
-      case ex: MathLinkException => throw ToolExecutionException("Error executing command " + cmd, ex)
+      case ex: MathLinkException => throw MathematicaMathlinkException("Error executing command " + cmd, ex)
     }
   }
 
@@ -128,7 +128,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
     try {
       ml.waitForAnswer()
     } catch {
-      case ex: MathLinkException => throw ToolExecutionException("Error executing Mathematica command " + ctx, ex)
+      case ex: MathLinkException => throw MathematicaMathlinkException("Error executing Mathematica command " + ctx, ex)
     }
     importResult(ml.getExpr,
       res => {
@@ -140,14 +140,15 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
           try {
             ml.waitForAnswer()
           } catch {
-            case ex: MathLinkException => throw ToolExecutionException("Error obtaining exception details for failed command " + ctx, ex)
+            case ex: MathLinkException => throw MathematicaMathlinkException("Error obtaining exception details for failed command " + ctx, ex)
           }
           val txtMsg = importResult(ml.getExpr, _.toString)
-          throw ToolExecutionException("Input " + ctx + " cannot be evaluated, cause: " + txtMsg)
+          if (txtMsg.contains("nsmet")) throw MathematicaInapplicableMethodException("Input " + ctx + " is not solvable with the available methods, cause: " + txtMsg)
+          else throw ToolExecutionException("Input " + ctx + " cannot be evaluated, cause: " + txtMsg)
         } else {
           val head = res.head
           if (head == MathematicaOpSpec.check.op) {
-            throw ToolExecutionException("JLink returned input as answer: " + res.toString)
+            throw MathematicaUnknownCauseCriticalException("JLink returned input as answer: " + res.toString)
           } else if (MathematicaOpSpec.list.applies(res) && res.args.length == 2 && res.args.head.asInt() == cmdIdx) {
             val theResult = res.args.last
             if (isAborted(theResult)) throw MathematicaComputationAbortedException(ctx.toString)
@@ -159,7 +160,7 @@ case class JLinkMathematicaCommandRunner(ml: KernelLink) extends BaseMathematica
                 case ex: Throwable => throw ConversionException("Error converting from Mathematica, returned result expression is: " + theResult.toString, ex)
               })
           } else {
-            throw ToolExecutionException("Unexpected result: either result length != 2 or JLink returned a stale answer: " + res.toString)
+            throw MathematicaUnknownCauseCriticalException("Unexpected result: either result length != 2 or JLink returned a stale answer: " + res.toString)
           }
         }
       })

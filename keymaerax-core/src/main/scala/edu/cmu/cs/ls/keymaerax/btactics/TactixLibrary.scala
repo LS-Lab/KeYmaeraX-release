@@ -173,7 +173,8 @@ object TactixLibrary extends HilbertCalculus
       if (recursors.nonEmpty) t(new Fixed(pos)) & Idioms.doIf(!_.isProved)(recursors.map(r =>
         DebuggingTactics.assertOnAll(_ != s ||
           //@note allow recursing on subposition after no-op steps that supply recursors
-          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })), "Stopping to recurse on unchanged sequent") &
+          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })),
+          "Stopping to recurse on unchanged sequent", new TacticInapplicableFailure(_)) &
         applyRecursor(r(s, pos))
       ).reduce(_&_))
 

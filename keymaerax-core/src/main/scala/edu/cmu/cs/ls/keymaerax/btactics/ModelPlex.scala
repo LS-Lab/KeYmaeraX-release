@@ -20,6 +20,8 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import org.apache.logging.log4j.scala.Logging
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
+
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
 
@@ -427,12 +429,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
         implyR(1) & cut(Box(ctrl, inv)) & Idioms.<(
           cut(Diamond(ctrl, And(inv, And(upsilon, odeDomain)))) & Idioms.<(
             hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(upsilon, odeDomain))) &
-            useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+            useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
             notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
             upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
             prop & DebuggingTactics.done("External control passes monitor 1")
             ,
-            useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))(2) & onAll(prop) &
+            useAt(Ax.Kd2, PosInExpr(1::1::Nil))(2) & onAll(prop) &
             DebuggingTactics.done("External control passes monitor 2")
           ),
           useLemma(name+"_2", Some(prop)) & DebuggingTactics.done("External control passes monitor 3")
@@ -445,14 +447,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
             SaturateTactic(chaseFallback('Llast)) & cut(Box(ctrl, inv)) <(
             cut(Diamond(ctrl, And(inv, And(fallbackUpsilon, odeDomain)))) <(
               hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(fallbackUpsilon, odeDomain))) &
-              useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+              useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
               notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
               fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).
                 map(c => exhaustiveEqR2L('L, c)).
                 reduce[BelleExpr](_&_) &
               prop & DebuggingTactics.done("Fallback 1")
               ,
-              useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
+              useAt(Ax.Kd2, PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
               DebuggingTactics.done("Fallback 2")
             )
             ,
@@ -519,13 +521,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
               DebuggingTactics.print("Using external control actuation cuts") &
               chase(1) &
               hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(upsilon, odeDomain))) &
-              useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+              useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
               notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
               upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
               prop & DebuggingTactics.done("Using external control actuation cuts")
               ,
               DebuggingTactics.print("Proving <ctrl;>(inv&upsilon&q)") &
-              useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))(2) & onAll(prop) &
+              useAt(Ax.Kd2, PosInExpr(1::1::Nil))(2) & onAll(prop) &
               DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)")
             )
             ,
@@ -543,13 +545,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
               cut(Diamond(ctrl, And(inv, And(fallbackUpsilon, odeDomain)))) <(
                 DebuggingTactics.print("Using fallback cuts") &
                 chase(1) & hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(fallbackUpsilon, odeDomain))) &
-                useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+                useAt(Ax.diamond, PosInExpr(1::Nil))('Llast) &
                 notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
                 fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqR2L('L, c)).reduce[BelleExpr](_&_) &
                 prop & DebuggingTactics.done("Using fallback cuts")
                 ,
                 DebuggingTactics.print("Proving <ctrl;>(inv&upsilon&q)") &
-                useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
+                useAt(Ax.Kd2, PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
                 DebuggingTactics.done("Proving <ctrl;>(inv&upsilon&q)")
               )
               ,
@@ -738,8 +740,8 @@ object ModelPlex extends ModelPlexTrait with Logging {
     else {
       val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
         case (Diamond(_: Loop, _), pp) =>
-          if (n == 1) Some(useAt("<*> approx")(pp))
-          else Some(useAt("<*> iterate", PosInExpr(0 :: Nil))(pp))
+          if (n == 1) Some(useAt(Ax.loopApproxd)(pp))
+          else Some(useAt(Ax.iterated, PosInExpr(0 :: Nil))(pp))
         case _ => None
       })
       positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip) & unrollLoop(n-1)(pos)
@@ -797,14 +799,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
   def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic =
     "Axiomatic controller monitor" by ((pos: Position) =>
       locateT(
-        useAt("<*> approx", PosInExpr(1::Nil)) ::
-        useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
-        useAt("<;> compose") ::
-        useAt("<++> choice") ::
-        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
-        useAt("<?> test") ::
-        useAt("<:=> assign") ::
-        ("<:=> assign opt. 1" by ((p: Position) => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
+        useAt(Ax.Dskipd, PosInExpr(1::Nil)) ::
+        useAt(Ax.composed) ::
+        useAt(Ax.choiced) ::
+        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt(Ax.testd) ::
+        useAt(Ax.assigndAxiom) ::
+        ("<:=> assign opt. 1" by ((p: Position) => useAt(Ax.assigndEquality)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
         Nil)(pos))
 
   /**
@@ -816,14 +818,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
    */
   def modelMonitorT(useOptOne: Boolean): DependentPositionTactic = "Axiomatic model monitor" by ((pos: Position) =>
     locateT(
-      useAt("<*> approx", PosInExpr(1::Nil)) ::
+      useAt(Ax.loopApproxd, PosInExpr(1::Nil)) ::
         AxiomaticODESolver.axiomaticSolve() ::
-        useAt("<;> compose") ::
-        useAt("<++> choice") ::
-        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
-        useAt("<?> test") ::
-        useAt("<:=> assign") ::
-        ("<:=> assign opt. 1" by ((p: Position) => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt(Ax.composed) ::
+        useAt(Ax.choiced) ::
+        ("<:*> nondet assign opt. 1" by ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt(Ax.testd) ::
+        useAt(Ax.assigndAxiom) ::
+        ("<:=> assign opt. 1" by ((p: Position) => useAt(Ax.assigndEquality)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
         Nil)(pos))
 
   /**
@@ -1059,20 +1061,22 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case _ => Nil
     })
 
+    def aiTupled(ai: AxiomInfo): (ProvableSig, PosInExpr, List[PosInExpr]) = (ai.provable, ai.key, ai.recursor)
+
     val propNF = chaseCustom({
-      case LessEqual(_, _) => fromAxIndex("<= to <")::Nil
-      case And(Less(_, _), Less(_, _)) => fromAxIndex("metric < & <")::Nil
-      case And(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= & <=")::Nil
-      case And(LessEqual(_, _), Less(_, _)) => fromAxIndex("& recursor")::Nil
-      case And(Less(_, _), LessEqual(_, _)) => fromAxIndex("& recursor")::Nil
-      case And(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("& recursor")::Nil
+      case LessEqual(_, _) => aiTupled(Ax.leApprox)::Nil
+      case And(Less(_, _), Less(_, _)) => aiTupled(Ax.metricAndLt)::Nil
+      case And(LessEqual(_, _), LessEqual(_, _)) => aiTupled(Ax.metricAndLe)::Nil
+      case And(LessEqual(_, _), Less(_, _)) => aiTupled(Ax.andRecursor)::Nil
+      case And(Less(_, _), LessEqual(_, _)) => aiTupled(Ax.andRecursor)::Nil
+      case And(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => aiTupled(Ax.andRecursor)::Nil
       case And(_: BinaryCompositeFormula, _) => (Ax.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
       case And(_, _: BinaryCompositeFormula) => (Ax.andRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
-      case Or(Less(_, _), Less(_, _)) => fromAxIndex("metric < | <")::Nil
-      case Or(LessEqual(_, _), LessEqual(_, _)) => fromAxIndex("metric <= | <=")::Nil
-      case Or(LessEqual(_, _), Less(_, _)) => fromAxIndex("| recursor")::Nil
-      case Or(Less(_, _), LessEqual(_, _)) => fromAxIndex("| recursor")::Nil
-      case Or(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => fromAxIndex("| recursor")::Nil
+      case Or(Less(_, _), Less(_, _)) => aiTupled(Ax.metricOrLt)::Nil
+      case Or(LessEqual(_, _), LessEqual(_, _)) => aiTupled(Ax.metricOrLe)::Nil
+      case Or(LessEqual(_, _), Less(_, _)) => aiTupled(Ax.orRecursor)::Nil
+      case Or(Less(_, _), LessEqual(_, _)) => aiTupled(Ax.orRecursor)::Nil
+      case Or(_: BinaryCompositeFormula, _: BinaryCompositeFormula) => aiTupled(Ax.orRecursor)::Nil
       case Or(_: BinaryCompositeFormula, _) => (Ax.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)::Nil
       case Or(_, _: BinaryCompositeFormula) => (Ax.orRecursor.provable, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)::Nil
       case _ => Nil

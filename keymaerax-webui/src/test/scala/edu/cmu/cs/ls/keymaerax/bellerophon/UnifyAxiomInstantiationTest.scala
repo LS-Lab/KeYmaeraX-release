@@ -18,8 +18,10 @@ import DerivationInfoAugmentors._
   *
   * @author Andre Platzer
   * @see [[UnificationMatch]]
+  * @see [[UnificationMatchTest]]
+  * @see [[AxiomKeyInstantiationTest]]
   */
-//@todo fix this test once test infrastructure is better behaved with getting DerivedAxioms up to speed.
+//@todo fix this test once test infrastructure is better behaved with getting DerivedAxioms up to speed. See [[AxiomKeyInstantiationTest]] for most part
 //@todo @SummaryTest
 class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 

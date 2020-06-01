@@ -64,8 +64,8 @@ object DerivationInfo {
     di
   }
 
-  def registerPositionTactic[T](value: => T, pti: PositionTacticInfo): T = {
-    _allInfo = pti :: allInfo
+  def registerL[T, R <: DerivationInfo](value: => T, p: R): T = {
+    _allInfo = p :: allInfo
     val _ = value
     value
   }
@@ -187,6 +187,7 @@ trait ProvableInfo extends DerivationInfo {
   /** `true` indicates that the key of this axiom/axiomatic proof rule can be matched linearly [[LinearMatcher]].
    * For completeness, this linearity declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
    * @see [[LinearMatcher]] */
+  //@todo replace by "def unifier: Symbol"
   def linear: Boolean
 }
 
@@ -210,6 +211,7 @@ trait AxiomInfo extends ProvableInfo {
   //def formula: Formula
   val theKey: ExprPos = 0 :: Nil
   val theRecursor: List[ExprPos] = Nil
+  //@todo lift unifier and displayLevel from CoreAxiomInfo to here
 }
 
 /** Meta-Information for an axiom from the prover core
@@ -262,6 +264,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
 /** Information for an axiomatic proof rule
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  * @see [[DerivedRuleInfo]] */
+//@todo add val theRecursor: List[Int] = Nil (so first number can have a sign) and unifier:Symbol into a joint common supertype of AxiomaticRuleInfo and DerivedRuleInfo that maybe should be called AxiomaticRuleInfo, CoreAxiomaticRuleInfo, DerivedAxiomaticRuleInfo or elide the axiomatic.
 case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, theExpr: Unit => Any)
   extends ProvableInfo {
   // lazy to avoid circular initializer call
@@ -326,19 +329,19 @@ case class TwoPositionTacticInfo(override val codeName: String, override val dis
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_, _], needsTool: Boolean = false,
+case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], needsTool: Boolean = false,
                            override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator, revealInternalSteps)
+  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator, revealInternalSteps)
 
 case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo,
-                                   override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_,_], needsTool: Boolean = false,
+                                   override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_,_],  needsTool: Boolean = false,
                                    override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator, revealInternalSteps) {
+  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
-case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => TypedFunc[_, _], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
+case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator) {
   override val numPositionArgs = 2
 }
 
