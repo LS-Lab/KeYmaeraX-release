@@ -101,7 +101,7 @@ trait UnifyUSCalculus {
 
   /** Whether to benefit from linearity info about axioms using [[LinearMatcher]] */
     //@todo optimizable: set to true
-  private val exploitDeclaredUnifier = true || System.getProperty("SPEED", "false")=="true"
+  private val exploitDeclaredUnifier = System.getProperty("SPEED", "true")=="true"
 
   /** The default position if no key has been specified, no key has been declared, and no key can be inferred. */
   private val defaultPosition = PosInExpr(0::Nil)

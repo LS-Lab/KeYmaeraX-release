@@ -86,8 +86,8 @@ class ArithmeticTests extends TacticTestBase {
   }
 
   it should "not support differential symbols" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1".asFormula,
-      TactixLibrary.QE) } should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
+    (the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1".asFormula,
+      TactixLibrary.QE) }).getMessage should include ("Name conversion of differential symbols not allowed: x'")
   }
 
   it should "support differential symbols with Z3" in withZ3 { _ =>

@@ -200,7 +200,7 @@ class ExampleProblems extends FlatSpec with Matchers with BeforeAndAfterEach {
       """.stripMargin
 
     val thrown = the [ParseException] thrownBy KeYmaeraXArchiveParser.parseProblem(problem)
-    thrown.getMessage should include ("Function/predicate f((•_0,•_1,•_2)) defined using undeclared •_3")
+    thrown.getMessage should include ("Function/predicate f(•_0,•_1,•_2) defined using undeclared •_3")
   }
 
   it should "replace names with the appropriate dots" in {
