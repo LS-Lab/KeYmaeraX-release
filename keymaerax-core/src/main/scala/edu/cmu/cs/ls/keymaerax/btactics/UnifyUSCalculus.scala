@@ -247,29 +247,6 @@ trait UnifyUSCalculus {
 
   import TacticFactory._
 
-  /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
-  //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic, inst: Subst=>Subst): PositionTactic = useAt(fact, key, tactic, inst)
-  //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = useAt(fact, key, tactic)
-  /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  //  def useAt(fact: Formula, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(fact, key, nil, inst)
-  //  def useAt(fact: Formula, key: PosInExpr): DependentPositionTactic = useAt(fact, key, nil)
-  /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  //  def useAt(fact: Provable, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = {
-  //    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-  //    useAt(fact, key, inst)
-  //  }
-  //  def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = {
-  //    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-  //    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
-  //    useAt(fact, key, inst=>inst)
-  //  }
-  // like useAt(fact,key) yet literally without uniform substitution of fact
-  //  private[tactics] def useDirectAt(fact: Provable, key: PosInExpr): PositionTactic = {
-  //    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-  //    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
-  //    useAt(fact.conclusion.succ.head, key, by(fact))
-  //  }
-
   import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors.AxiomInfoAugmentor
 
     /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
@@ -455,32 +432,6 @@ trait UnifyUSCalculus {
     }
   }
 
-//  /**
-//    * US(form) uses a suitable uniform substitution to reduce the proof to instead proving `form`.
-//    * Unifies the current sequent with `form` and uses that unifier as a uniform substitution.
-//    * {{{
-//    *      form:
-//    *     g |- d
-//    *   --------- US where G=s(g) and D=s(d) where s=unify(form, G|-D)
-//    *     G |- D
-//    * }}}
-//    *
-//    * @author Andre Platzer
-//    * @param form the sequent to reduce this proof to by a Uniform Substitution
-//    * @see [[byUS()]]
-//    */
-  //  @deprecated("use US(Provable) instead")
-  //  def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
-  //    override def computeExpr(sequent: Sequent): BelleExpr = {
-  //      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
-  //      val subst = matcher(form, sequent)
-  //      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
-  //      Predef.assert(sequent == subst(form), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + "\n  by:    " + subst)
-  //      subst.toTactic(form)
-  //    }
-  //  }
-
-
   // renaming
 
   /** uniformRename(what,repl) renames `what` to `repl` uniformly and vice versa.
@@ -510,7 +461,21 @@ trait UnifyUSCalculus {
   private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic =
     useAt(fact, PosInExpr(0::Nil))
 
+
   // main implementation
+
+  private[this] def useAtImpl(fact: ProvableInfo,
+                              inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification, fix axiom key or try to patch locally with own substitution"))): DependentPositionTactic =
+    fact match {
+      case fact: AxiomInfo => useAtImpl(fact.codeName, fact.provable, fact.key, matcherFor(fact), inst)
+      case _ => useAtImpl(fact.codeName, fact.provable, defaultPosition, defaultMatcher, inst)
+    }
+
+  private[this] def useAtWithImpl(fact: ProvableInfo, key: PosInExpr,
+                                  inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification, fix axiom key or try to patch locally with own substitution"))): DependentPositionTactic = {
+    //@note noncanonical position so fact.unifier has to be ignored
+    useAtImpl(fact.codeName, fact.provable, key, defaultMatcher, inst)
+  }
 
   /**
     * useAt(fact)(pos) uses the given fact at the given position in the sequent.
@@ -543,7 +508,7 @@ trait UnifyUSCalculus {
     * @param codeName The unique alphanumeric identifier for this (derived) axiom use.
     * @param fact the fact to use to simplify at the indicated position of the sequent
     * @param key the part of the Formula fact to unify the indicated position of the sequent with
-    * @param linear `true` indicates that fact(key) is a linear pattern, so fast [[LinearMatcher]] suffices.
+    * @param matcher which unifier to use.
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
@@ -556,20 +521,6 @@ trait UnifyUSCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
     */
-  private[this] def useAtImpl(fact: ProvableInfo,
-                              inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification, fix axiom key or try to patch locally with own substitution"))): DependentPositionTactic =
-    fact match {
-      case fact: AxiomInfo => useAtImpl(fact.codeName, fact.provable, fact.key, matcherFor(fact), inst)
-      case _ => useAtImpl(fact.codeName, fact.provable, defaultPosition, defaultMatcher, inst)
-    }
-
-  private[this] def useAtWithImpl(fact: ProvableInfo, key: PosInExpr,
-                                  inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new InapplicableUnificationKeyFailure("No substitution found by unification, fix axiom key or try to patch locally with own substitution"))): DependentPositionTactic = {
-    //@note noncanonical position so fact.unifier has to be ignored
-    useAtImpl(fact.codeName, fact.provable, key, defaultMatcher, inst)
-  }
-
-  @deprecated("prefer useAtImpl(ProvableInfo,...)")
   private[this] def useAtImpl(codeName: String, fact: ProvableSig, key: PosInExpr,
                               matcher: Matcher,
                               inst: Option[Subst]=>Subst): DependentPositionTactic = {
