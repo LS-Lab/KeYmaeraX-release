@@ -547,7 +547,7 @@ trait UnifyUSCalculus {
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
-    * @example useAt("[a;++b;]p(||)<->[a;]p(||)&[b;]p(||)", PosInExpr(0::Nil), byUS("[;] compose"))
+    * @example useAt(Ax.choiceb, PosInExpr(0::Nil), byUS(Ax.composeb))
     * applied to the indicated 1::1::Nil of
     * [x:=1;][{x'=22}] [x:=2*x;++x:=0;]x>=0
     * turns it into
@@ -1228,27 +1228,18 @@ trait UnifyUSCalculus {
   )
 
   /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: AxiomInfo): ForwardPositionTactic = useFor(axiom.provable, axiom.key, linear=axiom.linear)
-  def useFor(axiom: ProvableInfo): ForwardPositionTactic = axiom match {
-    case ax: AxiomInfo => useFor(ax)
-    case pi: ProvableInfo => useFor(pi.provable, defaultPosition, linear = pi.linear)
-  }
+  def useFor(axiom: ProvableInfo): ForwardPositionTactic = useForImpl(axiom)
 
-  def useFor(dai: AxiomInfo, key: PosInExpr): ForwardPositionTactic = {
-    //@note unifier info no longer applicable for nondefault key
-    useFor(dai.provable, key)
-  }
+  def useFor(axiom: AxiomInfo, key: PosInExpr): ForwardPositionTactic = useForWithImpl(axiom, key)
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   private[btactics]
-  def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(axiom.fact, key, linear=false, inst)
+  def useFor(axiom: Lemma, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useForImpl(axiom.fact, key, defaultMatcher, inst)
   /** useFor(pi, key) use the key part of the given axiom or provable info forward for the selected position in the given Provable to conclude a new Provable
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomInfo.key]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. Defaults to no change. */
-  private[btactics]
-  def useFor(pi: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(pi.provable, key, linear=false, inst)
-  private[btactics]
-  def useFor(dai: AxiomInfo, inst: Subst=>Subst): ForwardPositionTactic = useFor(dai.provable, dai.key, dai.linear, inst)
+  def useFor(pi: ProvableInfo, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useForWithImpl(pi, key, inst)
+  def useFor(axiom: ProvableInfo, inst: Subst=>Subst): ForwardPositionTactic = useForImpl(axiom, inst)
 
 
   /** CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C.
@@ -1575,11 +1566,10 @@ trait UnifyUSCalculus {
     * @author Andre Platzer
     * @param fact the Provable fact whose conclusion to use to simplify at the indicated position of the sequent
     * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
-    * @param linear `true` indicates that fact(key) is a linear pattern, so fast [[LinearMatcher]] suffices.
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in `fact.conclusion(key)`.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
-    * @example useFor(Axiom.axiom("[;] compose"), PosInExpr(0::Nil))
+    * @example useFor(Axiom.axiom(Ax.composeb), PosInExpr(0::Nil))
     * applied to the indicated 1::1::Nil of
     * ``[x:=1;][{x'=22}]__[x:=2*x;++x:=0;]x>=0__``
     * turns it into
@@ -1587,7 +1577,22 @@ trait UnifyUSCalculus {
     * @see [[useAtImpl()]]
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     */
-  def useFor(fact: ProvableSig, key: PosInExpr, linear: Boolean = false, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
+  def useFor(fact: ProvableSig, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic =
+    useForImpl(fact, key, defaultMatcher, inst)
+
+  private def useForImpl(fact: ProvableInfo, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
+    fact match {
+      case fact: AxiomInfo => useForImpl(fact.provable, fact.key, matcherFor(fact), inst)
+      case _ => useForImpl(fact.provable, defaultPosition, defaultMatcher, inst)
+    }
+  }
+
+  private def useForWithImpl(fact: ProvableInfo, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
+    //@note noncanonical position so fact.unifier has to be ignored
+    useForImpl(fact.provable, key, defaultMatcher, inst)
+  }
+
+  private def useForImpl(fact: ProvableSig, key: PosInExpr, matcher: Matcher, inst: Subst=>Subst): ForwardPositionTactic = {
     // split key into keyCtx{keyPart} = fact
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
     logger.debug("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
@@ -1596,8 +1601,8 @@ trait UnifyUSCalculus {
       // split proof into ctx{expr} at pos
       val (ctx, expr) = proof.conclusion.at(pos)
       // instantiated unification of expr against keyPart
-      val subst = if (exploitDeclaredUnifier && linear)
-        inst(LinearMatcher(keyPart, expr))
+      val subst = if (exploitDeclaredUnifier)
+        inst(matcher(keyPart, expr))
       else
         inst(defaultMatcher(keyPart, expr))
       logger.debug("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
@@ -1849,7 +1854,7 @@ trait UnifyUSCalculus {
 
             val remKey: PosInExpr = key.child
             require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
-            UnifyUSCalculus.this.useFor(remFact, remKey, linear=false, inst)(pos)(proof)
+            UnifyUSCalculus.this.useFor(remFact, remKey, inst)(pos)(proof)
 
 
           case DotFormula =>
