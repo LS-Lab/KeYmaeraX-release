@@ -204,7 +204,7 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
-  /** Chases program operators according to [[AxiomIndex]] or tactics according to `tacticIndex` (restricted to tactics
+  /** Chases program operators according to [[AxIndex]] or tactics according to `tacticIndex` (restricted to tactics
     * in `restrictTo`) at a position. */
   def chaseAt(tacticIndex: TacticIndex = new DefaultTacticIndex)
              (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = "chaseAt" by ((pos: Position, seq: Sequent) => {

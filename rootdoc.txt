@@ -61,13 +61,13 @@ Additional entry points and usage points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]` - Axiom indexing data structures with keys and recursors for canonical proof strategies.
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]` - Axiom indexing data structures with keys and recursors for canonical proof strategies.
+  - `[[edu.cmu.cs.ls.keymaerax.macros.Axiom]` `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
 
   - `[[edu.cmu.cs.ls.keymaerax.bellerophon.UIIndex]]` - Index determining which canonical reasoning steps to display on the KeYmaera X User Interface.
 
-  - `[[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]` - Registry for derived axioms and axiomatic proof rules that are proved from the core.
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.Ax]]` - Registry for derived axioms and axiomatic proof rules that are proved from the core.
 
 ==References==
 
