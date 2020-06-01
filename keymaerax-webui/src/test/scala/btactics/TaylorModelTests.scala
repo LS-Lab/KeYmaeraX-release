@@ -6,10 +6,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.BigDecimalTool
 
 import scala.collection.immutable._
 
+@SlowTest
 class TaylorModelTests extends TacticTestBase {
 
   "coarsenTimesBounds" should "work" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {

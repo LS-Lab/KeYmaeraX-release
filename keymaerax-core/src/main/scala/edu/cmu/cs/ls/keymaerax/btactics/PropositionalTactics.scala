@@ -112,8 +112,8 @@ private object PropositionalTactics extends Logging {
         | ((orR(1) & orL(-1) <((close | (hideR(2))), (close | (hideR(1)))) & assertT(1, 1))
         | ((implyR(1) & implyL(-1) <((close | (hideR(1))), (close | (hideL('Llast)))) & assertT(1, 1))
         | ((monb)
-        | ((mond)
-        | ((allR(1) & allL(-1))
+        |! ((mond)
+        |! ((allR(1) & allL(-1))
         | (existsL(-1) & existsR(1))
        ))))))))*at.pos.length
     }

@@ -210,6 +210,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Creates and initializes Mathematica; checks that a Matlab bridge is configured. @see[[withMathematica]]. */
+    //@todo skip if not matlink set up
   def withMathematicaMatlab(testcode: Mathematica => Any, timeout: Int = -1) {
     if (System.getProperty("KILL_MATLAB") == "true") {
       var killExit = 0
