@@ -1354,8 +1354,11 @@ private object DifferentialTactics extends Logging {
 
   private lazy val dbxEqOne: ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, "1*1^2=1".asFormula)
   // Darboux ghost variables
-  private lazy val gvy: Variable = BaseVariable("dbxy_")
-  private lazy val gvz: Variable = BaseVariable("dbxz_")
+  private val gvy: Variable = Variable("dbxy_")
+  private val gvz: Variable = Variable("dbxz_")
+  private val zero = Number(0)
+  private val one = Number(1)
+  private val two = Number(2)
 
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
@@ -1391,7 +1394,7 @@ private object DifferentialTactics extends Logging {
 
     //Skip ghosts if input cofactor was just 0
     //Could also do more triviality checks like -0, 0+0 etc.
-    if (qco == Number(0)) {
+    if (qco == zero) {
       //println("dgDbx automatically used dI for trivial cofactor")
       if(isOpen) openDiffInd(pos) else dI('full)(pos)
     }
@@ -1404,11 +1407,7 @@ private object DifferentialTactics extends Logging {
       //Construct the diff ghost y' = -qy
       val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco), gvy))
       //Diff ghost z' = qz/2
-      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, Number(2)), gvz))
-
-      val zero = Number(0)
-      val one = Number(1)
-      val two = Number(2)
+      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, two), gvz))
 
       //Postcond:
       //For equalities, != 0 works too, but the > 0 works for >=, > as well
@@ -1451,10 +1450,6 @@ private object DifferentialTactics extends Logging {
 
   private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
   private lazy val barrierCond2: ProvableSig = remember("h_() = k_() -> max(g_()*g_(),h_()) > 0 -> f_() > 0 ->  ((-(g_()*h_())/max(g_()*g_(),h_())) * f_() + 0) * g_() + f_() * k_() >=0".asFormula,QE,namespace).fact
-
-  private val zero = Number(0)
-  private val one = Number(1)
-  private val two = Number(2)
 
   private def dgBarrierAux : DependentPositionTactic = "barrieraux" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
@@ -1524,7 +1519,7 @@ private object DifferentialTactics extends Logging {
     })
 
     //Diff ghost z' = qz/2
-    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
+    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, two), gvz))
       pre &
       DifferentialTactics.dG(dey, None)(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
@@ -1567,7 +1562,6 @@ private object DifferentialTactics extends Logging {
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
     // p' = q p + r
     val (q,r) = domQuoRem(lie,p,dom)
-    val zero = Number(0)
 
     //The sign of the remainder for a Darboux argument
     //e.g., tests r >= 0 for p'>=gp (Darboux inequality)
@@ -1593,7 +1587,7 @@ private object DifferentialTactics extends Logging {
 
     if(pr.isProved)
       return (pr,q,r)
-    if(q != Number(0)) {
+    if(q != zero) {
       // Fall-back check if straightforward DI would work
       // This is needed, because one can e.g. get p'>=0 without having r>=0 when domain constraints are possible
       // todo: is it possible to improve the Darboux (in)equality generation heuristic to automatically cover this case?
@@ -1615,7 +1609,7 @@ private object DifferentialTactics extends Logging {
         case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] =>  proveBy(False, skip)
       }
       if(pr.isProved)
-        return (pr,Number(0),lie)
+        return (pr,zero,lie)
     }
 
     if(strict)
