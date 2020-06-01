@@ -260,7 +260,7 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
-  it should "eventually run out of ideas" taggedAs SlowTest in {
+  it should "eventually run out of ideas" taggedAs SlowTest in withQE {_ =>
     val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
