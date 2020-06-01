@@ -25,7 +25,7 @@ import DerivationInfoAugmentors._
 //@todo @SummaryTest
 class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
-  private val randomTrials = 200
+  private val randomTrials = 20
   private val randomComplexity = 8
   private val rand = new RandomFormula()
 

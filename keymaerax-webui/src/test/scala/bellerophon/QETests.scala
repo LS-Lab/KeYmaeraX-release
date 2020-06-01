@@ -114,7 +114,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "fail on tool mismatch" in withMathematica { _ =>
-    the [BelleThrowable] thrownBy proveBy("0=0".asFormula, TactixLibrary.QE(Nil, Some("Z3"))) should have message "[Bellerophon Runtime] QE requires Z3, but got None"
+    the [BelleThrowable] thrownBy proveBy("0=0".asFormula, TactixLibrary.QE(Nil, Some("Z3"))) should have message "QE requires Z3, but got None"
   }
 
   it should "switch between tools" in withDatabase { db =>
@@ -180,7 +180,7 @@ class QETests extends TacticTestBase {
   }}
 
   it should "complain about the wrong tool" in withZ3 { _ =>
-    the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QE(Nil, Some("Mathematica"), Some(7))) should have message "[Bellerophon Runtime] QE requires Mathematica, but got None"
+    the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QE(Nil, Some("Mathematica"), Some(7))) should have message "QE requires Mathematica, but got None"
   }
 
   "CEX in QE" should "not fail QE when FindInstance fails" in withMathematica { tool =>
