@@ -579,7 +579,7 @@ object ODELiveness {
       }
     }
 
-    useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict))
+    useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)
   }
 
   /** Applied to a top-level position containing a succedent diamond, this tactic removes irrelevant ODEs
