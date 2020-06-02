@@ -1775,12 +1775,13 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
     val proofSession = session(proofId).asInstanceOf[ProofSession]
     tree.locate(nodeId).map(n => n.goal.map(StaticSemantics.symbols).getOrElse(Set.empty)) match {
       case Some(symbols) =>
+        //@todo InputSignature no longer available from simplified parser -> simplify data structure
         val applicable: Map[NamedSymbol, (Signature, Option[InputSignature])] = symbols.
           filter({ case _: Function => true case _: ProgramConst => true case _ => false }).
           flatMap(s => {
             val defs = proofSession.defs.find(s.name, s.index)
-            defs._1 match {
-              case Some(f) => Some(s -> (f, defs._2))
+            defs match {
+              case Some(f) => Some(s -> (f, None))
               case None => None
             }
           }).toMap

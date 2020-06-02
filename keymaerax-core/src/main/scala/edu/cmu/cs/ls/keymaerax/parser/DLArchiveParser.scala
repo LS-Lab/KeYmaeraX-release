@@ -126,7 +126,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def allDeclarations[_: P]: P[Declaration] = P(
     //@todo NoCut(programVariables ~ definitions).map(p=>p._1++p._2) |
     (definitions.? ~ programVariables.?).
-      map({case (Some(a), Some(b)) => a++b case (None, Some(b)) => b case (Some(a), None) => a case (None, None) => Declaration(Map.empty, Map.empty)})
+      map({case (Some(a), Some(b)) => a++b case (None, Some(b)) => b case (Some(a), None) => a case (None, None) => Declaration(Map.empty)})
   )
 
   /** `Description "text".` parsed. */
@@ -140,7 +140,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** `Definitions declOrDef End.` parsed. */
   def definitions[_: P]: P[Declaration] = P("Definitions" ~~ blank ~/ declOrDef.rep ~ "End." ).
-    map(list => Declaration(list.toMap, Map.empty))
+    map(list => Declaration(list.toMap))
 //      list.filter({case (id,sig) => sig._3.isEmpty}).toMap,
 //      list.filter({case (id,sig) => sig._3.isDefined}).toMap)
 
@@ -178,7 +178,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
     //@todo retain location information
     //@todo how to ensure there is some whitespace between sort and baseVariable?
     (sort ~ ident ~ ("," ~ ident).rep ~ ";").map({case (ty,x,xs) => (xs.+:(x)).toList.map(v=>v->ty)})
-      .rep.map(xs => Declaration(xs.flatten.map(x=>x._1->(None,x._2,None,UnknownLocation)).toMap, Map.empty))
+      .rep.map(xs => Declaration(xs.flatten.map(x=>x._1->(None,x._2,None,UnknownLocation)).toMap))
     ~ "End." )
 
   /** `Problem  formula  End.` parsed. */
