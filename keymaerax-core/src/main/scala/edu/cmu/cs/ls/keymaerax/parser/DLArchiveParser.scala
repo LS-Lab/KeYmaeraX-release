@@ -170,8 +170,9 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   ).map({case (ty,n,args) => (n, (Some(args), ty, None, UnknownLocation))})
 
   /** `HP name ::= program;` program definition. */
-  def progDef[_: P]: P[(Name,Signature)] = P( "HP" ~~ blank ~ ident ~ "::=" ~ (NoCut(program) | "{" ~ NoCut(program) ~ "}") ~ ";" ).
-    map({case (s,idx,p) => ((s,idx),(None, Trafo, Some(p), UnknownLocation))})
+  def progDef[_: P]: P[(Name,Signature)] = P(
+    "HP" ~~ blank ~ ident ~ "::=" ~ ("{" ~ (program) ~ "}" /*| NoCut(program)*/) ~ ";"
+  ).map({case (s,idx,p) => ((s,idx),(None, Trafo, Some(p), UnknownLocation))})
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
   def programVariables[_: P]: P[Declaration] = P ("ProgramVariables" ~~ blank ~/
