@@ -9,6 +9,8 @@ import fastparse._
 import JavaWhitespace._
 import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 import KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry, parseProblem}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.DLBelleParser
 import edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable._
@@ -94,7 +96,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
     metaInfo ~
     allDeclarations ~
     problem ~
-    tactic.? ~
+    tacticProof.? ~
     metaInfo ~
     ("End.".!.map(s=>None) | "End" ~ label.map(s=>Some(s)) ~ ".")).map(
     {case (kind, label, name, meta, decl, prob, moremeta, endlabel) =>
@@ -194,8 +196,8 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   /** `Problem  formula  End.` parsed. */
   def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )
 
-  //@todo tactic.rep needs tactic parser or skip ahead to End. and ask BelleParser.
-  def tactic[_: P]: P[Unit] = P( "Tactic" ~~ blank ~/ "End.")
+  //@todo tactic needs tactic parser or skip ahead to End. and ask BelleParser.
+  def tacticProof[_: P]: P[Unit] = P( "Tactic" ~~ blank ~ string.? ~ tactic ~/ "End.")
 
 
   // externals
@@ -222,4 +224,6 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** odeprogram: Parses an ode system from [[expParser]]. */
   def odeprogram[_: P]: P[Program] = expParser.odeprogram
+
+  def tactic[_: P]: P[BelleExpr] = DLBelleParser.tactic
 }

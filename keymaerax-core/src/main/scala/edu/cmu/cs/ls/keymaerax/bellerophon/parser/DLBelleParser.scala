@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{DLAxiomParser, DLParser}
 import fastparse._
 import MultiLineWhitespace._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 
 import scala.collection.immutable._
@@ -37,7 +38,8 @@ class DLBelleParser {
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
   def locator[_: P]: P[PositionLocator] = P( position ).map(pos => Fixed(pos))
 
-  def tacticSymbol[_: P]: P[BelleExpr] = ident.map(s => ???)
+  //@todo parse proper tactic by name instead of nilT
+  def tacticSymbol[_: P]: P[BelleExpr] = ident.map(s => TactixLibrary.nil)
   def at[_: P]: P[AppliedPositionTactic] = P(tacticSymbol ~~ "(" ~ (string ~ ",").? ~ locator ~ ")").
     map({case (t,None,j) => t.asInstanceOf[PositionalTactic](j)
       case (t,Some(arg),j) => throw new Exception("Not implemented yet passing formula etc arguments")})
