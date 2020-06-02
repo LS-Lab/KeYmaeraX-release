@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPositio
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Nil
 
@@ -675,7 +676,7 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "not try univariate removal when inapplicable (1)" in withQE { _ =>
+  it should "not try univariate removal when inapplicable (1)" taggedAs IgnoreInBuildTest in withQE { _ =>
     val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=a^2*v, t'=1}> t > 1000".asFormula
 
     // In this case, the univariate reduction should never fire
@@ -687,7 +688,7 @@ class ODELivenessTests extends TacticTestBase {
     // "because odeReduce failed to autoremove: {a'=a^2*v,v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]a*a+v*v<=f_(|a,v|) or this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]2*(a*(a^2*v)+v*(-v^2*a))<=a_(|y_,z_,a,v|)*(a*a+v*v)+b_(|y_,z_,a,v|)"
   }
 
-  it should "not try univariate removal when inapplicable (2)" in withQE { _ =>
+  it should "not try univariate removal when inapplicable (2)" taggedAs IgnoreInBuildTest in withQE { _ =>
     val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=1, t'=1}> t > 1000".asFormula
 
     // In this case, the univariate reduction should never fire
