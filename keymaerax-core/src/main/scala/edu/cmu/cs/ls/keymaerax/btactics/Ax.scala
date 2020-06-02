@@ -4366,7 +4366,7 @@ object Ax extends Logging {
     * End.
     * }}}
     */
-  @Axiom("timesIdentityNeg")
+  @Axiom("timesIdentityNeg", key = "0", recursor = "")
   lazy val timesIdentityNeg =
     derivedAxiom("* identity neg", Sequent(IndexedSeq(), IndexedSeq("f_()*-1 = -f_()".asFormula)),
       allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
@@ -4381,7 +4381,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("minusZero", unifier = "linear")
+  @Axiom("minusZero", unifier = "linear", key = "0", recursor = "")
   lazy val minusZero = derivedAxiom("-0", Sequent(IndexedSeq(), IndexedSeq("(f_()-0) = f_()".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (x-0 = x)".asFormula, TactixLibrary.RCF)))
 
@@ -4393,7 +4393,7 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom("zeroMinus", unifier = "linear")
+  @Axiom("zeroMinus", unifier = "linear", key = "0", recursor = "")
   lazy val zeroMinus = derivedAxiom("0-", Sequent(IndexedSeq(), IndexedSeq("(0-f_()) = -f_()".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) & byUS(proveBy("\\forall x (0-x = -x)".asFormula, TactixLibrary.RCF)))
 
@@ -4405,9 +4405,9 @@ object Ax extends Logging {
 
   @Axiom("zeroDivNez")
   lazy val zeroDivNez = derivedAxiom("!=0 -> 0/F", Sequent(IndexedSeq(), IndexedSeq("f_() != 0 -> 0/f_() = 0".asFormula)), QE)
-  @Axiom("powZero")
+  @Axiom("powZero", key = "0", recursor = "")
   lazy val powZero = derivedAxiom("F^0", Sequent(IndexedSeq(), IndexedSeq("f_()^0 = 1".asFormula)), QE)
-  @Axiom("powOne")
+  @Axiom("powOne", key = "0", recursor = "")
   lazy val powOne = derivedAxiom("F^1", Sequent(IndexedSeq(), IndexedSeq("f_()^1 = f_()".asFormula)), QE)
 
   /** `t<->tt` equivalence */
@@ -4420,18 +4420,18 @@ object Ax extends Logging {
   // The following may already appear above
   // They are stated here in a shape suitable for the simplifier
   //(Ir)reflexivity axioms for comparison operators
-  @Axiom("lessNotRefl", unifier = "full")
+  @Axiom("lessNotRefl", unifier = "full", key = "0", recursor = "")
   lazy val lessNotRefl      = derivedAxiom("< irrefl", equivSequent("F_()<F_()","false"), propQE)
-  @Axiom("greaterNotRefl", unifier = "full")
+  @Axiom("greaterNotRefl", unifier = "full", key = "0", recursor = "")
   lazy val greaterNotRefl   = derivedAxiom("> irrefl", equivSequent("F_()>F_()","false"), propQE)
-  @Axiom("notEqualNotRefl", unifier = "full")
+  @Axiom("notEqualNotRefl", unifier = "full", key = "0", recursor = "")
   lazy val notEqualNotRefl  = derivedAxiom("!= irrefl", equivSequent("F_()!=F_()","false"), propQE)
   /** @see [[equivReflexive]] */
-  @Axiom("equalRefl", unifier = "full")
+  @Axiom("equalRefl", unifier = "full", key = "0", recursor = "")
   lazy val equalRefl        = derivedAxiom("= refl", equivSequent("F_() = F_()","true"), propQE)
-  @Axiom("lessEqualRefl", unifier = "full")
+  @Axiom("lessEqualRefl", unifier = "full", key = "0", recursor = "")
   lazy val lessEqualRefl    = derivedAxiom("<= refl", equivSequent("F_() <= F_()","true"), propQE)
-  @Axiom("greaterEqualRefl", unifier = "full")
+  @Axiom("greaterEqualRefl", unifier = "full", key = "0", recursor = "")
   lazy val greaterEqualRefl = derivedAxiom(">= refl", equivSequent("F_() >= F_()","true"), propQE)
 
   //(anti) symmetry axioms
