@@ -209,11 +209,17 @@ trait StorableInfo extends DerivationInfo {
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula
+  /** The key at which this formula will be unified against an input formula
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]] */
   val theKey: ExprPos = 0 :: Nil
+  /** The recursors which to look for later after using this axiom.
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase]] */
   val theRecursor: List[ExprPos] = Nil
+  /** The unifier to use when using theKey position of this axiom.
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]] */
   val unifier: Symbol
+  /** At what level to display this axiom in the user interface. */
   val displayLevel: Symbol
-  //@todo lift unifier and displayLevel from CoreAxiomInfo to here
 }
 
 /** Meta-Information for an axiom from the prover core
