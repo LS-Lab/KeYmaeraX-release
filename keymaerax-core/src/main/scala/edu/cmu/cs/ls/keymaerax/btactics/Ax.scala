@@ -789,6 +789,34 @@ object Ax extends Logging {
     )
 
   /**
+    * Rule "CQimply equation congruence".
+    * Premise f_(||) = g_(||)
+    * Conclusion ctx_(f_(||)) -> ctx_(g_(||))
+    * End.
+    */
+  @DerivedRule(("CQimply", "CQimplyCongruence"), conclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+    premises = "|- f_(||) = g_(||)")
+  lazy val CQimplyCongruence =
+  derivedRuleSequent("CQimply equation congruence",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
+    TactixLibrary.equivifyR(1) & by(CQrule)
+  )
+
+  /**
+    * Rule "CEimply congruence".
+    * Premise p_(||) <-> q_(||)
+    * Conclusion ctx_{p_(||)} -> ctx_{q_(||)}
+    * End.
+    */
+  @DerivedRule(("CEimply", "CEimplyCongruence"), conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
+    premises = "|- p_(||) -> q_(||)")
+  lazy val CEimplyCongruence =
+  derivedRuleSequent("CEimply congruence",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
+    TactixLibrary.equivifyR(1) & by(CErule)
+  )
+
+  /**
     * Rule "[] monotone".
     * Premise p(||) ==> q(||)
     * Conclusion [a;]p(||) ==> [a;]q(||)
