@@ -70,7 +70,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
   /** A parsed declaration, which assigns a signature to names, with `inputDecls` as literally listed in the file */
   case class Declaration(decls: Map[Name, Signature], inputDecls: Map[Name, InputSignature] = Map.empty) {
     /** The declarations as topologically sorted substitution pairs. */
-    lazy val substs: List[SubstitutionPair] = topSort(decls.filter(_._2._3.isDefined)).map((declAsSubstitutionPair _).tupled)
+    lazy val substs: List[SubstitutionPair] = decls.filter(_._2._3.isDefined).map((declAsSubstitutionPair _).tupled)
 
     /** Declared names and signatures as [[NamedSymbol]]. */
     lazy val asNamedSymbols: List[NamedSymbol] = decls.map({ case ((name, idx), (domain, sort, _, _)) => sort match {
@@ -104,34 +104,57 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     /** Elaborates variable uses of declared functions. */
     def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
 
+    /** Elaborates all declarations to dots. */
+    lazy val elaborateWithDots: Declaration = Declaration(topSort(decls).map(d => elaborateWithDots(d._1, d._2)).toMap, inputDecls)
+
+    /** Elaborates the interpretation in `signature` to dots. */
+    private def elaborateWithDots(name: Name, signature: Signature): (Name, Signature) = signature._3 match {
+      case None => (name, signature)
+      case Some(interpretation) =>
+        val arg = signature._1 match {
+          case Some(Unit) => Nothing
+          case Some(s: Tuple) => s.toDots(0)._1
+          case Some(s) => DotTerm(s)
+          case None => Nothing
+        }
+        val elaborated = elaborateToFunctions(interpretation)
+
+        val undeclaredDots = dotsOf(elaborated) -- dotsOf(arg)
+        if (undeclaredDots.nonEmpty) throw ParseException(
+          "Function/predicate " + name + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
+          UnknownLocation)
+        (name, (signature._1, signature._2, Some(elaborated), signature._4))
+    }
+
+    /** Returns the dots used in expression `e`. */
+    private def dotsOf(e: Expression): Set[DotTerm] = {
+      val dots = scala.collection.mutable.Set[DotTerm]()
+      val traverseFn = new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case d: DotTerm => dots += d; Left(None)
+          case _ => Left(None)
+        }
+      }
+      e match {
+        case t: Term => ExpressionTraversal.traverse(traverseFn, t)
+        case f: Formula => ExpressionTraversal.traverse(traverseFn, f)
+        case p: Program => ExpressionTraversal.traverse(traverseFn, p)
+      }
+      dots.toSet
+    }
+
     /** Turns a function declaration (with defined body) into a substitution pair. */
     private def declAsSubstitutionPair(name: Name, signature: Signature): SubstitutionPair = {
       require(signature._3.isDefined, "Substitution only for defined functions")
+      val (_, (domain, sort, Some(interpretation), _)) = elaborateWithDots(name, signature)
 
-      /** Returns the dots used in expression `e`. */
-      def dotsOf(e: Expression): Set[DotTerm] = {
-        val dots = scala.collection.mutable.Set[DotTerm]()
-        val traverseFn = new ExpressionTraversalFunction() {
-          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-            case d: DotTerm => dots += d; Left(None)
-            case _ => Left(None)
-          }
-        }
-        e match {
-          case t: Term => ExpressionTraversal.traverse(traverseFn, t)
-          case f: Formula => ExpressionTraversal.traverse(traverseFn, f)
-          case p: Program => ExpressionTraversal.traverse(traverseFn, p)
-        }
-        dots.toSet
-      }
-
-      val (arg, sig) = signature._1 match {
+      val (arg, sig) = domain match {
         case Some(Unit) => (Nothing, Unit)
-        case Some(s@Tuple(_, _)) => (s.toDots(0)._1, s)
+        case Some(s: Tuple) => (s.toDots(0)._1, s)
         case Some(s) => (DotTerm(s), s)
         case None => (Nothing, Unit)
       }
-      val what = signature._2 match {
+      val what = sort match {
         case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
         case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
         case Trafo =>
@@ -139,14 +162,8 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
           assert(signature._1.getOrElse(Unit) == Unit, "Expected domain Unit in program const signature, but got " + signature._1)
           ProgramConst(name._1)
       }
-      val repl = elaborateToFunctions(signature._3.get)
 
-      val undeclaredDots = dotsOf(repl) -- dotsOf(arg)
-      if (undeclaredDots.nonEmpty) throw ParseException(
-        "Function/predicate " + what.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
-        UnknownLocation)
-
-      SubstitutionPair(what, repl)
+      SubstitutionPair(what, interpretation)
     }
   }
 

@@ -1487,7 +1487,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "replace tabs with spaces" in {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End; End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
@@ -1505,12 +1505,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Problem
         |  x>0
         |End.
-        |Tactic "Proof" master End; End.""".stripMargin
+        |Tactic "Proof" master End. End.""".stripMargin
   }
 
   it should "replace tabs with spaces in model-only entry" in {
     // tabs throw off the position computation in the lexer (especially before \n). in archives without tactics, this leads to faulty model extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End; End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
@@ -2030,9 +2030,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true End.""".stripMargin
-    ) should have message """2:20 ArchiveEntry has no matching End.
-                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise at 1:1 to 1:12--2:20 to EOF$
-                            |Found:    EOF$ at 2:20 to EOF$
+    ) should have message """2:19 ArchiveEntry has no matching End.
+                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise at 1:1 to 1:12--2:19 to EOF$
+                            |Found:    EOF$ at 2:19 to EOF$
                             |Expected: End.
                             |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
 
@@ -2088,16 +2088,17 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true""".stripMargin
-    ) should have message """2:15 Missing problem delimiter
-                           |Found:    <EOF> at 2:15 to EOF$
+    ) should have message """2:14 Missing problem delimiter
+                           |Found:    <EOF> at 2:14 to EOF$
                            |Expected: End""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true End""".stripMargin
-    ) should have message """2:19 Missing . after delimiter End
-                            |Found:    <EOF> at 2:19 to EOF$
-                            |Expected: .""".stripMargin
+    ) should have message """2:18 Missing . after delimiter End
+                            |Found:    <EOF> at 2:18 to EOF$
+                            |Expected: .
+                            |Hint: ParseState( :+ ArchiveEntry :+ DOUBLE_QUOTES_STRING :+ MetaInfo(Map()) :+ Definitions(List(),List())  <|>  PROBLEM_BLOCK$, TRUE$, END_BLOCK$, EOF$)""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
@@ -2105,7 +2106,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Tactic "My tactic" closeTrue End. """.stripMargin
     ) should have message """3:1 Missing . after delimiter End
                             |Found:    Tactic at 3:1 to 3:6
-                            |Expected: .""".stripMargin
+                            |Expected: .
+                            |Hint: ParseState( :+ ArchiveEntry :+ DOUBLE_QUOTES_STRING :+ MetaInfo(Map()) :+ Definitions(List(),List())  <|>  PROBLEM_BLOCK$, TRUE$, END_BLOCK$, TACTIC_BLOCK$, DOUBLE_QUOTES_STRING, ID("closeTrue"), END_BLOCK$, PERIOD$, EOF$)""".stripMargin
   }
   
   it should "report parse errors in function definitions" in {
@@ -2176,8 +2178,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real f(); End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:22 Function definition only allowed in Definitions block
-                            |Found:    ( at 2:22
+    ) should have message """2:25 Function definition only allowed in Definitions block
+                            |Found:    ( at 2:25
                             |Expected: ;
                             |      or: ,""".stripMargin
 
@@ -2204,8 +2206,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real x &; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:23 Unexpected token in ProgramVariables block
-                            |Found:    & at 2:23
+    ) should have message """2:26 Unexpected token in ProgramVariables block
+                            |Found:    & at 2:26
                             |Expected: ;
                             |      or: ,""".stripMargin
 
@@ -2225,8 +2227,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Real f() & ; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:20 Unexpected token in function definition
-                            |Found:    & at 2:20
+    ) should have message """2:23 Unexpected token in function definition
+                            |Found:    & at 2:23
                             |Expected: =
                             |      or: ;""".stripMargin
 
@@ -2235,8 +2237,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Real f() <-> 5; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:20 Function must be defined by equality
-                            |Found:    <-> at 2:20 to 2:22
+    ) should have message """2:23 Function must be defined by equality
+                            |Found:    <-> at 2:23 to 2:25
                             |Expected: =""".stripMargin
 
     the [ParseException] thrownBy parse(
@@ -2244,8 +2246,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Real f() = 5!=7; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:22 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 5!=7
-                            |Found:    5!=7 at 2:22 to 2:25
+    ) should have message """2:25 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 5!=7
+                            |Found:    5!=7 at 2:25 to 2:28
                             |Expected: Term""".stripMargin
   }
 
