@@ -35,6 +35,7 @@ private object ProofRuleTactics extends Logging {
     }
   }
 
+  /** [[SequentCalculus.cut()]] */
   def cut(f: Formula): InputTactic = new InputTactic("cut", f::Nil) {
     override def computeExpr(): BelleExpr = new BuiltInTactic(name) {
       override def result(provable: ProvableSig): ProvableSig = {
@@ -43,6 +44,7 @@ private object ProofRuleTactics extends Logging {
     } & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))
   }
 
+  /** [[SequentCalculus.cutL()]] */
   def cutL(f: Formula): DependentPositionWithAppliedInputTactic = "cutL" byWithInput(f, (pos: Position, _: Sequent) => {
     new BuiltInTactic("CutL") {
       override def result(provable: ProvableSig): ProvableSig = {
@@ -52,6 +54,7 @@ private object ProofRuleTactics extends Logging {
     }
   })
 
+  /** [[SequentCalculus.cutR()]] */
   def cutR(f: Formula): DependentPositionWithAppliedInputTactic = "cutR" byWithInput(f, (pos: Position, _: Sequent) => {
     new BuiltInTactic("CutR") {
       override def result(provable: ProvableSig): ProvableSig = {
@@ -61,6 +64,7 @@ private object ProofRuleTactics extends Logging {
     }
   })
 
+  /** [[SequentCalculus.cutLR()]] */
   def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = "cutLR" byWithInput(f, (pos: Position, _: Sequent) => {
     new BuiltInTactic("CutLR") {
       override def result(provable: ProvableSig): ProvableSig = {
