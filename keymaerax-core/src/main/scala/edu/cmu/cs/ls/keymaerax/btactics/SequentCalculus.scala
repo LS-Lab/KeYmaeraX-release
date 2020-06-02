@@ -235,7 +235,7 @@ trait SequentCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // derived propositional
 
-  /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
+  /** Turn implication `a->b` on the right into an equivalence `a<->b`, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
   val equivifyR: CoreRightTactic = "equivifyR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
   /** Modus Ponens: p&(p->q) -> q.
     * @example{{{
