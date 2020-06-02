@@ -87,7 +87,11 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
 
   /** Parse a list of archive entries */
-  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = P( Start ~ archiveEntry.rep(1) ~ End ).map(_.toList)
+  def archiveEntries[_: P]: P[List[ParsedArchiveEntry]] = P( Start ~
+    sharedDefinitions.? ~
+    archiveEntry.rep(1) ~
+    End).map({case (shared,entries) => entries.toList})
+  //@todo add sharedDefinition to all entries
 
   /** Parse a single archive entry. */
   def archiveEntry[_: P]: P[ParsedArchiveEntry] = P( ("ArchiveEntry" | "Lemma" | "Theorem" | "Exercise").!.
@@ -128,8 +132,17 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def allDeclarations[_: P]: P[Declaration] = P(
     NoCut(programVariables ~ definitions).map(p=>p._1++p._2) |
     (definitions.? ~ programVariables.?).
-      map({case (Some(a), Some(b)) => a++b case (None, Some(b)) => b case (Some(a), None) => a case (None, None) => Declaration(Map.empty, Map.empty)})
+      map({case (a,b) => optjoin(a,b).getOrElse(Declaration(Map.empty, Map.empty))})
   )
+
+  private def optjoin(a: Option[Declaration], b: Option[Declaration]): Option[Declaration] = a match {
+    case None => b
+    case Some(d) => b match {
+      case None => a
+        //@todo complain about conflicting declarations
+      case Some(e) => Some(d++e)
+    }
+  }
 
   /** `Description "text".` parsed. */
   def description[_: P]: P[String] = P("Description" ~~ blank~/ string ~ "." )
@@ -139,6 +152,10 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** `Link "text".` parsed. */
   def link[_: P]: P[String] = P("Link" ~~ blank~/ string ~ "." )
+
+  /** `SharedDefinitions declOrDef End.` parsed. */
+  def sharedDefinitions[_: P]: P[Declaration] = P("SharedDefinitions" ~~ blank ~/ declOrDef.rep ~ "End." ).
+    map(list => Declaration(list.flatten.toMap, Map.empty))
 
   /** `Definitions declOrDef End.` parsed. */
   def definitions[_: P]: P[Declaration] = P("Definitions" ~~ blank ~/ declOrDef.rep ~ "End." ).
