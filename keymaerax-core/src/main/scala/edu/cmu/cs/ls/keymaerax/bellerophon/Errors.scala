@@ -128,7 +128,6 @@ abstract class BelleTacticFailure(message: => String, cause: Throwable = null) e
   */
 class TacticInapplicableFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
 
-
 /** Tactic was unable to unify with the given key and is, thus, inapplicable as indicated in the present sequent.
   * Besides indicating genuine unifiable situations, this may indicate that the wrong key was chosen for the (derived) axiom in its [[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]].
   */
@@ -140,6 +139,10 @@ class UnsupportedTacticFeature(message: => String, cause: Throwable = null) exte
 
 /** Signaling that a tactic input was not as expected. */
 class InputFormatFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
+
+/** Signals a proof search failure. Also thrown by calls that are not "tactics" per se but might, e.g., be called internally by a tactic
+  * May be caught internally by tactics to direct searches. */
+class ProofSearchFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
 
 //</editor-fold>
 
