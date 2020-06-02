@@ -281,7 +281,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, nil)")
   }
 
-  it should "work top-level and support complicated branch tactics" in withMathematica { _ => withDatabase { db =>
+  it should "work top-level and support complicated branch tactics" taggedAs(SlowTest) in withMathematica { _ => withDatabase { db =>
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0&[{x'=1&x>=0}]x>=0 End."
     val proofId = db.createProof(modelContent)
 

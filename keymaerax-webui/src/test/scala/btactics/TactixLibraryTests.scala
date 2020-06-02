@@ -272,6 +272,7 @@ class TactixLibraryTests extends TacticTestBase {
     }
   }
 
+  //@todo why does this test fail?
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
