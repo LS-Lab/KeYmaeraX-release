@@ -794,7 +794,7 @@ object Ax extends Logging {
     * Conclusion ctx_(f_(||)) -> ctx_(g_(||))
     * End.
     */
-  @DerivedRule(("CQimply", "CQimplyCongruence"), conclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+  @ProofRule(("CQimply", "CQimplyCongruence"), conclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
     premises = "|- f_(||) = g_(||)")
   lazy val CQimplyCongruence =
   derivedRuleSequent("CQimply equation congruence",
@@ -808,7 +808,7 @@ object Ax extends Logging {
     * Conclusion ctx_{p_(||)} -> ctx_{q_(||)}
     * End.
     */
-  @DerivedRule(("CEimply", "CEimplyCongruence"), conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
+  @ProofRule(("CEimply", "CEimplyCongruence"), conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
     premises = "|- p_(||) -> q_(||)")
   lazy val CEimplyCongruence =
   derivedRuleSequent("CEimply congruence",
