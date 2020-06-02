@@ -188,9 +188,9 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
 
   /**
     * Type analysis of expression according to the given type declarations decls
-    * @param name the entry name
-    * @param d the type declarations known from the context
-    * @param expr the expression parsed
+    * @param name the entry name (for error messages)
+    * @param d the type declarations known from the context (e.g., as parsed from the Definitions and ProgramVariables block of an entry)
+    * @param expr the expression to analyze
     * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
     */
   def typeAnalysis(name: String, d: Declaration, expr: Expression): Boolean = {
@@ -211,17 +211,19 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
         }
         else true
       case DifferentialSymbol(v) => d.decls.contains(v.name, v.index) //@note hence it is checked as variable already
-      case x: Variable if quantifiedVars(expr).contains(x) => true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
       case x: Variable =>
-        val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
-          case Some((None,sort, _, loc)) => (sort, loc)
-          case Some((Some(domain), sort, _, loc)) =>
-            throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
-          case None => throw ParseException.typeDeclGuessError(name +": undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
-            "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
+        if (quantifiedVars(expr).contains(x)) true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
+        else {
+          val (declaredSort, declLoc) = d.decls.get((x.name, x.index)) match {
+            case Some((None, sort, _, loc)) => (sort, loc)
+            case Some((Some(domain), sort, _, loc)) =>
+              throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
+            case None => throw ParseException.typeDeclGuessError(name + ": undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
+              "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
+          }
+          if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declaredSort + "", x, declLoc)
+          x.sort == declaredSort
         }
-        if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declaredSort + "", x, declLoc)
-        x.sort == declaredSort
       case _: UnitPredicational => true //@note needs not be declared
       case _: UnitFunctional => true //@note needs not be declared
       case _: DotTerm => true //@note needs not be declared
