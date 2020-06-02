@@ -177,11 +177,12 @@ class AxiomImpl (val c: whitebox.Context) {
                 q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
             // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
             // the axiom info to the global axiom info table
-            val (application, lemmaType) =
+            val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerR($fullRhs, $info)"
+            val lemmaType =
               if(isCore) {
-                (q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerCore($fullRhs, $info)", tq"edu.cmu.cs.ls.keymaerax.macros.CoreAxiomInfo")
+                tq"edu.cmu.cs.ls.keymaerax.macros.CoreAxiomInfo"
               }  else {
-                (q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerDerived($fullRhs, $info)", tq"edu.cmu.cs.ls.keymaerax.macros.DerivedAxiomInfo")
+                tq"edu.cmu.cs.ls.keymaerax.macros.DerivedAxiomInfo"
               }
             c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)

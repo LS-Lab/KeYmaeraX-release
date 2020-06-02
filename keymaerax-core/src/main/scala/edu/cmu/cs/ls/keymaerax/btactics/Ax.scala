@@ -83,7 +83,11 @@ object Ax extends Logging {
     CoreAxiomInfo(name)
   }
 
-//  /** A Provable proving the derived axiom/rule named id (convenience) */
+  private def coreRule(name: String): AxiomaticRuleInfo = {
+    AxiomaticRuleInfo(name)
+  }
+
+  //  /** A Provable proving the derived axiom/rule named id (convenience) */
 //  private def derivedAxiomOrRule(name: String): ProvableSig = {
 //    val lemmaName = DerivationInfo(name) match {
 //      case si: StorableInfo => si.storedName
@@ -296,12 +300,16 @@ object Ax extends Logging {
   // Core Axiomatic Rules   see [[AxiomBase]]
   //***************
 
-  //@todo turn into ProvableInfo and annotate with @DerivedRule or better yet @AxiomaticRule
-  val CQrule = ProvableSig.rules("CQ equation congruence")
-  val CErule = ProvableSig.rules("CE congruence")
-  val mondrule = ProvableSig.rules("<> monotone")
-  val indrule = ProvableSig.rules("ind induction")
-  val conrule = ProvableSig.rules("con convergence")
+  @ProofRule
+  val CQrule = coreRule("CQ equation congruence")
+  @ProofRule
+  val CErule = coreRule("CE congruence")
+  @ProofRule
+  val mondrule = coreRule("<> monotone")
+  @ProofRule
+  val indrule = coreRule("ind induction")
+  @ProofRule
+  val conrule = coreRule("con convergence")
 
 
   //***************
@@ -657,7 +665,7 @@ object Ax extends Logging {
     * @derived from Skolemize
     * @Note generalization of p(x) to p(||) as in Theorem 14
     */
-  @DerivedRule(("all gen", "allgen"),  premises = "|- P", conclusion = "|- \\forall x P")
+  @ProofRule(("all gen", "allgen"),  premises = "|- P", conclusion = "|- \\forall x P")
   lazy val allGeneralize = derivedRuleSequent("all generalization",
     //(immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
@@ -682,7 +690,7 @@ object Ax extends Logging {
     * @NOTE Unsound for hybrid games
     * @derived from M and [a]true
     */
-  @DerivedRule("G", conclusion = "|- [a;]P", premises = "|- P")
+  @ProofRule("G", conclusion = "|- [a;]P", premises = "|- P")
   lazy val Goedel = derivedRuleSequent("Goedel",
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
@@ -766,7 +774,7 @@ object Ax extends Logging {
     *
     * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
     */
-  @DerivedRule(("CT term congruence", "CTtermCongruence"), conclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
+  @ProofRule(("CT term congruence", "CTtermCongruence"), conclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
     premises = "|- f_(||) = g_(||)")
   lazy val CTtermCongruence =
     derivedRuleSequent("CT term congruence",
@@ -791,7 +799,7 @@ object Ax extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
-  @DerivedRule(("[] monotone", "[]monotone"),  conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
+  @ProofRule(("[] monotone", "[]monotone"),  conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
   lazy val monb = derivedRuleSequent("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
@@ -814,7 +822,7 @@ object Ax extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Renamed form of boxMonotone.
     */
-  @DerivedRule(("[] monotone 2", "[]monotone 2"), conclusion = "[a;]Q |- [a;]P", premises = "Q |- P")
+  @ProofRule(("[] monotone 2", "[]monotone 2"), conclusion = "[a;]Q |- [a;]P", premises = "Q |- P")
   lazy val monb2 = derivedRuleSequent("[] monotone 2",
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
@@ -841,7 +849,7 @@ object Ax extends Logging {
     *     \exists x_ J(x_) |- <a{|x_|}*>P
     * }}}
     */
-  @DerivedRule(("con flat", "conflat"),  conclusion = "J |- <a*>P",
+  @ProofRule(("con flat", "conflat"),  conclusion = "J |- <a*>P",
     premises ="\\exists v (v<=0&J) |- P;; v > 0, J |- <a>J(v-1)")
   lazy val conflat =
     derivedRuleSequent("con convergence flat",

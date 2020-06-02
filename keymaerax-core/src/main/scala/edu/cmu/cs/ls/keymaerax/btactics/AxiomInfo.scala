@@ -115,16 +115,6 @@ object DerivationInfoRegistry {
   private def useAt(l: Lemma): DependentPositionTactic = HilbertCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
 
-  /** Alphanumeric letter or digit parts of a name, skipping all other characters or spaces. */
-  private def canonicalize(name: String): String = name.filter(c => c.isLetterOrDigit)
-
-  /** Convert axiomatic proof rules to derivation infos. */
-  private def convertAxiomaticRules(rules: Map[String,ProvableSig]): List[AxiomaticRuleInfo] =
-  //@todo display info is rather impoverished
-    rules.keys.map(name =>
-      AxiomaticRuleInfo(name, SimpleDisplayInfo(name, name), canonicalize(name),
-      {case () => TactixLibrary.by(ProvableSig.rules(name), name)})).toList
-
   ////////////////////////////////////////////////////////
   // Structure registry [[allInfo]] as modalities, ODEs, differentials, quantifiers, misc, derived axioms, sequent rules.
   ////////////////////////////////////////////////////////
@@ -888,7 +878,7 @@ object DerivationInfoRegistry {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  var allInfo: List[DerivationInfo] = (convertAxiomaticRules(ProvableSig.rules) ++ modalityInfos ++ odeInfos ++
+  var allInfo: List[DerivationInfo] = (modalityInfos ++ odeInfos ++
     differentialInfos ++ foInfos ++ miscInfos ++ derivedAxiomsInfos ++ sequentCalculusInfos) ensures (
     consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 

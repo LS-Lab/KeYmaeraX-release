@@ -44,24 +44,13 @@ object DerivationInfo {
       case dis => dis
     }
 
-  // @TODO: Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
+  // Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info
-  def registerCore[T](value: => T, ci: CoreAxiomInfo): CoreAxiomInfo = {
-    _allInfo = ci :: allInfo
+  def registerR[T, R <: DerivationInfo](value: => T, p: R): R = {
+    _allInfo = p :: allInfo
     val _ = value
-    ci
-  }
-  def registerDerived[T](value: => T, di: DerivedAxiomInfo): DerivedAxiomInfo = {
-    _allInfo = di :: allInfo
-    val _ = value
-    di
-  }
-
-  def registerDerivedRule[T](value: => T, di: DerivedRuleInfo): DerivedRuleInfo = {
-    _allInfo = di :: allInfo
-    val _ = value
-    di
+    p
   }
 
   def registerL[T, R <: DerivationInfo](value: => T, p: R): T = {
@@ -273,7 +262,7 @@ case class DerivedAxiomInfo(  override val canonicalName: String
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  * @see [[DerivedRuleInfo]] */
 //@todo add val theRecursor: List[Int] = Nil (so first number can have a sign) and unifier:Symbol into a joint common supertype of AxiomaticRuleInfo and DerivedRuleInfo that maybe should be called AxiomaticRuleInfo, CoreAxiomaticRuleInfo, DerivedAxiomaticRuleInfo or elide the axiomatic.
-case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, theExpr: Unit => Any)
+case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, theExpr: Unit => Any, val displayLevel: Symbol = 'internal)
   extends ProvableInfo {
   // lazy to avoid circular initializer call
   //private[this] lazy val expr = TactixLibrary.by(provable, codeName)
@@ -285,6 +274,14 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
   override val linear: Boolean = false
 }
 
+object AxiomaticRuleInfo {
+  def apply(axiomName: String): AxiomaticRuleInfo = {
+    DerivationInfo.byCanonicalName(axiomName) match {
+      case info: AxiomaticRuleInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a core rule")
+    }
+  }
+}
 
 /** Information for a derived rule proved from the core
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]

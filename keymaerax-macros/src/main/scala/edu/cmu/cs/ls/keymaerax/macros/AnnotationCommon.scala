@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.macros
 
-import edu.cmu.cs.ls.keymaerax.macros.DerivedRule.ExprPos
+import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
 
 import scala.reflect.macros.whitebox
 
