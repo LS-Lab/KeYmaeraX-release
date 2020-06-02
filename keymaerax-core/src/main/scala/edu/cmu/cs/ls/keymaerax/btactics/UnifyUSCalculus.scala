@@ -494,7 +494,7 @@ trait UnifyUSCalculus {
     *
     * Tactic specification:
     * {{{
-    * useAt(fact)(p)(F) = let (C,c)=F(p) in
+    * useAt(fact)(p)(F) = {let (C,c)=F(p) in
     *   case c of {
     *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) ; <(
     *       "use cut": skip
@@ -502,6 +502,7 @@ trait UnifyUSCalculus {
     *     )
     *     s=unify(fact.right,_) => accordingly with an extra commuteEquivRightT
     *   }
+    * }
     * }}}
     *
     * @author Andre Platzer
@@ -569,8 +570,10 @@ trait UnifyUSCalculus {
         * @param C       the context C{_} around the position p at which K{k} will be used
         * @param c       the formula c at position p in context C{_} to be replaced by subst(k)
         * @param sequent the sequent in which this useAt happens.
-        * @tparam T
-        * @return
+        * @tparam T      the type of the whole `k` in the context `K`
+        * @return The tactic using key `k` of `fact` `K{k}` as a replacement for `c` at position `p` so in context `C{_}`.
+        * @requires C{c}.at(p.inExpr) == (C,c)
+        * @requires subst(k) == c
         * @author Andre Platzer
         * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
         */
@@ -581,15 +584,21 @@ trait UnifyUSCalculus {
         //@todo generalization of DotTerm to other types should be acceptable, too
         require(List((C, DotFormula), (C, DotTerm())).contains(C.ctx.at(p.inExpr)), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c) + "\nwith context at position " + p.inExpr + " having placeholder " + C.ctx.at(p.inExpr))
 
-        /** Equivalence rewriting step using `fact` to replace with substituted `other` */
+        /** Equivalence rewriting step using given `fact` to replace with substituted form of `other` */
         def equivStep(other: Expression, fact: ProvableSig): BelleExpr = {
           // The position at which the cut show formula will land depending on the side of cutLR
           val cutPos: SuccPos = p match {
             case p: SuccPosition => p.top
             case p: AntePosition => SuccPos(sequent.succ.length)
           }
-          lazy val expect = if (p.isSucc) Imply(C(subst(other)), C(subst(keyPart))) else Imply(C(subst(keyPart)), C(subst(other)))
-          lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
+//          lazy val expect = if (p.isSucc)
+//            Imply(C(subst(other)), C(subst(keyPart)))
+//          else
+//            Imply(C(subst(keyPart)), C(subst(other)))
+//          lazy val expectEquiv = if (p.isSucc)
+//            Equiv(C(subst(other)), C(subst(keyPart)))
+//          else
+//            Equiv(C(subst(keyPart)), C(subst(other)))
           //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
           //@todo simplify substantially if subst=id
           //@note cut instead of cutLR might be a quicker proof to avoid the equivify but changes positions which would be unfortunate.
@@ -600,10 +609,10 @@ trait UnifyUSCalculus {
             /* use */ ident
             ,
             /* show */
-              cohideR /*(expect)*/ (cutPos) & assert(0, 1) &
-              assert(expect, "useAt show implication")(SuccPos(0)) &
-              equivifyR(SuccPos(0)) &
-              assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) & (
+              cohideR /*(expect)*/ (cutPos) & //assert(0, 1) &
+              //assert(expect, "useAt show implication")(SuccPos(0)) &
+              equivifyR(SuccPos(0)) & (
+              //assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) &
               if (other.kind == FormulaKind) CE(p.inExpr)
               else if (other.kind == TermKind) CQ(p.inExpr)
               else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other)) &
@@ -649,13 +658,13 @@ trait UnifyUSCalculus {
             equivStep(True, if (p.isSucc) commuteFact(provedFact) else provedFact)
           }
 
-          case Equiv(DotFormula, other)    => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
+          case Equiv(DotFormula, other)    => equivStep(other, if (p.isAnte) fact else commuteFact(fact))
 
-          case Equiv(other, DotFormula)    => equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
+          case Equiv(other, DotFormula)    => equivStep(other, if (p.isSucc) fact else commuteFact(fact))
 
-          case Equal(DotTerm(_, _), other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
+          case Equal(DotTerm(_, _), other) => equivStep(other, if (p.isAnte) fact else commuteFact(fact))
 
-          case Equal(other, DotTerm(_, _)) => equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
+          case Equal(other, DotTerm(_, _)) => equivStep(other, if (p.isSucc) fact else commuteFact(fact))
 
           case Imply(other, DotFormula)    => implyStep(other)
 
@@ -699,6 +708,7 @@ trait UnifyUSCalculus {
               require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
               UnifyUSCalculus.this.useAtImpl("useAtRem", remFact, remKey, defaultMatcher, inst)(p)
             } catch {
+                  //@todo catch less
               case err: Throwable =>
                 //@todo if global proof of prereq is unsuccessful could also rewrite (DotFormula<->bla)<-prereq to prereq&bla -> DotFormula and use the latter.
 

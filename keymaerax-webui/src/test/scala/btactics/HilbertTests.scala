@@ -20,9 +20,10 @@ import testHelper.KeYmaeraXTestTags
 import scala.collection.immutable._
 
 /**
- * Tests Hilbert Calculus.
- * @author Andre Platzer
- */
+  * Tests Hilbert Calculus.
+  * @see [[HilbertCalculus]]
+  * @author Andre Platzer
+  */
 @SummaryTest
 @UsualTest
 @CheckinTest
