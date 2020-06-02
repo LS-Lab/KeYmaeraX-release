@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.PrivateMethodTester
 import edu.cmu.cs.ls.keymaerax.macros._
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 
 import scala.collection.immutable._
 
@@ -19,6 +20,7 @@ import scala.collection.immutable._
   * Documents some failures in UnifyUSCalculus, and usage of a few primitives
   *
   */
+@SummaryTest
 class UnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
 
   //Unifier manages to unify F_() - F_() with bad LHS

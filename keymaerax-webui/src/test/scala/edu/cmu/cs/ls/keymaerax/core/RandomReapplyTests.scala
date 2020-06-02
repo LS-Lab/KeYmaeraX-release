@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.tags.CoverageTest
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, CoverageTest}
 import testHelper.KeYmaeraXTestTags.{CheckinTest, SlowTest, SummaryTest, UsualTest}
 
 import scala.collection.immutable
@@ -21,6 +21,7 @@ import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
  * @author Andre Platzer
  */
 @CoverageTest
+@CheckinTest
 class RandomReapplyTests extends FlatSpec with Matchers {
   val randomTrials = 4000
   val randomComplexity = 30

@@ -4,7 +4,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.hydra.BelleParserLinker
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
+@SlowTest
 class SCUBATests extends TacticTestBase {
   "tApprox" should "prove with statistics" in withMathematica(_ => {
     val modelString = """ProgramVariables.

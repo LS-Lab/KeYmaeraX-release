@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, UsualTest}
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable._
@@ -25,6 +25,7 @@ import scala.collection.immutable._
  */
 @SummaryTest
 @UsualTest
+@CheckinTest
 class HilbertTests extends TacticTestBase {
   import HilbertCalculus.Derive._
 

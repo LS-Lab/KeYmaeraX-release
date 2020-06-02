@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 
 import scala.collection.immutable
 
@@ -11,6 +12,7 @@ import scala.collection.immutable
  * [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.mond]],
  * [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.G]]
  */
+@SummaryTest
 class AxiomaticRuleTests extends TacticTestBase {
 
   "[] monotone" should "work" in {
