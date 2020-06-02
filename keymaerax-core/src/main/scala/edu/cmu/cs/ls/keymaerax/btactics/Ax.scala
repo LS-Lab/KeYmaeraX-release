@@ -1529,7 +1529,8 @@ object Ax extends Logging {
     *
     * @Derived
     */
-  @Axiom(("[:=]∃","[:=]exists"))
+  @Axiom(("[:=]∃","[:=]exists"), displayLevel = "internal",
+    key = "0", recursor = "*")
   lazy val assignbexists = derivedAxiom("[:=] assign exists",
     Sequent(IndexedSeq(), IndexedSeq("[x_:=f_();]p_(||) -> \\exists x_ p_(||)".asFormula)),
 //    useAt(existsAndAxiom, PosInExpr(1::Nil))(1, 1::Nil)

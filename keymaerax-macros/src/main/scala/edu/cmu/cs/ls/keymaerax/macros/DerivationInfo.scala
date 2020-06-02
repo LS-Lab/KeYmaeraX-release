@@ -211,7 +211,8 @@ trait AxiomInfo extends ProvableInfo {
   //def formula: Formula
   val theKey: ExprPos = 0 :: Nil
   val theRecursor: List[ExprPos] = Nil
-  def unifier: Symbol
+  val unifier: Symbol
+  val displayLevel: Symbol
   //@todo lift unifier and displayLevel from CoreAxiomInfo to here
 }
 
@@ -223,9 +224,9 @@ trait AxiomInfo extends ProvableInfo {
 case class CoreAxiomInfo(  override val canonicalName:String
                          , override val display: DisplayInfo
                          , override val codeName: String
-                         , val unifier: Symbol
+                         , override val unifier: Symbol
                          , val theExpr: Unit => Any
-                         , val displayLevel: Symbol = 'all
+                         , override val displayLevel: Symbol = 'internal
                          , override val theKey: ExprPos = 0 :: Nil
                          , override val theRecursor: List[ExprPos] = Nil
                         )
@@ -243,9 +244,9 @@ case class CoreAxiomInfo(  override val canonicalName:String
 case class DerivedAxiomInfo(  override val canonicalName: String
                             , override val display: DisplayInfo
                             , override val codeName: String
-                            , val unifier: Symbol
+                            , override val unifier: Symbol
                             , theExpr: Unit => Any
-                            , val displayLevel: Symbol = 'all
+                            , override val displayLevel: Symbol = 'internal
                             , override val theKey: ExprPos = 0 :: Nil
                             , override val theRecursor: List[ExprPos] = Nil
                             )
@@ -282,7 +283,7 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
 /** Information for a derived rule proved from the core
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  * @see [[AxiomaticRuleInfo]] */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any, val displayLevel: Symbol = 'all)
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any, val displayLevel: Symbol = 'internal)
   extends ProvableInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   //def belleExpr = expr()
