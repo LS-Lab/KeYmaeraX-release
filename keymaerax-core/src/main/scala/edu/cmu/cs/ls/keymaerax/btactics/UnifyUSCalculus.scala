@@ -611,8 +611,8 @@ trait UnifyUSCalculus {
             /* show */
               cohideR /*(expect)*/ (cutPos) & //assert(0, 1) &
               //assert(expect, "useAt show implication")(SuccPos(0)) &
-              equivifyR(SuccPos(0)) &
-              //assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) & (
+              equivifyR(SuccPos(0)) & (
+              //assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) &
               if (other.kind == FormulaKind) CE(p.inExpr)
               else if (other.kind == TermKind) CQ(p.inExpr)
               else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other)) &
