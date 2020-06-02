@@ -204,15 +204,15 @@ trait StorableInfo extends DerivationInfo {
 // axioms
 
 /** Meta-Information for an axiom or derived axiom, as declared by an @[[Axiom]] annotation.
-  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]
   * @see [[Axiom]] */
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   //def formula: Formula
-  /** The key at which this formula will be unified against an input formula
+  /** The key at which this formula will be unified against an input formula.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]] */
   val theKey: ExprPos = 0 :: Nil
-  /** The recursors which to look for later after using this axiom.
+  /** The list of recursors which to look for later after using this axiom in a chase.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase]] */
   val theRecursor: List[ExprPos] = Nil
   /** The unifier to use when using theKey position of this axiom.
