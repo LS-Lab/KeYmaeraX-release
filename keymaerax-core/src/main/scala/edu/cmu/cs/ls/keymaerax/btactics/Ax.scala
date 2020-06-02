@@ -97,7 +97,7 @@ object Ax extends Logging {
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[this] def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): DerivedAxiomInfo = {
+  def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): DerivedAxiomInfo = {
     val dai = DerivedAxiomInfo(name)
     val lemmaName = storedNameOpt match {
       case Some(storedName) => storedName
@@ -147,8 +147,9 @@ object Ax extends Logging {
     dai
   }
 
-  private[this] def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): Lemma = {
+  def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): DerivedRuleInfo = {
     // create evidence (traces input into tool and output from tool)
+    val dri = DerivedRuleInfo(name)
     val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val codeName = codeNameOpt match {
       case Some(codeName) => codeName
@@ -161,45 +162,50 @@ object Ax extends Logging {
     }
     val lemmaName = DerivedAxiomInfo.toStoredName(codeName)
     val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
-    if (!AUTO_INSERT) {
-      lemma
-    } else {
-      // first check whether the lemma DB already contains identical lemma name
-      val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
-        // identical lemma contents with identical name, so reuse ID
-        if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
-        else {
-           throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
-        }
+    val insertedLemma =
+      if (!AUTO_INSERT) {
+        lemma
       } else {
-        derivedAxiomDB.add(lemma)
+        // first check whether the lemma DB already contains identical lemma name
+        val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
+          // identical lemma contents with identical name, so reuse ID
+          if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
+          else {
+             throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
+          }
+        } else {
+          derivedAxiomDB.add(lemma)
+        }
+        derivedAxiomDB.get(lemmaID).get
       }
-      derivedAxiomDB.get(lemmaID).get
-    }
+    dri.theLemma = insertedLemma
+    dri
   }
 
-  //@todo change return type to DerivedRuleInfo
-  private[this] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
+  private[this] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedRuleInfo = {
+    val dri = try {
+      DerivedRuleInfo(name)
+    } catch {
+      case _: Throwable => throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
+    }
     val codeName = codeNameOpt match {
       case Some(codeName) => codeName
-      case None =>
-        try {
-          DerivedRuleInfo(name).storedName
-        } catch {
-          case _: Throwable => throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
-        }
+      case None => dri.codeName
     }
     val storageName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedAxiomDB.get(storageName) match {
-      case Some(lemma) => lemma
-      case None =>
-        val witness = TactixLibrary.proveBy(derived, tactic)
-        derivedRule(name, witness, codeNameOpt)
-    }
+    val lemma =
+      derivedAxiomDB.get(storageName) match {
+        case Some(lemma) => lemma
+        case None =>
+          val witness = TactixLibrary.proveBy(derived, tactic)
+          derivedRule(name, witness, codeNameOpt).theLemma
+      }
+    dri.theLemma = lemma
+    dri
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[this] def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
+  def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
     val codeName =
       codeNameOpt match {
         case Some(codeName) => codeName
@@ -215,7 +221,7 @@ object Ax extends Logging {
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[this] def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
+  def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
     val dai: DerivedAxiomInfo = DerivedAxiomInfo.apply(canonicalName)
     val codeName =
       codeNameOpt match {
@@ -233,14 +239,14 @@ object Ax extends Logging {
         case None =>
           val witness = TactixLibrary.proveBy(derived, tactic)
           assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
-          derivedFact(canonicalName, witness, Some(storedName))
+          derivedFact(canonicalName, witness, Some(storedName)).theLemma
       }
     dai.theLemma = lemma
     dai
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[this] def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo =
+  def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo =
     derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic, codeNameOpt)
 
   private val x = Variable("x_", None, Real)
