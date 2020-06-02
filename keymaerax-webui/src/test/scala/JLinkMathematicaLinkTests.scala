@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.tools.ext.{ExtMathematicaOpSpec, JLinkMathematicaLink, Mathematica, MathematicaLink, ToolExecutor}
 import edu.cmu.cs.ls.keymaerax.tools.qe.{JLinkMathematicaCommandRunner, KeYmaeraToMathematica, MathematicaOpSpec, MathematicaToKeYmaera}
 import org.scalatest.PrivateMethodTester
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
 
 import scala.collection.immutable.Map
 import org.scalatest.LoneElement._
@@ -134,7 +134,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     link.qe("5 < 5--2".asFormula).fact.conclusion shouldBe "==> 5 < 5--2 <-> true".asSequent
   }
 
-  "QE" should "label branch on invalid formula" in withMathematica { link =>
+  "QE" should "label branch on invalid formula" taggedAs(SlowTest) in withMathematica { link =>
     link.qe("5<3".asFormula).fact.conclusion shouldBe "==> 5<3 <-> false".asSequent
     val result = proveBy("5<3".asFormula, TactixLibrary.QE, {
       case Some(labels) => labels.loneElement shouldBe BelleLabels.QECEX

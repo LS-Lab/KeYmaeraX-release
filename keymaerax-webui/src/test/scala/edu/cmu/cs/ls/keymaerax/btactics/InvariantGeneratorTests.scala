@@ -111,6 +111,7 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
     invGenerator(s, SuccPos(0)).toList.loneElement shouldBe ("x^2+y^2=2".asFormula, None)
   }
 
+  //@todo why does this test fail?
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
     proveBy("x=0 -> [{x:=-x;}*]x>=0".asFormula, auto) shouldBe 'proved
   }
