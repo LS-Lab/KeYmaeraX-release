@@ -721,7 +721,9 @@ private object DifferentialTactics extends Logging {
         val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
         val constFacts = sequent.ante.flatMap(FormulaTools.conjuncts).
           filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
-        constFacts.map(diffCut(_)(pos) <(skip, V(pos) & prop & done)).getOrElse(skip) & DW(pos) & G(pos)
+        constFacts.map(diffCut(_)(pos) &
+          // diffCut may not introduce the cut if it is already in there
+          Idioms.doIf(_.subgoals.size == 2)(<(skip, V(pos) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
       } else {
         useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }

@@ -15,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+
 import scala.collection.immutable
 import scala.collection.immutable.Nil
 import scala.collection.mutable.ListBuffer
@@ -577,7 +579,7 @@ object ODELiveness {
       }
     }
 
-    useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict)
+    useAt(vdg,PosInExpr(0::Nil))(pos) & removeODEs(ls.tail,pos, strict))
   }
 
   /** Applied to a top-level position containing a succedent diamond, this tactic removes irrelevant ODEs
@@ -879,6 +881,12 @@ object ODELiveness {
     }
   }
 
+  private def byUScaught(p:ProvableSig) =
+    TryCatch(byUS(p), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with: " + p+ " Exception:"+ ex))
+
+  private def byUScaught(p:Lemma) =
+    TryCatch(byUS(p), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with: " + p+ " Exception:"+ ex))
+
   /** Implements dV rule for atomic postconditions
     * The bottom two premises are auto-closed because of the need to Dconstify
     * The first one is partially auto-closed if odeReduce is able to prove global existence
@@ -953,7 +961,8 @@ object ODELiveness {
       andR(pos) <(
         andR(pos) <(
         ToolTactics.hideNonFOL & QE, //G |- e() > 0
-        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(ex))), // existence
+        odeReduce(strict = false)(pos) &
+        Idioms.?(cohideR(pos) & byUScaught(ex))), // existence
         compatCuts(pos) & dI('full)(pos)  // derivative lower bound
       )
     )
@@ -1014,7 +1023,7 @@ object ODELiveness {
         andR(pos) <(
           andR(pos) <(
             closeId,
-            odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & (byUS(baseGExge)|byUS(baseGExgt)))), // existence
+            odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & (byUScaught(baseGExge)|byUScaught(baseGExgt)))), // existence
           compatCuts(pos) &
             dR(lie,false)(pos) <(
                   cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI('full)(1),
@@ -1091,7 +1100,7 @@ object ODELiveness {
     kDomainDiamond(oldpbound)(pos) <(
       useAt(axren,PosInExpr(1::Nil))(pos)& andR(pos) <(
         ToolTactics.hideNonFOL & QE,
-        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUS(baseGExgt)) ), // existence
+        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUScaught(baseGExgt)) ), // existence
       dC(inv)(pos) <(
         DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
         DifferentialTactics.DconstV(pos) & sAIclosed(pos) //ODE does a boxand split, which is specifically a bad idea here
