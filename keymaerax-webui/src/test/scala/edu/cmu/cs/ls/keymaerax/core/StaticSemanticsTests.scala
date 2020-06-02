@@ -76,7 +76,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
   it should "@todo test symbols, signature" ignore {}
 
 
-  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CheckinTest,CoverageTest) in {test(10)}
+  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CoverageTest) in {test(10)}
   it should "consistently compute randomly (summary)" taggedAs(SummaryTest,CoverageTest) in {test(50)}
   it should "consistently compute randomly (usual)" taggedAs(UsualTest,CoverageTest) in {test(1000,12)}
   it should "consistently compute randomly (slow)" taggedAs(SlowTest,CoverageTest) in {test(randomTrials,20)}
