@@ -218,7 +218,8 @@ object DerivationInfoRegistry {
       , "VK", unsure, {case () => HilbertCalculus.VK}),
     new DerivedAxiomInfo("V vacuous"
       , AxiomDisplayInfo("V", "p→<span class=\"k4-axiom-key\">[a]p</span>")
-      , "V", unsure, {case () => HilbertCalculus.useAt(Ax.V)}),
+      , "V", unsure, {case () => HilbertCalculus.useAt(Ax.V)}
+      , theKey = 1:: Nil),
     new CoreAxiomInfo("[]T system"
       , AxiomDisplayInfo("[]T", "[a]true")
       , "boxTrue", 'linear, {case () => HilbertCalculus.boxTrue})
@@ -450,7 +451,7 @@ object DerivationInfoRegistry {
       , "DEsysy", unsure, {case () => HilbertCalculus.useAt(Ax.DEsysy)}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
-      , "DIequiv", 'linear, {case () => HilbertCalculus.useAt(Ax.DIinvariance)}),
+      , "DIequiv", 'linear, {case () => HilbertCalculus.useAt(Ax.DIequiv)}),
     new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←(Q→P∧[{x′=f(x)&Q}](P)′)")
       , "DI", 'linear, {case () => HilbertCalculus.DI}),
@@ -475,12 +476,12 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo("DIo open differential invariance <"
       , AxiomDisplayInfo("DIo <", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]g(x)<h(x)</span>↔[?Q]g(x)<h(x))←(Q→[{x′=f(x)&Q}](g(x)<h(x)→(g(x)<h(x))′))")
       , "DIoless", 'linear, {case () => HilbertCalculus.useAt(Ax.DIoless)})
-//    new CoreAxiomInfo("DV differential variant >="
-//      , AxiomDisplayInfo("DVgeq", "todo DVgeq")
-//      , "DVgeq", unsure, {case () => HilbertCalculus.useAt("DV differential variant >=")}),
-//    new DerivedAxiomInfo("DV differential variant <="
-//      , AxiomDisplayInfo("DVleq", "todo DVleq")
-//      , "DVleq", unsure, {case () => HilbertCalculus.useAt("DV differential variant <=")})
+    /*new CoreAxiomInfo("DV differential variant >="
+      , AxiomDisplayInfo("DVgeq", "todo DVgeq")
+      , "DVgeq", unsure, {case () => HilbertCalculus.useAt("DV differential variant >=")}),
+    new DerivedAxiomInfo("DV differential variant <="
+      , AxiomDisplayInfo("DVleq", "todo DVleq")
+      , "DVleq", unsure, {case () => HilbertCalculus.useAt("DV differential variant <=")})*/
   )
   //</editor-fold>
 
@@ -623,7 +624,7 @@ object DerivationInfoRegistry {
     new DerivedAxiomInfo("Uniq uniqueness iff", "UniqIff", "UniqIff", unsure, {case () => HilbertCalculus.useAt(Ax.UniqIff)}),
     new DerivedAxiomInfo("DBX>", "DBXgt", "DBXgt", unsure, {case () => useAt(Ax.DBXgt)}),
     new DerivedAxiomInfo("DBX> open", "DBXgtOpen", "DBXgtOpen", unsure, {case () => useAt(Ax.DBXgtOpen)}),
-    //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
+        //new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
     //@note derived axiom exists eliminate not yet proven -> use core axiom instead
     //    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),
     new DerivedAxiomInfo("\\exists& exists and", "∃∧", "existsAnd", unsure, {case () => useAt(Ax.existsAnd)}),
@@ -850,7 +851,6 @@ object DerivationInfoRegistry {
 
     // Extra liveness axioms
     new DerivedAxiomInfo("K<&>", "KDomD", "KDomD", unsure, {case () => useAt(Ax.KDomD)})
-
   )
   //</editor-fold>
 

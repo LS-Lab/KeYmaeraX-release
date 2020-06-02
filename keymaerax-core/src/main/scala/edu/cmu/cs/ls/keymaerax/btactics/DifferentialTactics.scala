@@ -722,7 +722,9 @@ private object DifferentialTactics extends Logging {
         val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
         val constFacts = sequent.ante.flatMap(FormulaTools.conjuncts).
           filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
-        constFacts.map(diffCut(_)(pos) <(skip, V(pos) & prop & done)).getOrElse(skip) & DW(pos) & G(pos)
+        constFacts.map(diffCut(_)(pos) &
+          // diffCut may not introduce the cut if it is already in there
+          Idioms.doIf(_.subgoals.size == 2)(<(skip, V(pos) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
       } else {
         useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
@@ -1353,9 +1355,6 @@ private object DifferentialTactics extends Logging {
   lazy val dbxNeqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() != 0 -> z_() != 0".asFormula,QE,namespace).fact
 
   private lazy val dbxEqOne: ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, "1*1^2=1".asFormula)
-  // Darboux ghost variables
-  private val gvy: Variable = Variable("dbxy_")
-  private val gvz: Variable = Variable("dbxz_")
   private val zero = Number(0)
   private val one = Number(1)
   private val two = Number(2)
@@ -1383,7 +1382,7 @@ private object DifferentialTactics extends Logging {
       case Greater(_,_) => dbxGtRw
       case Equal(_,_) => dbxEqRw
       case NotEqual(_,_) => dbxNeqRw
-      case _ => ???
+      case _ =>  ??? // caught by exception in previous case match
     }
 
     val isOpen = property match {
@@ -1399,10 +1398,11 @@ private object DifferentialTactics extends Logging {
       if(isOpen) openDiffInd(pos) else dI('full)(pos)
     }
     else {
-      require(!StaticSemantics.vars(system).contains(gvy), "fresh ghost " + gvy + " in " + system.prettyString)
-      //@todo should not occur anywhere else in the sequent either...
-      require(!StaticSemantics.vars(system).contains(gvz), "fresh ghost " + gvz + " in " + system.prettyString)
-      //@todo should not occur anywhere else in the sequent either...
+      /** The ghost variable */
+      val gvy = TacticHelper.freshNamedSymbol("dbxy_".asVariable,seq)
+
+      /** Another ghost variable */
+      val gvz = TacticHelper.freshNamedSymbol("dbxz_".asVariable,seq)
 
       //Construct the diff ghost y' = -qy
       val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco), gvy))
@@ -1503,7 +1503,12 @@ private object DifferentialTactics extends Logging {
     ) &
     starter
 
-    // reuse dgDbx ghosts dbxy_ and dbxz_, but bypass extra checks since we already know
+    // Same as dgDbx but bypasses extra checks since we already know
+    /** The ghost variable */
+    val gvy = TacticHelper.freshNamedSymbol("dbxy_".asVariable,seq)
+
+    /** Another ghost variable */
+    val gvz = TacticHelper.freshNamedSymbol("dbxz_".asVariable,seq)
 
     //Postcond:
     val gtz = Greater(gvy, zero)
@@ -1606,14 +1611,14 @@ private object DifferentialTactics extends Logging {
       catch {
         //todo: Instead of eliminating quantifiers, Z3 will throw an exception that isn't caught by ?(timeoutQE)
         //This is a workaround
-        case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] =>  proveBy(False, skip)
+        case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] => proveBy(False, skip)
       }
       if(pr.isProved)
         return (pr,zero,lie)
     }
 
     if(strict)
-      throw new TacticInapplicableFailure("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
+      throw new ProofSearchFailure("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
 
     (pr,q,r)
   }
@@ -1640,7 +1645,7 @@ private object DifferentialTactics extends Logging {
     val (pr,cofactor,rem) = try {
       findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
     } catch {
-      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to find Darboux polynomial", ex)
+      case ex: ProofSearchFailure => throw new TacticInapplicableFailure("dbx auto unable to automatically determine Darboux cofactors.", ex)
     }
 
     starter & dgDbx(cofactor)(pos)

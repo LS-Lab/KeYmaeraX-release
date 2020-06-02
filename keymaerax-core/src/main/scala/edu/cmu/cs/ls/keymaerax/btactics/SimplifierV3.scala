@@ -1060,19 +1060,21 @@ object SimplifierV3 {
     * Normalize a formula
     * By default, this normalizer builds in:
     * 1) NNF conversion
-    * 2) Term checking: no min, max, abs, functions (except consts)
+    * 2) Term checking: no min, max, abs, functions (except consts) -- if checkTerms = true
     */
-  private def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
+  private def doNormalize(fi:formulaIndex, checkTerms:Boolean = true)(f:Formula) : (Formula,Option[ProvableSig]) = {
     to_NNF(f) match {
       case Some((nnf,pr)) =>
-        val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, atomicTermIndex)
+        val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi,
+          if(checkTerms) atomicTermIndex else emptyTaxs)
         propt match {
           case None => (nnf,Some(pr))
           case Some(pr2) =>
             (ff, Some(useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(pr)) )
         }
       case None =>
-        SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), f, fi, atomicTermIndex)
+        SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), f, fi,
+          if(checkTerms) atomicTermIndex else emptyTaxs)
     }
   }
 
@@ -1195,6 +1197,7 @@ object SimplifierV3 {
   val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
   val algNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(algNormalizeIndex)(_)
   val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
+  val semiAlgNormalizeUnchecked: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex, checkTerms= false)(_)
   val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
   val maxMinGtNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGtNormalizeIndex)(_)
 }

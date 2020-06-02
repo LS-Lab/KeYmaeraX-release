@@ -280,7 +280,7 @@ object IsabelleSyntax {
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), p_()^2 -> p_() * p_()
   def normalise(f:Formula) : (Formula,ProvableSig) =
-    SimplifierV3.semiAlgNormalize(f) match {
+    SimplifierV3.semiAlgNormalizeUnchecked(f) match {
       case (ff,Some(pr)) => (ff,pr)
       case (ff,None) => {
         assert(f == ff)

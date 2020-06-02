@@ -25,6 +25,8 @@ import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import org.scalatest.time.SpanSugar._
 
+import scala.reflect.io.File
+
 /**
  * Tactix Library Test.
  * @author Andre Platzer
@@ -264,7 +266,7 @@ class TactixLibraryTests extends TacticTestBase {
     val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
-    failAfter(20 seconds) {
+    failAfter(50 seconds) {
       val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(invGenerator)(1))
       result.getMessage should include("loopPostMaster: Invariant generator ran out of ideas")
     }
@@ -567,28 +569,28 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(problem2, master()) shouldBe 'proved
   }
 
-  "useLemmaAt" should "apply at provided key" in {
+  "useLemmaAt" should "apply at provided key" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
     lemma shouldBe 'proved
-    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(1::Nil)))(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
     proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
   }
 
-  it should "apply with default key .1 in succedent" in {
+  it should "apply with default key .1 in succedent" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
     lemma shouldBe 'proved
-    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("==> x=0 & x=0".asSequent, useLemmaAt(lemmaName, None)(1)).subgoals.loneElement shouldBe "==> x=0".asSequent
   }
 
-  it should "apply with default key .0 in antecedent" in {
+  it should "apply with default key .0 in antecedent" in withQE { _ =>
     val lemmaName = "tests/useLemmaAt/tautology1"
     val lemma = proveBy("p() -> p()&p()".asFormula, prop)
     lemma shouldBe 'proved
-    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user/" + lemmaName)))
+    LemmaDBFactory.lemmaDB.add(Lemma(lemma, Lemma.requiredEvidence(lemma), Some("user" + File.separator + lemmaName)))
     proveBy("x=0 ==> ".asSequent, useLemmaAt(lemmaName, Some(PosInExpr(0::Nil)))(-1)).subgoals.loneElement shouldBe "x=0 & x=0 ==> ".asSequent
   }
 

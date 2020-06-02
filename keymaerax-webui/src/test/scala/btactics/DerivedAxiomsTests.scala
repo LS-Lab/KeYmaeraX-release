@@ -66,7 +66,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     }
   }
 
-  "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
+  "Derived axioms and rules" should "prove one-by-one on a fresh lemma database" taggedAs KeYmaeraXTestTags.CheckinTest in
+    withMathematica(initLibrary = false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
         // delete all stored lemmas
@@ -89,33 +90,33 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
         }
       })
     }
-  }
+  })
 
-  "Derived Rule" should "prove allG" in withMathematica { _ => allGeneralize.provable.subgoals shouldBe List(
+  "Derived Rule" should "prove allG" in withMathematica(initLibrary =  false, testcode = { _ => allGeneralize.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
-  ) }
+  ) })
 
-  it should "prove Goedel" in withMathematica { _ => Goedel.provable.subgoals shouldBe List(
+  it should "prove Goedel" in withMathematica(initLibrary =  false, testcode =  { _ => Goedel.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("p_(||)".asFormula))
-  ) }
+  ) })
 
-  it should "prove CT" in withMathematica { _ => CTtermCongruence.provable.subgoals shouldBe List(
+  it should "prove CT" in withMathematica(initLibrary =  false, testcode =  { _ => CTtermCongruence.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("f_(||) = g_(||)".asFormula))
-  ) }
+  ) })
 
-  it should "prove [] monotone" in withMathematica { _ => monb.provable.subgoals shouldBe List(
+  it should "prove [] monotone" in withMathematica(initLibrary =  false, testcode =  { _ => monb.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("p_(||)".asFormula), immutable.IndexedSeq("q_(||)".asFormula))
-  ) }
+  ) })
 
-  it should "prove [] monotone 2" in withMathematica { _ => monb2.provable.subgoals shouldBe List(
+  it should "prove [] monotone 2" in withMathematica(initLibrary =  false, testcode =  { _ => monb2.provable.subgoals shouldBe List(
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
-  ) }
+  ) })
 
-  it should "prove con convergence flat" in withMathematica { _ => conflat.provable.subgoals shouldBe List(
+  it should "prove con convergence flat" in withMathematica(initLibrary =  false, testcode =  { _ => conflat.provable.subgoals shouldBe List(
     //Sequent(immutable.IndexedSeq("v_<=0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
     Sequent(immutable.IndexedSeq("\\exists x_ (x_<=0 & J(||))".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
     Sequent(immutable.IndexedSeq("x_>0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("<a_{|x_|};><x_:=x_-1;>J(||)".asFormula))
-  ) }
+  ) })
 
 
   "Semantically-renamed Derived Axioms" should "prove [:=] assign equality y" in {check(assignbeqy)}
@@ -157,7 +158,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <:=> assign" in {check(assigndAxiom)}
 //  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove := assign dual" in {check(assignDual)}
-  it should "prove all substitute" in withMathematica { _ => check(allSubstitute)}
+  it should "prove all substitute" in withMathematica(initLibrary =  false, testcode =  { _ => check(allSubstitute)})
   it should "prove [:=] equational" in {check(assignbequational)}
   it should "prove [:=] assign equality exists" in {check(assignbequalityexists)}
   it should "prove exists and" in {check(existsAnd)}
@@ -212,7 +213,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove \\forall->\\exists" in {check(forallThenExists)}
   //it should "prove DI differential invariance from DI" in {check(DIinvariance)}
   it should "prove DI differential invariant from DI" in {check(DI)}
-  it should "prove DIo open differential invariance <" in withMathematica { _ => check(DIoless)}
+  it should "prove DIo open differential invariance <" in withMathematica(initLibrary =  false, testcode = { _ => check(DIoless)})
 //  it should "prove DV differential variant <=" in withMathematica {_ => check(DVLessEqual)}
   it should "prove DW differential weakening" in {check(DW)}
   it should "prove DW differential weakening and" in {check(DWeakenAnd)}
@@ -230,101 +231,101 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove DGd diamond inverse differential ghost implicational" in {check(DGdi)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(DvariableAxiom)}
-  it should "prove x' derive var commuted" in withMathematica { _ => check(DvariableCommutedAxiom)}
-  it should "prove 'linear" in withMathematica { _ => check(Dlinear)}
-  it should "prove 'linear right" in withMathematica { _ => check(DlinearRight)}
+  it should "prove x' derive var commuted" in withMathematica(initLibrary =  false, testcode =  { _ => check(DvariableCommutedAxiom)})
+  it should "prove 'linear" in withMathematica(initLibrary =  false, testcode =  { _ => check(Dlinear)})
+  it should "prove 'linear right" in withMathematica(initLibrary =  false, testcode =  { _ => check(DlinearRight)})
   it should "prove Uniq uniqueness iff" in {check(UniqIff)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
-  it should "prove DBX>" in withMathematica {_ => check(DBXgt)}
-  it should "prove DBX> open" in withMathematica {_ => check(DBXgtOpen)}
-  it should "prove 0*" in withMathematica { _ => check(zeroTimes)}
-  it should "prove 0+" in withMathematica { _ => check(zeroPlus)}
-  it should "prove +0" in withMathematica { _ => check(plusZero)}
-  it should "prove *0" in withMathematica { _ => check(timesZero)}
-  it should "prove = reflexive" in withMathematica {_ =>check(equalReflexive)}
-  it should "prove = commute" in withMathematica { _ =>check(equalCommute)}
-  it should "prove <=" in withMathematica { _ =>check(lessEqual)}
-  it should "prove ! !=" in withMathematica { _ =>check(notNotEqual)}
-  it should "prove >= flip" in withMathematica { _ =>check(flipGreaterEqual)}
-  it should "prove > flip" in withMathematica { _ =>check(flipGreater)}
-  it should "prove <= flip" in withMathematica { _ =>check(flipLessEqual)}
-  it should "prove < flip" in withMathematica { _ =>check(flipLess)}
-  it should "prove + associative" in withMathematica { _ => check(plusAssociative)}
-  it should "prove * associative" in withMathematica { _ => check(timesAssociative)}
-  it should "prove + commute" in withMathematica { _ => check(plusCommute)}
-  it should "prove * commute" in withMathematica { _ => check(timesCommute)}
-  it should "prove distributive" in withMathematica { _ => check(distributive)}
-  it should "prove + identity" in withMathematica { _ => check(plusIdentity)}
-  it should "prove * identity" in withMathematica { _ => check(timesIdentity)}
-  it should "prove + inverse" in withMathematica { _ => check(plusInverse)}
-  it should "prove * inverse" in withMathematica { _ => check(timesInverse)}
-  it should "prove positivity" in withMathematica { _ => check(positivity)}
-  it should "prove + closed" in withMathematica { _ => check(plusClosed)}
-  it should "prove * closed" in withMathematica { _ => check(timesClosed)}
-  it should "prove <" in withMathematica { _ => check(less)}
-  it should "prove ! <" in withMathematica { _ => check(notLess)}
-  it should "prove ! <=" in withMathematica { _ => check(notLessEqual)}
-  it should "prove >" in withMathematica { _ => check(greater)}
-  it should "prove ! >" in withMathematica { _ => check(notGreater)}
-  it should "prove ! >=" in withMathematica { _ => check(notGreaterEqual)}
+  it should "prove DBX>" in withMathematica(initLibrary =  false, testcode =  {_ => check(DBXgt)})
+  it should "prove DBX> open" in withMathematica(initLibrary =  false, testcode =  {_ => check(DBXgtOpen)})
+  it should "prove 0*" in withMathematica(initLibrary =  false, testcode =  { _ => check(zeroTimes)})
+  it should "prove 0+" in withMathematica(initLibrary =  false, testcode =  { _ => check(zeroPlus)})
+  it should "prove +0" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusZero)})
+  it should "prove *0" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesZero)})
+  it should "prove = reflexive" in withMathematica(initLibrary =  false, testcode =  {_ =>check(equalReflexive)})
+  it should "prove = commute" in withMathematica(initLibrary =  false, testcode =  { _ =>check(equalCommute)})
+  it should "prove <=" in withMathematica(initLibrary =  false, testcode =  { _ =>check(lessEqual)})
+  it should "prove ! !=" in withMathematica(initLibrary =  false, testcode =  { _ =>check(notNotEqual)})
+  it should "prove >= flip" in withMathematica(initLibrary =  false, testcode =  { _ =>check(flipGreaterEqual)})
+  it should "prove > flip" in withMathematica(initLibrary =  false, testcode =  { _ =>check(flipGreater)})
+  it should "prove <= flip" in withMathematica(initLibrary =  false, testcode =  { _ =>check(flipLessEqual)})
+  it should "prove < flip" in withMathematica(initLibrary =  false, testcode =  { _ =>check(flipLess)})
+  it should "prove + associative" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusAssociative)})
+  it should "prove * associative" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesAssociative)})
+  it should "prove + commute" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusCommute)})
+  it should "prove * commute" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesCommute)})
+  it should "prove distributive" in withMathematica(initLibrary =  false, testcode =  { _ => check(distributive)})
+  it should "prove + identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusIdentity)})
+  it should "prove * identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesIdentity)})
+  it should "prove + inverse" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusInverse)})
+  it should "prove * inverse" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesInverse)})
+  it should "prove positivity" in withMathematica(initLibrary =  false, testcode =  { _ => check(positivity)})
+  it should "prove + closed" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusClosed)})
+  it should "prove * closed" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesClosed)})
+  it should "prove <" in withMathematica(initLibrary =  false, testcode =  { _ => check(less)})
+  it should "prove ! <" in withMathematica(initLibrary =  false, testcode =  { _ => check(notLess)})
+  it should "prove ! <=" in withMathematica(initLibrary =  false, testcode =  { _ => check(notLessEqual)})
+  it should "prove >" in withMathematica(initLibrary =  false, testcode =  { _ => check(greater)})
+  it should "prove ! >" in withMathematica(initLibrary =  false, testcode =  { _ => check(notGreater)})
+  it should "prove ! >=" in withMathematica(initLibrary =  false, testcode =  { _ => check(notGreaterEqual)})
 
 //  it should "prove != elimination" in withMathematica { _ => check(notEqualElim)}
 //  it should "prove >= elimination" in withMathematica { _ => check(greaterEqualElim)}
 //  it should "prove > elimination" in withMathematica { _ => check(greaterElim)}
-  it should "prove 1>0" in withMathematica { _ => check(oneGreaterZero)}
-  it should "prove nonnegative squares" in withMathematica { _ => check(nonnegativeSquares)}
-  it should "prove >2!=" in withMathematica { _ => check(greaterImpliesNotEqual)}
-  it should "prove > monotone" in withMathematica { _ => check(greaterMonotone)}
+  it should "prove 1>0" in withMathematica(initLibrary =  false, testcode =  { _ => check(oneGreaterZero)})
+  it should "prove nonnegative squares" in withMathematica(initLibrary =  false, testcode =  { _ => check(nonnegativeSquares)})
+  it should "prove >2!=" in withMathematica(initLibrary =  false, testcode =  { _ => check(greaterImpliesNotEqual)})
+  it should "prove > monotone" in withMathematica(initLibrary =  false, testcode =  { _ => check(greaterMonotone)})
 
-  it should "prove abs" in withMathematica { _ =>
+  it should "prove abs" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { check(abs) }
-  }
-  it should "prove min" in withMathematica { _ =>
+  })
+  it should "prove min" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { check(min) }
-  }
-  it should "prove max" in withMathematica { _ =>
+  })
+  it should "prove max" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { check(max) }
-  }
-  it should "prove & recusor" in withMathematica { _ => check(andRecursor)}
-  it should "prove | recursor" in withMathematica { _ => check(orRecursor)}
-  it should "prove <= both" in withMathematica { _ => check(intervalLEBoth)}
-  it should "prove < both" in withMathematica { _ => check(intervalLBoth)}
-  it should "prove neg<= up" in withMathematica { _ => check(intervalUpNeg)}
-  it should "prove abs<= up" in withMathematica { _ =>
+  })
+  it should "prove & recusor" in withMathematica(initLibrary =  false, testcode =  { _ => check(andRecursor)})
+  it should "prove | recursor" in withMathematica(initLibrary =  false, testcode =  { _ => check(orRecursor)})
+  it should "prove <= both" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalLEBoth)})
+  it should "prove < both" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalLBoth)})
+  it should "prove neg<= up" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalUpNeg)})
+  it should "prove abs<= up" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       check(intervalUpAbs)
     }
-  }
-  it should "prove max<= up" in withMathematica { _ =>
+  })
+  it should "prove max<= up" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       check(intervalUpMax)
     }
-  }
-  it should "prove min<= up" in withMathematica { _ =>
+  })
+  it should "prove min<= up" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       check(intervalUpMin)
     }
-  }
-  it should "prove +<= up" in withMathematica { _ => check(intervalUpPlus)}
-  it should "prove -<= up" in withMathematica { _ => check(intervalUpMinus)}
-  it should "prove *<= up" in withMathematica { _ => check(intervalUpTimes)}
-  it should "prove pow<= up" in withMathematica { _ => check(intervalUpPower)}
-  it should "prove 1Div<= up" in withMathematica { _ => check(intervalUp1Divide)}
-  it should "prove <=+ down" in withMathematica { _ => check(intervalDownPlus)}
-  it should "prove <=- down" in withMathematica { _ => check(intervalDownMinus)}
-  it should "prove <=* down" in withMathematica { _ => check(intervalDownTimes)}
-  it should "prove <=pow down" in withMathematica { _ => check(intervalDownPower)}
-  it should "prove <=1Div down" in withMathematica { _ => check(intervalDown1Divide)}
-  it should "prove K& down" in withMathematica { _ => check(Kand)}
-  it should "prove &-> down" in withMathematica { _ => check(andImplies)}
-  it should "prove <= & <=" in withMathematica { _ => check(metricAndLe)}
-  it should "prove < & <" in withMathematica { _ => check(metricAndLt)}
-  it should "prove <= | <=" in withMathematica { _ => check(metricOrLe)}
-  it should "prove < | <" in withMathematica { _ => check(metricOrLt)}
+  })
+  it should "prove +<= up" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalUpPlus)})
+  it should "prove -<= up" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalUpMinus)})
+  it should "prove *<= up" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalUpTimes)})
+  it should "prove pow<= up" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalUpPower)})
+  it should "prove 1Div<= up" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalUp1Divide)})
+  it should "prove <=+ down" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalDownPlus)})
+  it should "prove <=- down" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalDownMinus)})
+  it should "prove <=* down" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalDownTimes)})
+  it should "prove <=pow down" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalDownPower)})
+  it should "prove <=1Div down" in withMathematica(initLibrary =  false, testcode =  { _ => check(intervalDown1Divide)})
+  it should "prove K& down" in withMathematica(initLibrary =  false, testcode =  { _ => check(Kand)})
+  it should "prove &-> down" in withMathematica(initLibrary =  false, testcode =  { _ => check(andImplies)})
+  it should "prove <= & <=" in withMathematica(initLibrary =  false, testcode =  { _ => check(metricAndLe)})
+  it should "prove < & <" in withMathematica(initLibrary =  false, testcode =  { _ => check(metricAndLt)})
+  it should "prove <= | <=" in withMathematica(initLibrary =  false, testcode =  { _ => check(metricOrLe)})
+  it should "prove < | <" in withMathematica(initLibrary =  false, testcode =  { _ => check(metricOrLt)})
 
-  it should "prove const congruence" in withMathematica { _ => check(constCongruence)}
-  it should "prove const formula congruence" in withMathematica { _ => check(constFormulaCongruence)}
+  it should "prove const congruence" in withMathematica(initLibrary =  false, testcode =  { _ => check(constCongruence)})
+  it should "prove const formula congruence" in withMathematica(initLibrary =  false, testcode =  { _ => check(constFormulaCongruence)})
 
   "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexive)}
   it should "tactically prove !!" in {check(doubleNegation)}
@@ -334,7 +335,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove all distribute" in {check(allDist)}
   it should "tactically prove box dual" in {check(box)}
   it should "tactically prove <:=> assign" in {check(assigndAxiom)}
-  it should "tactically prove [:=] equational" in withMathematica { _ => check(assignbequational)}
+  it should "tactically prove [:=] equational" in withMathematica(initLibrary = false, testcode = { _ => check(assignbequational)})
 //  it should "tactically prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
   it should "tactically prove [:=] vacuous assign" in {check(vacuousAssignb)}
   it should "tactically prove <:=> vacuous assign" in {check(vacuousAssignd)}
@@ -343,13 +344,13 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove <;> compose" in {check(composed)}
   it should "tactically prove <*> iterate" in {check(iterated)}
   it should "tactically prove exists generalize" in {check(existsGeneralize)}
-  it should "tactically prove = reflexive" in withMathematica { _ => check(equalReflexive)}
-  it should "tactically prove = commute" in withMathematica { _ => check(equalCommute)}
-  it should "tactically prove <=" in withMathematica { _ => check(lessEqual)}
-  it should "tactically prove ! !=" in withMathematica { _ => check(notNotEqual)}
-  it should "tactically prove ! >=" in withMathematica { _ => check(notGreaterEqual)}
-  it should "tactically prove >= flip" in withMathematica { _ => check(flipGreaterEqual)}
-  it should "tactically prove > flip" in withMathematica { _ => check(flipGreater)}
+  it should "tactically prove = reflexive" in withMathematica(initLibrary =  false, testcode =  { _ => check(equalReflexive)})
+  it should "tactically prove = commute" in withMathematica(initLibrary =  false, testcode =  { _ => check(equalCommute)})
+  it should "tactically prove <=" in withMathematica(initLibrary =  false, testcode =  { _ => check(lessEqual)})
+  it should "tactically prove ! !=" in withMathematica(initLibrary =  false, testcode =  { _ => check(notNotEqual)})
+  it should "tactically prove ! >=" in withMathematica(initLibrary =  false, testcode =  { _ => check(notGreaterEqual)})
+  it should "tactically prove >= flip" in withMathematica(initLibrary =  false, testcode =  { _ => check(flipGreaterEqual)})
+  it should "tactically prove > flip" in withMathematica(initLibrary =  false, testcode =  { _ => check(flipGreater)})
   it should "tactically prove all substitute" in {check(allSubstitute)}
   it should "tactically prove vacuous exists" in {check(existsV)}
   it should "tactically prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondet)}
@@ -359,23 +360,23 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove DI differential invariant" in {check(DI)}
   it should "tactically prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "tactically prove DW differential weakening" in {check(DW)}
-  it should "tactically prove abs" in withMathematica { _ =>
+  it should "tactically prove abs" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       check(abs)
     }
-  }
-  it should "tactically prove min" in withMathematica { _ =>
+  })
+  it should "tactically prove min" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       check(min)
     }
-  }
-  it should "tactically prove max" in withMathematica { _ =>
+  })
+  it should "tactically prove max" in withMathematica(initLibrary =  false, testcode =  { _ =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       check(max)
     }
-  }
+  })
 
-  "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" in withMathematica { _ =>
+  "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" in withMathematica(initLibrary =  false, testcode =  { _ =>
     import TactixLibrary._
     val dgZeroEquilibrium = "x=0 & n>0 -> [{x'=c*x^n}]x=0".asFormula
 
@@ -386,31 +387,31 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
       dG("z' = (c*x^(n-1)/4) * z".asDifferentialProgram, Some("y*z^2 = 1".asFormula))(1, 0::1::Nil) &
       dI()(1, 0::1::0::Nil) & QE
     ) shouldBe 'proved
-  }
+  })
 
-  "SimplifierV3" should "prove * identity neg" in withMathematica { _ => check{timesIdentityNeg}}
-  it should "prove -0" in withMathematica { _ => check{minusZero}}
-  it should "prove 0-" in withMathematica { _ => check{zeroMinus}}
-  it should "prove >0 -> !=0"  in withMathematica { _ => check{gtzImpNez}}
-  it should "prove <0 -> !=0"  in withMathematica { _ => check{ltzImpNez}}
-  it should "prove !=0 -> 0/F" in withMathematica { _ => check{zeroDivNez}}
-  it should "prove F^0" in withMathematica { _ => check{powZero}}
-  it should "prove F^1"        in withMathematica { _ => check{powOne}}
+  "SimplifierV3" should "prove * identity neg" in withMathematica(initLibrary =  false, testcode =  { _ => check{timesIdentityNeg}})
+  it should "prove -0" in withMathematica(initLibrary =  false, testcode =  { _ => check{minusZero}})
+  it should "prove 0-" in withMathematica(initLibrary =  false, testcode =  { _ => check{zeroMinus}})
+  it should "prove >0 -> !=0"  in withMathematica(initLibrary =  false, testcode =  { _ => check{gtzImpNez}})
+  it should "prove <0 -> !=0"  in withMathematica(initLibrary =  false, testcode =  { _ => check{ltzImpNez}})
+  it should "prove !=0 -> 0/F" in withMathematica(initLibrary =  false, testcode =  { _ => check{zeroDivNez}})
+  it should "prove F^0" in withMathematica(initLibrary =  false, testcode =  { _ => check{powZero}})
+  it should "prove F^1"        in withMathematica(initLibrary =  false, testcode =  { _ => check{powOne}})
 
-  it should "prove < irrefl" in withMathematica { _ => check{lessNotRefl}}
-  it should "prove > irrefl" in withMathematica { _ => check{greaterNotRefl}}
-  it should "prove != irrefl" in withMathematica { _ => check{notEqualNotRefl}}
-  it should "prove = refl"  in withMathematica { _ => check{equalRefl}}
-  it should "prove <= refl"  in withMathematica { _ => check{lessEqualRefl}}
-  it should "prove >= refl"  in withMathematica { _ => check{greaterEqualRefl}}
+  it should "prove < irrefl" in withMathematica(initLibrary =  false, testcode =  { _ => check{lessNotRefl}})
+  it should "prove > irrefl" in withMathematica(initLibrary =  false, testcode =  { _ => check{greaterNotRefl}})
+  it should "prove != irrefl" in withMathematica(initLibrary =  false, testcode =  { _ => check{notEqualNotRefl}})
+  it should "prove = refl"  in withMathematica(initLibrary =  false, testcode =  { _ => check{equalRefl}})
+  it should "prove <= refl"  in withMathematica(initLibrary =  false, testcode =  { _ => check{lessEqualRefl}})
+  it should "prove >= refl"  in withMathematica(initLibrary =  false, testcode =  { _ => check{greaterEqualRefl}})
 
-  it should "prove = sym"  in withMathematica { _ => check{equalSym}}
-  it should "prove != sym"  in withMathematica { _ => check{equalSym}}
-  it should "prove > antisym"  in withMathematica { _ => check{greaterNotSym}}
-  it should "prove < antisym"  in withMathematica { _ => check{lessNotSym}}
+  it should "prove = sym"  in withMathematica(initLibrary =  false, testcode =  { _ => check{equalSym}})
+  it should "prove != sym"  in withMathematica(initLibrary =  false, testcode =  { _ => check{equalSym}})
+  it should "prove > antisym"  in withMathematica(initLibrary =  false, testcode =  { _ => check{greaterNotSym}})
+  it should "prove < antisym"  in withMathematica(initLibrary =  false, testcode =  { _ => check{lessNotSym}})
 
   //@note must be last to populate the lemma database during build
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { _ =>
+  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica(initLibrary =  false, testcode =  { _ =>
     LemmaDBFactory.lemmaDB.deleteDatabase()
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       val writeEffect = true
@@ -444,7 +445,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
         fw.close()
       }
     }
-  }
+  })
 
   /** Returns the reflection mirrors to access the lazy vals in DerivedAxioms. */
   private def getDerivedAxiomsMirrors = {

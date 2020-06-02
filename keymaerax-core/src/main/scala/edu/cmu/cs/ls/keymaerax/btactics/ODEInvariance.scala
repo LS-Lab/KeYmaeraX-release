@@ -394,7 +394,7 @@ object ODEInvariance {
         val (pr, cofactor, rem) = try {
           findDbx(ode, dom, cf,false)
         } catch {
-          case _: IllegalArgumentException => return None
+          case ex: ProofSearchFailure => return None
         }
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
@@ -1185,7 +1185,7 @@ object ODEInvariance {
     remember("-abs(f())>=0<->f()=0".asFormula,QE,namespace)
   private lazy val uniqMin =
     remember("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
-      useAt(Ax.UniqIff)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
+      useAt(Ax.UniqIff, PosInExpr(0::Nil))(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
       namespace)
 
   private lazy val refAbs =
@@ -1313,7 +1313,7 @@ object ODEInvariance {
               (prop,Darboux(true, cofactor, pr))
             }
             catch {
-              case e: BelleThrowable => (False, Triv())
+              case e: ProofSearchFailure => (False, Triv())
             }
 
           if(context.isDefined)
@@ -1336,7 +1336,7 @@ object ODEInvariance {
             val (pr, cofactor, rem) = findDbx(ode, dom, prop)
             (prop, Darboux(false, cofactor, pr))
           } catch {
-            case _: IllegalArgumentException => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
+            case _: ProofSearchFailure => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
           }
 
         if(context.isDefined)

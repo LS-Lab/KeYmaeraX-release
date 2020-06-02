@@ -16,7 +16,7 @@ package edu.cmu.cs.ls.keymaerax
   *     - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus UnifyUSCalculus]]` Unification-based Uniform Substitution Calculus
   *
   *   - Tactic tools
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex] AxiomIndex]: Axiom Indexing data structures for canonical proof strategies.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.AxIndex] AxIndex]: Axiom Indexing data structures for canonical proof strategies.
   *     - [[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry DerivationInfo]]: Meta-information for derivation steps such as axioms for user interface etc.
   *
   * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon tactic language]],

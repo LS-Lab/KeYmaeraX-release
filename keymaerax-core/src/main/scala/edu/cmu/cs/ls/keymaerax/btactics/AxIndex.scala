@@ -39,6 +39,9 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
     * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., for chasing after useAt/useFor.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
+    * @see [[AxiomInfo.theKey]]
+    * @see [[AxiomInfo.theRecursor]]
+    * @see [[edu.cmu.cs.ls.keymaerax.macros.Axiom]]
     * @todo copy documentation from chase
     */
   def axiomIndex(axiom: ProvableInfo): AxiomIndex = axiom match {
@@ -48,10 +51,12 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
   }
 
 
-  /** Give the first canonical (derived) axiom or tactic that simplifies the expression `expr`. */
+  /** Give the first canonical (derived) axiom or tactic that simplifies the expression `expr`.
+    * @see [[axiomsFor()]] */
   def axiomFor(expr: Expression): Option[ProvableInfo] = axiomsFor(expr).headOption
 
-  /** Return ordered list of all canonical (derived) axioms or tactics that simplify the expression `expr`. */
+  /** Return ordered list of all canonical (derived) axioms or tactics that simplify the expression `expr`.
+    * @see [[axiomFor()]] */
   def axiomsFor(expr: Expression): List[ProvableInfo] = expr match{
     case term: Term => term match {
       case Differential(t) => t match {

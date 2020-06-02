@@ -18,25 +18,28 @@ import AnnotationCommon._
   * @param names Display names to render in the user interface.
   * @param codeName Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
   *                 `codeName`` will be inferred from the (lazy) val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
-  * @param formula Formula displayed for axioms as html with unicode
-  * @param unifier Which unifier to use for axiom: 'linear or 'full
+  * @param formula Formula displayed for axioms as html with unicode in the user interface
+  * @param unifier Which unifier to use for axiom: 'surjective or 'linear or 'surjlinear or 'surjlinearpretend or 'full [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]]
   * @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
   * @param inputs Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut.
   * @param key The position of the subexpression in this formula that will be unified against when using this axiom.
-  *            The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
+  *            The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for
+  *            [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
   *            - Default key="0" is the left child.
   *            - Root key="" is the full formula.
+  *            - key="1" is the right child.
   *            - key="0.1.1" is the right child of the right child of the left child.
   * @param recursor The ;-separated list of relative subpositions in the resulting formulas that will be chased away next.
-  *                 The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
+  *                 The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for
+  *                 [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase]].
   *                 The resulting subexpressions will be considered in the order of the ;-separated list.
   *                 - Default recursor="" means no recursion so stop chasing.
+  *                 - recursor="*" considers the full resulting formula.
   *                 - recursor="0;1" first considers the left child then the right child.
   *                 - recursor="1;*" first considers the right child then the whole subformula.
   *                 - recursor="1" only considers the right child.
   *                 - recursor="0.0;1.1" first considers the left child of the left child, then the right child of the right child.
-  *                 - recursor="0.1.1;0.1;" first considers the right child of the right child of the left child, then the right child of the left child, then the whole formula.
-  *                 - recursor="*" considers the full resulting formula.
+  *                 - recursor="0.1.1;0.1;*" first considers the right child of the right child of the left child, then the right child of the left child, then the whole formula.
   * @author Brandon Bohrer
   */
 class Axiom(val names: Any,
@@ -98,7 +101,7 @@ class AxiomImpl (val c: whitebox.Context) {
           val recursor = parsePoses(recursorString)(c)
           val displayInfo = (fml, inputs) match {
             case ("", Nil) => simpleDisplay
-            case (fml, Nil) if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
+            case (fml, Nil) if fml != "" => AxiomDisplayInfo.render(simpleDisplay, fml)
             case (fml, args) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
             //case ("", Nil, premises, Some(conclusion)) => RuleDisplayInfo(simpleDisplay, conclusion, premises)
             case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Axiom: either specify premisses and conclusion, or formula optionally with inputs, not both")
@@ -158,7 +161,13 @@ class AxiomImpl (val c: whitebox.Context) {
             val fullRhs = q"$functionName( ..$fullParams)"
             // Tactic implementation of derived axiom is always useAt
             val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonString))})""" // : (Unit => Any)
-            val unif = unifier match {case "full" => 'full case "linear" => 'linear case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
+            val unif = unifier match {
+              case "surjective" => 'surjective
+              case "surjlinear" => 'surlinear
+              case "full" => 'full
+              case "linear" => 'linear
+              case "surjlinearpretend" => 'surlinearpretend
+              case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
             val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
               case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
             val info =
