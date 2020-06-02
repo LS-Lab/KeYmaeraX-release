@@ -371,6 +371,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.fileContent shouldBe input.trim()
   }
 
+  it should "parse simple program definition compose assign before variables" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1;?x>1; } End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("a", None) -> (Some(Unit), Trafo, Some("x:=x+1;?x>1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.expandedModel shouldBe "x!=0 -> [x:=x+1;?x>1;]x>1".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
   it should "parse simple program definition compose before variables" in {
     val input =
       """

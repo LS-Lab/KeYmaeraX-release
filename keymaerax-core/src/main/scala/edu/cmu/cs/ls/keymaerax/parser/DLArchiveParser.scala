@@ -124,7 +124,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** Functions and ProgramVariables block in any order */
   def allDeclarations[_: P]: P[Declaration] = P(
-    //@todo NoCut(programVariables ~ definitions).map(p=>p._1++p._2) |
+    NoCut(programVariables ~ definitions).map(p=>p._1++p._2) |
     (definitions.? ~ programVariables.?).
       map({case (Some(a), Some(b)) => a++b case (None, Some(b)) => b case (Some(a), None) => a case (None, None) => Declaration(Map.empty, Map.empty)})
   )
@@ -171,7 +171,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** `HP name ::= program;` program definition. */
   def progDef[_: P]: P[(Name,Signature)] = P(
-    "HP" ~~ blank ~ ident ~ "::=" ~ ("{" ~ (program) ~ "}" /*| NoCut(program)*/) ~ ";"
+    "HP" ~~ blank ~ ident ~ "::=" ~ ("{" ~ (program) ~ "}" /*| NoCut(program)*/) ~ ";".?
   ).map({case (s,idx,p) => ((s,idx),(None, Trafo, Some(p), UnknownLocation))})
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
