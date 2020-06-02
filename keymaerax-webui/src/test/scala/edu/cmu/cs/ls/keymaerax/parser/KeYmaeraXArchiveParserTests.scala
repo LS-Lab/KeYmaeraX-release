@@ -1888,7 +1888,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "accept exercises" in {
     val input =
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( a >= b ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
@@ -1906,7 +1906,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( a >= b ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
@@ -1915,7 +1915,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "accept exercises in definitions" in {
     val input =
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
@@ -1933,7 +1933,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
