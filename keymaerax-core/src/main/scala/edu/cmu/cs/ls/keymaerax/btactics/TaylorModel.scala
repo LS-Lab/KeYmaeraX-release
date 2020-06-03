@@ -525,7 +525,7 @@ object TaylorModelTactics extends Logging {
     private val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
         case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
-          ProofRuleTactics.boundRenaming(vs.head, remainder(state.indexOf(v)))(pos) & existsL(pos)
+          ProofRuleTactics.boundRename(vs.head, remainder(state.indexOf(v)))(pos) & existsL(pos)
         case _ => throw new TacticInapplicableFailure("instLeq not on expected shape.")
       }
     }

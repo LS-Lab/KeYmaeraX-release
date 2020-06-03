@@ -141,7 +141,7 @@ private object DLBySubst {
 
             val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
                 case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
-                  stutter(x0)(pos) & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
+                  stutter(x0)(pos) & ProofRuleTactics.boundRename(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
                     eqR2L(-1)(pos.topLevel) & useAt(Ax.selfassignb)(pos.topLevel) & hide(-1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               })
@@ -212,9 +212,9 @@ private object DLBySubst {
     case Some(Box(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRenaming(x, y)(pos) &
+      ProofRuleTactics.boundRename(x, y)(pos) &
       (if (universal) useAt(Ax.assignbeq)(pos) else useAt(Ax.assignbequalityexists)(pos)) &
-      ProofRuleTactics.uniformRenaming(y, x) &
+      ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
        else ident)
@@ -229,9 +229,9 @@ private object DLBySubst {
     case Some(Diamond(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRenaming(x, y)(pos) &
+      ProofRuleTactics.boundRename(x, y)(pos) &
       (if (universal) useAt(Ax.assigndEqualityAll)(pos) else useAt(Ax.assigndEquality)(pos)) &
-      ProofRuleTactics.uniformRenaming(y, x) &
+      ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
        else ident)

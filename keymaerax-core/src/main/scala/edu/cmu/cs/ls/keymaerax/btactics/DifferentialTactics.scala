@@ -106,7 +106,7 @@ private object DifferentialTactics extends Logging {
 
             val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
               SubstitutionPair(aH, h) :: Nil)
-            val uren = ProofRuleTactics.uniformRenaming(aX, x)
+            val uren = ProofRuleTactics.uniformRename(aX, x)
             val origin = Sequent(IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(||),c&H(||)}]p(||) <-> [{c,${d.prettyString}=f(||)&H(||)}][${d.prettyString}:=f(||);]p(||)".asFormula))
 
             cutLR(g)(pos) <(

@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 
@@ -38,6 +39,8 @@ trait SequentCalculus {
   /** Hide/weaken whether left or right */
   val hide    : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
+//  @Tactic("WL", premises = "Γ |- Δ",
+//    conclusion = "Γ, P |- Δ")
   val hideL   : BuiltInLeftTactic = "hideL" by { (pr:ProvableSig, pos:AntePosition) => pr(HideLeft(pos.checkTop), 0) }
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
   val hideR   : BuiltInRightTactic = "hideR" by { (pr:ProvableSig, pos:SuccPosition) => pr(HideRight(pos.checkTop), 0) }
@@ -46,7 +49,7 @@ trait SequentCalculus {
   /** CoHide/weaken right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideRight CoHideRight]]) */
   val cohideR : BuiltInRightTactic = "cohideR" by { (pr:ProvableSig, pos:SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
-  val cohide             : DependentPositionTactic = ProofRuleTactics.coHide
+  val cohide             : DependentPositionTactic = ProofRuleTactics.cohide
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
   def cohide2: BuiltInTwoPositionTactic = "coHide2" by {(pr:ProvableSig, ante: Position, succ: Position) => {
       require(ante.isAnte && succ.isSucc, "Expects an antecedent and a succedent position.")
@@ -257,8 +260,15 @@ trait SequentCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
+//@todo  @Tactic(codeName = "closeTrue", premises = "*",
+//    conclusion = "Γ |- ⊤, Δ")
+//  val closeT: BelleExpr = anon { ProofRuleTactics.closeTrue('R, True) }
   val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
+  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
+//@todo  @Tactic(codeName = "closeFalse", premises = "*",
+//    conclusion = "Γ, ⊥ |- Δ")
+//  val closeF: BelleExpr = anon { ProofRuleTactics.closeFalse('L, False) }
   val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

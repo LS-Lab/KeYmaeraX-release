@@ -436,16 +436,16 @@ trait UnifyUSCalculus {
   /** uniformRename(what,repl) renames `what` to `repl` uniformly and vice versa.
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRename(what: Variable, repl: Variable): InputTactic = ProofRuleTactics.uniformRenaming(what,repl)
+  def uniformRename(what: Variable, repl: Variable): InputTactic = ProofRuleTactics.uniformRename(what,repl)
   /** uniformRename(ur) renames `ur.what` to `ur.repl` uniformly and vice versa.
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRename(ur: URename): InputTactic = ProofRuleTactics.uniformRenaming(ur.what,ur.repl)
+  def uniformRename(ur: URename): InputTactic = ProofRuleTactics.uniformRename(ur.what,ur.repl)
 
   /** boundRename(what,repl) renames `what` to `repl` at the indicated position (or vice versa).
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
     */
-  def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
+  def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRename(what,repl)
 
   /** @see [[US()]] */
   def uniformSubstitute(subst: USubst): InputTactic = "US" byWithInputs(subst.subsDefsInput.
