@@ -21,7 +21,7 @@ import scala.collection.immutable._
   *
   */
 @SummaryTest
-class UnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
+class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
 
   //Unifier manages to unify F_() - F_() with bad LHS
   "UnifyUSCalculus" should "unify weirdly" ignore withMathematica { qeTool =>

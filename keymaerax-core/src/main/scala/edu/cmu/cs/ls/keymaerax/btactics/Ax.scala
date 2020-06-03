@@ -803,17 +803,45 @@ object Ax extends Logging {
   )
 
   /**
+    * Rule "CQrevimply equation congruence".
+    * Premise g_(||) = f_(||)
+    * Conclusion ctx_(f_(||)) -> ctx_(g_(||))
+    * End.
+    */
+  @ProofRule(("CQrevimply", "CQrevimplyCongruence"), conclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+    premises = "|- g_(||) = f_(||)")
+  lazy val CQrevimplyCongruence =
+  derivedRuleSequent("CQrevimply equation congruence",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
+    TactixLibrary.equivifyR(1) & by(CQrule) & TactixLibrary.commuteEqual(1)
+  )
+
+  /**
     * Rule "CEimply congruence".
     * Premise p_(||) <-> q_(||)
     * Conclusion ctx_{p_(||)} -> ctx_{q_(||)}
     * End.
     */
   @ProofRule(("CEimply", "CEimplyCongruence"), conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
-    premises = "|- p_(||) -> q_(||)")
+    premises = "|- p_(||) <-> q_(||)")
   lazy val CEimplyCongruence =
   derivedRuleSequent("CEimply congruence",
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
     TactixLibrary.equivifyR(1) & by(CErule)
+  )
+
+  /**
+    * Rule "CErevimply congruence".
+    * Premise q_(||) <-> p_(||)
+    * Conclusion ctx_{p_(||)} -> ctx_{q_(||)}
+    * End.
+    */
+  @ProofRule(("CErevimply", "CErevimplyCongruence"), conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
+    premises = "|- q_(||) <-> p_(||)")
+  lazy val CErevimplyCongruence =
+  derivedRuleSequent("CErevimply congruence",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
+    TactixLibrary.equivifyR(1) & by(CErule) & TactixLibrary.commuteEquivR(1)
   )
 
   /**
