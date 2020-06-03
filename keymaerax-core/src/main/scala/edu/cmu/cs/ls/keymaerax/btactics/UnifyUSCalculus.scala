@@ -100,8 +100,7 @@ trait UnifyUSCalculus {
   private val defaultMatcher = UnificationMatch
 
   /** Whether to benefit from linearity info about axioms using [[LinearMatcher]] */
-    //@todo optimizable: set to true
-  private val exploitDeclaredUnifier = System.getProperty("SPEED", "true")=="true"
+  private val OPTIMIZE = System.getProperty("SPEED", "true")=="true"
 
   /** The default position if no key has been specified, no key has been declared, and no key can be inferred. */
   private val defaultPosition = PosInExpr(0::Nil)
@@ -494,7 +493,7 @@ trait UnifyUSCalculus {
     *
     * Tactic specification:
     * {{{
-    * useAt(fact)(p)(F) = let (C,c)=F(p) in
+    * useAt(fact)(p)(F) = {let (C,c)=F(p) in
     *   case c of {
     *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) ; <(
     *       "use cut": skip
@@ -502,6 +501,7 @@ trait UnifyUSCalculus {
     *     )
     *     s=unify(fact.right,_) => accordingly with an extra commuteEquivRightT
     *   }
+    * }
     * }}}
     *
     * @author Andre Platzer
@@ -534,7 +534,7 @@ trait UnifyUSCalculus {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
           // unify keyPart against target expression by single-sided matching
-          val subst = if (exploitDeclaredUnifier)
+          val subst = if (OPTIMIZE)
             inst(matcher.unifiable(keyPart, expr))
           else try {
             inst(defaultMatcher.unifiable(keyPart, expr))
@@ -569,8 +569,10 @@ trait UnifyUSCalculus {
         * @param C       the context C{_} around the position p at which K{k} will be used
         * @param c       the formula c at position p in context C{_} to be replaced by subst(k)
         * @param sequent the sequent in which this useAt happens.
-        * @tparam T
-        * @return
+        * @tparam T      the type of the whole `k` in the context `K`
+        * @return The tactic using key `k` of `fact` `K{k}` as a replacement for `c` at position `p` so in context `C{_}`.
+        * @requires C{c}.at(p.inExpr) == (C,c)
+        * @requires subst(k) == c
         * @author Andre Platzer
         * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
         */
@@ -581,15 +583,21 @@ trait UnifyUSCalculus {
         //@todo generalization of DotTerm to other types should be acceptable, too
         require(List((C, DotFormula), (C, DotTerm())).contains(C.ctx.at(p.inExpr)), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c) + "\nwith context at position " + p.inExpr + " having placeholder " + C.ctx.at(p.inExpr))
 
-        /** Equivalence rewriting step using `fact` to replace with substituted `other` */
+        /** Equivalence rewriting step using given `fact` to replace with substituted form of `other` */
         def equivStep(other: Expression, fact: ProvableSig): BelleExpr = {
           // The position at which the cut show formula will land depending on the side of cutLR
           val cutPos: SuccPos = p match {
             case p: SuccPosition => p.top
             case p: AntePosition => SuccPos(sequent.succ.length)
           }
-          lazy val expect = if (p.isSucc) Imply(C(subst(other)), C(subst(keyPart))) else Imply(C(subst(keyPart)), C(subst(other)))
-          lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
+//          lazy val expect = if (p.isSucc)
+//            Imply(C(subst(other)), C(subst(keyPart)))
+//          else
+//            Imply(C(subst(keyPart)), C(subst(other)))
+//          lazy val expectEquiv = if (p.isSucc)
+//            Equiv(C(subst(other)), C(subst(keyPart)))
+//          else
+//            Equiv(C(subst(keyPart)), C(subst(other)))
           //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
           //@todo simplify substantially if subst=id
           //@note cut instead of cutLR might be a quicker proof to avoid the equivify but changes positions which would be unfortunate.
@@ -600,14 +608,20 @@ trait UnifyUSCalculus {
             /* use */ ident
             ,
             /* show */
-              cohideR /*(expect)*/ (cutPos) & assert(0, 1) &
-              assert(expect, "useAt show implication")(SuccPos(0)) &
-              equivifyR(SuccPos(0)) &
-              assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) & (
-              if (other.kind == FormulaKind) CE(p.inExpr)
-              else if (other.kind == TermKind) CQ(p.inExpr)
-              else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other)) &
-              by(subst.toForward(fact))
+              cohideR /*(expect)*/ (cutPos) & //assert(0, 1) &
+              //assert(expect, "useAt show implication")(SuccPos(0)) &
+                (if (OPTIMIZE) {
+                  if (other.kind == FormulaKind) CEimp(p.inExpr)
+                  else if (other.kind == TermKind) CQimp(p.inExpr)
+                  else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other)
+                } else {
+                  equivifyR(SuccPos(0)) &
+                  //assert(expectEquiv, "useAt show equivalence")(SuccPos(0)) &
+                    (if (other.kind == FormulaKind) CE(p.inExpr)
+                    else if (other.kind == TermKind) CQ(p.inExpr)
+                    else throw new UnsupportedTacticFeature("Don't know how to handle kind " + other.kind + " of " + other))
+                }) &
+                by(subst.toForward(fact))
           )
         }
 
@@ -649,13 +663,13 @@ trait UnifyUSCalculus {
             equivStep(True, if (p.isSucc) commuteFact(provedFact) else provedFact)
           }
 
-          case Equiv(DotFormula, other)    => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
+          case Equiv(DotFormula, other)    => equivStep(other, if (p.isAnte) fact else commuteFact(fact))
 
-          case Equiv(other, DotFormula)    => equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
+          case Equiv(other, DotFormula)    => equivStep(other, if (p.isSucc) fact else commuteFact(fact))
 
-          case Equal(DotTerm(_, _), other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
+          case Equal(DotTerm(_, _), other) => equivStep(other, if (p.isAnte) fact else commuteFact(fact))
 
-          case Equal(other, DotTerm(_, _)) => equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
+          case Equal(other, DotTerm(_, _)) => equivStep(other, if (p.isSucc) fact else commuteFact(fact))
 
           case Imply(other, DotFormula)    => implyStep(other)
 
@@ -699,6 +713,7 @@ trait UnifyUSCalculus {
               require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
               UnifyUSCalculus.this.useAtImpl("useAtRem", remFact, remKey, defaultMatcher, inst)(p)
             } catch {
+                  //@todo catch less
               case err: Throwable =>
                 //@todo if global proof of prereq is unsuccessful could also rewrite (DotFormula<->bla)<-prereq to prereq&bla -> DotFormula and use the latter.
 
@@ -748,6 +763,7 @@ trait UnifyUSCalculus {
                   /* leave open: show prereq (@todo stripped down master might show) */ if (p.isSucc) hideR(p.top) else hideL(p.top)
                 )
             }
+
           case Forall(vars, remainder) =>
             ???
           //useAt(subst, new Context(remainder), k, p, C, c, /*@todo instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0))*/ ident, sequent)
@@ -843,8 +859,8 @@ trait UnifyUSCalculus {
           val (ctxF, f) = p.at(inEqPos)
           val (ctxG, g) = q.at(inEqPos)
           require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
-          require(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
-          require(ctxF.isTermContext, "Formula context expected for CQ")
+          Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
+          Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
           logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
           if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty) {
             //@todo use Axioms.CQrule
@@ -857,6 +873,51 @@ trait UnifyUSCalculus {
             if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
             //@todo could optimize to build directly since ctx already known
             CE(fmlPos) & CQ(termPos)
+          }
+        case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
+      }
+    }
+  }
+
+  /**
+    * CQimply(pos) at the indicated position within an equivalence reduces contextual implication `p(left)->p(right)` to argument equality `left=right`.
+    * This tactic will use [[CEat()]] under the hood as needed.
+    * {{{
+    *        f(x) = g(x)
+    *   --------------------- CQ
+    *    c(f(x)) -> c(g(x))
+    * }}}
+    *
+    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
+    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
+    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
+    */
+  def CQimp(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
+    private val f_ = UnitFunctional("f_", AnyArg, Real)
+    private val g_ = UnitFunctional("g_", AnyArg, Real)
+    private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm())
+
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      require(sequent.ante.isEmpty && sequent.succ.length == 1, "Expected empty antecedent and single succedent, but got " + sequent)
+      sequent.succ.head match {
+        case Imply(p, q) =>
+          val (ctxF, f) = p.at(inEqPos)
+          val (ctxG, g) = q.at(inEqPos)
+          require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
+          Predef.assert(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
+          Predef.assert(ctxF.isTermContext, "Formula context expected for CQ")
+          logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
+          //@todo this would be too permissive due to lack of special permission for CQimplyCongruence: if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty)
+          if (StaticSemantics.vars(ctxF.ctx).isEmpty) {
+            by(Ax.CQimplyCongruence, USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
+          } else {
+            logger.debug("CQ: Split " + p + " around " + inEqPos)
+            val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
+            logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
+            //if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
+            //if (fmlPos == HereP) throw new InfiniteTacticLoopError("CQ split void, would cause infinite loop unless stopped")
+            //@todo could optimize to build directly since ctx already known
+            CEimp(fmlPos) & CQ(termPos)
           }
         case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
       }
@@ -894,12 +955,48 @@ trait UnifyUSCalculus {
             val (ctxQ, q) = r.at(inEqPos)
             //@note Could skip the construction of ctxQ but it's part of the .at construction anyways.
             require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
-            require(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
-            require(ctxP.isFormulaContext, "Formula context expected for CE")
+            Predef.assert(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
+            Predef.assert(ctxP.isFormulaContext, "Formula context expected for CE")
             //@todo use DerivedAxioms.CErule
             by(ProvableInfo("CE congruence"), USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
           }
         case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
+      }
+    }
+  })
+  /**
+    * CEimply(pos) at the indicated position within an equivalence reduces contextual implication `C{left}->C{right}`to argument equivalence `left<->right`.
+    * {{{
+    *       p(x) <-> q(x)
+    *   --------------------- CE
+    *    C{p(x)} -> C{q(x)}
+    * }}}
+    * Part of the differential dynamic logic Hilbert calculus.
+    *
+    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula occurs.
+    * @see [[UnifyUSCalculus.CE(Context)]]
+    * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
+    */
+  def CEimp(inEqPos: PosInExpr): InputTactic = "CEimplyCongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
+    private val p_ = UnitPredicational("p_", AnyArg)
+    private val q_ = UnitPredicational("q_", AnyArg)
+    private val c_ = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
+
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
+      sequent.succ.head match {
+        case Imply(l, r) =>
+          if (inEqPos == HereP) equivifyR(1)
+          else {
+            val (ctxP, p) = l.at(inEqPos)
+            val (ctxQ, q) = r.at(inEqPos)
+            //@note Could skip the construction of ctxQ but it's part of the .at construction anyways.
+            require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
+            Predef.assert(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
+            Predef.assert(ctxP.isFormulaContext, "Formula context expected for CE")
+            by(Ax.CEimplyCongruence, USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
+          }
+        case fml => throw new TacticInapplicableFailure("Expected implication, but got " + fml)
       }
     }
   })
@@ -935,15 +1032,18 @@ trait UnifyUSCalculus {
       require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
       sequent.succ.head match {
         case Imply(l, r) =>
-          val (ctxP, p: Formula) = l.at(inEqPos)
-          val (ctxQ, q: Formula) = r.at(inEqPos)
-          require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)) &
-            by(CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p))))) &
-            by(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))))))
-          else implyR(SuccPos(0)) &
-            by(CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q))))) &
-            by(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))))))
+          if (inEqPos == HereP) ident
+          else {
+            val (ctxP, p: Formula) = l.at(inEqPos)
+            val (ctxQ, q: Formula) = r.at(inEqPos)
+            require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
+            if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)) &
+              by(CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(q), IndexedSeq(p))))) &
+              by(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(q, p))))))
+            else implyR(SuccPos(0)) &
+              by(CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q))))) &
+              by(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))))))
+          }
       }
     }
   })
@@ -1552,7 +1652,7 @@ trait UnifyUSCalculus {
       // split proof into ctx{expr} at pos
       val (ctx, expr) = proof.conclusion.at(pos)
       // instantiated unification of expr against keyPart
-      val subst = if (exploitDeclaredUnifier)
+      val subst = if (OPTIMIZE)
         inst(matcher(keyPart, expr))
       else
         inst(defaultMatcher(keyPart, expr))

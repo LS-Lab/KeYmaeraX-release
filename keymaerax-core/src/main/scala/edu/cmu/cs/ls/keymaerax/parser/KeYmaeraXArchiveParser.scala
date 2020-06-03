@@ -981,6 +981,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
       )
       case d => d
     })
+
     (elaboratedDefinitions, elaboratables)
   }
 

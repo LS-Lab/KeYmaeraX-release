@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.{CoreException, Formula}
-import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import org.scalatest.BeforeAndAfterAll
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
@@ -22,7 +22,7 @@ import DerivationInfoAugmentors._
   * @see [[AxiomInfo.theKey]]
   * @see [[AxiomInfo.unifier]]
   */
-@SummaryTest
+@CheckinTest
 class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   private val randomTrials = 2

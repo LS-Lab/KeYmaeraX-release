@@ -83,7 +83,11 @@ object Ax extends Logging {
     CoreAxiomInfo(name)
   }
 
-//  /** A Provable proving the derived axiom/rule named id (convenience) */
+  private def coreRule(name: String): AxiomaticRuleInfo = {
+    AxiomaticRuleInfo(name)
+  }
+
+  //  /** A Provable proving the derived axiom/rule named id (convenience) */
 //  private def derivedAxiomOrRule(name: String): ProvableSig = {
 //    val lemmaName = DerivationInfo(name) match {
 //      case si: StorableInfo => si.storedName
@@ -97,7 +101,7 @@ object Ax extends Logging {
   private val AUTO_INSERT: Boolean = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[this] def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): DerivedAxiomInfo = {
+  def derivedFact(name: String, fact: ProvableSig, storedNameOpt: Option[String] = None): DerivedAxiomInfo = {
     val dai = DerivedAxiomInfo(name)
     val lemmaName = storedNameOpt match {
       case Some(storedName) => storedName
@@ -147,8 +151,9 @@ object Ax extends Logging {
     dai
   }
 
-  private[this] def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): Lemma = {
+  def derivedRule(name: String, fact: ProvableSig, codeNameOpt: Option[String]): DerivedRuleInfo = {
     // create evidence (traces input into tool and output from tool)
+    val dri = DerivedRuleInfo(name)
     val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val codeName = codeNameOpt match {
       case Some(codeName) => codeName
@@ -161,45 +166,50 @@ object Ax extends Logging {
     }
     val lemmaName = DerivedAxiomInfo.toStoredName(codeName)
     val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
-    if (!AUTO_INSERT) {
-      lemma
-    } else {
-      // first check whether the lemma DB already contains identical lemma name
-      val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
-        // identical lemma contents with identical name, so reuse ID
-        if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
-        else {
-           throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
-        }
+    val insertedLemma =
+      if (!AUTO_INSERT) {
+        lemma
       } else {
-        derivedAxiomDB.add(lemma)
+        // first check whether the lemma DB already contains identical lemma name
+        val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
+          // identical lemma contents with identical name, so reuse ID
+          if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
+          else {
+             throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
+          }
+        } else {
+          derivedAxiomDB.add(lemma)
+        }
+        derivedAxiomDB.get(lemmaID).get
       }
-      derivedAxiomDB.get(lemmaID).get
-    }
+    dri.theLemma = insertedLemma
+    dri
   }
 
-  //@todo change return type to DerivedRuleInfo
-  private[this] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): Lemma = {
+  private[this] def derivedRuleSequent(name: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedRuleInfo = {
+    val dri = try {
+      DerivedRuleInfo(name)
+    } catch {
+      case _: Throwable => throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
+    }
     val codeName = codeNameOpt match {
       case Some(codeName) => codeName
-      case None =>
-        try {
-          DerivedRuleInfo(name).storedName
-        } catch {
-          case _: Throwable => throw new Exception("Derived rule info needs to exist or codeName needs to be explicitly passed")
-        }
+      case None => dri.codeName
     }
     val storageName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedAxiomDB.get(storageName) match {
-      case Some(lemma) => lemma
-      case None =>
-        val witness = TactixLibrary.proveBy(derived, tactic)
-        derivedRule(name, witness, codeNameOpt)
-    }
+    val lemma =
+      derivedAxiomDB.get(storageName) match {
+        case Some(lemma) => lemma
+        case None =>
+          val witness = TactixLibrary.proveBy(derived, tactic)
+          derivedRule(name, witness, codeNameOpt).theLemma
+      }
+    dri.theLemma = lemma
+    dri
   }
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private[this] def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
+  def derivedAxiomFromFact(canonicalName: String, derived: Formula, fact: ProvableSig, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
     val codeName =
       codeNameOpt match {
         case Some(codeName) => codeName
@@ -215,7 +225,7 @@ object Ax extends Logging {
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[this] def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
+  def derivedAxiom(canonicalName: String, derived: => Sequent, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo = {
     val dai: DerivedAxiomInfo = DerivedAxiomInfo.apply(canonicalName)
     val codeName =
       codeNameOpt match {
@@ -233,14 +243,14 @@ object Ax extends Logging {
         case None =>
           val witness = TactixLibrary.proveBy(derived, tactic)
           assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
-          derivedFact(canonicalName, witness, Some(storedName))
+          derivedFact(canonicalName, witness, Some(storedName)).theLemma
       }
     dai.theLemma = lemma
     dai
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[this] def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo =
+  def derivedFormula(name: String, derived: Formula, tactic: => BelleExpr, codeNameOpt: Option[String] = None): DerivedAxiomInfo =
     derivedAxiom(name, Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(derived)), tactic, codeNameOpt)
 
   private val x = Variable("x_", None, Real)
@@ -290,12 +300,16 @@ object Ax extends Logging {
   // Core Axiomatic Rules   see [[AxiomBase]]
   //***************
 
-  //@todo turn into ProvableInfo and annotate with @DerivedRule or better yet @AxiomaticRule
-  val CQrule = ProvableSig.rules("CQ equation congruence")
-  val CErule = ProvableSig.rules("CE congruence")
-  val mondrule = ProvableSig.rules("<> monotone")
-  val indrule = ProvableSig.rules("ind induction")
-  val conrule = ProvableSig.rules("con convergence")
+  @ProofRule
+  val CQrule = coreRule("CQ equation congruence")
+  @ProofRule
+  val CErule = coreRule("CE congruence")
+  @ProofRule
+  val mondrule = coreRule("<> monotone")
+  @ProofRule
+  val indrule = coreRule("ind induction")
+  @ProofRule
+  val conrule = coreRule("con convergence")
 
 
   //***************
@@ -651,7 +665,7 @@ object Ax extends Logging {
     * @derived from Skolemize
     * @Note generalization of p(x) to p(||) as in Theorem 14
     */
-  @DerivedRule(("all gen", "allgen"),  premises = "|- P", conclusion = "|- \\forall x P")
+  @ProofRule(("all gen", "allgen"),  premises = "|- P", conclusion = "|- \\forall x P")
   lazy val allGeneralize = derivedRuleSequent("all generalization",
     //(immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("\\forall x_ p_(||)".asFormula)),
@@ -676,7 +690,7 @@ object Ax extends Logging {
     * @NOTE Unsound for hybrid games
     * @derived from M and [a]true
     */
-  @DerivedRule("G", conclusion = "|- [a;]P", premises = "|- P")
+  @ProofRule("G", conclusion = "|- [a;]P", premises = "|- P")
   lazy val Goedel = derivedRuleSequent("Goedel",
     Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("[a_{|^@|};]p_(||)".asFormula)),
     cut("[a_{|^@|};]true".asFormula) <(
@@ -760,7 +774,7 @@ object Ax extends Logging {
     *
     * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
     */
-  @DerivedRule(("CT term congruence", "CTtermCongruence"), conclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
+  @ProofRule(("CT term congruence", "CTtermCongruence"), conclusion = "|- ctx_(f_(||)) = ctx_(g_(||))",
     premises = "|- f_(||) = g_(||)")
   lazy val CTtermCongruence =
     derivedRuleSequent("CT term congruence",
@@ -775,6 +789,34 @@ object Ax extends Logging {
     )
 
   /**
+    * Rule "CQimply equation congruence".
+    * Premise f_(||) = g_(||)
+    * Conclusion ctx_(f_(||)) -> ctx_(g_(||))
+    * End.
+    */
+  @ProofRule(("CQimply", "CQimplyCongruence"), conclusion = "|- ctx_(f_(||)) -> ctx_(g_(||))",
+    premises = "|- f_(||) = g_(||)")
+  lazy val CQimplyCongruence =
+  derivedRuleSequent("CQimply equation congruence",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_(f_(||)) -> ctx_(g_(||))".asFormula)),
+    TactixLibrary.equivifyR(1) & by(CQrule)
+  )
+
+  /**
+    * Rule "CEimply congruence".
+    * Premise p_(||) <-> q_(||)
+    * Conclusion ctx_{p_(||)} -> ctx_{q_(||)}
+    * End.
+    */
+  @ProofRule(("CEimply", "CEimplyCongruence"), conclusion = "|- ctx_{p_(||)} -> ctx_{(q_(||)}",
+    premises = "|- p_(||) -> q_(||)")
+  lazy val CEimplyCongruence =
+  derivedRuleSequent("CEimply congruence",
+    Sequent(immutable.IndexedSeq(), immutable.IndexedSeq("ctx_{p_(||)} -> ctx_{q_(||)}".asFormula)),
+    TactixLibrary.equivifyR(1) & by(CErule)
+  )
+
+  /**
     * Rule "[] monotone".
     * Premise p(||) ==> q(||)
     * Conclusion [a;]p(||) ==> [a;]q(||)
@@ -785,7 +827,7 @@ object Ax extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Notation changed to p instead of p_ just for the sake of the derivation.
     */
-  @DerivedRule(("[] monotone", "[]monotone"),  conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
+  @ProofRule(("[] monotone", "[]monotone"),  conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
   lazy val monb = derivedRuleSequent("[] monotone",
     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
@@ -808,7 +850,7 @@ object Ax extends Logging {
     * @see "André Platzer. Differential Hybrid Games."
     * @note Renamed form of boxMonotone.
     */
-  @DerivedRule(("[] monotone 2", "[]monotone 2"), conclusion = "[a;]Q |- [a;]P", premises = "Q |- P")
+  @ProofRule(("[] monotone 2", "[]monotone 2"), conclusion = "[a;]Q |- [a;]P", premises = "Q |- P")
   lazy val monb2 = derivedRuleSequent("[] monotone 2",
     Sequent(immutable.IndexedSeq("[a_;]q_(||)".asFormula), immutable.IndexedSeq("[a_;]p_(||)".asFormula)),
     useAt(box, PosInExpr(1::Nil))(-1) & useAt(box, PosInExpr(1::Nil))(1) &
@@ -835,7 +877,7 @@ object Ax extends Logging {
     *     \exists x_ J(x_) |- <a{|x_|}*>P
     * }}}
     */
-  @DerivedRule(("con flat", "conflat"),  conclusion = "J |- <a*>P",
+  @ProofRule(("con flat", "conflat"),  conclusion = "J |- <a*>P",
     premises ="\\exists v (v<=0&J) |- P;; v > 0, J |- <a>J(v-1)")
   lazy val conflat =
     derivedRuleSequent("con convergence flat",

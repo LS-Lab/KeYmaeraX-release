@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tags.UsualTest
   * @author Stefan Mitsch
   */
 @UsualTest
-class RoundtripTests extends TacticTestBase {
+class BelleParserRoundtripTests extends TacticTestBase {
   private def roundTrip(tactic: String): Unit = BellePrettyPrinter(BelleParser(tactic)) shouldBe tactic
   private def roundTrip(tactic: BelleExpr): Unit = BelleParser(BellePrettyPrinter(tactic)) shouldBe tactic
   private def roundTrip(tactic: BelleExpr, ts: String): Unit = {

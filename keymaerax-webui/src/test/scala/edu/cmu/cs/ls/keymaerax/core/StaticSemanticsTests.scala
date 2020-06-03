@@ -12,6 +12,7 @@ import testHelper.CustomAssertions.withSafeClue
 import scala.collection.immutable._
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.CheckinTest
 import testHelper.KeYmaeraXTestTags
 
 /**
@@ -19,10 +20,11 @@ import testHelper.KeYmaeraXTestTags
   *
  * @author Andre Platzer
  */
+@CheckinTest
 class StaticSemanticsTests extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   private val randomTrials = 1000
-  private val randomComplexity = 6
+  private val randomComplexity = 12
   private val rand = if (false) new RandomFormula(-6907410306474577855L) else new RandomFormula()
 
 
@@ -74,9 +76,9 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
   it should "@todo test symbols, signature" ignore {}
 
 
-  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CheckinTest,CoverageTest) in {test(10)}
+  "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CoverageTest) in {test(10)}
   it should "consistently compute randomly (summary)" taggedAs(SummaryTest,CoverageTest) in {test(50)}
-  it should "consistently compute randomly (usual)" taggedAs(UsualTest,CoverageTest) in {test(1000,10)}
+  it should "consistently compute randomly (usual)" taggedAs(UsualTest,CoverageTest) in {test(1000,12)}
   it should "consistently compute randomly (slow)" taggedAs(SlowTest,CoverageTest) in {test(randomTrials,20)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity): Unit = {
@@ -142,7 +144,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "sequent" taggedAs KeYmaeraXTestTags.CoverageTest in {
+  it should "consistently compute fir sequents" taggedAs KeYmaeraXTestTags.CoverageTest in {
     for (i <- 1 to randomTrials) {
       val e = rand.nextSequent(randomComplexity)
       val randClue = "Sequent produced in\n\t " + i + "th run of " + randomTrials +

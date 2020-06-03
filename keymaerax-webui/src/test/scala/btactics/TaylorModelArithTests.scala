@@ -43,7 +43,7 @@ class TaylorModelArithTests extends TacticTestBase {
   lazy val tm100000 = tma.Exact(ring.ofTerm("0.000001".asTerm), context3) *! tm1
   lazy val tm1234 = tma.Exact(ring.ofTerm("12.34".asTerm), context3) *! tm2
 
-  "Taylor models" should "add exactly" taggedAs(SlowTest) in withMathematica { qeTool =>
+  "Taylor models" should "add exactly" in withMathematica { qeTool =>
     (tm1 +! tm2).prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ (x+y=1.5*x0()+err_&-0.01<=err_&err_<=0.12)".asFormula
   }
