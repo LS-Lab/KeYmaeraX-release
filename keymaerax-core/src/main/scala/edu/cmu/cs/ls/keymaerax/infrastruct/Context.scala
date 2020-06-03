@@ -288,7 +288,7 @@ object Context {
   // direct replacement implementation
 
   /** Replace within term at position pos by repl
-    * @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools.boundAt()]] for same positions */
+    * @see [[edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools.boundAt()]] for same positions */
   def replaceAt(expr: Expression, pos: PosInExpr, repl: Expression): Expression = expr match {
     case f: Term    => replaceAt(f, pos, repl)
     case f: Formula => replaceAt(f, pos, repl)

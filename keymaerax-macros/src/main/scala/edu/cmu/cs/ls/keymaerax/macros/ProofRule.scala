@@ -8,11 +8,21 @@ import scala.reflect.macros.whitebox
 
 /**
  *  Annotation for derived axioms, which allows decentralized AxiomInfo
- *  @param names Display names
- *  @param codeName used to invoke axiom in tactics
- *  @param premises Premises displayed for rule
- *  @param conclusion Conclusion displayed for rule
- *  @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
+ * This annotation can only be applied to val declarations whose right-hand-sides are applications of [[derivedRule]]
+ * or related functions, see [[Ax]] for examples.
+ *
+ *  @param names    Display names
+ *  @param codeName You almost never need to specify this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+ *                  `codeName`` will be inferred from the val that is annotated by this `@ProofRule` and is strongly recommended to be identical to it.
+ *  @param premises String of premises when (if) the rule is displayed  on the UI.
+ *                  Rules with premises must have conclusions.
+ *                  Premises are separated by ;; and each premise is optionally a sequent.  "P;; A, B |- C" specifies two
+ *                  premises, the latter of which is a sequent with two assumptions. An asterisk "*" indicates a rule that
+ *                  closes a branch.
+ *  @param conclusion Conclusion of rule displayed on UI.
+ *                  The name of each input is given in [[inputs]], which may be generated from the [[def]].
+ *                  Sequent syntax is optionally supported:   A, B |- C, D
+ *  @param displayLevel Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
  *  @author Brandon Bohrer
  *  */
 class ProofRule(val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
@@ -69,7 +79,6 @@ class RuleImpl (val c: whitebox.Context) {
       (codeName, displayInfo, displayLevel)
     }
     def getParams (tn: TermName): (String, DisplayInfo, String) = {
-      // @TODO: What do ASTs look like when option arguments are omitted or passed by name?
       import c.universe._
       c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)

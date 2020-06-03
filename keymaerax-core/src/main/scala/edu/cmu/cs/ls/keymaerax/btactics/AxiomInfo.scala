@@ -822,26 +822,6 @@ object DerivationInfoRegistry {
 
     new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}),
 
-    // Derived axiomatic rules
-    new DerivedRuleInfo("all generalization"
-      , RuleDisplayInfo(SimpleDisplayInfo("all gen", "allgen"), SequentDisplay(Nil, "\\forall x P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
-      , "allGeneralize", {case () => HilbertCalculus.useAt(Ax.allGeneralize)}),
-    new DerivedRuleInfo("[] monotone"
-      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone", "[]monotone"), SequentDisplay("[a;]P"::Nil, "[a;]Q"::Nil), SequentDisplay("P"::Nil, "Q"::Nil)::Nil)
-      , "monb", {case () => HilbertCalculus.useAt(Ax.monb)}),
-    new DerivedRuleInfo("[] monotone 2"
-      , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]Q"::Nil, "[a;]P"::Nil), SequentDisplay("Q"::Nil, "P"::Nil)::Nil)
-      , "monb2", {case () => HilbertCalculus.useAt(Ax.monb2)}),
-    new DerivedRuleInfo("Goedel"
-      , RuleDisplayInfo(SimpleDisplayInfo("G", "G"), SequentDisplay(Nil, "[a;]P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
-      , "Goedel", {case () => HilbertCalculus.useAt(Ax.Goedel)}),
-    new DerivedRuleInfo("CT term congruence"
-      , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
-      , "CTtermCongruence", {case () => HilbertCalculus.useAt(Ax.CTtermCongruence)}),
-    new DerivedRuleInfo("con convergence flat"
-      , RuleDisplayInfo(SimpleDisplayInfo("con flat", "conflat"), SequentDisplay("J"::Nil, "<a*>P"::Nil), SequentDisplay("\\exists v (v<=0&J)"::Nil, "P"::Nil)::SequentDisplay("v > 0"::"J"::Nil ,"<a>J(v-1)"::Nil)::Nil)
-      , "conflat", {case () => HilbertCalculus.useAt(Ax.conflat)}),
-
     // numerical bound tactics
     new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}, needsTool = true),
     InputTacticInfo("intervalCutTerms",

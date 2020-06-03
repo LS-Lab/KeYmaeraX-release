@@ -12,7 +12,7 @@ import scala.collection.immutable
  */
 class ProofRuleTests extends TacticTestBase {
 
-  "Axiomatic" should "support axiomatic rules" in {
+  "Axiomatic" should "support axiomatic rules" in withQE { _ =>
     val result = proveBy(
       Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
       TactixLibrary.by(ProvableInfo("[] monotone"), USubst(Nil)))
@@ -21,7 +21,7 @@ class ProofRuleTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "q_(||)".asFormula
   }
 
-  it should "use the provided substitution for axiomatic rules" in {
+  it should "use the provided substitution for axiomatic rules" in withQE { _ =>
     val result = proveBy(
       Sequent(immutable.IndexedSeq("[?x>5;]x>2".asFormula), immutable.IndexedSeq("[?x>5;]x>0".asFormula)),
       TactixLibrary.by(ProvableInfo("[] monotone"),

@@ -32,8 +32,8 @@ object AnnotationCommon {
   def parseAI(s: String)(implicit c: whitebox.Context): ArgInfo = {
     s.split(":").toList match {
       case id :: tpe :: Nil =>
-        val first = id.indexOf('(')
-        val last = id.lastIndexOf(')')
+        val first = id.indexOf('[')
+        val last = id.lastIndexOf(']')
         val (name, allowFresh) =
           if (first != -1 && last != -1)
             (id.slice(0, first), id.slice(first+1, last).split(',').toList)
@@ -54,7 +54,10 @@ object AnnotationCommon {
         case ante :: succ :: Nil =>
           val (a, s) = (ante.split(",").toList, succ.split(",").toList)
           SequentDisplay(a, s)
-        case ss => c.abort(c.enclosingPosition, "Expected exactly one |- in sequent, got: " + ss)
+        case succ :: Nil =>
+          val s = succ.split(",").toList
+          SequentDisplay(Nil, s)
+        case ss => c.abort(c.enclosingPosition, "Expected at most one |- in sequent, got: " + ss)
       }
     }
   }
