@@ -26,6 +26,7 @@ import scala.reflect.runtime.{universe => ru}
   * using the [[[edu.cmu.cs.ls.keymaerax.macros.Axiom @Axiom]] annotation.
   *
   * = Using Axioms and Axiomatic Rules =
+  *
   * Using a (derived) axiom merely requires indicating the position where to use it:
   * {{{
   *   UnifyUSCalculus.useAt(Ax.choiceb)(1)
@@ -40,23 +41,33 @@ import scala.reflect.runtime.{universe => ru}
   * }}}
   * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS` because [[TactixLibrary]] extends [[UnifyUSCalculus]].
   *
+  * 
   * = Adding Derived Axioms and Derived Axiomatic Rules =
+  *
   * Core Axioms are loaded from the core and their meta information is annotated in this file e.g. as follows:
   * {{{
-  *   @Axiom(("[∪]", "[++]"), formula = "__[a∪b]P__↔[a]P∧[b]P",
+  *   @Axiom(("[∪]", "[++]"), conclusion = "__[a∪b]P__↔[a]P∧[b]P",
   *          key = "0", recursor = "0;1", unifier = "surjlinear")
   *   val choiceb = coreAxiom("[++] choice")
   * }}}
   *
   * Derived Axioms are proved with a tactic and their meta information is annotated in this file e.g. as follows:
   * {{{
-  *   @Axiom("V", formula = "p→__[a]p__",
+  *   @Axiom("V", conclusion = "p→__[a]p__",
   *          key = "1", recursor = "*")
   *   lazy val V = derivedAxiom("V vacuous",
   *     "p() -> [a{|^@|};]p()".asFormula,
   *     useAt(Ax.VK, PosInExpr(1::Nil))(1) &
   *     useAt(Ax.boxTrue)(1)
   *   )
+  * }}}
+  *
+  * Derived Axiomatic Rules are derived with a tactic and their meta information is annotated in this file as follows:
+  * {{{
+  *   @ProofRule("M[]", conclusion = "[a;]P |- [a;]Q", premises = "P |- Q")
+  *   lazy val monb = derivedRuleSequent("M[]",
+  *     Sequent(immutable.IndexedSeq("[a_;]p_(||)".asFormula), immutable.IndexedSeq("[a_;]q_(||)".asFormula)),
+  *     someTactic)
   * }}}
   *
   * @author Andre Platzer
