@@ -194,7 +194,7 @@ class TacticImpl(val c: whitebox.Context) {
       }
     }
     // Type and term ASTs which wrap acc in position and/or input arguments as anonymous lambdas
-    def argue(funName: String, acc: Tree, pos: PosArgs, args: List[ArgInfo], generatorOpt: Option[ArgInfo]): (Tree, Tree, Tree) = {
+    def argue(funName: String, acc: Tree, pos: PosArgs, args: List[ArgInfo], generatorOpt: Option[ArgInfo]): (Tree, Seq[ValDef], Seq[Tree], (Tree, Tree)) = {
       val funStr = Literal(Constant(funName))
       val argExpr = args match {
         case Nil => q"Nil"
@@ -244,12 +244,9 @@ class TacticImpl(val c: whitebox.Context) {
         (term, funTy)})
       val argSeq: Seq[ValDef] = args.map(aiToVal)
       val argTySeq: Seq[Tree] = argSeq.map(_.tpt)
-      val (uncurried, uncurriedType) =
-        if(argSeq.isEmpty) base
-        else (q"((..$argSeq) => ${base._1})", tq"""(..$argTySeq => ${base._2})""")
-      (curried, uncurried, uncurriedType)
+      (curried, argSeq, argTySeq, base)
     }
-    def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[c.universe.Tree], positions: PosArgs, rhs: Tree): c.Expr[Nothing] = {
+    def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[c.universe.Tree], positions: PosArgs, rhs: Tree, isDef: Boolean): c.Expr[Nothing] = {
       val (codeName, display, _argInfoAnnotation, displayLevel, revealInternalSteps) = getParams(declName)
       val (generatorOpt, inputs) = getInputs(inArgs)
       val needsGenerator = generatorOpt.isDefined
@@ -257,7 +254,9 @@ class TacticImpl(val c: whitebox.Context) {
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
       // AST for literal strings for the names
       val codeString = Literal(Constant(codeName))
-      val (curriedTermTree, uncurriedTermTree, uncurriedType) = argue(codeName, rhs, positions, inputs, generatorOpt)
+
+      val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, inputs, generatorOpt)
+
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
       // @TODO: Add to info constructors
       val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
@@ -273,11 +272,23 @@ class TacticImpl(val c: whitebox.Context) {
       }
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
-      val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($uncurriedTermTree, $info)"""
-      if (inputs.isEmpty)
+      val (uncurried, uncurriedType) =
+        if(argSeq.isEmpty) (base, baseType)
+        else {
+          (q"((..$argSeq) => ${base})", tq"""(..$argTySeq => ${baseType})""")
+        }
+      if(isDef) {
+        val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
+        if (inputs.isEmpty) {
+          c.Expr[Nothing](q"""$mods def ${TermName(codeName)}: $baseType = $application""")
+        }
+        else {
+          c.Expr[Nothing](q"""$mods def ${TermName(codeName)} (..$argSeq): $baseType = $application""")
+        }
+      } else {
+        val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($uncurried, $info)"""
         c.Expr[Nothing](q"""$mods val ${TermName(codeName)}: $uncurriedType = $application""")
-      else
-        c.Expr[Nothing](q"""$mods val ${TermName(codeName)}: $uncurriedType = $application""")
+      }
     }
     annottees map (_.tree) toList match {
       // Annottee must be a val or def declaration of an tactic
@@ -292,14 +303,14 @@ class TacticImpl(val c: whitebox.Context) {
                 if (!isTactic(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
                 val positions = getPositioning(params)
-                assemble(mods, codeName, inArgs, positions, rhs)
+                assemble(mods, codeName, inArgs, positions, rhs, isDef = true)
               //c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
               case rhs =>
                 if (f.toString != "anon")
                   c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
                 if (!isBelleExpr(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
-                assemble(mods, codeName, inArgs, NoPos(), rhs)
+                assemble(mods, codeName, inArgs, NoPos(), rhs, isDef = true)
             }
         }
       case (valDecl: ValDef) :: Nil =>
@@ -312,13 +323,13 @@ class TacticImpl(val c: whitebox.Context) {
                 if (!isTactic(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
                 val positions = getPositioning(params)
-                assemble(mods, declName, Nil, positions, rhs)
+                assemble(mods, declName, Nil, positions, rhs, isDef = false)
                case rhs =>
                  if (f.toString != "anon")
                    c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
                  if (!isBelleExpr(tRet))
                    c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
-                 assemble(mods, declName, Nil, NoPos(), rhs)
+                 assemble(mods, declName, Nil, NoPos(), rhs, isDef = false)
                }
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected val of tactic, got:" + valDecl)
         }
