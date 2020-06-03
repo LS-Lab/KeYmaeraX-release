@@ -210,9 +210,9 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
                 aborted.inc(n, seq0, seq)
               case SOSSolveNoSOS() =>
                 noSos.inc(n, seq0, seq)
-              case belleThrowable: BelleThrowable if belleThrowable.getMessage.startsWith("[Bellerophon Runtime] Divisor must be a constant polynomial.") =>
+              case PolynomialArithV2.NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedDivisorException) =>
                 ratTacFailure.inc(n, seq0, seq)
-              case belleThrowable: BelleThrowable if belleThrowable.getMessage.startsWith("[Bellerophon Runtime] Exponent must be integer but normalizes to") =>
+              case PolynomialArithV2.NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedExponentException) =>
                 outofScopePower.inc(n, seq0, seq)
               case ex =>
                 print("Unexpected failure:")
