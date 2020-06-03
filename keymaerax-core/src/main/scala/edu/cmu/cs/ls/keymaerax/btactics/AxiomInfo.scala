@@ -305,7 +305,6 @@ object DerivationInfoRegistry {
         /* premises */ List( (List("&Gamma;","Q"), List("[{x′=f(x) & Q}]P","&Delta;")) )
       ),
       _ => DifferentialTactics.diffUnpackEvolutionDomainInitially
-      , needsTool = false
     ),
     PositionTacticInfo("barrier",
       RuleDisplayInfo(
@@ -314,7 +313,6 @@ object DerivationInfoRegistry {
         /* premises */ List( (List("Q ∧ p=0"), List("p'>0")) )
       ),
       _ => DifferentialTactics.dgBarrier
-      , needsTool = true
     ),
     PositionTacticInfo("dRI",
       RuleDisplayInfo(
@@ -323,7 +321,6 @@ object DerivationInfoRegistry {
         /* premises */ List( (List("Q"), List("p*=0")) )
       ),
       _ => ODEInvariance.dRI
-      , needsTool = true
     ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
@@ -647,7 +644,7 @@ object DerivationInfoRegistry {
       TactixLibrary.existsL, TacticIndex.existsRStutter,
       ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
     )}),
-    PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
+    PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true, revealInternalSteps = true),
     new TacticInfo("explore", "explore", {case () => (gen:Generator.Generator[GenProduct]) => gen match {
@@ -669,12 +666,12 @@ object DerivationInfoRegistry {
       case _ => {
         case Some(Number(timeout)) => TactixLibrary.QE(Nil, None, Some(timeout.toInt))
         case _ => TactixLibrary.QE }: TypedFunc[Option[Term], BelleExpr]
-      }: TypedFunc[Option[String], _], needsTool = true, revealInternalSteps = true),
-    new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}, needsTool = true),
-    //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
-    new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
-    new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
-    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
+      }: TypedFunc[Option[String], _], revealInternalSteps = true),
+    new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}),
+    //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}),
+    new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}),
+    new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}),
+    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),
     //@todo universal closure may come with list of named symbols
     new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}),
 
@@ -777,19 +774,19 @@ object DerivationInfoRegistry {
     ),
 
     // Differential tactics
-    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
+    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}),
     new PositionTacticInfo("ODE",
       "Auto",
-      {case () => TactixLibrary.ODE}, needsTool = true, revealInternalSteps = true),
+      {case () => TactixLibrary.ODE}, revealInternalSteps = true),
     new PositionTacticInfo("odeInvC",
       "odeInvC",
-      {case () => TactixLibrary.odeInvariantComplete}, needsTool = true),
+      {case () => TactixLibrary.odeInvariantComplete}),
     new PositionTacticInfo("dgZeroMonomial",
       "dgZeroMonomial",
-      {case () => DifferentialTactics.dgZeroMonomial}, needsTool = true),
+      {case () => DifferentialTactics.dgZeroMonomial}),
     new PositionTacticInfo("dgZeroPolynomial",
       "dgZeroPolynomial",
-      {case () => DifferentialTactics.dgZeroPolynomial}, needsTool = true),
+      {case () => DifferentialTactics.dgZeroPolynomial}),
     new PositionTacticInfo("dI",
       RuleDisplayInfo("Differential Invariant",
         (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
@@ -807,15 +804,15 @@ object DerivationInfoRegistry {
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solve}, needsTool = true, revealInternalSteps = true),
+      {case () => TactixLibrary.solve}, revealInternalSteps = true),
     new PositionTacticInfo("solveEnd",
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( q(sol(t)) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solveEnd}, needsTool = true, revealInternalSteps = true),
+      {case () => TactixLibrary.solveEnd}, revealInternalSteps = true),
     new PositionTacticInfo("DGauto",
       "DGauto",
-      {case () => TactixLibrary.DGauto}, needsTool = true),
+      {case () => TactixLibrary.DGauto}),
 
     // DLBySubst
     //new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
@@ -823,7 +820,7 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}),
 
     // numerical bound tactics
-    new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}, needsTool = true),
+    new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}),
     InputTacticInfo("intervalCutTerms",
       RuleDisplayInfo(("Interval Arithmetic Cut","intervalCutTerms"),
         (List("&Gamma;"),List("&Delta;")),
@@ -836,7 +833,7 @@ object DerivationInfoRegistry {
         List((List("&Gamma;"), List("a <= trm", "trm <= b"), true), (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false))
       )
       , {case () => IntervalArithmeticV2.intervalCut}),
-    new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}, needsTool = true),
+    new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}),
 
     // assertions and messages
     InputTacticInfo("print"

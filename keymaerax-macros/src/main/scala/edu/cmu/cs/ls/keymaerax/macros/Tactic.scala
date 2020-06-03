@@ -28,8 +28,6 @@ import AnnotationCommon._
 *                   The name of each input is given in [[inputs]], which may be generated from the [[def]].
 *                   Sequent syntax is optionally supported:   A, B |- C, D
 * @param displayLevel Where to show the tactic: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
-* @TODO [[needsTool]] might be obsolete
-* @param needsTool Does the tactic use tools such as QE and ODE solving? Usually not necessary.
 * @param needsGenerator Does the tactic use invariant formula generators such as the @invariant annotation in .kyx files?
  *                       Used for a small number of tactics such as master.
 * @param revealInternalSteps Does the Web UI allow stepping inside this tactic?
@@ -39,7 +37,6 @@ class Tactic(val names: Any = false, /* false is a sigil value, user value shoul
              val premises: String = "",
              val conclusion: String = "",
              val displayLevel: String = "internal",
-             val needsTool: Boolean = false,
              val needsGenerator: Boolean = false,
              val revealInternalSteps: Boolean = false,
              val inputs:String = ""
@@ -56,7 +53,7 @@ class TacticImpl(val c: whitebox.Context) {
   private case class NoPos() extends PosArgs
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val paramNames = List("names", "codeName", "premises", "conclusion", "displayLevel", "needsTool", "needsGenerator", "revealInternalSteps", "inputs")
+    val paramNames = List("names", "codeName", "premises", "conclusion", "displayLevel", "needsGenerator", "revealInternalSteps", "inputs")
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
     def getLiteral(t: Tree): String = {
@@ -71,22 +68,21 @@ class TacticImpl(val c: whitebox.Context) {
         case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
       }
     }
-    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean, Boolean) = {
+    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean) = {
       val defaultMap: Map[String, Tree] = Map(
         "names"    -> Literal(Constant(false)),
         "codeName" -> Literal(Constant("")),
         "premises" -> Literal(Constant("")),
         "conclusion" -> Literal(Constant("")),
         "displayLevel" -> Literal(Constant("internal")),
-        "needsTool" -> Literal(Constant(false)),
         "needsGenerator" -> Literal(Constant(false)),
         "revealInternalSteps" -> Literal(Constant(false)),
         "inputs" -> Literal(Constant(""))
       )
       val (idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-      val (inputString, displayLevel, premisesString, conclusionString, needsTool, needsGenerator, revealInternal) =
+      val (inputString, displayLevel, premisesString, conclusionString, needsGenerator, revealInternal) =
         (getLiteral(paramMap("inputs")), getLiteral(paramMap("displayLevel")), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
-          getBoolLiteral(paramMap("needsTool")), getBoolLiteral(paramMap("needsGenerator")), getBoolLiteral(paramMap("revealInternalSteps")))
+          getBoolLiteral(paramMap("needsGenerator")), getBoolLiteral(paramMap("revealInternalSteps")))
       val inputs: List[ArgInfo] = parseAIs(inputString)(c)
       val codeName: String = paramMap("codeName") match {
         case Literal(Constant("")) => tn.decodedName.toString
@@ -112,9 +108,9 @@ class TacticImpl(val c: whitebox.Context) {
           RuleDisplayInfo(simpleDisplay, conc, prem)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
-      (codeName, displayInfo, inputs, displayLevel, needsTool, needsGenerator, revealInternal)
+      (codeName, displayInfo, inputs, displayLevel, needsGenerator, revealInternal)
     }
-    def getParams (tn: TermName): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean, Boolean) = {
+    def getParams (tn: TermName): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean) = {
         c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)
         case q"new $annotation()" => paramify(tn, Nil)
@@ -249,7 +245,7 @@ class TacticImpl(val c: whitebox.Context) {
       (curried, uncurried, uncurriedType)
     }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[c.universe.Tree], positions: PosArgs, rhs: Tree): c.Expr[Nothing] = {
-      val (codeName, display, _argInfoAnnotation, displayLevel, needsTool, needsGenerator, revealInternalSteps) = getParams(declName)
+      val (codeName, display, _argInfoAnnotation, displayLevel, needsGenerator, revealInternalSteps) = getParams(declName)
       val inputs = getInputs(inArgs)
       if (codeName.exists(c => c =='\"'))
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
@@ -262,12 +258,12 @@ class TacticImpl(val c: whitebox.Context) {
       case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
       val (info, rhsType) = (inputs, positions) match {
           // @TODO: BElleExpr or DependentTActic
-        case (Nil, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr""")
-        case (Nil, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic""")
-        case (Nil, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic""")
-        case (_, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
-        case (_, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic""")
-        case (_, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic""")
+        case (Nil, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr""")
+        case (Nil, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic""")
+        case (Nil, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic""")
+        case (_, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr,  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
+        case (_, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic""")
+        case (_, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic""")
       }
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
