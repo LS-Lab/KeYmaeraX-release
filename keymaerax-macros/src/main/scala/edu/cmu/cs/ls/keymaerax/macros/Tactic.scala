@@ -8,6 +8,8 @@ import AnnotationCommon._
 
 /**
 * @param names Display names to render in the user interface.
+* @param codeName You should avoid using this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+*                 `codeName`` will be inferred from the val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
 * @param inputs Display input information for non-positioning arguments, e.g., "C:Formula" for cut.
 *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
 *               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
@@ -33,6 +35,7 @@ import AnnotationCommon._
 * @param revealInternalSteps Does the Web UI allow stepping inside this tactic?
 */
 class Tactic(val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
+             val codeName: String = "",
              val premises: String = "",
              val conclusion: String = "",
              val displayLevel: String = "internal",
@@ -53,7 +56,7 @@ class TacticImpl(val c: whitebox.Context) {
   private case class NoPos() extends PosArgs
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val paramNames = List("names", "premises", "conclusion", "displayLevel", "needsTool", "needsGenerator", "revealInternalSteps", "inputs")
+    val paramNames = List("names", "codeName", "premises", "conclusion", "displayLevel", "needsTool", "needsGenerator", "revealInternalSteps", "inputs")
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
     def getLiteral(t: Tree): String = {
@@ -68,9 +71,10 @@ class TacticImpl(val c: whitebox.Context) {
         case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
       }
     }
-    def paramify(tn: TermName, params: Seq[Tree]): (DisplayInfo, List[ArgInfo], String, Boolean, Boolean, Boolean) = {
+    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean, Boolean) = {
       val defaultMap: Map[String, Tree] = Map(
         "names"    -> Literal(Constant(false)),
+        "codeName" -> Literal(Constant("")),
         "premises" -> Literal(Constant("")),
         "conclusion" -> Literal(Constant("")),
         "displayLevel" -> Literal(Constant("internal")),
@@ -80,16 +84,20 @@ class TacticImpl(val c: whitebox.Context) {
         "inputs" -> Literal(Constant(""))
       )
       val (idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-      val (inputString,  displayLevel, premisesString, conclusionString, needsTool, needsGenerator, revealInternal) =
-        (getLiteral(paramMap("inputs")),
-          getLiteral(paramMap("displayLevel")), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
+      val (inputString, displayLevel, premisesString, conclusionString, needsTool, needsGenerator, revealInternal) =
+        (getLiteral(paramMap("inputs")), getLiteral(paramMap("displayLevel")), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
           getBoolLiteral(paramMap("needsTool")), getBoolLiteral(paramMap("needsGenerator")), getBoolLiteral(paramMap("revealInternalSteps")))
       val inputs: List[ArgInfo] = parseAIs(inputString)(c)
+      val codeName: String = paramMap("codeName") match {
+        case Literal(Constant("")) => tn.decodedName.toString
+        case Literal(Constant(s: String)) => s
+        case t => c.abort(c.enclosingPosition, "Expected codeName to be a string literal, got: " + t)
+      }
       val simpleDisplay = paramMap("names") match {
         case q"""(${Literal(Constant(sl: String))}, ${Literal(Constant(sr: String))})""" => SimpleDisplayInfo(sl, sr)
         case Literal(Constant(s: String)) => SimpleDisplayInfo(s, s)
         case Literal(Constant(false)) => {
-          val s = tn.decodedName.toString
+          val s = codeName
           SimpleDisplayInfo(s, s)
         }
         //case sdi: SimpleDisplayInfo => sdi
@@ -104,20 +112,27 @@ class TacticImpl(val c: whitebox.Context) {
           RuleDisplayInfo(simpleDisplay, conc, prem)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
-      (displayInfo, inputs, displayLevel, needsTool, needsGenerator, revealInternal)
+      (codeName, displayInfo, inputs, displayLevel, needsTool, needsGenerator, revealInternal)
     }
-    def getParams (tn: TermName): (DisplayInfo, List[ArgInfo], String, Boolean, Boolean, Boolean) = {
+    def getParams (tn: TermName): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean, Boolean) = {
         c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)
         case q"new $annotation()" => paramify(tn, Nil)
         case e => c.abort(c.enclosingPosition, "Excepted @Tactic(args), got: " + e)
       }
     }
-    // Return type of tactic definition should be BelleExpr
+    // Return type of tactic definition
     def isTactic(tRet: Tree): Boolean = {
       tRet match {
         case tq"DependentTactic" | tq"DependentPositionTactic" | tq"InputPositionTactic"
              | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic" => true
+        case _ => false
+      }
+    }
+    // Return type of tactic definition
+    def isBelleExpr(tRet: Tree): Boolean = {
+      tRet match {
+        case tq"BelleExpr" => true
         case _ => false
       }
     }
@@ -188,7 +203,8 @@ class TacticImpl(val c: whitebox.Context) {
         pos match {
           case NoPos() =>
               if(args.isEmpty)
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($funStr, $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic")
+                // @TODO: acc could be DEpendentTactic or BelleExpr
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr")
               else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic")
           case OnePos(pname, None) =>
@@ -232,21 +248,21 @@ class TacticImpl(val c: whitebox.Context) {
         else (q"((..$argSeq) => ${base._1})", tq"""(..$argTySeq => ${base._2})""")
       (curried, uncurried, uncurriedType)
     }
-    def assemble(mods: Modifiers, codeName: TermName, inArgs: Seq[c.universe.Tree], positions: PosArgs, rhs: Tree): c.Expr[Nothing] = {
-      val (display, _argInfoAnnotation, displayLevel, needsTool, needsGenerator, revealInternalSteps) = getParams(codeName)
+    def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[c.universe.Tree], positions: PosArgs, rhs: Tree): c.Expr[Nothing] = {
+      val (codeName, display, _argInfoAnnotation, displayLevel, needsTool, needsGenerator, revealInternalSteps) = getParams(declName)
       val inputs = getInputs(inArgs)
-      val underlyingCodeName = codeName.decodedName.toString
-      if (codeName.toString.exists(c => c =='\"'))
+      if (codeName.exists(c => c =='\"'))
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
       // AST for literal strings for the names
-      val codeString = Literal(Constant(codeName.decodedName.toString))
-      val (curriedTermTree, uncurriedTermTree, uncurriedType) = argue(underlyingCodeName, rhs, positions, inputs)
+      val codeString = Literal(Constant(codeName))
+      val (curriedTermTree, uncurriedTermTree, uncurriedType) = argue(codeName, rhs, positions, inputs)
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
       // @TODO: Add to info constructors
       val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
       case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
       val (info, rhsType) = (inputs, positions) match {
-        case (Nil, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic""")
+          // @TODO: BElleExpr or DependentTActic
+        case (Nil, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr""")
         case (Nil, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic""")
         case (Nil, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic""")
         case (_, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsTool = $needsTool, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
@@ -257,9 +273,9 @@ class TacticImpl(val c: whitebox.Context) {
       // the tactic info to the global derivation info table
       val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($uncurriedTermTree, $info)"""
       if (inputs.isEmpty)
-        c.Expr[Nothing](q"""$mods val $codeName: $uncurriedType = $application""")
+        c.Expr[Nothing](q"""$mods val ${TermName(codeName)}: $uncurriedType = $application""")
       else
-        c.Expr[Nothing](q"""$mods val $codeName: $uncurriedType = $application""")
+        c.Expr[Nothing](q"""$mods val ${TermName(codeName)}: $uncurriedType = $application""")
     }
     annottees map (_.tree) toList match {
       // Annottee must be a val or def declaration of an tactic
@@ -270,17 +286,23 @@ class TacticImpl(val c: whitebox.Context) {
             theRhs match {
               case q"((..$params) => $rhs)" =>
                 if (f.toString != "anon")
-                  c.abort(c.enclosingPosition, s"Unexpected function $f on RHS")
+                  c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
                 if (!isTactic(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
                 val positions = getPositioning(params)
                 assemble(mods, codeName, inArgs, positions, rhs)
-              case t => c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
+              //c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
+              case rhs =>
+                if (f.toString != "anon")
+                  c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
+                if (!isBelleExpr(tRet))
+                  c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
+                assemble(mods, codeName, inArgs, NoPos(), rhs)
             }
         }
       case (valDecl: ValDef) :: Nil =>
         valDecl match {
-          case q"$mods val ${codeName: TermName}: $tRet = ${f: Ident}($theRhs)" =>
+          case q"$mods val ${declName: TermName}: $tRet = ${f: Ident}($theRhs)" =>
              theRhs match {
                case q"((..$params) => $rhs)" =>
                 if (f.toString != "anon")
@@ -288,8 +310,13 @@ class TacticImpl(val c: whitebox.Context) {
                 if (!isTactic(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
                 val positions = getPositioning(params)
-                assemble(mods, codeName, Nil, positions, rhs)
-               case t => c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
+                assemble(mods, declName, Nil, positions, rhs)
+               case rhs =>
+                 if (f.toString != "anon")
+                   c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
+                 if (!isBelleExpr(tRet))
+                   c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
+                 assemble(mods, declName, Nil, NoPos(), rhs)
                }
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected val of tactic, got:" + valDecl)
         }
