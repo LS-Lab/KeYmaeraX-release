@@ -247,7 +247,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
           fw.close()
         } catch {
           case ex: Exception =>
-            ???
+            throw ex
         }
 
         val expected = aborted.count + noSos.count + ratTacFailure.count + unknown.count
