@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
@@ -100,7 +100,8 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  val step          : DependentPositionTactic = "step" by ((pos: Position) =>
+  @Tactic()
+  val step : DependentPositionTactic = anon ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
      else HilbertCalculus.stepAt(pos))
@@ -315,9 +316,16 @@ object TactixLibrary extends HilbertCalculus
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
   def master(gen: Generator[GenProduct] = invGenerator,
-             keepQEFalse: Boolean=true): BelleExpr = "master" by {
+             keepQEFalse: Boolean = true): BelleExpr = "master" by {
     master(loopauto(gen), ODE, keepQEFalse)
   }
+
+  /**
+   * @TODO: Might need to pass generator from ReflectiveExpressionBuilder
+   * master: master tactic that tries hard to prove whatever it could.
+   * @see [[auto]] */
+  @Tactic(codeName = "master", needsGenerator = true)
+  val masterTactic: BelleExpr = anon { master(invGenerator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
@@ -356,7 +364,8 @@ object TactixLibrary extends HilbertCalculus
     * @see [[Idioms.<()]]
     * @see [[sublabel()]]
     */
-  def label(s: String): BelleExpr = label(BelleTopLevelLabel(s))
+  @Tactic()
+  def label(s: String): BelleExpr = anon { label(BelleTopLevelLabel(s)) }
 
   /** Mark the current proof branch and all subbranches `s``
     *
@@ -905,7 +914,7 @@ object TactixLibrary extends HilbertCalculus
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
   def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr = "useLemma" byWithInputs(
     if (adapt.isDefined) lemmaName::adapt.get.prettyString::Nil else lemmaName::Nil,
-    anon { _ =>
+    anon { (_, _) =>
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
@@ -915,7 +924,7 @@ object TactixLibrary extends HilbertCalculus
   )
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { _ =>
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_, _) =>
     adapt match {
       case Some(t) =>
         cut(lemma.fact.conclusion.toFormula ) <(t, cohideR('Rlast) &
