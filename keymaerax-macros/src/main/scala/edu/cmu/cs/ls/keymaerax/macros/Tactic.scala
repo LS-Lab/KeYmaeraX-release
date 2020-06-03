@@ -6,15 +6,39 @@ import scala.language.experimental.macros
 import scala.reflect.macros.{Universe, whitebox}
 import AnnotationCommon._
 
+/**
+* @param names Display names to render in the user interface.
+* @param inputs Display input information for non-positioning arguments, e.g., "C:Formula" for cut.
+*               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
+*               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
+*               By default, this argument is inferred from the argument types and names of the annotated [[def]].
+*               Use this argument when you want customized display on the UI or when there are allowedFresh variables.
+ *              Supported types: Expression, Formula, Term, Variable, Number, String, Substitution, List[], Option[]
+* @param premises String of premises when (if) the tactic is displayed like a rule on the UI.
+*                 For tactics with (non-position) inputs, the premises or conclusion must mention each input.
+*                 The name of each input is given in [[inputs]], which may be generated from the [[def]].
+*                 Premises are separated by ;; and each premise is optionally a sequent.  "P;; A, B |- C" specifies two
+*                 premises, the latter of which is a sequent with two assumptions. An asterisk "*" indicates a tactic that
+*                 closes a branch.
+* @param conclusion Conclusion of rule displayed on UI. Axiom-like tactics have a conclusion and no premises.
+ *                  Tactics with premises must have conclusions.
+*                   For tactics with (non-position) inputs, the premises or conclusion must mention each input.
+*                   The name of each input is given in [[inputs]], which may be generated from the [[def]].
+*                   Sequent syntax is optionally supported:   A, B |- C, D
+* @param displayLevel Where to show the tactic: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
+* @TODO [[needsTool]] might be obsolete
+* @param needsTool Does the tactic use tools such as QE and ODE solving? Usually not necessary.
+* @param needsGenerator Does the tactic use invariant formula generators such as the @invariant annotation in .kyx files?
+ *                       Used for a small number of tactics such as master.
+* @param revealInternalSteps Does the Web UI allow stepping inside this tactic?
+*/
 class Tactic(val names: Any,
-             val formula: String = "",
              val premises: String = "",
              val conclusion: String = "",
              val displayLevel: String = "internal",
              val needsTool: Boolean = false,
              val needsGenerator: Boolean = false,
              val revealInternalSteps: Boolean = false,
-            // @TODO: Can probably be eliminated by scraping def
              val inputs:String = ""
            ) extends StaticAnnotation {
     // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says Tactic.impl is the macro body
@@ -29,7 +53,7 @@ class TacticImpl(val c: whitebox.Context) {
   private case class NoPos() extends PosArgs
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val paramNames = List("names", "formula", "premises", "conclusion", "displayLevel", "needsTool", "needsGenerator", "revealInternalSteps", "inputs")
+    val paramNames = List("names", "premises", "conclusion", "displayLevel", "needsTool", "needsGenerator", "revealInternalSteps", "inputs")
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
     def getLiteral(t: Tree): String = {
@@ -48,7 +72,6 @@ class TacticImpl(val c: whitebox.Context) {
         c.prefix.tree match {
         case q"new $annotation(..$params)" =>
           val defaultMap: Map[String, Tree] = Map(
-            "formula" -> Literal(Constant("")),
             "premises" -> Literal(Constant("")),
             "conclusion" -> Literal(Constant("")),
             "displayLevel" -> Literal(Constant("internal")),
@@ -58,8 +81,8 @@ class TacticImpl(val c: whitebox.Context) {
             "inputs" -> Literal(Constant(""))
           )
           val (idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-          val (fml, inputString,  displayLevel, premisesString, conclusionString, needsTool, needsGenerator, revealInternal) =
-            (getLiteral(paramMap("formula")), getLiteral(paramMap("inputs")),
+          val (inputString,  displayLevel, premisesString, conclusionString, needsTool, needsGenerator, revealInternal) =
+            (getLiteral(paramMap("inputs")),
               getLiteral(paramMap("displayLevel")), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
               getBoolLiteral(paramMap("needsTool")), getBoolLiteral(paramMap("needsGenerator")), getBoolLiteral(paramMap("revealInternalSteps")))
           val inputs: List[ArgInfo] = parseAIs(inputString)(c)
@@ -69,14 +92,14 @@ class TacticImpl(val c: whitebox.Context) {
             //case sdi: SimpleDisplayInfo => sdi
             case di => c.abort(c.enclosingPosition, "@Tactic expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di)
           }
-          val displayInfo = (fml, inputs, premisesString, conclusionString) match {
-            case ("", Nil, "", "") => simpleDisplay
-            case (fml, Nil, "", "") if fml != "" => AxiomDisplayInfo(simpleDisplay, fml)
-            case (fml, args, "", "") if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
-            case (fml, args, _, _) if conclusionString != "" && premisesString != "" =>
+          val displayInfo = (inputs, premisesString, conclusionString) match {
+            case (Nil, "", "") => simpleDisplay
+            case (Nil, "", concl) if concl != "" => AxiomDisplayInfo(simpleDisplay, concl)
+            case (ins, prem, concl) if concl != "" => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
+            case (ins, prem, concl) if concl != "" && prem != "" =>
               val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
               RuleDisplayInfo(simpleDisplay, conc, prem)
-            case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: either specify premises and conclusion, or formula, not both")
+            case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
           }
           (displayInfo, inputs, displayLevel, needsTool, needsGenerator, revealInternal)
         case e => c.abort(c.enclosingPosition, "Excepted @Tactic(args), got: " + e)
@@ -157,8 +180,6 @@ class TacticImpl(val c: whitebox.Context) {
               else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic")
           case OnePos(pname, sname) =>
-            // @TODO: Check whether TacticForNameFactory.by is fine or whether overloading caused an issue
-            // byPosition is a wrapper for TacticForNameFactory.by
               if(args.isEmpty)
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
               else
