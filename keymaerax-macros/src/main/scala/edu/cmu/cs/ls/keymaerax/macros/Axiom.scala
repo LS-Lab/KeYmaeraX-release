@@ -20,7 +20,7 @@ import AnnotationCommon._
   *                 `codeName`` will be inferred from the (lazy) val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
   * @param formula Formula displayed for axioms as html with unicode in the user interface
   * @param unifier Which unifier to use for axiom: 'surjective or 'linear or 'surjlinear or 'surjlinearpretend or 'full [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]]
-  * @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
+  * @param displayLevel Where to show the axiom: "internal", "browse", "menu", "all"
   * @param inputs Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut.
   * @param key The position of the subexpression in this formula that will be unified against when using this axiom.
   *            The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for
