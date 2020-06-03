@@ -41,7 +41,7 @@ import scala.reflect.runtime.{universe => ru}
   * }}}
   * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS` because [[TactixLibrary]] extends [[UnifyUSCalculus]].
   *
-  * 
+  *
   * = Adding Derived Axioms and Derived Axiomatic Rules =
   *
   * Core Axioms are loaded from the core and their meta information is annotated in this file e.g. as follows:
@@ -2822,7 +2822,7 @@ object Ax extends Logging {
     * @Derived
     * }}}
     */
-  @Axiom("DC", conclusion = "(__[{x'=f(x)&Q}]P__↔[{x'=f(x)&Q∧R}]P)←[{x'=f(x)&Q}]R", displayLevel = "menu",
+  @Axiom("DC", conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R", displayLevel = "menu",
     key = "1.0", recursor = "*", unifier = "surjlinear", inputs = "R:formula")
   lazy val DC = derivedAxiom("DC differential cut",
     Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
@@ -3163,7 +3163,8 @@ object Ax extends Logging {
     * End.
     * }}}
     */
-  @Axiom("DCd", key = "1.0", recursor = "*")
+  @Axiom("DCd", conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
+    key = "1.0", recursor = "*")
   lazy val DCd = derivedAxiom("DCd diamond differential cut",
     Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &

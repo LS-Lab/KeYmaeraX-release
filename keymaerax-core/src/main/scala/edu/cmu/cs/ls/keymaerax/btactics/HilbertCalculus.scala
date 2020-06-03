@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.skip
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -55,6 +56,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @note Efficient source-level indexing implementation.
     * @see [[AxIndex]]
     */
+  //@todo @Tactic()
   val stepAt: DependentPositionTactic = stepAt(AxIndex.axiomFor)
 
 
@@ -73,7 +75,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[monb]] with p(x)=True
     * @see [[boxTrue]]
     */
-  val G            : DependentPositionTactic = "G" by ((pos:Position) =>
+  @Tactic(premises = "|- P", conclusion = "Γ |- [a]P, Δ")
+  val G            : DependentPositionTactic = anon ((pos:Position) =>
     SequentCalculus.cohideR(pos) & DLBySubst.G
     )
 
@@ -85,7 +88,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-    //@todo use allDist & DerivedAxioms.allGeneralize
+    //@todo use allDist & Ax.allGeneralize
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
@@ -95,7 +98,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-  lazy val monb               : BelleExpr         = byUS(Ax.monb)
+  @Tactic(premises = "P |- Q", conclusion = "[a]P |- [a]Q")
+  lazy val monb               : BelleExpr         = anon {byUS(Ax.monb)}
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
@@ -104,7 +108,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-  lazy val mond               : BelleExpr         = byUS(Ax.mondrule)
+  @Tactic(premises = "P |- Q", conclusion = "<a>P |- <a>Q")
+  lazy val mond               : BelleExpr         = anon {byUS(Ax.mondrule)}
 
   //
   // axioms
@@ -147,7 +152,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
     * }}}
     * @see [[DLBySubst.assignEquality]] */
-  lazy val assignb            : DependentPositionTactic = "assignb" by { (pos:Position) =>
+  @Tactic(revealInternalSteps = true)
+  lazy val assignb            : DependentPositionTactic = anon { (pos:Position) =>
     if (INTERNAL) useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) /*|! useAt(DerivedAxioms.assignbup)(pos)*/
     else useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) |! DLBySubst.assignEquality(pos)
   }
@@ -175,7 +181,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
   lazy val box                : DependentPositionTactic = useAt(Ax.box)
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
-  lazy val assignd            : DependentPositionTactic = "assignd" by { (pos:Position) =>
+  @Tactic(revealInternalSteps = true)
+  lazy val assignd            : DependentPositionTactic = anon { (pos:Position) =>
     useAt(Ax.assigndAxiom)(pos) |! useAt(Ax.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
   }
 
@@ -202,6 +209,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[monb]]
     * @see [[mond]]
     */
+    //@todo @Tactic? key change
   lazy val K                  : DependentPositionTactic = useAt(Ax.K, PosInExpr(1::Nil))
   /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games
@@ -221,19 +229,19 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** DWd: Diamond Differential Weakening to use evolution domain constraint `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)}>(q(x)&p(x))` */
   lazy val DWd                 : DependentPositionTactic = useAt(Ax.DWd)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DC(invariant: Formula)  : DependentPositionTactic = "ANON" byWithInput (invariant, (pos: Position, _: Sequent) => {
-    //@todo ODE is axiomIndex still needed?
+  @Tactic(conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R", inputs = "R:formula", revealInternalSteps = true)
+  def DC(invariant: Formula)  : DependentPositionTactic = anon {(pos: Position, _: Sequent) =>
     useAt(Ax.DC,
-      AxIndex.axiomIndex(Ax.DC)._1,
       (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
-  })
+  }
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DCd(invariant: Formula)  : DependentPositionTactic = useAt(Ax.DCd,
-    //@todo ODE is axiomIndex still needed?
-    AxIndex.axiomIndex(Ax.DCd)._1,
-    (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
-  )
+  @Tactic(conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R", inputs = "R:formula", revealInternalSteps = true)
+  def DCd(invariant: Formula)  : DependentPositionTactic = anon {(pos: Position, _: Sequent) =>
+    useAt(Ax.DCd,
+      (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
+    )(pos)
+  }
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols
     * as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`.
     * {{{
@@ -329,7 +337,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
     * @see [[UnifyUSCalculus.chase]]
     */
-  lazy val derive: DependentPositionTactic = "derive" by {(pos:Position, seq: Sequent) =>
+  @Tactic("()'", revealInternalSteps = false /* uninformative as useFor proof */)
+  lazy val derive: DependentPositionTactic = anon {(pos:Position, seq: Sequent) =>
     val chaseNegations = seq.sub(pos) match {
       case Some(post: DifferentialFormula) =>
         val notPositions = ListBuffer.empty[PosInExpr]
@@ -393,7 +402,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
       * }}}
       * @incontext
       */
-    lazy val Dvar: DependentPositionTactic = "Dvar" by {(pos:Position) => (if (INTERNAL) useAt(Ax.Dvar) else DifferentialTactics.Dvariable)(pos)}
+    @Tactic("(x)'")
+    lazy val Dvar: DependentPositionTactic = anon {(pos:Position) => (if (INTERNAL) useAt(Ax.Dvar) else DifferentialTactics.Dvariable)(pos)}
 
     /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
     lazy val Dand               : DependentPositionTactic = useAt(Ax.Dand)
