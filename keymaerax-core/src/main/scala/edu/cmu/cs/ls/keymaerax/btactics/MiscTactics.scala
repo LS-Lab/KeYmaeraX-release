@@ -456,6 +456,16 @@ object TacticFactory {
       }
     }
 
+    /** A position tactic with multiple inputs. */
+    def byWithInputs(inputs: Seq[Any], t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = {
+          require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+          t(pos)
+        }
+      }
+    }
+
     /** A named tactic with multiple inputs. */
     def byWithInputs(inputs: Seq[Any], t: => BelleExpr): InputTactic = new InputTactic(name, inputs) {
       override def computeExpr(): BelleExpr = t
@@ -544,6 +554,7 @@ object TacticFactory {
 
   def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
+  def anon(t: (Position => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Sequent => BelleExpr)): DependentTactic = "ANON" by t
 
 }
