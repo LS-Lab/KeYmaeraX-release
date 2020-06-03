@@ -98,6 +98,7 @@ object AnnotationCommon {
   def convAI(ai: ArgInfo)(implicit c: whitebox.Context): c.universe.Tree = {
     import c.universe._
     ai match {
+      case GeneratorArg(name) => q"""new edu.cmu.cs.ls.keymaerax.macros.GeneratorArg(${literal(name)})"""
       case VariableArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
       case NumberArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
       case StringArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.StringArg(${literal(name)}, ${literals(allowsFresh)})"""

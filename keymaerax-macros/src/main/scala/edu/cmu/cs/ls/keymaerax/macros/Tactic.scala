@@ -68,21 +68,20 @@ class TacticImpl(val c: whitebox.Context) {
         case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
       }
     }
-    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean) = {
+    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, List[ArgInfo], String, Boolean) = {
       val defaultMap: Map[String, Tree] = Map(
         "names"    -> Literal(Constant(false)),
         "codeName" -> Literal(Constant("")),
         "premises" -> Literal(Constant("")),
         "conclusion" -> Literal(Constant("")),
         "displayLevel" -> Literal(Constant("internal")),
-        "needsGenerator" -> Literal(Constant(false)),
         "revealInternalSteps" -> Literal(Constant(false)),
         "inputs" -> Literal(Constant(""))
       )
       val (idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-      val (inputString, displayLevel, premisesString, conclusionString, needsGenerator, revealInternal) =
+      val (inputString, displayLevel, premisesString, conclusionString, revealInternal) =
         (getLiteral(paramMap("inputs")), getLiteral(paramMap("displayLevel")), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
-          getBoolLiteral(paramMap("needsGenerator")), getBoolLiteral(paramMap("revealInternalSteps")))
+           getBoolLiteral(paramMap("revealInternalSteps")))
       val inputs: List[ArgInfo] = parseAIs(inputString)(c)
       val codeName: String = paramMap("codeName") match {
         case Literal(Constant("")) => tn.decodedName.toString
@@ -108,9 +107,9 @@ class TacticImpl(val c: whitebox.Context) {
           RuleDisplayInfo(simpleDisplay, conc, prem)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
-      (codeName, displayInfo, inputs, displayLevel, needsGenerator, revealInternal)
+      (codeName, displayInfo, inputs, displayLevel, revealInternal)
     }
-    def getParams (tn: TermName): (String, DisplayInfo, List[ArgInfo], String, Boolean, Boolean) = {
+    def getParams (tn: TermName): (String, DisplayInfo, List[ArgInfo], String, Boolean) = {
         c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)
         case q"new $annotation()" => paramify(tn, Nil)
@@ -160,6 +159,7 @@ class TacticImpl(val c: whitebox.Context) {
       param match {
         case v: ValDef =>
           v.tpt match {
+            case tq"""Generator[GenProduct]""" => GeneratorArg(v.name.decodedName.toString)
             case tq"""Formula""" => FormulaArg(v.name.decodedName.toString)
             case tq"""Expression""" => new ExpressionArg(v.name.decodedName.toString)
             case tq"""Term""" => new TermArg(v.name.decodedName.toString)
@@ -172,13 +172,18 @@ class TacticImpl(val c: whitebox.Context) {
           }
       }
     }
-    def getInputs(params: Seq[c.universe.Tree]): List[ArgInfo] = {
-      params.toList.map(getInput)
+    def getInputs(params: Seq[c.universe.Tree]): (Option[ArgInfo], List[ArgInfo]) = {
+      val infos = params.toList.map(getInput)
+      val gen = infos.find((ai: ArgInfo) => ai match {case _: GeneratorArg => true case _ => false})
+      if (infos.nonEmpty && infos.dropRight(1).contains((ai: ArgInfo) => ai match {case _: GeneratorArg => true case _ => false})) {
+        c.abort(c.enclosingPosition, "Generator argument to tactic must appear after all expression arguments")
+      }
+      (gen, infos)
     }
     // Scala types corresponding to tactic inputs
-    // @TODO rename
     def typeName(ai: ArgInfo): Tree = {
       ai match {
+        case _: GeneratorArg => tq"edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator[edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct]"
         case _: FormulaArg => tq"edu.cmu.cs.ls.keymaerax.core.Formula"
         case _: StringArg => tq"String"
         case _: NumberArg => tq"edu.cmu.cs.ls.keymaerax.core.Number"
@@ -189,7 +194,7 @@ class TacticImpl(val c: whitebox.Context) {
       }
     }
     // Type and term ASTs which wrap acc in position and/or input arguments as anonymous lambdas
-    def argue(funName: String, acc: Tree, pos: PosArgs, args: List[ArgInfo]): (Tree, Tree, Tree) = {
+    def argue(funName: String, acc: Tree, pos: PosArgs, args: List[ArgInfo], generatorOpt: Option[ArgInfo]): (Tree, Tree, Tree) = {
       val funStr = Literal(Constant(funName))
       val argExpr = args match {
         case Nil => q"Nil"
@@ -223,7 +228,7 @@ class TacticImpl(val c: whitebox.Context) {
         val name = ai match {
           case a: VariableArg => a.name case a: FormulaArg => a.name case n: NumberArg => n.name
           case a: StringArg => a.name case a: TermArg => a.name case a: SubstitutionArg => a.name
-          case a: ExpressionArg => a.name
+          case a: ExpressionArg => a.name case g: GeneratorArg => g.name
         }
         val argTy = typeName(ai)
         ValDef(Modifiers(), name, tq"""$argTy""", EmptyTree)
@@ -245,13 +250,14 @@ class TacticImpl(val c: whitebox.Context) {
       (curried, uncurried, uncurriedType)
     }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[c.universe.Tree], positions: PosArgs, rhs: Tree): c.Expr[Nothing] = {
-      val (codeName, display, _argInfoAnnotation, displayLevel, needsGenerator, revealInternalSteps) = getParams(declName)
-      val inputs = getInputs(inArgs)
+      val (codeName, display, _argInfoAnnotation, displayLevel, revealInternalSteps) = getParams(declName)
+      val (generatorOpt, inputs) = getInputs(inArgs)
+      val needsGenerator = generatorOpt.isDefined
       if (codeName.exists(c => c =='\"'))
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
       // AST for literal strings for the names
       val codeString = Literal(Constant(codeName))
-      val (curriedTermTree, uncurriedTermTree, uncurriedType) = argue(codeName, rhs, positions, inputs)
+      val (curriedTermTree, uncurriedTermTree, uncurriedType) = argue(codeName, rhs, positions, inputs, generatorOpt)
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
       // @TODO: Add to info constructors
       val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all

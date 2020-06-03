@@ -17,6 +17,11 @@ case class FormulaArg (override val name: String, override val allowsFresh: List
   val sort = "formula"
 }
 
+case class GeneratorArg (override val name: String) extends ArgInfo {
+  val sort = "generator"
+  override val allowsFresh: List[String] = Nil
+}
+
 class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "expression"
 }

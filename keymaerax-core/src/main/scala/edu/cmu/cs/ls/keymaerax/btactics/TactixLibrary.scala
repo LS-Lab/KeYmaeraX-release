@@ -321,11 +321,10 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /**
-   * @TODO: Might need to pass generator from ReflectiveExpressionBuilder
    * master: master tactic that tries hard to prove whatever it could.
    * @see [[auto]] */
-  @Tactic(codeName = "master", needsGenerator = true)
-  val masterTactic: BelleExpr = anon { master(invGenerator) }
+  @Tactic(codeName = "master")
+  def masterTactic(generator: Generator[GenProduct]): BelleExpr = anon { master(generator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
