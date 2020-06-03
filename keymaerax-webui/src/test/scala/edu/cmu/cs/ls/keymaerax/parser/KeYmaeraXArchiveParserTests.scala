@@ -20,11 +20,12 @@ import org.scalatest.matchers.{MatchResult, Matcher}
   * Tests the archive parser.
   * Created by smitsch on 12/29/16.
   * @author Stefan Mitsch
+  * @author Andre Platzer
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
   private val parser =
-  //  KeYmaeraXArchiveParser
-  DLArchiveParser
+    KeYmaeraXArchiveParser
+//  DLArchiveParser
 
   private def parse(input: String): List[KeYmaeraXArchiveParser.ParsedArchiveEntry] =
     parser.parse(input)
@@ -271,10 +272,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "parse an isolated simple definition assignment" in {
-    parser.expParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
-    parser.expParser.programParser("{ x:=x+1; }") shouldBe (parser.expParser.programParser("x:=x+1;"))
-    DLParser.parseValue( "HP a ::= { x:=x+1; };", parser.progDef(_)) shouldBe (("a", None), (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))
-    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", parser.definitions(_)) shouldBe (Declaration(Map(("a", None) -> (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation)), Map.empty))
+    DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
+    DLParser.programParser("{ x:=x+1; }") shouldBe (DLParser.programParser("x:=x+1;"))
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", DLArchiveParser.progDef(_)) shouldBe (("a", None), (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))
+    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", DLArchiveParser.definitions(_)) shouldBe (Declaration(Map(("a", None) -> (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))))
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -365,6 +366,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [{x'=5}]x>1".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
+  it should "parse simple program definition compose assign before variables" in {
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions HP a ::= { x:=x+1;?x>1; } End.
+        | ProgramVariables Real x; End.
+        | Problem x!=0 -> [a;]x>1 End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("a", None) -> (Some(Unit), Trafo, Some("x:=x+1;?x>1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.expandedModel shouldBe "x!=0 -> [x:=x+1;?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
@@ -816,7 +841,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | Definitions. Bool p() <-> (1>0). Bool p() <-> (2>1); End.
+        | Definitions Bool p() <-> (1>0). Bool p() <-> (2>1); End.
         | ProgramVariables Real x; Real y; End.
         | Problem p() -> x>=y End.
         |End.
@@ -829,7 +854,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | Definitions. HP a ::= { ?true; }. HP a ::= { ?false; }; End.
+        | Definitions HP a ::= { ?true; }. HP a ::= { ?false; }; End.
         | ProgramVariables Real x; Real y; End.
         | Problem [a;]true End.
         |End.
@@ -1487,7 +1512,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "replace tabs with spaces" in {
     // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End; End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
@@ -1505,12 +1530,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Problem
         |  x>0
         |End.
-        |Tactic "Proof" master End; End.""".stripMargin
+        |Tactic "Proof" master End. End.""".stripMargin
   }
 
   it should "replace tabs with spaces in model-only entry" in {
     // tabs throw off the position computation in the lexer (especially before \n). in archives without tactics, this leads to faulty model extraction.
-    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End; End.").loneElement
+    val entry = parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End. End.").loneElement
     entry.name shouldBe "Replace tabs"
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
@@ -1560,8 +1585,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   "Global definitions" should "be added to all entries" in {
     val input =
-      """SharedDefinitions.
-        | B gt(R,R) <-> ( ._0 > ._1 ).
+      """SharedDefinitions
+        | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |
         |Lemma "Entry 1"
@@ -1570,7 +1595,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.
         |
         |Theorem "Entry 2"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2" useLemma({`Entry 1`}) End.
@@ -1593,7 +1618,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.info shouldBe empty
     entry1.fileContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1601,7 +1626,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     entry1.problemContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1625,10 +1650,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Theorem "Entry 2"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2" useLemma({`Entry 1`}) End.
@@ -1637,8 +1662,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "add to all entries but not auto-expand if tactic expands" in {
     val input =
-      """SharedDefinitions.
-        | B gt(R,R) <-> ( ._0 > ._1 ).
+      """SharedDefinitions
+        | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |
         |Lemma "Entry 1"
@@ -1647,7 +1672,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.
         |
         |Theorem "Entry 2"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2" expand "gt" ; useLemma({`Entry 1`}) End.
@@ -1670,7 +1695,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.info shouldBe empty
     entry1.fileContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1678,7 +1703,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     entry1.problemContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1703,10 +1728,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Theorem "Entry 2"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2" expand "gt" ; useLemma({`Entry 1`}) End.
@@ -1715,8 +1740,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "add to all entries but not auto-expand if tactic uses US to expand" in {
     val input =
-      """SharedDefinitions.
-        | B gt(R,R) <-> ( ._0 > ._1 ).
+      """SharedDefinitions
+        | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |
         |Lemma "Entry 1"
@@ -1725,7 +1750,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.
         |
         |Theorem "Entry 2"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
@@ -1748,7 +1773,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.info shouldBe empty
     entry1.fileContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1756,7 +1781,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     entry1.problemContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Lemma "Entry 1"
         | ProgramVariables Real x; Real y; End.
@@ -1781,10 +1806,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.info shouldBe empty
     entry2.fileContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |Theorem "Entry 2"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         | Tactic "Proof Entry 2" US("gt(._0,._1) ~> ._0>._1") ; useLemma({`Entry 1`}) End.
@@ -1794,12 +1819,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   it should "not allow duplicates with local definitions" in {
     val input =
       """
-        |SharedDefinitions.
-        | B gt(R,R) <-> ( ._0 > ._1 ).
+        |SharedDefinitions
+        | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |
         |Lemma "Entry 1"
-        | Definitions. B gt(R,R) <-> ( ._0 + 0 > ._1 ); End.
+        | Definitions Bool gt(Real,Real) <-> ( ._0 + 0 > ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> x>=y End.
         |End.
@@ -1811,12 +1836,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   it should "not allow duplicates with local definitions even with different sorts" in {
     val input =
       """
-        |SharedDefinitions.
-        | B gt(R,R) <-> ( ._0 > ._1 ).
+        |SharedDefinitions
+        | Bool gt(Real,Real) <-> ( ._0 > ._1 ).
         |End.
         |
         |Lemma "Entry 1"
-        | Definitions Real gt(R) = ( ._0 * 3 ); End.
+        | Definitions Real gt(Real) = ( ._0 * 3 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> x>=y End.
         |End.
@@ -1827,12 +1852,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "not swallow backslashes, for example \\exists" in {
     val input =
-      """SharedDefinitions.
-        | B gt(R,R) <-> ( \exists t (t=1 & ._0*t > ._1) ).
+      """SharedDefinitions
+        | Bool gt(Real,Real) <-> ( \exists t (t=1 & ._0*t > ._1) ).
         |End.
         |
         |Lemma "Entry 1"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         |End.""".stripMargin
@@ -1852,10 +1877,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe empty
     entry.fileContent shouldBe
       """SharedDefinitions
-        |B gt(R,R) <-> ( \exists t (t=1 & ._0*t > ._1) ).
+        |Bool gt(Real,Real) <-> ( \exists t (t=1 & ._0*t > ._1) ).
         |End.
         |Lemma "Entry 1"
-        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ); End.
+        | Definitions Bool geq(Real,Real) <-> ( ._0 >= ._1 ); End.
         | ProgramVariables Real x; Real y; End.
         | Problem gt(x,y) -> geq(x,y) End.
         |End.""".stripMargin
@@ -1863,7 +1888,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "accept exercises" in {
     val input =
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( a >= b ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
@@ -1881,7 +1906,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( a >= b ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
@@ -1890,7 +1915,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
 
   it should "accept exercises in definitions" in {
     val input =
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
@@ -1908,7 +1933,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe
-      """Exercise "Exercise 1".
+      """Exercise "Exercise 1"
         | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
         | ProgramVariables Real x, y; End.
         | Problem __________ -> geq(x,y) End.
@@ -2030,9 +2055,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true End.""".stripMargin
-    ) should have message """2:20 ArchiveEntry has no matching End.
-                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise at 1:1 to 1:12--2:20 to EOF$
-                            |Found:    EOF$ at 2:20 to EOF$
+    ) should have message """2:19 ArchiveEntry has no matching End.
+                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise at 1:1 to 1:12--2:19 to EOF$
+                            |Found:    EOF$ at 2:19 to EOF$
                             |Expected: End.
                             |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
 
@@ -2088,16 +2113,17 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true""".stripMargin
-    ) should have message """2:15 Missing problem delimiter
-                           |Found:    <EOF> at 2:15 to EOF$
+    ) should have message """2:14 Missing problem delimiter
+                           |Found:    <EOF> at 2:14 to EOF$
                            |Expected: End""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Problem true End""".stripMargin
-    ) should have message """2:19 Missing . after delimiter End
-                            |Found:    <EOF> at 2:19 to EOF$
-                            |Expected: .""".stripMargin
+    ) should have message """2:18 Missing . after delimiter End
+                            |Found:    <EOF> at 2:18 to EOF$
+                            |Expected: .
+                            |Hint: ParseState( :+ ArchiveEntry :+ DOUBLE_QUOTES_STRING :+ MetaInfo(Map()) :+ Definitions(List(),List())  <|>  PROBLEM_BLOCK$, TRUE$, END_BLOCK$, EOF$)""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
@@ -2105,7 +2131,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Tactic "My tactic" closeTrue End. """.stripMargin
     ) should have message """3:1 Missing . after delimiter End
                             |Found:    Tactic at 3:1 to 3:6
-                            |Expected: .""".stripMargin
+                            |Expected: .
+                            |Hint: ParseState( :+ ArchiveEntry :+ DOUBLE_QUOTES_STRING :+ MetaInfo(Map()) :+ Definitions(List(),List())  <|>  PROBLEM_BLOCK$, TRUE$, END_BLOCK$, TACTIC_BLOCK$, DOUBLE_QUOTES_STRING, ID("closeTrue"), END_BLOCK$, PERIOD$, EOF$)""".stripMargin
   }
   
   it should "report parse errors in function definitions" in {
@@ -2176,18 +2203,18 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real f(); End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:22 Function definition only allowed in Definitions block
-                            |Found:    ( at 2:22
+    ) should have message """2:25 Function definition only allowed in Definitions block
+                            |Found:    ( at 2:25
                             |Expected: ;
                             |      or: ,""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
-        | ProgramVariables B p(); End.
+        | ProgramVariables Bool p(); End.
         | Problem true End.
         |End.""".stripMargin
     ) should have message """2:19 Predicate and program definitions only allowed in Definitions block
-                            |Found:    B at 2:19
+                            |Found:    Bool at 2:19 to 2:22
                             |Expected: Real""".stripMargin
 
     the [ParseException] thrownBy parse(
@@ -2204,8 +2231,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real x &; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:23 Unexpected token in ProgramVariables block
-                            |Found:    & at 2:23
+    ) should have message """2:26 Unexpected token in ProgramVariables block
+                            |Found:    & at 2:26
                             |Expected: ;
                             |      or: ,""".stripMargin
 
@@ -2225,8 +2252,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Real f() & ; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:20 Unexpected token in function definition
-                            |Found:    & at 2:20
+    ) should have message """2:23 Unexpected token in function definition
+                            |Found:    & at 2:23
                             |Expected: =
                             |      or: ;""".stripMargin
 
@@ -2235,8 +2262,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Real f() <-> 5; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:20 Function must be defined by equality
-                            |Found:    <-> at 2:20 to 2:22
+    ) should have message """2:23 Function must be defined by equality
+                            |Found:    <-> at 2:23 to 2:25
                             |Expected: =""".stripMargin
 
     the [ParseException] thrownBy parse(
@@ -2244,37 +2271,37 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Definitions Real f() = 5!=7; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:22 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 5!=7
-                            |Found:    5!=7 at 2:22 to 2:25
+    ) should have message """2:25 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 5!=7
+                            |Found:    5!=7 at 2:25 to 2:28
                             |Expected: Term""".stripMargin
   }
 
   it should "report predicate definition errors" in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
-        | Definitions B p() & ; End.
+        | Definitions Bool p() & ; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:20 Unexpected token in predicate definition
-                            |Found:    & at 2:20
+    ) should have message """2:23 Unexpected token in predicate definition
+                            |Found:    & at 2:23
                             |Expected: <->""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
-        | Definitions B p() = 5>0; End.
+        | Definitions Bool p() = 5>0; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:20 Predicate must be defined by equivalence
-                            |Found:    = at 2:20
+    ) should have message """2:23 Predicate must be defined by equivalence
+                            |Found:    = at 2:23
                             |Expected: <->""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
-        | Definitions B p() <-> 5+7; End.
+        | Definitions Bool p() <-> 5+7; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:24 Impossible elaboration: Operator PSEUDO$ expects a Formula as argument but got the Term 5+7
-                            |Found:    5+7 at 2:24 to 2:26
+    ) should have message """2:27 Impossible elaboration: Operator PSEUDO$ expects a Formula as argument but got the Term 5+7
+                            |Found:    5+7 at 2:27 to 2:29
                             |Expected: Formula""".stripMargin
   }
   
@@ -2295,22 +2322,22 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   it should "report imbalanced parentheses in predicate definitions" in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
-        | Definitions B p() <-> ( true; End.
+        | Definitions Bool p() <-> ( true; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:24 Unmatched opening parenthesis in predicate definition
-                            |unmatched: LPAREN$ at 2:24--2:26 to 2:29
-                            |Found:    TRUE$ at 2:24 to 2:29
+    ) should have message """2:27 Unmatched opening parenthesis in predicate definition
+                            |unmatched: LPAREN$ at 2:27--2:29 to 2:32
+                            |Found:    TRUE$ at 2:27 to 2:32
                             |Expected: )""".stripMargin
     
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
-        | Definitions B p() <-> ( (true) | false; End.
+        | Definitions Bool p() <-> ( (true) | false; End.
         | Problem true End.
         |End.""".stripMargin
-    ) should have message """2:24 Unmatched opening parenthesis in predicate definition
-                            |unmatched: LPAREN$ at 2:24--2:26
-                            |Found:    LPAREN$ at 2:24 to 2:26
+    ) should have message """2:27 Unmatched opening parenthesis in predicate definition
+                            |unmatched: LPAREN$ at 2:27--2:29
+                            |Found:    LPAREN$ at 2:27 to 2:29
                             |Expected: )""".stripMargin
   }
 

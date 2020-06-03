@@ -107,15 +107,20 @@ private object PropositionalTactics extends Logging {
       // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
       // will branch and one of these branches will close by identity. on the other branch, we have to hide
       // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-      (((notL(-1) & notR(1) & assertT(1, 1))
-        | ((andL(-1) & andR(1) <((close | (hideL(-2))), (close | (hideL(-1)))) & assertT(1, 1))
-        | ((orR(1) & orL(-1) <((close | (hideR(2))), (close | (hideR(1)))) & assertT(1, 1))
-        | ((implyR(1) & implyL(-1) <((close | (hideR(1))), (close | (hideL('Llast)))) & assertT(1, 1))
-        | ((monb)
-        | ((mond)
-        | ((allR(1) & allL(-1))
-        | (existsL(-1) & existsR(1))
-       ))))))))*at.pos.length
+      if (at.pos.length <= 0) skip
+      else (sequent.succ.headOption match {
+        case Some(_: Not) => notL(-1) & notR(1) & assertT(1, 1)
+        case Some(_: And) => andL(-1) & andR(1) <(close | hideL(-2), close | hideL(-1)) & assertT(1, 1)
+        case Some(_: Or) => orR(1) & orL(-1) <(close | hideR(2), close | hideR(1)) & assertT(1, 1)
+        case Some(_: Imply) => implyR(1) & implyL(-1) <(close | hideR(1), close | hideL('Llast)) & assertT(1, 1)
+        case Some(_: Box) => monb
+        case Some(_: Diamond) => mond
+        case Some(_: Forall) => allR(1) & allL(-1)
+        case Some(_: Exists) => existsL(-1) & existsR(1)
+        case Some(e) => throw new TacticInapplicableFailure("Prop. CMon not applicable to " + e.prettyString)
+        // redundant to exception raised by .at(...) in contract above
+        case None => throw new IllFormedTacticApplicationException("Prop. CMon: no more formulas left to descend into " + at.prettyString)
+      }) & propCMon(at.child)
     }
   }
 

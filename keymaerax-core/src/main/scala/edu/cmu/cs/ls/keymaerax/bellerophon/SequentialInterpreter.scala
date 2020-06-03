@@ -222,6 +222,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       } catch {
         case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(RepeatTactic(e.context, times),
                   "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
+        case e: BelleThrowable => throw new IllFormedTacticApplicationException("RepeatTactic failed on repetition " + i, e)
       }
       result
 

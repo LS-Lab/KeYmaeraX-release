@@ -204,8 +204,16 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "solve simple nested ODEs" in withMathematica { _ =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), solve(1))
-    result.subgoals.loneElement shouldBe "x_1>0 ==> \\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asSequent
+    val sequent = Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula))
+    proveBy(sequent, solve(1)).subgoals.loneElement shouldBe "x_1>0 ==> \\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asSequent
+    proveBy(sequent, solve(1, 1::Nil)).subgoals.loneElement shouldBe "x>0 ==> [{x'=2}]\\forall t_ (t_>=0 -> 3*t_+x > 0)".asSequent
+  }
+
+  it should "fail fast on unsolvable ODEs" in withMathematica { _ =>
+    the [BelleTacticFailure] thrownBy proveBy("x>0 ==> [{x'=x}]x>0".asSequent, solve(1)) should
+      have message "ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve()."
+    the [BelleTacticFailure] thrownBy proveBy("x>0 ==> [{x'=2}][{x'=x}]x>0".asSequent, solve(1, PosInExpr(1::Nil))) should
+      have message "ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().".stripMargin
   }
 
   it should "solve in universal context in ante" in withMathematica { _ =>
@@ -563,12 +571,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=x,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     the [BelleThrowable] thrownBy proveBy(f, t) should have message
-      """ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().
-        |Provable{
-        |==> 1:  x=1&v=2&a=0&t=0->[{x'=v,v'=x,t'=1&true}]x^3>=1	Imply
-        |  from
-        |   -1:  x=1&v=2&a=0&t=0	And
-        |==> 1:  [kyxtime_0:=0;][{x'=v,v'=x,t'=1,kyxtime_0'=1&true}]x^3>=1	Box}""".stripMargin
+      "ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve()."
   }
   //endregion
 

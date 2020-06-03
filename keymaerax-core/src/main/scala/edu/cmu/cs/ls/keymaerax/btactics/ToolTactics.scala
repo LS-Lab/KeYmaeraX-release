@@ -64,7 +64,7 @@ private object ToolTactics {
 
     //@note don't split exhaustively (may explode), but *3 is only a guess
     val splittingQE =
-      ArithmeticSimplification.smartHide & Idioms.?(onAll(orL('L) | andR('R)))*3 & onAll(plainQE & done)
+      ArithmeticSimplification.smartHide & onAll(Idioms.?(orL('L) | andR('R)))*3 & onAll(plainQE & done)
 
     AnonymousLemmas.cacheTacticResult(
       Idioms.doIf(p => !p.isProved && p.subgoals.forall(_.isFOL))(

@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, IllFormedTacticApplicationException}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -294,5 +294,11 @@ class PropositionalTests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
       propCMon(PosInExpr(0::1::1::0::0::Nil)))
     result.subgoals.loneElement shouldBe "x>1 ==> x>0".asSequent
+  }
+
+  it should "report when trying to unpeel too far" in {
+    the [IllFormedTacticApplicationException] thrownBy proveBy(Sequent(IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula), IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
+      propCMon(PosInExpr(0::1::1::0::0::1::1::Nil))) should have message "Unable to create dependent tactic 'Prop. CMon', cause: part position .1 of term 0 may not be defined"
+
   }
 }

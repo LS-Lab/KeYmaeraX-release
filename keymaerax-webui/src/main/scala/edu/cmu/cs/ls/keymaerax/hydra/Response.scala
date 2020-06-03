@@ -1041,7 +1041,9 @@ case class ApplicableDefinitionsResponse(defs: List[(NamedSymbol, Expression, Op
         "what" -> JsString(ne.prettyString),
         "repl" -> JsString(s match {
           case Some(is) => is._2.map(_.prettyString).getOrElse("")
-          case None => re.map(_.prettyString).getOrElse("")
+          case None =>
+            //@todo replace dots with arguments from ne (input signature no longer available from simplified parser, is always None)
+            re.map(_.prettyString).getOrElse("")
         }),
         "editable" -> JsBoolean(s.isEmpty)
       )

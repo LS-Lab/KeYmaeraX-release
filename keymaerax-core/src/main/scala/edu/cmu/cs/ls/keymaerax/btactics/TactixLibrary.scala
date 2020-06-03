@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
-import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -137,28 +137,36 @@ object TactixLibrary extends HilbertCalculus
     def atPos(except: Option[Position]): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
       if (except.contains(pos)) skip
       else s.sub(pos) match {
-        case Some(fml) if pos.isAnte && s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
-        case Some(fml) if pos.isSucc && s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(fml) =>
-          tacticIndex.tacticsFor(fml) match {
-            case (t, _) if pos.isAnte => t.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
-            case (_, t) if pos.isSucc => t.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+          val si = s.succ.indexOf(fml)
+          if (pos.isAnte && si >= 0) close(pos.checkAnte.top, SuccPos(si))
+          else {
+            val ai = s.ante.indexOf(fml)
+            if (pos.isSucc && ai >= 0) close(AntePos(ai), pos.checkSucc.top)
+            else {
+              val (ta, ts) = tacticIndex.tacticsFor(fml)
+              if (pos.isAnte) ta.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+              else ts.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
+            }
           }
         case _ => skip
       }
     })
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
-    def atOrSearch(p: PositionLocator): BelleExpr = atPos(None)(p) | (p match {
-      case Fixed(pp, Some(fml), exact) if pp.isAnte => ?(atPos(Some(pp))(Find.FindL(0, Some(fml), exact=exact)))
-      case Fixed(pp, Some(fml), exact) if pp.isSucc => ?(atPos(Some(pp))(Find.FindR(0, Some(fml), exact=exact)))
-      case _ => skip
+    def atOrSearch(p: PositionLocator): DependentTactic = "ANON" by ((s: Sequent) => p match {
+      case Fixed(pp, Some(fml), exact) =>
+        if (( exact && s.sub(pp).contains(fml)) ||
+            (!exact && s.sub(pp).exists(UnificationMatch.unifiable(fml, _).isDefined))) atPos(None)(Fixed(pp))
+        else if (pp.isAnte) atPos(Some(pp))(Find.FindL(0, Some(fml), exact=exact))
+        else                atPos(Some(pp))(Find.FindR(0, Some(fml), exact=exact))
+      case _ => atPos(None)(p)
     })
 
     /** Do all the tactics of a branch in sequence. */
     def applyBranchRecursor(rec: TacticIndex.Branch): BelleExpr =
-      //@note onAll tries on too many branches, but skip in atOrSearch compensates for this
-      rec.map(r => onAll(atOrSearch(r))).reduce(_&_)
+      //@note onAll tries on too many branches, but optional atOrSearch compensates for this
+      rec.map(r => onAll(?(atOrSearch(r)))).reduce(_&_)
 
     /** Turn branches (if any) into a branching tactic. */
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
@@ -169,24 +177,25 @@ object TactixLibrary extends HilbertCalculus
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
-      val recursors = tacticIndex.tacticRecursors(t)
+      val recursors = tacticIndex.tacticRecursors(t).map(_(s, pos)).filter(_.nonEmpty)
       if (recursors.nonEmpty) t(new Fixed(pos)) & Idioms.doIf(!_.isProved)(recursors.map(r =>
         DebuggingTactics.assertOnAll(_ != s ||
           //@note allow recursing on subposition after no-op steps that supply recursors
-          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })),
-          "Stopping to recurse on unchanged sequent", new TacticInapplicableFailure(_)) &
-        applyRecursor(r(s, pos))
+          r.exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })),
+          "No progress, stopping recursion", new BelleNoProgress(_)) &
+        applyRecursor(r)
       ).reduce(_&_))
-
       else t(new Fixed(pos))
     }
 
     seq.sub(pos) match {
-      case Some(fml: Formula) if expected.isEmpty || expected.contains(fml) => onAll(atPos(None)(pos, fml))
-      case Some(fml: Formula) if !expected.contains(fml) => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-      case None if expected.isDefined => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
-      case None if expected.isEmpty => throw new IllFormedTacticApplicationException("Position " + pos + " points outside sequent")
-      case _ => throw new TacticInapplicableFailure("TacticChase is only applicable at formulas")
+      case Some(fml: Formula) =>
+        if (expected.isEmpty || expected.contains(fml)) onAll(atPos(None)(pos, fml))
+        else onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
+      case Some(e) => throw new TacticInapplicableFailure("TacticChase is only applicable at formulas, but got " + e.prettyString)
+      case None =>
+        if (expected.isDefined) onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
+        else throw new IllFormedTacticApplicationException("Position " + pos + " points outside sequent")
     }
   })
 
@@ -204,7 +213,7 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
-  /** Chases program operators according to [[AxiomIndex]] or tactics according to `tacticIndex` (restricted to tactics
+  /** Chases program operators according to [[AxIndex]] or tactics according to `tacticIndex` (restricted to tactics
     * in `restrictTo`) at a position. */
   def chaseAt(tacticIndex: TacticIndex = new DefaultTacticIndex)
              (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = "chaseAt" by ((pos: Position, seq: Sequent) => {
@@ -246,7 +255,7 @@ object TactixLibrary extends HilbertCalculus
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(l: Loop, p) => (Nil, DLBySubst.safeabstractionb::loop::Nil)
-        case Box(ode: ODESystem, p) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::Nil)
+        case Box(ode: ODESystem, p) => (TactixLibrary.solve::Nil, DLBySubst.safeabstractionb::odeR::solve::dWPlus::Nil)
         case f@Not(_)      if f.isFOL => (Nil, Nil)
         case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
         case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
@@ -270,13 +279,13 @@ object TactixLibrary extends HilbertCalculus
 
     def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
       val solvers = Idioms.mapSubpositions(pos, seq, {
-        case (Box(ODESystem(_, _), q), pp: Position) if pp.isTopLevel =>
-          if (q.isFOL) Some(odeR(pp))
-          else Some(chase(pp ++ PosInExpr(1::Nil)) & odeR(pp))
-        case (Box(ODESystem(_, _), q), pp: Position) if !pp.isTopLevel => Some(solve(pp))
+        case (Box(ODESystem(_, _), q), pp: Position) =>
+          if (pp.isTopLevel) {
+            if (q.isFOL) Some(odeR(pp))
+            else Some(chase(pp ++ PosInExpr(1::Nil)) & odeR(pp))
+          } else Some(solve(pp))
         case _ => None
       })
-
       solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
@@ -297,7 +306,7 @@ object TactixLibrary extends HilbertCalculus
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWPlus, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
           (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
   }

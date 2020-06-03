@@ -20,6 +20,7 @@ import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
 
 /**
@@ -393,7 +394,7 @@ object ODEInvariance {
         val (pr, cofactor, rem) = try {
           findDbx(ode, dom, cf,false)
         } catch {
-          case _: IllegalArgumentException => return None
+          case ex: ProofSearchFailure => return None
         }
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
@@ -712,6 +713,14 @@ object ODEInvariance {
     */
   private lazy val dbxCond: ProvableSig = remember("((-g_())*y_()+0)*(z_())^2 + y_()*(2*z_()^(2-1)*(g_()/2*z_()+0))=0".asFormula,QE,namespace).fact
 
+  private lazy val dbxEqOne: ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, "1*1^2=1".asFormula)
+  /** The ghost variables */
+  private val gvy = Variable("dbxy_")
+  private val gvz = Variable("dbxz_")
+  private val zero = Number(0)
+  private val one = Number(1)
+  private val two = Number(2)
+
   def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
     val dim = ps.length
@@ -722,10 +731,6 @@ object ODEInvariance {
       case Some(e) => throw new TacticInapplicableFailure("dgVdbx only applicable to box ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
-
-    val zero = Number(0)
-    val one = Number(1)
-    val two = Number(2)
 
     // Turns the vector into sum_i p_i^2
     val sump = ps.map(p => Times(p,p)).reduce(Plus)
@@ -748,16 +753,11 @@ object ODEInvariance {
     val cofactorPre = Plus(Gco.map(ts => ts.map(t=>Times(t,t):Term).reduceLeft(Plus)).reduceLeft(Plus),one)
     val qco = if (negate) Neg(cofactorPre) else cofactorPre
 
-    /** The ghost variable */
-    val gvy = "dbxy_".asVariable
-    /** Another ghost variable */
-    val gvz = "dbxz_".asVariable
-
     //Construct the diff ghost y' = -qy
     val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco), gvy))
 
     //Diff ghost z' = qz/2
-    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, Number(2)), gvz))
+    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, two), gvz))
 
     val gtz = Greater(gvy, zero)
     val pcy = And(gtz,
@@ -797,13 +797,14 @@ object ODEInvariance {
                 //Extra domain constraint from diffInd step
                 hideL('Llast) &
                 //Get rid of dbxy_=1 assumption
-                exhaustiveEqL2R('Llast) &
+                exhaustiveEqL2R(hide=true)('Llast) &
                 // TODO: The next 3 steps do not work with Dconstify
                 //useAt(leftMultId)(pos++PosInExpr(0::Nil)) &
                 //useAt(pr,PosInExpr(1::Nil))(pos) &
                 //DebuggingTactics.debug("First Vdbx QE",true) &
                 //p=0 must be true initially
-                (QE & done | DebuggingTactics.done("Vdbx condition must hold in the beginning")),
+                QE & DebuggingTactics.done("Vdbx condition must hold in the beginning")
+                ,
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
                   // or the negated version ((-g)y+0)p + y(p') >= 0
@@ -820,7 +821,7 @@ object ODEInvariance {
                     ,
                     // This is the only "real" use of QE.
                     DebuggingTactics.debug("Second Vdbx QE",debugTactic) &
-                      hideR(1) & (QE & done | DebuggingTactics.done("Vdbx condition must be preserved"))
+                      hideR(1) & QE & DebuggingTactics.done("Vdbx condition must be preserved")
                   )
                 )
               )
@@ -831,7 +832,7 @@ object ODEInvariance {
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
             diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
               <(
-              hideL('Llast) & QE,
+              hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
               cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
             )
         )
@@ -1184,7 +1185,7 @@ object ODEInvariance {
     remember("-abs(f())>=0<->f()=0".asFormula,QE,namespace)
   private lazy val uniqMin =
     remember("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
-      useAt(Ax.UniqIff)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
+      useAt(Ax.UniqIff, PosInExpr(0::Nil))(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
       namespace)
 
   private lazy val refAbs =
@@ -1312,7 +1313,7 @@ object ODEInvariance {
               (prop,Darboux(true, cofactor, pr))
             }
             catch {
-              case e: BelleThrowable => (False, Triv())
+              case e: ProofSearchFailure => (False, Triv())
             }
 
           if(context.isDefined)
@@ -1335,7 +1336,7 @@ object ODEInvariance {
             val (pr, cofactor, rem) = findDbx(ode, dom, prop)
             (prop, Darboux(false, cofactor, pr))
           } catch {
-            case _: IllegalArgumentException => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
+            case _: ProofSearchFailure => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
           }
 
         if(context.isDefined)
@@ -1614,11 +1615,10 @@ object ODEInvariance {
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
-    if(TacticHelper.names(seq).contains(nilpotentSolveTimeVar))
+    if (StaticSemantics.symbols(dom).exists(_.name == nilpotentSolveTimeVar.name))
       throw new IllFormedTacticApplicationException("nilpotent solve should not be called twice (solution already available from prior call)")
 
-    val t = nilpotentSolveTimeVar //explicitly non-idempotent
-    //val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
+    val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)

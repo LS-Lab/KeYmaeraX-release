@@ -114,7 +114,7 @@ class SequentialInterpreterTests extends TacticTestBase {
         |==> 1:  x=5	Equal})""".stripMargin
   }
 
-  "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
+  "Saturate combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = SaturateTactic(
           OnAll(andR(SuccPos(0))) |
@@ -162,6 +162,15 @@ class SequentialInterpreterTests extends TacticTestBase {
     failAfter(1 second) {
       proveBy("x>=0 ==> x>=0".asSequent, SaturateTactic(label("A label"))).subgoals.loneElement shouldBe "x>=0 ==> x>=0".asSequent
     }
+  }
+
+  "Repeat combinator" should "repeat the specified number of times" in {
+    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*0).subgoals.loneElement shouldBe "x=2&y=3&z=4 ==> x=2".asSequent
+    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*1).subgoals.loneElement shouldBe "x=2, y=3&z=4 ==> x=2".asSequent
+    proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*2).subgoals.loneElement shouldBe "x=2, y=3, z=4 ==> x=2".asSequent
+    val ex = the [IllFormedTacticApplicationException] thrownBy proveBy("x=2&y=3&z=4 ==> x=2".asSequent, andL('L)*3)
+    ex should have message "RepeatTactic failed on repetition 3"
+    ex.getCause should have message "Position tactic andL('L) is not applicable anywhere in antecedent"
   }
 
   "+ combinator" should "saturate with at least 1 repetition" in {

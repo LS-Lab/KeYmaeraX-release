@@ -534,7 +534,7 @@ object Real {
 object Predicate {
 
   abstract sealed class pred[A]
-  final case class Seq[A](a: Unit => seq[A]) extends pred[A]
+  final case class SeqPred[A](a: Unit => seq[A]) extends pred[A]
 
   abstract sealed class seq[A]
   final case class Empty[A]() extends seq[A]
@@ -548,7 +548,7 @@ object Predicate {
   }
 
   def bind[A, B](x0: pred[A], f: A => pred[B]): pred[B] = (x0, f) match {
-    case (Seq(g), f) => Seq[B](((_: Unit) => applya[A, B](f, g(()))))
+    case (SeqPred(g), f) => SeqPred[B](((_: Unit) => applya[A, B](f, g(()))))
   }
 
   def member[A : HOL.equal](xa0: seq[A], x: A): Boolean = (xa0, x) match {
@@ -558,22 +558,22 @@ object Predicate {
   }
 
   def eval[A : HOL.equal](x0: pred[A]): A => Boolean = x0 match {
-    case Seq(f) => ((a: A) => member[A](f(()), a))
+    case SeqPred(f) => ((a: A) => member[A](f(()), a))
   }
 
   def holds(p: pred[Unit]): Boolean = (eval[Unit](p)).apply(())
 
-  def bot_pred[A]: pred[A] = Seq[A](((_: Unit) => Empty[A]()))
+  def bot_pred[A]: pred[A] = SeqPred[A](((_: Unit) => Empty[A]()))
 
-  def single[A](x: A): pred[A] = Seq[A](((_: Unit) => Insert[A](x, bot_pred[A])))
+  def single[A](x: A): pred[A] = SeqPred[A](((_: Unit) => Insert[A](x, bot_pred[A])))
 
   def sup_pred[A](x0: pred[A], x1: pred[A]): pred[A] = (x0, x1) match {
-    case (Seq(f), Seq(g)) =>
-      Seq[A](((_: Unit) =>
+    case (SeqPred(f), SeqPred(g)) =>
+      SeqPred[A](((_: Unit) =>
         (f(()) match {
           case Empty() => g(())
-          case Insert(x, p) => Insert[A](x, sup_pred[A](p, Seq[A](g)))
-          case Join(p, xq) => adjunct[A](Seq[A](g), Join[A](p, xq))
+          case Insert(x, p) => Insert[A](x, sup_pred[A](p, SeqPred[A](g)))
+          case Join(p, xq) => adjunct[A](SeqPred[A](g), Join[A](p, xq))
         })))
   }
 

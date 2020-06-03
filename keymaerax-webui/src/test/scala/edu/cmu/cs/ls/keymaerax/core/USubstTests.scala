@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, SystemTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest, USubstTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.macros._
 import DerivationInfoAugmentors._
 import testHelper.KeYmaeraXTestTags
@@ -32,6 +32,7 @@ import scala.language.postfixOps
 @SummaryTest
 @UsualTest
 @USubstTest
+@CheckinTest
 class USubstTests extends SystemTestBase {
   val randomTrials = 50
   val randomComplexity = 20

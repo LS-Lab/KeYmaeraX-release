@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.infrastruct
 
 import edu.cmu.cs.ls.keymaerax.core.{CoreException, Formula}
-import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
+import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, SummaryTest}
 import org.scalatest.BeforeAndAfterAll
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors.FormulaAugmentor
@@ -22,7 +22,7 @@ import DerivationInfoAugmentors._
   * @see [[AxiomInfo.theKey]]
   * @see [[AxiomInfo.unifier]]
   */
-@SummaryTest
+@CheckinTest
 class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   private val randomTrials = 2
@@ -34,7 +34,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
     new DerivedAxiomsTests().execute("The DerivedAxioms prepopulation procedure should not crash")
   }
 
-  /** Match given axiom directly against the given instance. */
+  /** Match given axiom directly against the given instance in full. */
   private def matchDirect(axiom: AxiomInfo, instance: Formula): Boolean = {
     val ax: Formula = axiom.formula
     val u = UnifyUSCalculus.matcherFor(axiom)(ax, instance)

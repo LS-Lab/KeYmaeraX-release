@@ -6,10 +6,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.BigDecimalTool
 
 import scala.collection.immutable._
 
+@SlowTest
 class TaylorModelTests extends TacticTestBase {
 
   "coarsenTimesBounds" should "work" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
@@ -287,8 +289,8 @@ class TaylorModelTests extends TacticTestBase {
           |                  0.0013888888885 * s^6 +
           |                  0.000083333333335 * (s^5 * r0()) +
           |                  Rem0 &
-          |                  s * (-5592960036 * 10^-15) <= Rem0 &
-          |                  Rem0 <= s * (4899578817 * 10^-14)
+          |                  s * ((-523314372) * 10^(-14)) <= Rem0 &
+          |                  Rem0 <= s * (486364251 * 10^(-13))
           |                ) &
           |                (
           |                  y =
@@ -300,8 +302,8 @@ class TaylorModelTests extends TacticTestBase {
           |                  0.000083333333335 * (s^5 * r2()) +
           |                  0.00069444444425 * s^6 +
           |                  Rem1 &
-          |                  s * (-5502467913 * 10^-15) <= Rem1 &
-          |                  Rem1 <= s * (1273627598 * 10^-14)
+          |                  s * ((-522695019) * 10^(-14)) <= Rem1 &
+          |                  Rem1 <= s * (124607299 * 10^(-13))
           |                ) &
           |                z =
           |                0.01 * r2() + 0.5 * s + 0.01 * (s * r1()) +
@@ -312,8 +314,8 @@ class TaylorModelTests extends TacticTestBase {
           |                0.00041666666665 * (s^4 * r2()) +
           |                0.000083333333335 * (s^5 * r1()) +
           |                Rem2 &
-          |                s * (-5520549521 * 10^-15) <= Rem2 &
-          |                Rem2 <= s * (1998817301 * 10^-14)
+          |                s * ((-522822616) * 10^(-14)) <= Rem2 &
+          |                Rem2 <= s * (196958106 * 10^(-13))
           |              )
           |    }
           |  ]
@@ -354,19 +356,19 @@ class TaylorModelTests extends TacticTestBase {
           |              (
           |                x =
           |                1 + 0.01 * r0() + 0 * r1() + 1.5 * s + 0.01 * (s * r1()) +
-          |                -0.5 * s^2 +
+          |                (-0.5) * s^2 +
           |                0 * (s * r0()) +
           |                Rem0 &
-          |                s * (-1887591619 * 10^-11) + 0.00 <= Rem0 &
-          |                Rem0 <= s * (2940096162 * 10^-12) + 0.00
+          |                s * ((-189040551) * 10^(-10)) + 0.00 <= Rem0 &
+          |                Rem0 <= s * (296823505 * 10^(-11)) + 0.00
           |              ) &
           |              y =
-          |              0.5 + 0 * r0() + 0.01 * r1() + -1 * s + 0 * (s * r1()) +
-          |              -1.5 * s^2 +
-          |              -0.02 * (s * r0()) +
+          |              0.5 + 0 * r0() + 0.01 * r1() + (-1) * s + 0 * (s * r1()) +
+          |              (-1.5) * s^2 +
+          |              (-0.02) * (s * r0()) +
           |              Rem1 &
-          |              s * (-1875812641 * 10^-11) + 0.00 <= Rem1 &
-          |              Rem1 <= s * (9399926235 * 10^-12) + 0.00
+          |              s * ((-188091640) * 10^(-10)) + 0.00 <= Rem1 &
+          |              Rem1 <= s * (945066145 * 10^(-11)) + 0.00
           |            )
           |    }
           |  ]

@@ -414,14 +414,19 @@ private object EqualityTactics {
     case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " does not point to a valid position in " + sequent.prettyString)
   })
 
+  private def protectPos(tac : DependentPositionTactic) : DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+    if(sequent.sub(pos).isDefined) tac(pos)
+    else skip //todo: skip or throw a catchable failure?
+  })
+
   /** Expands all special functions (abs/min/max). */
   lazy val expandAll: BelleExpr = "expandAll" by ((s: Sequent) => {
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
-        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(abs(pos)))
-        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
-        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
+        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(protectPos(abs)(pos)))
+        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
         case _ => None
       })
     )
@@ -431,9 +436,9 @@ private object EqualityTactics {
   lazy val expandAllAt: DependentPositionTactic = "expandAllAt" by ((pos: Position, seq: Sequent) => {
     val tactics =
       Idioms.mapSubpositions(pos, seq, {
-        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(abs(pos)))
-        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
-        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
+        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(protectPos(abs)(pos)))
+        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
+        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(protectPos(minmax)(pos)))
         case _ => None
       })
     tactics.reduceOption(_ & _).getOrElse(skip)

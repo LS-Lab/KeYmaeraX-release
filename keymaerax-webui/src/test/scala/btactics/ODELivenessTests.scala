@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, SuccPositio
 import edu.cmu.cs.ls.keymaerax.pt.ElidingProvable
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.ODELiveness._
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Nil
 
@@ -252,7 +253,6 @@ class ODELivenessTests extends TacticTestBase {
 
     val pr = proveBy(fml,
       implyR(1) &
-
         //Keep compactness assumption around, wrap into tactic
         cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
           skip,
@@ -264,21 +264,20 @@ class ODELivenessTests extends TacticTestBase {
           skip,
           hideL(-2) & cohideOnlyR(2) & ODE(1)
         ) &
-
         // Wrap into tactic
         cut("\\exists t t=0".asFormula) <( existsL(-4) , cohideR(2) & QE) &
         vDG("t'=1".asDifferentialProgram)(1) &
         // same, actually p = 1
         cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-5) , cohideR(2) & QE) &
-
         // Not great
         kDomainDiamond("t > 2/3*p".asFormula)(1)
           <(
           skip,
-          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <( ODE(1), hideL(-3) & hideL(-2) & ODE(1)) //todo: ODE fix! ignore box stuff in antecedents
+          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <(
+            hideL(-3) & hideL(-2) & ODE(1),
+            hideL(-3) & hideL(-2) & ODE(1)) //todo: ODE fix! ignore box stuff in antecedents
           )
         &
-
         // Not great either: nasty ODE order!
         cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
           odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
@@ -545,7 +544,7 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove RAL goal reachability" in withQE { _ =>
+  it should "prove RAL goal reachability" in withMathematica { _ =>
     val seq = "v>0, vl<=v, v<=vh, a=0, eps>0, k*eps^2-2*eps < k*(x^2+y^2)-2*x, k*(x^2+y^2)-2*x < k*eps^2-2*eps, y>0 ==> <{x'=-v*k*y, y'=v*(k*x-1), v'=0 & v>=0}>( x^2+y^2<=eps^2 & (vl<=v & v<=vh) )".asSequent
 
     val pr = proveBy(seq,
@@ -577,7 +576,7 @@ class ODELivenessTests extends TacticTestBase {
       // As long as the goal is not yet reached, y will stay positive
       cut("[{x'=-v*k*y,y'=v*(k*x-1),v'=0&!x^2+y^2<=eps^2}] y > oldhalfy".asFormula)<(
         skip,
-        hideR(1) & compatCuts(1) & ODE(1) //compatCuts super useful here
+        hideR(1) & compatCuts(1) & hideL(-10) & ODE(1) //todo: Z3 gets stuck here for whatever reason
       ) &
       // dV("2*oldv*oldhalfy".asTerm)(1)
       dVAuto(1)
@@ -677,7 +676,7 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "not try univariate removal when inapplicable (1)" in withQE { _ =>
+  it should "not try univariate removal when inapplicable (1)" taggedAs IgnoreInBuildTest in withQE { _ =>
     val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=a^2*v, t'=1}> t > 1000".asFormula
 
     // In this case, the univariate reduction should never fire
@@ -689,7 +688,7 @@ class ODELivenessTests extends TacticTestBase {
     // "because odeReduce failed to autoremove: {a'=a^2*v,v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]a*a+v*v<=f_(|a,v|) or this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]2*(a*(a^2*v)+v*(-v^2*a))<=a_(|y_,z_,a,v|)*(a*a+v*v)+b_(|y_,z_,a,v|)"
   }
 
-  it should "not try univariate removal when inapplicable (2)" in withQE { _ =>
+  it should "not try univariate removal when inapplicable (2)" taggedAs IgnoreInBuildTest in withQE { _ =>
     val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=1, t'=1}> t > 1000".asFormula
 
     // In this case, the univariate reduction should never fire

@@ -4,12 +4,14 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, Find}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.infrastruct.AntePosition
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 
 import scala.collection.immutable
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.bellerophon.PositionLocator]]
  */
+@SummaryTest
 class LocateTests extends TacticTestBase {
 
   "'L" should "locate the sole applicable formula in antecedent" in {

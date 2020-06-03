@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -721,7 +722,9 @@ private object DifferentialTactics extends Logging {
         val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
         val constFacts = sequent.ante.flatMap(FormulaTools.conjuncts).
           filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
-        constFacts.map(diffCut(_)(pos) <(skip, V(pos) & prop & done)).getOrElse(skip) & DW(pos) & G(pos)
+        constFacts.map(diffCut(_)(pos) &
+          // diffCut may not introduce the cut if it is already in there
+          Idioms.doIf(_.subgoals.size == 2)(<(skip, V(pos) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
       } else {
         useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
@@ -915,8 +918,8 @@ private object DifferentialTactics extends Logging {
     case Some(Box(sys@ODESystem(ode, q), _)) =>
       lazy val recurseODE = ODE(useOdeInvariant = false, introduceStuttering = true,
         //@note abort if unchanged
-        assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
-          failureMessage
+        DebuggingTactics.assert((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
+          failureMessage, new BelleNoProgress(_)
         )(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
             case Some(ODESystem(_, extendedQ)) =>
@@ -1134,8 +1137,8 @@ private object DifferentialTactics extends Logging {
       }
     )(
       //@note aborts with error if the ODE was left unchanged -- invariant generators failed
-      assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0 :: Nil)).contains(sys),
-        failureMessage
+      DebuggingTactics.assert((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0 :: Nil)).contains(sys),
+        failureMessage, new BelleNoProgress(_)
       )(pos) &
         ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
           case Some(ODESystem(_, extendedQ)) =>
@@ -1147,33 +1150,35 @@ private object DifferentialTactics extends Logging {
         })) (pos ++ PosInExpr(0 :: Nil))
     )
 
-    if (StaticSemantics.symbols(seq).contains(ODEInvariance.nilpotentSolveTimeVar)) {
-      diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
-    } else seq.sub(pos) match {
-      case Some(b@Box(sys: ODESystem, _)) =>
-        // Try to prove postcondition invariant. If we don't have an invariant generator, try hard immediately.
-        (if (ToolProvider.invGenTool().isEmpty) odeInvariant(tryHard = true, useDw = true)(pos) & done
-         else odeInvariant()(pos) & done) |
-        // Counterexample check
-        cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
-          // Some additional cases
-          //(solve(pos) & ?(timeoutQE)) |
-          doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
-          ODEInvariance.dRI(pos) |
-          invCheck(
-            //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
-            //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
-            //  "ODE invariant generation skipped.")
-            //@note ODEInvariance not yet proving all invariance questions: try if Pegasus finds simpler invariants
-            odeWithInvgen(sys, InvariantGenerator.pegasusInvariants,
-              //@note ran out of options on generator error
-              (ex: Throwable) => throw new BelleNoProgress("Detected an invariant-only question at " +
-                b.prettyString + " but ODE automation was unable to prove it.", ex)
-            )(pos)
-            ,
-            odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
-          )(pos)
-        )
+    seq.sub(pos) match {
+      case Some(b@Box(sys@ODESystem(_, q), _)) =>
+        if (StaticSemantics.symbols(q).exists(_.name == ODEInvariance.nilpotentSolveTimeVar.name)) {
+          diffWeakenPlus(pos) & timeoutQE & DebuggingTactics.done("The strongest ODE invariant has already been added to the domain constraint. Try dW/dWplus/solve the ODE, expand definitions, and simplify the arithmetic for QE to make progress in your proof.")
+        } else {
+          // Try to prove postcondition invariant. If we don't have an invariant generator, try hard immediately.
+          (if (ToolProvider.invGenTool().isEmpty) odeInvariant(tryHard = true, useDw = true)(pos) & done
+          else odeInvariant()(pos) & done) |
+            // Counterexample check
+            cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
+              // Some additional cases
+              //(solve(pos) & ?(timeoutQE)) |
+              doIfElse((_: ProvableSig) => Configuration.get[Boolean](Configuration.Keys.ODE_USE_NILPOTENT_SOLVE).getOrElse(true))(ODEInvariance.nilpotentSolve(true)(pos), done) |
+                ODEInvariance.dRI(pos) |
+                invCheck(
+                  //@todo fail immediately or try Pegasus? at the moment, Pegasus seems to not search for easier invariants
+                  //assertT(_ => false ,"Detected an invariant-only question at "+seq.sub(pos)+ " but ODE automation was unable to prove it." +
+                  //  "ODE invariant generation skipped.")
+                  //@note ODEInvariance not yet proving all invariance questions: try if Pegasus finds simpler invariants
+                  odeWithInvgen(sys, InvariantGenerator.pegasusInvariants,
+                    //@note ran out of options on generator error
+                    (ex: Throwable) => throw new BelleNoProgress("Detected an invariant-only question at " +
+                      b.prettyString + " but ODE automation was unable to prove it.", ex)
+                  )(pos)
+                  ,
+                  odeWithInvgen(sys, TactixLibrary.differentialInvGenerator, (_: Throwable) => Stream[GenProduct]())(pos)
+                )(pos)
+            )
+        }
       case Some(e) => throw new TacticInapplicableFailure("ODE automation only applicable to box ODEs, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
@@ -1349,6 +1354,11 @@ private object DifferentialTactics extends Logging {
   lazy val dbxEqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() = 0 -> z_() = 0".asFormula,QE,namespace).fact
   lazy val dbxNeqRw: ProvableSig = remember("(p() & y_() > 0) & y_() * z_() != 0 -> z_() != 0".asFormula,QE,namespace).fact
 
+  private lazy val dbxEqOne: ProvableSig = ProvableSig.proveArithmetic(BigDecimalQETool, "1*1^2=1".asFormula)
+  private val zero = Number(0)
+  private val one = Number(1)
+  private val two = Number(2)
+
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
@@ -1372,7 +1382,7 @@ private object DifferentialTactics extends Logging {
       case Greater(_,_) => dbxGtRw
       case Equal(_,_) => dbxEqRw
       case NotEqual(_,_) => dbxNeqRw
-      case _ => ???
+      case _ =>  ??? // caught by exception in previous case match
     }
 
     val isOpen = property match {
@@ -1383,29 +1393,21 @@ private object DifferentialTactics extends Logging {
 
     //Skip ghosts if input cofactor was just 0
     //Could also do more triviality checks like -0, 0+0 etc.
-    if (qco == Number(0)) {
+    if (qco == zero) {
       //println("dgDbx automatically used dI for trivial cofactor")
       if(isOpen) openDiffInd(pos) else dI('full)(pos)
     }
     else {
       /** The ghost variable */
-      val gvy = "dbxy_".asVariable
-      require(!StaticSemantics.vars(system).contains(gvy), "fresh ghost " + gvy + " in " + system.prettyString)
-      //@todo should not occur anywhere else in the sequent either...
+      val gvy = TacticHelper.freshNamedSymbol("dbxy_".asVariable,seq)
 
       /** Another ghost variable */
-      val gvz = "dbxz_".asVariable
-      require(!StaticSemantics.vars(system).contains(gvz), "fresh ghost " + gvz + " in " + system.prettyString)
-      //@todo should not occur anywhere else in the sequent either...
+      val gvz = TacticHelper.freshNamedSymbol("dbxz_".asVariable,seq)
 
       //Construct the diff ghost y' = -qy
       val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco), gvy))
       //Diff ghost z' = qz/2
-      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, Number(2)), gvz))
-
-      val zero = Number(0)
-      val one = Number(1)
-      val two = Number(2)
+      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, two), gvz))
 
       //Postcond:
       //For equalities, != 0 works too, but the > 0 works for >=, > as well
@@ -1428,7 +1430,7 @@ private object DifferentialTactics extends Logging {
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
             diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
               <(
-              hideL('Llast) & QE,
+              hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
               cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
             )
         )
@@ -1486,7 +1488,6 @@ private object DifferentialTactics extends Logging {
 
     val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
 
-    val zero = Number(0)
     //The special max term
     val barrierAlg = FuncOf(maxF, Pair(Times(barrier, barrier), lie))
     val barrierFml = Greater(barrierAlg, zero)
@@ -1504,12 +1505,10 @@ private object DifferentialTactics extends Logging {
 
     // Same as dgDbx but bypasses extra checks since we already know
     /** The ghost variable */
-    val gvy = "dbxy_".asVariable
-    /** Another ghost variable */
-    val gvz = "dbxz_".asVariable
+    val gvy = TacticHelper.freshNamedSymbol("dbxy_".asVariable,seq)
 
-    val one = Number(1)
-    val two = Number(2)
+    /** Another ghost variable */
+    val gvz = TacticHelper.freshNamedSymbol("dbxz_".asVariable,seq)
 
     //Postcond:
     val gtz = Greater(gvy, zero)
@@ -1525,7 +1524,7 @@ private object DifferentialTactics extends Logging {
     })
 
     //Diff ghost z' = qz/2
-    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
+    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, two), gvz))
       pre &
       DifferentialTactics.dG(dey, None)(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
@@ -1547,7 +1546,7 @@ private object DifferentialTactics extends Logging {
           existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
           // Closes z > 0 invariant with another diff ghost
           diffInd('diffInd)(pos) <(
-            hideL('Llast) & QE & done,
+            hideL('Llast) & exhaustiveEqL2R(hide=true)('Llast)*2 & useAt(dbxEqOne)(pos) & closeT,
             cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond) & done
           )
       )
@@ -1568,7 +1567,6 @@ private object DifferentialTactics extends Logging {
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
     // p' = q p + r
     val (q,r) = domQuoRem(lie,p,dom)
-    val zero = Number(0)
 
     //The sign of the remainder for a Darboux argument
     //e.g., tests r >= 0 for p'>=gp (Darboux inequality)
@@ -1594,7 +1592,7 @@ private object DifferentialTactics extends Logging {
 
     if(pr.isProved)
       return (pr,q,r)
-    if(q != Number(0)) {
+    if(q != zero) {
       // Fall-back check if straightforward DI would work
       // This is needed, because one can e.g. get p'>=0 without having r>=0 when domain constraints are possible
       // todo: is it possible to improve the Darboux (in)equality generation heuristic to automatically cover this case?
@@ -1613,14 +1611,14 @@ private object DifferentialTactics extends Logging {
       catch {
         //todo: Instead of eliminating quantifiers, Z3 will throw an exception that isn't caught by ?(timeoutQE)
         //This is a workaround
-        case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] =>  proveBy(False, skip)
+        case e : BelleThrowable if e.getCause.isInstanceOf[SMTQeException] => proveBy(False, skip)
       }
       if(pr.isProved)
-        return (pr,Number(0),lie)
+        return (pr,zero,lie)
     }
 
     if(strict)
-      throw new TacticInapplicableFailure("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
+      throw new ProofSearchFailure("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
 
     (pr,q,r)
   }
@@ -1647,7 +1645,7 @@ private object DifferentialTactics extends Logging {
     val (pr,cofactor,rem) = try {
       findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
     } catch {
-      case ex: IllegalArgumentException => throw new TacticInapplicableFailure("Unable to find Darboux polynomial", ex)
+      case ex: ProofSearchFailure => throw new TacticInapplicableFailure("dbx auto unable to automatically determine Darboux cofactors.", ex)
     }
 
     starter & dgDbx(cofactor)(pos)
