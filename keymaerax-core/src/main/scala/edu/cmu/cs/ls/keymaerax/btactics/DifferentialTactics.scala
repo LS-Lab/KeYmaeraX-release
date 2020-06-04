@@ -208,6 +208,12 @@ private object DifferentialTactics extends Logging {
     }
   }
 
+  @Tactic(names="Differential Invariant",
+    premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
+    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    displayLevel="all", revealInternalSteps = true)
+  val dI: DependentPositionTactic = anon ((pos:Position) => diffInd('cex)(pos))
+
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
     *
@@ -685,13 +691,25 @@ private object DifferentialTactics extends Logging {
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
   //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
-  lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("Dvariable") {
-    private val OPTIMIZED = true
-    private val axiom: AxiomInfo = Ax.DvariableCommutedAxiom
-    private val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(1::Nil))
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+  @Tactic(names="x'",
+    conclusion="(x)' = x",
+    displayLevel="browse")
+  lazy val Dvariable: DependentPositionTactic = anon ( (pos:Position, sequent:Sequent) => {
 
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+    val OPTIMIZED = true
+    val axiom: AxiomInfo = Ax.DvariableCommutedAxiom
+    val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(1::Nil))
+
+    /** Finds the first parent of p in f that is a formula. Returns p if f at p is a formula. */
+    @tailrec
+    def formulaPos(f: Formula, p: PosInExpr): PosInExpr = {
+      f.sub(p) match {
+        case Some(_: Formula) => p
+        case _ => formulaPos(f, p.parent)
+      }
+    }
+
+    sequent.sub(pos) match {
         case Some(Differential(x: Variable)) =>
           if (OPTIMIZED) {
             logger.debug("Dvariable " + keyPart + " on " + x)
@@ -710,17 +728,7 @@ private object DifferentialTactics extends Logging {
         case Some(e) => throw new TacticInapplicableFailure("Dvariable only applicable to Differentials, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
       }
-    }
-
-    /** Finds the first parent of p in f that is a formula. Returns p if f at p is a formula. */
-    @tailrec
-    private def formulaPos(f: Formula, p: PosInExpr): PosInExpr = {
-      f.sub(p) match {
-        case Some(_: Formula) => p
-        case _ => formulaPos(f, p.parent)
-      }
-    }
-  }
+  })
 
   /**
    * Unpacks the evolution domain of an ODE at time zero. Useful for proofs that rely on contradictions with other
@@ -1135,7 +1143,7 @@ private object DifferentialTactics extends Logging {
                   dgDbxAuto(afterCutPos) & done |
                     odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
                 case Some(PegasusProofHint(_, Some("FirstIntegral"))) =>
-                  dI()(afterCutPos) & done |
+                  diffInd()(afterCutPos) & done |
                     odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
                 case Some(PegasusProofHint(_, _)) => odeInvariant(tryHard = true, useDw = false)(afterCutPos) & done
                 case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(afterCutPos) & done
@@ -1446,7 +1454,7 @@ private object DifferentialTactics extends Logging {
     //Could also do more triviality checks like -0, 0+0 etc.
     if (qco == zero) {
       //println("dgDbx automatically used dI for trivial cofactor")
-      if(isOpen) openDiffInd(pos) else dI('full)(pos)
+      if(isOpen) openDiffInd(pos) else diffInd('full)(pos)
     }
     else {
       /** The ghost variable */
@@ -2118,7 +2126,7 @@ private object DifferentialTactics extends Logging {
     * @see [[FormulaTools.closure]]
     *
     */
-  def dCClosure(cutInterior:Boolean = true): DependentPositionTactic = "dCClosure" by ((pos:Position,seq: Sequent) => {
+  def dCClosure(cutInterior:Boolean): DependentPositionTactic = "dCClosure" by ((pos:Position,seq: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dCClosure expects to be called on top-level succedent")
 
     val (ode,p_fml,post) = seq.sub(pos) match {
@@ -2185,6 +2193,12 @@ private object DifferentialTactics extends Logging {
       )
     )
   })
+
+  @Tactic(names="dC Closure",
+    premises="Γ |- [x'=f(x)&Q∧closure(P)]interior(P), Δ ;; Γ |- interior(P)",
+    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    displayLevel="browse", revealInternalSteps = true)
+  val dCClosure : DependentPositionTactic = anon ((pos:Position) => dCClosure(true)(pos))
 
   /** Lemmas that can be proved only for specific instances of ODEs. */
   case class ODESpecific(ode: DifferentialProgram, variant: String => String = (x => x + "_")) {

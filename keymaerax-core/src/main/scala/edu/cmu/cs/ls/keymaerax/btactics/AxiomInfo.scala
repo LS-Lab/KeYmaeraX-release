@@ -345,10 +345,11 @@ object DerivationInfoRegistry {
   //<editor-fold desc="Differentials">
   /** Differential cases of [[allInfo]] */
   private[this] lazy val differentialInfos: List[DerivationInfo] = List(
-    new PositionTacticInfo("Dvariable"
+    new PositionTacticInfo("Dvariable" //@Tactic-fied
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
       , {case () => DifferentialTactics.Dvariable}),
-    PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
+
+    new PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
   )
   //</editor-fold>
 
@@ -789,7 +790,7 @@ object DerivationInfoRegistry {
     // new PositionTacticInfo("dgZeroPolynomial",
     //  "dgZeroPolynomial",
     //  {case () => DifferentialTactics.dgZeroPolynomial}),
-    new PositionTacticInfo("dI",
+    new PositionTacticInfo("dI", //@Tactic-fied
       RuleDisplayInfo("Differential Invariant",
         (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
         /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/),
@@ -835,7 +836,7 @@ object DerivationInfoRegistry {
         List((List("&Gamma;"), List("a <= trm", "trm <= b"), true), (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false))
       )
       , {case () => IntervalArithmeticV2.intervalCut}),
-    new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}),
+    new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}), //@Tactic-fied
 
     // assertions and messages
     InputTacticInfo("print"
