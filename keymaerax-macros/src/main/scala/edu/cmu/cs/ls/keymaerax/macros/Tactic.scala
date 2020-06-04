@@ -241,7 +241,6 @@ class TacticImpl(val c: whitebox.Context) {
           case AntePos(sname, pname) =>
             if (args.isEmpty) {
               if (isCoreAnon) {
-                println("DEBUG: CoreLeft 2")
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic")
               } else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
@@ -303,7 +302,7 @@ class TacticImpl(val c: whitebox.Context) {
         case (Nil, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic""")
         case (Nil, _: AntePos) =>
           val r =
-            if(isCoreAnon) {println("DEBUG: CoreLeft 1");  tq"""edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic"""}
+            if(isCoreAnon) tq"""edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic"""
             else tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic"""
           (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
         case (Nil, _: SuccPos) =>
@@ -362,7 +361,7 @@ class TacticImpl(val c: whitebox.Context) {
                   c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
                 assemble(mods, codeName, inArgs, NoPos(), rhs, isDef = true, isCoreAnon)
             }
-          case rhs => c.abort(c.enclosingPosition, "@Tactic expects def <name> (args): <T> = f(...), got: " + rhs)
+          case rhs => c.abort(c.enclosingPosition, "@Tactic expects def <name> (args): <T> = anon(...), got: " + rhs)
         }
       case (valDecl: ValDef) :: Nil =>
         valDecl match {
@@ -378,7 +377,6 @@ class TacticImpl(val c: whitebox.Context) {
                 if (!isTactic(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
                 val positions = getPositioning(params)
-                println(s"DEBUG: Assembling val $declName")
                 assemble(mods, declName, Nil, positions, rhs, isDef = false, isCoreAnon)
                case rhs =>
                  val isCoreAnon =
@@ -391,7 +389,7 @@ class TacticImpl(val c: whitebox.Context) {
                    c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
                  assemble(mods, declName, Nil, NoPos(), rhs, isDef = false, isCoreAnon)
                }
-          case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected val of tactic, got: " + valDecl)
+          case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected function application anon(..) on right-hand side of val, got: " + valDecl)
           case rhs => c.abort(c.enclosingPosition, "@Tactic expects val <name> (args): <T> = f(...), got: " + rhs)
         }
       case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val or def declaration got: " + t.head + " of type: " + t.head.getClass())
