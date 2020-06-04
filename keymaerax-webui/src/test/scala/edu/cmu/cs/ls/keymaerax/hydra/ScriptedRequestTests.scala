@@ -134,7 +134,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  "Step misapplication" should "give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
+  "Step misapplication" should "FEATURE_REQUEST: give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -143,7 +143,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", implyR(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Tactic implyR(2) failed, because internally:\n[Bellerophon Runtime] Position Fixed(2,None,true) may point outside the positions of the goal ElidingProvable(Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply})"))
+    response should have ('msg ("TODO the following does not include implyR: Position Fixed(2,None,true) may point outside the positions of the goal ElidingProvable(Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply})"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -151,7 +151,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  it should "report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
+  it should "FEATURE_REQUEST: report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables Real x, v; End. Problem x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -160,7 +160,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(1, 1::Nil))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Tactic choiceb(1.1) failed, because internally:\n[Bellerophon Runtime] Tactic choiceb(1.1) is not applicable for\n    [v:=v;]<{x'=v&true}>x>=0\nat position 1.1\nbecause No substitution found by unification, try to patch locally with own substitution"))
+    response should have ('msg ("TODO the following is not a readable message: No substitution found by unification, fix axiom key or try to patch locally with own substitution"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -177,7 +177,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Tactic choiceb(2) failed, because internally:\n[Bellerophon Runtime] Tactic choiceb(2) is not applicable for\n    position outside sequent: expected -1...-0 or 1...1\nat position 2\nbecause requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
+    response should have ('msg ("Unable to create dependent tactic 'choiceb', cause: requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -195,7 +195,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1::Nil))
     response shouldBe a [ErrorResponse]
     //@note dG immediately calls an ANON tactic, which is the one that actually raises the error
-    response should have ('msg ("Tactic dG(\"{y'=0*y+2}\",1.1) failed, because internally:\n[Bellerophon Runtime] Tactic ANON(1.1) is not applicable for\n    [v:=v;]<{x'=v&true}>x>=0\nat position 1.1\nbecause Some([v:=v;]<{x'=v&true}>x>=0) (of class scala.Some)"))
+    response should have ('msg ("dG only applicable to box ODEs, but got [v:=v;]<{x'=v&true}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, _, leaves, _, _, _, _) =>
@@ -336,7 +336,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      Declaration(Map(("f", None) -> (None, Real, Some("3+5".asTerm), null))))
+      Declaration(Map(("f", None) -> (None, Real, None, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f()>0").
       getResultingResponses(t).loneElement
@@ -348,7 +348,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
-      Declaration(Map(("f", None) -> (Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, Some("3+5".asTerm), null))))
+      Declaration(Map(("f", None) -> (Some(edu.cmu.cs.ls.keymaerax.core.Unit), Real, None, Some("3+5".asTerm), null))))
 
     val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement
