@@ -236,12 +236,7 @@ class TacticImpl(val c: whitebox.Context) {
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, (($provable, $pos1, $pos2) =>  $acc))""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic")
       }
       def aiToVal(ai: ArgInfo): ValDef = {
-        val name = ai match {
-          case a: VariableArg => a.name case a: FormulaArg => a.name case n: NumberArg => n.name
-          case a: StringArg => a.name case a: TermArg => a.name case a: SubstitutionArg => a.name
-          case a: ExpressionArg => a.name case g: GeneratorArg => g.name case a: OptionArg => a.name
-          case a: PosInExprArg => a.name
-        }
+        val name = ai.name
         val argTy = typeName(ai)
         ValDef(Modifiers(), name, tq"""$argTy""", EmptyTree)
       }
@@ -272,7 +267,7 @@ class TacticImpl(val c: whitebox.Context) {
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
       // @TODO: Add to info constructors
       val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
-      case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
+        case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
       val (info, rhsType) = (inputs, positions) match {
           // @TODO: BElleExpr or DependentTActic
         case (Nil, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr""")
@@ -324,6 +319,7 @@ class TacticImpl(val c: whitebox.Context) {
                   c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
                 assemble(mods, codeName, inArgs, NoPos(), rhs, isDef = true)
             }
+          case rhs => c.abort(c.enclosingPosition, "@Tactic expects def <name> (args): <T> = f(...), got: " + rhs)
         }
       case (valDecl: ValDef) :: Nil =>
         valDecl match {
@@ -344,6 +340,7 @@ class TacticImpl(val c: whitebox.Context) {
                  assemble(mods, declName, Nil, NoPos(), rhs, isDef = false)
                }
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected val of tactic, got:" + valDecl)
+          case rhs => c.abort(c.enclosingPosition, "@Tactic expects val <name> (args): <T> = f(...), got: " + rhs)
         }
       case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val or def declaration got: " + t.head + " of type: " + t.head.getClass())
     }
