@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
@@ -187,12 +188,12 @@ private object DLBySubst {
     * Introduces a universal quantifier when applied in the succedent/existential quantifier in the antecedent,
     * which is already skolemized if applied at top-level; quantifier remains unhandled in non-top-level context.
     *
-    * @example{{{
+    * @example {{{
     *    x_0=x+1 |- [{x_0:=x_0+1;}*]x_0>0
     *    ----------------------------------assignEquality(1)
     *        |- [x:=x+1;][{x:=x+1;}*]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *    x_0=x+1, [{x_0:=x_0+1;}*]x_0>0) |-
     *    ------------------------------------ assignEquality(-1)
     *           [x:=x+1;][{x:=x+1;}*]x>0 |-
@@ -366,11 +367,12 @@ private object DLBySubst {
     *
     * @param invariant The invariant.
     */
-
-  def loopRule(invariant: Formula): DependentPositionWithAppliedInputTactic = "loopRule" byWithInput(invariant, (pos, sequent) => {
+  @Tactic(premises = "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
+    conclusion = "Γ |- [a<sup>*</sup>]P, Δ")
+  def loopRule(invariant: Formula): DependentPositionTactic /*DependentPositionWithAppliedInputTactic*/ = anon {(pos:Position, seq:Sequent) =>
     //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
-    require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
+    require(seq(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
     //val alast = AntePosition(sequent.ante.length)
     cutR(invariant)(pos.checkSucc.top) <(
         ident & label(BelleLabels.initCase),
@@ -380,7 +382,7 @@ private object DLBySubst {
           ident & label(BelleLabels.useCase)
         )
       )
-  })
+  }
 
   /** @see [[TactixLibrary.throughout]] */
   def throughout(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "throughout" byWithInput(invariant, (pos, sequent) => {
@@ -539,7 +541,7 @@ private object DLBySubst {
   /**
    * Turns an existential quantifier into an assignment.
     *
-    * @example{{{
+    * @example {{{
    *         |- [t:=f;][x:=t;]x>=0
    *         -------------------------assignbExists(f)(1)
    *         |- \exists t [x:=t;]x>=0
@@ -560,7 +562,7 @@ private object DLBySubst {
   /**
     * Turns a universal quantifier into an assignment.
     *
-    * @example{{{
+    * @example {{{
     *         [t:=f;][x:=t;]x>=0 |-
     *         -------------------------assignbAll(f)(-1)
     *         \forall t [x:=t;]x>=0 |-
