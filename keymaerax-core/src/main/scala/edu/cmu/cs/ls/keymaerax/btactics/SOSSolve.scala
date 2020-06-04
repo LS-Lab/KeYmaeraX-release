@@ -111,7 +111,22 @@ object SOSSolve {
     }
   }
 
-  def witnessSOS(degree: Int, timeout: Option[Int] = None, sosTimer: Timer = NoTimer, witnessTimer: Timer = NoTimer) : DependentTactic = {
+  val lexicographicVariableOrdering : Ordering[Variable] = new Ordering[Variable] {
+    def compare(x: Variable, y: Variable): Int = x.name.compareTo(y.name)
+  }
+
+  def augmentedVariableOrdering[A](augment: Variable => A, variableOrdering: Ordering[Variable])(implicit ordA: Ordering[A]) = new Ordering[Variable] {
+    def compare(x: Variable, y: Variable): Int = {
+      implicit val vo = variableOrdering
+      (augment(x), x).compareTo((augment(y), y))
+    }
+  }
+
+  val preferAuxiliaryVariableOrdering : Ordering[Variable] =
+    augmentedVariableOrdering(v => if (v.name.startsWith("wit_")) 0 else 1:Int,
+      lexicographicVariableOrdering)
+
+  def witnessSOS(degree: Int, variableOrdering: Ordering[Variable], timeout: Option[Int] = None, sosTimer: Timer = NoTimer, witnessTimer: Timer = NoTimer) : DependentTactic = {
     val name = "witnessSOS"
     name by { (seq: Sequent) =>
       require(seq.succ.isEmpty, name + " requires succedent to be empty")
@@ -119,7 +134,8 @@ object SOSSolve {
         case Equal(p, Number(n)) if n.compareTo(0) == 0 => p
         case fml => throw new IllegalArgumentException(name + " requires only formulas of the form 'poly = 0' in the antecedent but got " + fml)
       }.toList
-      val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct
+      val vars = polys.flatMap(StaticSemantics.freeVars(_).toSet).distinct.sorted(variableOrdering)
+      println("variableOrdering: " + vars.mkString(" "))
       val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
       val (sos, cofactors, lininst) = sosTimer.time {
         sosSolveTool.sosSolve(polys, vars, degree, timeout) match {

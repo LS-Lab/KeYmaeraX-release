@@ -63,7 +63,9 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     TaylorModelTactics.Timing.tic()
     PolynomialArithV2.ring
     TaylorModelTactics.Timing.toc("Initialized PolynomialArithV2")
-    proveBy(prob1, prop & PolynomialArith.prepareArith & SOSSolve.witnessSOS(1)) shouldBe 'proved
+    proveBy(prob1, prop &
+      PolynomialArith.prepareArith &
+      SOSSolve.witnessSOS(1, SOSSolve.lexicographicVariableOrdering)) shouldBe 'proved
   }
 
   def isConstant(t: Term) : Boolean = t match {
@@ -95,6 +97,27 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
   }
   def denominators(seq: Sequent) : Seq[Term] = (seq.ante++seq.succ).flatMap(denominators)
 
+  private lazy val ringX = PolynomialArithV2.ring.ofTerm("x".asVariable)
+  def naturalExponentCheck(t: Term) : Unit = t match {
+    case Power(a, b) => ringX ^ PolynomialArithV2.ring.ofTerm(b); naturalExponentCheck(a)
+    case t: BinaryCompositeTerm => naturalExponentCheck(t.left); naturalExponentCheck(t.right)
+    case t: UnaryCompositeTerm => naturalExponentCheck(t.child)
+    case t: AtomicTerm => ()
+    case t: FuncOf => naturalExponentCheck(t.child)
+    case _ => ???
+  }
+  def naturalExponentCheck(fml: Formula) : Unit = fml match {
+    case fml: BinaryCompositeFormula => naturalExponentCheck(fml.left); naturalExponentCheck(fml.right)
+    case fml: ComparisonFormula => naturalExponentCheck(fml.left); naturalExponentCheck(fml.right)
+    case fml: UnaryCompositeFormula => naturalExponentCheck(fml.child)
+    case fml: AtomicFormula => ()
+    case fml: PredOf => naturalExponentCheck(fml.child)
+    case fml: PredicationalOf => naturalExponentCheck(fml.child)
+    case _ =>
+      ???
+  }
+  def naturalExponentCheck(seq: Sequent) : Unit = (seq.ante++seq.succ).foreach(naturalExponentCheck)
+
   lazy val preprocess = SaturateTactic((useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(1) & notR(1))|!skip) &
     fullSimpTac(faxs = composeIndex(defaultFaxs, chaseIndex), taxs = emptyTaxs) &
     SaturateTactic(onAll(?(alphaRule | betaRule | existsL('L) | closeF)
@@ -111,6 +134,18 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     import java.util.Calendar
 
     val logPath = Configuration.path(Configuration.Keys.SOSSOLVE_LOG_PATH)
+    val logfilename = logPath + Configuration(Configuration.Keys.SOSSOLVE_LOG_INPUT)
+    val logtimeout = Configuration(Configuration.Keys.SOSSOLVE_LOG_TIMEOUT).toInt
+    val variableOrdering = Configuration(Configuration.Keys.SOSSOLVE_VARIABLE_ORDERING) match {
+      case "lexicographic" =>
+        SOSSolve.lexicographicVariableOrdering
+      case "preferAuxiliary" =>
+        SOSSolve.preferAuxiliaryVariableOrdering
+      case k => throw new IllegalArgumentException("Unknown key for variable ordering: " + k)
+    }
+    var lineCount = 0
+    QELogger.processLog(_ => Some(()), { _: Unit => lineCount = lineCount + 1 } , logfilename)
+
     val dateStr = new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(Calendar.getInstance.getTime)
 
     trait Status { val name: String; val message: String}
@@ -156,14 +191,14 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     val outfile = new java.io.File(outfileName)
 
     def isForall(fml: Formula) = fml.isInstanceOf[Forall]
-    def processEntry(degree: Int, timeout: Int)(entry: (String, Sequent, Sequent)) = entry match {
+    def processEntry(degree: Int, variableOrdering: Ordering[Variable], timeout: Int)(entry: (String, Sequent, Sequent)) = entry match {
       case (n, seq0, seq) =>
         val totalTimer = Timer()
         val qeTimer = Timer()
         val preprocTimer = Timer()
         val sosTimer = Timer()
         val witnessTimer = Timer()
-        println(i + "/3034 (" + n + "): " + seq.toString.replace('\n', ' '))
+        println(i + "/" + lineCount + "(" + n + "): " + seq.toString.replace('\n', ' '))
         i = i + 1
         print("trying QE...")
         val qeTry = qeTimer.time {
@@ -185,19 +220,22 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
             outofScopeQuantifier.inc()
           } else {
             try {
+              print("all exponents are")
+              preprocessed.subgoals.foreach(naturalExponentCheck)
+              println(" natural.")
               println(preprocessed.subgoals.length + " subgoal(s):")
               val res = for ((subgoal, subgoalN) <- preprocessed.subgoals.zipWithIndex) yield {
                 println("Subgoal " + subgoalN + ": " + subgoal.ante.mkString(", ") + subgoal.succ.mkString(" ==> ", ", ", ""))
                 val denoms = denominators(subgoal)
                 if (denoms.isEmpty)
-                  proveBy(subgoal, SOSSolve.witnessSOS(degree, Some(timeout), sosTimer, witnessTimer))
+                  proveBy(subgoal, SOSSolve.witnessSOS(degree, variableOrdering, Some(timeout), sosTimer, witnessTimer))
                 else {
                   println("strengthen assumptions for preprocessing of rational functions...")
                   val noRat = preprocTimer.time {
                     proveBy(Sequent(subgoal.ante ++ denoms.map(NotEqual(_, Number(0))), subgoal.succ),
                       PolynomialArith.ratTac & OnAll(preprocess))
                   }
-                  proveBy(noRat, OnAll(SOSSolve.witnessSOS(degree, Some(timeout), sosTimer, witnessTimer)))
+                  proveBy(noRat, OnAll(SOSSolve.witnessSOS(degree, variableOrdering, Some(timeout), sosTimer, witnessTimer)))
                 }
               }
               if (res.forall(_.isProved)) {
@@ -265,14 +303,12 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
         println("QE false  : " + qeFalse.count)
         println("QE timeout: " + qeTimeout.count)
       }
-    val logfilename = Configuration(Configuration.Keys.SOSSOLVE_LOG_INPUT)
-    val logtimeout = Configuration(Configuration.Keys.SOSSOLVE_LOG_TIMEOUT).toInt
 
 //    val seq = "==>\\forall F_ (F_!=0->F_^0=1)".asSequent
 //    processEntry(10, 600)(("test", seq, seq))
 
     withTemporaryConfig(Map(Configuration.Keys.DEBUG -> "false")){
-      QELogger.processLog(QELogger.parseStr, processEntry(10, logtimeout), logPath + logfilename)
+      QELogger.processLog(QELogger.parseStr, processEntry(10, variableOrdering, logtimeout), logfilename)
     }
   }
 
