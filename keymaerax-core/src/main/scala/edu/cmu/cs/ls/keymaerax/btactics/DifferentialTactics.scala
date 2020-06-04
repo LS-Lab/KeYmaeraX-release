@@ -1232,7 +1232,11 @@ private object DifferentialTactics extends Logging {
     * Given a formula of the form [ode]p<=q, produces two new subgoals of the forms [ode]p < q and  [ode]p=q.
     * @see http://nfulton.org/2017/01/14/Ghosts/#ghosts-for-closedclopen-sets
     * @author Nathan Fulton */
-  def splitWeakInequality : DependentPositionTactic = "splitWeakInequality" by ((pos: Position, seq: Sequent) => {
+  @Tactic(names="Split weak inequality",
+    premises="Γ |- [x'=f(x)&Q] p > q, Δ ;; Γ |- [x'=f(x)&Q] p = q, Δ",
+    conclusion="Γ |- [x'=f(x)&Q] p >= q, Δ",
+    displayLevel="browse")
+  val splitWeakInequality : DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val postcondition = seq.at(pos)._2 match {
       case Box(ODESystem(_,_), p) => p
       case _ => throw new TacticInapplicableFailure("splitWeakInequality is only applicable for ODE's with weak inequalities as post-conditions.")
@@ -1256,11 +1260,13 @@ private object DifferentialTactics extends Logging {
     )
   })
 
+  /* Deprecated. probably use dgDbx instead. */
+  @deprecated
   def dgZeroPolynomial: DependentPositionTactic = "dgZeroPolynomial" by ((pos: Position, seq: Sequent) => {
     val Box(ODESystem(system, constraint), property) = seq.sub(pos) match {
       case Some(b@Box(ODESystem(system, constraint), property)) => b
       case Some(e) => throw new TacticInapplicableFailure("dgZeroPolynomial only applicable to box ODEs, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+   case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
 
     val lhs = property match {
@@ -1289,7 +1295,8 @@ private object DifferentialTactics extends Logging {
     })
 
     /* construct the arguments ti diff aux:
-     * y' = -xPrimeDividedByX/2 * y
+     * Deprecated. Use dgDbx instead.
+    * y' = -xPrimeDividedByX/2 * y
      * x=0 <-> \exists y x*y^2=0 & y>0 */
     //@todo At some point I was not sure if this works for no exponent (i.e. x, x+x, x+x+x and so on b/c of the pattern matching in dgZero. But it does. So review dgZero and this to see what's up.
     val (ghostODE, ghostEqn) = (
@@ -1310,7 +1317,7 @@ private object DifferentialTactics extends Logging {
   })
 
   /** Proves properties of the form {{{x=0&n>0 -> [{x^n}]x=0}}}
-    * @todo make this happen by usubst.
+    * Deprecated. Use dgDbx instead.
     * */
   @deprecated
   def dgZeroMonomial: DependentPositionTactic = "dgZeroMonomial" by ((pos: Position, seq: Sequent) => {

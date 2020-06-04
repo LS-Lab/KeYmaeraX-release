@@ -774,19 +774,21 @@ object DerivationInfoRegistry {
     ),
 
     // Differential tactics
-    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}),
+    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}), //@Tactic-fied
     new PositionTacticInfo("ODE",
       "Auto",
       {case () => TactixLibrary.ODE}, revealInternalSteps = true),
     new PositionTacticInfo("odeInvC",
       "odeInvC",
       {case () => TactixLibrary.odeInvariantComplete}),
-    new PositionTacticInfo("dgZeroMonomial",
-      "dgZeroMonomial",
-      {case () => DifferentialTactics.dgZeroMonomial}),
-    new PositionTacticInfo("dgZeroPolynomial",
-      "dgZeroPolynomial",
-      {case () => DifferentialTactics.dgZeroPolynomial}),
+    // Not @Tactic-fied because deprecated.
+    // new PositionTacticInfo("dgZeroMonomial",
+    //  "dgZeroMonomial",
+    //  {case () => DifferentialTactics.dgZeroMonomial}),
+    // Not @Tactic-fied because deprecated.
+    // new PositionTacticInfo("dgZeroPolynomial",
+    //  "dgZeroPolynomial",
+    //  {case () => DifferentialTactics.dgZeroPolynomial}),
     new PositionTacticInfo("dI",
       RuleDisplayInfo("Differential Invariant",
         (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
