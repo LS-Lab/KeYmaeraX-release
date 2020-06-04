@@ -1298,7 +1298,7 @@ object ODELiveness {
     saveBox(pos) & dDR(target)(pos) < (
       // Remove the saveBox to reduce clutter
       hideL('Llast),
-      DifferentialTactics.dCClosure()(pos)<(
+      DifferentialTactics.dCClosure(pos)<(
         hideL('Llast) & skip , compatCuts(pos) & hideL('Llast) )
     )
   })

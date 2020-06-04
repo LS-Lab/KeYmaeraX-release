@@ -314,7 +314,7 @@ object DerivationInfoRegistry {
       ),
       _ => DifferentialTactics.dgBarrier
     ),
-    PositionTacticInfo("dRI",
+    PositionTacticInfo("dRI", //@Tactic-fied
       RuleDisplayInfo(
         "(Conj.) Differential Radical Invariants",
         /* conclusion */ (List("p*=0"), List("[{x′=f(x) & Q}]p=0")),
@@ -645,7 +645,7 @@ object DerivationInfoRegistry {
       TactixLibrary.existsL, TacticIndex.existsRStutter,
       ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
     )}),
-    PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}),
+    PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}), //@Tactic-fied
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true, revealInternalSteps = true),
     new TacticInfo("explore", "explore", {case () => (gen:Generator.Generator[GenProduct]) => gen match {
@@ -672,7 +672,7 @@ object DerivationInfoRegistry {
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}),
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}),
-    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),
+    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),  //@Tactic-fied
     //@todo universal closure may come with list of named symbols
     new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}),
 

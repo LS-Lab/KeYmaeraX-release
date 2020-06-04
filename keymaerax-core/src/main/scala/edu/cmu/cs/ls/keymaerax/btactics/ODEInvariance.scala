@@ -20,6 +20,7 @@ import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
 
@@ -208,7 +209,7 @@ object ODEInvariance {
               //This is a special case where we don't want full DI, because we already have everything
               cohideOnlyR(pos) &
               Dconstify(
-                dI('diffInd)(1) <(
+                diffInd('diffInd)(1) <(
                   useAt(geq)(1) & orR(1) & closeId,
                   cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
                   useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
@@ -585,7 +586,7 @@ object ODEInvariance {
           Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
         dC(LessEqual(left,right))(pos)<(
           dW(pos) & QE & done,
-          dI('full)(pos)
+          diffInd('full)(pos)
         )
     }
   })
@@ -776,7 +777,7 @@ object ODEInvariance {
     val dpPre = dot_prod(matvec_prod(Gco,ps),ps)
     val dp = replaceODEfree(sump,dpPre,ode)
     if(lie == Number(0))
-      dC(cutp)(pos) <( skip, dI('full)(pos))
+      dC(cutp)(pos) <( skip, diffInd('full)(pos))
 
     else
     //Cuts
@@ -850,7 +851,11 @@ object ODEInvariance {
     * This requires a top-level postcondition which rearranges to be a conjunction of equalities
     * @see Khalil Ghorbal, Andrew Sogokon, and André Platzer. [[https://doi.org/10.1007/978-3-319-10936-7_10 Invariance of conjunctions of polynomial equalities for algebraic differential equations]].
     */
-  def dRI : DependentPositionTactic = "dRI" by ((pos:Position,seq:Sequent) => {
+  @Tactic(names="(Conj.) Differential Radical Invariants",
+    premises="Γ, Q |- p*=0",
+    conclusion="Γ |- [x'=f(x) & Q}]p=0, Δ",
+    displayLevel="browse")
+  val dRI : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dRI only applicable in top-level succedent")
 
     val (sys, post) = seq.sub(pos) match {
@@ -1692,7 +1697,7 @@ object ODEInvariance {
       finish,
       // dRI directly is actually a lot slower than the dC chain even with naive dI
       // dRI('Rlast)
-      cuts.foldLeft(skip)((t, f) => dC(f)('Rlast) < (t, dI('full)('Rlast))) & dI('full)('Rlast)
+      cuts.foldLeft(skip)((t, f) => dC(f)('Rlast) < (t, diffInd('full)('Rlast))) & diffInd('full)('Rlast)
 
       // this does the "let" once rather than on every dI -- doesn't help speed much
       //Dconstify(
