@@ -337,7 +337,7 @@ object Ax extends Logging {
     key = "0", recursor = "*", unifier = "full")
   val assignbAxiom = coreAxiom("[:=] assign")
   @Axiom("[:=]=", conclusion = "__[x:=e]P__↔∀x(x=e→P)", displayLevel = "all",
-    key = "0", recursor = "*;0.1", unifier = "surjlinearpretend")
+    key = "0", recursor = "0.1;*", unifier = "surjlinearpretend")
   val assignbeq = coreAxiom("[:=] assign equality")
   @Axiom("[:=]", conclusion = "__[x:=x]P__↔P")
   val selfassignb = coreAxiom("[:=] self assign")
@@ -1571,7 +1571,8 @@ object Ax extends Logging {
     * @Derived from [:=] assign equality, quantifier dualities
     * @Derived by ":= assign dual" from "[:=] assign equality exists".
     */
-  @Axiom("<:=>", key = "0", recursor = "*;0.1")
+  @Axiom("<:=>", conclusion = "__<x:=e>P__↔∃x(x=e∧P)", displayLevel = "all",
+    key = "0", recursor = "0.1;*")
   lazy val assigndEquality = derivedAxiom("<:=> assign equality",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
