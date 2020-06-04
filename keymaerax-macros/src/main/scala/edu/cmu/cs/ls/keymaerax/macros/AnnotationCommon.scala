@@ -102,6 +102,7 @@ object AnnotationCommon {
       case VariableArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
       case NumberArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
       case StringArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.StringArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case PosInExprArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.PosInExprArg(${literal(name)}, ${literals(allowsFresh)})"""
       case SubstitutionArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
       case OptionArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.OptionArg(${convAI(arg)})"""
       case FormulaArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""

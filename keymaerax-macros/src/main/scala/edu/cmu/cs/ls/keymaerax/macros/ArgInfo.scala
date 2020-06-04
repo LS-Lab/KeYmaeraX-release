@@ -45,6 +45,11 @@ case class StringArg (override val name: String, override val allowsFresh: List[
 case class SubstitutionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "subst"
 }
+
+case class PosInExprArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
+  val sort = "posinexpr"
+}
+
 case class OptionArg(arg: ArgInfo) extends ArgInfo {
   val name: String = arg.name
   val sort: String = "option[" + arg.sort + "]"

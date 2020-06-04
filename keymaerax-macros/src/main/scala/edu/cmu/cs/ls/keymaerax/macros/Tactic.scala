@@ -166,6 +166,7 @@ class TacticImpl(val c: whitebox.Context) {
             case tq"""Number""" => NumberArg(v.name.decodedName.toString)
             case tq"""Variable""" => VariableArg(v.name.decodedName.toString)
             case tq"""String""" => StringArg(v.name.decodedName.toString)
+            case tq"""PosInExpr""" => PosInExprArg(v.name.decodedName.toString)
             case tq"""Substitution""" => SubstitutionArg(v.name.decodedName.toString)
             case tq"""Option[$t]""" =>
               val vd = ValDef(v.mods, v.name, t, v.rhs)
@@ -196,6 +197,7 @@ class TacticImpl(val c: whitebox.Context) {
         case _: TermArg => tq"edu.cmu.cs.ls.keymaerax.core.Term"
         case _: SubstitutionArg => tq"edu.cmu.cs.ls.keymaerax.core.Subst"
         case _: ExpressionArg => tq"edu.cmu.cs.ls.keymaerax.core.Expression"
+        case _: PosInExprArg => tq"edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr"
         case OptionArg(ai) => tq"scala.Option[${typeName(ai)}]"
         case ListArg(name, elementSort, allowsFresh) =>
           c.abort(c.enclosingPosition, "List arguments in tactics not yet supported")
@@ -238,6 +240,7 @@ class TacticImpl(val c: whitebox.Context) {
           case a: VariableArg => a.name case a: FormulaArg => a.name case n: NumberArg => n.name
           case a: StringArg => a.name case a: TermArg => a.name case a: SubstitutionArg => a.name
           case a: ExpressionArg => a.name case g: GeneratorArg => g.name case a: OptionArg => a.name
+          case a: PosInExprArg => a.name
         }
         val argTy = typeName(ai)
         ValDef(Modifiers(), name, tq"""$argTy""", EmptyTree)
