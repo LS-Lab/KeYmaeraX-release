@@ -53,13 +53,13 @@ trait HybridProgramCalculus {
     *          G |- [a]B, D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *   genUseLbl:        genShowLbl:
     *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
     *   ------------------------------------generalize("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
-    * @example{{{
+    * @example {{{
     *   genUseLbl:                      genShowLbl:
     *   |- a=2 -> [z:=3;][x:=2;]x>1     x>1 |- [y:=x;]y>1
     *   -------------------------------------------------generalize("x>1".asFormula)(1, 1::1::Nil)
@@ -80,13 +80,13 @@ trait HybridProgramCalculus {
     *   G |- [{a}*]p, D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *   use:          init:         step:
     *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
     *   ------------------------------------------------I("x>1".asFormula)(1)
     *   x>2 |- [{x:=x+1;}*]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *   use:               init:              step:
     *   x>1, y>0 |- x>0    x>2, y>0 |- x>1    x>1, y>0 |- [x:=x+y;]x>1
     *   ---------------------------------------------------------------I("x>1".asFormula)(1)
@@ -94,8 +94,9 @@ trait HybridProgramCalculus {
     * }}}
     * @param invariant The loop invariant `I`.
     * @note Currently uses I induction axiom, which is unsound for hybrid games.
+    * @note Beware that the order of premises for hybrid games is use, step, init.
     */
-  @Tactic(premises = "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
+  @Tactic(premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ", revealInternalSteps = true)
   def loop(invariant: Formula)  : DependentPositionTactic = anon {(pos:Position) => DLBySubst.loop(invariant)(pos) }
 
@@ -105,12 +106,12 @@ trait HybridProgramCalculus {
     *   ------------------iG (where y is new)
     *        G |- p(x), D
     * }}}
-    * @example{{{
+    * @example {{{
     *         |- [y_0:=y;]x>0
     *         ----------------discreteGhost("y".asTerm)(1)
     *         |- x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *         |- [z:=2;][y:=5;]x>0
     *         ---------------------discreteGhost("0".asTerm, Some("y".asVariable))(1, 1::Nil)
     *         |- [z:=2;]x>0

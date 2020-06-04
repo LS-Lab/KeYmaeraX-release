@@ -201,12 +201,12 @@ protected object FOQuantifierTactics {
 
   /**
    * Generalizes existential quantifiers, but only at certain positions. All positions have to refer to the same term.
-   * @example{{{
+   * @example {{{
    *           \exists z z=a+b |-
    *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: Nil)(AntePosition(0))
    *                 a+b = a+b |-
    * }}}
-   * @example{{{
+   * @example {{{
    *           \exists z z=z |-
    *           ----------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: PosInExpr(1::Nil) :: Nil)(AntePosition(0))
    *               a+b = a+b |-
@@ -255,11 +255,11 @@ protected object FOQuantifierTactics {
    * @param x The universally quantified variable to introduce.
    * @param t The term to generalize.
    * @return The position tactic.
-   * @example{{{\forall z \forall x x^2 >= -z^2
+   * @example {{{\forall z \forall x x^2 >= -z^2
    *            ------------------------------- universalGenT(z, f())
    *            \forall x x^2 >= -f()^2
    * }}}
-   * @example{{{\forall z \forall x x^2 >= -z^2
+   * @example {{{\forall z \forall x x^2 >= -z^2
    *            ------------------------------- universalGenT(z, y+5)
    *            \forall x x^2 >= -(y+5)^2
    * }}}
@@ -306,12 +306,12 @@ protected object FOQuantifierTactics {
   /**
    * Computes the universal closure of the formula at the specified position. Uses the provided order of quantifiers.
    * Reverse alphabetical order for non-mentioned variables (for all variables if order == Nil).
-   * @example{{{
+   * @example {{{
    *           |- \forall a forall z forall x (x>0 & a=2 & z<5)
    *         ---------------------------------------------------universalClosure(Variable("a")::Nil)
    *           |- x>0 & a=2 & z<5
    * }}}
-   * @example{{{
+   * @example {{{
    *           |- \forall z forall x forall a (x>0 & a=2 & z<5)
    *         ---------------------------------------------------universalClosure()
    *           |- x>0 & a=2 & z<5

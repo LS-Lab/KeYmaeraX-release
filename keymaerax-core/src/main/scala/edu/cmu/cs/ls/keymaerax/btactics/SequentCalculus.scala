@@ -161,7 +161,7 @@ trait SequentCalculus {
   /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]])
     * Skolemization with bound renaming on demand.
     * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
-    * @example{{{
+    * @example {{{
     *     y>5   |- x^2>=0
     *     --------------------------allSkolemize(1)
     *     y>5   |- \forall x x^2>=0
@@ -277,7 +277,7 @@ trait SequentCalculus {
   /** Turn implication `a->b` on the right into an equivalence `a<->b`, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
   val equivifyR: CoreRightTactic = "equivifyR" coreby { (pr:ProvableSig, pos:SuccPosition) => pr(EquivifyRight(pos.checkTop), 0) }
   /** Modus Ponens: p&(p->q) -> q.
-    * @example{{{
+    * @example {{{
     *      p, q, G |- D
     *   ---------------- modusPonens
     *   p, p->q, G |- D

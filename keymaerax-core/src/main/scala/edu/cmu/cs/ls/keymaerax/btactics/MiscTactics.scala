@@ -402,7 +402,7 @@ object TacticFactory {
 
   /**
    * Creates named dependent tactics.
-   * @example{{{
+   * @example {{{
    *  "[:=] assign" by (pos => useAt(Ax.assignbAxiom)(pos))
    * }}}
    * @param name The tactic name.

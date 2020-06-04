@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax
  * An implementation of a lemma data base using files [[edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB]].
  * A factory [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory]] provides instances of lemma databases.
  *
- * @example{{{
+ * @example {{{
  * // prove a lemma
  * val proved = TactixLibrary.proveBy(
  *    Sequent(IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
@@ -24,7 +24,7 @@ package edu.cmu.cs.ls.keymaerax
  * }}}
  *
  * The lemma database returned by the factory can be configured.
- * @example{{{
+ * @example {{{
  *  LemmaDBFactory.setLemmaDB(new FileLemmaDB)
  *  val lemmaDB = LemmaDBFactory.lemmaDB
  * }}}

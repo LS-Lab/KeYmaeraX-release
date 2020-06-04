@@ -126,27 +126,27 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * or by equality assignment [x:=f();]p(||) <-> \forall x (x=f() -> p(||)) as a fallback.
     * Universal quantifiers are skolemized if applied at top-level in the succedent; they remain unhandled in the
     * antecedent and in non-top-level context.
-    * @example{{{
+    * @example {{{
     *    |- 1>0
     *    --------------------assignb(1)
     *    |- [x:=1;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *           1>0 |-
     *    --------------------assignb(-1)
     *    [x:=1;]x>0 |-
     * }}}
-    * @example{{{
+    * @example {{{
     *    x_0=1 |- [{x_0:=x_0+1;}*]x_0>0
     *    ----------------------------------assignb(1)
     *          |- [x:=1;][{x:=x+1;}*]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *    \\forall x_0 (x_0=1 -> [{x_0:=x_0+1;}*]x_0>0) |-
     *    -------------------------------------------------assignb(-1)
     *                           [x:=1;][{x:=x+1;}*]x>0 |-
     * }}}
-    * @example{{{
+    * @example {{{
     *    |- [y:=2;]\\forall x_0 (x_0=1 -> x_0=1 -> [{x_0:=x_0+1;}*]x_0>0)
     *    -----------------------------------------------------------------assignb(1, 1::Nil)
     *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
@@ -250,12 +250,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
     *   G |- [{x'=f(||)&H(||)}]p(||), D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *    |- [{x'=1}][x':=1;]x>0
     *    -----------------------DE(1)
     *    |- [{x'=1}]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *    |- [{x'=1, y'=x & x>0}][y':=x;][x':=1;]x>0
     *    -------------------------------------------DE(1)
     *    |- [{x'=1, y'=x & x>0}]x>0
@@ -390,12 +390,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
       *   G |- (x)'=f, D
       * }}}
       *
-      * @example{{{
+      * @example {{{
       *   |- x'=1
       *   ----------Dvariable(1, 0::Nil)
       *   |- (x)'=1
       * }}}
-      * @example{{{
+      * @example {{{
       *   |- [z':=1;]z'=1
       *   ------------------Dvariable(1, 1::0::Nil)
       *   |- [z':=1;](z)'=1

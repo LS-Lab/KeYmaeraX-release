@@ -211,12 +211,12 @@ private object DifferentialTactics extends Logging {
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
     *
-    * @example{{{
+    * @example {{{
    *    x>=5 |- x>=5    x>=5 |- [{x'=2}](x>=5)'
    *    ---------------------------------------DIRule(qeTool)(1)
    *    x>=5 |- [{x'=2}]x>=5
    * }}}
-   * @example{{{
+   * @example {{{
    *    x>=5 |- [x:=x+1;](true->x>=5&[{x'=2}](x>=5)')
    *    ---------------------------------------------DIRule(qeTool)(1, 1::Nil)
    *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
@@ -473,12 +473,12 @@ private object DifferentialTactics extends Logging {
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     *
-    * @example{{{
+    * @example {{{
     *         |- \exists y [{x'=2,y'=0*y+1}]x>0
     *         ---------------------------------- DG("{y'=0*y+1}".asDifferentialProgram)(1)
     *         |- [{x'=2}]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *         |- \exists y [{x'=2,y'=f()*y+g() & x>=0}]x>0
     *         --------------------------------------------- DG("{y'=f()*y+g()}".asDifferentialProgram)(1)
     *         |- [{x'=2 & x>=0}]x>0

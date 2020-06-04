@@ -69,17 +69,17 @@ trait DifferentialEquationCalculus {
     * Use special function old(.) to introduce a discrete ghost for the starting value of a variable that can be
     * used in the evolution domain constraint.
     *
-    * @example{{{
+    * @example {{{
     *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
     *         -----------------------------------------------diffCut("x>0".asFormula)(1)
     *         x>0 |- [{x'=2}]x>=0
     * }}}
-    * @example{{{
+    * @example {{{
     *         x>0, x_0=x |- [{x'=2&x>=x_0}]x>=0     x>0, x_0=x |- [{x'=2}]x>=x_0
     *         -------------------------------------------------------------------diffCut("x>=old(x)".asFormula)(1)
     *         x>0 |- [{x'=2}]x>=0
     * }}}
-    * @example{{{
+    * @example {{{
     *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0&x>=x_0}]x>=0
     *                x>0, v>=0 |- [{x'=v,v'=1}]v>=0
     *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0}]x>=x_0
@@ -118,22 +118,22 @@ trait DifferentialEquationCalculus {
     *                      ----------------------------------------------
     *                                  G |- [x'=f(x)&q(x)]p(x), D
     *                    }}}
-    * @example{{{
+    * @example {{{
     *         *
     *    ---------------------diffInd(qeTool, 'full)(1)
     *    x>=5 |- [{x'=2}]x>=5
     * }}}
-    * @example{{{
+    * @example {{{
     *    x>=5, true |- x>=5    true |- [{x':=2}]x'>=0
     *    --------------------------------------------diffInd(qeTool, 'diffInd)(1)
     *    x>=5 |- [{x'=2}]x>=5
     * }}}
-    * @example{{{
+    * @example {{{
     *    x>=5, true |- x>=5    x>=5, true |- [{x'=2}](x>=5)'
     *    ---------------------------------------------------diffInd(qeTool, 'none)(1)
     *    x>=5 |- [{x'=2}]x>=5
     * }}}
-    * @example{{{
+    * @example {{{
     *    x>=5 |- [x:=x+1;](true -> x>=5&2>=0)
     *    -------------------------------------diffInd(qeTool, 'full)(1, 1::Nil)
     *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
@@ -194,17 +194,17 @@ trait DifferentialEquationCalculus {
     * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
     * formulas are differential invariants. Fails if diffInd cannot prove invariants.
     *
-    * @example{{{
+    * @example {{{
     *         x>0 |- [{x'=2&x>0}]x>=0
     *         ------------------------diffInvariant("x>0".asFormula)(1)
     *         x>0 |- [{x'=2}]x>=0
     * }}}
-    * @example{{{
+    * @example {{{
     *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0
     *         ---------------------------------diffInvariant("x>old(x)".asFormula)(1)
     *                x>0 |- [{x'=2}]x>=0
     * }}}
-    * @example{{{
+    * @example {{{
     *         x>0, v>=0, x_0=x |- [{x'=v,v'=1 & v>=0&x>x_0}]x>=0
     *         ---------------------------------------------------diffInvariant("v>=0".asFormula, "x>old(x)".asFormula)(1)
     *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
@@ -220,12 +220,12 @@ trait DifferentialEquationCalculus {
     * openDiffInd: proves an inequality to be an invariant of a differential equation (by DIo, DW, DE, QE)
     *           For strict inequalities, it uses open diff ind (<,>)
     *
-    * @example{{{
+    * @example {{{
     *         *
     *    ---------------------openDiffInd(1)
     *    x^2>5 |- [{x'=x^3+x^4}]x^2>5
     * }}}
-    * @example{{{
+    * @example {{{
     *         *
     *    ---------------------openDiffInd(1)
     *    x^3>5 |- [{x'=x^3+x^4}]x^3>5
@@ -241,7 +241,7 @@ trait DifferentialEquationCalculus {
 
   /** DV: Differential Variant proves a formula to become true at some point after a differential equation.
     *
-    * @example{{{
+    * @example {{{
     *         *
     *    ------------------------- DV(1)
     *    a()>0 |- <{x'=a()}>x>=b()

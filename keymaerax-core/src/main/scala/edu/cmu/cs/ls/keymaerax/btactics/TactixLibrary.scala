@@ -390,22 +390,22 @@ object TactixLibrary extends HilbertCalculus
   /** GVR abstractionb: turns `[a]p` into `\forall BV(a) p` by universally quantifying over all variables modified in program `a`.
     * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
     * of that modality.
-    * @example{{{
+    * @example {{{
     *           |- \forall x x>0
     *         ------------------abstractionb(1)
     *           |- [x:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *           |- x>0 & z=1 -> [z:=y;]\forall x x>0
     *         --------------------------------------abstractionb(1, 1::1::Nil)
     *           |- x>0 & z=1 -> [z:=y;][x:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *           |- x>0
     *         ---------------abstractionb(1)
     *           |- [y:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *          x<=0  |- \forall y \forall z x<=z^2
     *         ------------------------------------abstractionb(1)
     *          x<=0  |- [y:=2;z:=z+1;]x<=z^2
@@ -575,13 +575,13 @@ object TactixLibrary extends HilbertCalculus
     *          G |- [a]B, D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *   cutShowLbl:      cutUseLbl:
     *   |- [x:=2;]x>1    |- [x:=2;](x>1 -> [y:=x;]y>1)
     *   -----------------------------------------------postCut("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
-    * @example{{{
+    * @example {{{
     *   cutShowLbl:      cutUseLbl:
     *   |- [x:=2;]x>1    |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)
     *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
@@ -681,7 +681,7 @@ object TactixLibrary extends HilbertCalculus
 
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term.
-    * @example{{{
+    * @example {{{
     *   maxcd = max(c,d) |- a+b <= maxcd+e
     *   ----------------------------------------abbrv(Variable("maxcd"))(1, 1::0::Nil)
     *                    |- a+b <= max(c, d) + e
@@ -690,7 +690,7 @@ object TactixLibrary extends HilbertCalculus
     * */
   def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position.
-    * @example{{{
+    * @example {{{
     *    x=0 |- 0*y=0, x+1>0
     *    ---------------------eqL2R(-1)(1)
     *    x=0 |- x*y=0, x+1>0

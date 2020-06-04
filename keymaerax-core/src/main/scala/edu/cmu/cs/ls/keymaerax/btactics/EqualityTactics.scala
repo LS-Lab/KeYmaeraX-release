@@ -123,7 +123,7 @@ private object EqualityTactics {
 
   /**
    * Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively.
-   * @example{{{
+   * @example {{{
    *    x=2, 2+y=7 |- 2+1<y, [x:=3;]x>0
    *    --------------------------------exhaustiveEqR2L(-1)
    *    x=2, x+y=7 |- x+1<y, [x:=3;]x>0
@@ -153,7 +153,7 @@ private object EqualityTactics {
 
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
-   * @example{{{
+   * @example {{{
    *    2=x, 2+y=7 |- 2+1<y, [x:=3;]x>0
    *    --------------------------------exhaustiveEqR2L(-1)
    *    2=x, x+y=7 |- x+1<y, [x:=3;]x>0
@@ -176,7 +176,7 @@ private object EqualityTactics {
   /**
    * Abbreviates a term `t` to a variable everywhere, except in places where some free variable of `t` is bound.
     *
-    * @example{{{
+    * @example {{{
    *   max_0 = max(c,d) |- a+b <= max_0+e
    *   ----------------------------------------abbrv("max(c,d)".asTerm)
    *                    |- a+b <= max(c, d) + e
@@ -216,7 +216,7 @@ private object EqualityTactics {
 
   /**
     * Abbreviates a term to a variable at a position.
-    * @example{{{
+    * @example {{{
     *   |- [x:=2;]\exists z (z=min(x,y) & z<=2)
     *   ---------------------------------------abbrvAt("min(x,y)".asTerm, Some("z".asVariable)(1,1::Nil)
     *   |- [x:=2;]min(x,y) <= 2
@@ -262,7 +262,7 @@ private object EqualityTactics {
 
   /**
    * Expands an absolute value function.
-   * @example{{{
+   * @example {{{
    *    x>=0&abs_0=x | x<0&abs_0=-x |- abs_0=5
    *    ---------------------------------------abs(1, 0::Nil)
    *                                |- abs(x)=5
@@ -335,7 +335,7 @@ private object EqualityTactics {
 
   /**
    * Expands min/max function.
-   * @example{{{
+   * @example {{{
    *    x>=y&max_0=x | x<y&max_0=y  |- max_0=5
    *    ------------------------------------------max(1, 0::Nil)
    *                                |- max(x,y)=5

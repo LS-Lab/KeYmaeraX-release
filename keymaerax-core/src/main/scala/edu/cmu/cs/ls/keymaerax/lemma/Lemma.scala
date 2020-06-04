@@ -87,7 +87,7 @@ object Lemma {
   * Lemmas are named Provables, supported by some evidence of how they came about.
   * The soundness-critical part in a lemma is its provable fact, which can only be obtained from the prover core.
  *
-  * @example{{{
+  * @example {{{
   * // prove a lemma
   * val proved = TactixLibrary.proveBy(
   *    Sequent(IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
