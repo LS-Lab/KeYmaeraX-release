@@ -1292,11 +1292,13 @@ trait UnifyUSCalculus {
     *
     * @see [[UnifyUSCalculus.CEat(Provable)]]
     */
-  def cutAt(repl: Expression): DependentPositionTactic = "cutAt" byWithInput(repl, (pos, sequent) => {
-    require(sequent.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + sequent)
-    val (ctx, _) = sequent.at(pos)
+  @Tactic(premises = "Γ |- C{repl}, Δ ;; Γ |- C{repl}→C{c}, Δ",
+    conclusion = "Γ |- C{c}, Δ")
+  def cutAt(repl: Expression): DependentPositionTactic = anon {(pos:Position, seq:Sequent) => {
+    require(seq.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + seq)
+    val (ctx, _) = seq.at(pos)
     cutLR(ctx(repl))(pos.top)
-  })
+  }}
 
 
   /*******************************************************************
@@ -1584,6 +1586,7 @@ trait UnifyUSCalculus {
             throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
           case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).symbols.intersect(vars.toSet).isEmpty =>
+            //@todo optimizable by using HilbertCalculus.allG?
             require(vars.size == 1, "Universal quantifier must not be block quantifier")
             //@note would also work with all distribute and all generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
@@ -2022,7 +2025,8 @@ trait UnifyUSCalculus {
 
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
     * Unlike [[TactixLibrary.tacticChase]] will not branch or use propositional rules, merely transform the chosen formula in place. */
-  lazy val chase: DependentPositionTactic = chase(3,3)
+  @Tactic()
+  lazy val chase: DependentPositionTactic = anon {(pos:Position) => chase(3,3)(pos)}
 
   /** Chase with bounded breadth and giveUp to stop.
     *
