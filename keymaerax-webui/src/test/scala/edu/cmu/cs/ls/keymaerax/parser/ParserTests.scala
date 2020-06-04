@@ -30,8 +30,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
 
 //  val parser = new KeYmaeraParser(false)
 //  val alpParser = parser.ProofFileParser
-  val x = Variable("x", None, Real)
-  val y = Variable("y", None, Real)
+  private val x = Variable("x", None, Real)
+  private val y = Variable("y", None, Real)
 
   "The problem parser" should "reject strings containing non-ASCII characters" in {
     def input(s: String) =
@@ -60,7 +60,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
       |End.
     """.stripMargin
     val entry = KeYmaeraXArchiveParser(input).loneElement
-    entry.defs.decls(("J", None))._3.value shouldBe "1>=0".asFormula
+    entry.defs.decls(("J", None))._4.value shouldBe "1>=0".asFormula
     entry.model shouldBe "J() -> [{x:=x+1;}*]J()".asFormula
   }
 
@@ -78,9 +78,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     """.stripMargin
     val entry = KeYmaeraXArchiveParser(input).loneElement
     inside (entry.defs.decls(("J", None))) {
-      case (domain, sort, expr, _) =>
+      case (domain, sort, argNames, expr, _) =>
         domain.value shouldBe Real
         sort shouldBe Bool
+        argNames shouldBe Some((("x", None), Real) :: Nil)
         expr.value shouldBe ".>=0".asFormula
     }
     entry.model shouldBe "J(x) -> [{x:=x+1;}*]J(x)".asFormula
@@ -101,9 +102,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     """.stripMargin
     val entry = KeYmaeraXArchiveParser(input).loneElement
     inside (entry.defs.decls(("J", None))) {
-      case (domain, sort, expr, _) =>
+      case (domain, sort, argNames, expr, _) =>
         domain.value shouldBe Tuple(Real, Real)
         sort shouldBe Bool
+        argNames shouldBe Some((("x", None), Real) :: (("y", None), Real) :: Nil)
         expr.value shouldBe "._0>=._1".asFormula
     }
     entry.model shouldBe "J(x,y) -> [{x:=x+1;}*]J(x,y)".asFormula
@@ -123,9 +125,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     """.stripMargin
     val entry = KeYmaeraXArchiveParser(input).loneElement
     inside (entry.defs.decls(("prg", None))) {
-      case (domain, sort, expr, _) =>
+      case (domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Trafo
+        argNames shouldBe 'empty
         expr.value shouldBe "x:=x+1;".asProgram
     }
     entry.model shouldBe "x>=0 -> [{prg;}*]x>=0".asFormula
@@ -314,10 +317,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
 
   it should "not parse any negative examples" in {
     val files =
-      ("finishparse.key", """<somewhere> Semantic analysis error
-                            |semantics: Expect unique names_index that identify a unique type.
-                            |ambiguous: x:Trafo and x:Real
-                            |symbols:   x, x""".stripMargin) ::
+      ("finishparse.key", """<somewhere> assertion failed: Cannot elaborate:
+                            |  Symbol x used with inconsistent kinds x:Trafo,x:Real
+                            |Found:    <unknown> at <somewhere>
+                            |Expected: <unknown>""".stripMargin) ::
       ("scolon1.key", "6:10 Unexpected token cannot be parsed\nFound:    > at 6:10") ::
       ("scolon2.key", "6:12 Unexpected token cannot be parsed\nFound:    = at 6:12") ::
       ("scolon3.key", "6:12 Unexpected token cannot be parsed\nFound:    > at 6:12") :: Nil
@@ -361,16 +364,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
       """.stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
-      """2:12 type analysis: <undefined>: A was declared as a function but must be a variable when it is assigned to or has a differential equation.
-        |Found:    Unit->Real Function at 2:12 to 2:15
-        |Expected: Variable of sort Real""".stripMargin
+      """<somewhere> assertion failed: Elaboration tried replacing A in literal bound occurrence inside A>=0->[x:=A;A:=2;]x>=0
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
   }
 
   /*
    *@TODO setup pretty-printer so that it can be parsed again.
   it should "parse pretty-prints of random formulas" in {
 	  val rand = RandomFormula
-	  
+
       for(i <- 1 to 5) {
         val left : Expr = rand.nextFormula(10)
         val print : String = KeYmaeraPrettyPrinter.stringify(left)
@@ -455,15 +458,17 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     val input = "Functions. B init() <-> (x>=2). B safe(R) <-> (.>=0). End. ProgramVariables. R x. End. Problem. init() -> [{x:=x+1;}*]safe(x) End."
     val entry = KeYmaeraXArchiveParser(input).loneElement
     inside (entry.defs.decls(("init", None))) {
-      case (domain, sort, expr, _) =>
+      case (domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Bool
+        argNames shouldBe Some(Nil)
         expr.value shouldBe "x>=2".asFormula
     }
     inside (entry.defs.decls(("safe", None))) {
-      case (domain, sort, expr, _) =>
+      case (domain, sort, argNames, expr, _) =>
         domain.value shouldBe Real
         sort shouldBe Bool
+        argNames shouldBe Some((("\\cdot", Some(0)), Real) :: Nil)
         expr.value shouldBe ".>=0".asFormula
     }
     entry.model shouldBe "init() -> [{x:=x+1;}*]safe(x)".asFormula
@@ -492,15 +497,17 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     KeYmaeraXParser.setAnnotationListener(listener)
     val entry = KeYmaeraXArchiveParser(input).loneElement
     inside (entry.defs.decls(("inv", None))) {
-      case (domain, sort, expr, _) =>
+      case (domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Bool
+        argNames shouldBe Some(Nil)
         expr.value shouldBe "x>=y()".asFormula
     }
     inside (entry.defs.decls(("y", None))) {
-      case (domain, sort, expr, _) =>
+      case (domain, sort, argNames, expr, _) =>
         domain.value shouldBe Unit
         sort shouldBe Real
+        argNames shouldBe Some(Nil)
         expr.value shouldBe "3+b()".asTerm
     }
     entry.model shouldBe "x>=2 -> [{x:=x+b();}*]x>=0".asFormula
@@ -557,7 +564,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach with Mo
     KeYmaeraXParser.setAnnotationListener(listener)
     KeYmaeraXParser(input)
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////

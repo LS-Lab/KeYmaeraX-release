@@ -90,8 +90,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
   }
 
   it should "export KeYmaera X stripped" ignore {
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
-      ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, Declaration(Map.empty), e.model, Nil, e.info)
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
     val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
     val printer = new KeYmaeraXArchivePrinter()

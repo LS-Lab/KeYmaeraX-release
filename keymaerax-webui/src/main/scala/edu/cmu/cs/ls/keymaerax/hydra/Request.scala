@@ -1031,9 +1031,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
       //@note archive parser augments a plain formula with definitions and flags it with name '<undefined>'
       val archiveEntries =
         if (parsedArchiveEntries.size == 1 && parsedArchiveEntries.head.name == "<undefined>") {
-          val entry = parsedArchiveEntries.head
-          KeYmaeraXArchiveParser.ParsedArchiveEntry(modelName.getOrElse("undefined"), entry.kind, entry.fileContent, entry.problemContent,
-            entry.defs, entry.model, entry.tactics, entry.info) :: Nil
+          parsedArchiveEntries.head.copy(name = modelName.getOrElse("undefined")) :: Nil
         } else parsedArchiveEntries
 
       val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[(String, Int)]()))({ case ((failedImports, succeededImports), entry) =>
@@ -1788,21 +1786,21 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
         // name, name expression (what), optional repl, optional plaintext definition from the model file
         val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
           // functions, predicates, and programs with definition
-          case (s: Function, ((domain, sort, repl, _), insig)) if repl.isDefined =>
+          case (s: Function, ((domain, sort, _, repl, _), insig)) if repl.isDefined =>
             val arg = insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
             sort match {
               case Real => (s, FuncOf(s, arg), repl, insig)
               case Bool => (s, PredOf(s, arg), repl, insig)
             }
-          case (s: ProgramConst, ((_, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
+          case (s: ProgramConst, ((_, _, _, repl, _), insig)) if repl.isDefined => (s, s, repl, insig)
           // functions, predicates, and programs without definition
-          case (s: Function, ((domain, sort, None, _), _)) =>
+          case (s: Function, ((domain, sort, _, None, _), _)) =>
             val arg = domain.map({ case edu.cmu.cs.ls.keymaerax.core.Unit => Nothing case d => d.toDots(0)._1}).getOrElse(Nothing)
             sort match {
               case Real => (s, FuncOf(s, arg), None, None)
               case Bool => (s, PredOf(s, arg), None, None)
             }
-          case (s: ProgramConst, ((_, _, None, _), _)) => (s, s, None, None)
+          case (s: ProgramConst, ((_, _, _, None, _), _)) => (s, s, None, None)
         })
         ApplicableDefinitionsResponse(expansions.sortBy(_._1)) :: Nil
       case None => ApplicableDefinitionsResponse(Nil) :: Nil
@@ -1832,7 +1830,7 @@ class SetDefinitionsRequest(db: DBAbstraction, userId: String, proofId: String, 
           case Left(ex) => BooleanResponse(flag = false, Some("Unable to parse 'repl': " + ex.getMessage)) :: Nil
           case Right(r) if r.sort == sort =>
             session(proofId) = proofSession.copy(defs = proofSession.defs.copy(decls = proofSession.defs.decls +
-              ((name, index) -> (domain, sort, Some(r), UnknownLocation))))
+              ((name, index) -> (domain, sort, None, Some(r), UnknownLocation))))
             BooleanResponse(flag = true) :: Nil
           case Right(r) if r.sort != sort =>
             BooleanResponse(flag = false, Some("Expected a replacement of sort " + sort + ", but got " + r.sort)) :: Nil
@@ -2568,16 +2566,15 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
 object ArchiveEntryPrinter {
   def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
     KeYmaeraXArchiveParser(modelInfo.keyFile) match {
-      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
+      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
         new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, modelInfo.name, tactics))
-      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
+      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
         new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, entry.name, tactics))
     }
   }
 
   private def replaceInfo(entry: ParsedArchiveEntry, entryName: String, tactics: List[(String, String)]): ParsedArchiveEntry = {
-    KeYmaeraXArchiveParser.ParsedArchiveEntry(entryName, entry.kind, entry.fileContent, entry.problemContent,
-      entry.defs, entry.model, tactics.map(e => (e._1, e._2, TactixLibrary.skip)), entry.info)
+    entry.copy(name = entryName, tactics = tactics.map(e => (e._1, e._2, TactixLibrary.skip)))
   }
 }
 
@@ -2811,9 +2808,9 @@ object RequestHelper {
     val signatures = node.children.flatMap(_.localProvable.subgoals.flatMap(StaticSemantics.signature)).toSet
     val undefined = signatures.filter(s => !proofSession.defs.asNamedSymbols.contains(s))
     val newDefs: Map[KeYmaeraXArchiveParser.Name, KeYmaeraXArchiveParser.Signature] = undefined.map({
-      case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, UnknownLocation)
-      case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, UnknownLocation)
-      case u => (u.name, u.index) -> (None, u.sort, None, UnknownLocation) // should not happen
+      case Function(name, index, domain, sort, _) => (name, index) -> (Some(domain), sort, None, None, UnknownLocation)
+      case ProgramConst(name, _) => (name, None) -> (None, Trafo, None, None, UnknownLocation)
+      case u => (u.name, u.index) -> (None, u.sort, None, None, UnknownLocation) // should not happen
     }).toMap
     proofSession.copy(defs = proofSession.defs.copy(proofSession.defs.decls ++ newDefs))
   }
