@@ -151,12 +151,12 @@ object DerivationInfoRegistry {
   /** Differential equation cases of [[allInfo]] */
   private[this] lazy val odeInfos: List[DerivationInfo] = List(
     /*new CoreAxiomInfo("DW base", "DWbase", "DWbase", 'linear, {case () => HilbertCalculus.DW}),*/
-    PositionTacticInfo("dW"
+    PositionTacticInfo("dW" // @Tactic-fied
       , RuleDisplayInfo("Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
       , {case () => DifferentialTactics.diffWeaken}, revealInternalSteps = true),
-    PositionTacticInfo("dWplus"
+    PositionTacticInfo("dWplus" // @Tactic-fied
       , RuleDisplayInfo("Assumption-Preserving Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
@@ -168,14 +168,14 @@ object DerivationInfoRegistry {
           (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
       , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
       , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr], revealInternalSteps = true),
-    InputPositionTacticInfo("dR"
+    InputPositionTacticInfo("dR" // @Tactic-fied
       , RuleDisplayInfo("Differential Refine"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
           (List("&Gamma;"), List("[{x′=f(x) & R}]P","&Delta;"))))
       , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
       , _ => ((fml: Formula) => DifferentialTactics.diffRefine(fml)): TypedFunc[Formula, BelleExpr]),
-    PositionTacticInfo("dCi"
+    PositionTacticInfo("dCi" // @Tactic-fied
       , RuleDisplayInfo("dCi"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))
         , /* premises */ List(
@@ -278,7 +278,7 @@ object DerivationInfoRegistry {
         revealInternalSteps = true
       )
     },
-    PositionTacticInfo("dGi",
+    PositionTacticInfo("dGi", // @Tactic-fied
       RuleDisplayInfo(
         "Inverse Differential Ghost",
         /* conclusion */ (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")),
@@ -286,7 +286,7 @@ object DerivationInfoRegistry {
       ),
       _ => DifferentialTactics.inverseDiffGhost
     ),
-    InputPositionTacticInfo("dbx",
+    InputPositionTacticInfo("dbx", //todo: @Tactic-fied but broken
       RuleDisplayInfo(
         "Darboux (in)equalities",
         /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
@@ -298,7 +298,7 @@ object DerivationInfoRegistry {
         case None => DifferentialTactics.dgDbxAuto
       }: TypedFunc[Option[Term], BelleExpr]
     ),
-    PositionTacticInfo("diffUnpackEvolDomain",
+    PositionTacticInfo("diffUnpackEvolDomain", //@Tactic-fied
       RuleDisplayInfo(
         "Unpack evolution domain",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P","&Delta;")),
@@ -306,7 +306,7 @@ object DerivationInfoRegistry {
       ),
       _ => DifferentialTactics.diffUnpackEvolutionDomainInitially
     ),
-    PositionTacticInfo("barrier",
+    PositionTacticInfo("barrier", //@Tactic-fied
       RuleDisplayInfo(
         "Strict Barrier Certificate",
         /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
