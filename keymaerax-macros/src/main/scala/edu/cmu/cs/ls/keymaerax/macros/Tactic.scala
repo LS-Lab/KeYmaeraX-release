@@ -289,14 +289,14 @@ class TacticImpl(val c: whitebox.Context) {
       if(isDef) {
         val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
         if (inputs.isEmpty) {
-          c.Expr[Nothing](q"""$mods def ${TermName(codeName)}: $baseType = $application""")
+          c.Expr[Nothing](q"""$mods def $declName: $baseType = $application""")
         }
         else {
-          c.Expr[Nothing](q"""$mods def ${TermName(codeName)} (..$argSeq): $baseType = $application""")
+          c.Expr[Nothing](q"""$mods def $declName (..$argSeq): $baseType = $application""")
         }
       } else {
         val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($uncurried, $info)"""
-        c.Expr[Nothing](q"""$mods val ${TermName(codeName)}: $uncurriedType = $application""")
+        c.Expr[Nothing](q"""$mods val $declName: $uncurriedType = $application""")
       }
     }
     annottees map (_.tree) toList match {
