@@ -829,7 +829,7 @@ object DerivationInfoRegistry {
         (List("&Gamma;"),List("&Delta;")),
         /* premises */ List((List("&Gamma;"), List("a <= trm", "trm <= b"), true),
           (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false)))
-      ,List(new TermArg("trm")), _ => ((t:Term) => IntervalArithmeticV2.intervalCutTerms(t)): TypedFunc[Term, BelleExpr]),
+      ,List(new TermArg("trm")), _ => ((t:Term) => IntervalArithmeticV2.intervalCutTerms(scala.collection.immutable.Seq(t))): TypedFunc[Term, BelleExpr]),
     PositionTacticInfo("intervalCut"
       , RuleDisplayInfo(("Interval Arithmetic Cut", "intervalCut"),
         (List("&Gamma;"),List("&Delta;")),
