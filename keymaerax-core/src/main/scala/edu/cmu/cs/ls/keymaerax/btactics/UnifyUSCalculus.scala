@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, _}
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutLR}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -116,8 +117,9 @@ trait UnifyUSCalculus {
   val nil : BelleExpr = anon {skip}
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
-  @Tactic()
-  val fail : BelleExpr = anon {(_: Sequent) => throw new TacticInapplicableFailure("fail")}
+  //@todo@Tactic()
+  //val fail : BelleExpr = anon {(_: Sequent) => throw new TacticInapplicableFailure("fail")}
+  val fail: BelleExpr = "fail" by ((_: Sequent) => throw new TacticInapplicableFailure("fail"))
 
 
   /*******************************************************************

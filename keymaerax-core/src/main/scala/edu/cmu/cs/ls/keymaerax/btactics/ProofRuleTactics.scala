@@ -58,8 +58,13 @@ private object ProofRuleTactics extends Logging {
   })
 
   /** [[SequentCalculus.cutR()]] */
+  /*DependentPositionWithAppliedInputTactic*/
 //@todo  @Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
 //    conclusion = "Γ |- P, Δ", inputs = "C:formula")
+//  def cutR(f: Formula): BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
+//    requireOneSubgoal(provable, "cutR(" + f + ")")
+//    provable(core.CutRight(f, pos.top), 0)
+//  }
   def cutR(f: Formula): DependentPositionWithAppliedInputTactic = "cutR" byWithInput(f, (pos: Position, _: Sequent) => {
     new BuiltInTactic("CutR") {
       override def result(provable: ProvableSig): ProvableSig = {
@@ -68,7 +73,6 @@ private object ProofRuleTactics extends Logging {
       }
     }
   })
-
   /** [[SequentCalculus.cutLR()]] */
   //@todo@Tactic()
   def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = /*anon { (provable: ProvableSig, pos: Position) =>
