@@ -156,12 +156,12 @@ protected object FOQuantifierTactics {
         val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
         //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
         val renaming =
-          if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRenaming(np._1, np._2)(_)).reduce[BelleExpr](_&_)).reduce[BelleExpr](_ & _)
-          else {assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_&_)}
+          if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_&_)).reduce[BelleExpr](_ & _)
+          else {assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_&_)}
         // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
         val backrenaming =
-          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRenaming(np._2, np._1)).reduce[BelleExpr](_ & _)
-          else {assert(namePairs.size == 1); ProofRuleTactics.uniformRenaming(namePairs.head._2, namePairs.head._1)}
+          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
+          else {assert(namePairs.size == 1); ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)}
         renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
       }
     }
@@ -201,12 +201,12 @@ protected object FOQuantifierTactics {
 
   /**
    * Generalizes existential quantifiers, but only at certain positions. All positions have to refer to the same term.
-   * @example{{{
+   * @example {{{
    *           \exists z z=a+b |-
    *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: Nil)(AntePosition(0))
    *                 a+b = a+b |-
    * }}}
-   * @example{{{
+   * @example {{{
    *           \exists z z=z |-
    *           ----------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: PosInExpr(1::Nil) :: Nil)(AntePosition(0))
    *               a+b = a+b |-
@@ -232,7 +232,7 @@ protected object FOQuantifierTactics {
             SubstitutionPair(aT, sequent.sub(pos.topLevel ++ where.head).get) :: Nil)
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
-            /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
+            /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRename(Variable("x_"), x)('Llast)),
             /* show */ cohide('Rlast) & TactixLibrary.by(Ax.existsGeneralize, subst)
             )
         case Some(e) => throw new TacticInapplicableFailure("existsGeneralize only applicable to formulas, but got " + e.prettyString)
@@ -255,11 +255,11 @@ protected object FOQuantifierTactics {
    * @param x The universally quantified variable to introduce.
    * @param t The term to generalize.
    * @return The position tactic.
-   * @example{{{\forall z \forall x x^2 >= -z^2
+   * @example {{{\forall z \forall x x^2 >= -z^2
    *            ------------------------------- universalGenT(z, f())
    *            \forall x x^2 >= -f()^2
    * }}}
-   * @example{{{\forall z \forall x x^2 >= -z^2
+   * @example {{{\forall z \forall x x^2 >= -z^2
    *            ------------------------------- universalGenT(z, y+5)
    *            \forall x x^2 >= -(y+5)^2
    * }}}
@@ -306,12 +306,12 @@ protected object FOQuantifierTactics {
   /**
    * Computes the universal closure of the formula at the specified position. Uses the provided order of quantifiers.
    * Reverse alphabetical order for non-mentioned variables (for all variables if order == Nil).
-   * @example{{{
+   * @example {{{
    *           |- \forall a forall z forall x (x>0 & a=2 & z<5)
    *         ---------------------------------------------------universalClosure(Variable("a")::Nil)
    *           |- x>0 & a=2 & z<5
    * }}}
-   * @example{{{
+   * @example {{{
    *           |- \forall z forall x forall a (x>0 & a=2 & z<5)
    *         ---------------------------------------------------universalClosure()
    *           |- x>0 & a=2 & z<5

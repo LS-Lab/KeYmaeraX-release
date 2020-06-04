@@ -32,8 +32,8 @@ object AnnotationCommon {
   def parseAI(s: String)(implicit c: whitebox.Context): ArgInfo = {
     s.split(":").toList match {
       case id :: tpe :: Nil =>
-        val first = id.indexOf('(')
-        val last = id.lastIndexOf(')')
+        val first = id.indexOf('[')
+        val last = id.lastIndexOf(']')
         val (name, allowFresh) =
           if (first != -1 && last != -1)
             (id.slice(0, first), id.slice(first+1, last).split(',').toList)
@@ -54,7 +54,10 @@ object AnnotationCommon {
         case ante :: succ :: Nil =>
           val (a, s) = (ante.split(",").toList, succ.split(",").toList)
           SequentDisplay(a, s)
-        case ss => c.abort(c.enclosingPosition, "Expected exactly one |- in sequent, got: " + ss)
+        case succ :: Nil =>
+          val s = succ.split(",").toList
+          SequentDisplay(Nil, s)
+        case ss => c.abort(c.enclosingPosition, "Expected at most one |- in sequent, got: " + ss)
       }
     }
   }
@@ -95,9 +98,11 @@ object AnnotationCommon {
   def convAI(ai: ArgInfo)(implicit c: whitebox.Context): c.universe.Tree = {
     import c.universe._
     ai match {
+      case GeneratorArg(name) => q"""new edu.cmu.cs.ls.keymaerax.macros.GeneratorArg(${literal(name)})"""
       case VariableArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
       case NumberArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
       case StringArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.StringArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case PosInExprArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.PosInExprArg(${literal(name)}, ${literals(allowsFresh)})"""
       case SubstitutionArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
       case OptionArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.OptionArg(${convAI(arg)})"""
       case FormulaArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""

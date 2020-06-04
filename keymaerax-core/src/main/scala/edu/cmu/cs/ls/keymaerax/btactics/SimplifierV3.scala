@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
+import edu.cmu.cs.ls.keymaerax.macros.{ProvableInfo, Tactic}
 
 import scala.collection.immutable._
 
@@ -732,6 +732,12 @@ object SimplifierV3 {
     }
   }
 
+  @Tactic(names="Simplify",
+    premises="Γ |- simplify(P), Δ",
+    conclusion="Γ |- P, Δ",
+    displayLevel="browse")
+  val simplify : DependentPositionTactic = anon ((pos:Position) => simpTac()(pos))
+
   /**
     * Full sequent simplification tactic
     */
@@ -764,6 +770,12 @@ object SimplifierV3 {
       else succ) & hideTrues & hideFalses
     }
   }
+
+  @Tactic(names="Full Simplify",
+    premises="simplify(Γ |- P, Δ)",
+    conclusion="Γ |- P, Δ",
+    displayLevel="browse")
+  val fullSimplify : BelleExpr = anon { fullSimpTac() }
 
   /** Term simplification indices */
 

@@ -313,7 +313,6 @@ class BuiltinInfo(  override val codeName: String
 class TacticInfo(  override val codeName: String
                  , override val display: DisplayInfo
                  , val theExpr: Unit => Any
-                 , needsTool: Boolean = false
                  , override val needsGenerator: Boolean = false
                  , override val revealInternalSteps: Boolean = false)
   extends DerivationInfo {
@@ -323,30 +322,30 @@ class TacticInfo(  override val codeName: String
 }
 
 case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val theExpr: Unit => Any,
-                              needsTool: Boolean = false, override val needsGenerator: Boolean = false,
+                              override val needsGenerator: Boolean = false,
                               override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator, revealInternalSteps) {
+  extends TacticInfo(codeName, display, theExpr, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
-case class TwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val theExpr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator) {
+case class TwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val theExpr: Unit => Any, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, theExpr, needsGenerator) {
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], needsTool: Boolean = false,
+case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _],
                            override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator, revealInternalSteps)
+  extends TacticInfo(codeName, display, theExpr, needsGenerator, revealInternalSteps)
 
 case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo,
-                                   override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_,_],  needsTool: Boolean = false,
+                                   override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_,_],
                                    override val needsGenerator: Boolean = false, override val revealInternalSteps: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator, revealInternalSteps) {
+  extends TacticInfo(codeName, display, theExpr, needsGenerator, revealInternalSteps) {
   override val numPositionArgs = 1
 }
 
-case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], needsTool: Boolean = false, override val needsGenerator: Boolean = false)
-  extends TacticInfo(codeName, display, theExpr, needsTool, needsGenerator) {
+case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], override val theExpr: Unit => TypedFunc[_, _], override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, theExpr, needsGenerator) {
   override val numPositionArgs = 2
 }
 

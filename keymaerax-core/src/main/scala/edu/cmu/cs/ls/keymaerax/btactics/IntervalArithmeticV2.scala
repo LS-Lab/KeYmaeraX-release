@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{FormulaTools, PosInExpr, Position, RenUSubst, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool.{minF, maxF}
@@ -1027,8 +1028,11 @@ object IntervalArithmeticV2 {
       }
     }
 
-  lazy val intervalArithmetic: BelleExpr = "intervalArithmetic" by {
-    val precision = 15
+  @Tactic("Interval Arithmetic",
+    displayLevel = "menu"
+  )
+  lazy val intervalArithmetic: BelleExpr = anon {
+    val precision = 15 // @todo: precision as (optional) argument?
     SaturateTactic((orRi |! skip)) &
       intervalArithmeticPreproc(1) &
       intervalArithmeticBool(precision, ToolProvider.qeTool().get, true)(1)
@@ -1041,7 +1045,7 @@ object IntervalArithmeticV2 {
       val nantes = sequent.ante.length
       val prec = 5
       val qe = ToolProvider.qeTool().get
-      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(terms)
+      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap(), Map())(terms.toIndexedSeq)
       val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
       (prvs, prvs.indices).zipped.foldLeft(provable) {
         (result, prvi) => prvi match {
@@ -1054,7 +1058,13 @@ object IntervalArithmeticV2 {
     }
   }
 
-  def intervalCutTerms(terms: Term*): InputTactic = "intervalCutTerms" byWithInputs (terms.toList, intervalCutTerms(terms.toList))
+  @Tactic("Interval Arithmetic Cut",
+    codeName = "intervalCutTerms" /* @todo old codeName */,
+    premises = "Γ, lowerBound(trm) <= trm, trm <= upperBound(trm) |- Δ",
+    conclusion = "Γ |- Δ",
+    displayLevel = "menu"
+  )
+  def intervalCutTerm(trm: Term): BelleExpr = anon { intervalCutTerms(Seq(trm)) }
 
   private def terms_of(fml: Formula) : List[Term] = fml match {
     case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)
@@ -1065,10 +1075,15 @@ object IntervalArithmeticV2 {
     case _ => List()
   }
 
-  val intervalCut : DependentPositionTactic = "intervalCut" by { (pos: Position, seq: Sequent) =>
+  @Tactic("Interval Arithmetic Cut",
+    premises = "Γ, lowerBound(trm) <= trm, trm <= upperBound(trm) |- Δ",
+    conclusion = "Γ |- Δ",
+    displayLevel = "internal"
+  )
+  val intervalCut : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
-      case Some(t: Term) => intervalCutTerms(List(t))
+      case Some(t: Term) => intervalCutTerms(Seq(t))
       case Some(e) => throw new TacticInapplicableFailure("intervalCut only applicable to formulas or terms, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }

@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2.{NonSupportedDivisorException, NonSupportedExponentException}
 
 import scala.collection.immutable._
 
@@ -224,14 +225,32 @@ object PolynomialArithV2 {
   /** Prove "t1 = t2" by equating coefficients */
   def equate(t1: Term, t2: Term) : Option[ProvableSig] = ring.ofTerm(t1).equate(ring.ofTerm(t2))
 
+  /** report operations not supported by polynomial arithmetic in computations */
+  trait NonSupportedOperationException extends IllegalArgumentException
+  final case class NonSupportedExponentException(message: String)
+    extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
+  final case class NonSupportedDivisorException(message: String)
+    extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
+
+  /** report operations not supported by polynomial arithmetic in tactics */
+  final case class NonSupportedOperationInapplicability(cause: NonSupportedOperationException)
+    extends TacticInapplicableFailure("Tactic inapplicable because of an operation that is not supported by polynomial arithmetic.", cause)
+  def reportBelleThrowables[R](block: => R) =
+    try {
+      block
+    } catch {
+      case nonSupportedOperationException: NonSupportedOperationException =>
+        throw NonSupportedOperationInapplicability(nonSupportedOperationException)
+    }
+
   /** Prove an equality by equating coefficients */
   val equate : DependentPositionTactic = "equate" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     seq.sub(pos) match {
       case Some(Equal(t1, t2)) =>
-        equate(t1, t2) match {
-          case None => throw new IllegalArgumentException("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
+        reportBelleThrowables{ equate(t1, t2) } match {
+          case None => throw new TacticInapplicableFailure("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
           case Some(prv) => cohideR(pos) & by(prv)
         }
       case Some(e) => throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)
@@ -249,11 +268,11 @@ object PolynomialArithV2 {
   val normalizeAt : DependentPositionTactic = "normalizeAt" by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
-        useAt(normalize(t), PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
+        useAt(reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
       case Some(Equal(s, t)) =>
         useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
       case Some(t: Term) =>
-        useAt(normalize(t), PosInExpr(0::Nil))(pos)
+        useAt(reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos)
       case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
@@ -1045,6 +1064,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   case class Stay(p: TreePolynomial) extends Growth
   case class Sprout(sprout: Branch2) extends Growth
 
+  final case class UnknownPolynomialImplementationException(other: Polynomial) extends
+    RuntimeException("only TreePolynomials are supported, but got " + other)
+
   sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
     def representation: ProvableSig = prv
@@ -1240,7 +1262,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
             ("sum_", sum.rhs)
           ), Seq(other.prv, sum.prv))
         sum.updatePrv(newPrv)
-      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
+      case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
 
     def -(other: Polynomial) : TreePolynomial = other match {
@@ -1271,7 +1293,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           ("sum_", sum.rhs)
         ), Seq(other.prv, sum.prv))
         sum.updatePrv(newPrv)
-      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
+      case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
 
     def *(x: Monomial) : TreePolynomial = this match {
@@ -1346,7 +1368,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
             ), Seq(prv, sum.prv))
             sum.updatePrv(newPrv)
         }
-      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
+      case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
 
     def ^(n: Int) : TreePolynomial = n match {
@@ -1375,7 +1397,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
               Seq(mPrv, p.prv, r.prv))
             r.updatePrv(newPrv)
           }
-        } else throw new IllegalArgumentException("negative power unsupported by PolynomialArithV2")
+        } else throw NonSupportedExponentException("negative power unsupported by PolynomialArithV2")
     }
 
     def isConstant : Boolean = this match {
@@ -1404,15 +1426,15 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
               )
               pi.updatePrv(newPrv)
             case Number(bd) =>
-              throw new IllegalArgumentException("Exponent must be integer but normalizes to " + bd)
+              throw NonSupportedExponentException("Exponent must be integer but normalizes to " + bd)
             case d@Divide(l, r) =>
-              throw new IllegalArgumentException("Exponent must be integer but normalizes to division " + d)
+              throw NonSupportedExponentException("Exponent must be integer but normalizes to division " + d)
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
           }
         } else {
-          throw new IllegalArgumentException("Exponent must be a constant polynomial.")
+          throw NonSupportedExponentException("Exponent must be a constant polynomial.")
         }
-      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
+      case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
 
     def /(other: Polynomial): TreePolynomial = other match {
@@ -1459,9 +1481,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
           }
         } else {
-          throw new IllegalArgumentException("Divisor must be a constant polynomial.")
+          throw NonSupportedDivisorException("Divisor must be a constant polynomial.")
         }
-      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
+      case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
 
     // negation
@@ -1557,7 +1579,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           case Some(zeroPrv) =>
             Some(useDirectly(equalityBySubtraction, Seq(("t_", this.lhs), ("s_", other.lhs)), Seq(zeroPrv)))
         }
-      case _ => throw new RuntimeException("only TreePolynomials are supported, but got " + other)
+      case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
 
     def partitionMonomials(P: Monomial => Boolean)(acc: (Seq[Monomial], Seq[Monomial])) : (Seq[Monomial], Seq[Monomial]) = {

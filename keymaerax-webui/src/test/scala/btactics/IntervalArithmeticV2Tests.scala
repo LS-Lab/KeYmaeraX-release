@@ -112,7 +112,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
         "11111*10^-5<=x^-2 & x^-2<=1 &" +
         "-1<=x^-3 & x^-3<=-37037*10^-6"
         ).asFormula)),
-      intervalCutTerms(
+      intervalCutTerms(Seq(
         "x+f(x)".asTerm,
         "x*f(x)".asTerm,
         "x - c()".asTerm,
@@ -132,7 +132,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
         "x^-1".asTerm,
         "x^-2".asTerm,
         "x^-3".asTerm
-      ) & SimplifierV3.fullSimpTac() & prop
+      )) & SimplifierV3.fullSimpTac() & prop
     )
     res shouldBe 'proved
   }
@@ -161,7 +161,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   }
 
   it should "work with non-constant numerical bounds" in withMathematica { _ =>
-    proveBy("1/3<=x, x<=5*10^(-1)==>66666*10^-5<=2*x&2*x<=10*10^-1".asSequent, intervalCutTerms("2*x".asTerm) & prop) shouldBe
+    proveBy("1/3<=x, x<=5*10^(-1)==>66666*10^-5<=2*x&2*x<=10*10^-1".asSequent, intervalCutTerms(Seq("2*x".asTerm)) & prop) shouldBe
       'proved
   }
 

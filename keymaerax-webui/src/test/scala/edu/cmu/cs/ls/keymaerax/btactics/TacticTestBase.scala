@@ -130,7 +130,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /**
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
    * axioms that are proved by QE.
-   * @example{{{
+   * @example {{{
    *    "My test" should "prove something with Mathematica" in withMathematica { qeTool =>
    *      // ... your test code here
    *    }
@@ -178,7 +178,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     * Creates and initializes Z3 for tests that want to use QE. Also necessary for tests that use derived
     * axioms that are proved by QE.
     * Note that Mathematica should also ne initialized in order to perform DiffSolution and CounterExample
-    * @example{{{
+    * @example {{{
     *    "My test" should "prove something with Z3" in withZ3 { qeTool =>
     *      // ... your test code here
     *    }
@@ -383,7 +383,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** Execute a task with tactic progress.
-    * @example{{{
+    * @example {{{
     *   withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
     *   withTacticProgress("master".asTactic, "master"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) }
     * }}}
@@ -507,7 +507,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = DBTools.listener(db)(proofId)(tacticName, parentInTrace, branch)
 
   /** Removes all whitespace for string comparisons in tests.
-    * @example{{{
+    * @example {{{
     *     "My string with     whitespace" should equal ("Mystring   with whitespace") (after being whiteSpaceRemoved)
     * }}}
     */

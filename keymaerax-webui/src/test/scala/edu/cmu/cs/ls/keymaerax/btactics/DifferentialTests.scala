@@ -1502,19 +1502,6 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  "OUTDATED: Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
-    proveBy(Sequent(IndexedSeq("a()>0".asFormula), IndexedSeq("<{x'=a()}>x>=b()".asFormula)), diffVar(1)) shouldBe 'proved
-  }
-
-  it should "diff var flat flight progress [function]" in withMathematica { _ =>
-    proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula, diffVar(1, 1::0::1::Nil)) shouldBe 'proved
-  }
-
-  it should "FEATURE_REQUEST: diff var flat flight progress [variable]" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
-    //@note test is supposed to fail until feature is implemented
-    proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
-  }
-
   /**
     * Test cases for the Darboux ghost tactics
     */

@@ -15,13 +15,20 @@ import AnnotationCommon._
 
 /**
   * Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]].
+  * This annotation can only be applied to val declarations whose right-hand-sides are applications of [[derivedAxiom]]
+  * or related functions, see [[Ax]] for examples.
   * @param names Display names to render in the user interface.
-  * @param codeName Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
-  *                 `codeName`` will be inferred from the (lazy) val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
-  * @param formula Formula displayed for axioms as html with unicode in the user interface
+  * @param codeName You almost never need to specify this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+  *                 `codeName`` will be inferred from the val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
+  * @param conclusion Formula string displayed for axioms as html with unicode in the user interface
+  *  For axioms with (non-position) inputs, the conclusion must mention each input.
+  *  Sequent syntax is optionally supported:   A, B |- C, D
   * @param unifier Which unifier to use for axiom: 'surjective or 'linear or 'surjlinear or 'surjlinearpretend or 'full [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]]
-  * @param displayLevel Where to show the axiom: 'internal, 'browse, 'menu, 'all
+  * @param displayLevel Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
   * @param inputs Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut.
+  *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
+  *               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
+  *               Supported types: Expression, Formula, Term, Variable, Number, String, Substitution, List[], Option[]
   * @param key The position of the subexpression in this formula that will be unified against when using this axiom.
   *            The notation is as in [[edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr]] for
   *            [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt]]/[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useFor]].
@@ -44,7 +51,7 @@ import AnnotationCommon._
   */
 class Axiom(val names: Any,
             val codeName: String = "",
-            val formula: String = "",
+            val conclusion: String = "",
             val unifier: String = "full",
             val displayLevel: String = "internal",
             val inputs: String = "",
@@ -64,7 +71,7 @@ class AxiomImpl (val c: whitebox.Context) {
   import c.universe._
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val paramNames = List("names", "codeName", "formula", "unifier", "displayLevel", "inputs", "key", "recursor")
+    val paramNames = List("names", "codeName", "conclusion", "unifier", "displayLevel", "inputs", "key", "recursor")
     def getLiteral(t: Tree): String = {
       t match {
         case Literal(Constant(s: String)) => s
@@ -74,12 +81,11 @@ class AxiomImpl (val c: whitebox.Context) {
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
     def getParams: (String, DisplayInfo, String, String, ExprPos, List[ExprPos]) = {
-      // @TODO: What do ASTs look like when option arguments are omitted or passed by name?
       c.prefix.tree match {
         case q"new $annotation(..$params)" =>
           val defaultMap: Map[String, Tree] = Map(
             "codeName" -> Literal(Constant("")),
-            "formula" -> Literal(Constant("")),
+            "conclusion" -> Literal(Constant("")),
             "unifier" -> Literal(Constant("full")),
             "displayLevel" -> Literal(Constant("internal")),
             "key" -> Literal(Constant("0")),
@@ -93,18 +99,18 @@ class AxiomImpl (val c: whitebox.Context) {
             //case sdi: SimpleDisplayInfo => sdi
             case di => c.abort(c.enclosingPosition, "@Axiom expected names: String or names: (String, String) or names: SimpleDisplayInfo, got: " + di)
           }
-          val (fml, inputString, codeName, unifier, displayLevel, keyString, recursorString) =
-            (getLiteral(paramMap("formula")), getLiteral(paramMap("inputs")), getLiteral(paramMap("codeName")), getLiteral(paramMap("unifier")),
+          val (concl, inputString, codeName, unifier, displayLevel, keyString, recursorString) =
+            (getLiteral(paramMap("conclusion")), getLiteral(paramMap("inputs")), getLiteral(paramMap("codeName")), getLiteral(paramMap("unifier")),
               getLiteral(paramMap("displayLevel")), getLiteral(paramMap("key")), getLiteral(paramMap("recursor")))
           val inputs: List[ArgInfo] = parseAIs(inputString)(c)
           val key = parsePos(keyString)(c)
           val recursor = parsePoses(recursorString)(c)
-          val displayInfo = (fml, inputs) match {
+          val displayInfo = (concl, inputs) match {
             case ("", Nil) => simpleDisplay
             case (fml, Nil) if fml != "" => AxiomDisplayInfo.render(simpleDisplay, fml)
             case (fml, args) if fml != "" => InputAxiomDisplayInfo(simpleDisplay, fml, args)
             //case ("", Nil, premises, Some(conclusion)) => RuleDisplayInfo(simpleDisplay, conclusion, premises)
-            case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Axiom: either specify premisses and conclusion, or formula optionally with inputs, not both")
+            case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Axiom: axioms with inputs must have conclusion specified")
           }
           (codeName, displayInfo, unifier, displayLevel, key, recursor)
         case e => c.abort(c.enclosingPosition, "Excepted @Axiom(args), got: " + e)
@@ -116,7 +122,7 @@ class AxiomImpl (val c: whitebox.Context) {
       t match {
         case id: Ident => {
           if (Set("coreAxiom", "derivedAxiom", "derivedFormula", "derivedAxiomFromFact", "derivedFact").contains(id.name.decodedName.toString)) true
-          else c.abort(c.enclosingPosition, "Expected function name: one of {coreaxiom, derivedAxiom, derivedFormula, derivedAxiomFromFact, derivedFact}, got: " + t + " of type " + t.getClass())
+          else c.abort(c.enclosingPosition, "Expected function name: one of {coreAxiom, derivedAxiom, derivedFormula, derivedAxiomFromFact, derivedFact}, got: " + t + " of type " + t.getClass())
         }
         case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected axiom function, got: " + t + " of type " + t.getClass())
       }

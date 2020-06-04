@@ -735,6 +735,33 @@ class ODELivenessTests extends TacticTestBase {
     )
 
     println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
+    val pr = proveBy("a()>0 ==> <{x'=a()}>x>=b()".asSequent, dVAuto(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "diff var flat flight progress [function]" in withQE { _ =>
+    val pr = proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula,
+      implyR(1) &
+      existsR("b".asTerm)(1) &
+      andR(1) <( QE , dVAuto(1))
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "diff var flat flight progress [variable]" in withQE { _ =>
+    val pr = proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula,
+      implyR(1) &
+      allR(1) &
+      existsR("b".asTerm)(1) &
+      andR(1) <( QE , dVAuto(1)))
+    println(pr)
+    pr shouldBe 'proved
   }
 
 }

@@ -89,7 +89,7 @@ private object PropositionalTactics extends Logging {
  *
    * @see [[UnifyUSCalculus.CMon(Context)]]
    * @see [[UnifyUSCalculus.CE(Context)]]
-   * @example{{{
+   * @example {{{
    *                  z=1 |- z>0
    *         --------------------------propCE(PosInExpr(1::Nil))
    *           x>0 -> z=1 |- x>0 -> z>0

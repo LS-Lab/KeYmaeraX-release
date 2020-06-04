@@ -256,7 +256,7 @@ object StaticSemantics {
     * The signature of expression e.
     *
     * @note Result will not be order stable, so order could be different on different runs of the prover.
-    * @example{{{
+    * @example {{{
     *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
     *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
     * }}}

@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
@@ -100,7 +100,8 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  val step          : DependentPositionTactic = "step" by ((pos: Position) =>
+  @Tactic()
+  val step : DependentPositionTactic = anon ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
      else HilbertCalculus.stepAt(pos))
@@ -315,9 +316,15 @@ object TactixLibrary extends HilbertCalculus
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
   def master(gen: Generator[GenProduct] = invGenerator,
-             keepQEFalse: Boolean=true): BelleExpr = "master" by {
+             keepQEFalse: Boolean = true): BelleExpr = "master" by {
     master(loopauto(gen), ODE, keepQEFalse)
   }
+
+  /**
+   * master: master tactic that tries hard to prove whatever it could.
+   * @see [[auto]] */
+  @Tactic(codeName = "master")
+  def masterTactic(generator: Generator[GenProduct]): BelleExpr = anon { master(generator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
@@ -356,7 +363,8 @@ object TactixLibrary extends HilbertCalculus
     * @see [[Idioms.<()]]
     * @see [[sublabel()]]
     */
-  def label(s: String): BelleExpr = label(BelleTopLevelLabel(s))
+  @Tactic()
+  def label(s: String): BelleExpr = anon { label(BelleTopLevelLabel(s)) }
 
   /** Mark the current proof branch and all subbranches `s``
     *
@@ -382,22 +390,22 @@ object TactixLibrary extends HilbertCalculus
   /** GVR abstractionb: turns `[a]p` into `\forall BV(a) p` by universally quantifying over all variables modified in program `a`.
     * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
     * of that modality.
-    * @example{{{
+    * @example {{{
     *           |- \forall x x>0
     *         ------------------abstractionb(1)
     *           |- [x:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *           |- x>0 & z=1 -> [z:=y;]\forall x x>0
     *         --------------------------------------abstractionb(1, 1::1::Nil)
     *           |- x>0 & z=1 -> [z:=y;][x:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *           |- x>0
     *         ---------------abstractionb(1)
     *           |- [y:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *          x<=0  |- \forall y \forall z x<=z^2
     *         ------------------------------------abstractionb(1)
     *          x<=0  |- [y:=2;z:=z+1;]x<=z^2
@@ -567,13 +575,13 @@ object TactixLibrary extends HilbertCalculus
     *          G |- [a]B, D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *   cutShowLbl:      cutUseLbl:
     *   |- [x:=2;]x>1    |- [x:=2;](x>1 -> [y:=x;]y>1)
     *   -----------------------------------------------postCut("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
-    * @example{{{
+    * @example {{{
     *   cutShowLbl:      cutUseLbl:
     *   |- [x:=2;]x>1    |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)
     *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
@@ -673,7 +681,7 @@ object TactixLibrary extends HilbertCalculus
 
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term.
-    * @example{{{
+    * @example {{{
     *   maxcd = max(c,d) |- a+b <= maxcd+e
     *   ----------------------------------------abbrv(Variable("maxcd"))(1, 1::0::Nil)
     *                    |- a+b <= max(c, d) + e
@@ -682,7 +690,7 @@ object TactixLibrary extends HilbertCalculus
     * */
   def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position.
-    * @example{{{
+    * @example {{{
     *    x=0 |- 0*y=0, x+1>0
     *    ---------------------eqL2R(-1)(1)
     *    x=0 |- x*y=0, x+1>0
@@ -905,7 +913,7 @@ object TactixLibrary extends HilbertCalculus
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
   def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr = "useLemma" byWithInputs(
     if (adapt.isDefined) lemmaName::adapt.get.prettyString::Nil else lemmaName::Nil,
-    anon { _ =>
+    anon { (_, _) =>
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
@@ -915,7 +923,7 @@ object TactixLibrary extends HilbertCalculus
   )
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { _ =>
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_, _) =>
     adapt match {
       case Some(t) =>
         cut(lemma.fact.conclusion.toFormula ) <(t, cohideR('Rlast) &

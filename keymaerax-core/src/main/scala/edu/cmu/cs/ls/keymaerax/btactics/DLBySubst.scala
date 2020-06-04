@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
@@ -141,7 +142,7 @@ private object DLBySubst {
 
             val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
                 case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
-                  stutter(x0)(pos) & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
+                  stutter(x0)(pos) & ProofRuleTactics.boundRename(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
                     eqR2L(-1)(pos.topLevel) & useAt(Ax.selfassignb)(pos.topLevel) & hide(-1)
                 case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
               })
@@ -187,12 +188,12 @@ private object DLBySubst {
     * Introduces a universal quantifier when applied in the succedent/existential quantifier in the antecedent,
     * which is already skolemized if applied at top-level; quantifier remains unhandled in non-top-level context.
     *
-    * @example{{{
+    * @example {{{
     *    x_0=x+1 |- [{x_0:=x_0+1;}*]x_0>0
     *    ----------------------------------assignEquality(1)
     *        |- [x:=x+1;][{x:=x+1;}*]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *    x_0=x+1, [{x_0:=x_0+1;}*]x_0>0) |-
     *    ------------------------------------ assignEquality(-1)
     *           [x:=x+1;][{x:=x+1;}*]x>0 |-
@@ -212,9 +213,9 @@ private object DLBySubst {
     case Some(Box(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRenaming(x, y)(pos) &
+      ProofRuleTactics.boundRename(x, y)(pos) &
       (if (universal) useAt(Ax.assignbeq)(pos) else useAt(Ax.assignbequalityexists)(pos)) &
-      ProofRuleTactics.uniformRenaming(y, x) &
+      ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
        else ident)
@@ -229,9 +230,9 @@ private object DLBySubst {
     case Some(Diamond(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRenaming(x, y)(pos) &
+      ProofRuleTactics.boundRename(x, y)(pos) &
       (if (universal) useAt(Ax.assigndEqualityAll)(pos) else useAt(Ax.assigndEquality)(pos)) &
-      ProofRuleTactics.uniformRenaming(y, x) &
+      ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
        else ident)
@@ -366,11 +367,12 @@ private object DLBySubst {
     *
     * @param invariant The invariant.
     */
-
-  def loopRule(invariant: Formula): DependentPositionWithAppliedInputTactic = "loopRule" byWithInput(invariant, (pos, sequent) => {
+  @Tactic(premises = "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
+    conclusion = "Γ |- [a<sup>*</sup>]P, Δ")
+  def loopRule(invariant: Formula): DependentPositionTactic /*DependentPositionWithAppliedInputTactic*/ = anon {(pos:Position, seq:Sequent) =>
     //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
-    require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
+    require(seq(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
     //val alast = AntePosition(sequent.ante.length)
     cutR(invariant)(pos.checkSucc.top) <(
         ident & label(BelleLabels.initCase),
@@ -380,7 +382,7 @@ private object DLBySubst {
           ident & label(BelleLabels.useCase)
         )
       )
-  })
+  }
 
   /** @see [[TactixLibrary.throughout]] */
   def throughout(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "throughout" byWithInput(invariant, (pos, sequent) => {
@@ -539,7 +541,7 @@ private object DLBySubst {
   /**
    * Turns an existential quantifier into an assignment.
     *
-    * @example{{{
+    * @example {{{
    *         |- [t:=f;][x:=t;]x>=0
    *         -------------------------assignbExists(f)(1)
    *         |- \exists t [x:=t;]x>=0
@@ -560,7 +562,7 @@ private object DLBySubst {
   /**
     * Turns a universal quantifier into an assignment.
     *
-    * @example{{{
+    * @example {{{
     *         [t:=f;][x:=t;]x>=0 |-
     *         -------------------------assignbAll(f)(-1)
     *         \forall t [x:=t;]x>=0 |-
