@@ -667,14 +667,6 @@ object TactixLibrary extends HilbertCalculus
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Utility Tactics
-  /** skip is a no-op tactic that has no effect
-    * @see [[done]] */
-  val skip : BelleExpr = Idioms.ident
-  /** nil=skip is a no-op tactic that has no effect */
-  val nil : BelleExpr = skip
-  /** fail is a tactic that always fails as being inapplicable
-    * @see [[skip]] */
-  val fail : BelleExpr = "fail" by ((_: Sequent) => throw new TacticInapplicableFailure("fail"))
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done : BelleExpr = DebuggingTactics.done

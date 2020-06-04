@@ -70,15 +70,21 @@ private object ProofRuleTactics extends Logging {
   })
 
   /** [[SequentCalculus.cutLR()]] */
-  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = "cutLR" byWithInput(f, (pos: Position, _: Sequent) => {
-    new BuiltInTactic("CutLR") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, "cutLR(" + f + ")")
-        if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
-        else provable(core.CutRight(f, pos.checkSucc.top), 0)
+  //@todo@Tactic()
+  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = /*anon { (provable: ProvableSig, pos: Position) =>
+    requireOneSubgoal(provable, "cutLR(" + f + ")")
+    if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
+    else provable(core.CutRight(f, pos.checkSucc.top), 0)
+  }*/
+    "cutLR" byWithInput(f, (pos: Position, _: Sequent) => {
+      new BuiltInTactic("CutLR") {
+        override def result(provable: ProvableSig): ProvableSig = {
+          requireOneSubgoal(provable, "cutLR(" + f + ")")
+          if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
+          else provable(core.CutRight(f, pos.checkSucc.top), 0)
+        }
       }
-    }
-  })
+    })
 
   //@todo this should not be a dependent tactic, just a by(Position=>Belle)
   @Tactic("W")

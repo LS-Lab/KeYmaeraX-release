@@ -8,7 +8,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.skip
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
 
@@ -56,8 +55,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @note Efficient source-level indexing implementation.
     * @see [[AxIndex]]
     */
-  //@todo @Tactic()
-  val stepAt: DependentPositionTactic = stepAt(AxIndex.axiomFor)
+  @Tactic()
+  val stepAt: DependentPositionTactic = anon {(pos:Position) => UnifyUSCalculus.stepAt(AxIndex.axiomFor)(pos)}
 
 
   //
