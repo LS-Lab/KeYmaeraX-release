@@ -560,7 +560,8 @@ object TacticFactory {
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Position => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Sequent => BelleExpr)): DependentTactic = "ANON" by t
-
+  def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = "ANON" coreby t
+  def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = "ANON" coreby t
 }
 
 /**
