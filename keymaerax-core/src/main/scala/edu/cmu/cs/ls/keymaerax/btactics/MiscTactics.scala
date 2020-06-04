@@ -554,6 +554,8 @@ object TacticFactory {
 
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = "ANON" by t
+  def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
+  def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t
   def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Position => BelleExpr)): DependentPositionTactic = "ANON" by t
