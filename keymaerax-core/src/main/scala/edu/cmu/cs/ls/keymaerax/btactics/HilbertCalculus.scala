@@ -78,7 +78,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   @Tactic(premises = "|- P", conclusion = "Γ |- [a]P, Δ")
   val G            : DependentPositionTactic = anon ((pos:Position) =>
     SequentCalculus.cohideR(pos) & DLBySubst.G
-    )
+  )
 
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation.
     * {{{
@@ -88,8 +88,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
-    //@todo use allDist & Ax.allGeneralize
-  lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
+  @Tactic(premises = "P |- Q", conclusion = "∀x P |- ∀x Q")
+  lazy val allG               : BelleExpr         = anon {byUS(Ax.monall)}
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)

@@ -689,6 +689,20 @@ object Ax extends Logging {
   )
 
   /**
+    * Rule "all generalization".
+    * Premise p(||) |- q(||)
+    * Conclusion \forall x p(||) |- \forall x q(||)
+    * End.
+    */
+  @ProofRule("M∀",  premises = "P |- Q", conclusion = "∀x P |- ∀ x Q")
+  lazy val monall = derivedRuleSequent("all monotone",
+    Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
+    implyRi()(-1,1) &
+      useAt(allDistElim, PosInExpr(1::Nil))(1) &
+      byUS(allGeneralize)
+  )
+
+  /**
     * Rule "Goedel".
     * Premise p(||)
     * Conclusion [a;]p(||)
