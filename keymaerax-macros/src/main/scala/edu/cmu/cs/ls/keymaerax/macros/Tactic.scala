@@ -155,7 +155,7 @@ class TacticImpl(val c: whitebox.Context) {
       }
     }
     // Scrape argument info from declaration
-    def getInput(param: c.universe.Tree): ArgInfo = {
+    def getInput(param: Tree): ArgInfo = {
       param match {
         case v: ValDef =>
           v.tpt match {
@@ -167,12 +167,17 @@ class TacticImpl(val c: whitebox.Context) {
             case tq"""Variable""" => VariableArg(v.name.decodedName.toString)
             case tq"""String""" => StringArg(v.name.decodedName.toString)
             case tq"""Substitution""" => SubstitutionArg(v.name.decodedName.toString)
-            case tq"""Option[$t]""" => new OptionArg(getInput(t))
-            case tq"""List[$t]""" => new ListArg(v.name.decodedName.toString, getInput(t).name)
+            case tq"""Option[$t]""" =>
+              val vd = ValDef(v.mods, v.name, t, v.rhs)
+              new OptionArg(getInput(vd))
+            case tq"""List[$t]""" =>
+              val vd = ValDef(v.mods, v.name, t, v.rhs)
+              new ListArg(v.name.decodedName.toString, getInput(vd).name)
+            case t => c.abort(c.enclosingPosition, "Expected supported input type in tactic definition, got unsupported type: " + t)
           }
       }
     }
-    def getInputs(params: Seq[c.universe.Tree]): (Option[ArgInfo], List[ArgInfo]) = {
+    def getInputs(params: Seq[Tree]): (Option[ArgInfo], List[ArgInfo]) = {
       val infos = params.toList.map(getInput)
       val gen = infos.find((ai: ArgInfo) => ai match {case _: GeneratorArg => true case _ => false})
       if (infos.nonEmpty && infos.dropRight(1).contains((ai: ArgInfo) => ai match {case _: GeneratorArg => true case _ => false})) {
@@ -191,6 +196,10 @@ class TacticImpl(val c: whitebox.Context) {
         case _: TermArg => tq"edu.cmu.cs.ls.keymaerax.core.Term"
         case _: SubstitutionArg => tq"edu.cmu.cs.ls.keymaerax.core.Subst"
         case _: ExpressionArg => tq"edu.cmu.cs.ls.keymaerax.core.Expression"
+        case OptionArg(ai) => tq"scala.Option[${typeName(ai)}]"
+        case ListArg(name, elementSort, allowsFresh) =>
+          c.abort(c.enclosingPosition, "List arguments in tactics not yet supported")
+        case ai => c.abort(c.enclosingPosition, "Unimplemented case in @Tactic, could not convert argument spec: " + ai)
       }
     }
     // Type and term ASTs which wrap acc in position and/or input arguments as anonymous lambdas
@@ -228,7 +237,7 @@ class TacticImpl(val c: whitebox.Context) {
         val name = ai match {
           case a: VariableArg => a.name case a: FormulaArg => a.name case n: NumberArg => n.name
           case a: StringArg => a.name case a: TermArg => a.name case a: SubstitutionArg => a.name
-          case a: ExpressionArg => a.name case g: GeneratorArg => g.name
+          case a: ExpressionArg => a.name case g: GeneratorArg => g.name case a: OptionArg => a.name
         }
         val argTy = typeName(ai)
         ValDef(Modifiers(), name, tq"""$argTy""", EmptyTree)
@@ -246,7 +255,7 @@ class TacticImpl(val c: whitebox.Context) {
       val argTySeq: Seq[Tree] = argSeq.map(_.tpt)
       (curried, argSeq, argTySeq, base)
     }
-    def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[c.universe.Tree], positions: PosArgs, rhs: Tree, isDef: Boolean): c.Expr[Nothing] = {
+    def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, isDef: Boolean): c.Expr[Nothing] = {
       val (codeName, display, _argInfoAnnotation, displayLevel, revealInternalSteps) = getParams(declName)
       val (generatorOpt, inputs) = getInputs(inArgs)
       val needsGenerator = generatorOpt.isDefined

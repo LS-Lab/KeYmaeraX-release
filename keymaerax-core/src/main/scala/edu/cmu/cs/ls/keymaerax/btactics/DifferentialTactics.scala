@@ -1716,17 +1716,17 @@ private object DifferentialTactics extends Logging {
   })
 
 // TODO:
-//  @Tactic(names="Darboux (in)equalities",
-//    premises="Γ |- p≳0 ;; Q |- p' >= g p",
-//    conclusion="Γ |- [x'=f(x)&Q]p≳0, Δ",
-//    inputs="g:option[term]",
-//    displayLevel="browse")
-//  def dbx(g : Option[Term]) : DependentPositionTactic = anon ({ pos: Position =>
-//    g match {
-//      case None => dgDbxAuto(pos)
-//      case Some(cof) => dgDbx(cof)(pos)
-//    }
-//  })
+  @Tactic(names="Darboux (in)equalities",
+    premises="Γ |- p≳0 ;; Q |- p' >= g p",
+    conclusion="Γ |- [x'=f(x)&Q]p≳0, Δ",
+    inputs="g:option[term]",
+    displayLevel="browse")
+  def dbx(g : Option[Term]) : DependentPositionTactic = anon ({ pos: Position =>
+    g match {
+      case None => dgDbxAuto(pos)
+      case Some(cof) => dgDbx(cof)(pos)
+    }
+  })
 
   /** @see [[TactixLibrary.DGauto]]
     * @author Andre Platzer */
