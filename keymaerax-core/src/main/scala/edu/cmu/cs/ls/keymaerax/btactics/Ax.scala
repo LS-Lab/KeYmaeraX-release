@@ -494,8 +494,8 @@ object Ax extends Logging {
   @Axiom("[]T", conclusion = "__[a]⊤__", displayLevel = "all",
     key = "", recursor = "", unifier = "surjlinear")
   val boxTrue = coreAxiom("[]T system")
-  @Axiom("K", conclusion = "[a](P→Q) → ([a]P → __[a]Q__)",
-    key = "1.1", recursor = "*", unifier = "surjlinear")
+  @Axiom("K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
+    key = "1", recursor = "*")
   val K = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
   @Axiom(("I<sub>→</sub>", "Iind"), conclusion = "P∧[a<sup>*</sup>](P→[a]P)→__[a<sup>*</sup>]P__", displayLevel = "internal",
