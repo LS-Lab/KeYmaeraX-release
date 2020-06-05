@@ -129,7 +129,8 @@ class TacticImpl(val c: blackbox.Context) {
              | tq"CoreLeftTactic" | tq"CoreRightTactic"
              | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic" | tq"InputTactic"
              | tq"DependentPositionWithAppliedInputTactic"
-             | tq"AppliedBuiltInTwoPositionTactic" => true
+             | tq"AppliedBuiltInTwoPositionTactic"
+             | tq"BelleExpr" => true
         case _ => false
       }
     }
@@ -404,7 +405,7 @@ class TacticImpl(val c: blackbox.Context) {
                case q"((..$params) => $rhs)" =>
                  val isCoreAnon = coreAnon(f.toString)
                  if (!isTactic(tRet))
-                  c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
+                  c.abort(c.enclosingPosition, s"Invalid annottee: Return type $tRet is not one of the supported return types")
                 val positions = getPositioning(params)
                 assemble(mods, declName, Nil, positions, rhs, isDef = false, isCoreAnon)
                case rhs =>

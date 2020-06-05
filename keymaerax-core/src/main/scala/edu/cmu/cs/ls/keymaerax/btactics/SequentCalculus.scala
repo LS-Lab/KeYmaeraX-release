@@ -241,8 +241,7 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
     //@todo optimizable seems like complicated and possibly slow code???
-//  @Tactic(premises = "*",
-//    conclusion = "Γ, P |- P, Δ")
+  @Tactic(premises = "*", conclusion = "Γ, P |- P, Δ")
   val close: BelleExpr = anon {(seq: Sequent) => {
     seq.succ.zipWithIndex.find({
       case (True, _) => true
