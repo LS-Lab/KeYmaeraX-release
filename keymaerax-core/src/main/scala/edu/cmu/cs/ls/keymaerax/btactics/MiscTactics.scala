@@ -578,6 +578,16 @@ object TacticFactory {
 
     /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
      */
+    def by(t: (ProvableSig) => ProvableSig): BuiltInTactic =
+      new BuiltInTactic(name) {
+        @inline override def result(provable: ProvableSig): ProvableSig = {
+          requireOneSubgoal(provable, name)
+          t(provable)
+        }
+      }
+
+    /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
+     */
     def by(t: (ProvableSig, Position) => ProvableSig): BuiltInPositionTactic =
       new BuiltInPositionTactic(name) {
         @inline override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
@@ -617,6 +627,7 @@ object TacticFactory {
 
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = "ANON" by t
+  def anon(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" by t
   def anon(t: ((ProvableSig, Position) => ProvableSig)): BuiltInPositionTactic = "ANON" by t
   def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
   def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t

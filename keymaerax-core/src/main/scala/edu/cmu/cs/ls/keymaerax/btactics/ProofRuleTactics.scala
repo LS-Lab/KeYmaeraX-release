@@ -33,16 +33,11 @@ private object ProofRuleTactics extends Logging {
     }
   }
 
+  def rawCut(f: Formula): BuiltInTactic = "rawCut" by { (provable: ProvableSig) => provable(core.Cut(f), 0)}
+
   /** [[SequentCalculus.cut()]] */
-//  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C",
-//    conclusion = "Γ |- Δ", inputs = "C:formula")
-  def cut(f: Formula): InputTactic = new InputTactic("cut", f::Nil) {
-    override def computeExpr(): BelleExpr = new BuiltInTactic(name) {
-      override def result(provable: ProvableSig): ProvableSig = {
-        provable(core.Cut(f), 0)
-      }
-    } & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))
-  }
+  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C", conclusion = "Γ |- Δ", inputs = "C:formula")
+  def cut(f: Formula): InputTactic = inputanon {rawCut(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))}
 
   /** [[SequentCalculus.cutL()]] */
   @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",

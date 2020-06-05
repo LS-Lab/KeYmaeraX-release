@@ -135,9 +135,9 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
     // Return type of tactic definition
-    def isBelleExpr(tRet: Tree): Boolean = {
+    def isValTactic(tRet: Tree): Boolean = {
       tRet match {
-        case tq"BelleExpr" => true
+        case tq"BelleExpr" | tq"InputTactic" => true
         case _ => false
       }
     }
@@ -392,8 +392,8 @@ class TacticImpl(val c: blackbox.Context) {
               //c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
               case rhs =>
                 val isCoreAnon = coreAnon(f.toString)
-                if (!isBelleExpr(tRet))
-                  c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
+                if (!isValTactic(tRet))
+                  c.abort(c.enclosingPosition, "Invalid annottee: Unexpected return type: " + tRet)
                 assemble(mods, codeName, inArgs, NoPos(), rhs, isDef = true, isCoreAnon)
             }
           case rhs => c.abort(c.enclosingPosition, "@Tactic expects def <name> (args): <T> = anon(...), got: " + rhs)
@@ -410,8 +410,8 @@ class TacticImpl(val c: blackbox.Context) {
                 assemble(mods, declName, Nil, positions, rhs, isDef = false, isCoreAnon)
                case rhs =>
                  val isCoreAnon = coreAnon(f.toString)
-                 if (!isBelleExpr(tRet))
-                   c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
+                 if (!isValTactic(tRet))
+                   c.abort(c.enclosingPosition, "Invalid annottee: Unexpected return type: " + tRet)
                  assemble(mods, declName, Nil, NoPos(), rhs, isDef = false, isCoreAnon)
                }
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected function application anon(..) on right-hand side of val, got: " + valDecl)
