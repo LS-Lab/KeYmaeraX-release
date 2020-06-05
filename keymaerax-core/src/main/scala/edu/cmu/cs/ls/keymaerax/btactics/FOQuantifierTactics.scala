@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivedAxiomInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivedAxiomInfo, Tactic}
 import DerivationInfoAugmentors._
 
 import scala.collection.immutable._
@@ -143,6 +143,9 @@ protected object FOQuantifierTactics {
 
 
   /** @see [[SequentCalculus.allR]] */
+//  @Tactic(premises = "Γ |- p(x), Δ",
+//    conclusion = "Γ |- ∀x p(x), Δ",
+//    codeName = "allR")
   lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allR") {
     //@note could also try to skolemize directly and then skolemize to a fresh name index otherwise
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -197,6 +200,9 @@ protected object FOQuantifierTactics {
    * Skolemizes an existential quantifier in the antecedent.
    * @see [[allSkolemize]]
    */
+//  @Tactic(premises = "p(x), Γ |- Δ",
+//    conclusion = "∃x p(x), Γ |- Δ",
+//    codeName = "existsL")
   lazy val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
 
   /**
