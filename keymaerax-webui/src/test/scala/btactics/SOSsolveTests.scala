@@ -141,6 +141,8 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
         SOSSolve.lexicographicVariableOrdering
       case "preferAuxiliary" =>
         SOSSolve.preferAuxiliaryVariableOrdering
+      case "deferAuxiliary" =>
+        SOSSolve.deferAuxiliaryVariableOrdering
       case k => throw new IllegalArgumentException("Unknown key for variable ordering: " + k)
     }
     var lineCount = 0

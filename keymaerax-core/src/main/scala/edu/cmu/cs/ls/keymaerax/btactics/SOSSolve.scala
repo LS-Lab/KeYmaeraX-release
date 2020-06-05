@@ -126,6 +126,10 @@ object SOSSolve {
     augmentedVariableOrdering(v => if (v.name.startsWith("wit_")) 0 else 1:Int,
       lexicographicVariableOrdering)
 
+  val deferAuxiliaryVariableOrdering : Ordering[Variable] =
+    augmentedVariableOrdering(v => if (v.name.startsWith("wit_")) 1 else 0:Int,
+      lexicographicVariableOrdering)
+
   def witnessSOS(degree: Int, variableOrdering: Ordering[Variable], timeout: Option[Int] = None, sosTimer: Timer = NoTimer, witnessTimer: Timer = NoTimer) : DependentTactic = {
     val name = "witnessSOS"
     name by { (seq: Sequent) =>
