@@ -41,6 +41,7 @@ object HilbertCalculus extends HilbertCalculus
   * @see [[HilbertCalculus.derive()]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
+  * @Tactic completed
   */
 trait HilbertCalculus extends UnifyUSCalculus {
   import TacticFactory._
@@ -76,9 +77,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[boxTrue]]
     */
   @Tactic(premises = "|- P", conclusion = "Γ |- [a]P, Δ")
-  val G            : DependentPositionTactic = anon ((pos:Position) =>
-    SequentCalculus.cohideR(pos) & DLBySubst.G
-  )
+  val G : DependentPositionTactic = anon {(pos:Position) => SequentCalculus.cohideR(pos) & DLBySubst.G}
 
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation.
     * {{{
@@ -209,8 +208,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @see [[monb]]
     * @see [[mond]]
     */
-    //@todo @Tactic? key change
-  lazy val K                  : DependentPositionTactic = useAt(Ax.K, PosInExpr(1::Nil))
+  lazy val K                  : DependentPositionTactic = useAt(Ax.K)
   /** V: vacuous box `[a]p()` will be discarded and replaced by `p()` provided program `a` does not change values of postcondition `p()`.
     * @note Unsound for hybrid games
     */

@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
@@ -29,6 +28,7 @@ object SequentCalculus extends SequentCalculus
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
+  * @Tactic complete
   */
 trait SequentCalculus {
 
@@ -203,13 +203,17 @@ trait SequentCalculus {
     *     x>0   |- \forall x x^2>=0
     * }}}
     */
-  val allR                          : DependentPositionTactic = FOQuantifierTactics.allSkolemize
+  @Tactic(premises = "Γ |- p(x), Δ",
+    conclusion = "Γ |- ∀x p(x), Δ")
+  val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
   /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `term`. */
   def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
-  val allL                          : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
+  @Tactic(premises = "p(e), Γ |- Δ",
+    conclusion = "∀x p(x), Γ |- Δ")
+  val allL                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allInstantiate(None, None)(pos)}
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   //@todo turn this into a more general function that obtains data from the sequent.
   def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
@@ -218,13 +222,17 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
-  val existsL                         : DependentPositionTactic = "existsL" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsSkolemize(pos))
+  @Tactic(premises = "p(x), Γ |- Δ",
+    conclusion = "∃x p(x), Γ |- Δ")
+  val existsL                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsSkolemize(pos)}
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
-  val existsR                         : DependentPositionTactic = "existsR" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
+  @Tactic(premises = "Γ |- p(e), Δ",
+    conclusion = "Γ |- ∃x p(x), Δ")
+  val existsR                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsInstantiate(None, None)(pos)}
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
@@ -238,7 +246,8 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
     //@todo optimizable seems like complicated and possibly slow code???
-  lazy val close: BelleExpr = "close" by ((seq: Sequent) => {
+  @Tactic(premises = "*", conclusion = "Γ, P |- P, Δ")
+  val close: BelleExpr = anon {(seq: Sequent) => {
     seq.succ.zipWithIndex.find({
       case (True, _) => true
       case (fml, _) =>
@@ -255,7 +264,7 @@ trait SequentCalculus {
         case _ => DebuggingTactics.error("Inapplicable close")
       }
     }
-  })
+  }}
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePos, s: SuccPos): BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     //@note same name (closeId) as SequentCalculus.closeId for serialization
@@ -272,23 +281,24 @@ trait SequentCalculus {
     }
   def close(a: Int, s: Int): BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  val closeIdWith: DependentPositionTactic = "idWith" by ((pos: Position, s: Sequent) => {
+  @Tactic(premises = "*",
+    conclusion = "Γ, P |- P, Δ",
+    codeName = "idWith")
+  val closeIdWith: DependentPositionTactic = anon {(pos: Position, s: Sequent) =>
     pos.top match {
       case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
       case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)
       case _ => throw new TacticInapplicableFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
     }
-  })
+  }
   //@note do not forward to closeIdWith (performance)
-  val closeId           : DependentTactic = new DependentTactic("id") {
-    override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        val fmls = s.ante.intersect(s.succ)
-        val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString))
-        close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
-    }
+  @Tactic(premises = "*",
+    conclusion = "Γ, P |- P, Δ")
+  val closeId: DependentTactic = anon {(seq: Sequent) =>
+    //@todo optimizable performance avoiding the repeated search
+    val fmls = seq.ante.intersect(seq.succ)
+    val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + seq.prettyString))
+    close(AntePos(seq.ante.indexOf(fml)), SuccPos(seq.succ.indexOf(fml)))
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   @Tactic(/*codeName = "closeTrue",*/ premises = "*",

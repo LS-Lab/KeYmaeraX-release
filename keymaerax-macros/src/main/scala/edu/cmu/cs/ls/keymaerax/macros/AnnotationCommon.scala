@@ -2,22 +2,22 @@ package edu.cmu.cs.ls.keymaerax.macros
 
 import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
 
-import scala.reflect.macros.whitebox
+import scala.reflect.macros.blackbox
 
 object AnnotationCommon {
-  def toArgInfo(name: String, tpe: String, allowFresh: List[String])(implicit c: whitebox.Context): ArgInfo = {
+  def toArgInfo(name: String, tpe: String, allowFresh: List[String])(implicit c: blackbox.Context): ArgInfo = {
     import c.universe._
     val first = tpe.indexOf('[')
     val last = tpe.lastIndexOf(']')
     if (first != -1 && last != -1) {
       val (tpeFun, tpeArg) = (tpe.slice(0, first).trim.toLowerCase, tpe.slice(first + 1, last).trim.toLowerCase)
       tpeFun match {
-        case "list" => ListArg(name, tpeArg, allowFresh)
+        case "list" => ListArg(toArgInfo(name, tpeArg, allowFresh))
         case "option" => OptionArg(toArgInfo(name, tpeArg, allowFresh))
         case s => c.abort(c.enclosingPosition, "Unexpected type constructor: " + s + ", should be option[] or list[]")
       }
     } else {
-      tpe match {
+      tpe.trim.toLowerCase match {
         case "variable" => VariableArg(name, allowFresh)
         case "term" => new TermArg(name, allowFresh)
         case "formula" => FormulaArg(name, allowFresh)
@@ -29,43 +29,43 @@ object AnnotationCommon {
       }
     }
   }
-  def parseAI(s: String)(implicit c: whitebox.Context): ArgInfo = {
+  def parseAI(s: String)(implicit c: blackbox.Context): ArgInfo = {
     s.split(":").toList match {
       case id :: tpe :: Nil =>
         val first = id.indexOf('[')
         val last = id.lastIndexOf(']')
         val (name, allowFresh) =
           if (first != -1 && last != -1)
-            (id.slice(0, first), id.slice(first+1, last).split(',').toList)
-          else (id, Nil)
-        toArgInfo(name, tpe, allowFresh)
+            (id.slice(0, first).trim, id.slice(first+1, last).split(',').toList.map(_.trim))
+          else (id.trim, Nil)
+        toArgInfo(name, tpe.trim, allowFresh)
       case ss => c.abort(c.enclosingPosition, "Invalid argument type descriptor:" + s)
     }
   }
-  def parseAIs(s: String)(implicit c: whitebox.Context): List[ArgInfo] = {
+  def parseAIs(s: String)(implicit c: blackbox.Context): List[ArgInfo] = {
     if (s.isEmpty) Nil
-    else s.split(";;").toList.map(parseAI)
+    else s.split(";;").toList.map(s => parseAI(s.trim))
   }
-  def parseSequent(str: String)(implicit c: whitebox.Context): SequentDisplay = {
+  def parseSequent(str: String)(implicit c: blackbox.Context): SequentDisplay = {
     if(str == "*") {
       SequentDisplay(Nil, Nil, isClosed = true)
     } else {
       str.split("\\|-").toList match {
         case ante :: succ :: Nil =>
-          val (a, s) = (ante.split(",").toList, succ.split(",").toList)
+          val (a, s) = (ante.split(",").toList.map(_.trim), succ.split(",").toList.map(_.trim))
           SequentDisplay(a, s)
         case succ :: Nil =>
-          val s = succ.split(",").toList
+          val s = succ.split(",").toList.map(_.trim)
           SequentDisplay(Nil, s)
         case ss => c.abort(c.enclosingPosition, "Expected at most one |- in sequent, got: " + ss)
       }
     }
   }
-  def parseSequents(s: String)(implicit c: whitebox.Context): List[SequentDisplay] = {
+  def parseSequents(s: String)(implicit c: blackbox.Context): List[SequentDisplay] = {
     if (s.isEmpty) Nil
     else s.split(";;").toList.map(parseSequent)
   }
-  def toNonneg(s: String)(implicit c: whitebox.Context): Int = {
+  def toNonneg(s: String)(implicit c: blackbox.Context): Int = {
     val i =
       try {
          s.toInt
@@ -75,27 +75,27 @@ object AnnotationCommon {
     if (i < 0) c.abort(c.enclosingPosition, "Position needs to be nonnegative, got: " + i)
     else i
   }
-  def parsePos(s: String)(implicit c: whitebox.Context): ExprPos = {
+  def parsePos(s: String)(implicit c: blackbox.Context): ExprPos = {
     if(s == "*" || s == "") Nil
     else s.split("\\.").toList.map(toNonneg)
   }
-  def parsePoses(s: String)(implicit c: whitebox.Context): List[ExprPos] = {
+  def parsePoses(s: String)(implicit c: blackbox.Context): List[ExprPos] = {
     if(s == "") Nil
     else s.split(";").toList.map(parsePos)
   }
 
   // Abstract syntax trees for string and string list literals
-  def literal(s: String)(implicit c: whitebox.Context): c.universe.Tree = c.universe.Literal(c.universe.Constant(s))
-  def literals(ss: List[String])(implicit c: whitebox.Context): c.universe.Tree = {
+  def literal(s: String)(implicit c: blackbox.Context): c.universe.Tree = c.universe.Literal(c.universe.Constant(s))
+  def literals(ss: List[String])(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     q"""List(..${ss.map((s: String) => literal(s))})"""
   }
   // Abstract syntax trees for all the display info data structures
-  def convAIs(ais: List[ArgInfo])(implicit c: whitebox.Context): c.universe.Tree = {
+  def convAIs(ais: List[ArgInfo])(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     q"""List(..${ais.map((ai:ArgInfo) => convAI(ai))})"""
   }
-  def convAI(ai: ArgInfo)(implicit c: whitebox.Context): c.universe.Tree = {
+  def convAI(ai: ArgInfo)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     ai match {
       case GeneratorArg(name) => q"""new edu.cmu.cs.ls.keymaerax.macros.GeneratorArg(${literal(name)})"""
@@ -106,17 +106,17 @@ object AnnotationCommon {
       case SubstitutionArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
       case OptionArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.OptionArg(${convAI(arg)})"""
       case FormulaArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case ListArg(name, sort, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.ListArg(${literal(name)}, ${literal(sort)}, ${literals(allowsFresh)})"""
+      case ListArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.ListArg(${convAI(arg)})"""
       case ta: TermArg => q"""new edu.cmu.cs.ls.keymaerax.macros.TermArg(${literal(ta.name)}, ${literals{ta.allowsFresh}})"""
       case ea: ExpressionArg => q"""new edu.cmu.cs.ls.keymaerax.macros.ExpressionArg (${literal(ea.name)}, ${literals(ea.allowsFresh)})"""
     }
   }
-  def convSD(sd: SequentDisplay)(implicit c: whitebox.Context): c.universe.Tree = {
+  def convSD(sd: SequentDisplay)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     val SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean) = sd
     q"""new SequentDisplay($ante, $succ, $isClosed)"""
   }
-  def convDI(di: DisplayInfo)(implicit c: whitebox.Context): c.universe.Tree = {
+  def convDI(di: DisplayInfo)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     di match {
       case SimpleDisplayInfo(name, asciiName) => q"""new edu.cmu.cs.ls.keymaerax.macros.SimpleDisplayInfo(${literal(name)}, ${literal(asciiName)})"""
@@ -131,14 +131,14 @@ object AnnotationCommon {
         q"""new edu.cmu.cs.ls.keymaerax.macros.InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
     }
   }
-  def sequentDisplayFromObj(a: Any)(implicit c: whitebox.Context): SequentDisplay = {
+  def sequentDisplayFromObj(a: Any)(implicit c: blackbox.Context): SequentDisplay = {
     a match {
       case (ante: List[String], succ: List[String]) => SequentDisplay(ante, succ)
       case sd: SequentDisplay => sd
       case e => c.abort(c.enclosingPosition, "Expected SequentDisplay, got: " + e)
     }
   }
-  def foldParams(c: whitebox.Context, paramNames: List[String])(acc: (Int, Boolean, Map[String, c.universe.Tree]), param: c.universe.Tree): (Int, Boolean, Map[String, c.universe.Tree]) = {
+  def foldParams(c: blackbox.Context, paramNames: List[String])(acc: (Int, Boolean, Map[String, c.universe.Tree]), param: c.universe.Tree): (Int, Boolean, Map[String, c.universe.Tree]) = {
     import c.universe._
     val (idx, wereNamed, paramMap) = acc
     val (k, v, isNamed) = param match {

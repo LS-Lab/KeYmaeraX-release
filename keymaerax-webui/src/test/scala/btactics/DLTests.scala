@@ -489,7 +489,7 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "v_>0, v_>x, 0>=0 ==> <x:=x-1;>v_-1>x".asSequent
   }
 
-  it should "TODO: accept modal convergence conditions" taggedAs TodoTest in {
+  it should "TODO: accept modal convergence conditions" taggedAs(TodoTest) in {
     val result = proveBy("<{{x'=-1}}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "<{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asFormula)(1))
     result.subgoals should have size 3
     result.subgoals(0) shouldBe "==> \\exists v_ <{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asSequent

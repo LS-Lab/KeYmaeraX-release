@@ -33,62 +33,36 @@ private object ProofRuleTactics extends Logging {
     }
   }
 
+  def rawCut(f: Formula): BuiltInTactic = "rawCut" by { (provable: ProvableSig) => provable(core.Cut(f), 0)}
+
   /** [[SequentCalculus.cut()]] */
-//@todo  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C",
-//    conclusion = "Γ |- Δ", inputs = "C:formula")
-  def cut(f: Formula): InputTactic = new InputTactic("cut", f::Nil) {
-    override def computeExpr(): BelleExpr = new BuiltInTactic(name) {
-      override def result(provable: ProvableSig): ProvableSig = {
-        provable(core.Cut(f), 0)
-      }
-    } & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))
-  }
+  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C", conclusion = "Γ |- Δ", inputs = "C:formula")
+  def cut(f: Formula): InputTactic = inputanon {rawCut(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))}
 
   /** [[SequentCalculus.cutL()]] */
-//@todo  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
-//    conclusion = "Γ, P |- Δ", inputs = "C:formula")
-  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = "cutL" byWithInput(f, (pos: Position, _: Sequent) => {
-    new BuiltInTactic("CutL") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, "cutL(" + f + ")")
-        provable(core.CutLeft(f, pos.checkAnte.top), 0)
-        //@todo label BelleLabels.cutUse/cutShow
-      }
-    }
-  })
+  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
+    conclusion = "Γ, P |- Δ", inputs = "C:formula")
+  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = inputanonL { (provable: ProvableSig, pos: AntePosition) =>
+    requireOneSubgoal(provable, "cutL(" + f + ")")
+    provable(core.CutLeft(f, pos.top), 0)
+    //@todo label BelleLabels.cutUse/cutShow
+  }
 
   /** [[SequentCalculus.cutR()]] */
-  /*DependentPositionWithAppliedInputTactic*/
-//@todo  @Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
-//    conclusion = "Γ |- P, Δ", inputs = "C:formula")
-//  def cutR(f: Formula): BuiltInRightTactic = anon { (provable: ProvableSig, pos: SuccPosition) =>
-//    requireOneSubgoal(provable, "cutR(" + f + ")")
-//    provable(core.CutRight(f, pos.top), 0)
-//  }
-  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = "cutR" byWithInput(f, (pos: Position, _: Sequent) => {
-    new BuiltInTactic("CutR") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, "cutR(" + f + ")")
-        provable(core.CutRight(f, pos.checkSucc.top), 0)
-      }
-    }
-  })
+  @Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
+    conclusion = "Γ |- P, Δ", inputs = "C:formula")
+  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonR { (provable: ProvableSig, pos: SuccPosition) =>
+    requireOneSubgoal(provable, "cutR(" + f + ")")
+    provable(core.CutRight(f, pos.top), 0)
+  }
+
   /** [[SequentCalculus.cutLR()]] */
-  //@todo@Tactic()
-  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = /*anon { (provable: ProvableSig, pos: Position) =>
+  @Tactic()
+  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonP { (provable: ProvableSig, pos: Position) =>
     requireOneSubgoal(provable, "cutLR(" + f + ")")
     if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
     else provable(core.CutRight(f, pos.checkSucc.top), 0)
-  }*/
-    "cutLR" byWithInput(f, (pos: Position, _: Sequent) => {
-      new BuiltInTactic("CutLR") {
-        override def result(provable: ProvableSig): ProvableSig = {
-          requireOneSubgoal(provable, "cutLR(" + f + ")")
-          if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
-          else provable(core.CutRight(f, pos.checkSucc.top), 0)
-        }
-      }
-    })
+  }
 
   //@todo this should not be a dependent tactic, just a by(Position=>Belle)
   @Tactic("W")
