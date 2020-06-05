@@ -28,6 +28,7 @@ object SequentCalculus extends SequentCalculus
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
+  * @Tactic complete
   */
 trait SequentCalculus {
 
@@ -202,7 +203,9 @@ trait SequentCalculus {
     *     x>0   |- \forall x x^2>=0
     * }}}
     */
-  val allR                          : DependentPositionTactic = FOQuantifierTactics.allSkolemize
+  @Tactic(premises = "Γ |- p(x), Δ",
+    conclusion = "Γ |- ∀x p(x), Δ")
+  val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
   /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `term`. */
@@ -219,7 +222,9 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
-  val existsL                         : DependentPositionTactic = "existsL" by ((pos: Position) => FOQuantifierTactics.existsSkolemize(pos))
+  @Tactic(premises = "p(x), Γ |- Δ",
+    conclusion = "∃x p(x), Γ |- Δ")
+  val existsL                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsSkolemize(pos)}
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */

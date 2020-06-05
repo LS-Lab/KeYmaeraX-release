@@ -200,9 +200,6 @@ protected object FOQuantifierTactics {
    * Skolemizes an existential quantifier in the antecedent.
    * @see [[allSkolemize]]
    */
-//  @Tactic(premises = "p(x), Γ |- Δ",
-//    conclusion = "∃x p(x), Γ |- Δ",
-//    codeName = "existsL")
   lazy val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
 
   /**
