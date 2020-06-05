@@ -68,9 +68,13 @@ trait HybridProgramCalculus {
     *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
     * }}}
     */
-    //@todo MR or generalize? // MR see AxiomInfo.scala
-  @Tactic(codeName = "generalize", premises = "Γ |- [a]Q, Δ ;; Q |- P",
-    conclusion = "Γ |- [a]P, Δ", revealInternalSteps = true)
+  @Tactic(
+    names = "Monotonicity",
+    codeName = "MR",
+    premises =      "Γ |- [a]Q, Δ ;; Q |- P",
+    // Monotonicity ------------------------
+    conclusion =    "Γ |- [a]P, Δ",
+    revealInternalSteps = true)
   def generalize(C: Formula)  : DependentPositionTactic = anon {(pos:Position) => DLBySubst.generalize(C)(pos) }
 
   /** loop: prove a property of a loop by induction with the given loop invariant (hybrid systems)
