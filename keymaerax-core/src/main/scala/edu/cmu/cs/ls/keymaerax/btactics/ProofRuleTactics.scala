@@ -44,12 +44,12 @@ private object ProofRuleTactics extends Logging {
     } & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))
   }
 
-  /** [[SequentCalculus.cutL()]] */
+  /** [[SequentCalculus.cutL()]] */ 
   @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
     conclusion = "Γ, P |- Δ", inputs = "C:formula")
   def cutL(f: Formula): DependentPositionWithAppliedInputTactic = inputanonL { (provable: ProvableSig, pos: AntePosition) =>
     requireOneSubgoal(provable, "cutL(" + f + ")")
-    provable(core.CutLeft(f, pos.checkAnte.top), 0)
+    provable(core.CutLeft(f, pos.top), 0)
     //@todo label BelleLabels.cutUse/cutShow
   }
 
