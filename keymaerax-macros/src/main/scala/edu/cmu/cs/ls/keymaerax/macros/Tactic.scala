@@ -15,7 +15,8 @@ import AnnotationCommon._
 *               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
 *               By default, this argument is inferred from the argument types and names of the annotated [[def]].
 *               Use this argument when you want customized display on the UI or when there are allowedFresh variables.
- *              Supported types: Expression, Formula, Term, Variable, Number, String, Substitution, List[], Option[]
+*               Supported types: Expression, Formula, Term, Variable, Number, String, Substitution, List[], Option[]
+*               Type names are case-insensitive.
 * @param premises String of premises when (if) the tactic is displayed like a rule on the UI.
 *                 For tactics with (non-position) inputs, the premises or conclusion must mention each input.
 *                 The name of each input is given in [[inputs]], which may be generated from the [[def]].
@@ -72,7 +73,7 @@ class TacticImpl(val c: blackbox.Context) {
         case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
       }
     }
-    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, List[ArgInfo], String, Boolean) = {
+    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, String, Boolean) = {
       val defaultMap: Map[String, Tree] = Map(
         "names"    -> Literal(Constant(false)),
         "codeName" -> Literal(Constant("")),
@@ -112,9 +113,9 @@ class TacticImpl(val c: blackbox.Context) {
         case (_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
-      (codeName, displayInfo, inputs, displayLevel, revealInternal)
+      (codeName, displayInfo, displayLevel, revealInternal)
     }
-    def getParams (tn: TermName): (String, DisplayInfo, List[ArgInfo], String, Boolean) = {
+    def getParams (tn: TermName): (String, DisplayInfo, String, Boolean) = {
         c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)
         case q"new $annotation()" => paramify(tn, Nil)
@@ -306,7 +307,7 @@ class TacticImpl(val c: blackbox.Context) {
     }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, isDef: Boolean
                 , isCoreAnon: Boolean): c.Expr[Any] = {
-      val (codeName, display, _argInfoAnnotation, displayLevel, revealInternalSteps) = getParams(declName)
+      val (codeName, display, displayLevel, revealInternalSteps) = getParams(declName)
       val (generatorOpt, inputs) = getInputs(inArgs)
       val needsGenerator = generatorOpt.isDefined
       if (codeName.exists(c => c =='\"'))

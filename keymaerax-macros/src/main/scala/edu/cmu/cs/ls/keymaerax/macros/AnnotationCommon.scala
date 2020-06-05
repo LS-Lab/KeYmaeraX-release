@@ -17,7 +17,7 @@ object AnnotationCommon {
         case s => c.abort(c.enclosingPosition, "Unexpected type constructor: " + s + ", should be option[] or list[]")
       }
     } else {
-      tpe match {
+      tpe.trim.toLowerCase match {
         case "variable" => VariableArg(name, allowFresh)
         case "term" => new TermArg(name, allowFresh)
         case "formula" => FormulaArg(name, allowFresh)
@@ -36,15 +36,15 @@ object AnnotationCommon {
         val last = id.lastIndexOf(']')
         val (name, allowFresh) =
           if (first != -1 && last != -1)
-            (id.slice(0, first), id.slice(first+1, last).split(',').toList)
-          else (id, Nil)
-        toArgInfo(name, tpe, allowFresh)
+            (id.slice(0, first).trim, id.slice(first+1, last).split(',').toList.map(_.trim))
+          else (id.trim, Nil)
+        toArgInfo(name, tpe.trim, allowFresh)
       case ss => c.abort(c.enclosingPosition, "Invalid argument type descriptor:" + s)
     }
   }
   def parseAIs(s: String)(implicit c: blackbox.Context): List[ArgInfo] = {
     if (s.isEmpty) Nil
-    else s.split(";;").toList.map(parseAI)
+    else s.split(";;").toList.map(s => parseAI(s.trim))
   }
   def parseSequent(str: String)(implicit c: blackbox.Context): SequentDisplay = {
     if(str == "*") {
@@ -52,10 +52,10 @@ object AnnotationCommon {
     } else {
       str.split("\\|-").toList match {
         case ante :: succ :: Nil =>
-          val (a, s) = (ante.split(",").toList, succ.split(",").toList)
+          val (a, s) = (ante.split(",").toList.map(_.trim), succ.split(",").toList.map(_.trim))
           SequentDisplay(a, s)
         case succ :: Nil =>
-          val s = succ.split(",").toList
+          val s = succ.split(",").toList.map(_.trim)
           SequentDisplay(Nil, s)
         case ss => c.abort(c.enclosingPosition, "Expected at most one |- in sequent, got: " + ss)
       }
