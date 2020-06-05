@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.macros
 import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Nil
 import scala.language.experimental.macros
-import scala.reflect.macros.{Universe, whitebox}
+import scala.reflect.macros.{Universe, blackbox}
 import AnnotationCommon._
 
 /**
@@ -45,7 +45,7 @@ class Tactic(val names: Any = false, /* false is a sigil value, user value shoul
     def macroTransform(annottees: Any*): Any = macro TacticImpl.apply
 }
 
-class TacticImpl(val c: whitebox.Context) {
+class TacticImpl(val c: blackbox.Context) {
   import c.universe._
   private trait PosArgs
   private case class AntePos(provableName: ValDef, posName: ValDef) extends PosArgs
@@ -281,7 +281,7 @@ class TacticImpl(val c: whitebox.Context) {
       (curried, argSeq, argTySeq, base)
     }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, isDef: Boolean
-                , isCoreAnon: Boolean): c.Expr[Nothing] = {
+                , isCoreAnon: Boolean): c.Expr[Any] = {
       val (codeName, display, _argInfoAnnotation, displayLevel, revealInternalSteps) = getParams(declName)
       val (generatorOpt, inputs) = getInputs(inArgs)
       val needsGenerator = generatorOpt.isDefined
@@ -318,17 +318,19 @@ class TacticImpl(val c: whitebox.Context) {
       }
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
-      if(isDef) {
-        val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
-        if (inputs.isEmpty) {
-          c.Expr[Nothing](q"""$mods def $declName: $baseType = $application""")
+        if(isDef) {
+          val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
+          if (inputs.isEmpty) {
+          //val tag: TypeTag[_] = tagify(annottees.head.actualType)
+//            c.typecheck()
+          c.Expr(q"""$mods def $declName: $baseType = $application""")
         }
         else {
-          c.Expr[Nothing](q"""$mods def $declName (..$argSeq): $baseType = $application""")
+          c.Expr(q"""$mods def $declName (..$argSeq): $baseType = $application""")
         }
       } else {
         val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
-        c.Expr[Nothing](q"""$mods val $declName: $baseType = $application""")
+        c.Expr(q"""$mods val $declName: $baseType = $application""")
       }
     }
     annottees map (_.tree) toList match {
@@ -366,6 +368,7 @@ class TacticImpl(val c: whitebox.Context) {
       case (valDecl: ValDef) :: Nil =>
         valDecl match {
           case q"$mods val ${declName: TermName}: $tRet = ${f: Ident}($theRhs)" =>
+            println("DEBUG: " + showRaw(valDecl))
              theRhs match {
                case q"((..$params) => $rhs)" =>
                  val isCoreAnon =
