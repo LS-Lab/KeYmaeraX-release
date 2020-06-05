@@ -283,7 +283,12 @@ trait SequentCalculus {
   //@note do not forward to closeIdWith (performance)
 //  @Tactic(premises = "*",
 //    conclusion = "Γ, P |- P, Δ")
-  val closeId           : DependentTactic = new DependentTactic("id") {
+  val closeId           : DependentTactic = /*anon {(seq: Sequent) =>
+    val fmls = seq.ante.intersect(seq.succ)
+    val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + seq.prettyString))
+    close(AntePos(seq.ante.indexOf(fml)), SuccPos(seq.succ.indexOf(fml)))
+  }*/
+  new DependentTactic("id") {
   override def computeExpr(v: BelleValue): BelleExpr = v match {
     case BelleProvable(provable, _) =>
       require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
