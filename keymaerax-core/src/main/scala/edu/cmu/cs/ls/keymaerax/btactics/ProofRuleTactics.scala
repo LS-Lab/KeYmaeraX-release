@@ -34,7 +34,7 @@ private object ProofRuleTactics extends Logging {
   }
 
   /** [[SequentCalculus.cut()]] */
-//@todo  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C",
+//  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C",
 //    conclusion = "Γ |- Δ", inputs = "C:formula")
   def cut(f: Formula): InputTactic = new InputTactic("cut", f::Nil) {
     override def computeExpr(): BelleExpr = new BuiltInTactic(name) {
@@ -45,26 +45,22 @@ private object ProofRuleTactics extends Logging {
   }
 
   /** [[SequentCalculus.cutL()]] */
-//@todo  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
-//    conclusion = "Γ, P |- Δ", inputs = "C:formula")
-  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = "cutL" byWithInput(f, (pos: Position, _: Sequent) => {
-    new BuiltInTactic("CutL") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        requireOneSubgoal(provable, "cutL(" + f + ")")
-        provable(core.CutLeft(f, pos.checkAnte.top), 0)
-        //@todo label BelleLabels.cutUse/cutShow
-      }
-    }
-  })
+  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
+    conclusion = "Γ, P |- Δ", inputs = "C:formula")
+  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = inputanonL { (provable: ProvableSig, pos: AntePosition) =>
+    requireOneSubgoal(provable, "cutL(" + f + ")")
+    provable(core.CutLeft(f, pos.checkAnte.top), 0)
+    //@todo label BelleLabels.cutUse/cutShow
+  }
 
   /** [[SequentCalculus.cutR()]] */
-@Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
+  @Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
     conclusion = "Γ |- P, Δ", inputs = "C:formula")
-  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonR { (provable: ProvableSig, pos: SuccPosition) => {
-        requireOneSubgoal(provable, "cutR(" + f + ")")
-        provable(core.CutRight(f, pos.top), 0)
-    }
+  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonR { (provable: ProvableSig, pos: SuccPosition) =>
+    requireOneSubgoal(provable, "cutR(" + f + ")")
+    provable(core.CutRight(f, pos.top), 0)
   }
+
   /** [[SequentCalculus.cutLR()]] */
   //@todo@Tactic()
   def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = /*anon { (provable: ProvableSig, pos: Position) =>
