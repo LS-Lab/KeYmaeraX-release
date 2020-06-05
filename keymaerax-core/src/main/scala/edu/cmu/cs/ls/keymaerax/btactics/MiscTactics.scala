@@ -397,7 +397,11 @@ object Idioms {
   })
 }
 
-/** Creates tactic objects */
+/** Basic facilities for easily creating tactic objects.
+  * @author Stefan Mitsch
+  * @author Brandon Bohrer
+  * @author Andre Platzer
+  */
 object TacticFactory {
 
   /**
@@ -632,56 +636,3 @@ object TacticFactory {
   def inputanonL(t: ((ProvableSig, AntePosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsL(Nil:Seq[Any], t)
   def inputanon(t: => BelleExpr): InputTactic = "ANON" byWithInputs( Nil, t)
 }
-
-/**
- * @author Nathan Fulton
- */
-//object Legacy {
-//  /** The default mechanism for initializing KeYmaeraScheduler, Mathematica, and Z3 that are used in the legacy tactics.
-//    * @note This may interfere in unexpected ways with sequential tactics.
-//    */
-//  def defaultInitialization(mathematicaConfig:  Map[String,String]) = {
-//    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
-//    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
-//
-//    Tactics.KeYmaeraScheduler.init(Map())
-//    Tactics.Z3Scheduler.init
-//    Tactics.MathematicaScheduler.init(mathematicaConfig)
-//  }
-
-//  def defaultDeinitialization = {
-//    if (Tactics.KeYmaeraScheduler != null) {
-//      Tactics.KeYmaeraScheduler.shutdown()
-//      Tactics.KeYmaeraScheduler = null
-//    }
-//    if (Tactics.MathematicaScheduler != null) {
-//      Tactics.MathematicaScheduler.shutdown()
-//      Tactics.MathematicaScheduler = null
-//    }
-//    if(Tactics.Z3Scheduler != null) {
-//      Tactics.Z3Scheduler = null
-//    }
-//  }
-//
-//  def initializedScheduledTactic(mathematicaConfig : Map[String,String], tactic: keymaerax.tactics.Tactics.Tactic) = {
-//    defaultInitialization(mathematicaConfig)
-//    scheduledTactic(tactic)
-//  }
-//
-//  def scheduledTactic(tactic : keymaerax.tactics.Tactics.Tactic) = new BuiltInTactic(s"Scheduled(${tactic.name})") {
-//    //@see [[Legacy.defaultInitialization]]
-//    if(!Tactics.KeYmaeraScheduler.isInitialized)
-//      throw new BelleThrowable("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
-//
-//    override def result(provable: Provable): Provable = {
-//      //@todo don't know if we can create a proof node from a provable.
-//      if(provable.subgoals.length != 1) throw new Exception("Cannot run scheduled tactic on something with more than one subgoal.")
-//
-//      val node = new keymaerax.tactics.RootNode(provable.subgoals.head)
-//
-//      Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
-//
-//      node.provableWitness
-//    }
-//  }
-//}
