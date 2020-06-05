@@ -52,6 +52,7 @@ class TacticImpl(val c: blackbox.Context) {
   private case class SuccPos(provableName: ValDef, posName: ValDef) extends PosArgs
   private case class OnePos(posName: ValDef, seqName: Option[ValDef]) extends PosArgs
   private case class TwoPos(provableName: ValDef, pos1Name: ValDef, pos2Name: ValDef) extends PosArgs
+  private case class SequentArg(sequentName: ValDef) extends PosArgs
   private case class NoPos() extends PosArgs
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
@@ -125,7 +126,7 @@ class TacticImpl(val c: blackbox.Context) {
         case tq"DependentTactic" | tq"DependentPositionTactic" | tq"InputPositionTactic"
              | tq"BuiltInLeftTactic" | tq"BuiltInRightTactic"
              | tq"CoreLeftTactic" | tq"CoreRightTactic"
-             | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic"
+             | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic" | tq"InputTactic"
              | tq"DependentPositionWithAppliedInputTactic"
              | tq"AppliedBuiltInTwoPositionTactic" => true
         case _ => false
@@ -140,13 +141,14 @@ class TacticImpl(val c: blackbox.Context) {
     }
     // Scrape position argument info from declaration
     def getPositioning(params: Seq[Tree]): PosArgs = {
-      val supportedArgs = "Unit, Position, (Position, Sequent), or (ProvableSig, Position, Position)"
+      val supportedArgs = "Unit, Position, Sequent, (Position, Sequent), or (ProvableSig, Position, Position)"
       params.toList match {
         // ValDef is also used for argument specifications
         case Nil => NoPos()
         case (posDef: ValDef) :: Nil =>
           posDef.tpt match {
             case (tq"Position") => OnePos(posDef, None)
+            case (tq"Sequent") => SequentArg(posDef)
             case params => c.abort(c.enclosingPosition, s"Positioning arguments must be $supportedArgs, got: $params")
           }
         case (ldef: ValDef) :: (rdef: ValDef) :: Nil  =>
@@ -229,6 +231,12 @@ class TacticImpl(val c: blackbox.Context) {
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr")
               else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic")
+          case SequentArg(sequentName) =>
+            if(args.isEmpty) {
+              (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic")
+            } else {
+              (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic")
+            }
           case OnePos(pname, None) =>
             if(args.isEmpty)
               (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
@@ -310,6 +318,7 @@ class TacticImpl(val c: blackbox.Context) {
       val (info, rhsType) = (inputs, positions) match {
           // @TODO: BElleExpr or DependentTActic
         case (Nil, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr""")
+        case (Nil, _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic""")
         case (Nil, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic""")
         case (Nil, _: AntePos) =>
           val r =
@@ -323,6 +332,7 @@ class TacticImpl(val c: blackbox.Context) {
           (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
         case (Nil, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic""")
         case (_, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr,  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
+        case (_, _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
         case (_, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic""")
         case (_, _: AntePos) =>
           val r = tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"

@@ -981,14 +981,13 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CEat(Provable)]]
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
     */
-//  @Tactic(premises = "P↔Q",
-//        conclusion = "C{P}↔C{Q}")
-  def CE(inEqPos: PosInExpr): InputTactic = "CECongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
-    private val p_ = UnitPredicational("p_", AnyArg)
-    private val q_ = UnitPredicational("q_", AnyArg)
-    private val c_ = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
-
-    override def computeExpr(sequent: Sequent): BelleExpr = {
+  @Tactic(premises = "P↔Q",
+        conclusion = "C{P}↔C{Q}") 
+  def CE(inEqPos: PosInExpr): InputTactic =
+    inputanon {  (sequent: Sequent) =>
+      val p_ = UnitPredicational("p_", AnyArg)
+      val q_ = UnitPredicational("q_", AnyArg)
+      val c_ = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
       require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
       sequent.succ.head match {
         case Equiv(l, r) =>
@@ -1006,7 +1005,6 @@ trait UnifyUSCalculus {
         case fml => throw new TacticInapplicableFailure("Expected equivalence, but got " + fml)
       }
     }
-  })
 
   /**
     * CEimply(pos) at the indicated position within an equivalence reduces contextual implication `C{left}->C{right}`to argument equivalence `left<->right`.

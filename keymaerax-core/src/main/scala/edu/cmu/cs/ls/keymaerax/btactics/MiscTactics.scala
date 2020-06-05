@@ -482,6 +482,10 @@ object TacticFactory {
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
+    def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInput(input, new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
+    })
+
 
     /** Creates a BuiltInRightTactic from a function turning provables and succedent positions into new provables.
       * @example {{{
@@ -598,6 +602,7 @@ object TacticFactory {
   def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = "ANON" coreby t
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
    * will transform them to the correct byWithInputs */
+  def inputanon(t: Sequent => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
   def inputanon(t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanon(t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanonR(t: ((ProvableSig, SuccPosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsR(Nil:Seq[Any], t)
