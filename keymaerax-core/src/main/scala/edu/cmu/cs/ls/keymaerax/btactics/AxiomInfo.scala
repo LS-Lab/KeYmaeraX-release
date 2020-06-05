@@ -134,8 +134,8 @@ object DerivationInfoRegistry {
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
       , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
     new PositionTacticInfo("assignd", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), {case () => HilbertCalculus.assignd}),
-    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
-    new InputPositionTacticInfo("assignbExistsRule",
+    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true), //@Tactic-fied
+    new InputPositionTacticInfo("assignbExistsRule", //@Tactic-fied
       RuleDisplayInfo(
         "[:=] assign exists",
         /* conclusion */ (List("&Gamma;"), List("∃t [x:=t;]P", "&Delta;")),
@@ -429,7 +429,7 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("G"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
-    new PositionTacticInfo("GV"
+    new PositionTacticInfo("GV" //@Tactic-fied DLBySubst.scala
       , RuleDisplayInfo("G&ouml;del Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
         , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}, revealInternalSteps = true),
@@ -558,7 +558,7 @@ object DerivationInfoRegistry {
       , revealInternalSteps = true),
     new PositionTacticInfo("loopAuto", "loopAuto",
       {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
-    new InputPositionTacticInfo("throughout",
+    new InputPositionTacticInfo("throughout", //@Tactic-fied
       RuleDisplayInfo("Loop Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("j(x)", "&Delta;")),
@@ -567,7 +567,7 @@ object DerivationInfoRegistry {
           (List("j(x)"),List("[d]j(x)")),
           (List("j(x)"),List("P"))))
       , List(FormulaArg("j(x)")), _ => ((fml: Formula) => TactixLibrary.throughout(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("con",
+    new InputPositionTacticInfo("con", //@Tactic-fied
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
           (List("&Gamma;"),List("∃x. j(x)", "&Delta;")),
@@ -606,7 +606,7 @@ object DerivationInfoRegistry {
         List((List("P(y)"),List("Q(y)"))))
       , List(VariableArg("x"),VariableArg("y"))
       , _ => ((x:Variable) => ((y:Variable) => TactixLibrary.uniformRename(x,y)): TypedFunc[Variable, BelleExpr]): TypedFunc[Variable, TypedFunc[Variable, BelleExpr]]),
-    new InputPositionTacticInfo("stutter"
+    new InputPositionTacticInfo("stutter" //@Tactic-fied
       , RuleDisplayInfo(("[:=]", "[:=]"), (List("&Gamma;"), List("P","&Delta;"))
         , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(VariableArg("x"))
       , _ => ((x:Variable) => DLBySubst.stutter(x)): TypedFunc[Variable, BelleExpr]),
@@ -620,7 +620,7 @@ object DerivationInfoRegistry {
       FormulaArg("equality") :: Nil,
       _ => ((f:Formula) => ArithmeticSimplification.transformEquality(f)): TypedFunc[Formula, BelleExpr]),
 
-    new InputPositionTacticInfo(
+    new InputPositionTacticInfo(  //@Tactic-fied
       "discreteGhost",
       RuleDisplayInfo(("iG", "iG"), (List("&Gamma;"),List("P","&Delta;")),
         List((List("&Gamma;"), List("[gv:=gt;]P","&Delta;")))),

@@ -52,8 +52,6 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   /** Parse an archive file string into a list of archive entries, same as [[apply()]] */
   def parse(input: String) : List[ParsedArchiveEntry] = archiveParser(input)
 
-  //@todo definitions elaboration to replace arguments by dots and do type analysis
-
   /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
   def parseAsProblemOrFormula(input: String): Formula = problemOrFormulaParser(input)
 
@@ -105,7 +103,8 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
     ("End.".!.map(s=>None) | "End" ~ label.map(s=>Some(s)) ~ ".")).map(
     {case (kind, label, name, meta, decl, prob, moremeta, endlabel) =>
       if (endlabel.isDefined && endlabel != label) throw ParseException("end label is optional but should be the same as the start label: " + label + " is not " + endlabel)
-      ParsedArchiveEntry(
+      // definitions elaboration to replace arguments by dots and do type analysis
+      KeYmaeraXArchiveParser.elaborate(ParsedArchiveEntry(
         name = name,
         kind = kind,
         fileContent = "???",
@@ -116,7 +115,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
         annotations = Nil, //@todo fill annotations
         //@todo check that there are no contradictory facts in the meta and moremeta
         info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
-      )}
+      ))}
   )
 
   /** meta information */
@@ -166,7 +165,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   /** Name is alphanumeric name and index. */
   type Name = (String, Option[Int])
-  /** Signature is a domain sort, codomain sort, expression used as "interpretation", location that starts the declaration. */
+  /** Signature is a argument sort, result sort, list of argument parameters, expression used as "interpretation" if any, location that starts the declaration. */
   type Signature = (Option[Sort], Sort, Option[List[(Name, Sort)]], Option[Expression], Location)
 
   /** `sort name(sort1 arg1, sorg2 arg2);` declaration or
@@ -180,28 +179,50 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
     | NoCut(declPart ~ "<->" ~ formula ~ ";").map({case (id, sig, f) => (id, (sig._1, sig._2, sig._3, Some(f), sig._5))::Nil})
   )
 
+  private def namedTupleDo(ty1: Sort, n1: Option[Name], ty2: Sort, n2: Option[List[(Name, Sort)]]): (Sort, Option[List[(Name, Sort)]]) =
+    (Tuple(ty1,ty2),
+      n2 match {
+        case Some(args) => Some((n1.getOrElse(throw ParseException("Either all or no arguments of function/predicate declarations should have names")),ty1) :: args)
+        case None => if (n1.isEmpty) None else throw ParseException("Either all or no arguments of function/predicate declarations should have names")
+      }
+      )
+  private def namedTuple(args: ((Sort, Option[Name]), (Sort, Option[List[(Name, Sort)]]))): (Sort, Option[List[(Name, Sort)]]) =
+    namedTupleDo(args._1._1, args._1._2, args._2._1, args._2._2)
+//  private def namedTuple(ty1: Sort, n1: Option[(String, Option[Int])], args: (Sort, Option[List[((String, Option[Int]), Sort)]])): (Sort, Option[List[(Name, Sort)]]) =
+//    namedTupleDo(ty1, n1, args._1, args._2)
+  private def namedArgs(ty1: Sort, n1: Option[Name], acc: Option[List[(Name, Sort)]]): Option[List[(Name, Sort)]] =
+  n1 match {
+    case Some(name) => Some((name,ty1) :: acc.getOrElse(Nil))
+    case None => if (acc.isEmpty) None else throw ParseException("Either all or no arguments of function/predicate declarations should have names")
+  }
+
   /** `sort name(sort1 arg1, sorg2 arg2)` single declaration part.*/
+  //type Signature = (Option[Sort], Sort, Option[List[(Name, Sort)]], Option[Expression], Location)
   def declPart[_: P]: P[(Name,Signature)] = P(
     sort ~~ blank ~~/ ident ~~ (
       ("(" ~ (sort ~~ (blank ~ ident).?).rep(sep=","./) ~ ")").
-        map(xs => xs.map(_._1).toList.reduceRightOption(Tuple).getOrElse(core.Unit))
-      | "".!.map(_ => core.Unit)
+        map(xs =>
+          (xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit)
+            //@todo ,xs.reduceRightOption(namedArgs)
+            )
+        )
+      //| "".!.map(_ => (core.Unit,Some(Nil)))
     )
-  ).map({case (ty,n,args) => (n, (Some(args), ty, /*@todo names and sorts of arguments */ None, None, UnknownLocation))})
+  ).map({case (ty,n,args) => (n, (Some(args), ty, /*@todo names and sorts of arguments */ Some(Nil), None, UnknownLocation))})
 
   /** `sort nameA(sort1A arg1A, sorg2A arg2A), nameB(sort1B arg1B)` list declaration part.*/
   def declPartList[_: P]: P[List[(Name,Signature)]] = P(
     sort ~~ blank ~~/ (ident ~~ (
       ("(" ~ (sort ~~ (blank ~ ident).?).rep(sep=","./) ~ ")").
-        map(xs => xs.map(_._1).toList.reduceRightOption(Tuple).getOrElse(core.Unit))
-        | "".!.map(_ => core.Unit)
+        map(xs => xs.map(_._1).reduceRightOption(Tuple).getOrElse(Unit))
+        //| "".!.map(_ => (core.Unit,Some(Nothing)))
       )).rep(sep=","./)
-  ).map({case (ty,decllist) => decllist.map({case (n,idx,args) => ((n,idx), (Some(args), ty, None, None, UnknownLocation))}).toList})
+  ).map({case (ty,decllist) => decllist.map({case (n,idx,args) => ((n,idx), (Some(args), ty, Some(Nil), None, UnknownLocation))}).toList})
 
   /** `HP name ::= program;` program definition. */
   def progDef[_: P]: P[(Name,Signature)] = P(
     "HP" ~~ blank ~ ident ~ "::=" ~ ("{" ~ (NoCut(program) | odeprogram) ~ "}" /*| NoCut(program)*/) ~ ";".?
-  ).map({case (s,idx,p) => ((s,idx),(None, Trafo, None, Some(p), UnknownLocation))})
+  ).map({case (s,idx,p) => ((s,idx),(Some(Unit), Trafo, None, Some(p), UnknownLocation))})
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */
   def programVariables[_: P]: P[Declaration] = P ("ProgramVariables" ~~ blank ~/

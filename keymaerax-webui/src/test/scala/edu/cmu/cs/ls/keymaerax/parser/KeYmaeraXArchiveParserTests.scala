@@ -24,8 +24,8 @@ import org.scalatest.matchers.{MatchResult, Matcher}
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
   private val parser =
-    KeYmaeraXArchiveParser
-//  DLArchiveParser
+//    KeYmaeraXArchiveParser
+  DLArchiveParser
 
   private def parse(input: String): List[KeYmaeraXArchiveParser.ParsedArchiveEntry] =
     parser.parse(input)

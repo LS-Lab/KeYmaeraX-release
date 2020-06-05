@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+
 
 import scala.collection.immutable._
 
@@ -34,6 +36,7 @@ object HybridProgramCalculus extends HybridProgramCalculus
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.Ax]]
   * @see [[HilbertCalculus]]
+  * @Tactic complete
   */
 trait HybridProgramCalculus {
 
@@ -66,7 +69,7 @@ trait HybridProgramCalculus {
     *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
     * }}}
     */
-    //@todo MR or generalize?
+    //@todo MR or generalize? // MR see AxiomInfo.scala
   @Tactic(codeName = "generalize", premises = "Γ |- [a]Q, Δ ;; Q |- P",
     conclusion = "Γ |- [a]P, Δ", revealInternalSteps = true)
   def generalize(C: Formula)  : DependentPositionTactic = anon {(pos:Position) => DLBySubst.generalize(C)(pos) }
@@ -121,8 +124,6 @@ trait HybridProgramCalculus {
     *              For robustness you are advised to choose a name.
     * @incontext
     */
-//@todo@Tactic("iG", premises = "Γ |- [gv:=gt;]P, Δ",
-//    conclusion = "Γ |- P, Δ", inputs = "gt:term ;; gv:variable")
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
 
 }

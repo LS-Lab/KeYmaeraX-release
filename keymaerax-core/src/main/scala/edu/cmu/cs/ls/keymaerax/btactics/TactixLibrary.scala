@@ -519,7 +519,7 @@ object TactixLibrary extends HilbertCalculus
     * @param variant The variant property or convergence property in terms of new variable `v`.
     * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
     */
-  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = DLBySubst.con(v, variant, pre)
+  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = DLBySubst.con(v, variant, pre)
 
 
   // major differential equation automation
@@ -667,14 +667,6 @@ object TactixLibrary extends HilbertCalculus
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Utility Tactics
-  /** skip is a no-op tactic that has no effect
-    * @see [[done]] */
-  val skip : BelleExpr = Idioms.ident
-  /** nil=skip is a no-op tactic that has no effect */
-  val nil : BelleExpr = skip
-  /** fail is a tactic that always fails as being inapplicable
-    * @see [[skip]] */
-  val fail : BelleExpr = "fail" by ((_: Sequent) => throw new TacticInapplicableFailure("fail"))
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done : BelleExpr = DebuggingTactics.done

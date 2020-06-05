@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 
 import scala.collection.immutable._
 
@@ -181,9 +182,10 @@ trait DifferentialEquationCalculus {
     * }}}
     * @see [[HilbertCalculus.DG]]
     */
-//@todo@Tactic(premises = "Γ |- ∃y [x'=f(x),E&Q]P, Δ",
+//  @Tactic(premises = "Γ |- ∃y [x'=f(x),E&Q]P, Δ",
 //    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true, inputs = "E:differentialprogram")
-  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = DifferentialTactics.dG(ghost, r)
+  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic =
+  anon {(pos:Position) => DifferentialTactics.dG(ghost, r)(pos)}
 
 
   // more DI/DC/DG variants

@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, _}
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutLR}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -104,6 +105,22 @@ trait UnifyUSCalculus {
 
   /** The default position if no key has been specified, no key has been declared, and no key can be inferred. */
   private val defaultPosition = PosInExpr(0::Nil)
+
+  // utility tactics
+
+  /** skip is a no-op tactic that has no effect
+    * @see [[TactixLibrary.done]] */
+  @Tactic()
+  val skip : BelleExpr = anon {Idioms.ident}
+  /** nil=skip is a no-op tactic that has no effect */
+  @Tactic()
+  val nil : BelleExpr = anon {skip}
+  /** fail is a tactic that always fails as being inapplicable
+    * @see [[skip]] */
+  //@todo@Tactic()
+  //val fail : BelleExpr = anon {(_: Sequent) => throw new TacticInapplicableFailure("fail")}
+  val fail: BelleExpr = "fail" by ((_: Sequent) => throw new TacticInapplicableFailure("fail"))
+
 
   /*******************************************************************
     * Stepping auto-tactic
@@ -719,7 +736,7 @@ trait UnifyUSCalculus {
                 def hide2 =
                   if (p.isSucc) cohide2(AntePos(sequent.ante.size), p.top)
                   else (sequent.ante.indices.reverse.tail.map(i => hideL(AntePosition.base0(i))) ++
-                    sequent.succ.indices.reverse.map(i => hideR(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip)
+                    sequent.succ.indices.reverse.map(i => hideR(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
 
                 // uses specialized congruence tactic for DC, may not work with other conditional equivalences
                 cut(C(subst(prereq))) < (
@@ -818,6 +835,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     */
+  //  @Tactic(premises = "e=k",
+  //        conclusion = "c(e)↔c(k)")
   def CQ(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
     private val f_ = UnitFunctional("f_", AnyArg, Real)
     private val g_ = UnitFunctional("g_", AnyArg, Real)
@@ -863,6 +882,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     */
+  //  @Tactic(premises = "e=k",
+  //        conclusion = "c(e)→c(k)")
   def CQimp(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
     private val f_ = UnitFunctional("f_", AnyArg, Real)
     private val g_ = UnitFunctional("g_", AnyArg, Real)
@@ -908,6 +929,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     */
+  //  @Tactic(premises = "k=e",
+  //        conclusion = "c(e)→c(k)")
   def CQrevimp(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
     private val f_ = UnitFunctional("f_", AnyArg, Real)
     private val g_ = UnitFunctional("g_", AnyArg, Real)
@@ -958,7 +981,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CEat(Provable)]]
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
     */
-    //@todo @Tactic
+//  @Tactic(premises = "P↔Q",
+//        conclusion = "C{P}↔C{Q}")
   def CE(inEqPos: PosInExpr): InputTactic = "CECongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
     private val p_ = UnitPredicational("p_", AnyArg)
     private val q_ = UnitPredicational("q_", AnyArg)
@@ -997,6 +1021,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(Context)]]
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
     */
+//  @Tactic(premises = "P↔Q",
+//    conclusion = "C{P}→C{Q}")
   def CEimp(inEqPos: PosInExpr): InputTactic = "CEimplyCongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
     private val p_ = UnitPredicational("p_", AnyArg)
     private val q_ = UnitPredicational("q_", AnyArg)
@@ -1034,6 +1060,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(Context)]]
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
     */
+//  @Tactic(premises = "Q↔P",
+//    conclusion = "C{P}→C{Q}")
   def CErevimp(inEqPos: PosInExpr): InputTactic = "CErevimplyCongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
     private val p_ = UnitPredicational("p_", AnyArg)
     private val q_ = UnitPredicational("q_", AnyArg)
@@ -1085,6 +1113,8 @@ trait UnifyUSCalculus {
     * @see [[HilbertCalculus.monb]]
     * @see [[HilbertCalculus.mond]]
     */
+//  @Tactic(premises = "P→Q",
+//    conclusion = "C{P}→C{Q}")
   def CMon(inEqPos: PosInExpr): InputTactic = "CMonCongruence" byWithInput(inEqPos.prettyString, new SingleGoalDependentTactic("ANON") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
@@ -1155,7 +1185,8 @@ trait UnifyUSCalculus {
     * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))``
     * @todo Optimization: Would direct propositional rules make CEat faster at pos.isTopLevel?
     */
-
+  //  @Tactic(premises = "Γ |- C{Q}, Δ ;; Q↔P",
+  //    conclusion = "Γ |- C{P}, Δ")
   def CEat(fact: ProvableSig): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
 
