@@ -34,10 +34,11 @@ object AxiomDisplayInfo {
   def render(names: SimpleDisplayInfo, displayFormula: String): AxiomDisplayInfo = AxiomDisplayInfo(
     names,
     displayFormula.
+      replaceAllLiterally("<","&lt;").
+      replaceAllLiterally(">","&gt;").
+      replaceAll("&lt;(/?(\\w+))&gt;", "<$1>"). // undo escaping HTML tags
       replaceFirst("__", "<span class=\"k4-axiom-key\">").
-      replaceFirst("__", "</span>").
-      replaceAll("<","&lt;").
-      replaceAll(">","&gt;")
+      replaceFirst("__", "</span>")
   )
 }
 
