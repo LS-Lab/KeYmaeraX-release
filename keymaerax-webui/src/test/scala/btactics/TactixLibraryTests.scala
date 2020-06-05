@@ -272,8 +272,62 @@ class TactixLibraryTests extends TacticTestBase {
     }
   }
 
-  //@todo why does this test fail?
-  "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+  //@todo why do these tests fail with ill-positioning?
+  "SnR Loop Invariant" should "by loopSR find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val proof = proveBy(fml,
+      implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "by loopPostMaster find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val proof = proveBy(fml,
+      implyR(1) & loopPostMaster((_, _) => invs.map(_ -> None).toStream)(1)
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find by assignb an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val jj = "j(.)".asFormula
+    val proof = proveBy(fml,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
+        loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, assignb(1)),
+        feedOneAfterTheOther(invs),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find by step an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val jj = "j(.)".asFormula
+    val proof = proveBy(fml,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
+        loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, step(1)),
+        feedOneAfterTheOther(invs),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find by chase an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
@@ -288,7 +342,6 @@ class TactixLibraryTests extends TacticTestBase {
     proof shouldBe 'proved
     proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
-
 
   "Normalize" should "prove simple formula" in {
     val f = "y>0 -> [x:=y;]x>0".asFormula
