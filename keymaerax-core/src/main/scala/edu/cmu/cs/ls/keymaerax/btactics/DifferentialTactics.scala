@@ -315,7 +315,7 @@ private object DifferentialTactics extends Logging {
 
   /** @see [[TactixLibrary.dC()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
-    "dC" byWithInputs (formulas.toList, (pos, sequent) => {
+    "dC" byWithInputs (formulas.toList, (pos: Position, sequent: Sequent) => {
       formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut &
         Idioms.doIf(_.subgoals.size == 2)(<(all, skip)))
     })
@@ -384,7 +384,7 @@ private object DifferentialTactics extends Logging {
 
   /** @see [[TactixLibrary.diffInvariant]] */
   def diffInvariant(formulas: Formula*): DependentPositionTactic =
-    "diffInvariant" byWithInputs (formulas.toList, (pos, sequent) => {
+    "diffInvariant" byWithInputs (formulas.toList, (pos: Position, sequent: Sequent) => {
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
       val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)

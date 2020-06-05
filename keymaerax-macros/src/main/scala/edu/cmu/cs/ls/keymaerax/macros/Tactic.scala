@@ -50,7 +50,8 @@ class TacticImpl(val c: blackbox.Context) {
   private trait PosArgs
   private case class AntePos(provableName: ValDef, posName: ValDef) extends PosArgs
   private case class SuccPos(provableName: ValDef, posName: ValDef) extends PosArgs
-  private case class OnePos(posName: ValDef, seqName: Option[ValDef]) extends PosArgs
+  /** Arguments are Position, (Position, Sequent), or (ProvableSig, Position). In the latter case, useProvable = true*/
+  private case class OnePos(lname: ValDef, rname: Option[ValDef], useProvable: Boolean = false) extends PosArgs
   private case class TwoPos(provableName: ValDef, pos1Name: ValDef, pos2Name: ValDef) extends PosArgs
   private case class SequentArg(sequentName: ValDef) extends PosArgs
   private case class NoPos() extends PosArgs
@@ -154,6 +155,7 @@ class TacticImpl(val c: blackbox.Context) {
         case (ldef: ValDef) :: (rdef: ValDef) :: Nil  =>
           (ldef.tpt, rdef.tpt) match {
             case (tq"Position", tq"Sequent") => OnePos(ldef, Some(rdef))
+            case (tq"ProvableSig", tq"Position") => OnePos(ldef, Some(rdef), useProvable = true)
             case (tq"ProvableSig", tq"AntePosition") => AntePos(ldef, rdef)
             case (tq"ProvableSig", tq"SuccPosition") => SuccPos(ldef, rdef)
             case params => c.abort(c.enclosingPosition, s"Positioning arguments must be $supportedArgs, got: $params")
@@ -237,15 +239,17 @@ class TacticImpl(val c: blackbox.Context) {
             } else {
               (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic")
             }
-          case OnePos(pname, None) =>
+          case OnePos(pname, None, _) =>
             if(args.isEmpty)
               (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
             else
               (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-          case OnePos(pname, Some(sname)) =>
+          case OnePos(pname, Some(sname), provable) =>
               if(args.isEmpty)
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
-              else
+              else if (provable) {
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
+              } else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
           case AntePos(sname, pname) =>
             if (args.isEmpty) {
@@ -365,6 +369,7 @@ class TacticImpl(val c: blackbox.Context) {
         case "anon" => false
         case "inputanon" => false
         case "inputanonL" => false
+        case "inputanonP" => false
         case "inputanonR" => false
         case "coreanon" => true
         case _ => c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $s""")

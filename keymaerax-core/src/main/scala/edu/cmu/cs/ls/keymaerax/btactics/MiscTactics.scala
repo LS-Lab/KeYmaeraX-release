@@ -549,17 +549,38 @@ object TacticFactory {
         }
       })
 
+/** Creates a Tactic with applied inputs from a function turning provables and antecedent positions into new provables. */
+    def byWithInputsP(inputs: Seq[Any], t: (ProvableSig, Position) => ProvableSig): DependentPositionWithAppliedInputTactic =
+      byWithInputs(inputs, (pos: Position, _: Sequent) => {
+        new BuiltInTactic(name) {
+          override def result(provable: ProvableSig): ProvableSig = {
+            t(provable, pos)
+          }
+        }
+      })
+
     /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
       * @example {{{
       *         "andL" by((pr,pos)=> pr(AndLeft(pos.top),0))
       *         }}}
       */
-    def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = new BuiltInLeftTactic(name) {
-      @inline override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-        requireOneSubgoal(provable, name)
-        t(provable, pos)
+    def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic =
+      new BuiltInLeftTactic(name) {
+        @inline override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+          requireOneSubgoal(provable, name)
+          t(provable, pos.checkAnte)
+        }
       }
-    }
+
+    /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
+     */
+    def by(t: (ProvableSig, Position) => ProvableSig): BuiltInPositionTactic =
+      new BuiltInPositionTactic(name) {
+        @inline override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
+          requireOneSubgoal(provable, name)
+          t(provable, pos)
+          }
+      }
 
     /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
       * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
@@ -592,6 +613,7 @@ object TacticFactory {
 
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = "ANON" by t
+  def anon(t: ((ProvableSig, Position) => ProvableSig)): BuiltInPositionTactic = "ANON" by t
   def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
   def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t
   def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
@@ -605,6 +627,7 @@ object TacticFactory {
   def inputanon(t: Sequent => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
   def inputanon(t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanon(t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
+  def inputanonP(t: ((ProvableSig, Position) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputsP(Nil:Seq[Any], t)
   def inputanonR(t: ((ProvableSig, SuccPosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsR(Nil:Seq[Any], t)
   def inputanonL(t: ((ProvableSig, AntePosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsL(Nil:Seq[Any], t)
   def inputanon(t: => BelleExpr): InputTactic = "ANON" byWithInputs( Nil, t)
