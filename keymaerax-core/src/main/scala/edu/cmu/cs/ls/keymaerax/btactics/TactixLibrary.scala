@@ -519,7 +519,7 @@ object TactixLibrary extends HilbertCalculus
     * @param variant The variant property or convergence property in terms of new variable `v`.
     * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
     */
-  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = DLBySubst.con(v, variant, pre)
+  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = DLBySubst.con(v, variant, pre)
 
 
   // major differential equation automation

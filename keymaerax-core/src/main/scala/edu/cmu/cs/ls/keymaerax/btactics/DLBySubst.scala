@@ -31,6 +31,7 @@ private object DLBySubst {
 
   /** @see [[HilbertCalculus.G]] */
   lazy val G: BelleExpr = {
+    //@Tactic in [[HilbertCalculus.G]]
     val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};]p_(||)".asFormula)))
     //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
     if (false && isGame) //@note true changes the shape maybe?
@@ -55,38 +56,43 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.abstractionb]] */
-  def abstractionb: DependentPositionTactic = new DependentPositionTactic("GV") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(!pos.isAnte, "Abstraction only in succedent")
-        sequent.at(pos) match {
-          case (ctx, b@Box(prg, phi)) =>
-            val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
-            val diffies = vars.filter(v => v.isInstanceOf[DifferentialSymbol])
-            if (diffies.nonEmpty) throw new IllegalArgumentException("abstractionb: found differential symbols " + diffies + " in " + b + "\nFirst handle those")
-            val qPhi =
-              if (vars.isEmpty) phi
-              else
-              //@todo code quality needs improved
-              //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
-                vars.filter(v => v.isInstanceOf[BaseVariable]).map(v => v.asInstanceOf[NamedSymbol]).
-                  to[scala.collection.immutable.SortedSet].
-                  foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+  @Tactic(
+    names = "Gödel Vacuous",
+    codeName = "GV",
+    premises =       "Γ<sub>const</sub> |- P, Δ<sub>const</sub>",
+    // Gödel Vacuous --------------------------------------------
+    conclusion =     "Γ |- [a]P, Δ",
+    displayLevel = "all",
+    revealInternalSteps = true)
+  val abstractionb: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    require(!pos.isAnte, "Abstraction only in succedent")
+    sequent.at(pos) match {
+      case (ctx, b@Box(prg, phi)) =>
+        val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+        val diffies = vars.filter(v => v.isInstanceOf[DifferentialSymbol])
+        if (diffies.nonEmpty) throw new IllegalArgumentException("abstractionb: found differential symbols " + diffies + " in " + b + "\nFirst handle those")
+        val qPhi =
+          if (vars.isEmpty) phi
+          else
+          //@todo code quality needs improved
+          //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
+            vars.filter(v => v.isInstanceOf[BaseVariable]).map(v => v.asInstanceOf[NamedSymbol]).
+              to[scala.collection.immutable.SortedSet].
+              foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
-            cut(Imply(ctx(qPhi), ctx(b))) <(
-              /* use */ implyL('Llast) <(hideR(pos.topLevel) /* result remains open */ , closeIdWith('Llast)),
-              /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
-              assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
-              topAbstraction(1) & closeId
-              )
-          case (_, e) => throw new TacticInapplicableFailure("GV only applicable to box properties, but got " + e.prettyString)
-        }
-      }
+        cut(Imply(ctx(qPhi), ctx(b))) <(
+          /* use */ implyL('Llast) <(hideR(pos.topLevel) /* result remains open */ , closeIdWith('Llast)),
+          /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
+          assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
+          topAbstraction(1) & closeId
+          )
+      case (_, e) => throw new TacticInapplicableFailure("GV only applicable to box properties, but got " + e.prettyString)
     }
-  }
+  })
 
   /** Safe abstraction checks to not lose information from tests and evolution domain constraints before it abstracts. */
-  def safeabstractionb: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  val safeabstractionb: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+    // internal automation support
     seq.sub(pos) match {
       case Some(Box(prg, fml)) =>
         val fv = StaticSemantics.freeVars(fml)
@@ -110,10 +116,16 @@ private object DLBySubst {
 
   /**
     * Introduces a self assignment [x:=x;]p(||) in front of p(||).
-    *
     * @param x The self-assigned variable.
     */
-  def stutter(x: Variable): DependentPositionTactic = "stutter" byWithInput (x, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  @Tactic(
+    names = "[:=]",
+    premises =   "Γ |- [x:=x]P, Δ",
+    //      [:=] ------------------
+    conclusion = "Γ |- P, Δ",
+    displayLevel = "browse"
+  )
+  def stutter(x: Variable): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, f: Formula) =>
       val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
@@ -124,64 +136,60 @@ private object DLBySubst {
   })
 
   /** Top-level abstraction: basis for abstraction tactic */
-  private def topAbstraction: DependentPositionTactic = new DependentPositionTactic("Top-level abstraction") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(!pos.isAnte, "Abstraction only in succedent")
-        sequent.sub(pos) match {
-          case Some(b@Box(prg, phi)) =>
-            val vars: scala.collection.immutable.SortedSet[Variable] = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.
-              //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
-              filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]).to[scala.collection.immutable.SortedSet](
-                //@note provide canBuildFrom and ordering because Scala implicit conversions won't compile
-                scala.collection.immutable.SortedSet.canBuildFrom(new Ordering[Variable] {
-                  override def compare(x: Variable, y: Variable): Int = x.compare(y)
-                }))
+  val topAbstraction: DependentPositionTactic = "Top-level abstraction" by ((pos: Position, sequent: Sequent) => {
+    require(!pos.isAnte, "Abstraction only in succedent")
+    sequent.sub(pos) match {
+      case Some(b@Box(prg, phi)) =>
+        val vars: scala.collection.immutable.SortedSet[Variable] = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.
+          //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
+          filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]).to[scala.collection.immutable.SortedSet](
+            //@note provide canBuildFrom and ordering because Scala implicit conversions won't compile
+            scala.collection.immutable.SortedSet.canBuildFrom(new Ordering[Variable] {
+              override def compare(x: Variable, y: Variable): Int = x.compare(y)
+            }))
 
-            val qPhi = if (vars.isEmpty) phi else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
+        val qPhi = if (vars.isEmpty) phi else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
 
-            val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
-                case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
-                  stutter(x0)(pos) & ProofRuleTactics.boundRename(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
-                    eqR2L(-1)(pos.topLevel) & useAt(Ax.selfassignb)(pos.topLevel) & hide(-1)
-                case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
-              })
+        val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
+            case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
+              stutter(x0)(pos) & ProofRuleTactics.boundRename(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
+                eqR2L(-1)(pos.topLevel) & useAt(Ax.selfassignb)(pos.topLevel) & hide(-1)
+            case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
+          })
 
-            val diffRename: DependentPositionTactic = "diffRename" by ((pos: Position, sequent: Sequent) => {
-              //@note allL may introduce equations of the form x=x_0, but not necessarily for all variables
-              if (sequent.ante.size == 1 && sequent.succ.size == 1 && sequent.ante.head == sequent.succ.head) ident
-              else if (sequent.ante.size <= 1 + vars.size && sequent.succ.size == 1) sequent(AntePos(0)) match {
-                case Equal(_, _) if sequent(AntePos(sequent.ante.size - 1)) == phi => diffRenameStep(pos)*(sequent.ante.size - 1)
-                case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
-              }
-              else throw new ProverException("Expected sequent either of the form p(x) |- p(x)\n or of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
-            })
+        val diffRename: DependentPositionTactic = "diffRename" by ((pos: Position, sequent: Sequent) => {
+          //@note allL may introduce equations of the form x=x_0, but not necessarily for all variables
+          if (sequent.ante.size == 1 && sequent.succ.size == 1 && sequent.ante.head == sequent.succ.head) ident
+          else if (sequent.ante.size <= 1 + vars.size && sequent.succ.size == 1) sequent(AntePos(0)) match {
+            case Equal(_, _) if sequent(AntePos(sequent.ante.size - 1)) == phi => diffRenameStep(pos)*(sequent.ante.size - 1)
+            case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
+          }
+          else throw new ProverException("Expected sequent either of the form p(x) |- p(x)\n or of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
+        })
 
-            cut(Imply(qPhi, Box(prg, qPhi))) <(
-              /* use */ (implyL('Llast) <(
-                hideR(pos.topLevel) /* result */,
-                cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
-                  assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &
-                  assertE(b, "abstractionb: original box")('Rlast) & ?(monb) &
-                  assertT(1, 1) & assertE(qPhi, "abstractionb: quantified predicate")('Llast) &
-                  assertE(phi, "abstractionb: original predicate")('Rlast) & (allL('Llast)*vars.size) &
-                  diffRename(1) &
-                  assertT(1, 1) & assertT(s => s.ante.head match {
-                    case Forall(_, _) => phi match {
-                      case Forall(_, _) => true
-                      case _ => false
-                    }
-                    case _ => true
-                  }, "abstractionb: foralls must match") & closeId
-                )),
-              /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
-            )
-          case Some(e) => throw new TacticInapplicableFailure("Top-level abstraction only applicable to box properties, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
-      }
+        cut(Imply(qPhi, Box(prg, qPhi))) <(
+          /* use */ (implyL('Llast) <(
+            hideR(pos.topLevel) /* result */,
+            cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
+              assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &
+              assertE(b, "abstractionb: original box")('Rlast) & ?(monb) &
+              assertT(1, 1) & assertE(qPhi, "abstractionb: quantified predicate")('Llast) &
+              assertE(phi, "abstractionb: original predicate")('Rlast) & (allL('Llast)*vars.size) &
+              diffRename(1) &
+              assertT(1, 1) & assertT(s => s.ante.head match {
+                case Forall(_, _) => phi match {
+                  case Forall(_, _) => true
+                  case _ => false
+                }
+                case _ => true
+              }, "abstractionb: foralls must match") & closeId
+            )),
+          /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
+        )
+      case Some(e) => throw new TacticInapplicableFailure("Top-level abstraction only applicable to box properties, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
-  }
+  })
 
     /**
     * Equality assignment to a fresh variable.
@@ -201,13 +209,20 @@ private object DLBySubst {
     * @example Other uses of the variable in the context remain unchanged.
     * {{{
     *    x=2 |- [y:=2;]\\forall x_0 (x_0=x+1 -> [{x_0:=x_0+1;}*]x_0>0)
-    *    -------------------------------------------------------------- assignEquational(1, 1::Nil)
+    *    -------------------------------------------------------------- assignEquality(1, 1::Nil)
     *    x=2   |- [y:=2;][x:=x+1;][{x:=x+1;}*]x>0
     * }}}
     * @author Andre Platzer
     * @incontext
     */
-  private[btactics] lazy val assignEquality: DependentPositionTactic = "assignEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  @Tactic(
+    names = "[:=]=",
+    premises =   "Γ, x=e |- P, Δ",
+    //    [:=]=  ------------------
+    conclusion = "Γ |- [x:=e]P, Δ",
+    displayLevel = "all"
+  )
+  private[btactics] val assignEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
     case Some(Box(Assign(x, t), p)) =>
@@ -224,7 +239,14 @@ private object DLBySubst {
   })
 
   /** Equality assignment to a fresh variable. @see assignEquality @incontext */
-  private[btactics] lazy val assigndEquality: DependentPositionTactic = "assigndEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  @Tactic(
+    names = "<:=>=",
+    premises =   "Γ, x=e |- P, Δ",
+    //     <:=>= -----------------
+    conclusion = "Γ |- ⟨x:=e⟩P, Δ",
+    displayLevel = "all"
+  )
+  private[btactics] val assigndEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
     case Some(Diamond(Assign(x, t), p)) =>
@@ -243,61 +265,66 @@ private object DLBySubst {
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
    */
-  def generalize(c: Formula, isGame: Boolean = false): DependentPositionTactic = {
-    "MR" byWithInput(c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
-      case (ctx, Box(a, p)) =>
-        val ov = FormulaTools.argsOf("old", c)
+  def generalize(c: Formula, isGame: Boolean = false): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+    //@Tactic in [[HybridProgramCalculus.generalize]]
+    case (ctx, Box(a, p)) =>
+      val ov = FormulaTools.argsOf("old", c)
 
-        var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
-        val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-          val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, sequent)
-          freshOld = nextCandidate
-          (old -> ghost,
-            ghostPos match {
-              case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-              case _ => discreteGhost(old, Some(ghost))(pos)
-            })
-        }).toList
-        val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-        val afterGhostsPos = pos ++ PosInExpr(List.fill(posIncrements)(1))
+      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
+      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
+        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, sequent)
+        freshOld = nextCandidate
+        (old -> ghost,
+          ghostPos match {
+            case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
+            case _ => discreteGhost(old, Some(ghost))(pos)
+          })
+      }).toList
+      val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+      val afterGhostsPos = pos ++ PosInExpr(List.fill(posIncrements)(1))
 
-        val oldifiedC = SubstitutionHelper.replaceFn("old", c, ghosts.map(_._1).toMap)
-        val oldifiedA = ghosts.foldLeft(a)({case (prg, ((w, r), _)) => SubstitutionHelper.replaceFree(prg)(w, r) })
-        val introduceGhosts = ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip)
+      val oldifiedC = SubstitutionHelper.replaceFn("old", c, ghosts.map(_._1).toMap)
+      val oldifiedA = ghosts.foldLeft(a)({case (prg, ((w, r), _)) => SubstitutionHelper.replaceFree(prg)(w, r) })
+      val introduceGhosts = ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip)
 
-        val (q, useCleanup, showCleanup) = {
-          val aBVs = StaticSemantics.boundVars(a)
-          val constConjuncts =
-            if (aBVs.isInfinite) Nil
-            else sequent.ante.map(fml =>
-              ghosts.foldLeft(fml)({ case (f, ((what, repl), _)) => SubstitutionHelper.replaceFree(f)(what, repl) })).
-              flatMap(FormulaTools.conjuncts).
-              filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
-          (constConjuncts, isGame) match {
-            case ((Nil, _) | (_, true)) => (oldifiedC, skip, implyR(1))
-            case (consts, false) => (And(consts.reduceRight(And), oldifiedC),
-                boxAnd(afterGhostsPos) &
-                abstractionb(afterGhostsPos ++ PosInExpr(0 :: Nil)) &
-                (if (afterGhostsPos.isTopLevel) andR(afterGhostsPos) & Idioms.<(prop & done, skip)
-                else skip),
-                implyR(1) & andL(-1)
-            )
-          }
+      val (q, useCleanup, showCleanup) = {
+        val aBVs = StaticSemantics.boundVars(a)
+        val constConjuncts =
+          if (aBVs.isInfinite) Nil
+          else sequent.ante.map(fml =>
+            ghosts.foldLeft(fml)({ case (f, ((what, repl), _)) => SubstitutionHelper.replaceFree(f)(what, repl) })).
+            flatMap(FormulaTools.conjuncts).
+            filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
+        (constConjuncts, isGame) match {
+          case ((Nil, _) | (_, true)) => (oldifiedC, skip, implyR(1))
+          case (consts, false) => (And(consts.reduceRight(And), oldifiedC),
+              boxAnd(afterGhostsPos) &
+              abstractionb(afterGhostsPos ++ PosInExpr(0 :: Nil)) &
+              (if (afterGhostsPos.isTopLevel) andR(afterGhostsPos) & Idioms.<(prop & done, skip)
+              else skip),
+              implyR(1) & andL(-1)
+          )
         }
-        introduceGhosts & cutR(ctx(Box(oldifiedA, q)))(afterGhostsPos.checkSucc.top) < (
-          /* use */
-          /*label(BranchLabels.genUse)*/ useCleanup,
-          /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
-        )
-      case (_, e) => throw new TacticInapplicableFailure("MR only applicable to box, but got " + e.prettyString)
-    })
-  }
+      }
+      introduceGhosts & cutR(ctx(Box(oldifiedA, q)))(afterGhostsPos.checkSucc.top) < (
+        /* use */
+        /*label(BranchLabels.genUse)*/ useCleanup,
+        /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
+      )
+    case (_, e) => throw new TacticInapplicableFailure("MR only applicable to box, but got " + e.prettyString)
+  })
   /** @see [[TactixLibrary.postCut()]]
    * @todo same for diamonds by the dual of K
    * @note Uses K modal modus ponens, which is unsound for hybrid games.
    */
-  def postCut(C: Formula): DependentPositionTactic = useAt(Ax.K, PosInExpr(1::1::Nil),
-    (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p(||)".asFormula, C)::Nil))
+  @Tactic(
+    premises =   "Γ |- [a]C, Δ ;; Γ |- [a](C→P)",
+    //   postCut -------------------------------
+    conclusion = "Γ |- [a]P, Δ",
+    displayLevel = "browse"
+  )
+  def postCut(C: Formula): DependentPositionTactic = anon (useAt(Ax.K, PosInExpr(1::1::Nil),
+    (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p(||)".asFormula, C)::Nil))(_: Position))
 
   private def constAnteConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
@@ -308,7 +335,8 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.loop]] */
-  def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "loop" byWithInput(invariant, (pos, sequent) => {
+  def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    //@Tactic see [[HybridProgramCalculus.loop]]
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
 
     val ov = FormulaTools.argsOf("old", invariant)
@@ -367,9 +395,12 @@ private object DLBySubst {
     *
     * @param invariant The invariant.
     */
-  @Tactic(premises = "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
-    conclusion = "Γ |- [a<sup>*</sup>]P, Δ")
-  def loopRule(invariant: Formula): DependentPositionTactic /*DependentPositionWithAppliedInputTactic*/ = anon {(pos:Position, seq:Sequent) =>
+  @Tactic(
+    premises =   "Γ |- J, Δ ;; J |- [a]J ;; J |- P",
+    //  loopRule -----------------------------------
+    conclusion = "Γ |- [a<sup>*</sup>]P, Δ"
+  )
+  def loopRule(invariant: Formula): DependentPositionTactic = anon {(pos: Position, seq: Sequent) =>
     //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(seq(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
@@ -385,9 +416,16 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.throughout]] */
-  def throughout(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "throughout" byWithInput(invariant, (pos, sequent) => {
+  @Tactic(
+    premises =    "Γ |- J, Δ ;; J |- [a]J ;; J |- [b]J ;; J |- P",
+    // throughout ------------------------------------------------
+    conclusion =  "Γ |- [{a;b}<sup>*</sup>]P, Δ",
+    displayLevel = "browse"
+  )
+  def throughout(invariant: Formula): DependentPositionTactic = anon (throughout(invariant, SaturateTactic(alphaRule))(_: Position))
+  def throughout(invariant: Formula, pre: BelleExpr): DependentPositionTactic = anon ((pos: Position) => {
     require(pos.isTopLevel && pos.isSucc, "throughout only at top-level in succedent, but got " + pos)
-    lazy val split: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    lazy val split: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(Compose(_, _), _)) => composeb(pos) & generalize(invariant)(pos) & Idioms.<(skip, split(pos))
       case _ => skip
     })
@@ -399,7 +437,16 @@ private object DLBySubst {
     )})
 
   /** [[TactixLibrary.con()]] */
-  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "con" byWithInputs(v::variant::Nil, (pos, sequent) => {
+  @Tactic(
+    names = "Loop Convergence",
+    premises =          "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
+    // Loop Convergence -----------------------------------------------------------
+    conclusion =        "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
+    inputs = "x:variable;;J[x]:formula",
+    displayLevel = "all"
+  )
+  def con(x: Variable, J: Formula): DependentPositionTactic = anon (con(x, J, SaturateTactic(alphaRule))(_: Position))
+  def con(v: Variable, variant: Formula, pre: BelleExpr): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
@@ -454,19 +501,26 @@ private object DLBySubst {
     * Loop convergence wiping all context.
     * {{{
     *   init:                       use:                  step:
-    *   G |- exists v. J(v), D    v<=0, J(v) |- p     v>0, J(v) |- <a>J(v-1)
+    *   G |- exists x. J(x), D    x<=0, J(x) |- p     x>0, J(x) |- <a>J(x-1)
     *   --------------------------------------------------------------------------
     *   G |- <{a}*>p, D
     * }}}
-    * @param variant The variant property or convergence property in terms of new variable `v`.
-    * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
+    * @param J The variant property or convergence property in terms of new variable `x`.
+    * @example The variant J(x) ~> (x = z) is specified as x=="x".asVariable, variant == "x = z".asFormula
     */
-  def conRule(v: Variable, variant: Formula): DependentPositionWithAppliedInputTactic = "conRule" byWithInput(variant, (pos, sequent) => {
+  @Tactic(
+    premises =   "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
+    // conRule   -----------------------------------------------------------
+    conclusion = "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
+    inputs = "x:variable;;J[x]:formula",
+    displayLevel = "browse"
+  )
+  def conRule(x: Variable, J: Formula): DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
-    val ur = URename(Variable("x_",None,Real), v)
+    val ur = URename(Variable("x_",None,Real), x)
 
-    cutR(Exists(ur.what ::Nil, ur(variant)))(pos.checkSucc.top) <(
+    cutR(Exists(ur.what ::Nil, ur(J)))(pos.checkSucc.top) <(
       uniformRename(ur) & label(BelleLabels.initCase)
       ,
       cohide(pos) & implyR(1)
@@ -479,37 +533,45 @@ private object DLBySubst {
   })
 
   /** @see [[TactixLibrary.discreteGhost()]] */
-  def discreteGhost(t: Term, ghost: Option[Variable], assignInContext: Boolean = true): DependentPositionWithAppliedInputTactic = "discreteGhost" byWithInputs (
-      ghost match { case Some(g) => List(t, g) case _ => List(t) }, (pos: Position, seq: Sequent) => {
-    require(ghost match { case Some(g) => g != t case None => true }, "Expected ghost different from t, use stutter instead")
+  @Tactic(
+    names = "iG",
+    premises =   "Γ |- [x:=e]P, Δ",
+    //        iG ------------------
+    conclusion = "Γ |- P, Δ",
+    inputs = "e:term;;x:option[variable]"
+  )
+  def discreteGhost(e: Term, x: Option[Variable]): DependentPositionTactic = anon (discreteGhost(e, x, assignInContext = true)(_: Position))
+  /** @see [[TactixLibrary.discreteGhost]] */
+  def discreteGhost(e: Term, x: Option[Variable], assignInContext: Boolean = true): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
+    require(x match { case Some(g) => g != e case None => true }, "Expected ghost different from t, use stutter instead")
     seq.sub(pos) match {
       case Some(f: Formula) =>
         // check specified name, or construct a new name for the ghost variable if None
-        def ghostV(f: Formula): Variable = ghost match {
-          case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
-          case None => t match {
+        def ghostV(f: Formula): Variable = x match {
+          case Some(gv) => require(gv == e || (!StaticSemantics.symbols(f).contains(gv))); gv
+          case None => e match {
             case v: Variable => TacticHelper.freshNamedSymbol(v, f)
             case _ => TacticHelper.freshNamedSymbol(Variable("ghost"), seq)
           }
         }
         val theGhost = ghostV(f)
-        val theF = t match {
+        val theF = e match {
           //@note first two cases: backwards compatibility with diffSolve and others
-          case _: Variable => f.replaceFree(t, DotTerm())
-          case _ if StaticSemantics.boundVars(f).intersect(StaticSemantics.freeVars(t)).isEmpty => f.replaceFree(t, DotTerm())
+          case _: Variable => f.replaceFree(e, DotTerm())
+          case _ if StaticSemantics.boundVars(f).intersect(StaticSemantics.freeVars(e)).isEmpty => f.replaceFree(e, DotTerm())
           case _ => f //@note new: arbitrary term ghosts
         }
 
         val subst = (us: Option[Subst]) => RenUSubst(
           ("x_".asVariable, theGhost) ::
-          ("f()".asTerm, t) ::
+          ("f()".asTerm, e) ::
           ("p(.)".asFormula, theF) ::
           Nil
         )
 
         val execAssignment = assignEquality(pos) &
           //@note allR2L does not allow rewriting numbers
-          (if (!t.isInstanceOf[Number] && pos.isTopLevel) {
+          (if (!e.isInstanceOf[Number] && pos.isTopLevel) {
             if (pos.isSucc) TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) // from implyR
             else TactixLibrary.exhaustiveEqR2L(hide=false)(AntePos(seq.ante.size-1)) // from andL
           } else skip)
@@ -524,7 +586,7 @@ private object DLBySubst {
   /** Introduces ghost variables with a fresh name in `origSeq' for each of the terms `trms', before continuing with the
     * tactic produced by `cont`. */
   def discreteGhosts(trms: Set[Term], origSeq: Sequent,
-                     cont: List[((Term, Variable), BelleExpr)] => BelleExpr): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+                     cont: List[((Term, Variable), BelleExpr)] => BelleExpr): DependentPositionTactic = anon ((pos: Position) => {
     var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
     val ghosts: List[((Term, Variable), BelleExpr)] = trms.map(old => {
       val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
@@ -542,18 +604,26 @@ private object DLBySubst {
    * Turns an existential quantifier into an assignment.
     *
     * @example {{{
-   *         |- [t:=f;][x:=t;]x>=0
-   *         -------------------------assignbExists(f)(1)
+   *         |- [t:=e;][x:=t;]x>=0
+   *         -------------------------assignbExists(e)(1)
    *         |- \exists t [x:=t;]x>=0
    * }}}
-   * @param f The right-hand side term of the assignment chosen as a witness for the existential quantifier.
+   * @param e The right-hand side term of the assignment chosen as a witness for the existential quantifier.
    * @return The tactic.
    */
-  def assignbExists(f: Term): DependentPositionTactic = "assignbExistsRule" byWithInput (f, (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Exists(vars, p)) =>
+  @Tactic(
+    names = "[:=] assign exists",
+    codeName = "assignbExistsRule",
+    premises =            "Γ |- [t:=e][x:=t]P, Δ",
+    // [:=] assign exists -----------------------
+    conclusion =          "Γ |- ∃t [x:=t]P, Δ",
+    displayLevel = "browse"
+  )
+  def assignbExists(e: Term): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(Exists(vars, _)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> e :: Nil))
       useAt(Ax.assignbexists, PosInExpr(1::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("assignbExistsRule only applicable to existential quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -563,18 +633,26 @@ private object DLBySubst {
     * Turns a universal quantifier into an assignment.
     *
     * @example {{{
-    *         [t:=f;][x:=t;]x>=0 |-
-    *         -------------------------assignbAll(f)(-1)
+    *         [t:=e;][x:=t;]x>=0 |-
+    *         -------------------------assignbAll(e)(-1)
     *         \forall t [x:=t;]x>=0 |-
     * }}}
-    * @param f The right-hand side term of the assignment chosen as a witness for the universal quantifier.
+    * @param e The right-hand side term of the assignment chosen as a witness for the universal quantifier.
     * @return The tactic.
     */
-  def assignbAll(f: Term): DependentPositionTactic = "[:=] assign all" byWithInput (f, (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(Forall(vars, p)) =>
+  @Tactic(
+    names = "[:=] assign all",
+    codeName = "assignbAllRule",
+    premises =         "Γ, [t:=e][x:=t]P |- Δ",
+    // [:=] assign all -----------------------
+    conclusion =       "Γ, ∀t [x:=t]P |- Δ",
+    displayLevel = "browse"
+  )
+  def assignbAll(e: Term): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(Forall(vars, _)) =>
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>
-        s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbExists")) ++ RenUSubst(USubst("f_()".asTerm ~> f :: Nil))
+        s.getOrElse(throw new UnsupportedTacticFeature("Expected unification in assignbAll")) ++ RenUSubst(USubst("f_()".asTerm ~> e :: Nil))
       useAt(Ax.assignball, PosInExpr(0::Nil), subst)(pos)
     case Some(e) => throw new TacticInapplicableFailure("[:=] assign all only applicable to box universal quantifier, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
