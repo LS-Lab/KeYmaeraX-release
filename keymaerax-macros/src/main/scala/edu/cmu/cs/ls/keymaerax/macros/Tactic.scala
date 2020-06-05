@@ -107,6 +107,7 @@ class TacticImpl(val c: blackbox.Context) {
         case (ins, prem, concl) if concl != "" && prem != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
           RuleDisplayInfo(simpleDisplay, conc, prem)
+        case (_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
       (codeName, displayInfo, inputs, displayLevel, revealInternal)
@@ -245,16 +246,26 @@ class TacticImpl(val c: blackbox.Context) {
               } else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
             }
-            else
-              c.abort(c.enclosingPosition, "@Tactic with AntePos argument cannot have additional inputs")
+            else {
+              if (isCoreAnon) {
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsL($argExpr, ($sname, $pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
+              } else {
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsL($argExpr, ($sname, $pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
+              }
+            }
           case SuccPos(sname, pname) =>
             if(args.isEmpty) {
               if (isCoreAnon)
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
               else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
-            } else
-              c.abort(c.enclosingPosition, "@Tactic with SuccPos argument cannot have additional inputs")
+            } else {
+              if (isCoreAnon) {
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebywithInputsR($argExpr, ($sname, $pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
+              } else {
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsR($argExpr, ($sname, $pname) =>  $acc)""",tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
+              }
+            }
           case TwoPos(provable, pos1, pos2) =>
               if(args.isEmpty)
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by((($provable, $pos1, $pos2) =>  $acc))""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic")
@@ -313,6 +324,12 @@ class TacticImpl(val c: blackbox.Context) {
         case (Nil, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic""")
         case (_, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr,  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
         case (_, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic""")
+        case (_, _: AntePos) =>
+          val r = tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"
+          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
+        case (_, _: SuccPos) =>
+          val r = tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"
+          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
         case (_, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic""")
         case (x, y) => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: ($x, $y)")
       }
@@ -333,6 +350,16 @@ class TacticImpl(val c: blackbox.Context) {
         c.Expr(q"""$mods val $declName: $baseType = $application""")
       }
     }
+    def coreAnon(s: String): Boolean = {
+      s match {
+        case "anon" => false
+        case "inputanon" => false
+        case "inputanonL" => false
+        case "inputanonR" => false
+        case "coreanon" => true
+        case _ => c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $s""")
+      }
+    }
     annottees map (_.tree) toList match {
       // Annottee must be a val or def declaration of an tactic
       case (defDecl: DefDef) :: Nil =>
@@ -341,24 +368,14 @@ class TacticImpl(val c: blackbox.Context) {
           case q"$mods def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}($theRhs)" =>
             theRhs match {
               case q"((..$params) => $rhs)" =>
-                val isCoreAnon =
-                  f.toString match {
-                    case "anon" => false
-                    case "coreanon" => true
-                    case _ => c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
-                  }
+                val isCoreAnon = coreAnon(f.toString)
                 if (!isTactic(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
                 val positions = getPositioning(params)
                 assemble(mods, codeName, inArgs, positions, rhs, isDef = true, isCoreAnon)
               //c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
               case rhs =>
-                val isCoreAnon =
-                  f.toString match {
-                    case "anon" => false
-                    case "coreanon" => true
-                    case _ => c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
-                  }
+                val isCoreAnon = coreAnon(f.toString)
                 if (!isBelleExpr(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
                 assemble(mods, codeName, inArgs, NoPos(), rhs, isDef = true, isCoreAnon)
@@ -368,26 +385,15 @@ class TacticImpl(val c: blackbox.Context) {
       case (valDecl: ValDef) :: Nil =>
         valDecl match {
           case q"$mods val ${declName: TermName}: $tRet = ${f: Ident}($theRhs)" =>
-            println("DEBUG: " + showRaw(valDecl))
              theRhs match {
                case q"((..$params) => $rhs)" =>
-                 val isCoreAnon =
-                   f.toString match {
-                     case "anon" => false
-                     case "coreanon" => true
-                     case _ => c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
-                   }
-                if (!isTactic(tRet))
+                 val isCoreAnon = coreAnon(f.toString)
+                 if (!isTactic(tRet))
                   c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
                 val positions = getPositioning(params)
                 assemble(mods, declName, Nil, positions, rhs, isDef = false, isCoreAnon)
                case rhs =>
-                 val isCoreAnon =
-                   f.toString match {
-                     case "anon" => false
-                     case "coreanon" => true
-                     case _ => c.abort(c.enclosingPosition, s"""Expected function "anon" on RHS, got: $f""")
-                   }
+                 val isCoreAnon = coreAnon(f.toString)
                  if (!isBelleExpr(tRet))
                    c.abort(c.enclosingPosition, "Invalid annottee: anon on RHS of @Tactic should either be of type BelleExpr or start with (args => ...)")
                  assemble(mods, declName, Nil, NoPos(), rhs, isDef = false, isCoreAnon)
