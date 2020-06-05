@@ -12,7 +12,7 @@ object AnnotationCommon {
     if (first != -1 && last != -1) {
       val (tpeFun, tpeArg) = (tpe.slice(0, first).trim.toLowerCase, tpe.slice(first + 1, last).trim.toLowerCase)
       tpeFun match {
-        case "list" => ListArg(name, tpeArg, allowFresh)
+        case "list" => ListArg(toArgInfo(name, tpeArg, allowFresh))
         case "option" => OptionArg(toArgInfo(name, tpeArg, allowFresh))
         case s => c.abort(c.enclosingPosition, "Unexpected type constructor: " + s + ", should be option[] or list[]")
       }
@@ -106,7 +106,7 @@ object AnnotationCommon {
       case SubstitutionArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
       case OptionArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.OptionArg(${convAI(arg)})"""
       case FormulaArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case ListArg(name, sort, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.ListArg(${literal(name)}, ${literal(sort)}, ${literals(allowsFresh)})"""
+      case ListArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.ListArg(${convAI(arg)})"""
       case ta: TermArg => q"""new edu.cmu.cs.ls.keymaerax.macros.TermArg(${literal(ta.name)}, ${literals{ta.allowsFresh}})"""
       case ea: ExpressionArg => q"""new edu.cmu.cs.ls.keymaerax.macros.ExpressionArg (${literal(ea.name)}, ${literals(ea.allowsFresh)})"""
     }

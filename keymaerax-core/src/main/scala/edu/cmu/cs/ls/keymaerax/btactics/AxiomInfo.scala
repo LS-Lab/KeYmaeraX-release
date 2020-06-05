@@ -64,9 +64,8 @@ object DerivationInfoRegistry {
       case (_: FormulaArg, f :: Nil) => Right("Expected a formula but got " + f.prettyString)
       case (_: ExpressionArg, (e: Expression) :: Nil) => Left(e)
       case (_: ExpressionArg, e :: Nil) => Right("Expected an expression but got " + e.prettyString)
-      // @TODO: Generalize
-      case (ListArg(n, "formula", a), fmls) if fmls.forall(_.kind == FormulaKind) =>
-        val res = fmls.map(e => convert(FormulaArg(n, a), List(e)))
+      case (ListArg(ai: ArgInfo), fmls) if fmls.forall(_.kind == FormulaKind) =>
+        val res = fmls.map(e => convert(ai, List(e)))
         res.find({case _: Left[Any, String] => false case _: Right[Any, String] => true}) match {
           case Some(Right(err)) => Right(err)
           case None => Left(res.map({case Left(v) => v}))

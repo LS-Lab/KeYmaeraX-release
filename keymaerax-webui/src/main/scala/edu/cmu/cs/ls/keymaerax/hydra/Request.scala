@@ -1922,7 +1922,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case BelleTermInput(value, Some(OptionArg(arg))) if !arg.isInstanceOf[SubstitutionArg] => checkExpressionInput(arg, value.asExpr :: Nil, sequent, defs)
         case BelleTermInput(value, Some(OptionArg(arg))) if  arg.isInstanceOf[SubstitutionArg] =>
           checkSubstitutionInput(arg, value.asSubstitutionPair :: Nil, sequent, defs)
-        case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => checkExpressionInput(arg, value.split(",").map(KeYmaeraXParser).toList, sequent, defs)
+        case BelleTermInput(value, Some(arg@ListArg(ai: FormulaArg))) => checkExpressionInput(arg, value.split(",").map(KeYmaeraXParser).toList, sequent, defs)
       }
     } catch {
       case ex: ParseException => BooleanResponse(flag=false, Some(ex.toString))
@@ -1937,7 +1937,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
       case (_: TermArg, (t: Term) :: Nil) => DerivationInfoRegistry.convert(arg, List(t)).right.toOption
       case (_: FormulaArg, (f: Formula) :: Nil) => DerivationInfoRegistry.convert(arg, List(f)).right.toOption
       case (_: ExpressionArg, (e: Expression) :: Nil) => DerivationInfoRegistry.convert(arg, List(e)).right.toOption
-      case (ListArg(_, "formula", _), fmls) if fmls.forall(_.kind == FormulaKind) => None
+      case (ListArg(ai: FormulaArg), fmls) if fmls.forall(_.kind == FormulaKind) => None
       case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " +   exprs.map(_.prettyString).mkString(","))
     }
 
@@ -2015,7 +2015,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:SubstitutionArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
+      case BelleTermInput(value, Some(ListArg(ai: FormulaArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, Some(OptionArg(_))) => "{`"+value+"`}"

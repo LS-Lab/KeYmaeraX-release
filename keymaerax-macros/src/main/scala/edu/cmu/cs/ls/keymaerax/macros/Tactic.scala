@@ -189,7 +189,7 @@ class TacticImpl(val c: blackbox.Context) {
               new OptionArg(getInput(vd))
             case tq"""List[$t]""" =>
               val vd = ValDef(v.mods, v.name, t, v.rhs)
-              new ListArg(v.name.decodedName.toString, getInput(vd).name)
+              new ListArg(getInput(vd))
             case t => c.abort(c.enclosingPosition, "Expected supported input type in tactic definition, got unsupported type: " + t)
           }
       }
@@ -215,8 +215,7 @@ class TacticImpl(val c: blackbox.Context) {
         case _: ExpressionArg => tq"edu.cmu.cs.ls.keymaerax.core.Expression"
         case _: PosInExprArg => tq"edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr"
         case OptionArg(ai) => tq"scala.Option[${typeName(ai)}]"
-        case ListArg(name, elementSort, allowsFresh) =>
-          c.abort(c.enclosingPosition, "List arguments in tactics not yet supported")
+        case ListArg(ai: ArgInfo) => tq"scala.List[${typeName(ai)}]"
         case ai => c.abort(c.enclosingPosition, "Unimplemented case in @Tactic, could not convert argument spec: " + ai)
       }
     }
