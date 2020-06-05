@@ -218,13 +218,13 @@ trait SequentCalculus {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
   /** exists left: Skolemize an existential quantifier in the antecedent by introducing a new name for the witness. */
-  val existsL                         : DependentPositionTactic = "existsL" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsSkolemize(pos))
+  val existsL                         : DependentPositionTactic = "existsL" by ((pos: Position) => FOQuantifierTactics.existsSkolemize(pos))
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
-  val existsR                         : DependentPositionTactic = "existsR" by ((pos: Position,seq: Sequent) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
+  val existsR                         : DependentPositionTactic = "existsR" by ((pos: Position) => FOQuantifierTactics.existsInstantiate(None, None)(pos))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
   def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
@@ -238,7 +238,9 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
     //@todo optimizable seems like complicated and possibly slow code???
-  lazy val close: BelleExpr = "close" by ((seq: Sequent) => {
+//  @Tactic(premises = "*",
+//    conclusion = "Γ, P |- P, Δ")
+  val close: BelleExpr =  "close" by {(seq: Sequent) =>
     seq.succ.zipWithIndex.find({
       case (True, _) => true
       case (fml, _) =>
@@ -255,7 +257,7 @@ trait SequentCalculus {
         case _ => DebuggingTactics.error("Inapplicable close")
       }
     }
-  })
+  }
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePos, s: SuccPos): BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     //@note same name (closeId) as SequentCalculus.closeId for serialization
@@ -280,15 +282,17 @@ trait SequentCalculus {
     }
   })
   //@note do not forward to closeIdWith (performance)
+//  @Tactic(premises = "*",
+//    conclusion = "Γ, P |- P, Δ")
   val closeId           : DependentTactic = new DependentTactic("id") {
-    override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable, _) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        val fmls = s.ante.intersect(s.succ)
-        val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString))
-        close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
-    }
+  override def computeExpr(v: BelleValue): BelleExpr = v match {
+    case BelleProvable(provable, _) =>
+      require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+      val s = provable.subgoals.head
+      val fmls = s.ante.intersect(s.succ)
+      val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString))
+      close(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
+  }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   @Tactic(/*codeName = "closeTrue",*/ premises = "*",
