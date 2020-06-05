@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{InapplicableUnificationKeyFailure, _}
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus.{andLi => _, implyRi => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutLR}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -104,6 +105,22 @@ trait UnifyUSCalculus {
 
   /** The default position if no key has been specified, no key has been declared, and no key can be inferred. */
   private val defaultPosition = PosInExpr(0::Nil)
+
+  // utility tactics
+
+  /** skip is a no-op tactic that has no effect
+    * @see [[TactixLibrary.done]] */
+  @Tactic()
+  val skip : BelleExpr = anon {Idioms.ident}
+  /** nil=skip is a no-op tactic that has no effect */
+  @Tactic()
+  val nil : BelleExpr = anon {skip}
+  /** fail is a tactic that always fails as being inapplicable
+    * @see [[skip]] */
+  //@todo@Tactic()
+  //val fail : BelleExpr = anon {(_: Sequent) => throw new TacticInapplicableFailure("fail")}
+  val fail: BelleExpr = "fail" by ((_: Sequent) => throw new TacticInapplicableFailure("fail"))
+
 
   /*******************************************************************
     * Stepping auto-tactic
@@ -719,7 +736,7 @@ trait UnifyUSCalculus {
                 def hide2 =
                   if (p.isSucc) cohide2(AntePos(sequent.ante.size), p.top)
                   else (sequent.ante.indices.reverse.tail.map(i => hideL(AntePosition.base0(i))) ++
-                    sequent.succ.indices.reverse.map(i => hideR(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip)
+                    sequent.succ.indices.reverse.map(i => hideR(SuccPosition.base0(i)))).reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
 
                 // uses specialized congruence tactic for DC, may not work with other conditional equivalences
                 cut(C(subst(prereq))) < (
