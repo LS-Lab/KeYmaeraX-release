@@ -1590,12 +1590,12 @@ class DifferentialTests extends TacticTestBase {
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 1 (Z3)" in withZ3 {qeTool =>
+  it should "COMPATIBILITY: prove a strict barrier certificate 1 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 2 (Z3)" in withZ3 {qeTool =>
+  it should "COMPATIBILITY: prove a strict barrier certificate 2 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
