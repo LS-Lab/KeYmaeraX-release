@@ -159,6 +159,8 @@ class DLParser extends Parser {
 
   def fullExpression[_: P]: P[Expression] = P( NoCut(formula ~ End) | NoCut(term ~ End) | (program ~ End) )
 
+  def expression[_: P]: P[Expression] = P( NoCut(formula) | NoCut(term) | program )
+
 
   //*****************
   // terminals

@@ -59,7 +59,7 @@ class DLBelleParser extends (String => BelleExpr) {
 
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
   def locator[_: P]: P[PositionLocator] = P( position ).map(pos => Fixed(pos))
-  def argument[_: P]: P[Expression] = P("\"" ~~ formula ~~ "\"")
+  def argument[_: P]: P[Expression] = P("\"" ~~ expression ~~ "\"")
 
   def tacticSymbol[_: P]: P[String] = P( ident ).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
   def atomicTactic[_: P]: P[BelleExpr] = P( tacticSymbol ~ !"(").map(t => ReflectiveExpressionBuilder(t, Nil, generator, defs))
@@ -110,6 +110,9 @@ class DLBelleParser extends (String => BelleExpr) {
   def natural[_: P]: P[Int] = expParser.natural
 
   def baseVariable[_: P]: P[BaseVariable] = expParser.baseVariable
+
+  /** expression: Parses a dL expression from [[expParser]]. */
+  def expression[_: P]: P[Expression] = expParser.expression
 
   /** term: Parses a dL term from [[expParser]]. */
   def term[_: P]: P[Term] = expParser.term
