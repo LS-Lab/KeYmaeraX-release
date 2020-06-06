@@ -36,6 +36,7 @@ trait SequentCalculus {
   // Propositional tactics
 
   /** Hide/weaken whether left or right */
+  //@Tactic("W")
   val hide    : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   @Tactic("WL", premises = "Γ |- Δ",

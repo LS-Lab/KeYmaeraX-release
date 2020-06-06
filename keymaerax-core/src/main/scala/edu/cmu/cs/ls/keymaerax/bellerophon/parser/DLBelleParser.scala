@@ -11,11 +11,13 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLAxiomParser, DLParser}
+import edu.cmu.cs.ls.keymaerax.parser.{DLAxiomParser, DLParser, KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, ParseException}
 import fastparse._
 import MultiLineWhitespace._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.btactics.{Generator, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.parser.DLParser.parseException
 
 import scala.collection.immutable._
 
@@ -30,21 +32,42 @@ object DLBelleParser extends DLBelleParser {
   * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of Bellerophon tactics for KeYmaera X.
   * @author Andre Platzer
   */
-class DLBelleParser {
+class DLBelleParser extends (String => BelleExpr) {
+
+  //@todo fill both vals with life
+  private val generator: Option[Generator.Generator[GenProduct]] = None
+  private val defs: KeYmaeraXArchiveParser.Declaration = KeYmaeraXArchiveParser.Declaration(Map.empty)
 
   /** Which formula/term/program parser this archive parser uses. */
   val expParser = DLParser
 
+  /** Parse the input string as a Bellerophon tactic.
+    *
+    * @param input the string to parse as a bellerophon tactic.
+    * @ensures apply(printer(\result)) == \result
+    * @throws ParseException if `input` is not a well-formed bellerophon tactic.
+    */
+  override def apply(input: String): BelleExpr = belleParser(input)
+
+
+  /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
+  //@todo store the parser for speed
+  val belleParser: String => BelleExpr = (s => fastparse.parse(s, tactic(_)) match {
+    case Parsed.Success(value, index) => value
+    case f: Parsed.Failure => throw parseException(f)
+  })
+
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
   def locator[_: P]: P[PositionLocator] = P( position ).map(pos => Fixed(pos))
+  def argument[_: P]: P[Expression] = P("\"" ~~ formula ~~ "\"")
 
-  //@todo parse proper tactic by name instead of nilT
-  def tacticSymbol[_: P]: P[BelleExpr] = ident.map(s => TactixLibrary.nil)
-  def at[_: P]: P[AppliedPositionTactic] = P(tacticSymbol ~~ "(" ~ (string ~ ",").? ~ locator ~ ")").
-    map({case (t,None,j) => t.asInstanceOf[PositionalTactic](j)
-      case (t,Some(arg),j) => throw new Exception("Not implemented yet passing formula etc arguments")})
+  def tacticSymbol[_: P]: P[String] = P( ident ).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
+  def atomicTactic[_: P]: P[BelleExpr] = P( tacticSymbol ~ !"(").map(t => ReflectiveExpressionBuilder(t, Nil, generator, defs))
+  def at[_: P]: P[BelleExpr] = P( tacticSymbol ~~ "(" ~ (argument ~ ",").? ~ locator ~ ")" ).
+    map({case (t,None,j) => ReflectiveExpressionBuilder(t, Right(j)::Nil, generator, defs)
+      case (t,Some(arg),j) => ReflectiveExpressionBuilder(t, Right(j)::Left(Seq(arg))::Nil, generator, defs)})
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )
-  def baseTac[_: P]: P[BelleExpr] = P( NoCut(at) | tacticSymbol |
+  def baseTac[_: P]: P[BelleExpr] = P( atomicTactic | NoCut(at) |
     branchTac | NoCut(repeatTac) | parenTac
   )
 
