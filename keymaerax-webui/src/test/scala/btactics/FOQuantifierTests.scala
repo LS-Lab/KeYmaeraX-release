@@ -54,7 +54,7 @@ class FOQuantifierTests extends TacticTestBase {
     {
       val result = proveBy(
         Sequent(IndexedSeq("\\forall z \\forall y y>z".asFormula), IndexedSeq()),
-        allInstantiate()(-1))
+        allInstantiate(None, None)(-1))
       result.subgoals.loneElement shouldBe "\\forall y y>z ==> ".asSequent
     }
     {
@@ -233,7 +233,7 @@ class FOQuantifierTests extends TacticTestBase {
   it should "instantiate variables bound in an ODE" in {
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),
-      existsInstantiate()(1)).subgoals.loneElement shouldBe "==> [{x'=2,y'=0*y+1&true}]x>0".asSequent
+      existsInstantiate(None, None)(1)).subgoals.loneElement shouldBe "==> [{x'=2,y'=0*y+1&true}]x>0".asSequent
 
     proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),

@@ -209,9 +209,10 @@ trait SequentCalculus {
   val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
   /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
-  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `term`. */
-  def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
+  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e`. */
+  def allL(e: Term)              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, Some(e))(_: Position) }
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
+  //@todo annotation must be on def allL(e: Term), otherwise it won't be an input tactic. can make it e: Option[Term] to get behavior of val allL.
   @Tactic(premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
   val allL                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allInstantiate(None, None)(pos)}
@@ -229,8 +230,9 @@ trait SequentCalculus {
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
-  def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
+  def existsR(e: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
+  //@todo annotation must be on def existsR(e: Term), otherwise it won't be an input tactic. can make it e: Option[Term] to get behavior of val existsR.
   @Tactic(premises = "Γ |- p(e), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
   val existsR                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsInstantiate(None, None)(pos)}
