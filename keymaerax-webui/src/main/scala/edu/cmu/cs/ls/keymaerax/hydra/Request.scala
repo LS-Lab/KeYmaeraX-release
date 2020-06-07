@@ -1758,7 +1758,10 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
   override protected def doResultingResponses(): List[Response] = {
     val infos = axiomId match {
       case Some(aid) => (DerivationInfo.ofCodeName(aid), UIIndex.comfortOf(aid).map(DerivationInfo.ofCodeName)) :: Nil
-      case None => DerivationInfoRegistry.allInfo.map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
+      case None => DerivationInfo.allInfo.filter({
+        case ai: AxiomInfo => ai.displayLevel != 'internal
+        case _ => true
+      }).map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
     }
     ApplicableAxiomsResponse(infos, Map.empty) :: Nil
   }
