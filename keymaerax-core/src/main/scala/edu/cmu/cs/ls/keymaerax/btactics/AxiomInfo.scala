@@ -533,7 +533,7 @@ object DerivationInfoRegistry {
         ,List(
           (List("&Gamma;"),List("&Delta;","P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
-      ,List(FormulaArg("P")), _ => ((fml:Formula) => ProofRuleTactics.cut(fml)): TypedFunc[Formula, BelleExpr]),
+      ,List(FormulaArg("P")), _ => ((fml:Formula) => SequentCalculus.cut(fml)): TypedFunc[Formula, BelleExpr]),
     new InputTacticInfo("abbrv"
       , RuleDisplayInfo(("Abbreviate","abbrv")
         ,(List("&Gamma;"), List("&Delta;"))

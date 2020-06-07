@@ -67,13 +67,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
   // axiomatic rules
   //
 
-  /** G: Gödel generalization rule reduces a proof of `|- [a]p(x)` to proving the postcondition `|- p(x)` in isolation.
+  /** G: Gödel generalization rule reduces a proof of `&Gamma; |- [a]p(x), &Delta;` to proving the postcondition `|- p(x)` in isolation.
     * {{{
     *     |- p(||)
     *   --------------- G
     *   G |- [a]p(||), D
     * }}}
-    * The more flexible and more general rule [[monb]] with p(x)=True gives `G` using [[boxTrue]].
+    * This rule is a special case of rule [[monb]] with p(x)=True by [[boxTrue]].
     * @note Unsound for hybrid games
     * @see [[monb]] with p(x)=True
     * @see [[boxTrue]]
@@ -81,7 +81,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   @Tactic(premises = "|- P", conclusion = "Γ |- [a]P, Δ")
   val G : DependentPositionTactic = anon {(pos:Position) => SequentCalculus.cohideR(pos) & DLBySubst.G}
 
-  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation.
+  /** allG: all generalization rule reduces a proof of `\forall x p(x) |- \forall x q(x)` to proving `p(x) |- q(x)` in isolation.
     * {{{
     *      p(x) |- q(x)
     *   ---------------------------------
@@ -89,8 +89,9 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
+    //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "∀x P |- ∀x Q")
-  lazy val allG               : BelleExpr         = anon {byUS(Ax.monall)}
+  lazy val monall             : BelleExpr         = anon {byUS(Ax.monall)}
   /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)`.
     * {{{
     *      p(x) |- q(x)
@@ -99,6 +100,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
+  //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "[a]P |- [a]Q")
   lazy val monb               : BelleExpr         = anon {byUS(Ax.monb)}
   /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)`.
@@ -109,6 +111,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * }}}
     * @see [[UnifyUSCalculus.CMon()]]
     */
+  //@todo flexibilize via cohide2 first
   @Tactic(premises = "P |- Q", conclusion = "<a>P |- <a>Q")
   lazy val mond               : BelleExpr         = anon {byUS(Ax.mondrule)}
 
@@ -402,7 +405,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
       * }}}
       * @incontext
       */
-    @Tactic("(x)'")
+    @Tactic("(x)'", conclusion="(x)' = x", displayLevel = "browse")
     lazy val Dvar: DependentPositionTactic = anon {(pos:Position) => (if (INTERNAL) useAt(Ax.Dvar) else DifferentialTactics.Dvariable)(pos)}
 
     /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
@@ -454,10 +457,13 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val allV               : DependentPositionTactic = useAt(Ax.allV)
   /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
   lazy val existsV            : DependentPositionTactic = useAt(Ax.existsV)
-  //@todo document and unclear what it really does depending on the index
+  /** allDist: distribute `\forall x p(x) -> \forall x q(x)` by replacing it with `\forall x (p(x)->q(x))`.
+    * @see [[allDistElim]] */
   lazy val allDist            : DependentPositionTactic = useAt(Ax.allDist)
+  /** allDistElim: distribute `\forall x P -> \forall x Q` by replacing it with `\forall x (P->Q)`. */
+  lazy val allDistElim        : DependentPositionTactic = useAt(Ax.allDistElim)
 
-  //@todo document and unclear what it really does depending on the index
+  /** existsE: show `\exists x P` by showing that it follows from `P`. */
   lazy val existsE            : DependentPositionTactic = useAt(Ax.existse)
 
 }

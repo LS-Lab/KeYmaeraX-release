@@ -54,7 +54,8 @@ object AxiomaticODESolver {
 
   def apply(): DependentPositionTactic = axiomaticSolve()
 
-  def axiomaticSolve(instEnd: Boolean = false): DependentPositionTactic =
+  /** [[DifferentialEquationCalculus.solve]] and [[DifferentialEquationCalculus.solveEnd]]. */
+  private[btactics] def axiomaticSolve(instEnd: Boolean = false): DependentPositionTactic =
       (if (instEnd) "solveEnd" else "solve") by ((pos: Position, s: Sequent) => {
     s.sub(pos) match {
       case Some(Diamond(ODESystem(_, True), _)) =>

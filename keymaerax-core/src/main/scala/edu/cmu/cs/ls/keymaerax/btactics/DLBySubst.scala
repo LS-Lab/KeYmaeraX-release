@@ -32,6 +32,7 @@ private object DLBySubst {
   /** @see [[HilbertCalculus.G]] */
   lazy val G: BelleExpr = {
     //@Tactic in [[HilbertCalculus.G]]
+    //@todo optimizable why is this entire tactic not just TactixLibrary.by(Ax.Goedel)?
     val pattern = SequentType(Sequent(IndexedSeq(), IndexedSeq("[a_{|^@|};]p_(||)".asFormula)))
     //@todo ru.getRenamingTactic should be trivial so can be optimized away with a corresponding assert
     if (false && isGame) //@note true changes the shape maybe?
@@ -540,7 +541,7 @@ private object DLBySubst {
     conclusion = "Γ |- P, Δ",
     inputs = "e:term;;x:option[variable]"
   )
-  def discreteGhost(e: Term, x: Option[Variable]): DependentPositionTactic = anon (discreteGhost(e, x, assignInContext = true)(_: Position))
+  private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionTactic = anon (discreteGhost(e, x, assignInContext = true)(_: Position))
   /** @see [[TactixLibrary.discreteGhost]] */
   def discreteGhost(e: Term, x: Option[Variable], assignInContext: Boolean = true): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     require(x match { case Some(g) => g != e case None => true }, "Expected ghost different from t, use stutter instead")

@@ -33,64 +33,6 @@ private object ProofRuleTactics extends Logging {
     }
   }
 
-  def rawCut(f: Formula): BuiltInTactic = "rawCut" by { (provable: ProvableSig) => provable(core.Cut(f), 0)}
-
-  /** [[SequentCalculus.cut()]] */
-  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C", conclusion = "Γ |- Δ", inputs = "C:formula")
-  def cut(f: Formula): InputTactic = inputanon {rawCut(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))}
-
-  /** [[SequentCalculus.cutL()]] */
-  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
-    conclusion = "Γ, P |- Δ", inputs = "C:formula")
-  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = inputanonL { (provable: ProvableSig, pos: AntePosition) =>
-    requireOneSubgoal(provable, "cutL(" + f + ")")
-    provable(core.CutLeft(f, pos.top), 0)
-    //@todo label BelleLabels.cutUse/cutShow
-  }
-
-  /** [[SequentCalculus.cutR()]] */
-  @Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
-    conclusion = "Γ |- P, Δ", inputs = "C:formula")
-  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonR { (provable: ProvableSig, pos: SuccPosition) =>
-    requireOneSubgoal(provable, "cutR(" + f + ")")
-    provable(core.CutRight(f, pos.top), 0)
-  }
-
-  /** [[SequentCalculus.cutLR()]] */
-  @Tactic()
-  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonP { (provable: ProvableSig, pos: Position) =>
-    requireOneSubgoal(provable, "cutLR(" + f + ")")
-    if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
-    else provable(core.CutRight(f, pos.checkSucc.top), 0)
-  }
-
-  //@todo this should not be a dependent tactic, just a by(Position=>Belle)
-  @Tactic("W")
-  val hide: DependentPositionTactic = anon { (pos:Position) => pos match {
-      case p: AntePosition => SequentCalculus.hideL(p)
-      case p: SuccPosition => SequentCalculus.hideR(p)
-    }
-  }
-
-  @Tactic("W")
-  val cohide: DependentPositionTactic = anon { (pos: Position) => pos match {
-      case p: AntePosition => SequentCalculus.cohideL(p)
-      case p: SuccPosition => SequentCalculus.cohideR(p)
-    }
-  }
-
-  @Tactic("XL")
-  val exchangeL: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
-    //require(posOne.isAnte && posTwo.isAnte, "Both positions should be in the Antecedent.")
-    pr(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
-  }
-
-  @Tactic("XR")
-  val exchangeR: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
-    //require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
-    pr(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
-  }
-
   /**
     * Uniform renaming `what~>repl` and vice versa.
     *

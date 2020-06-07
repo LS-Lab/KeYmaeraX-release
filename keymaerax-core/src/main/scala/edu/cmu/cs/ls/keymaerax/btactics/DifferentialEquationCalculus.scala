@@ -249,6 +249,7 @@ trait DifferentialEquationCalculus {
     *    a()>0 |- <{x'=a()}>x>=b()
     * }}}
     */
+  @deprecated
   def diffVar: DependentPositionTactic = DifferentialTactics.diffVar
 
   /** Refine top-level antecedent/succedent ODE domain constraint

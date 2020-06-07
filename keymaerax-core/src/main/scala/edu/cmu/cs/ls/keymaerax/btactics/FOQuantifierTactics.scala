@@ -82,7 +82,7 @@ protected object FOQuantifierTactics {
 
           //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
-          ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+          SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
             cohide('Rlast) & CMon(pos.inExpr) & byUS(Ax.allInst) & done
             )
@@ -128,7 +128,7 @@ protected object FOQuantifierTactics {
 
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
-            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+            SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
               cohide(pos) & CMon(pos.inExpr) & byUS(Ax.existsGeneralize, subst) & done
               )
@@ -142,11 +142,11 @@ protected object FOQuantifierTactics {
     })
 
 
-  /** @see [[SequentCalculus.allR]] */
+  /** [[SequentCalculus.allR]] */
 //  @Tactic(premises = "Γ |- p(x), Δ",
 //    conclusion = "Γ |- ∀x p(x), Δ",
 //    codeName = "allR")
-  lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allR") {
+  private[btactics] lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allR") {
     //@note could also try to skolemize directly and then skolemize to a fresh name index otherwise
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -197,10 +197,10 @@ protected object FOQuantifierTactics {
   }
 
   /**
-   * Skolemizes an existential quantifier in the antecedent.
-   * @see [[allSkolemize]]
-   */
-  lazy val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
+    * [[SequentCalculus.existsL]]
+    * Skolemizes an existential quantifier in the antecedent.
+    */
+  private[btactics] lazy val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
 
   /**
    * Generalizes existential quantifiers, but only at certain positions. All positions have to refer to the same term.
