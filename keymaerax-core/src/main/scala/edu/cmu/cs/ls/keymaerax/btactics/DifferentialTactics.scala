@@ -374,7 +374,7 @@ private object DifferentialTactics extends Logging {
      })
 
   @Tactic(names="Differential Refine",
-    //codeName="dR" -- todo: this was the original codeName
+    codeName="dR", // todo: rename the tactic directly
     premises="Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel="browse")
@@ -395,7 +395,7 @@ private object DifferentialTactics extends Logging {
     * @see AxiomaticODESolver.inverseDiffCut
     * */
   @Tactic(names="Inverse Differential Cut",
-    //codeName="dCi" -- todo: this was the original codeName
+    codeName="dCi", // todo: rename the tactic directly
     premises="Γ |- [x'=f(x)&Q]P ;; Γ |- R, Δ",
     conclusion="Γ |- [x'=f(x)&(Q∧R)]P, Δ",
     displayLevel="browse")
@@ -646,7 +646,7 @@ private object DifferentialTactics extends Logging {
     * }}}
     */
   @Tactic(names="Inverse Differential Ghost",
-    //codeName="dGi" -- todo: this was the original codeName
+    codeName="dGi",  // todo: rename the tactic directly
     premises="Γ |- [{x'=f(x) & Q}]P, Δ",
     conclusion="Γ |- ∃y [{x'=f(x),E & Q}]P, Δ",
     displayLevel="browse")
@@ -740,7 +740,7 @@ private object DifferentialTactics extends Logging {
    * }}}
    */
   @Tactic(names="Unpack evolution domain",
-    //codeName="diffUnpackEvolDomain" -- todo: this was the original codeName
+    codeName="diffUnpackEvolDomain", // todo: rename the tactic directly
     premises="Γ, Q |- [x'=f(x)&Q]P, Δ",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel="browse")
@@ -757,7 +757,7 @@ private object DifferentialTactics extends Logging {
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
   @Tactic(names="Differential Weaken",
-          //codeName="dW" -- todo: this was the original codeName
+          codeName="dW", // todo: rename the tactic directly
           premises="Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
           conclusion="Γ |- [x'=f(x)&Q]P, Δ",
           displayLevel="all", revealInternalSteps=true)
@@ -781,7 +781,7 @@ private object DifferentialTactics extends Logging {
 
   /** diffWeaken preserving all initial facts and mimicking the initial sequent shape. */
   @Tactic(names="Initial State-Preserving Differential Weaken",
-    //codeName="dWplus" -- todo: this was the original codeName
+    codeName="dWplus", // todo: rename the tactic directly
     premises="Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel="browse", revealInternalSteps=true)
@@ -1612,7 +1612,7 @@ private object DifferentialTactics extends Logging {
   })
 
   @Tactic(names="Strict Barrier Certificate",
-    //codeName="barrier" -- todo: this was the original codeName
+    codeName="barrier", // todo: rename the tactic directly
     premises="Γ |- p≳0 ;; Q ∧ p=0 |- p'>0",
     conclusion="Γ |- [x'=f(x)&Q] p≳0, Δ",
     displayLevel="browse")
