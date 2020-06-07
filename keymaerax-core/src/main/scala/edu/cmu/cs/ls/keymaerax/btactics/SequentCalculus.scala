@@ -330,7 +330,7 @@ trait SequentCalculus {
       }
     }
   }}
-  /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePos, s: SuccPos): BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     //@note same name (closeId) as SequentCalculus.closeId for serialization
     new BuiltInTactic("closeId") {
@@ -345,17 +345,23 @@ trait SequentCalculus {
       }
     }
   def close(a: Int, s: Int): BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
-  /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  /** closeIdWith: closes the branch with the formula at the given position when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ",
     codeName = "idWith")
   val closeIdWith: DependentPositionTactic = anon {(pos: Position, s: Sequent) =>
     pos.top match {
-      case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
-      case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)
-      case _ => throw new TacticInapplicableFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
+      case p: AntePos => close(p, SuccPos(closeIdFound(pos, s.succ.indexOf(s(p)))))
+      case p: SuccPos => close(AntePos(closeIdFound(pos, s.ante.indexOf(s(p)))), p)
     }
   }
+  @inline
+  private def closeIdFound(pos: Position, i: Int): Int = if (i >= 0)
+    i
+  else
+    throw new TacticInapplicableFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
+
+  /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@note do not forward to closeIdWith (performance)
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ")
