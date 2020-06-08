@@ -129,7 +129,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse a built-in tactic that takes a whole list of arguments" in {
-    BelleParser("diffInvariant({`1=1`}, 1)") shouldBe (round trip TactixLibrary.diffInvariant(Seq("1=1".asFormula) : _*)(1))
+    BelleParser("diffInvariant({`1=1`}, 1)") shouldBe (round trip TactixLibrary.diffInvariant("1=1".asFormula)(1))
   }
 
   it should "Parse a loop tactic and print it back out" in {

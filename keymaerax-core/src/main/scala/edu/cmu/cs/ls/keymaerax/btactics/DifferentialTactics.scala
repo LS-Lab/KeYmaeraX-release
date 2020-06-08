@@ -315,8 +315,10 @@ private object DifferentialTactics extends Logging {
   }
 
   /** @see [[TactixLibrary.dC()]] */
-  private[btactics] def diffCut(formulas: Formula*): DependentPositionTactic =
-    "dC" byWithInputs (formulas.toList, (pos: Position, sequent: Sequent) => {
+  //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.dC(Formula)
+  private[btactics] def diffCut(formula: Formula): DependentPositionTactic = diffCut(List(formula))
+  private[btactics] def diffCut(formulas: List[Formula]): DependentPositionTactic =
+    "dC" byWithInputs (formulas, (pos: Position, sequent: Sequent) => {
       formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut &
         Idioms.doIf(_.subgoals.size == 2)(<(all, skip)))
     })
@@ -385,12 +387,13 @@ private object DifferentialTactics extends Logging {
   )
 
   /** @see [[TactixLibrary.diffInvariant]] */
-  private[btactics] def diffInvariant(formulas: Formula*): DependentPositionTactic =
-    "diffInvariant" byWithInputs (formulas.toList, (pos: Position, sequent: Sequent) => {
+  //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.diffInvariant(Formula)
+  private[btactics] def diffInvariant(formulas: List[Formula]): DependentPositionTactic =
+    "diffInvariant" byWithInputs (formulas, (pos: Position, sequent: Sequent) => {
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
       val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
-      diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*)
+      diffCut(formulas)(pos) <(diffIndAllButFirst:_*)
     })
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint.

@@ -71,6 +71,7 @@ object DerivationInfo {
 
   /** canonical name mapped to derivation information */
   def byCanonicalName: Map[String, DerivationInfo] =
+  //@todo optimizable performance bottle neck: this folding shouldn't be done every time
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
       acc + ((info.canonicalName, info))
     }
@@ -194,7 +195,8 @@ trait ProvableInfo extends DerivationInfo {
  */
 trait StorableInfo extends DerivationInfo {
   val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
-  // Should be a [[Lemma]]
+  /** Gives the [[Lemma]] stored for this derivation info (after initialization). */
+  //@todo write-protect except by Ax.scala.
   var theLemma: Any = None
 }
 

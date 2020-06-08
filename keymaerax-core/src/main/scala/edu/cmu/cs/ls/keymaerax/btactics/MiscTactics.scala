@@ -432,11 +432,40 @@ object TacticFactory {
       }
     }
 
+    /** Creates a dependent two position tactic without inspecting the formula at that position */
+    def byLR(t: ((AntePosition, SuccPosition) => BelleExpr)): DependentTwoPositionTactic = {
+      name byTactic {(_, l, r) =>
+        require(l.isAnte && r.isAnte, "Expected antecedent and succedent position")
+        t(l.checkAnte, r.checkSucc)
+      }
+    }
+
+
     /** Creates a dependent position tactic without inspecting the formula at that position */
     //@todo why does this have to have a DependentPositionTactic instead of a PositionalTactic?
     def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = t(pos)
+      }
+    }
+
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def byL(t: (AntePosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: ProvableSig): BelleExpr = {
+          require(pos.isAnte, "Expects an antecedent position.")
+          t(pos.checkAnte)
+        }
+      }
+    }
+
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def byR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: ProvableSig): BelleExpr = {
+          require(pos.isAnte, "Expects an succedent position.")
+          t(pos.checkSucc)
+        }
       }
     }
 
@@ -634,6 +663,9 @@ object TacticFactory {
   def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Position => BelleExpr)): DependentPositionTactic = "ANON" by t
+  def anonLR(t: ((AntePosition, SuccPosition) => BelleExpr)): DependentTwoPositionTactic = "ANON" byLR t
+  def anonL(t: (AntePosition => BelleExpr)): DependentPositionTactic = "ANON" byL t
+  def anonR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = "ANON" byR t
   def anon(t: (Sequent => BelleExpr)): DependentTactic = "ANON" by t
   def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = "ANON" coreby t
   def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = "ANON" coreby t

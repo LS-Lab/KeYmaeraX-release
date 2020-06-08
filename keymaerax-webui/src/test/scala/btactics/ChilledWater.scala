@@ -74,13 +74,13 @@ class ChilledWater extends TacticTestBase {
   /* Case [ctrl;ode]a()<=Tw */
   def aLessEqualTw: BelleExpr = skip <(
     /* v:=1;Tw:=a; */ diffInvariant("Tw=a()".asFormula)(1) & dW(1) & QE & done,
-    /* ?l=0;v:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+    /* ?l=0;v:=0; */ dC("Tw<Tl".asFormula :: "a()<=Tw".asFormula :: Nil)(1) <(
     dW(1) & QE & done,
     DAchilled(valve=false, load=Some(false), "Tl-Tw") & done,
     dI()(1) & done
     ),
     /* ?v=1;l:=1; */ diffInvariant("Tw=a()".asFormula)(1) & dW(1) & QE & done,
-    /* l:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+    /* l:=0; */ dC("Tw<Tl".asFormula :: "a()<=Tw".asFormula :: Nil)(1) <(
     dW(1) & QE & done,
     orL(FindL(0, Some("v=1|v=0".asFormula))) <(
       DAchilled(valve=true, load=Some(false), "Tl-Tw") & done,
@@ -163,9 +163,9 @@ class ChilledWater extends TacticTestBase {
 
     val odeALessEqualTw = skip <(
       /* v:=1;Tw:=a; */ dC("Tw=a()".asFormula)(1),
-      /* ?l=0;v:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1),
+      /* ?l=0;v:=0; */ dC("Tw<Tl".asFormula :: "a()<=Tw".asFormula :: Nil)(1),
       /* ?v=1;l:=1; */ dC("Tw=a()".asFormula)(1),
-      /* l:=0; */ dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+      /* l:=0; */ dC("Tw<Tl".asFormula :: "a()<=Tw".asFormula :: Nil)(1) <(
         skip,
         orL(FindL(0, Some("v=1|v=0".asFormula))),
         skip
@@ -250,7 +250,7 @@ class ChilledWater extends TacticTestBase {
               skip,
               skip,
               /* new branch */
-              dC("Tw<Tl".asFormula, "a()<=Tw".asFormula)(1) <(
+              dC("Tw<Tl".asFormula :: "a()<=Tw".asFormula :: Nil)(1) <(
                 dW(1) & QE & done,
                 DAchilled(valve=false, load=Some(true), "Tl-Tw") & done,
                 dI()(1) & done

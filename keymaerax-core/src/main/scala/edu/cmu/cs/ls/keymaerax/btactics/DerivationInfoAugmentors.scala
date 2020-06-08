@@ -59,6 +59,7 @@ object DerivationInfoAugmentors {
       derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
     }
 
+    //@todo performance really slow
     def provable: ProvableSig = {
       pi match {
         case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
@@ -68,6 +69,7 @@ object DerivationInfoAugmentors {
       }
     }
 
+    //@todo performance really slow
     def formula: Formula = {
       pi match {
         case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
