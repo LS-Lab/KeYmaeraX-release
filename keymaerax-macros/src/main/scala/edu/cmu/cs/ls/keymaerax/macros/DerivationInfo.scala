@@ -195,7 +195,8 @@ trait ProvableInfo extends DerivationInfo {
  */
 trait StorableInfo extends DerivationInfo {
   val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
-  // Should be a [[Lemma]]
+  /** Gives the [[Lemma]] stored for this derivation info (after initialization). */
+  //@todo write-protect except by Ax.scala.
   var theLemma: Any = None
 }
 
