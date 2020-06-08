@@ -222,9 +222,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
             outofScopeQuantifier.inc()
           } else {
             try {
-              print("all exponents are")
               preprocessed.subgoals.foreach(naturalExponentCheck)
-              println(" natural.")
               println(preprocessed.subgoals.length + " subgoal(s):")
               val res = for ((subgoal, subgoalN) <- preprocessed.subgoals.zipWithIndex) yield {
                 println("Subgoal " + subgoalN + ": " + subgoal.ante.mkString(", ") + subgoal.succ.mkString(" ==> ", ", ", ""))
@@ -253,6 +251,8 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
               case PolynomialArithV2.NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedDivisorException) =>
                 ratTacFailure.inc(n, seq0, seq)
               case PolynomialArithV2.NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedExponentException) =>
+                outofScopePower.inc(n, seq0, seq)
+              case PolynomialArithV2.NonSupportedExponentException(_) =>
                 outofScopePower.inc(n, seq0, seq)
               case ex =>
                 print("Unexpected failure:")
@@ -306,8 +306,10 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
         println("QE timeout: " + qeTimeout.count)
       }
 
-//    val seq = "==>\\forall F_ (F_!=0->F_^0=1)".asSequent
-//    processEntry(10, 600)(("test", seq, seq))
+//    val seq = "==>\\forall v \\forall m \\forall T (9>0&1>0&T>0&m < -(9/1)^(1/2)&v>-(9/1)^(1/2)&v < 0->v>=m)".asSequent
+//    processEntry(10, SOSSolve.preferAuxiliaryVariableOrdering, 120)(("preferAuxiliary", seq, seq))
+//    processEntry(10, SOSSolve.deferAuxiliaryVariableOrdering, 120)(("deferAuxiliary", seq, seq))
+//    processEntry(10, SOSSolve.lexicographicVariableOrdering, 120)(("lexicographic", seq, seq))
 
     withTemporaryConfig(Map(Configuration.Keys.DEBUG -> "false")){
       QELogger.processLog(QELogger.parseStr, processEntry(10, variableOrdering, logtimeout), logfilename)
