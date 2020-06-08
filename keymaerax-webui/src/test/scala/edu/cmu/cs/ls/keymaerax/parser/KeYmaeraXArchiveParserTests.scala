@@ -869,7 +869,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic "Proof 1" implyR(1) & QE End.
+        | Tactic "Proof 1" implyR(1) ; QE End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -896,7 +896,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic implyR(1) & QE End.
+        | Tactic implyR(1) ; QE End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -924,7 +924,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic "Empty" /* a comment */ nil partial End.
+        | Tactic "Empty" /* a comment */ nil End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -936,7 +936,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Empty", "/* a comment */ nil partial", PartialTactic(nil)) :: Nil
+    entry.tactics shouldBe ("Empty", "/* a comment */ nil", nil) :: Nil
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
   }
