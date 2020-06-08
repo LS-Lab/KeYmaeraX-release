@@ -310,9 +310,11 @@ trait SequentCalculus {
   // closing tactics
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-    //@todo optimizable seems like complicated and possibly slow code???
   @Tactic(premises = "*", conclusion = "Γ, P |- P, Δ")
-  val close: BelleExpr = anon {(seq: Sequent) => {
+  val close: BelleExpr = anon {(seq: Sequent) => findClose(seq)}
+  // alternative implementation
+  //@todo optimizable seems like complicated and possibly slow code???
+  /*anon {(seq: Sequent) => {
     seq.succ.zipWithIndex.find({
       case (True, _) => true
       case (fml, _) =>
@@ -329,7 +331,40 @@ trait SequentCalculus {
         case _ => DebuggingTactics.error("Inapplicable close")
       }
     }
-  }}
+  }}*/
+
+  /** Find a succedent True or an antecedent False or the same formula left and right and give back its closing tactic. */
+  private def findClose(seq: Sequent): BelleExpr = {
+    // The control structure is complicated but ensures False/True are only searched for exactly once en passent.
+    val ante = seq.ante
+    val succ = seq.succ
+    if (succ.isEmpty) {
+      for (j <- ante.indices) {
+        if (ante(j) == False) return ProofRuleTactics.closeFalse(AntePos(j))
+      }
+    } else {
+      val fml0 = succ.head
+      if (fml0 == True) return ProofRuleTactics.closeTrue(SuccPos(0))
+      //@todo optimizable: measure whether antecedent converted to HashMap for lookup is faster if succ.length>1 and ante.length large
+      for (j <- ante.indices) {
+        ante(j) match {
+          case False => return ProofRuleTactics.closeTrue(SuccPos(j))
+          case other => if (fml0 == other) return close(AntePos(j), SuccPos(0))
+        }
+      }
+      for (i <- succ.indices.tail) {
+        succ(i) match {
+          case True => return ProofRuleTactics.closeTrue(SuccPos(i))
+          case fml =>
+            for (j <- ante.indices) {
+              if (fml == ante(j)) return close(AntePos(j), SuccPos(i))
+            }
+        }
+      }
+    }
+    DebuggingTactics.error("Inapplicable close")
+  }
+
   /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePos, s: SuccPos): BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     //@note same name (closeId) as SequentCalculus.closeId for serialization
@@ -365,12 +400,14 @@ trait SequentCalculus {
   //@note do not forward to closeIdWith (performance)
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ")
-  val closeId: DependentTactic = anon {(seq: Sequent) =>
+  val closeId: DependentTactic = anon {(seq: Sequent) => close}
+  // alternative implementation
+  /*anon {(seq: Sequent) =>
     //@todo optimizable performance avoiding the repeated search
     val fmls = seq.ante.intersect(seq.succ)
     val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + seq.prettyString))
     close(AntePos(seq.ante.indexOf(fml)), SuccPos(seq.succ.indexOf(fml)))
-  }
+  }*/
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   @Tactic(/*codeName = "closeTrue",*/ premises = "*",
     conclusion = "Γ |- ⊤, Δ")
