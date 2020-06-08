@@ -51,8 +51,8 @@ class Tactic(val names: Any = false, /* false is a sigil value, user value shoul
 class TacticImpl(val c: blackbox.Context) {
   import c.universe._
   private trait PosArgs
-  private case class AntePos(provableName: ValDef, posName: ValDef) extends PosArgs
-  private case class SuccPos(provableName: ValDef, posName: ValDef) extends PosArgs
+  private case class AntePos(provableName: Option[ValDef], posName: ValDef) extends PosArgs
+  private case class SuccPos(provableName: Option[ValDef], posName: ValDef) extends PosArgs
   /** Arguments are Position, (Position, Sequent), or (ProvableSig, Position). In the latter case, useProvable = true*/
   private case class OnePos(lname: ValDef, rname: Option[ValDef], useProvable: Boolean = false) extends PosArgs
   private case class TwoPos(provableName: ValDef, pos1Name: ValDef, pos2Name: ValDef) extends PosArgs
@@ -154,14 +154,16 @@ class TacticImpl(val c: blackbox.Context) {
           posDef.tpt match {
             case (tq"Position") => OnePos(posDef, None)
             case (tq"Sequent") => SequentArg(posDef)
+            case tq"AntePosition" => AntePos(None, posDef)
+            case tq"SuccPosition" => SuccPos(None, posDef)
             case params => c.abort(c.enclosingPosition, s"Positioning arguments must be $supportedArgs, got: $params")
           }
         case (ldef: ValDef) :: (rdef: ValDef) :: Nil  =>
           (ldef.tpt, rdef.tpt) match {
             case (tq"Position", tq"Sequent") => OnePos(ldef, Some(rdef))
             case (tq"ProvableSig", tq"Position") => OnePos(ldef, Some(rdef), useProvable = true)
-            case (tq"ProvableSig", tq"AntePosition") => AntePos(ldef, rdef)
-            case (tq"ProvableSig", tq"SuccPosition") => SuccPos(ldef, rdef)
+            case (tq"ProvableSig", tq"AntePosition") => AntePos(Some(ldef), rdef)
+            case (tq"ProvableSig", tq"SuccPosition") => SuccPos(Some(ldef), rdef)
             case params => c.abort(c.enclosingPosition, s"Positioning arguments must be $supportedArgs, got: $params")
           }
         case (provableDef: ValDef) :: (pos1Def: ValDef) :: (pos2Def: ValDef) :: Nil  =>
@@ -262,7 +264,13 @@ class TacticImpl(val c: blackbox.Context) {
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
               } else
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-            case AntePos(sname, pname) =>
+            case AntePos(None, pname) =>
+              if (args.isEmpty) {
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byL(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
+              } else {
+                c.abort(c.enclosingPosition, "Argument combination not yet supported")
+              }
+            case AntePos(Some(sname), pname) =>
               if (args.isEmpty) {
                 if (isCoreAnon.contains(true)) {
                   (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic")
@@ -276,7 +284,13 @@ class TacticImpl(val c: blackbox.Context) {
                   (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsL($argExpr, ($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
                 }
               }
-            case SuccPos(sname, pname) =>
+            case SuccPos(None, pname) =>
+              if (args.isEmpty) {
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byR(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
+              } else {
+                c.abort(c.enclosingPosition, "Argument combination not yet supported")
+              }
+            case SuccPos(Some(sname), pname) =>
               if (args.isEmpty) {
                 if (isCoreAnon.contains(true))
                   (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
@@ -341,12 +355,16 @@ class TacticImpl(val c: blackbox.Context) {
             (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tRet)
         case (Nil, _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic""")
         case (Nil, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic""")
-        case (Nil, _: AntePos) =>
+        case (Nil, AntePos(None, r)) =>
+          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic""")
+        case (Nil, AntePos(Some(l), r)) =>
           val r =
             if(isCoreAnon.contains(true)) tq"""edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic"""
             else tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic"""
           (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
-        case (Nil, _: SuccPos) =>
+        case (Nil, SuccPos(None, r)) =>
+          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic""")
+        case (Nil, SuccPos(Some(l), r)) =>
           val r =
             if(isCoreAnon.contains(true)) tq"""edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic"""
             else  tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic"""
@@ -384,6 +402,8 @@ class TacticImpl(val c: blackbox.Context) {
     def coreAnon(s: String): Option[Boolean] = {
       s match {
         case "anon" => Some(false)
+        case "anonL" => Some(false)
+        case "anonR" => Some(false)
         case "inputanon" => Some(false)
         case "inputanonL" => Some(false)
         case "inputanonP" => Some(false)

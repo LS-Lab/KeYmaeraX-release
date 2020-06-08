@@ -440,6 +440,26 @@ object TacticFactory {
       }
     }
 
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def byL(t: (AntePosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: ProvableSig): BelleExpr = {
+          require(pos.isAnte, "Expects an antecedent position.")
+          t(pos.checkAnte)
+        }
+      }
+    }
+
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def byR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: ProvableSig): BelleExpr = {
+          require(pos.isAnte, "Expects an succedent position.")
+          t(pos.checkSucc)
+        }
+      }
+    }
+
     /** Creates a dependent position tactic while inspecting the sequent/formula at that position */
     def by(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -634,6 +654,8 @@ object TacticFactory {
   def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Position => BelleExpr)): DependentPositionTactic = "ANON" by t
+  def anonL(t: (AntePosition => BelleExpr)): DependentPositionTactic = "ANON" byL t
+  def anonR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = "ANON" byR t
   def anon(t: (Sequent => BelleExpr)): DependentTactic = "ANON" by t
   def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = "ANON" coreby t
   def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = "ANON" coreby t
