@@ -138,13 +138,6 @@ class TacticImpl(val c: blackbox.Context) {
         case _ => false
       }
     }
-    // Return type of tactic definition
-    def isValTactic(tRet: Tree): Boolean = {
-      tRet match {
-        case tq"BelleExpr" | tq"InputTactic" => true
-        case _ => false
-      }
-    }
     // Scrape position argument info from declaration
     def getPositioning(params: Seq[Tree]): PosArgs = {
       val supportedArgs = "Unit, Position, Sequent, (Position, Sequent), or (ProvableSig, Position, Position)"
@@ -416,63 +409,35 @@ class TacticImpl(val c: blackbox.Context) {
         case _ => None
       }
     }
-    annottees map (_.tree) toList match {
-      // Annottee must be a val or def declaration of an tactic
-      case (defDecl: DefDef) :: Nil =>
-        defDecl match {
-          // def has parameters for positions and/or inputs, and may have a return type
-          case q"$mods def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}($theRhs)" =>
-            theRhs match {
-              case q"((..$params) => $rhs)" =>
-                val isCoreAnon = coreAnon(f.toString)
-                if (!isTactic(tRet))
-                  c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
-                val positions = getPositioning(params)
-                assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef = true, isCoreAnon)
-              //c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
-              case rhs =>
-                val isCoreAnon = coreAnon(f.toString)
-                if (!isValTactic(tRet))
-                  c.abort(c.enclosingPosition, "Invalid annottee: Unexpected return type: " + tRet)
-                isCoreAnon match {
-                  case Some(_) => assemble(mods, codeName, inArgs, NoPos(), rhs, tRet, isDef = true, isCoreAnon)
-                  case None => assemble(mods, codeName, inArgs, NoPos(), q"${f: Ident}($theRhs)", tRet, isDef = true, isCoreAnon)
-                }
-            }
-          case q"$mods def ${codeName: TermName}(..$inArgs): $tRet = $rhs" =>
-            if (!isTactic(tRet))
-              c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
-            val positions = NoPos()
-            assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef = true, isCoreAnon = None)
-          case rhs => c.abort(c.enclosingPosition, "@Tactic expects def <name> (args): <T> = anon(...), got: " + rhs)
+    def pickRhs(f: Ident, rhs: Tree, params: Option[Seq[Tree]] = None): Tree = {
+      if (coreAnon(f.toString).isDefined) {
+        rhs
+      } else {
+        params match {
+          case Some(params) => q"${f: Ident}((..$params) => $rhs)"
+          case None => q"${f: Ident}($rhs)"
         }
-      case (valDecl: ValDef) :: Nil =>
-        valDecl match {
-          case q"$mods val ${declName: TermName}: $tRet = ${f: Ident}($theRhs)" =>
-             theRhs match {
-               case q"((..$params) => $rhs)" =>
-                 val isCoreAnon = coreAnon(f.toString)
-                 if (!isTactic(tRet))
-                  c.abort(c.enclosingPosition, s"Invalid annottee: Return type $tRet is not one of the supported return types")
-                val positions = getPositioning(params)
-                assemble(mods, declName, Nil, positions, rhs, tRet, isDef = false, isCoreAnon)
-               case rhs =>
-                 val isCoreAnon = coreAnon(f.toString)
-                 if (!isValTactic(tRet))
-                   c.abort(c.enclosingPosition, "Invalid annottee: Unexpected return type: " + tRet)
-                 isCoreAnon match {
-                   case Some(_) => assemble(mods, declName, Nil, NoPos(), rhs, tRet, isDef = false, isCoreAnon)
-                   case None => assemble(mods, declName, Nil, NoPos(), q"${f: Ident}($theRhs)", tRet, isDef = false, isCoreAnon)
-                 }
-               }
-          case q"$mods val ${codeName: TermName}: $tRet = $rhs" =>
-            if (!isTactic(tRet))
-              c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
-            val positions = NoPos()
-            assemble(mods, codeName, Nil, positions, rhs, tRet, isDef = true, isCoreAnon = None)
-          case rhs => c.abort(c.enclosingPosition, "@Tactic expects val <name> (args): <T> = f(...), got: " + rhs)
-        }
-      case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val or def declaration got: " + t.head + " of type: " + t.head.getClass())
+      }
     }
+    val (isDef, mods, codeName, inArgs, tRet, fOpt, params, rhs) =
+      annottees map (_.tree) toList match {
+        case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}(((..$params) => $rhs))" :: Nil =>
+          (true, mds, codeName, inArgs, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
+        case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}($rhs)" :: Nil =>
+          (true, mds, codeName, inArgs, tRet, Some(f), Nil, pickRhs(f, rhs))
+        case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = $rhs" :: Nil =>
+          (true, mds, codeName, inArgs, tRet, None, Nil, rhs)
+        case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}((..$params) => $rhs)" :: Nil =>
+          (false, mds, codeName, Nil, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
+        case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}($rhs)" :: Nil=>
+          (false, mds, codeName, Nil, tRet, Some(f), Nil, pickRhs(f, rhs))
+        case q"$mds val ${codeName: TermName}: $tRet = $rhs" :: Nil =>
+          (false, mds, codeName, Nil, tRet, None, Nil, rhs)
+      }
+    if (!isTactic(tRet))
+      c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
+    val isCoreAnon = fOpt match { case Some(f) => coreAnon(f.toString) case None => None }
+    val positions = getPositioning(params)
+    assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
   }
 }
