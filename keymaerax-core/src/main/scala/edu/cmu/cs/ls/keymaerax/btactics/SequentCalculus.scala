@@ -81,16 +81,14 @@ trait SequentCalculus {
   /** Cohides in succedent, but leaves antecedent as is. */
   @Tactic("WR", premises = "Γ, P |- Q",
     conclusion = "Γ, P |- Q, Δ")
-  val cohideOnlyR: DependentPositionTactic = anon { (pos: Position) =>
-    assert(pos.isTopLevel & pos.isSucc, "Expected top-level succedent position, but got " + pos)
+  val cohideOnlyR: DependentPositionTactic = anonR { (pos: SuccPosition) =>
     (hideR(1) * pos.checkTop.getIndex) & SaturateTactic(hideR(2))
   }
 
   /** Cohides in antecedent, but leaves succedent as is. */
   @Tactic("WL", premises = "|- Q, Δ",
     conclusion = "Γ, P |- Q, Δ")
-  val cohideOnlyL: DependentPositionTactic = anon { (pos: Position) =>
-    assert(pos.isTopLevel & pos.isAnte, "Expected top-level antecedent position, but got " + pos)
+  val cohideOnlyL: DependentPositionTactic = anonL { (pos: AntePosition) =>
     (hideL(-1) * pos.checkTop.getIndex) & SaturateTactic(hideL(-2))
   }
 

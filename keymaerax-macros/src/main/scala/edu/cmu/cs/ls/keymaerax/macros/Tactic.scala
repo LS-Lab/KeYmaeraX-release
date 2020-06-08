@@ -268,7 +268,7 @@ class TacticImpl(val c: blackbox.Context) {
                 (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
             case AntePos(None, pname) =>
               if (args.isEmpty) {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byL(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byL(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
               } else {
                 c.abort(c.enclosingPosition, "Argument combination not yet supported")
               }
@@ -288,7 +288,7 @@ class TacticImpl(val c: blackbox.Context) {
               }
             case SuccPos(None, pname) =>
               if (args.isEmpty) {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byR(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
+                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byR(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
               } else {
                 c.abort(c.enclosingPosition, "Argument combination not yet supported")
               }
@@ -465,11 +465,11 @@ class TacticImpl(val c: blackbox.Context) {
                    case None => assemble(mods, declName, Nil, NoPos(), q"${f: Ident}($theRhs)", tRet, isDef = false, isCoreAnon)
                  }
                }
-          case q"$mods def ${codeName: TermName}(..$inArgs): $tRet = $rhs" =>
+          case q"$mods val ${codeName: TermName}: $tRet = $rhs" =>
             if (!isTactic(tRet))
               c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
             val positions = NoPos()
-            assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef = true, isCoreAnon = None)
+            assemble(mods, codeName, Nil, positions, rhs, tRet, isDef = true, isCoreAnon = None)
           case rhs => c.abort(c.enclosingPosition, "@Tactic expects val <name> (args): <T> = f(...), got: " + rhs)
         }
       case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val or def declaration got: " + t.head + " of type: " + t.head.getClass())
