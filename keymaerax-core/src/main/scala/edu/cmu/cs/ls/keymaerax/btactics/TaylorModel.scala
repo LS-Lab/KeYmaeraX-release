@@ -487,9 +487,8 @@ object TaylorModelTactics extends Logging {
 
     private def tmEnclosure(x: Variable, i: Int, p: Term, l: Term, u: Term) = {
       val r = remainder(i)
-      And(Equal(x, Plus(p, r)), And(LessEqual(l, r), LessEqual(r, u)))
+      Exists(Seq(r), And(Equal(x, Plus(p, r)), And(LessEqual(l, r), LessEqual(r, u))))
     }
-    // Taylor Model postcondition without existentials and instantiated with t for time.
     private val post = {
       (state, picard_iteration_approx).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
         tmEnclosure(x, i, p, postIvlL(i), postIvlU(i))
@@ -506,14 +505,17 @@ object TaylorModelTactics extends Logging {
 
     toc("post")
     private val postUnfolded = SubstitutionHelper.replaceFree(
-      (state, picard_iteration_approx).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
+      (And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep))::(state, picard_iteration_approx).zipped.toList.zipWithIndex.map { case ((x, p), i) =>
         val r = Minus(x, p)
         And(LessEqual(postIvlL(i), r), LessEqual(r, postIvlU(i)))
-      }.reduceRight(And))(localTime, Minus(time, time0))
+      }).reduceRight(And))(localTime, Minus(time, time0))
     toc("postUnfolded")
 
     private val boxTMEnclosure = Box(ODESystem(ode, And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep)))),
-      FormulaTools.quantifyExists(localTime :: remainders, (Equal(time, Plus(time0, localTime)):: post).reduceRight(And))
+      (Exists(Seq(localTime),
+        (And(Equal(time, Plus(time0, localTime)),
+          And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)))
+          :: post).reduceRight(And)))
     )
 
     lazy val eqAddIff = remember("f_() = g_() + h_() <-> h_() = f_() - g_()".asFormula, QE & done)
@@ -521,20 +523,28 @@ object TaylorModelTactics extends Logging {
     val postEq = proveBy(Equiv(boxTMEnclosure.child, postUnfolded),
       equivR(1) &
         Idioms.<(
-          existsL(-1) * (dim + 1) &
-            andL(-1) &
-            useAt(eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & hideL(-1) &
-            (andL(-1) & andL(-1) & andR(1) &
-              Idioms.<(useAt(eqAddIff, PosInExpr(0 :: Nil))(-2) & eqL2R(-2)(-3) & hideL(-2) & closeId, hideL(-3) & hideL(-2))) * (dim - 1) &
-            andL(-1) & useAt(eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & hideL(-1) & closeId,
+          existsLstable(-1) & andLstable(-1) & andLstable(-1) &
+            useAt(eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & eqL2R(-1)(-3) &
+            andR(1) & Idioms.<(close(-3, 1), skip) & hideL(-3) & hideL(-1) &
+          andLstable('Llast) * (dim-1) &
+          (1 to dim).map { i =>
+            val p = -i
+            val l = -(dim + i)
+            existsLstable(p) & andLstable(p) &
+              useAt(eqAddIff, PosInExpr(0 :: Nil))(p) & eqL2R(p)(l)
+            : BelleExpr}.reduceLeft(_ & _) &
+            hideL(-1) * dim &
+            (andR(1) & Idioms.<(closeId, skip))*(dim - 1) & closeId,
           existsR(Minus(time, time0))(1) &
-            (state, picard_iteration_approx).zipped.foldRight(skip) { case ((x, p), tac) =>
-              existsR(Minus(x, SubstitutionHelper.replaceFree(p)(localTime, Minus(time, time0))))(1) & tac
-            } &
-            andR(1) &
-            Idioms.<(cohideR(1) & byUS(plusDiffRefl)/* time */,
-              (andL(-1) & andR(1) & Idioms.<(andR(1) & Idioms.<(cohideR(1) & byUS(plusDiffRefl), hideL(-2) & closeId), hideL(-1)))*(dim - 1)) &
-            andR(1) & Idioms.<(cohideR(1) & byUS(plusDiffRefl), closeId)
+            andLstable(-1) &
+            andR(1) & Idioms.<(andR(1) & Idioms.<(
+                cohideR(1) & byUS(plusDiffRefl),
+                closeId
+              ), hideL(-1)) &
+            andLstable('Llast) * (dim - 1) &
+            (andR(1) & Idioms.<(
+              useAt(unfoldExistsLemma)(1) & closeId, skip)) * (dim - 1) &
+            useAt(unfoldExistsLemma)(1) & closeId
         )
     )
 
@@ -560,6 +570,8 @@ object TaylorModelTactics extends Logging {
         debugTac("post push") &
         tocTac("pre dIClosed") &
         useAt(domain_rewrite, PosInExpr(0::Nil))(1, 0::1::Nil) &
+        debugTac("pre dIClosed") &
+        boxAnd(1) & andR(1) & Idioms.<(cohideR(1) & byUS(Ax.DWbase), skip) &
         odeTac.dIClosed(1) &
         Idioms.<(
           // Initial Condition
