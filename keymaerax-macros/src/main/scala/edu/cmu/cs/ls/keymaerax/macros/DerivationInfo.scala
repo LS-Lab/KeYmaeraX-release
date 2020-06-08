@@ -187,6 +187,10 @@ trait ProvableInfo extends DerivationInfo {
    * @see [[LinearMatcher]] */
   //@todo replace by "def unifier: Symbol"
   def linear: Boolean
+
+  /** Gives the [[Provable]] for which this information is (after initialization). */
+  //@todo write-protect except by Ax.scala.
+  var theProvable: Any = None
 }
 
 /** Storable derivation info (e.g., as lemmas).
