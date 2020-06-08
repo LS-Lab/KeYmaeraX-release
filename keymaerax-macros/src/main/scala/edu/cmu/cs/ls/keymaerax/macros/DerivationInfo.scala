@@ -149,6 +149,14 @@ sealed trait DerivationInfo {
    * it is (curried) function which accepts the inputs and produces a BelleExpr. */
   //def theExpr: Any
 
+  /** At what level to display this axiom/rule/tactic in the user interface.
+    *  - 'internal not on UI at all
+    *  - 'browse only show up when searching for it in browse
+    *  - 'menu also show up in top-level menu
+    *  - 'all also pop up in context-menu
+    */
+  val displayLevel: Symbol
+
   /** Number of positional arguments to the derivation. Can be 0, 1 or 2.
    *   - 0 means this inference cannot be positioned but applies to the whole sequent.
    *   - 1 means this inference will be applied at one position.
@@ -207,8 +215,6 @@ trait AxiomInfo extends ProvableInfo {
   /** The unifier to use when using theKey position of this axiom.
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]] */
   val unifier: Symbol
-  /** At what level to display this axiom in the user interface. */
-  val displayLevel: Symbol
 }
 
 /** Meta-Information for an axiom from the prover core
