@@ -60,21 +60,15 @@ object DerivationInfoAugmentors {
     }
 
     def provable: ProvableSig = {
-      //@todo optimizable store provable in all ProvableInfo
       pi match {
         case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
         case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
-        //@note much faster alternative but not usable during initialization. Provable needs stored directly.
-        case dai: DerivedAxiomInfo => dai.theProvable.asInstanceOf[ProvableSig]
-        case dari: DerivedRuleInfo => dari.theProvable.asInstanceOf[ProvableSig]
-        //@note horribly slow alternatives
-//        case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName)
-//        case dari: DerivedRuleInfo => derivedAxiomOrRule(dari.canonicalName)
+        case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName)
+        case dari: DerivedRuleInfo => derivedAxiomOrRule(dari.canonicalName)
       }
     }
 
     def formula: Formula = {
-      //@todo optimizable store provable in all provableInfo and ask its formula.
       pi match {
         case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
         case cai: CoreAxiomInfo =>

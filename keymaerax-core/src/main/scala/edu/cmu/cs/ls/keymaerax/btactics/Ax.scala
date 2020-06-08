@@ -91,15 +91,11 @@ object Ax extends Logging {
 
   /** Look up a core axiom from [[Provable.axioms]] and wrap it into a [[CoreAxiomInfo]] */
   private def coreAxiom(name: String): CoreAxiomInfo = {
-    val ai = CoreAxiomInfo(name)
-    ai.theProvable = Provable.axioms(name)
-    ai
+    CoreAxiomInfo(name)
   }
 
   private def coreRule(name: String): AxiomaticRuleInfo = {
-    val ai = AxiomaticRuleInfo(name)
-    ai.theProvable = Provable.rules(name)
-    ai
+    AxiomaticRuleInfo(name)
   }
 
   //  /** A Provable proving the derived axiom/rule named id (convenience) */
@@ -128,7 +124,6 @@ object Ax extends Logging {
         }
     }
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
-    dai.theProvable = fact
     val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
@@ -213,15 +208,14 @@ object Ax extends Logging {
       case None => dri.codeName
     }
     val storageName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedAxiomDB.get(storageName) match {
-      case Some(lemma) =>
-        dri.theProvable = lemma.fact
-        dri.theLemma = lemma
-      case None =>
-        val witness = TactixLibrary.proveBy(derived, tactic)
-        dri.theProvable = witness
-        dri.theLemma = derivedRule(name, witness, codeNameOpt).theLemma
-    }
+    val lemma =
+      derivedAxiomDB.get(storageName) match {
+        case Some(lemma) => lemma
+        case None =>
+          val witness = TactixLibrary.proveBy(derived, tactic)
+          derivedRule(name, witness, codeNameOpt).theLemma
+      }
+    dri.theLemma = lemma
     dri
   }
 
@@ -254,16 +248,15 @@ object Ax extends Logging {
         }
       }
     val storedName = DerivedAxiomInfo.toStoredName(codeName)
-    derivedAxiomDB.get(storedName) match {
-      case Some(lemma) =>
-        dai.theProvable = lemma.fact
-        dai.theLemma = lemma
-      case None =>
-        val witness = TactixLibrary.proveBy(derived, tactic)
-        assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
-        dai.theProvable = witness
-        dai.theLemma = derivedFact(canonicalName, witness, Some(storedName)).theLemma
-    }
+    val lemma =
+      derivedAxiomDB.get(storedName) match {
+        case Some(lemma) => lemma
+        case None =>
+          val witness = TactixLibrary.proveBy(derived, tactic)
+          assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + canonicalName + " got\n" + witness)
+          derivedFact(canonicalName, witness, Some(storedName)).theLemma
+      }
+    dai.theLemma = lemma
     dai
   }
 
