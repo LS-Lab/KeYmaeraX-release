@@ -461,11 +461,11 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
     new PositionTacticInfo("cohide", "W", {case () => SequentCalculus.cohide}),
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
-    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
-    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}),
-    new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
-    new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
-    new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
+    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}), //@Tactic-fied
+    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}), //@Tactic-fied
+    new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}), //@Tactic-fied
+    new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}), //@Tactic-fied
+    new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}), //@Tactic-fied
     new PositionTacticInfo("toSingleFormula", "toFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     PositionTacticInfo("CMon"
@@ -534,7 +534,7 @@ object DerivationInfoRegistry {
           (List("&Gamma;"),List("&Delta;","P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
       ,List(FormulaArg("P")), _ => ((fml:Formula) => ProofRuleTactics.cut(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputTacticInfo("abbrv"
+    new InputTacticInfo("abbrv" //@Tactic-fied TactixLibrary.abbrvAll
       , RuleDisplayInfo(("Abbreviate","abbrv")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
