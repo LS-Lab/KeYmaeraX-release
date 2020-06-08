@@ -434,15 +434,19 @@ private object DifferentialTactics extends Logging {
     * @return The tactic.
     */
   def Dconstify(inner: BelleExpr): DependentPositionTactic = TacticFactory.anon ((pos: Position, seq: Sequent) => {
-    seq.sub(pos) match {
-      case Some(Box(ode@ODESystem(_, _), p)) =>
+    val (ctx, expr) = seq.at(pos)
+    expr match {
+      case Box(ode@ODESystem(_, _), p) =>
         val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
-        constify(consts, inner)
-      case Some(Diamond(ode@ODESystem(_, _), p)) =>
+        val ctxBoundConsts = StaticSemantics.boundVars(ctx(True)).intersect(consts)
+        if (ctxBoundConsts.isEmpty) constify(consts, inner)
+        else throw new TacticInapplicableFailure("Unable to constify in context " + ctx + ", because it binds " + ctxBoundConsts.toSet[Variable].map(_.prettyString).mkString(","))
+      case Diamond(ode@ODESystem(_, _), p) =>
         val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
-        constify(consts, inner)
-      case Some(e) => throw new TacticInapplicableFailure("Dconstify only applicable to box/diamond ODEs, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+        val ctxBoundConsts = StaticSemantics.boundVars(ctx(True)).intersect(consts)
+        if (ctxBoundConsts.isEmpty) constify(consts, inner)
+        else throw new TacticInapplicableFailure("Unable to constify in context " + ctx + ", because it binds " + ctxBoundConsts.toSet[Variable].map(_.prettyString).mkString(","))
+      case e => throw new TacticInapplicableFailure("Dconstify only applicable to box/diamond ODEs, but got " + e.prettyString)
     }
   })
 
