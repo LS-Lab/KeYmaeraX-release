@@ -74,7 +74,7 @@ class StttTutorial extends TacticTestBase {
 
   it should "be provable with multi-arg invariant" in withQE { _ => withDatabase { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
-    val tactic = implyR('_) & SaturateTactic(andL('_)) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
+    val tactic = implyR('_) & SaturateTactic(andL('_)) & diffInvariant("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1) &
       dW(1) & SaturateTactic(alphaRule) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
@@ -320,8 +320,8 @@ class StttTutorial extends TacticTestBase {
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 10", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
-    def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
-      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) & dW('R)
+    def ode(a: String) = diffInvariant("c>=0".asFormula :: "dx^2+dy^2=1".asFormula :: s"v=old(v)+$a*c".asFormula ::
+      s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula :: Nil)('R) & dW('R)
 
     def hideQE = SaturateTactic(hideL('Llike, "dx_0^2+dy_0^2=1".asFormula)) & hideL('L, "c<=ep()".asFormula) & hideL('L, "r!=0".asFormula)
 

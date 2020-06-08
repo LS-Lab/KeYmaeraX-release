@@ -87,17 +87,17 @@ trait DifferentialEquationCalculus {
     *         --------------------------------------------------diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1)
     *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
     * }}}
-    * @param formulas the list of formulas that will be cut into the differential equation in that order.
+    * @param formula the formula that will be cut into the differential equation (in that order if it is a list).
     *                 The formulas are typically shown to be differential invariants subsequently.
     *                 They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
     * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[HilbertCalculus.DC]]
     */
     //@todo@Tactic
-  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
-  def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
+  def dC(formula: Formula)     : DependentPositionTactic = DifferentialTactics.diffCut(formula)
+  def dC(formulas: List[Formula]) : DependentPositionTactic = DifferentialTactics.diffCut(formulas)
 
-  /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
+  /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant).
     * (uses DI, DW, DE, QE)
     *
     * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
@@ -121,22 +121,22 @@ trait DifferentialEquationCalculus {
     *                    }}}
     * @example {{{
     *         *
-    *    ---------------------diffInd(qeTool, 'full)(1)
+    *    ---------------------diffInd('full)(1)
     *    x>=5 |- [{x'=2}]x>=5
     * }}}
     * @example {{{
     *    x>=5, true |- x>=5    true |- [{x':=2}]x'>=0
-    *    --------------------------------------------diffInd(qeTool, 'diffInd)(1)
+    *    --------------------------------------------diffInd('diffInd)(1)
     *    x>=5 |- [{x'=2}]x>=5
     * }}}
     * @example {{{
     *    x>=5, true |- x>=5    x>=5, true |- [{x'=2}](x>=5)'
-    *    ---------------------------------------------------diffInd(qeTool, 'none)(1)
+    *    ---------------------------------------------------diffInd('none)(1)
     *    x>=5 |- [{x'=2}]x>=5
     * }}}
     * @example {{{
     *    x>=5 |- [x:=x+1;](true -> x>=5&2>=0)
-    *    -------------------------------------diffInd(qeTool, 'full)(1, 1::Nil)
+    *    -------------------------------------diffInd('full)(1, 1::Nil)
     *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
     * }}}
     * @example
@@ -215,8 +215,8 @@ trait DifferentialEquationCalculus {
     * @see [[dC]]
     * @see [[dI]]
     */
-  //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
-  def diffInvariant(invariants: Formula*): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants:_*)
+  def diffInvariant(invariants: Formula): DependentPositionTactic = DifferentialTactics.diffInvariant(List(invariants))
+  def diffInvariant(invariants: List[Formula]): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants)
 
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * openDiffInd: proves an inequality to be an invariant of a differential equation (by DIo, DW, DE, QE)

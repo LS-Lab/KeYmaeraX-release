@@ -40,11 +40,11 @@ class Robix extends TacticTestBase {
                       |  | abs(y-yo) > v^2 / (2*B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula)
+      "t>=0".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*t".asFormula ::
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula :: Nil)
 
     val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
@@ -82,11 +82,11 @@ class Robix extends TacticTestBase {
 
     def di(a: String): DependentPositionTactic = diffInvariant(
       //@todo allow old(t) in multiple formulas
-      "t>=old(t)".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*(t-t_0)".asFormula,
-      s"-(t-t_0) * (v - $a/2*(t-t_0)) <= x - old(x) & x - old(x) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula,
-      s"-(t-t_0) * (v - $a/2*(t-t_0)) <= y - old(y) & y - old(y) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula)
+      "t>=old(t)".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*(t-t_0)".asFormula ::
+      s"-(t-t_0) * (v - $a/2*(t-t_0)) <= x - old(x) & x - old(x) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula ::
+      s"-(t-t_0) * (v - $a/2*(t-t_0)) <= y - old(y) & y - old(y) <= (t-t_0) * (v - $a/2*(t-t_0))".asFormula :: Nil)
 
     val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
@@ -135,13 +135,13 @@ class Robix extends TacticTestBase {
                       |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "t>=0".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*t".asFormula ::
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
     val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
@@ -216,13 +216,13 @@ class Robix extends TacticTestBase {
                       |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "t>=0".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*t".asFormula ::
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
     val dw: BelleExpr = SaturateTactic(andL('_)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
@@ -352,13 +352,13 @@ class Robix extends TacticTestBase {
                       |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "t>=0".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*t".asFormula ::
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
     
     val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
@@ -392,13 +392,13 @@ class Robix extends TacticTestBase {
         |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "t>=0".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*t".asFormula ::
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
     val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
@@ -448,7 +448,7 @@ class Robix extends TacticTestBase {
     val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ =>
       diHide & dI()(SuccPosition.base0(seq.succ.size-1, pos.inExpr)) & done)
 
-    dC(formulas:_*)(pos) <(diffIndAllButFirst:_*)
+    dC(formulas)(pos) <(diffIndAllButFirst:_*)
   })
 
   "Passive orientation safety" should "be provable" in withMathematica { _ =>
@@ -613,13 +613,13 @@ class Robix extends TacticTestBase {
         |          | abs(y-yo) > v^2 / (2*Da()*B()) + V()*(v/(Da()*B())))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "t>=0".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"old(v) + $a*pa*t = v".asFormula,
-      s"-t * (v - $a*pa/2*t) <= x - old(x) & x - old(x) <= t * (v - $a*pa/2*t)".asFormula, // Mathematica won't prove -> need better hiding in DI
-      s"-t * (v - $a*pa/2*t) <= y - old(y) & y - old(y) <= t * (v - $a*pa/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "t>=0".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"old(v) + $a*pa*t = v".asFormula ::
+      s"-t * (v - $a*pa/2*t) <= x - old(x) & x - old(x) <= t * (v - $a*pa/2*t)".asFormula :: // Mathematica won't prove -> need better hiding in DI
+      s"-t * (v - $a*pa/2*t) <= y - old(y) & y - old(y) <= t * (v - $a*pa/2*t)".asFormula ::
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
     val dw: BelleExpr = SaturateTactic(andL('L)) & print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
