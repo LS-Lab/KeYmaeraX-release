@@ -58,14 +58,22 @@ class DLBelleParser extends (String => BelleExpr) {
   })
 
   def position[_: P]: P[Position] = P( integer ~~ ("." ~~/ natural).repX ).map({case (j,js) => Position(j, js.toList)})
-  def locator[_: P]: P[PositionLocator] = P( position ).map(pos => Fixed(pos))
+  def searchLocator[_: P]: P[PositionLocator] = P(
+    "'Llast".!.map(_ => LastAnte(0))
+      | "'L".!.map(_ => Find.FindL(0, None))
+      | "'Rlast".!.map(_ => LastSucc(0))
+      | "'R".!.map(_ => Find.FindR(0, None))
+  )
+  def locator[_: P]: P[PositionLocator] = P( position.map(pos => Fixed(pos)) | searchLocator )
   def argument[_: P]: P[Expression] = P("\"" ~~ expression ~~ "\"")
 
   def tacticSymbol[_: P]: P[String] = P( ident ).map({case (n,None) => n case (n,Some(idx)) =>n + "_" + idx})
   def atomicTactic[_: P]: P[BelleExpr] = P( tacticSymbol ~ !"(").map(t => ReflectiveExpressionBuilder(t, Nil, generator, defs))
-  def at[_: P]: P[BelleExpr] = P( tacticSymbol ~~ "(" ~ (argument ~ ",").? ~ locator ~ ")" ).
-    map({case (t,None,j) => ReflectiveExpressionBuilder(t, Right(j)::Nil, generator, defs)
-      case (t,Some(arg),j) => ReflectiveExpressionBuilder(t, Right(j)::Left(Seq(arg))::Nil, generator, defs)})
+  //@note arguments have the funky type List[Either[Seq[Any], PositionLocator]]
+  def at[_: P]: P[BelleExpr] = P( tacticSymbol ~~ "("
+    ~ (argument.map(arg => Left(Seq(arg))::Nil) | locator.map(j => Right(j)::Nil)).rep(min = 1, sep = ","./)
+    ~ ")" ).
+    map({case (t,args) => ReflectiveExpressionBuilder(t, args.flatten.toList, generator, defs)})
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )
   def baseTac[_: P]: P[BelleExpr] = P( atomicTactic | NoCut(at) |
     branchTac | NoCut(repeatTac) | parenTac
