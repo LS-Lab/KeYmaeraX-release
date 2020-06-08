@@ -71,6 +71,7 @@ object DerivationInfo {
 
   /** canonical name mapped to derivation information */
   def byCanonicalName: Map[String, DerivationInfo] =
+  //@todo optimizable performance bottle neck: this folding shouldn't be done every time
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
       acc + ((info.canonicalName, info))
     }
