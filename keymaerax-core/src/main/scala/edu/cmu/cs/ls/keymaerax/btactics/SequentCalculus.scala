@@ -49,19 +49,19 @@ trait SequentCalculus {
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   @Tactic("WL", premises = "Γ |- Δ",
     conclusion = "Γ, P |- Δ")
-  val hideL   : CoreLeftTactic = anon { (pr:ProvableSig, pos:AntePosition) => pr(HideLeft(pos.checkTop), 0) }
+  val hideL   : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(HideLeft(pos.checkTop), 0) }
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
   @Tactic("WR", premises = "Γ |- Δ",
     conclusion = "Γ |- P, Δ")
-  val hideR   : CoreRightTactic = anon { (pr:ProvableSig, pos:SuccPosition) => pr(HideRight(pos.checkTop), 0) }
+  val hideR   : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(HideRight(pos.checkTop), 0) }
   /** CoHide/weaken left: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   @Tactic("WL", premises = "P |- ",
     conclusion = "Γ, P |- Δ")
-  val cohideL : CoreLeftTactic = anon { (pr:ProvableSig, pos:AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
+  val cohideL : CoreLeftTactic = coreanon { (pr:ProvableSig, pos:AntePosition) => pr(CoHideLeft(pos.checkTop), 0) }
   /** CoHide/weaken right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideRight CoHideRight]]) */
   @Tactic("WR", premises = "|- P",
     conclusion = "Γ |- P, Δ")
-  val cohideR : CoreRightTactic = anon { (pr:ProvableSig, pos:SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
+  val cohideR : CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   @Tactic("W", premises = "|- P",
     conclusion = "Γ |- P, Δ")
