@@ -7,32 +7,34 @@ import scala.reflect.macros.{Universe, blackbox}
 import AnnotationCommon._
 
 /**
-* @param names Display names to render in the user interface.
-* @param codeName You should avoid using this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
-*                 `codeName`` will be inferred from the val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
-* @param inputs Display input information for non-positioning arguments, e.g., "C:Formula" for cut.
-*               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
-*               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
-*               By default, this argument is inferred from the argument types and names of the annotated [[def]].
-*               Use this argument when you want customized display on the UI or when there are allowedFresh variables.
-*               Supported types: Expression, Formula, Term, Variable, Number, String, Substitution, List[], Option[]
-*               Type names are case-insensitive.
-* @param premises String of premises when (if) the tactic is displayed like a rule on the UI.
-*                 For tactics with (non-position) inputs, the premises or conclusion must mention each input.
-*                 The name of each input is given in [[inputs]], which may be generated from the [[def]].
-*                 Premises are separated by ;; and each premise is optionally a sequent.  "P;; A, B |- C" specifies two
-*                 premises, the latter of which is a sequent with two assumptions. An asterisk "*" indicates a tactic that
-*                 closes a branch.
-* @param conclusion Conclusion of rule displayed on UI. Axiom-like tactics have a conclusion and no premises.
- *                  Tactics with premises must have conclusions.
-*                   For tactics with (non-position) inputs, the premises or conclusion must mention each input.
-*                   The name of each input is given in [[inputs]], which may be generated from the [[def]].
-*                   Sequent syntax is optionally supported:   A, B |- C, D
-* @param displayLevel Where to show the tactic: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
-* @param needsGenerator Does the tactic use invariant formula generators such as the @invariant annotation in .kyx files?
- *                       Used for a small number of tactics such as master.
-* @param revealInternalSteps Does the Web UI allow stepping inside this tactic?
-*/
+  * Tactic Annotation for proof tactics, which allows decentralized [[TacticInfo]].
+  * @param names Display names to render in the user interface.
+  * @param codeName You should avoid using this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+  *                 `codeName`` will be inferred from the val that is annotated by this `@Axiom` and is strongly recommended to be identical to it.
+  * @param inputs Display input information for non-positioning arguments, e.g., "C:Formula" for cut.
+  *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
+  *               E[y,x,y']:Formula;; P[y]:Formula are the arguments to tactic dG.
+  *               By default, this argument is inferred from the argument types and names of the annotated [[def]].
+  *               Use this argument when you want customized display on the UI or when there are allowedFresh variables.
+  *               Supported types: Expression, Formula, Term, Variable, Number, String, Substitution, List[], Option[]
+  *               Type names are case-insensitive.
+  * @param premises String of premises when (if) the tactic is displayed like a rule on the UI.
+  *                 For tactics with (non-position) inputs, the premises or conclusion must mention each input.
+  *                 The name of each input is given in [[inputs]], which may be generated from the [[def]].
+  *                 Premises are separated by ;; and each premise is optionally a sequent.  "P;; A, B |- C" specifies two
+  *                 premises, the latter of which is a sequent with two assumptions. An asterisk "*" indicates a tactic that
+  *                 closes a branch.
+  * @param conclusion Conclusion of rule displayed on UI. Axiom-like tactics have a conclusion and no premises.
+  *                  Tactics with premises must have conclusions.
+  *                   For tactics with (non-position) inputs, the premises or conclusion must mention each input.
+  *                   The name of each input is given in [[inputs]], which may be generated from the [[def]].
+  *                   Sequent syntax is optionally supported:   A, B |- C, D
+  * @param displayLevel Where to show the tactic: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
+  * @param needsGenerator Does the tactic use invariant formula generators such as the @invariant annotation in .kyx files?
+  *                       Used for a small number of tactics such as master.
+  * @param revealInternalSteps Does the Web UI allow stepping inside this tactic?
+  * @see [[TacticInfo]]
+  */
 class Tactic(val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
              val codeName: String = "",
              val premises: String = "",

@@ -996,6 +996,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       case info: DerivationInfo => info.display match {
         case _: SimpleDisplayInfo => tacticJson(info)
         case _: AxiomDisplayInfo => axiomJson(info)
+        case _: InputAxiomDisplayInfo => axiomJson(info) //@todo usually those have tactics with RuleDisplayInfo
         case RuleDisplayInfo(_, conclusion, premises) => ruleJson(info, conclusion, premises)
       }
     }

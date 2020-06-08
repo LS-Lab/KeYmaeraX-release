@@ -5,11 +5,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 
@@ -36,7 +38,14 @@ trait SequentCalculus {
   // Propositional tactics
 
   /** Hide/weaken whether left or right */
-  val hide    : DependentPositionTactic = ProofRuleTactics.hide
+  @Tactic("W", premises = "Γ |- Δ",
+    conclusion = "Γ |- P, Δ")
+  val hide    : DependentPositionTactic = anon { (pos:Position) => pos match {
+    case p: AntePosition => SequentCalculus.hideL(p)
+    case p: SuccPosition => SequentCalculus.hideR(p)
+  }
+  }
+
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   @Tactic("WL", premises = "Γ |- Δ",
     conclusion = "Γ, P |- Δ")
@@ -54,7 +63,13 @@ trait SequentCalculus {
     conclusion = "Γ |- P, Δ")
   val cohideR : CoreRightTactic = anon { (pr:ProvableSig, pos:SuccPosition) => pr(CoHideRight(pos.checkTop), 0) }
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
-  val cohide  : DependentPositionTactic = ProofRuleTactics.cohide
+  @Tactic("W", premises = "|- P",
+    conclusion = "Γ |- P, Δ")
+  val cohide  : DependentPositionTactic = anon { (pos: Position) => pos match {
+    case p: AntePosition => SequentCalculus.cohideL(p)
+    case p: SuccPosition => SequentCalculus.cohideR(p)
+  }
+  }
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
   @Tactic("WLR", codeName = "coHide2", premises = "P |- Q",
     conclusion = "Γ, P |- Q, Δ")
@@ -154,7 +169,10 @@ trait SequentCalculus {
     *         G |- D
     * }}}
     */
-  def cut(cut : Formula)      : InputTactic         = ProofRuleTactics.cut(cut)
+  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C", conclusion = "Γ |- Δ", inputs = "C:formula")
+  def cut(f: Formula): InputTactic = inputanon {rawCut(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))}
+  private def rawCut(f: Formula): BuiltInTactic = "rawCut" by { (provable: ProvableSig) => provable(core.Cut(f), 0)}
+
   /** cut a formula in in place of pos on the right to prove its implication on the second branch and assume it on the first. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]).
     * {{{
     * G |- c, D    G |- c->p, D
@@ -162,7 +180,13 @@ trait SequentCalculus {
     *        G |- p, D
     * }}}
     */
-  def cutR(cut : Formula): DependentPositionWithAppliedInputTactic =  ProofRuleTactics.cutR(cut)
+  @Tactic(premises = "Γ |- C, Δ ;; Γ |- C→P, Δ",
+    conclusion = "Γ |- P, Δ", inputs = "C:formula")
+  def cutR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonR { (provable: ProvableSig, pos: SuccPosition) =>
+    requireOneSubgoal(provable, "cutR(" + f + ")")
+    provable(core.CutRight(f, pos.top), 0)
+  }
+
   /** cut a formula in in place of pos on the left to prove its implication on the second branch and assume it on the first. ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]]).
     * {{{
     * c, G |- D    G |- D, p->c
@@ -170,7 +194,14 @@ trait SequentCalculus {
     *        p, G |- D
     * }}}
     */
-  def cutL(cut : Formula): DependentPositionWithAppliedInputTactic = ProofRuleTactics.cutL(cut)
+  @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, P→C",
+    conclusion = "Γ, P |- Δ", inputs = "C:formula")
+  def cutL(f: Formula): DependentPositionWithAppliedInputTactic = inputanonL { (provable: ProvableSig, pos: AntePosition) =>
+    requireOneSubgoal(provable, "cutL(" + f + ")")
+    provable(core.CutLeft(f, pos.top), 0)
+    //@todo label BelleLabels.cutUse/cutShow
+  }
+
   /** cut a formula in in place of pos to prove its implication on the second branch and assume it on the first (whether pos is left or right). ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]] or [[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]).
     * {{{
     * c, G |- D    G |- D, p->c
@@ -183,7 +214,41 @@ trait SequentCalculus {
     *        G |- p, D
     * }}}
     */
-  def cutLR(cut : Formula): DependentPositionWithAppliedInputTactic = ProofRuleTactics.cutLR(cut)
+  @Tactic()
+  def cutLR(f: Formula): DependentPositionWithAppliedInputTactic = inputanonP { (provable: ProvableSig, pos: Position) =>
+    requireOneSubgoal(provable, "cutLR(" + f + ")")
+    if (pos.isAnte) provable(core.CutLeft(f, pos.checkAnte.top), 0)
+    else provable(core.CutRight(f, pos.checkSucc.top), 0)
+  }
+
+
+  /**
+    * Exchange left rule reorders antecedent.
+    * {{{
+    * q, p, G |- D
+    * ------------- (Exchange left)
+    * p, q, G |- D
+    * }}}
+    */
+  @Tactic("XL", premises = "Q, P, Γ |- Δ",
+    conclusion = "P, Q, Γ |- Δ")
+  val exchangeL: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
+    pr(core.ExchangeLeftRule(posOne.checkAnte.top, posTwo.checkAnte.top), 0)
+  }
+
+  /**
+    * Exchange right rule reorders succedent.
+    * {{{
+    * G |- q, p, D
+    * ------------- (Exchange right)
+    * G |- p, q, D
+    * }}}
+    */
+  @Tactic("XR", premises = "Γ |- Q, P, Δ",
+    conclusion = "Γ |- P, Q, Δ")
+  val exchangeR: BuiltInTwoPositionTactic = anon { (pr: ProvableSig, posOne: Position, posTwo: Position) =>
+    pr(core.ExchangeRightRule(posOne.checkSucc.top, posTwo.checkSucc.top), 0)
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // First-order tactics
@@ -208,9 +273,10 @@ trait SequentCalculus {
   val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
   /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
-  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `term`. */
-  def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
+  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e`. */
+  def allL(e: Term)              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, Some(e))(_: Position) }
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
+  //@todo annotation must be on def allL(e: Term), otherwise it won't be an input tactic. can make it e: Option[Term] to get behavior of val allL.
   @Tactic(premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
   val allL                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allInstantiate(None, None)(pos)}
@@ -228,8 +294,9 @@ trait SequentCalculus {
   /** exists right: instantiate an existential quantifier for x in the succedent by a concrete instance `inst` as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance `inst` as a witness */
-  def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
+  def existsR(e: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(e))
   /** exists right: instantiate an existential quantifier for x in the succedent by itself as a witness */
+  //@todo annotation must be on def existsR(e: Term), otherwise it won't be an input tactic. can make it e: Option[Term] to get behavior of val existsR.
   @Tactic(premises = "Γ |- p(e), Δ",
     conclusion = "Γ |- ∃x p(x), Δ")
   val existsR                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsInstantiate(None, None)(pos)}
@@ -245,9 +312,11 @@ trait SequentCalculus {
   // closing tactics
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-    //@todo optimizable seems like complicated and possibly slow code???
   @Tactic(premises = "*", conclusion = "Γ, P |- P, Δ")
-  val close: BelleExpr = anon {(seq: Sequent) => {
+  val close: BelleExpr = anon {(seq: Sequent) => findClose(seq)}
+  // alternative implementation
+  //@todo optimizable seems like complicated and possibly slow code???
+  /*anon {(seq: Sequent) => {
     seq.succ.zipWithIndex.find({
       case (True, _) => true
       case (fml, _) =>
@@ -264,8 +333,41 @@ trait SequentCalculus {
         case _ => DebuggingTactics.error("Inapplicable close")
       }
     }
-  }}
-  /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  }}*/
+
+  /** Find a succedent True or an antecedent False or the same formula left and right and give back its closing tactic. */
+  private def findClose(seq: Sequent): BelleExpr = {
+    // The control structure is complicated but ensures False/True are only searched for exactly once en passent.
+    val ante = seq.ante
+    val succ = seq.succ
+    if (succ.isEmpty) {
+      for (j <- ante.indices) {
+        if (ante(j) == False) return ProofRuleTactics.closeFalse(AntePos(j))
+      }
+    } else {
+      val fml0 = succ.head
+      if (fml0 == True) return ProofRuleTactics.closeTrue(SuccPos(0))
+      //@todo optimizable: measure whether antecedent converted to HashMap for lookup is faster if succ.length>1 and ante.length large
+      for (j <- ante.indices) {
+        ante(j) match {
+          case False => return ProofRuleTactics.closeFalse(AntePos(j))
+          case other => if (fml0 == other) return close(AntePos(j), SuccPos(0))
+        }
+      }
+      for (i <- succ.indices.tail) {
+        succ(i) match {
+          case True => return ProofRuleTactics.closeTrue(SuccPos(i))
+          case fml =>
+            for (j <- ante.indices) {
+              if (fml == ante(j)) return close(AntePos(j), SuccPos(i))
+            }
+        }
+      }
+    }
+    DebuggingTactics.error("Inapplicable close")
+  }
+
+  /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePos, s: SuccPos): BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
     //@note same name (closeId) as SequentCalculus.closeId for serialization
     new BuiltInTactic("closeId") {
@@ -280,26 +382,34 @@ trait SequentCalculus {
       }
     }
   def close(a: Int, s: Int): BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
-  /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  /** closeIdWith: closes the branch with the formula at the given position when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ",
     codeName = "idWith")
   val closeIdWith: DependentPositionTactic = anon {(pos: Position, s: Sequent) =>
     pos.top match {
-      case p@AntePos(_) if s.succ.contains(s(p)) => close(p, SuccPos(s.succ.indexOf(s(p))))
-      case p@SuccPos(_) if s.ante.contains(s(p)) => close(AntePos(s.ante.indexOf(s(p))), p)
-      case _ => throw new TacticInapplicableFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
+      case p: AntePos => close(p, SuccPos(closeIdFound(pos, s.succ.indexOf(s(p)))))
+      case p: SuccPos => close(AntePos(closeIdFound(pos, s.ante.indexOf(s(p)))), p)
     }
   }
+  @inline
+  private def closeIdFound(pos: Position, i: Int): Int = if (i >= 0)
+    i
+  else
+    throw new TacticInapplicableFailure("Inapplicable: closeIdWith at " + pos + " cannot close due to missing counterpart")
+
+  /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@note do not forward to closeIdWith (performance)
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ")
-  val closeId: DependentTactic = anon {(seq: Sequent) =>
+  val closeId: DependentTactic = anon {(seq: Sequent) => close}
+  // alternative implementation
+  /*anon {(seq: Sequent) =>
     //@todo optimizable performance avoiding the repeated search
     val fmls = seq.ante.intersect(seq.succ)
     val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + seq.prettyString))
     close(AntePos(seq.ante.indexOf(fml)), SuccPos(seq.succ.indexOf(fml)))
-  }
+  }*/
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   @Tactic(/*codeName = "closeTrue",*/ premises = "*",
     conclusion = "Γ |- ⊤, Δ")
@@ -340,5 +450,30 @@ trait SequentCalculus {
   val commuteEquivR: CoreRightTactic = coreanon { (pr:ProvableSig, pos:SuccPosition) => pr(CommuteEquivRight(pos.checkTop), 0) }
   /** Commute equality `a=b` to `b=a` */
   lazy val commuteEqual       : DependentPositionTactic = UnifyUSCalculus.useAt(Ax.equalCommute)
+
+
+  //  meta-tactics for proof structuring information but no effect
+
+  /** Call/label the current proof branch by the given label `s`.
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    * @see [[BelleLabels]]
+    */
+  def label(s: BelleLabel): BelleExpr = LabelBranch(s)
+
+  /** Call/label the current proof branch by the top-level label `s`.
+    *
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    */
+  @Tactic()
+  def label(s: String): BelleExpr = anon { label(BelleTopLevelLabel(s)) }
+
+  /** Mark the current proof branch and all subbranches `s``
+    *
+    * @see [[label()]]
+    */
+  def sublabel(s: String): BelleExpr = UnifyUSCalculus.skip //LabelBranch(BelleSubLabel(???, s))
+
 
 }

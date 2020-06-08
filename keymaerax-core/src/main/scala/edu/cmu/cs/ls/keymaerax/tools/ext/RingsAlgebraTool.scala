@@ -3,11 +3,10 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 import cc.redberry.rings.bigint.BigInteger
 import cc.redberry.rings.scaladsl._
 import cc.redberry.rings.scaladsl.syntax._
-import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith
+import edu.cmu.cs.ls.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith, SequentCalculus}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic}
-import edu.cmu.cs.ls.keymaerax.btactics.{AnonymousLemmas, Idioms, PolynomialArith}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
@@ -296,7 +295,7 @@ class RingsLibrary(terms: Traversable[Term]) {
       case Some(LessEqual(a, b)) => {
         val d = fromRing(toRing(b) - toRing(a))
         useAt(normalizeLemma)(pos) &
-          cut(Equal(Minus(b, a), d)) &
+          SequentCalculus.cut(Equal(Minus(b, a), d)) &
           Idioms.<(
             eqL2R(-seq.ante.length - 1)(pos) & hideL(-seq.ante.length - 1),
             cohideR('Rlast) & qeTac & done

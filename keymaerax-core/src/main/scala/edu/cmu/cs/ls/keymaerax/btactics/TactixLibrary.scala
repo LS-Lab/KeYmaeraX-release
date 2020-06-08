@@ -349,29 +349,6 @@ object TactixLibrary extends HilbertCalculus
     case _ => throw new InputFormatFailure("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
   }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
 
-  //  meta-tactics for proof structuring information but no effect
-
-  /** Call/label the current proof branch by the given label `s`.
-    * @see [[Idioms.<()]]
-    * @see [[sublabel()]]
-    * @see [[BelleLabels]]
-    */
-  def label(s: BelleLabel): BelleExpr = LabelBranch(s)
-
-  /** Call/label the current proof branch by the top-level label `s`.
-    *
-    * @see [[Idioms.<()]]
-    * @see [[sublabel()]]
-    */
-  @Tactic()
-  def label(s: String): BelleExpr = anon { label(BelleTopLevelLabel(s)) }
-
-  /** Mark the current proof branch and all subbranches `s``
-    *
-    * @see [[label()]]
-    */
-  def sublabel(s: String): BelleExpr = skip //LabelBranch(BelleSubLabel(???, s))
-
   /*******************************************************************
     * unification and matching based auto-tactics
  *
@@ -681,6 +658,17 @@ object TactixLibrary extends HilbertCalculus
     * @param name The new variable to use as an abbreviation.
     * */
   def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
+
+  /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
+  @Tactic(
+    names = ("Abbreviate", "abbrv"),
+    codeName = "abbrv", //@todo name clash with abbrv above
+    premises = "Γ(x), x=e |- Δ(x)",
+    conclusion = "Γ(e) |- Δ(e)",
+    inputs = "e:term;;x[x]:option[variable]"
+  )
+  def abbrvAll(e: Term, x: Option[Variable]): BelleExpr = anon { EqualityTactics.abbrv(e, x) }
+
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position.
     * @example {{{
     *    x=0 |- 0*y=0, x+1>0
@@ -697,7 +685,8 @@ object TactixLibrary extends HilbertCalculus
   def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
-  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEqL2R(false)
+  @Tactic(names = "L=R all", codeName = "allL2R")
+  val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) "allL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(l, _)) =>
@@ -709,7 +698,8 @@ object TactixLibrary extends HilbertCalculus
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = exhaustiveEqR2L(false)
+  @Tactic(names = "R=L all", codeName = "allR2L")
+  val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(_, r)) =>

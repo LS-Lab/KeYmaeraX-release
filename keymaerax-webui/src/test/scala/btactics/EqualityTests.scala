@@ -237,12 +237,12 @@ class EqualityTests extends TacticTestBase {
 
   it should "abbreviate min(a,b) to z everywhere (except at bound occurrences) and pick a name automatically" in withQE { _ =>
     val result = proveBy("min(a,b) < c, x>y, 5 < min(a,b) ==> min(a,b) + 2 = 7, a<b, [b:=2;]min(a,b) < 9".asSequent,
-      abbrv("min(a,b)".asTerm))
+      abbrv("min(a,b)".asTerm, None))
     result.subgoals.loneElement shouldBe "min_0<c, x>y, 5<min_0, min_0 = min(a,b) ==> min_0+2=7, a<b, [b:=2;]min(a,b)<9".asSequent
   }
 
   it should "abbreviate any argument even if not contained in the sequent and pick a name automatically" in withQE { _ =>
-    val result = proveBy("x>y ==> a<b".asSequent, abbrv("c+d".asTerm))
+    val result = proveBy("x>y ==> a<b".asSequent, abbrv("c+d".asTerm, None))
     result.subgoals.loneElement shouldBe "x>y, x_0 = c+d ==> a<b".asSequent
   }
 
@@ -350,13 +350,13 @@ class EqualityTests extends TacticTestBase {
 
   it should "be possible to combine with abbrvAt to expand min(x,y) broadly" in withQE { _ =>
     val result = proveBy("[x:=2;]((min(x,y) >= 2 | y=7) & min(x,y) <= 10)".asFormula,
-      abbrvAt("min(x,y)".asTerm)(1, 1::Nil) & minmax(1, 1::0::0::1::Nil))
+      abbrvAt("min(x,y)".asTerm, None)(1, 1::Nil) & minmax(1, 1::0::0::1::Nil))
     result.subgoals.loneElement shouldBe "==> [x:=2;]\\forall min_0 (x<=y&min_0=x|x>y&min_0=y->(min_0>=2|y=7)&min_0<=10)".asSequent
   }
 
   it should "be possible to combine with abbrv to expand min(x,y) broadly" in withQE { _ =>
     val result = proveBy("(min(x,y) >= 2 | y=7) & min(x,y) <= 10".asFormula,
-      abbrv("min(x,y)".asTerm) & minmax(-1, 1::Nil))
+      abbrv("min(x,y)".asTerm, None) & minmax(-1, 1::Nil))
     result.subgoals.loneElement shouldBe "min_0=min_1, x<=y&min_1=x|x>y&min_1=y ==> (min_0>=2|y=7)&min_0<=10".asSequent
   }
 

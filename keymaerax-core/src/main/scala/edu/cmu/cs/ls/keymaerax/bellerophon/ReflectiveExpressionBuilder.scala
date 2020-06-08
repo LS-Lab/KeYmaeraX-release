@@ -88,6 +88,14 @@ object ReflectiveExpressionBuilder extends Logging {
     }
   }
 
+  /**
+    * Create the BelleExpr tactic expression `name(arguments)`.
+    * @param name The codeName of the Bellerophon tactic to create according to [[TacticInfo.codeName]].
+    * @param arguments the list of arguments passed to the tactic, either expressions or positions.
+    * @param generator invariant generators passed to the tactic, if any.
+    * @param defs
+    * @return `name(arguments)` as a BelleExpr.
+    */
   def apply(name: String, arguments: List[Either[Seq[Any], PositionLocator]] = Nil,
             generator: Option[Generator.Generator[GenProduct]], defs: Declaration) : BelleExpr = {
     if (!DerivationInfo.hasCodeName(name)) {

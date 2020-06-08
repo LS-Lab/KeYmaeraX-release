@@ -14,7 +14,7 @@ import AnnotationCommon._
 
 
 /**
-  * Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]].
+  * Axiom Annotation for core axioms and derived axioms, which allows decentralized [[AxiomInfo]].
   * This annotation can only be applied to val declarations whose right-hand-sides are applications of [[derivedAxiom]]
   * or related functions, see [[Ax]] for examples.
   * @param names Display names to render in the user interface.
@@ -23,7 +23,7 @@ import AnnotationCommon._
   * @param conclusion Formula string displayed for axioms as html with unicode in the user interface
   *  For axioms with (non-position) inputs, the conclusion must mention each input.
   *  Sequent syntax is optionally supported:   A, B |- C, D
-  * @param unifier Which unifier to use for axiom: 'surjective or 'linear or 'surjlinear or 'surjlinearpretend or 'full [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]]
+  * @param unifier Which unifier to use for axiom: "surjective" or "linear" or "surjlinear" or "surjlinearpretend" or "full" [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.matcherFor()]]
   * @param displayLevel Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
   * @param inputs Display inputs for axiom-with-input as type declarations, e.g., "C:Formula" for cut.
   *               Arguments are separated with ;; and allowed fresh variables are given in square brackets, for example
@@ -48,6 +48,7 @@ import AnnotationCommon._
   *                 - recursor="0.0;1.1" first considers the left child of the left child, then the right child of the right child.
   *                 - recursor="0.1.1;0.1;*" first considers the right child of the right child of the left child, then the right child of the left child, then the whole formula.
   * @author Brandon Bohrer
+  * @see [[AxiomInfo]]
   */
 class Axiom(val names: Any,
             val codeName: String = "",

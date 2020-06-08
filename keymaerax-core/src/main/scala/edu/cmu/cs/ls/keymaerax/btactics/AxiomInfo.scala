@@ -412,16 +412,16 @@ object DerivationInfoRegistry {
         List((List("&Gamma;","P","Q"),List("&Delta;")),
           (List("&Gamma;","¬P","¬Q"),List("&Delta;"))))
       , {case () => SequentCalculus.equivR}),
-    new InputPositionTacticInfo("allL"
+    new InputPositionTacticInfo("allL" //@Tactic-fied
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
         List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
       , List(new TermArg("θ", "θ"::Nil))
       , _ => ((t:Term) => SequentCalculus.allL(t)): TypedFunc[Term, BelleExpr]),
-    new PositionTacticInfo("allR"
+    new PositionTacticInfo("allR"  //@Tactic-fied
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(x)","&Delta;"))))
       , {case () => SequentCalculus.allR}),
-    new PositionTacticInfo("existsL"
+    new PositionTacticInfo("existsL" //@Tactic-fied
       , RuleDisplayInfo(("∃L", "existsL"), (List("&Gamma;","∃x P(x)"),List("&Delta;")),
         List((List("&Gamma;","P(x)"),List("&Delta;"))))
       , {case () => SequentCalculus.existsL}),
@@ -432,7 +432,7 @@ object DerivationInfoRegistry {
       , RuleDisplayInfo("G&ouml;del Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
         , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}, revealInternalSteps = true),
-    new InputPositionTacticInfo("existsR"
+    new InputPositionTacticInfo("existsR" //@Tactic-fied
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
       , List(new TermArg("θ", "θ"::Nil))
@@ -461,11 +461,11 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
     new PositionTacticInfo("cohide", "W", {case () => SequentCalculus.cohide}),
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
-    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
-    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}),
-    new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
-    new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
-    new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
+    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}), //@Tactic-fied
+    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}), //@Tactic-fied
+    new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}), //@Tactic-fied
+    new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}), //@Tactic-fied
+    new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}), //@Tactic-fied
     new PositionTacticInfo("toSingleFormula", "toFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     PositionTacticInfo("CMon"
@@ -533,8 +533,8 @@ object DerivationInfoRegistry {
         ,List(
           (List("&Gamma;"),List("&Delta;","P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
-      ,List(FormulaArg("P")), _ => ((fml:Formula) => ProofRuleTactics.cut(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputTacticInfo("abbrv"
+      ,List(FormulaArg("P")), _ => ((fml:Formula) => SequentCalculus.cut(fml)): TypedFunc[Formula, BelleExpr]),
+    new InputTacticInfo("abbrv" //@Tactic-fied TactixLibrary.abbrvAll
       , RuleDisplayInfo(("Abbreviate","abbrv")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
@@ -673,7 +673,7 @@ object DerivationInfoRegistry {
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}),
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),  //@Tactic-fied
     //@todo universal closure may come with list of named symbols
-    new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}),
+    new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}), //@Tactic-fied
 
     InputPositionTacticInfo("useAt"
       , "useAt"
