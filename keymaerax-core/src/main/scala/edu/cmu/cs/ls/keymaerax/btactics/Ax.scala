@@ -698,7 +698,7 @@ object Ax extends Logging {
   lazy val monall = derivedRuleSequent("all monotone",
     Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
     implyRi()(-1,1) &
-      useAt(allDistElim, PosInExpr(1::Nil))(1) &
+      useAt(allDistElim)(1) &
       byUS(allGeneralize)
   )
 
@@ -1201,8 +1201,8 @@ object Ax extends Logging {
     *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
     * }}}
     */
-  @Axiom(("∀→","all->"), conclusion = "(∀x (p(x)→q(x))) → (∀x p(x) → __∀x q(x)__)",
-    key = "1.1"
+  @Axiom(("∀→","all->"), conclusion = "(∀x (p(x)→q(x))) → (__∀x p(x) → ∀x q(x)__)",
+    key = "1", recursor = "*"
   )
   lazy val allDist = derivedAxiom("all distribute",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p(x_)->q(x_))) -> ((\\forall x_ p(x_))->(\\forall x_ q(x_)))".asFormula)),
@@ -1210,11 +1210,11 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "all distribute".
-    *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
+    *   (\forall x (P->Q)) -> ((\forall x P)->(\forall x Q))
     * }}}
     */
-  @Axiom(("∀→","all->"), conclusion = "(∀x (P→Q)) → (∀x P → __∀x Q__)",
-    key = "1.1", unifier = "surjlinear")
+  @Axiom(("∀→","all->"), conclusion = "(∀x (P→Q)) → (__∀x P → ∀x Q__)",
+    key = "1", recursor = "*")
   lazy val allDistElim = derivedAxiom("all distribute elim",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p_(||)->q_(||))) -> ((\\forall x_ p_(||))->(\\forall x_ q_(||)))".asFormula)),
     implyR(1) & implyR(1) & ProofRuleTactics.skolemizeR(1) & useAt(alle)(-1) & useAt(alle)(-2) & prop)

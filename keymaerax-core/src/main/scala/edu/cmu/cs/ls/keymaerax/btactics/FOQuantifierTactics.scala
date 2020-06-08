@@ -82,7 +82,7 @@ protected object FOQuantifierTactics {
 
           //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
-          ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+          SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
             cohide('Rlast) & CMon(pos.inExpr) & byUS(Ax.allInst) & done
             )
@@ -127,7 +127,7 @@ protected object FOQuantifierTactics {
 
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
-            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+            SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
               cohide(pos) & CMon(pos.inExpr) & byUS(Ax.existsGeneralize, subst) & done
               )
@@ -147,7 +147,7 @@ protected object FOQuantifierTactics {
 
   private def outerMostBoundPos(x: Variable, fmls: IndexedSeq[Formula], posFactory: (Int, List[Int]) => Position): IndexedSeq[Position] = {
     fmls.map(outerMostBoundPos(x, _)).
-      zipWithIndex.flatMap({case (posInExpr, i) => posInExpr.map(pie => posFactory(i+1, pie.pos)) })
+      zipWithIndex.flatMap({ case (posInExpr, i) => posInExpr.map(pie => posFactory(i + 1, pie.pos)) })
   }
 
   private def outerMostBoundPos(x: Variable, fml: Formula): List[PosInExpr] = {
@@ -166,8 +166,8 @@ protected object FOQuantifierTactics {
     outerMostBound
   }
 
-  /** @see [[SequentCalculus.allR]] */
-  val allSkolemize: DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
+  /** [[SequentCalculus.allR]] */
+  private[btactics] val allSkolemize: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     //@Tactic in [[SequentCalculus]]
     if (!pos.isSucc) throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
     val xs = sequent.sub(pos) match {
@@ -188,10 +188,10 @@ protected object FOQuantifierTactics {
   })
 
   /**
-   * Skolemizes an existential quantifier in the antecedent.
-   * @see [[allSkolemize]]
-   */
-  val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
+    * [[SequentCalculus.existsL]]
+    * Skolemizes an existential quantifier in the antecedent.
+    */
+  private[btactics] val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
 
   /**
    * Generalizes existential quantifiers, but only at certain positions. All positions have to refer to the same term.

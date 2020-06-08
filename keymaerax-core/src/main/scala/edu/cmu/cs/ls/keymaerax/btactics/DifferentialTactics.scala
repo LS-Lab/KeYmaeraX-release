@@ -232,8 +232,8 @@ private object DifferentialTactics extends Logging {
   lazy val DIRule: DependentPositionTactic = diffInd('none)
   lazy val diffIndRule: DependentPositionTactic = diffInd('diffInd)
 
-  /** @see [[TactixLibrary.openDiffInd]] */
-  val openDiffInd: DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
+  /** [[DifferentialEquationCalculus.openDiffInd]] */
+  private[btactics] lazy val openDiffInd: DependentPositionTactic = new DependentPositionTactic("openDiffInd") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc && pos.isTopLevel, "openDiffInd only at ODE system in succedent")
@@ -285,6 +285,7 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.diffVar]]
     * TODO: deprecate this
     * */
+  @deprecated
   val diffVar: DependentPositionTactic = new DependentPositionTactic("diffVar") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -314,7 +315,7 @@ private object DifferentialTactics extends Logging {
   }
 
   /** @see [[TactixLibrary.dC()]] */
-  def diffCut(formulas: Formula*): DependentPositionTactic =
+  private[btactics] def diffCut(formulas: Formula*): DependentPositionTactic =
     "dC" byWithInputs (formulas.toList, (pos: Position, sequent: Sequent) => {
       formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut &
         Idioms.doIf(_.subgoals.size == 2)(<(all, skip)))
@@ -368,7 +369,8 @@ private object DifferentialTactics extends Logging {
   }
 
   // For scala-land use
-  def diffRefine(f: Formula, hide: Boolean=true) : DependentPositionTactic =
+  /** [[DifferentialEquationCalculus.dR]] */
+  private[btactics] def diffRefine(f: Formula, hide: Boolean=true) : DependentPositionTactic =
     "ANON" by ((pos:Position,sequent: Sequent) => {
       diffRefineInternal(f, hide)(pos,sequent)
      })
@@ -383,7 +385,7 @@ private object DifferentialTactics extends Logging {
   )
 
   /** @see [[TactixLibrary.diffInvariant]] */
-  def diffInvariant(formulas: Formula*): DependentPositionTactic =
+  private[btactics] def diffInvariant(formulas: Formula*): DependentPositionTactic =
     "diffInvariant" byWithInputs (formulas.toList, (pos: Position, sequent: Sequent) => {
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
@@ -600,8 +602,8 @@ private object DifferentialTactics extends Logging {
     }
   })
 
-  /** @see [[TactixLibrary.dG]] */
-  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = "dG" byWithInputs (
+  /** [[DifferentialEquationCalculus.dG]] */
+  private[btactics] def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = "dG" byWithInputs (
       r match { case Some(rr) => ghost :: rr :: Nil case None => ghost :: Nil },
       (pos: Position, sequent: Sequent) => sequent.sub(pos) match {
         case Some(Box(ODESystem(_, h), _)) =>
@@ -691,10 +693,11 @@ private object DifferentialTactics extends Logging {
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
   //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
+  //@Tactic in HilbertCalculus.Derive.Dvar same
   @Tactic(names="x'",
     conclusion="(x)' = x",
-    displayLevel="browse")
-  lazy val Dvariable: DependentPositionTactic = anon ( (pos:Position, sequent:Sequent) => {
+    displayLevel="internal")
+  private[btactics] lazy val Dvariable: DependentPositionTactic = anon ( (pos:Position, sequent:Sequent) => {
 
     val OPTIMIZED = true
     val axiom: AxiomInfo = Ax.DvariableCommutedAxiom
@@ -755,13 +758,13 @@ private object DifferentialTactics extends Logging {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
-  /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
+  /** [[DifferentialEquationCalculus.dW]]. diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
   @Tactic(names="Differential Weaken",
           codeName="dW", // todo: rename the tactic directly
           premises="Γ<sub>const</sub>, Q |- P, Δ<sub>const</sub>",
           conclusion="Γ |- [x'=f(x)&Q]P, Δ",
           displayLevel="all", revealInternalSteps=true)
-  lazy val diffWeaken: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  private[btactics] lazy val diffWeaken: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
@@ -779,13 +782,13 @@ private object DifferentialTactics extends Logging {
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
 
-  /** diffWeaken preserving all initial facts and mimicking the initial sequent shape. */
+  /** [[DifferentialEquationCalculus.dWPlus]]. diffWeaken preserving all initial facts and mimicking the initial sequent shape. */
   @Tactic(names="Initial State-Preserving Differential Weaken",
     codeName="dWplus", // todo: rename the tactic directly
     premises="Γ<sub>0</sub>, Q |- P, Δ<sub>0</sub>",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel="browse", revealInternalSteps=true)
-  lazy val diffWeakenPlus: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  private[btactics] lazy val diffWeakenPlus: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 

@@ -349,29 +349,6 @@ object TactixLibrary extends HilbertCalculus
     case _ => throw new InputFormatFailure("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
   }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
 
-  //  meta-tactics for proof structuring information but no effect
-
-  /** Call/label the current proof branch by the given label `s`.
-    * @see [[Idioms.<()]]
-    * @see [[sublabel()]]
-    * @see [[BelleLabels]]
-    */
-  def label(s: BelleLabel): BelleExpr = LabelBranch(s)
-
-  /** Call/label the current proof branch by the top-level label `s`.
-    *
-    * @see [[Idioms.<()]]
-    * @see [[sublabel()]]
-    */
-  @Tactic()
-  def label(s: String): BelleExpr = anon { label(BelleTopLevelLabel(s)) }
-
-  /** Mark the current proof branch and all subbranches `s``
-    *
-    * @see [[label()]]
-    */
-  def sublabel(s: String): BelleExpr = skip //LabelBranch(BelleSubLabel(???, s))
-
   /*******************************************************************
     * unification and matching based auto-tactics
  *
