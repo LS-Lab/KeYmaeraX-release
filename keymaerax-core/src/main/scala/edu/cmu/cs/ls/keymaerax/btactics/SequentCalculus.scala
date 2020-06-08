@@ -348,7 +348,7 @@ trait SequentCalculus {
       //@todo optimizable: measure whether antecedent converted to HashMap for lookup is faster if succ.length>1 and ante.length large
       for (j <- ante.indices) {
         ante(j) match {
-          case False => return ProofRuleTactics.closeTrue(SuccPos(j))
+          case False => return ProofRuleTactics.closeFalse(AntePos(j))
           case other => if (fml0 == other) return close(AntePos(j), SuccPos(0))
         }
       }
