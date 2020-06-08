@@ -74,8 +74,10 @@ class DLBelleParser extends (String => BelleExpr) {
     ~ (argument.map(arg => Left(Seq(arg))::Nil) | locator.map(j => Right(j)::Nil)).rep(min = 1, sep = ","./)
     ~ ")" ).
     map({case (t,args) => ReflectiveExpressionBuilder(t, args.flatten.toList, generator, defs)})
+  def namedCombinator[_: P]: P[BelleExpr] = P( ("doall".!) ~~ "(" ~ tactic ~ ")" ).
+    map({case ("doall", t) => OnAll(t)})
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )
-  def baseTac[_: P]: P[BelleExpr] = P( atomicTactic | NoCut(at) |
+  def baseTac[_: P]: P[BelleExpr] = P( namedCombinator | atomicTactic | NoCut(at) |
     branchTac | NoCut(repeatTac) | parenTac
   )
 
