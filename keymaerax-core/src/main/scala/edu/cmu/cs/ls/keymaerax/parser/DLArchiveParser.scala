@@ -101,7 +101,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
     tacticProof.? ~
     metaInfo ~
     ("End.".!.map(s=>None) | "End" ~ label.map(s=>Some(s)) ~ ".")).map(
-    {case (kind, label, name, meta, decl, prob, moremeta, endlabel) =>
+    {case (kind, label, name, meta, decl, prob, tac, moremeta, endlabel) =>
       if (endlabel.isDefined && endlabel != label) throw ParseException("end label is optional but should be the same as the start label: " + label + " is not " + endlabel)
       // definitions elaboration to replace arguments by dots and do type analysis
       KeYmaeraXArchiveParser.elaborate(ParsedArchiveEntry(
@@ -111,7 +111,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
         problemContent = "???",
         defs = decl,
         model = prob,
-        tactics = Nil,
+        tactics = if (tac.isEmpty) Nil else List((tac.get._1.getOrElse("<undefined>"),"<source???>",tac.get._2)),
         annotations = Nil, //@todo fill annotations
         //@todo check that there are no contradictory facts in the meta and moremeta
         info = (if (label.isDefined) Map("id"->label.get) else Map.empty) ++ meta ++ moremeta
@@ -236,7 +236,7 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
   def problem[_: P]: P[Formula] = P("Problem" ~~ blank ~/ formula ~ "End." )
 
   //@todo tactic needs tactic parser or skip ahead to End. and ask BelleParser.
-  def tacticProof[_: P]: P[Unit] = P( "Tactic" ~~ blank ~ string.? ~ tactic ~/ "End.")
+  def tacticProof[_: P]: P[(Option[String],BelleExpr)] = P( "Tactic" ~~ blank ~ string.? ~ tactic ~/ "End.")
 
 
   // externals
