@@ -92,6 +92,22 @@ object TaylorModelTactics extends Logging {
         apply(HideLeft(AntePos(Llast)), 0)
     }
   }
+  val existsLstable = new BuiltInLeftTactic("existsLstable") {
+    override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+      ProofRuleTactics.requireOneSubgoal(provable, name)
+      val subgoal = provable.subgoals(0)
+      /** [[pos.checkTop]] like in [[andL]] */
+      val antepos = pos.checkTop
+      /** matching on [[Exists]] like in [[AndLeft]] */
+      val fml@Exists(_, _) = subgoal(pos.checkTop)
+      val Llast = subgoal.ante.length
+      proveBy(provable(core.Cut(fml), 0).
+        apply(Close(antepos, SuccPos(subgoal.succ.length)), 1),
+        existsL(AntePos(Llast))
+      ).apply(ExchangeLeftRule(antepos, AntePos(Llast)), 0).
+        apply(HideLeft(AntePos(Llast)), 0)
+    }
+  }
 
   // Terms
 

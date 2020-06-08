@@ -14,6 +14,15 @@ import scala.collection.immutable._
 @SlowTest
 class TaylorModelTests extends TacticTestBase {
 
+  "existsLstable" should "work" in {
+    proveBy("P(), \\exists x Q(x), R() ==> S(), T()".asSequent,
+      existsLstable(-2)).subgoals.loneElement shouldBe
+      "P(), Q(x), R()\n  ==>  S(), T()".asSequent
+    proveBy("P(x), \\exists x Q(x), R(x,y) ==> S(x, y), T()".asSequent,
+      existsLstable(-2)).subgoals.loneElement shouldBe
+      "P(x_0), Q(x), R(x_0,y)\n  ==>  S(x_0,y), T()".asSequent
+  }
+
   "coarsenTimesBounds" should "work" in withMathematica { _ => withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
     proveBy("0 <= t, t <= h(), t*f() + cL() <= xRem, xRem <= t*g() + cU(), p() ==> q()".asSequent, coarsenTimesBounds("t".asTerm)).
       subgoals.loneElement shouldBe ("0<=t, t<=h(), min((0,h()*f()))+cL()<=xRem, xRem<=max((0,h()*g()))+cU(), p() ==>  q()".asSequent)
