@@ -107,12 +107,12 @@ class TacticImpl(val c: blackbox.Context) {
       }
       val displayInfo = (inputs, premisesString, conclusionString) match {
         case (Nil, "", "") => simpleDisplay
+        case (_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case (Nil, "", concl) if concl != "" => AxiomDisplayInfo(simpleDisplay, concl)
-        case (ins, prem, concl) if concl != "" => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
+        case (ins, "", concl) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
         case (ins, prem, concl) if concl != "" && prem != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
           RuleDisplayInfo(simpleDisplay, conc, prem)
-        case (_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
       (codeName, displayInfo, displayLevel, revealInternal)

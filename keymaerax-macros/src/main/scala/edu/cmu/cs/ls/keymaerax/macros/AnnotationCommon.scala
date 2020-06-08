@@ -114,7 +114,7 @@ object AnnotationCommon {
   def convSD(sd: SequentDisplay)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     val SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean) = sd
-    q"""new SequentDisplay($ante, $succ, $isClosed)"""
+    q"""new edu.cmu.cs.ls.keymaerax.macros.SequentDisplay($ante, $succ, $isClosed)"""
   }
   def convDI(di: DisplayInfo)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
