@@ -1370,7 +1370,7 @@ trait UnifyUSCalculus {
   /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: ProvableInfo): ForwardPositionTactic = useForImpl(axiom)
 
-  def useFor(axiom: AxiomInfo, key: PosInExpr): ForwardPositionTactic = useForWithImpl(axiom, key)
+  def useFor(axiom: ProvableInfo, key: PosInExpr): ForwardPositionTactic = useForWithImpl(axiom, key)
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   private[btactics]
