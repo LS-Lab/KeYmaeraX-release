@@ -45,7 +45,7 @@ private object ProofRuleTactics extends Logging {
 //@todo  @Tactic("UR",
 //    premises = "P(y) |- Q(y)",
 //    conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
-//  def uniformRename(what: Variable, repl: Variable): InputTactic = anon { (pr: ProvableSig) =>
+//  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanon { (pr: ProvableSig) =>
 //    requireOneSubgoal(pr, "UR(" + what + "~~>" + repl + ")")
 //    pr(core.UniformRenaming(what, repl), 0)
 //  }
