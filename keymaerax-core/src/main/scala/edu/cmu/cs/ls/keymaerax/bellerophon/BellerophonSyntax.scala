@@ -365,7 +365,7 @@ trait RightTactic extends PositionalTactic {
 abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
   private[bellerophon] final def execute(provable: ProvableSig): ProvableSig =
     result(provable)
-  private[bellerophon] def result(provable : ProvableSig): ProvableSig
+  private[keymaerax] def result(provable : ProvableSig): ProvableSig
 }
 
 
