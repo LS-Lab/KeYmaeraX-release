@@ -478,7 +478,7 @@ object TacticFactory {
     def byR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = {
-          require(pos.isAnte, "Expects an succedent position.")
+          require(pos.isSucc, "Expects a succedent position.")
           t(pos.checkSucc)
         }
       }
