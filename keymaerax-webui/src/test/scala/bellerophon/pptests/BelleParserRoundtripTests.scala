@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tags.UsualTest
   */
 @UsualTest
 class BelleParserRoundtripTests extends TacticTestBase {
-  private val belleParser: String=>BelleExpr = if (true) BelleParser else DLBelleParser
+  private val belleParser: String=>BelleExpr = if (false) BelleParser else DLBelleParser
 
   private def roundTrip(tactic: String): Unit = BellePrettyPrinter(belleParser(tactic)) shouldBe tactic
   private def roundTrip(tactic: BelleExpr): Unit = belleParser(BellePrettyPrinter(tactic)) shouldBe tactic

@@ -76,7 +76,7 @@ class TacticImpl(val c: blackbox.Context) {
         case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
       }
     }
-    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, String, Boolean) = {
+    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, String, List[ArgInfo], Boolean) = {
       val defaultMap: Map[String, Tree] = Map(
         "names"    -> Literal(Constant(false)),
         "codeName" -> Literal(Constant("")),
@@ -108,17 +108,17 @@ class TacticImpl(val c: blackbox.Context) {
       }
       val displayInfo = (inputs, premisesString, conclusionString) match {
         case (Nil, "", "") => simpleDisplay
-        case (_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case (Nil, "", concl) if concl != "" => AxiomDisplayInfo(simpleDisplay, concl)
         case (ins, "", concl) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
         case (ins, prem, concl) if concl != "" && prem != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
           RuleDisplayInfo(simpleDisplay, conc, prem)
+        //case (_::_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
-      (codeName, displayInfo, displayLevel, revealInternal)
+      (codeName, displayInfo, displayLevel, inputs, revealInternal)
     }
-    def getParams (tn: TermName): (String, DisplayInfo, String, Boolean) = {
+    def getParams (tn: TermName): (String, DisplayInfo, String, List[ArgInfo], Boolean) = {
         c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)
         case q"new $annotation()" => paramify(tn, Nil)
@@ -135,13 +135,6 @@ class TacticImpl(val c: blackbox.Context) {
              | tq"DependentPositionWithAppliedInputTactic"
              | tq"AppliedBuiltInTwoPositionTactic"
              | tq"BelleExpr" => true
-        case _ => false
-      }
-    }
-    // Return type of tactic definition
-    def isValTactic(tRet: Tree): Boolean = {
-      tRet match {
-        case tq"BelleExpr" | tq"InputTactic" => true
         case _ => false
       }
     }
@@ -225,100 +218,98 @@ class TacticImpl(val c: blackbox.Context) {
         case ai => c.abort(c.enclosingPosition, "Unimplemented case in @Tactic, could not convert argument spec: " + ai)
       }
     }
+
+    def inferType(defaultType: Tree, args: List[ArgInfo], pos: PosArgs, isCoreAnon: Option[Boolean]): Tree = {
+      // Only infer type if annotation is empty
+      if (defaultType != tq"") return defaultType
+      (args, pos) match {
+        case (Nil, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic"
+        case (_::_, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic"
+        case (Nil, _: AntePos | _: OnePos | _: SuccPos) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic"
+        case (_::_, _: OnePos | _: AntePos | _: SuccPos) =>
+          tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"
+        case (Nil, _: TwoPos | _: AnteSuccPos) =>
+          (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic")
+        case (_::_, _: TwoPos | _: AnteSuccPos) =>
+          (tq"edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic")
+        case (Nil, AntePos(Some(sname), pname)) =>
+          if (isCoreAnon.contains(true))
+            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic")
+          else
+            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
+        case (Nil, SuccPos(Some(sname), pname)) =>
+          if (isCoreAnon.contains(true))
+            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
+          else
+            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
+        case (_::_, _: SuccPos | _: AntePos) =>
+          c.abort(c.enclosingPosition, "Argument combination not yet supported")
+        case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos")
+      }
+    }
+    def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, isCoreAnon: Option[Boolean]): Tree = {
+      if (isCoreAnon.isEmpty) {
+        return q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).forward($acc)"""
+      }
+      (args, pos) match {
+        case (Nil, NoPos()) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
+        case (Nil, SequentArg(sequentName)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)"""
+        case (Nil, OnePos(pname, None, _)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname) =>  $acc)"""
+        case (Nil, OnePos(pname, Some(sname), _)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)"""
+        case (_::_, NoPos()) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)"""
+        case (_::_, SequentArg(sequentName)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)"""
+        case (_::_, OnePos(pname, None, _)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname) =>  $acc)"""
+        case (_::_, OnePos(pname, Some(sname), false)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname, $sname) =>  $acc)"""
+        case (_::_, OnePos(pname, Some(sname), true)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname, $sname) =>  $acc)"""
+        case (Nil, AntePos(None, pname)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byL(($pname) =>  $acc)"""
+        case (Nil, AntePos(Some(sname), pname)) =>
+          if (isCoreAnon.contains(true))
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)"""
+          else
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)"""
+        case (_::_, AntePos(Some(sname), pname)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsL($argExpr, ($sname, $pname) =>  $acc)"""
+        case (Nil, SuccPos(None, pname)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byR(($pname) =>  $acc)"""
+        case (Nil, SuccPos(Some(sname), pname)) =>
+          if (isCoreAnon.contains(true))
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)"""
+          else
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)"""
+        case (_::_, SuccPos(Some(sname), pname)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsR($argExpr, ($sname, $pname) =>  $acc)"""
+        case (Nil, AnteSuccPos(sname, pname)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byLR(($sname, $pname) =>  $acc)"""
+        case (Nil, TwoPos(provable, pos1, pos2)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by((($provable, $pos1, $pos2) =>  $acc))"""
+        case (_::_, TwoPos(provable, pos1, pos2)) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, (($provable, $pos1, $pos2) =>  $acc))"""
+        case (_::_, _: SuccPos | _: AntePos | _: AnteSuccPos) =>
+          c.abort(c.enclosingPosition, "Argument combination not yet supported")
+        case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos")
+      }
+    }
     // Type and term ASTs which wrap acc in position and/or input arguments as anonymous lambdas
     def argue(funName: String, acc: Tree, pos: PosArgs, args: List[ArgInfo], generatorOpt: Option[ArgInfo], tRet: Tree, isCoreAnon: Option[Boolean]): (Tree, Seq[ValDef], Seq[Tree], (Tree, Tree)) = {
       val funStr = Literal(Constant(funName))
       val argExpr = args match {
         case Nil => q"Nil"
-        case _ => args.foldRight[Tree](q"Nil")({case (ai, acc) => q"${ai.name} :: $acc"})
+        case _ => args.foldRight[Tree](q"Nil")({case (ai, acc) => q"${Ident(TermName(ai.name))} :: $acc"})
       }
       // if no "anon" function present, then tactic is a simple forwarding expression like val e: BelleExpr = <tac>
-      val isForward = isCoreAnon.isEmpty
-      val base: (Tree, Tree) =
-        if(isForward) {
-          if (args.isEmpty)
-            (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)""", tRet)
-          else
-            (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)""", tRet)
-        } else {
-          pos match {
-            case NoPos() =>
-              if (args.isEmpty)
-              // @TODO: acc could be DEpendentTactic or BelleExpr
-              (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr")
-              else
-              (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic")
-            case SequentArg(sequentName) =>
-              if (args.isEmpty) {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic")
-              } else {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic")
-              }
-            case OnePos(pname, None, _) =>
-              if (args.isEmpty)
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
-              else
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-            case OnePos(pname, Some(sname), provable) =>
-              if (args.isEmpty)
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
-              else if (provable) {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-              } else
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname, $sname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-            case AntePos(None, pname) =>
-              if (args.isEmpty) {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byL(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
-              } else {
-                c.abort(c.enclosingPosition, "Argument combination not yet supported")
-              }
-            case AntePos(Some(sname), pname) =>
-              if (args.isEmpty) {
-                if (isCoreAnon.contains(true)) {
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic")
-                } else
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
-              }
-              else {
-                if (isCoreAnon.contains(true)) {
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsL($argExpr, ($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-                } else {
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsL($argExpr, ($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-                }
-              }
-            case SuccPos(None, pname) =>
-              if (args.isEmpty) {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byR(($pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic")
-              } else {
-                c.abort(c.enclosingPosition, "Argument combination not yet supported")
-              }
-            case SuccPos(Some(sname), pname) =>
-              if (args.isEmpty) {
-                if (isCoreAnon.contains(true))
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
-                else
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
-              } else {
-                if (isCoreAnon.contains(true)) {
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebywithInputsR($argExpr, ($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-                } else {
-                  (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsR($argExpr, ($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic")
-                }
-              }
-            case AnteSuccPos(sname, pname) =>
-              if (args.isEmpty) {
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byLR(($sname, $pname) =>  $acc)""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic")
-              } else {
-                c.abort(c.enclosingPosition, "Unsupported argument combination")
-              }
-            case TwoPos(provable, pos1, pos2) =>
-              if (args.isEmpty)
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by((($provable, $pos1, $pos2) =>  $acc))""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic")
-              else
-                (q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, (($provable, $pos1, $pos2) =>  $acc))""", tq"edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic")
-            case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos")
-          }
-        }
+      val baseType = inferType(tRet, args, pos, isCoreAnon)
+      val baseTerm = arguePos(funStr, argExpr, args, pos, acc, isCoreAnon)
+      val base = (baseTerm, baseType)
       def aiToVal(ai: ArgInfo): ValDef = {
         val name = ai.name
         val argTy = typeName(ai)
@@ -339,71 +330,33 @@ class TacticImpl(val c: blackbox.Context) {
     }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, tRet: Tree, isDef: Boolean
                 , isCoreAnon: Option[Boolean]): c.Expr[Any] = {
-      val (codeName, display, displayLevel, revealInternalSteps) = getParams(declName)
-      val (generatorOpt, inputs) = getInputs(inArgs)
+      val (codeName, display, displayLevel, parsedArgs, revealInternalSteps) = getParams(declName)
+      val (generatorOpt, defArgs) = getInputs(inArgs)
+      val displayInputs = if (parsedArgs.nonEmpty) parsedArgs else defArgs
       val needsGenerator = generatorOpt.isDefined
       if (codeName.exists(c => c =='\"'))
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
       // AST for literal strings for the names
       val codeString = Literal(Constant(codeName))
-
-      val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, inputs, generatorOpt, tRet, isCoreAnon)
-
+      val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, defArgs, generatorOpt, tRet, isCoreAnon)
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
-      // @TODO: Add to info constructors
-      val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
-        case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
-      val (info, rhsType) = (inputs, positions) match {
-          // @TODO: BElleExpr or DependentTActic
-        case (Nil, _: NoPos) =>
-          if (isCoreAnon.isDefined)
-            (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr""")
-          else
-            // Forwarding case, best guess at tacticinfo
-            (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tRet)
-        case (Nil, _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic""")
-        case (Nil, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic""")
-        case (Nil, AnteSuccPos(l, r)) =>
-          (q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic""")
-        case (Nil, AntePos(None, r)) =>
-          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic""")
-        case (Nil, AntePos(Some(l), r)) =>
-          val r =
-            if(isCoreAnon.contains(true)) tq"""edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic"""
-            else tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic"""
-          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
-        case (Nil, SuccPos(None, r)) =>
-          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic""")
-        case (Nil, SuccPos(Some(l), r)) =>
-          val r =
-            if(isCoreAnon.contains(true)) tq"""edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic"""
-            else  tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic"""
-          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
-        case (Nil, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic""")
-        case (_, _: NoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr,  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
-        case (_, _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic""")
-        case (_, _: OnePos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic""")
-        case (_, _: AntePos) =>
-          val r = tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"
-          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
-        case (_, _: SuccPos) =>
-          val r = tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"
-          (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""", r)
-        case (_, _: TwoPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, needsGenerator = $needsGenerator)""", tq"""edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic""")
+      val info = (displayInputs, positions) match {
+        case (Nil, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case (_ :: _, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)},  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case (Nil, _: OnePos | _: AntePos | _: SuccPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case (_ :: _, _: OnePos | _: AntePos | _: SuccPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case (Nil, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
+        case (_ :: _, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
         case (x, y) => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: ($x, $y)")
       }
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
-        if(isDef) {
-          val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
-          if (inputs.isEmpty) {
-          //val tag: TypeTag[_] = tagify(annottees.head.actualType)
-//            c.typecheck()
+      if(isDef) {
+        val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
+        if (defArgs.isEmpty)
           c.Expr(q"""$mods def $declName: $baseType = $application""")
-        }
-        else {
-          c.Expr(q"""$mods def $declName (..$argSeq): $baseType = $application""")
-        }
+        else
+        c.Expr(q"""$mods def $declName (..$argSeq): $baseType = $application""")
       } else {
         val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
         c.Expr(q"""$mods val $declName: $baseType = $application""")
@@ -416,63 +369,41 @@ class TacticImpl(val c: blackbox.Context) {
         case _ => None
       }
     }
-    annottees map (_.tree) toList match {
-      // Annottee must be a val or def declaration of an tactic
-      case (defDecl: DefDef) :: Nil =>
-        defDecl match {
-          // def has parameters for positions and/or inputs, and may have a return type
-          case q"$mods def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}($theRhs)" =>
-            theRhs match {
-              case q"((..$params) => $rhs)" =>
-                val isCoreAnon = coreAnon(f.toString)
-                if (!isTactic(tRet))
-                  c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
-                val positions = getPositioning(params)
-                assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef = true, isCoreAnon)
-              //c.abort(c.enclosingPosition, "Expected anonymous function, got:" + t)
-              case rhs =>
-                val isCoreAnon = coreAnon(f.toString)
-                if (!isValTactic(tRet))
-                  c.abort(c.enclosingPosition, "Invalid annottee: Unexpected return type: " + tRet)
-                isCoreAnon match {
-                  case Some(_) => assemble(mods, codeName, inArgs, NoPos(), rhs, tRet, isDef = true, isCoreAnon)
-                  case None => assemble(mods, codeName, inArgs, NoPos(), q"${f: Ident}($theRhs)", tRet, isDef = true, isCoreAnon)
-                }
-            }
-          case q"$mods def ${codeName: TermName}(..$inArgs): $tRet = $rhs" =>
-            if (!isTactic(tRet))
-              c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
-            val positions = NoPos()
-            assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef = true, isCoreAnon = None)
-          case rhs => c.abort(c.enclosingPosition, "@Tactic expects def <name> (args): <T> = anon(...), got: " + rhs)
+    def pickRhs(f: Ident, rhs: Tree, params: Option[Seq[Tree]] = None): Tree = {
+      if (coreAnon(f.toString).isDefined) {
+        rhs
+      } else {
+        params match {
+          case Some(params) => q"${f: Ident}((..$params) => $rhs)"
+          case None => q"${f: Ident}($rhs)"
         }
-      case (valDecl: ValDef) :: Nil =>
-        valDecl match {
-          case q"$mods val ${declName: TermName}: $tRet = ${f: Ident}($theRhs)" =>
-             theRhs match {
-               case q"((..$params) => $rhs)" =>
-                 val isCoreAnon = coreAnon(f.toString)
-                 if (!isTactic(tRet))
-                  c.abort(c.enclosingPosition, s"Invalid annottee: Return type $tRet is not one of the supported return types")
-                val positions = getPositioning(params)
-                assemble(mods, declName, Nil, positions, rhs, tRet, isDef = false, isCoreAnon)
-               case rhs =>
-                 val isCoreAnon = coreAnon(f.toString)
-                 if (!isValTactic(tRet))
-                   c.abort(c.enclosingPosition, "Invalid annottee: Unexpected return type: " + tRet)
-                 isCoreAnon match {
-                   case Some(_) => assemble(mods, declName, Nil, NoPos(), rhs, tRet, isDef = false, isCoreAnon)
-                   case None => assemble(mods, declName, Nil, NoPos(), q"${f: Ident}($theRhs)", tRet, isDef = false, isCoreAnon)
-                 }
-               }
-          case q"$mods val ${codeName: TermName}: $tRet = $rhs" =>
-            if (!isTactic(tRet))
-              c.abort(c.enclosingPosition, "Invalid annottee: Expected val <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
-            val positions = NoPos()
-            assemble(mods, codeName, Nil, positions, rhs, tRet, isDef = true, isCoreAnon = None)
-          case rhs => c.abort(c.enclosingPosition, "@Tactic expects val <name> (args): <T> = f(...), got: " + rhs)
-        }
-      case t => c.abort(c.enclosingPosition, "Invalid annottee: Expected val or def declaration got: " + t.head + " of type: " + t.head.getClass())
+      }
     }
+    val (isDef, mods, codeName, inArgs, tRet, fOpt, params, rhs) =
+      annottees map (_.tree) toList match {
+        case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}(((..$params) => $rhs))" :: Nil =>
+          (true, mds, codeName, inArgs, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
+        case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = ${f: Ident}($rhs)" :: Nil =>
+          (true, mds, codeName, inArgs, tRet, Some(f), Nil, pickRhs(f, rhs))
+        case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = $rhs" :: Nil =>
+          (true, mds, codeName, inArgs, tRet, None, Nil, rhs)
+        case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}((..$params) => $rhs)" :: Nil =>
+          (false, mds, codeName, Nil, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
+        case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}($rhs)" :: Nil=>
+          (false, mds, codeName, Nil, tRet, Some(f), Nil, pickRhs(f, rhs))
+        case q"$mds val ${codeName: TermName}: $tRet = $rhs" :: Nil =>
+          (false, mds, codeName, Nil, tRet, None, Nil, rhs)
+      }
+    if (!isTactic(tRet))
+      c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
+    val isCoreAnon = fOpt match { case Some(f) => coreAnon(f.toString) case None => None }
+    val positions = getPositioning(params)
+    val res = assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
+    // Print debug info when applied to any tactic in this set
+    val debugTactics: Set[String] = Set()
+    if(debugTactics.contains(codeName.decodedName.toString)) {
+      println(s"DEBUG (${codeName}): \n$res\n")
+    }
+    res
   }
 }

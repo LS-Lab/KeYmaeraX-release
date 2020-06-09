@@ -90,6 +90,11 @@ object AnnotationCommon {
     import c.universe._
     q"""List(..${ss.map((s: String) => literal(s))})"""
   }
+  def convSymbol(s: String)(implicit c: blackbox.Context): c.universe.Tree = {
+    import c.universe._
+    val symbol = Symbol(s)
+    q"$symbol"
+  }
   // Abstract syntax trees for all the display info data structures
   def convAIs(ais: List[ArgInfo])(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
