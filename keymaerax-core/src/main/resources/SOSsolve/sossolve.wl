@@ -137,6 +137,7 @@ RoundResult[res_,monbasis_,gtrm_,gb_,vars_,skipround_,monOrder_]:= Module[{
 	(* Heuristic: just clip all vals that are < 0 to 0
 	vals = Map[Clip[#,{0,Infinity}]&,vals]; *)
 	If[Not[AllTrue[vals, # >= 0&]],
+		Print["failure: ",vals];
 		If[skipround,Return[{}], Continue[]]
 	];
 
@@ -330,10 +331,6 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 	prem = mons;	
 	Print["No. input monomials: ",Length[prem]];
 	
-	(* Filter linearly dependent monomials *)
-	prem=ReduceLin[prem, gb, vars, monOrder];
-	Print["After linear filter: ",Length[prem]];
-	
 	(* No monomials left *)
 	If[Length[prem]===0, Return[{}]];
 	
@@ -461,6 +458,59 @@ FilterPolytope[mons_,vars_,polytope_,monOrder_]:=Module[{mm},
 	Return[mm];
 ]
 
+SolveNorm[f_,test_]:=Block[{eqs,norm,c},
+	eqs=Map[#-f[[1]]&,Drop[f,1]];
+	norm=NullSpace[eqs][[1]];
+	c=norm.f[[1]];
+	{norm,c,Sign[norm.test-c]}
+]
+(* Turns a convex hull (facets as produced by NDConvexHull
+	into its constraint representation. The convex hull must be full dimensional
+*)
+ConstraintRep[msco_]:=Block[{pts,facets,chullpts,mid,facetsraw,hyps,dim},
+	Print["No. input points: ",Length[msco]];
+	dim=Length[msco[[1]]];
+	Print["dimension ",dim];
+	If[dim <= 2, Print["Dimension too low."];Return[{}]];
+	{pts,facets}=NDConvexHull`CHNQuickHull[msco];
+	Print["Converting hull with ",Length[facets]," facets in dimension ",dim
+		," to constraint representation."];
+	chullpts=msco[[pts]];
+	mid=Mean[chullpts];
+	facetsraw=Map[msco[[#]]&,facets];
+	hyps=Map[SolveNorm[#,mid]&,facetsraw]//DeleteDuplicates;
+	hyps=Select[hyps,#[[3]]!=0&];
+	If[Length[hyps]===0,
+		Block[{},
+		Print["WARNING: convex hull may not be full dimensional."];
+		(* Arbitrarily extend points in all directions *)
+		ff=Function[{a},Map[#+a&,IdentityMatrix[dim]]];
+		msco2=Flatten[Map[ff,msco],1]//DeleteDuplicates;
+		Return[ConstraintRep[msco2]]]
+	];
+	Return[hyps];
+];
+TestConstraint[pt_,constraints_]:=Block[{},
+	AllTrue[Map[#[[3]]*(pt.#[[1]]-#[[2]])>=0&,constraints],TrueQ]
+];
+(* Test a point against the constraint representation *)
+FilterPolytopeConstraint[mons_,vars_,constraints_,monOrder_]:=Module[{
+	mm,coeffs,tests,pos},
+	(* Print[Map[2*CoefficientRules[#,vars,monOrder][[1]][[1]]&,mons]]; *)
+	coeffs=Map[2*CoefficientRules[#,vars,monOrder][[1]][[1]]&,mons];
+	tests=Map[TestConstraint[#,constraints]&,coeffs];
+	pos=Position[tests,True]//Flatten;
+	Return[mons[[pos]]]
+];
+ShiftHyp[{norm_,c_,sgn_},dirs_]:=Block[{shifts,m},
+	shifts=Map[sgn*(norm.#)&,dirs];
+	m=Min[Join[{0},shifts]];
+	{norm,c+sgn*m,sgn}
+];
+ExtendConstraints[constraints_,dirs_]:=Block[{},
+	Map[ShiftHyp[#,dirs]&,constraints]
+];
+
 
 (* Input:
 polys {p_1,p_2,...} - polynomials assumed to be = 0
@@ -483,7 +533,8 @@ FindWitness[polysPre_List, ineqs_List,
 	done, prevdeg, rm,
 	res,monbasis,constraints,cs, rres,
 	soscoeff, sos, seq, pos,
-	trunclim, primaltrunclim
+	trunclim, primaltrunclim,
+	pts,facets,hullconstraints
 	},
 	
 	(* The return is a 5-element list:
@@ -503,7 +554,7 @@ FindWitness[polysPre_List, ineqs_List,
 
 	(* Some of these can be made parameters, but these defaults should be more or less representative *)
 	maxcofdeg=15; (* Max degree of cofactors *)
-	hullbound=500; (* stops using convex hull if (number of points * dimension) is above this number *)	
+	(* hullbound=500; stops using convex hull if (number of points * dimension) is above this number *)	
 	
 	trunclim=15; (* Controls rounding truncation when attempting to round solution 10^-0, 10^-1, ..., 10^-trunclim*) 
 	primaltrunclim=15; (* Same as above but used for the final primal truncation *)
@@ -514,7 +565,7 @@ FindWitness[polysPre_List, ineqs_List,
 		{polysPre,varsPre,{}}
 	];	(* NOTE: vars is kept in same order as input (deletions in place) *)	
 	
-	(* Eliminate some monomials *)
+	(* Eliminate some monomialsc *)
 	{polys,vars,replacement}=If[ineqs==={},
 		Pvars[polys,vars,monOrder],
 		{polys,vars,{}}
@@ -548,22 +599,19 @@ FindWitness[polysPre_List, ineqs_List,
 	(* ivars is the same as vars, although the elimination might have got rid of a bunch of variables *)
 	ivars=Select[vars,MemberQ[vstemp,#]&];
 	gcoeff=CoefficientRules[redg,ivars,monOrder];
-
+	
+	Print["Reduced variable set: ",ivars];
+	
 	(* Computing the "approximate" convex hull from the Groebner basis *)
 	ms = Map[CoefficientRules[#,ivars,monOrder]&, gb];
 	msco = Flatten[Map[#[[1]]&,ms,{2}],1];
-	
-	(* Various options *)
-	hull=If[Length[ivars] <= 2, ConvexHullCorners, #[[(NDConvexHull`CHNQuickHull[#][[1]])]]&];
-	If[Length[msco]>hullbound,
-		Print["Too many points and dimensions, switching to bounding box. Num points: ",Length[msco]," Num vars: ",Length[ivars]];
-		polytope=Join[{ConstantArray[0,Length[ivars]]},DiagonalMatrix[Max /@ Transpose[msco]]],
-		polytope = hull[msco];
+	(* hullconstraints is a list of constraints in higher dimension
+		otherwise it's just a list of points *)
+	If[Length[ivars]>2,
+		hullconstraints = ConstraintRep[msco],
+		hullconstraints = ConvexHullCorners[msco]
 	];
-	
-	(* vv, fvv are used to extend the polytope by increasing degree by 1 TODO: check correctness *)
-	vv = Map[CoefficientRules[#,ivars,monOrder][[1]][[1]]&, Join[{1},ivars]];
-	fvv=Function[{a},Map[#+a&,vv]];
+	vv = IdentityMatrix[Length[ivars]];
 	
 	(* Some book-keeping:
 		done tracks the monomial lists that have already been done
@@ -573,7 +621,8 @@ FindWitness[polysPre_List, ineqs_List,
 
 	(* Outer loop: loop over the cofactor degrees *)
 	For[polydeg=0, polydeg <= maxcofdeg, polydeg++,
-	Print["Using polytope: ",polytope, " from cofactor degree: ",polydeg];
+	Print["Using polytope from cofactor degree: ",polydeg];
+	Print[hullconstraints];
 
 		(* Inner loop: loop over the monomial degrees *)
 		For[deg=1, deg <= degBound, deg++,	
@@ -581,8 +630,21 @@ FindWitness[polysPre_List, ineqs_List,
 		
 		(* All monomials up to the degree bound and filtered under the Newton polytope *)
 		prem = allMonomials[ivars,deg];
-		prem = FilterPolytope[prem,ivars,polytope,monOrder]; (* TODO: speed this up!! *)
+		
+		Print["Initial length: ",Length[prem]];
+		
+		{tt,prem} = Timing[
+			If[Length[ivars]>2,
+			FilterPolytopeConstraint[prem,ivars,hullconstraints,monOrder],
+			FilterPolytope[prem,ivars,hullconstraints,monOrder]]];
+		Print["After Newton polytope: ",Length[prem], " Time: ",tt];
 
+		{tt,prem} = Timing[Select[prem, PolynomialReduce[#,gb,ivars,MonomialOrder->monOrder][[2]]===#&]];
+		Print["Standard monomials (not reduced): ",Length[prem]," Time: ",tt];
+
+				(* Filter linearly dependent monomials -- these essentially do not filter anything more *)
+		(* {tt,prem}=Timing[ReduceLin[prem, gb, ivars, monOrder]];
+		Print["After linear filter: ",Length[prem], " Time: ",tt]; *)
 		If[MemberQ[done,prem] || Length[prem]===0,
 			Print["Skipping (prev max deg: ",prevdeg,")"];
 			If[deg <= prevdeg, Continue[], Break[]]];
@@ -661,6 +723,7 @@ FindWitness[polysPre_List, ineqs_List,
 		(* Return successfully afer cleaning it up somewhat *)
 		{soscoeff,sos,seq} = rres;
 		pos=Position[soscoeff, x_ /; ! TrueQ[x == 0], {1}, Heads -> False]//Flatten;
+		Print["seq: ",seq];
 		Return[{
 			gtrm,
 			soscoeff[[pos]],
@@ -671,12 +734,12 @@ FindWitness[polysPre_List, ineqs_List,
 		];
 
 	(* Extend the convex hull *)
-	msco=Flatten[Map[fvv[#]&,polytope],1]//DeleteDuplicates;
-	If[Length[msco]>hullbound,
-		Print["Too many points and dimensions, switching to bounding box. Num points: ",Length[msco]," Num vars: ",Length[ivars]];
-		polytope=Join[{ConstantArray[0,Length[ivars]]},DiagonalMatrix[Max /@ Transpose[msco]]],
-		polytope = hull[msco];
-	]
+	If[Length[ivars]>2,
+		hullconstraints=ExtendConstraints[hullconstraints,vv],
+		fvv=Function[{a},Map[#+a&,Join[{{0,0}},vv]]];
+		msco=Flatten[Map[fvv[#]&,hullconstraints],1]//DeleteDuplicates;
+		hullconstraints = ConvexHullCorners[msco]
+	];
 	];
 	(* Exit outer loop *)
 	Return[failure];
