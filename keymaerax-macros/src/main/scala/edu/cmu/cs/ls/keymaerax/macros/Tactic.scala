@@ -410,12 +410,22 @@ class TacticImpl(val c: blackbox.Context) {
           (true, mds, codeName, inArgs, tRet, Some(f), Nil, pickRhs(f, rhs))
         case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = $rhs" :: Nil =>
           (true, mds, codeName, inArgs, tRet, None, Nil, rhs)
+        case q"$mds def ${codeName: TermName}: $tRet = ${f: Ident}(((..$params) => $rhs))" :: Nil =>
+          (true, mds, codeName, Nil, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
+        case q"$mds def ${codeName: TermName}: $tRet = ${f: Ident}($rhs)" :: Nil =>
+          (true, mds, codeName, Nil, tRet, Some(f), Nil, pickRhs(f, rhs))
+        case q"$mds def ${codeName: TermName}: $tRet = $rhs" :: Nil =>
+          (true, mds, codeName, Nil, tRet, None, Nil, rhs)
         case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}((..$params) => $rhs)" :: Nil =>
           (false, mds, codeName, Nil, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
         case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}($rhs)" :: Nil=>
           (false, mds, codeName, Nil, tRet, Some(f), Nil, pickRhs(f, rhs))
         case q"$mds val ${codeName: TermName}: $tRet = $rhs" :: Nil =>
           (false, mds, codeName, Nil, tRet, None, Nil, rhs)
+        case _ :: _ :: _ =>
+          c.abort(c.enclosingPosition, "Expected one tactic definition, got multiple: " + annottees.map(show(_)))
+        case _ =>
+          c.abort(c.enclosingPosition, "Expected tactic definition, got: " + annottees.map(show(_)))
       }
     if (!isTactic(tRet))
       c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
