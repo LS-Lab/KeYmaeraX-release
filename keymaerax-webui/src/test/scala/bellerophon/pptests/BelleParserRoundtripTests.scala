@@ -48,7 +48,7 @@ class BelleParserRoundtripTests extends TacticTestBase {
     roundTrip(Idioms.nil | Idioms.nil, "nil | nil")
     roundTrip(OnAll(Idioms.nil), "doall(nil)")
     roundTrip(Idioms.nil*2, "nil*2")
-    roundTrip(PartialTactic(Idioms.nil), "nil partial")
+    roundTrip(Idioms.nil, "nil")
   }
 
   it should "input tactic transform" in {
