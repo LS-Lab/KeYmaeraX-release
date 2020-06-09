@@ -331,6 +331,24 @@ class TacticImpl(val c: blackbox.Context) {
       val argTySeq: Seq[Tree] = argSeq.map(_.tpt)
       (curried, argSeq, argTySeq, base)
     }
+    def sdContains(sd: SequentDisplay, s: String): Boolean = {
+      sd.ante.exists(n => n.contains(s)) || sd.succ.exists(n => n.contains(s))
+    }
+    // Error check: Web UI uses axiom/rule display to let user input arguments of tactic. This requires every argument
+    // name to appear in the displayinfo.
+    def missingInput(displayLevel: String, args: List[ArgInfo], display: DisplayInfo): Option[ArgInfo] = {
+      // Input doesn't need to appear in displayinfo if UI can't show the tactic anyway
+      if (displayLevel == "internal") None
+      else {
+        args.find((ai: ArgInfo) => {
+          display match {
+            case (_: AxiomDisplayInfo) | (_: SimpleDisplayInfo) => true
+            case InputAxiomDisplayInfo(names, displayFormula, _input) => !displayFormula.contains(ai.name)
+            case RuleDisplayInfo(sd, conc, prem) => !(sdContains(conc, ai.name) || prem.exists(sd => sdContains(sd, ai.name)))
+          }
+        })
+      }
+    }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, tRet: Tree, isDef: Boolean
                 , isCoreAnon: Option[Boolean]): c.Expr[Any] = {
       val (codeName, display, displayLevel, parsedArgs, revealInternalSteps) = getParams(declName)
@@ -352,6 +370,8 @@ class TacticImpl(val c: blackbox.Context) {
         case (_ :: _, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
         case (x, y) => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: ($x, $y)")
       }
+      missingInput(displayLevel, displayInputs, display).
+        map(ai => c.abort(c.enclosingPosition, s"Tactic $declName must mention every input in DisplayInfo, but argument $ai is not mentioned in DisplayInfo $display"))
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
       if(isDef) {
