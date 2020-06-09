@@ -24,8 +24,8 @@ import org.scalatest.matchers.{MatchResult, Matcher}
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
   private val parser =
-    KeYmaeraXArchiveParser
-//  DLArchiveParser
+//    KeYmaeraXArchiveParser
+  DLArchiveParser
 
   private def parse(input: String): List[KeYmaeraXArchiveParser.ParsedArchiveEntry] =
     parser.parse(input)
@@ -53,8 +53,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.problemContent shouldBe input
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -73,8 +73,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -93,8 +93,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -116,8 +116,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, None, UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("f", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
       )))
     entry.model shouldBe "x>=0 -> f()>0".asFormula
     entry.expandedModel shouldBe "x>=0 -> f()>0".asFormula
@@ -140,8 +140,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, Some("1".asTerm), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("f", None) -> (Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
       )))
     entry.model shouldBe "x>=0 -> f()>0".asFormula
     entry.expandedModel shouldBe "x>=0 -> 1>0".asFormula
@@ -164,8 +164,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("p", None) -> (Some(Real), Bool, None, UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("p", None) -> (Some(Real), Bool, Some((("x", None), Real) :: Nil), None, UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "p(x) & x>0 -> [x:=x+1;]p(x)".asFormula
     entry.expandedModel shouldBe "p(x) & x>0 -> [x:=x+1;]p(x)".asFormula
@@ -188,8 +188,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("p", None) -> (Some(Unit), Bool, Some("2>1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("p", None) -> (Some(Unit), Bool, Some(Nil), Some("2>1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "p() & x>0 -> [x:=x+1;]p()".asFormula
     entry.expandedModel shouldBe "2>1 & x>0 -> [x:=x+1;]2>1".asFormula
@@ -212,9 +212,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("p", None) -> (Some(Unit), Bool, Some("2>1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("p", None) -> (Some(Unit), Bool, Some(Nil), Some("2>1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "p() & x>0 -> [x:=x+y;]p()".asFormula
     entry.expandedModel shouldBe "2>1 & x>0 -> [x:=x+y;]2>1".asFormula
@@ -237,8 +237,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("p", None) -> (Some(Real), Bool, Some(".>1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("p", None) -> (Some(Real), Bool, Some((("x", None), Real) :: Nil), Some(".>1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "p(x) & x>0 -> [x:=x+1;]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & x>0 -> [x:=x+1;]x>1".asFormula
@@ -261,8 +261,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, None, UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, None, UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [a;]x>1".asFormula
@@ -274,8 +274,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   it should "parse an isolated simple definition assignment" in {
     DLParser.programParser("x:=x+1;") shouldBe Assign(Variable("x"),Plus(Variable("x"),Number(BigDecimal(1))))
     DLParser.programParser("{ x:=x+1; }") shouldBe (DLParser.programParser("x:=x+1;"))
-    DLParser.parseValue( "HP a ::= { x:=x+1; };", DLArchiveParser.progDef(_)) shouldBe (("a", None), (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))
-    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", DLArchiveParser.definitions(_)) shouldBe (Declaration(Map(("a", None) -> (None, Trafo, Some("x:=x+1;".asProgram), UnknownLocation))))
+    DLParser.parseValue( "HP a ::= { x:=x+1; };", DLArchiveParser.progDef(_)) shouldBe (("a", None), (None, Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))
+    DLParser.parseValue( "Definitions HP a ::= { x:=x+1; }; End.", DLArchiveParser.definitions(_)) shouldBe (Declaration(Map(("a", None) -> (None, Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation))))
     val input =
       """
         |ArchiveEntry "Entry 1"
@@ -289,8 +289,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, Some("x:=x+1;".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
@@ -313,8 +313,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, Some("x:=x+1;".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
@@ -337,8 +337,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, Some("?x>1;".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, Some("?x>1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [?x>1;]x>1".asFormula
@@ -361,8 +361,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, Some("{x'=5}".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, Some("{x'=5}".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [{x'=5}]x>1".asFormula
@@ -385,8 +385,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, Some("x:=x+1;?x>1;".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;?x>1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;?x>1;]x>1".asFormula
@@ -409,8 +409,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, Some("?x>1;x:=x+1;".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, Some("?x>1;x:=x+1;".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [?x>1;x:=x+1;]x>1".asFormula
@@ -433,12 +433,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, Some("1".asTerm), UnknownLocation),
-        ("p", None) -> (Some(Real), Bool, Some(".>1".asFormula), UnknownLocation),
-        ("q", None) -> (Some(Tuple(Real, Tuple(Real, Real))), Bool, Some("._0+._1>._2".asFormula), UnknownLocation),
-        ("a", None) -> (Some(Unit), Trafo, Some("?p(x);".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("f", None) -> (Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
+        ("p", None) -> (Some(Real), Bool, Some((("x", None), Real) :: Nil), Some(".>1".asFormula), UnknownLocation),
+        ("q", None) -> (Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((("x", None), Real) :: (("y", None), Real) :: (("z", None), Real) :: Nil), Some("._0+._1>._2".asFormula), UnknownLocation),
+        ("a", None) -> (Some(Unit), Trafo, None, Some("?p(x);".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
@@ -477,8 +477,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, Some("1".asTerm), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("f", None) -> (Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
       )))
     entry.model shouldBe "f()>0 & x>=0 -> [x:=x+1;]f()>0".asFormula
     entry.expandedModel shouldBe "1>0 & x>=0 -> [x:=x+1;]1>0".asFormula
@@ -501,12 +501,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, Some("1".asTerm), UnknownLocation),
-        ("p", None) -> (Some(Real), Bool, Some(".>1".asFormula), UnknownLocation),
-        ("q", None) -> (Some(Tuple(Real, Tuple(Real, Real))), Bool, Some("._0+._1>._2".asFormula), UnknownLocation),
-        ("a", None) -> (Some(Unit), Trafo, Some("?p(x);".asProgram), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("f", None) -> (Some(Unit), Real, Some(Nil), Some("1".asTerm), UnknownLocation),
+        ("p", None) -> (Some(Real), Bool, Some((("x", None), Real) :: Nil), Some(".>1".asFormula), UnknownLocation),
+        ("q", None) -> (Some(Tuple(Real, Tuple(Real, Real))), Bool, Some((("x", None), Real) :: (("y", None), Real) :: (("z", None), Real) :: Nil), Some("._0+._1>._2".asFormula), UnknownLocation),
+        ("a", None) -> (Some(Unit), Trafo, None, Some("?p(x);".asProgram), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
@@ -529,9 +529,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("a", None) -> (Some(Unit), Trafo, Some("{ x'=x, t'=1 & x<=2 }".asProgram), UnknownLocation),
-        ("t", None) -> (None, Real, None, UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("a", None) -> (Some(Unit), Trafo, None, Some("{ x'=x, t'=1 & x<=2 }".asProgram), UnknownLocation),
+        ("t", None) -> (None, Real, None, None, UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "[a;]x<=2".asFormula
     entry.expandedModel shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
@@ -552,11 +552,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Real), Real, None, UnknownLocation),
-        ("g", None) -> (Some(Tuple(Real, Real)), Real, None, UnknownLocation),
-        ("h", None) -> (Some(Real), Real, Some(".+2".asTerm), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("f", None) -> (Some(Real), Real, Some((("\\cdot", Some(0)), Real) :: Nil), None, UnknownLocation),
+        ("g", None) -> (Some(Tuple(Real, Real)), Real, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), None, UnknownLocation),
+        ("h", None) -> (Some(Real), Real, Some((("\\cdot", Some(0)), Real) :: Nil), Some(".+2".asTerm), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "f(x)>g(x,y) & h(x)>5".asFormula
     entry.expandedModel shouldBe "f(x)>g(x,y) & x+2>5".asFormula
@@ -576,8 +576,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, Some("5".asTerm), UnknownLocation),
-        ("p", None) -> (Some(Real), Bool, Some(".>0".asFormula), UnknownLocation)
+        ("f", None) -> (Some(Unit), Real, Some(Nil), Some("5".asTerm), UnknownLocation),
+        ("p", None) -> (Some(Real), Bool, Some((("x", None), Real) :: Nil), Some(".>0".asFormula), UnknownLocation)
       )))
     entry.model shouldBe "p(f())".asFormula
     entry.expandedModel shouldBe "5>0".asFormula
@@ -585,7 +585,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
   }
-  
+
   it should "parse comma-separated variable declarations" in {
     val input =
       """ArchiveEntry "Entry 1"
@@ -598,8 +598,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.problemContent shouldBe input
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -615,7 +615,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     ).loneElement.defs should beDecl(
       Declaration(Map(
-        ("Real", None) -> (None, Real, None, UnknownLocation)
+        ("Real", None) -> (None, Real, None, None, UnknownLocation)
       ))
     )
 
@@ -626,7 +626,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     ).loneElement.defs  should beDecl(
       Declaration(Map(
-        ("R", None) -> (None, Real, None, UnknownLocation)
+        ("R", None) -> (None, Real, None, None, UnknownLocation)
       ))
     )
 
@@ -637,7 +637,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     ).loneElement.defs  should beDecl(
       Declaration(Map(
-        ("Bool", None) -> (None, Real, None, UnknownLocation)
+        ("Bool", None) -> (None, Real, None, None, UnknownLocation)
       ))
     )
 
@@ -648,7 +648,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |End.""".stripMargin
     ).loneElement.defs  should beDecl(
       Declaration(Map(
-        ("HP", None) -> (None, Real, None, UnknownLocation)
+        ("HP", None) -> (None, Real, None, None, UnknownLocation)
       ))
     )
   }
@@ -664,7 +664,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, None, UnknownLocation)
+        ("f", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation)
       )))
     entry.model shouldBe "f()>0".asFormula
     entry.tactics shouldBe empty
@@ -683,8 +683,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("f", None) -> (Some(Unit), Real, None, UnknownLocation),
-        ("g", None) -> (Some(Unit), Real, None, UnknownLocation)
+        ("f", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("g", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation)
       )))
     entry.model shouldBe "f()>g()".asFormula
     entry.tactics shouldBe empty
@@ -703,8 +703,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("p", None) -> (Some(Unit), Bool, None, UnknownLocation),
-        ("q", None) -> (Some(Unit), Bool, None, UnknownLocation)
+        ("p", None) -> (Some(Unit), Bool, Some(Nil), None, UnknownLocation),
+        ("q", None) -> (Some(Unit), Bool, Some(Nil), None, UnknownLocation)
       )))
     entry.model shouldBe "p() & q()".asFormula
     entry.tactics shouldBe empty
@@ -738,7 +738,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "[{x:=x;}*]x=x".asFormula
     entry.tactics shouldBe empty
@@ -772,8 +772,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.problemContent shouldBe input.trim()
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -788,8 +788,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -869,7 +869,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic "Proof 1" implyR(1) & QE End.
+        | Tactic "Proof 1" implyR(1) ; QE End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -877,8 +877,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe ("Proof 1", "implyR(1) & QE", implyR(1) & QE) :: Nil
@@ -896,7 +896,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic implyR(1) & QE End.
+        | Tactic implyR(1) ; QE End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -904,8 +904,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe ("<undefined>", "implyR(1) & QE", implyR(1) & QE) :: Nil
@@ -924,7 +924,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |ArchiveEntry "Entry 1"
         | ProgramVariables Real x; Real y; End.
         | Problem x>y -> x>=y End.
-        | Tactic "Empty" /* a comment */ nil partial End.
+        | Tactic "Empty" /* a comment */ nil End.
         |End.
       """.stripMargin
     val entry = parse(input).loneElement
@@ -932,11 +932,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Empty", "/* a comment */ nil partial", PartialTactic(nil)) :: Nil
+    entry.tactics shouldBe ("Empty", "/* a comment */ nil", nil) :: Nil
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
   }
@@ -955,8 +955,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe ("Pending", "implyR(1) ; pending({`QE`})", implyR(1) & DebuggingTactics.pending("QE")) :: Nil
@@ -978,8 +978,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe ("Pending", "implyR(1) ; pending({`QE({`Mathematica`}) | QE({`Z3`})`})", implyR(1) & DebuggingTactics.pending("QE({`Mathematica`}) | QE({`Z3`})")) :: Nil
@@ -1001,8 +1001,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> [{x'=1}]x>=y".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"x>=old(x)\", 1)", implyR(1) & dC("x>=old(x)".asFormula)(1)) :: Nil
@@ -1025,8 +1025,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (Some(Unit), Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation)
       )))
     entry.model shouldBe "x>y() -> [{x'=1}]x>=y()".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
@@ -1049,8 +1049,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (Some(Unit), Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation)
       )))
     entry.model shouldBe "x>y() -> [ctrl;]x>=y()".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
@@ -1072,8 +1072,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> [{x'=1}]x>=y".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; pending(\"dC(\\\"x>=old(x)\\\", 1)\")", implyR(1) & DebuggingTactics.pending("dC(\\\"x>=old(x)\\\", 1)")) :: Nil
@@ -1096,8 +1096,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe ("Proof 1", "implyR(1) & QE", implyR(1) & QE) :: ("Proof 2", "implyR('R)", implyR('R)) :: Nil
@@ -1131,8 +1131,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "theorem"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1147,8 +1147,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (Some(Unit), Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "x()>=y -> x()>=y".asFormula
     entry2.tactics shouldBe ("Prop Proof", "prop", prop) :: Nil
@@ -1193,8 +1193,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "theorem"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1209,8 +1209,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "lemma"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (Some(Unit), Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "x()>=y -> x()>=y".asFormula
     entry2.tactics shouldBe ("Prop Proof", "prop", prop) :: Nil
@@ -1227,7 +1227,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry3.kind shouldBe "theorem"
     entry3.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry3.model shouldBe "x>3 -> x>=3".asFormula
     entry3.tactics shouldBe empty
@@ -1242,7 +1242,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry4.kind shouldBe "theorem"
     entry4.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry4.model shouldBe "x>4 -> x>=4".asFormula
     entry4.tactics shouldBe empty
@@ -1285,8 +1285,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "theorem"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1301,8 +1301,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "lemma"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (Some(Unit), Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "x()>=y -> x()>=y".asFormula
     entry2.tactics shouldBe ("Prop Proof of Lemma 2", "prop", prop) :: Nil
@@ -1319,7 +1319,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry3.kind shouldBe "theorem"
     entry3.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry3.model shouldBe "x>3 -> x>=3".asFormula
     entry3.tactics shouldBe empty
@@ -1334,7 +1334,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry4.kind shouldBe "theorem"
     entry4.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry4.model shouldBe "x>4 -> x>=4".asFormula
     entry4.tactics shouldBe empty
@@ -1358,8 +1358,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "lemma"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -1380,8 +1380,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
     entry.tactics shouldBe empty
@@ -1409,8 +1409,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "lemma"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry1.model shouldBe "x>y -> x>=y".asFormula
     entry1.tactics shouldBe empty
@@ -1426,8 +1426,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})", TactixLibrary.useLemma("Entry 1", None))::Nil
@@ -1454,8 +1454,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "lemma"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> y<x".asFormula
     entry.tactics shouldBe empty
@@ -1488,8 +1488,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "lemma"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> y<x".asFormula
     entry.tactics shouldBe empty
@@ -1517,7 +1517,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
     entry.tactics shouldBe ("Proof", "master", TactixLibrary.master()) :: Nil
@@ -1540,7 +1540,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "theorem"
     entry.defs should beDecl(
       Declaration(Map(
-        ("x", None) -> (None, Real, None, UnknownLocation)
+        ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>0".asFormula
     entry.tactics shouldBe empty
@@ -1608,9 +1608,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "lemma"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0>._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0>._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
     entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
@@ -1638,11 +1638,13 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 > ._1".asFormula), UnknownLocation),
-        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
+    val foo = entry2.defs.substs
+    val bar = entry2.defs.substs
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
     entry2.tactics shouldBe ("Proof Entry 2", "useLemma({`Entry 1`})",
@@ -1685,9 +1687,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "lemma"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0>._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0>._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
     entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
@@ -1715,10 +1717,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 > ._1".asFormula), UnknownLocation),
-        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
@@ -1763,9 +1765,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry1.kind shouldBe "lemma"
     entry1.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0>._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0>._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry1.model shouldBe "gt(x,y) -> x>=y".asFormula
     entry1.expandedModel shouldBe "x>y -> x>=y".asFormula
@@ -1793,10 +1795,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry2.kind shouldBe "theorem"
     entry2.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 > ._1".asFormula), UnknownLocation),
-        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 > ._1".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry2.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry2.expandedModel shouldBe "x>y -> x>=y".asFormula
@@ -1866,10 +1868,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "lemma"
     entry.defs should beDecl(
       Declaration(Map(
-        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some("\\exists t (t=1 & ._0*t > ._1)".asFormula), UnknownLocation),
-        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("gt", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("\\exists t (t=1 & ._0*t > ._1)".asFormula), UnknownLocation),
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("\\cdot", Some(0)), Real) :: (("\\cdot", Some(1)), Real) :: Nil), Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "gt(x,y) -> geq(x,y)".asFormula
     entry.expandedModel shouldBe "\\exists t (t=1 & x*t>y) -> x>=y".asFormula
@@ -1898,9 +1900,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "exercise"
     entry.defs should beDecl(
       Declaration(Map(
-        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("a", None), Real) :: (("b", None), Real) :: Nil), Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "false".asFormula
     entry.tactics shouldBe empty
@@ -1925,9 +1927,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.kind shouldBe "exercise"
     entry.defs should beDecl(
       Declaration(Map(
-        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, None, UnknownLocation),
-        ("x", None) -> (None, Real, None, UnknownLocation),
-        ("y", None) -> (None, Real, None, UnknownLocation)
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some((("a", None), Real) :: (("b", None), Real) :: Nil), None, UnknownLocation),
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "false".asFormula
     entry.tactics shouldBe empty
@@ -2134,7 +2136,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Expected: .
                             |Hint: ParseState( :+ ArchiveEntry :+ DOUBLE_QUOTES_STRING :+ MetaInfo(Map()) :+ Definitions(List(),List())  <|>  PROBLEM_BLOCK$, TRUE$, END_BLOCK$, TACTIC_BLOCK$, DOUBLE_QUOTES_STRING, ID("closeTrue"), END_BLOCK$, PERIOD$, EOF$)""".stripMargin
   }
-  
+
   it should "report parse errors in function definitions" in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
@@ -2156,7 +2158,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    > at 2:34
                             |Expected: <BeginningOfExpression>""".stripMargin
   }
-  
+
   it should "report parse errors in program definitions" in {
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
@@ -2194,8 +2196,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    } at 2:37
                             |Expected: $$$T""".stripMargin
   }
-  
-  
+
+
 
   it should "report misplaced function, predicate, or program definitions" in {
     the [ParseException] thrownBy parse(
@@ -2304,7 +2306,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    5+7 at 2:27 to 2:29
                             |Expected: Formula""".stripMargin
   }
-  
+
   it should "report substitution errors" in {
     val entries = parse(
       """ArchiveEntry "Entry 1"
@@ -2329,7 +2331,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |unmatched: LPAREN$ at 2:27--2:29 to 2:32
                             |Found:    TRUE$ at 2:27 to 2:32
                             |Expected: )""".stripMargin
-    
+
     the [ParseException] thrownBy parse(
       """ArchiveEntry "Entry 1"
         | Definitions Bool p() <-> ( (true) | false; End.
@@ -2403,12 +2405,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |Found:    <unknown> at 4:5 to 4:10
                             |Expected: <unknown>""".stripMargin
   }
-  
+
   it should "report sort identifier mismatches" in {
     the [ParseException] thrownBy parse(
-      """ProgramVariables 
-        |  Real x; 
-        |  Rea y; 
+      """ProgramVariables
+        |  Real x;
+        |  Rea y;
         |End.
         |Problem x>y -> x>=y End.""".stripMargin
     ) should have message """3:3 Unexpected program variable definition
@@ -2417,9 +2419,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
                             |      or: Real""".stripMargin
 
     the [ParseException] thrownBy parse(
-      """ProgramVariables 
-        |  Real x; 
-        |  Bool y; 
+      """ProgramVariables
+        |  Real x;
+        |  Bool y;
         |End.
         |Problem x>y -> x>=y End.""".stripMargin
     ) should have message """3:3 Predicate and program definitions only allowed in Definitions block

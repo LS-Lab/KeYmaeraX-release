@@ -102,7 +102,7 @@ class DeclsTests extends FlatSpec with Matchers {
       """.stripMargin
 
     val parsed = KeYmaeraXArchiveParser(input).loneElement
-    parsed.defs.decls.loneElement._2 match { case (Some(domain), codomain, Some(interpretation), _) =>
+    parsed.defs.decls.loneElement._2 match { case (Some(domain), codomain, _, Some(interpretation), _) =>
       domain shouldBe Tuple(Real, Tuple(Real, Real))
       codomain shouldBe Bool
       interpretation shouldBe "(._0) + (._1) <= (._2)".asFormula

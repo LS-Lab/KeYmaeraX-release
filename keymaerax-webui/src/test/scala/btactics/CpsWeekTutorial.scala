@@ -192,7 +192,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
     def di(a: String) = {
       val accCond = "2*b()*abs(mx-x)>v^2+(A()+b())*(A()*ep()^2+2*ep()*v)|2*b()*abs(my-y)>v^2+(A()+b())*(A()*ep()^2+2*ep()*v)".asFormula
-      diffInvariant("dx^2+dy^2=1".asFormula, "t>=0".asFormula, s"v=old(v)+$a*t".asFormula)('R) &
+      diffInvariant("dx^2+dy^2=1".asFormula :: "t>=0".asFormula :: s"v=old(v)+$a*t".asFormula :: Nil)('R) &
       DebuggingTactics.print("Now what?") &
       dC(s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t) & -t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R) <(
         skip,

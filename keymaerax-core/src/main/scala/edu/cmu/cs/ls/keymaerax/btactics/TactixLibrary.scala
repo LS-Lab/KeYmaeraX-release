@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, Tactic, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
@@ -100,7 +100,8 @@ object TactixLibrary extends HilbertCalculus
   // high-level generic proof automation
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  val step          : DependentPositionTactic = "step" by ((pos: Position) =>
+  @Tactic()
+  val step : DependentPositionTactic = anon ((pos: Position) =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
      else HilbertCalculus.stepAt(pos))
@@ -315,9 +316,15 @@ object TactixLibrary extends HilbertCalculus
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
   def master(gen: Generator[GenProduct] = invGenerator,
-             keepQEFalse: Boolean=true): BelleExpr = "master" by {
+             keepQEFalse: Boolean = true): BelleExpr = "master" by {
     master(loopauto(gen), ODE, keepQEFalse)
   }
+
+  /**
+   * master: master tactic that tries hard to prove whatever it could.
+   * @see [[auto]] */
+  @Tactic(codeName = "master")
+  def masterTactic(generator: Generator[GenProduct]): BelleExpr = anon { master(generator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
@@ -342,28 +349,6 @@ object TactixLibrary extends HilbertCalculus
     case _ => throw new InputFormatFailure("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
   }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
 
-  //  meta-tactics for proof structuring information but no effect
-
-  /** Call/label the current proof branch by the given label `s`.
-    * @see [[Idioms.<()]]
-    * @see [[sublabel()]]
-    * @see [[BelleLabels]]
-    */
-  def label(s: BelleLabel): BelleExpr = LabelBranch(s)
-
-  /** Call/label the current proof branch by the top-level label `s`.
-    *
-    * @see [[Idioms.<()]]
-    * @see [[sublabel()]]
-    */
-  def label(s: String): BelleExpr = label(BelleTopLevelLabel(s))
-
-  /** Mark the current proof branch and all subbranches `s``
-    *
-    * @see [[label()]]
-    */
-  def sublabel(s: String): BelleExpr = skip //LabelBranch(BelleSubLabel(???, s))
-
   /*******************************************************************
     * unification and matching based auto-tactics
  *
@@ -382,22 +367,22 @@ object TactixLibrary extends HilbertCalculus
   /** GVR abstractionb: turns `[a]p` into `\forall BV(a) p` by universally quantifying over all variables modified in program `a`.
     * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
     * of that modality.
-    * @example{{{
+    * @example {{{
     *           |- \forall x x>0
     *         ------------------abstractionb(1)
     *           |- [x:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *           |- x>0 & z=1 -> [z:=y;]\forall x x>0
     *         --------------------------------------abstractionb(1, 1::1::Nil)
     *           |- x>0 & z=1 -> [z:=y;][x:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *           |- x>0
     *         ---------------abstractionb(1)
     *           |- [y:=2;]x>0
     * }}}
-    * @example{{{
+    * @example {{{
     *          x<=0  |- \forall y \forall z x<=z^2
     *         ------------------------------------abstractionb(1)
     *          x<=0  |- [y:=2;z:=z+1;]x<=z^2
@@ -511,7 +496,7 @@ object TactixLibrary extends HilbertCalculus
     * @param variant The variant property or convergence property in terms of new variable `v`.
     * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
     */
-  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = DLBySubst.con(v, variant, pre)
+  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionTactic = DLBySubst.con(v, variant, pre)
 
 
   // major differential equation automation
@@ -567,13 +552,13 @@ object TactixLibrary extends HilbertCalculus
     *          G |- [a]B, D
     * }}}
     *
-    * @example{{{
+    * @example {{{
     *   cutShowLbl:      cutUseLbl:
     *   |- [x:=2;]x>1    |- [x:=2;](x>1 -> [y:=x;]y>1)
     *   -----------------------------------------------postCut("x>1".asFormula)(1)
     *   |- [x:=2;][y:=x;]y>1
     * }}}
-    * @example{{{
+    * @example {{{
     *   cutShowLbl:      cutUseLbl:
     *   |- [x:=2;]x>1    |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)
     *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
@@ -659,21 +644,13 @@ object TactixLibrary extends HilbertCalculus
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Utility Tactics
-  /** skip is a no-op tactic that has no effect
-    * @see [[done]] */
-  val skip : BelleExpr = Idioms.ident
-  /** nil=skip is a no-op tactic that has no effect */
-  val nil : BelleExpr = skip
-  /** fail is a tactic that always fails as being inapplicable
-    * @see [[skip]] */
-  val fail : BelleExpr = "fail" by ((_: Sequent) => throw new TacticInapplicableFailure("fail"))
   /** done: check that the current goal is proved and fail if it isn't.
     * @see [[skip]] */
   val done : BelleExpr = DebuggingTactics.done
 
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term.
-    * @example{{{
+    * @example {{{
     *   maxcd = max(c,d) |- a+b <= maxcd+e
     *   ----------------------------------------abbrv(Variable("maxcd"))(1, 1::0::Nil)
     *                    |- a+b <= max(c, d) + e
@@ -681,8 +658,19 @@ object TactixLibrary extends HilbertCalculus
     * @param name The new variable to use as an abbreviation.
     * */
   def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
+
+  /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
+  @Tactic(
+    names = ("Abbreviate", "abbrv"),
+    codeName = "abbrv", //@todo name clash with abbrv above
+    premises = "Γ(x), x=e |- Δ(x)",
+    conclusion = "Γ(e) |- Δ(e)",
+    inputs = "e:term;;x[x]:option[variable]"
+  )
+  def abbrvAll(e: Term, x: Option[Variable]): BelleExpr = anon { EqualityTactics.abbrv(e, x) }
+
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position.
-    * @example{{{
+    * @example {{{
     *    x=0 |- 0*y=0, x+1>0
     *    ---------------------eqL2R(-1)(1)
     *    x=0 |- x*y=0, x+1>0
@@ -697,7 +685,8 @@ object TactixLibrary extends HilbertCalculus
   def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
-  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEqL2R(false)
+  @Tactic(names = "L=R all", codeName = "allL2R")
+  val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) "allL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(l, _)) =>
@@ -709,7 +698,8 @@ object TactixLibrary extends HilbertCalculus
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = exhaustiveEqR2L(false)
+  @Tactic(names = "R=L all", codeName = "allR2L")
+  val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(_, r)) =>
@@ -905,7 +895,7 @@ object TactixLibrary extends HilbertCalculus
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
   def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr = "useLemma" byWithInputs(
     if (adapt.isDefined) lemmaName::adapt.get.prettyString::Nil else lemmaName::Nil,
-    anon { _ =>
+    anon { (_, _) =>
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
@@ -915,7 +905,7 @@ object TactixLibrary extends HilbertCalculus
   )
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { _ =>
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_, _) =>
     adapt match {
       case Some(t) =>
         cut(lemma.fact.conclusion.toFormula ) <(t, cohideR('Rlast) &

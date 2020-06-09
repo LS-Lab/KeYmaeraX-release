@@ -645,7 +645,7 @@ object ODELiveness {
         //Moves back into diamond
         useAt(Ax.box, PosInExpr(1 :: Nil))(AntePosition(seq.ante.length + 1)) & notL('Llast) &
         useAt(Ax.doubleNegation)(seq.succ.length, 1 :: Nil) &
-        ProofRuleTactics.exchangeR(Position(seq.succ.length),pos)
+        SequentCalculus.exchangeR(Position(seq.succ.length),pos)
     }
   })
 
@@ -1298,7 +1298,7 @@ object ODELiveness {
     saveBox(pos) & dDR(target)(pos) < (
       // Remove the saveBox to reduce clutter
       hideL('Llast),
-      DifferentialTactics.dCClosure()(pos)<(
+      DifferentialTactics.dCClosure(pos)<(
         hideL('Llast) & skip , compatCuts(pos) & hideL('Llast) )
     )
   })

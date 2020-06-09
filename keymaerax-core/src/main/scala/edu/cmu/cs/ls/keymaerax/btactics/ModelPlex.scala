@@ -581,13 +581,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * operate on input produced by createMonitorSpecificationConjecture.
     *
     * @see [[createMonitorSpecificationConjecture]]
-   * @example{{{
+   * @example {{{
    *        |- xpost=1
    *        ------------------------------controllerMonitorByChase(1)
    *        |- <{x:=1; {x'=2}}*>xpost=x
    * }}}
    * In order to produce the result above, the tactic performs intermediate steps as follows.
-   * @example{{{
+   * @example {{{
    *        |- xpost=1
    *        ------------------------------true&
    *        |- (true & xpost=1)
@@ -841,7 +841,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /**
    * Returns a modified test tactic for axiom <?H>p <-> H & (H->p)
     *
-    * @example{{{
+    * @example {{{
    *          |- x>0 & (x>0 -> [x'=x]x>0)
    *          ---------------------------diamondTestRetainCondition
    *          |- <?x>0>[x'=x]x>0
@@ -855,7 +855,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * Performs a tactic from the list of tactics that is applicable somewhere underneath position p in sequent s,
    * taking the outermost such sub-position of p. Formulas only.
     *
-    * @example{{{
+    * @example {{{
    *           |- a=1 & (<x:=2;>x+y>0 & <y:=3;>x+y>0)
    *           ---------------------------------------locateT(diamondSeqT :: diamondChoiceT :: Nil)(1)
    *           |- a=1 & <x:=2; ++ y:=3;>x+y>0
@@ -881,7 +881,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
   /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
     * somewhere in the quantified formula.
     *
-    * @example{{{
+    * @example {{{
     *           |- xpost>0 & xpost=xpost
     *           ------------------------------optimizationOneWithSearch
     *           |- \exists x x>0 & xpost=x
@@ -999,12 +999,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
    * the tactic may be used in intermediate steps of ModelPlex, it uses fresh variants of the post-variable for
    * instantiation, if asked to automatically instantiate.
     *
-    * @example{{{
+    * @example {{{
    *           |- z>0 & xpost=z
    *           -----------------------------------optimizationOne(Some(Variable("x"), Variable("z")))
    *           |- \exists x (x>0 & xpost=x)
    * }}}
-   * @example{{{
+   * @example {{{
    *           |- xpost_0>0 & xpost=xpost_0
    *           -----------------------------------optimizationOne(None)
    *           |- \exists x (x>0 & xpost=x)

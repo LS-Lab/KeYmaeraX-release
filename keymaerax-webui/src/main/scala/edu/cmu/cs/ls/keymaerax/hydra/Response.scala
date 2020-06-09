@@ -910,11 +910,11 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
           "param" -> JsString(name),
           "value" -> JsString(e.prettyString)
         )
-      case (_, ListArg(name, elementSort, _)) => //@todo suggested input for Formula*
+      case (_, ListArg(ai)) => //@todo suggested input for Formula*
         JsObject(
           "type" -> JsString(input.sort),
-          "elementType" -> JsString(elementSort),
-          "param" -> JsString(name)
+          "elementType" -> JsString(ai.sort),
+          "param" -> JsString(ai.name)
         )
       case _ =>
         JsObject (
@@ -996,6 +996,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       case info: DerivationInfo => info.display match {
         case _: SimpleDisplayInfo => tacticJson(info)
         case _: AxiomDisplayInfo => axiomJson(info)
+        case _: InputAxiomDisplayInfo => axiomJson(info) //@todo usually those have tactics with RuleDisplayInfo
         case RuleDisplayInfo(_, conclusion, premises) => ruleJson(info, conclusion, premises)
       }
     }

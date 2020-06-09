@@ -397,12 +397,16 @@ object Idioms {
   })
 }
 
-/** Creates tactic objects */
+/** Basic facilities for easily creating tactic objects.
+  * @author Stefan Mitsch
+  * @author Brandon Bohrer
+  * @author Andre Platzer
+  */
 object TacticFactory {
 
   /**
    * Creates named dependent tactics.
-   * @example{{{
+   * @example {{{
    *  "[:=] assign" by (pos => useAt(Ax.assignbAxiom)(pos))
    * }}}
    * @param name The tactic name.
@@ -421,6 +425,21 @@ object TacticFactory {
 
     /** Creates a named tactic */
     def by(t: BelleExpr): BelleExpr = NamedTactic(name, t)
+    // Renamed version of by(BelleExpr): BelleExpr for name consistency
+    def forward(t: BelleExpr): BelleExpr = name by t
+    def forward(t: BuiltInTactic): BuiltInTactic = name by ((ps: ProvableSig) => t.result(ps))
+    def forward(t: BuiltInPositionTactic): BuiltInPositionTactic =  by ((pr: ProvableSig, pos: Position) => t.computeResult(pr, pos))
+    def forward(t: BuiltInLeftTactic): BuiltInLeftTactic = by ((pr: ProvableSig, pos: AntePosition) => t.computeResult(pr, pos))
+    def forward(t: BuiltInRightTactic): BuiltInRightTactic = by ((pr: ProvableSig, pos: SuccPosition) => t.computeResult(pr, pos))
+    def forward(t: CoreLeftTactic): CoreLeftTactic = coreby ((pr: ProvableSig, pos: AntePosition) => t.computeResult(pr, pos))
+    def forward(t: CoreRightTactic): CoreRightTactic = coreby ((pr: ProvableSig, pos: SuccPosition) => t.computeResult(pr, pos))
+    def forward(t: DependentTactic): DependentTactic = by ((seq: Sequent) => t)
+    def forward(t: DependentPositionTactic): DependentPositionTactic = by ((pos: Position, seq: Sequent) => t(pos))
+    def forward(t: DependentPositionWithAppliedInputTactic): DependentPositionWithAppliedInputTactic = byWithInputs(t.inputs, (pos: Position, seq: Sequent) => t(pos))
+    def forward(t: BuiltInTwoPositionTactic): BuiltInTwoPositionTactic = by ((ps: ProvableSig, posOne: Position, posTwo: Position) => t.computeResult(ps, posOne, posTwo))
+    // @TODO: implement
+    //def forward(t: AppliedBuiltinTwoPositionTactic): AppliedBuiltinTwoPositionTactic = "ANON" by t
+    def forward(t: InputTactic): InputTactic = byWithInputs(t.inputs, t)
 
     def byTactic(t: ((ProvableSig, Position, Position) => BelleExpr)) = new DependentTwoPositionTactic(name) {
       override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {
@@ -428,11 +447,40 @@ object TacticFactory {
       }
     }
 
+    /** Creates a dependent two position tactic without inspecting the formula at that position */
+    def byLR(t: ((AntePosition, SuccPosition) => BelleExpr)): DependentTwoPositionTactic = {
+      name byTactic {(_, l, r) =>
+        require(l.isAnte && r.isAnte, "Expected antecedent and succedent position")
+        t(l.checkAnte, r.checkSucc)
+      }
+    }
+
+
     /** Creates a dependent position tactic without inspecting the formula at that position */
     //@todo why does this have to have a DependentPositionTactic instead of a PositionalTactic?
     def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(provable: ProvableSig): BelleExpr = t(pos)
+      }
+    }
+
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def byL(t: (AntePosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: ProvableSig): BelleExpr = {
+          require(pos.isAnte, "Expects an antecedent position.")
+          t(pos.checkAnte)
+        }
+      }
+    }
+
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def byR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: ProvableSig): BelleExpr = {
+          require(pos.isSucc, "Expects a succedent position.")
+          t(pos.checkSucc)
+        }
       }
     }
 
@@ -456,6 +504,16 @@ object TacticFactory {
       }
     }
 
+    /** A position tactic with multiple inputs. */
+    def byWithInputs(inputs: Seq[Any], t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = {
+          require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+          t(pos)
+        }
+      }
+    }
+
     /** A named tactic with multiple inputs. */
     def byWithInputs(inputs: Seq[Any], t: => BelleExpr): InputTactic = new InputTactic(name, inputs) {
       override def computeExpr(): BelleExpr = t
@@ -472,6 +530,10 @@ object TacticFactory {
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
+    def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInput(input, new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
+    })
+
 
     /** Creates a BuiltInRightTactic from a function turning provables and succedent positions into new provables.
       * @example {{{
@@ -501,17 +563,82 @@ object TacticFactory {
       }
     }
 
+    /** Creates a CoreRightTactic with applied inputs from a function turning provables and succedent positions into new provables.
+     * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
+     * @example {{{
+     *         "andR" coreby((pr,pos)=> pr(AndRight(pos.top),0))
+     *         }}}
+     * @see [[Rule]]
+     * @see [[TacticInapplicableFailure]]
+     */
+    def corebyWithInputsR(inputs: Seq[Any], t: (ProvableSig, SuccPosition) => ProvableSig): DependentPositionWithAppliedInputTactic =
+      byWithInputs(inputs, (pos: Position, _: Sequent) => {
+        new BuiltInTactic(name) {
+          override def result(provable: ProvableSig): ProvableSig = {
+            t(provable, pos.checkSucc)
+          }
+        }
+      })
+
+    /** Creates a CoreLeftTactic with applied inputs from a function turning provables and antecedent positions into new provables.
+     * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
+     * @example {{{
+     *         "andL" coreby((pr,pos)=> pr(AndLeft(pos.top),0))
+     *         }}}
+     * @see [[Rule]]
+     * @see [[TacticInapplicableFailure]]
+     */
+    def corebyWithInputsL(inputs: Seq[Any], t: (ProvableSig, AntePosition) => ProvableSig): DependentPositionWithAppliedInputTactic =
+      byWithInputs(inputs, (pos: Position, _: Sequent) => {
+        new BuiltInTactic(name) {
+          override def result(provable: ProvableSig): ProvableSig = {
+            t(provable, pos.checkAnte)
+          }
+        }
+      })
+
+/** Creates a Tactic with applied inputs from a function turning provables and antecedent positions into new provables. */
+    def byWithInputsP(inputs: Seq[Any], t: (ProvableSig, Position) => ProvableSig): DependentPositionWithAppliedInputTactic =
+      byWithInputs(inputs, (pos: Position, _: Sequent) => {
+        new BuiltInTactic(name) {
+          override def result(provable: ProvableSig): ProvableSig = {
+            t(provable, pos)
+          }
+        }
+      })
+
     /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
       * @example {{{
       *         "andL" by((pr,pos)=> pr(AndLeft(pos.top),0))
       *         }}}
       */
-    def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic = new BuiltInLeftTactic(name) {
-      @inline override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-        requireOneSubgoal(provable, name)
-        t(provable, pos)
+    def by(t: (ProvableSig, AntePosition) => ProvableSig): BuiltInLeftTactic =
+      new BuiltInLeftTactic(name) {
+        @inline override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
+          requireOneSubgoal(provable, name)
+          t(provable, pos.checkAnte)
+        }
       }
-    }
+
+    /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
+     */
+    def by(t: (ProvableSig) => ProvableSig): BuiltInTactic =
+      new BuiltInTactic(name) {
+        @inline override def result(provable: ProvableSig): ProvableSig = {
+          requireOneSubgoal(provable, name)
+          t(provable)
+        }
+      }
+
+    /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
+     */
+    def by(t: (ProvableSig, Position) => ProvableSig): BuiltInPositionTactic =
+      new BuiltInPositionTactic(name) {
+        @inline override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
+          requireOneSubgoal(provable, name)
+          t(provable, pos)
+          }
+      }
 
     /** Creates a BuiltInLeftTactic from a function turning provables and antecedent positions into new provables.
       * Unlike [[by]], the coreby will augment MatchErrors from the kernel into readable error messages.
@@ -542,61 +669,29 @@ object TacticFactory {
     }
   }
 
+  // augment anonymous tactics
+  def anon(t: BelleExpr): BelleExpr = "ANON" by t
+  def anon(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" by t
+  def anon(t: ((ProvableSig, Position) => ProvableSig)): BuiltInPositionTactic = "ANON" by t
+  def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
+  def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t
   def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
+  def anon(t: (Position => BelleExpr)): DependentPositionTactic = "ANON" by t
+  def anonLR(t: ((AntePosition, SuccPosition) => BelleExpr)): DependentTwoPositionTactic = "ANON" byLR t
+  def anonL(t: (AntePosition => BelleExpr)): DependentPositionTactic = "ANON" byL t
+  def anonR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = "ANON" byR t
   def anon(t: (Sequent => BelleExpr)): DependentTactic = "ANON" by t
+  def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = "ANON" coreby t
+  def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = "ANON" coreby t
+  /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
+   * will transform them to the correct byWithInputs */
+  def inputanon(t: Sequent => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
+  def inputanon(t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
+  def inputanon(t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
+  def inputanonP(t: ((ProvableSig, Position) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputsP(Nil:Seq[Any], t)
+  def inputanonR(t: ((ProvableSig, SuccPosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsR(Nil:Seq[Any], t)
+  def inputanonL(t: ((ProvableSig, AntePosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsL(Nil:Seq[Any], t)
+  def inputanon(t: => BelleExpr): InputTactic = "ANON" byWithInputs( Nil, t)
 
 }
-
-/**
- * @author Nathan Fulton
- */
-//object Legacy {
-//  /** The default mechanism for initializing KeYmaeraScheduler, Mathematica, and Z3 that are used in the legacy tactics.
-//    * @note This may interfere in unexpected ways with sequential tactics.
-//    */
-//  def defaultInitialization(mathematicaConfig:  Map[String,String]) = {
-//    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
-//    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
-//
-//    Tactics.KeYmaeraScheduler.init(Map())
-//    Tactics.Z3Scheduler.init
-//    Tactics.MathematicaScheduler.init(mathematicaConfig)
-//  }
-
-//  def defaultDeinitialization = {
-//    if (Tactics.KeYmaeraScheduler != null) {
-//      Tactics.KeYmaeraScheduler.shutdown()
-//      Tactics.KeYmaeraScheduler = null
-//    }
-//    if (Tactics.MathematicaScheduler != null) {
-//      Tactics.MathematicaScheduler.shutdown()
-//      Tactics.MathematicaScheduler = null
-//    }
-//    if(Tactics.Z3Scheduler != null) {
-//      Tactics.Z3Scheduler = null
-//    }
-//  }
-//
-//  def initializedScheduledTactic(mathematicaConfig : Map[String,String], tactic: keymaerax.tactics.Tactics.Tactic) = {
-//    defaultInitialization(mathematicaConfig)
-//    scheduledTactic(tactic)
-//  }
-//
-//  def scheduledTactic(tactic : keymaerax.tactics.Tactics.Tactic) = new BuiltInTactic(s"Scheduled(${tactic.name})") {
-//    //@see [[Legacy.defaultInitialization]]
-//    if(!Tactics.KeYmaeraScheduler.isInitialized)
-//      throw new BelleThrowable("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
-//
-//    override def result(provable: Provable): Provable = {
-//      //@todo don't know if we can create a proof node from a provable.
-//      if(provable.subgoals.length != 1) throw new Exception("Cannot run scheduled tactic on something with more than one subgoal.")
-//
-//      val node = new keymaerax.tactics.RootNode(provable.subgoals.head)
-//
-//      Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
-//
-//      node.provableWitness
-//    }
-//  }
-//}

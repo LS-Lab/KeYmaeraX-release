@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 
 import scala.collection.immutable._
 
@@ -21,12 +22,16 @@ private object EqualityTactics {
   private val namespace = "eq"
 
   /**
-   * Rewrites an equality exhaustively from right to left (i.e., replaces occurrences of left with right).
-   * @note Base tactic for eqL2R and eqR2L.
-   * @param name The name of the tactic.
-   * @return The tactic.
-   */
-  private def exhaustiveEq(name: String): DependentPositionTactic = name by ((pos: Position, sequent: Sequent) => {
+    * Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively.
+    * @example {{{
+    *    x=2, 2+y=7 |- 2+1<y, [x:=3;]x>0
+    *    --------------------------------exhaustiveEqR2L(-1)
+    *    x=2, x+y=7 |- x+1<y, [x:=3;]x>0
+    * }}}
+    * @return The tactic.
+    */
+  val exhaustiveEqL2R: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    //@Tactic in [[TactixLibrary]]
     require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
     sequent.sub(pos) match {
       case Some(Equal(lhs, rhs)) =>
@@ -60,14 +65,14 @@ private object EqualityTactics {
 
         val occurrences = sequent.zipWithPositions.filter({ case (f, p) => p != pos && f.find(lhs).isDefined })
         occurrences.map({ case (_, p) => renameBoundRhs(p) & eqL2R(pos.checkAnte)(p) }).reduceOption[BelleExpr](_&_).getOrElse(skip)
-      case Some(e) => throw new TacticInapplicableFailure("ExhaustiveEq (" + name + ") only applicable to equalities l=r, but got " + e.prettyString)
+      case Some(e) => throw new TacticInapplicableFailure("exhaustiveEqL2R only applicable to equalities l=r, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
   })
 
   /** @see [[TactixLibrary.eqL2R]] */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         val rhsFv = StaticSemantics.freeVars(rhs)
@@ -121,19 +126,9 @@ private object EqualityTactics {
     }
   })
 
-  /**
-   * Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively.
-   * @example{{{
-   *    x=2, 2+y=7 |- 2+1<y, [x:=3;]x>0
-   *    --------------------------------exhaustiveEqR2L(-1)
-   *    x=2, x+y=7 |- x+1<y, [x:=3;]x>0
-   * }}}
-   * @return The tactic.
-   */
-  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEq("allL2R")
-
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or uninterpreted function) */
-  lazy val atomExhaustiveEqL2R: DependentPositionTactic = "atomAllL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  @Tactic(names = "L=R all atoms", codeName = "atomAllL2R")
+  val atomExhaustiveEqL2R: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(_: Variable, _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
     case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
     case Some(e) => throw new TacticInapplicableFailure("Equality rewriting only applicable to equalities l=r, but got " + e.prettyString)
@@ -141,7 +136,8 @@ private object EqualityTactics {
   })
 
   /** Rewrites all atom equalities in the assumptions. */
-  lazy val applyEqualities: DependentTactic = "ANON" by ((seq: Sequent) => {
+  @Tactic(displayLevel = "internal")
+  val applyEqualities: DependentTactic = anon ((seq: Sequent) => {
     seq.zipAnteWithPositions.filter({
       case (Equal(v: Variable, t), _) => v != t
       case (Equal(fn@FuncOf(Function(_, _, _, _, false), _), t), _) => fn != t
@@ -153,21 +149,22 @@ private object EqualityTactics {
 
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
-   * @example{{{
+   * @example {{{
    *    2=x, 2+y=7 |- 2+1<y, [x:=3;]x>0
    *    --------------------------------exhaustiveEqR2L(-1)
    *    2=x, x+y=7 |- x+1<y, [x:=3;]x>0
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  val exhaustiveEqR2L: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    //@Tactic in [[TactixLibrary]]
     case Some(fml@Equal(lhs, rhs)) =>
-      useAt(Ax.equalCommute)(pos, fml) & exhaustiveEq("allL2R")(pos, Equal(rhs, lhs)) & useAt(Ax.equalCommute)(pos, Equal(rhs, lhs))
+      useAt(Ax.equalCommute)(pos, fml) & exhaustiveEqL2R(pos, Equal(rhs, lhs)) & useAt(Ax.equalCommute)(pos, Equal(rhs, lhs))
   })
 
 
   /** @see [[TactixLibrary.abbrv()]] */
-  def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def abbrv(abbrvV: Variable): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(t: Term) => abbrv(t, Some(abbrvV))
     case Some(e) => throw new TacticInapplicableFailure("Expected a term at position " + pos + ", but got " + e)
     case _ => throw new IllFormedTacticApplicationException("Position " + pos + " is undefined in sequent " + sequent)
@@ -176,7 +173,7 @@ private object EqualityTactics {
   /**
    * Abbreviates a term `t` to a variable everywhere, except in places where some free variable of `t` is bound.
     *
-    * @example{{{
+    * @example {{{
    *   max_0 = max(c,d) |- a+b <= max_0+e
    *   ----------------------------------------abbrv("max(c,d)".asTerm)
    *                    |- a+b <= max(c, d) + e
@@ -189,87 +186,84 @@ private object EqualityTactics {
    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
    * @return The tactic.
    */
-  def abbrv(t: Term, abbrvV: Option[Variable] = None): InputTactic = new InputTactic("abbrv",
-      abbrvV match { case Some(v) => t::v::Nil case None => t::Nil }) {
-    def computeExpr(): BelleExpr = new SingleGoalDependentTactic(name) {
-      def computeExpr(sequent: Sequent): BelleExpr = {
-        require(abbrvV.isEmpty ||
-          !(sequent.ante.flatMap(StaticSemantics.signature)
-            ++ sequent.succ.flatMap(StaticSemantics.signature)).contains(abbrvV.get),
-          "Abbreviation must be fresh in sequent")
-        val v = abbrvV match {
-          case Some(vv) => vv
-          case None => t match {
-            case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
-            case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
-            case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
-          }
-        }
-
-        cut(Exists(v :: Nil, Equal(v, t))) <(
-          /* use */ existsL('Llast) & exhaustiveEqR2L('Llast),
-          /* show */ cohide('Rlast) & existsR(t)(1) & byUS(Ax.equalReflexive)
-        )
+  def abbrv(t: Term, abbrvV: Option[Variable]): DependentTactic = anon ((sequent: Sequent) => {
+    //@Tactic in [[TactixLibrary.abbrvAll]]
+    require(abbrvV.isEmpty ||
+      !(sequent.ante.flatMap(StaticSemantics.signature)
+        ++ sequent.succ.flatMap(StaticSemantics.signature)).contains(abbrvV.get),
+      "Abbreviation must be fresh in sequent")
+    val v = abbrvV match {
+      case Some(vv) => vv
+      case None => t match {
+        case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+        case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+        case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
       }
     }
-  }
+
+    cut(Exists(v :: Nil, Equal(v, t))) <(
+      /* use */ existsL('Llast) & exhaustiveEqR2L('Llast),
+      /* show */ cohide('Rlast) & existsR(t)(1) & byUS(Ax.equalReflexive)
+    )
+  })
 
   /**
     * Abbreviates a term to a variable at a position.
-    * @example{{{
+    * @example {{{
     *   |- [x:=2;]\exists z (z=min(x,y) & z<=2)
     *   ---------------------------------------abbrvAt("min(x,y)".asTerm, Some("z".asVariable)(1,1::Nil)
     *   |- [x:=2;]min(x,y) <= 2
     * }}}
-    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
+    * @param x The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
     * @return The tactic.
     */
-  def abbrvAt(t: Term, abbrvV: Option[Variable] = None): DependentPositionWithAppliedInputTactic = "abbrvAt" byWithInputs(
-    abbrvV match { case Some(v) => t::v::Nil case None => t::Nil }, (pos: Position, sequent: Sequent) => {
+  @Tactic(displayLevel = "internal")
+  def abbrvAt(e: Term, x: Option[Variable]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
       val inFml = sequent.sub(pos) match {
         case Some(p: Formula) => p
         case Some(t: Term) => throw new TacticInapplicableFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
         case _ => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to an expression")
       }
-      require(abbrvV.isEmpty ||
-        !sequent.sub(pos).map(StaticSemantics.signature).contains(abbrvV.get),
+      require(x.isEmpty ||
+        !sequent.sub(pos).map(StaticSemantics.signature).contains(x.get),
         "Abbreviation must be fresh at position")
-      val v = abbrvV match {
+      val v = x match {
         case Some(vv) => vv
-        case None => t match {
+        case None => e match {
           case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
           case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
-          case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
+          case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), e.sort)
         }
       }
 
       val polarity = FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) * (if (pos.isSucc) 1 else -1)
 
       val cutFml =
-        if (polarity >= 0) /* positive and unknown polarity */ Forall(v :: Nil, Imply(Equal(v, t), inFml.replaceFree(t, v)))
-        else Exists(v :: Nil, And(Equal(v, t), inFml.replaceFree(t, v)))
+        if (polarity >= 0) /* positive and unknown polarity */ Forall(v :: Nil, Imply(Equal(v, e), inFml.replaceFree(e, v)))
+        else Exists(v :: Nil, And(Equal(v, e), inFml.replaceFree(e, v)))
 
       val cohidePos = if (pos.isAnte) cohide('Rlast) else cohide(pos.top)
 
       cutAt(cutFml)(pos) <(
         /* use */ skip,
         /* show */ cohidePos & CMon(pos.inExpr) & implyR(1) &
-        (if (polarity >= 0) allL(t)(-1) & implyL(-1) <(cohide(2) & byUS(Ax.equalReflexive), closeId)
-         else existsR(t)(1) & andR(1) <(cohide(1) & byUS(Ax.equalReflexive), closeId)) &
+        (if (polarity >= 0) allL(e)(-1) & implyL(-1) <(cohide(2) & byUS(Ax.equalReflexive), closeId)
+         else existsR(e)(1) & andR(1) <(cohide(1) & byUS(Ax.equalReflexive), closeId)) &
         done
       )
   })
 
   /**
    * Expands an absolute value function.
-   * @example{{{
+   * @example {{{
    *    x>=0&abs_0=x | x<0&abs_0=-x |- abs_0=5
    *    ---------------------------------------abs(1, 0::Nil)
    *                                |- abs(x)=5
    * }}}
    * @return The tactic.
    */
-  lazy val abs: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  @Tactic(names = "absExp", codeName = "absExp")
+  val abs: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
@@ -288,7 +282,8 @@ private object EqualityTactics {
   private lazy val maxContradiction = AnonymousLemmas.remember("f()<g() & f()>=g() <-> false".asFormula, QE, namespace)
 
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
-  lazy val absAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  @Tactic(displayLevel = "internal")
+  val absAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(absTerm@FuncOf(Function(fn, None, Real, Real, true), x)) if fn == "abs" =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
@@ -335,14 +330,15 @@ private object EqualityTactics {
 
   /**
    * Expands min/max function.
-   * @example{{{
+   * @example {{{
    *    x>=y&max_0=x | x<y&max_0=y  |- max_0=5
    *    ------------------------------------------max(1, 0::Nil)
    *                                |- max(x,y)=5
    * }}}
    * @return The tactic.
    */
-  lazy val minmax: DependentPositionTactic = "minmax" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  @Tactic(names = "min/max")
+  val minmax: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t@Pair(f, g))) if fn == "min" || fn == "max" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
@@ -361,7 +357,8 @@ private object EqualityTactics {
     case (_, e) => throw new TacticInapplicableFailure("minmax only applicable to min/max, but got " + e.prettyString)
   })
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
-  lazy val minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  @Tactic(displayLevel = "internal")
+  val minmaxAt: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
@@ -420,7 +417,8 @@ private object EqualityTactics {
   })
 
   /** Expands all special functions (abs/min/max). */
-  lazy val expandAll: BelleExpr = "expandAll" by ((s: Sequent) => {
+  @Tactic(revealInternalSteps = true)
+  val expandAll: BelleExpr = anon ((s: Sequent) => {
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
@@ -433,7 +431,8 @@ private object EqualityTactics {
     tactics.reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
-  lazy val expandAllAt: DependentPositionTactic = "expandAllAt" by ((pos: Position, seq: Sequent) => {
+  @Tactic(displayLevel = "internal")
+  val expandAllAt: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val tactics =
       Idioms.mapSubpositions(pos, seq, {
         case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(protectPos(abs)(pos)))

@@ -839,7 +839,7 @@ object KeYmaeraX {
       val lemmaEntries = lemmas.map({ case (name, fml, tactic) =>
         val serializableTactic = db.extractSerializableTactic(fml, tactic)
         ParsedArchiveEntry(name, "lemma", "", "", Declaration(Map.empty), fml,
-          (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)})
+          (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)})
       // check and store lemmas
       lemmaEntries.foreach(entry => {
         println(s"Checking sandbox lemma ${entry.name}...")
@@ -858,7 +858,7 @@ object KeYmaeraX {
 
       val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
       val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", "", Declaration(Map.empty),
-        sandbox, (inputEntry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)
+        sandbox, (inputEntry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Nil, Map.empty)
       // check sandbox proof
       println("Checking sandbox safety...")
       assert(TactixLibrary.proveBy(sandboxEntry.model.asInstanceOf[Formula],
@@ -1061,8 +1061,7 @@ object KeYmaeraX {
 
     //@note remove all tactics, e.model does not contain annotations anyway
     //@note remove all definitions too, those might be used as proof hints
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
-      ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, Declaration(Map.empty), e.model, Nil, e.info)
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
     val printer = new KeYmaeraXArchivePrinter()
     val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")

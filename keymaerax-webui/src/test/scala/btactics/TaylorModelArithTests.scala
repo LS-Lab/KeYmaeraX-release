@@ -189,19 +189,20 @@ class TaylorModelArithTests extends TacticTestBase {
       res.conclusion.succ.loneElement shouldBe
         """[{x'=y, y'=(1 - x^2) * y - x, t'=1 & 0 <= t & t <= 0 + 0.01}]
           |  \exists s
-          |    \exists Rem0
+          |    (
+          |      (t = 0 + s & 0 <= s & s <= 0.01) &
+          |      \exists Rem0
+          |        (
+          |          x =
+          |          1.4 + 0.15 * e0 + 0 * e1 + 2.4 * s + 0.05 * (s * e1) + (-1.8520) * s^2 + 0 * (s * e0) +
+          |          (-0.02400) * (s^2 * e1) +
+          |          (-2.4954) * s^3 +
+          |          (-0.5790) * (s^2 * e0) +
+          |          Rem0 &
+          |          s * ((-8724) * 10^(-7)) + 0.00 <= Rem0 & Rem0 <= s * (4131 * 10^(-7)) + 0.00
+          |        ) &
           |      \exists Rem1
           |        (
-          |          t = 0 + s &
-          |          (
-          |            x =
-          |            1.4 + 0.15 * e0 + 0 * e1 + 2.4 * s + 0.05 * (s * e1) + (-1.8520) * s^2 + 0 * (s * e0) +
-          |            (-0.02400) * (s^2 * e1) +
-          |            (-2.4954) * s^3 +
-          |            (-0.5790) * (s^2 * e0) +
-          |            Rem0 &
-          |            s * ((-8724) * 10^(-7)) + 0.00 <= Rem0 & Rem0 <= s * (4131 * 10^(-7)) + 0.00
-          |          ) &
           |          y =
           |          2.4 + 0 * e0 + 0.05 * e1 + (-3.704) * s + (-0.0480) * (s * e1) + (-7.48605) * s^2 +
           |          (-1.1580) * (s * e0) +
@@ -213,7 +214,8 @@ class TaylorModelArithTests extends TacticTestBase {
           |          0.000 * (s * e1^2) +
           |          Rem1 &
           |          s * ((-3991) * 10^(-6)) + 0.00 <= Rem1 & Rem1 <= s * (1096 * 10^(-5)) + 0.00
-          |        )""".stripMargin.asFormula
+          |        )
+          |    )""".stripMargin.asFormula
     }
   }
 }

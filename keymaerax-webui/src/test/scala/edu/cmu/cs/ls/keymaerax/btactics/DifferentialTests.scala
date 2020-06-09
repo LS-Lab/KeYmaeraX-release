@@ -323,6 +323,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>=5 ==> [x:=x+1;](true->x>=5&[{x'=2}](x>=5)')".asSequent
   }
 
+  it should "fail constification in context if ODE consts are bound outside" taggedAs KeYmaeraXTestTags.SummaryTest in {
+    proveBy("x>=5, y=2 ==> [x:=x+1;][{x'=y}]x>=y".asSequent, DifferentialTactics.diffInd('full)(1, 1::Nil)).
+      subgoals.loneElement shouldBe "x>=5, y()=2 ==> [x:=x+1;](true->x>=y()&y()>=0)".asSequent
+    the [BelleProofSearchControl] thrownBy proveBy("x>=5 ==> [y:=2;x:=x+1;][{x'=y}]x>=y".asSequent,
+      DifferentialTactics.diffInd('full)(1, 1::Nil)) should
+      have message "Unable to constify in context ReplContext{{[y:=2;x:=x+1;][{x'=y&true}]x>=y at .1}}, because it binds y"
+  }
+
   it should "autoprove x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in {
     val result = proveBy("x>=5 ==> [x:=x+1;][{x'=2}]x>=5".asSequent, DifferentialTactics.diffInd('full)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "x>=5 ==> [x:=x+1;](true->x>=5&2>=0)".asSequent
@@ -639,7 +647,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "cut in multiple formulas" in withQE { _ =>
-    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent, dC("v>=0".asFormula, "x>=old(x)".asFormula)(1))
+    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent, dC("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1))
     result.subgoals should have size 3
     result.subgoals(0) shouldBe "v>=0, x_0>0, x_0=x ==> [{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asSequent
     result.subgoals(1) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2}]v>=0".asSequent
@@ -648,7 +656,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "not duplicate cuts" in withQE { _ =>
     val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent,
-      dC("v>=0".asFormula, "v>=0".asFormula)(1) <(dC("v>=0".asFormula)(1), skip))
+      dC("v>=0".asFormula :: "v>=0".asFormula :: Nil)(1) <(dC("v>=0".asFormula)(1), skip))
     result.subgoals should have size 2
     result.subgoals(0) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2 & true & v>=0}]x>=0".asSequent
     result.subgoals(1) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2}]v>=0".asSequent
@@ -656,7 +664,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "not duplicate old cuts" in withQE { _ =>
     val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent,
-      dC("v>=old(v)".asFormula, "v>=old(v)".asFormula)(1) <(dC("v>=old(v)".asFormula)(1), skip))
+      dC("v>=old(v)".asFormula :: "v>=old(v)".asFormula :: Nil)(1) <(dC("v>=old(v)".asFormula)(1), skip))
     result.subgoals should have size 2
     result.subgoals(0) shouldBe "v_0>=0, x>0, v_0=v ==> [{x'=v,v'=2 & true & v>=v_0}]x>=0".asSequent
     result.subgoals(1) shouldBe "v_0>=0, x>0, v_0=v ==> [{x'=v,v'=2}]v>=v_0".asSequent
@@ -757,7 +765,7 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "cut in multiple formulas" in withQE { _ =>
-    val result = proveBy("v>=0, x>0 ==> <{x'=v,v'=2}>x>=0".asSequent, dC("v>=0".asFormula, "x>=old(x)".asFormula)(1))
+    val result = proveBy("v>=0, x>0 ==> <{x'=v,v'=2}>x>=0".asSequent, dC("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1))
     result.subgoals should have size 3
     result.subgoals(0) shouldBe "v>=0, x_0>0, x_0=x ==> <{x'=v,v'=2 & (true & v>=0) & x>=x_0}>x>=0".asSequent
     result.subgoals(1) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2}]v>=0".asSequent
@@ -838,12 +846,12 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "cut in multiple formulas" in withQE { _ =>
-    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent, diffInvariant("v>=0".asFormula, "x>0".asFormula)(1))
+    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent, diffInvariant("v>=0".asFormula :: "x>0".asFormula :: Nil)(1))
     result.subgoals.loneElement shouldBe "v>=0, x>0 ==> [{x'=v,v'=2 & (true & v>=0) & x>0}]x>=0".asSequent
   }
 
   it should "cut in multiple formulas with old" in withQE { _ =>
-    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent, diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
+    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent, diffInvariant("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1))
     result.subgoals.loneElement shouldBe "v>=0, x_0>0, x_0=x ==> [{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asSequent
   }
 
@@ -854,7 +862,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "fail if any of the formulas is not an invariant" in withQE { _ =>
     a [BelleThrowable] should be thrownBy proveBy("x>0 ==> [{x'=v,v'=2}]x>=0".asSequent,
-      diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
+      diffInvariant("v>=0".asFormula :: "x>=old(x)".asFormula :: Nil)(1))
   }
 
   it should "let us directly prove variable x+y^2*3-z = x+y^2*3-z by abbreviation" in withQE { _ =>
@@ -1502,19 +1510,6 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  "OUTDATED: Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
-    proveBy(Sequent(IndexedSeq("a()>0".asFormula), IndexedSeq("<{x'=a()}>x>=b()".asFormula)), diffVar(1)) shouldBe 'proved
-  }
-
-  it should "diff var flat flight progress [function]" in withMathematica { _ =>
-    proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula, diffVar(1, 1::0::1::Nil)) shouldBe 'proved
-  }
-
-  it should "FEATURE_REQUEST: diff var flat flight progress [variable]" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
-    //@note test is supposed to fail until feature is implemented
-    proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
-  }
-
   /**
     * Test cases for the Darboux ghost tactics
     */
@@ -1603,12 +1598,12 @@ class DifferentialTests extends TacticTestBase {
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 1 (Z3)" in withZ3 {qeTool =>
+  it should "COMPATIBILITY: prove a strict barrier certificate 1 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }
 
-  it should "COMPATIBILITY: prove a strict barrier certificate 2 (Z3)" in withZ3 {qeTool =>
+  it should "COMPATIBILITY: prove a strict barrier certificate 2 (Z3)" taggedAs(TodoTest) in withZ3 {qeTool =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(1)) shouldBe 'proved
   }

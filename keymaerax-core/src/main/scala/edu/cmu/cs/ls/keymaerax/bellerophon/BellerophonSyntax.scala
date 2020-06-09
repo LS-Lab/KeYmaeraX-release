@@ -24,7 +24,7 @@ object BelleExpr {
   * All Bellerophon tactic expressions are of type [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]],
   * which provides the following tactic combinators
   *
-  *   - `s & t` alias `s ; t` [[edu.cmu.cs.ls.keymaerax.bellerophon.SeqTactic sequential composition]] executes t` on the output of `s`, failing if either fail.
+  *   - `s ; t` alias `s & t` [[edu.cmu.cs.ls.keymaerax.bellerophon.SeqTactic sequential composition]] executes t` on the output of `s`, failing if either fail.
   *   - `s | t` [[edu.cmu.cs.ls.keymaerax.bellerophon.EitherTactic alternative composition]] executes `t` if applying `s` fails, failing if both fail.
   *   - `t*` [[edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic saturating repetition]] executes tactic `t` repeatedly to a fixpoint, casting result to type annotation,
   *     diverging if no fixpoint.
@@ -82,7 +82,7 @@ trait NamedBelleExpr extends BelleExpr {
 // basic tactic combinators
 
 /** `left ; right` sequential composition executes right` on the output of `left`, failing if either fail. */
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "&" + right.prettyString + ")" }
+case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ";" + right.prettyString + ")" }
 /** `left | right` alternative composition executes `right` if applying `left` fails, failing if both fail. */
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
 //@note saturate and repeat tactic fully parenthesize for parser
@@ -365,7 +365,7 @@ trait RightTactic extends PositionalTactic {
 abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
   private[bellerophon] final def execute(provable: ProvableSig): ProvableSig =
     result(provable)
-  private[bellerophon] def result(provable : ProvableSig): ProvableSig
+  private[keymaerax] def result(provable : ProvableSig): ProvableSig
 }
 
 

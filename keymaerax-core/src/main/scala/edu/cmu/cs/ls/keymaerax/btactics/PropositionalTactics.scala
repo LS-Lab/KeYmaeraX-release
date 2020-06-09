@@ -23,8 +23,8 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[SequentCalculus.implyR]]
    */
-  lazy val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
-  def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = "implyRi" by ((p: ProvableSig, a: Position, s: Position) => {
+  private[btactics] lazy val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
+  private[btactics] def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = "implyRi" by ((p: ProvableSig, a: Position, s: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
     val sequent = p.subgoals.head
     require(a.isIndexDefined(sequent) && s.isIndexDefined(sequent),
@@ -41,8 +41,8 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.orR]]
    */
-  lazy val orRi: DependentTactic = orRi()
-  def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = new SingleGoalDependentTactic("inverse or right") {
+  private[btactics] lazy val orRi: DependentTactic = orRi()
+  private[btactics] def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = new SingleGoalDependentTactic("inverse or right") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(pos1 != pos2, "Two distinct positions required")
       require(sequent.succ.length > pos1.getIndex && sequent.succ.length > pos2.getIndex,
@@ -65,8 +65,8 @@ private object PropositionalTactics extends Logging {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.andL]]
    */
-  lazy val andLi: DependentTactic = andLi()
-  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = new SingleGoalDependentTactic("inverse and left") {
+  private[btactics] lazy val andLi: DependentTactic = andLi()
+  private[btactics] def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = new SingleGoalDependentTactic("inverse and left") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(pos1 != pos2, "Two distinct positions required")
       require(sequent.ante.length > pos1.getIndex && sequent.ante.length > pos2.getIndex,
@@ -89,7 +89,7 @@ private object PropositionalTactics extends Logging {
  *
    * @see [[UnifyUSCalculus.CMon(Context)]]
    * @see [[UnifyUSCalculus.CE(Context)]]
-   * @example{{{
+   * @example {{{
    *                  z=1 |- z>0
    *         --------------------------propCE(PosInExpr(1::Nil))
    *           x>0 -> z=1 |- x>0 -> z>0
@@ -125,13 +125,14 @@ private object PropositionalTactics extends Logging {
   }
 
   /** @see [[SequentCalculus.modusPonens()]] */
-  def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
+  private[btactics] def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
       //@note adapted to use implyL instead of implyLOld
       implyL(implication) <(
-        cohide2(p, SuccPos(sequent.succ.length)) & close
-        //@todo shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
+        close(p, SuccPos(sequent.succ.length))
+        //cohide2(p, SuccPos(sequent.succ.length)) & close
+        //@todo optimizable shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
         ,
         Idioms.ident
         )

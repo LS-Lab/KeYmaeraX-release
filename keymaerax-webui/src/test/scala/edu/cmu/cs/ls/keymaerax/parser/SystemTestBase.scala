@@ -29,7 +29,7 @@ class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
 
   /** Removes all whitespace for string comparisons in tests.
-    * @example{{{
+    * @example {{{
     *     "My string with     whitespace" should equal ("Mystring   with whitespace") (after being whiteSpaceRemoved)
     * }}}
     */

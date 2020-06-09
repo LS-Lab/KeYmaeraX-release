@@ -1429,7 +1429,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
               throw NonSupportedExponentException("Exponent must be integer but normalizes to " + bd)
             case d@Divide(l, r) =>
               throw NonSupportedExponentException("Exponent must be integer but normalizes to division " + d)
-            case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
+            case n@Neg(_) =>
+              throw NonSupportedExponentException("Exponent must be non negative but normalizes to " + n)
+            case _ => throw new RuntimeException("Constant polynomials must normalize to Number, Divide, or Neg.")
           }
         } else {
           throw NonSupportedExponentException("Exponent must be a constant polynomial.")
@@ -1478,7 +1480,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
                 Seq(npq.prv)
               )
               npq.updatePrv(newPrv)
-            case _ => throw new RuntimeException("Constant polynomials must normalize to Number or Divide.")
+            case _ => throw new RuntimeException("Constant polynomials must normalize to Number, Divide, or Neg.")
           }
         } else {
           throw NonSupportedDivisorException("Divisor must be a constant polynomial.")

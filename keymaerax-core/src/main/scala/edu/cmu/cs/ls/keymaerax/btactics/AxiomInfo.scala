@@ -64,9 +64,8 @@ object DerivationInfoRegistry {
       case (_: FormulaArg, f :: Nil) => Right("Expected a formula but got " + f.prettyString)
       case (_: ExpressionArg, (e: Expression) :: Nil) => Left(e)
       case (_: ExpressionArg, e :: Nil) => Right("Expected an expression but got " + e.prettyString)
-      // @TODO: Generalize
-      case (ListArg(n, "formula", a), fmls) if fmls.forall(_.kind == FormulaKind) =>
-        val res = fmls.map(e => convert(FormulaArg(n, a), List(e)))
+      case (ListArg(ai: ArgInfo), fmls) if fmls.forall(_.kind == FormulaKind) =>
+        val res = fmls.map(e => convert(ai, List(e)))
         res.find({case _: Left[Any, String] => false case _: Right[Any, String] => true}) match {
           case Some(Right(err)) => Right(err)
           case None => Left(res.map({case Left(v) => v}))
@@ -134,8 +133,8 @@ object DerivationInfoRegistry {
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
       , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
     new PositionTacticInfo("assignd", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), {case () => HilbertCalculus.assignd}),
-    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true),
-    new InputPositionTacticInfo("assignbExistsRule",
+    new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true), //@Tactic-fied
+    new InputPositionTacticInfo("assignbExistsRule", //@Tactic-fied
       RuleDisplayInfo(
         "[:=] assign exists",
         /* conclusion */ (List("&Gamma;"), List("∃t [x:=t;]P", "&Delta;")),
@@ -151,12 +150,12 @@ object DerivationInfoRegistry {
   /** Differential equation cases of [[allInfo]] */
   private[this] lazy val odeInfos: List[DerivationInfo] = List(
     /*new CoreAxiomInfo("DW base", "DWbase", "DWbase", 'linear, {case () => HilbertCalculus.DW}),*/
-    PositionTacticInfo("dW"
+    PositionTacticInfo("dW" // @Tactic-fied
       , RuleDisplayInfo("Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
       , {case () => DifferentialTactics.diffWeaken}, revealInternalSteps = true),
-    PositionTacticInfo("dWplus"
+    PositionTacticInfo("dWplus" // @Tactic-fied
       , RuleDisplayInfo("Assumption-Preserving Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
@@ -168,14 +167,14 @@ object DerivationInfoRegistry {
           (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
       , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
       , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr], revealInternalSteps = true),
-    InputPositionTacticInfo("dR"
+    InputPositionTacticInfo("dR" // @Tactic-fied
       , RuleDisplayInfo("Differential Refine"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
           (List("&Gamma;"), List("[{x′=f(x) & R}]P","&Delta;"))))
       , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
       , _ => ((fml: Formula) => DifferentialTactics.diffRefine(fml)): TypedFunc[Formula, BelleExpr]),
-    PositionTacticInfo("dCi"
+    PositionTacticInfo("dCi" // @Tactic-fied
       , RuleDisplayInfo("dCi"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))
         , /* premises */ List(
@@ -278,7 +277,7 @@ object DerivationInfoRegistry {
         revealInternalSteps = true
       )
     },
-    PositionTacticInfo("dGi",
+    PositionTacticInfo("dGi", // @Tactic-fied
       RuleDisplayInfo(
         "Inverse Differential Ghost",
         /* conclusion */ (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")),
@@ -286,7 +285,7 @@ object DerivationInfoRegistry {
       ),
       _ => DifferentialTactics.inverseDiffGhost
     ),
-    InputPositionTacticInfo("dbx",
+    InputPositionTacticInfo("dbx", //todo: @Tactic-fied but broken
       RuleDisplayInfo(
         "Darboux (in)equalities",
         /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
@@ -298,32 +297,29 @@ object DerivationInfoRegistry {
         case None => DifferentialTactics.dgDbxAuto
       }: TypedFunc[Option[Term], BelleExpr]
     ),
-    PositionTacticInfo("diffUnpackEvolDomain",
+    PositionTacticInfo("diffUnpackEvolDomain", //@Tactic-fied
       RuleDisplayInfo(
         "Unpack evolution domain",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P","&Delta;")),
         /* premises */ List( (List("&Gamma;","Q"), List("[{x′=f(x) & Q}]P","&Delta;")) )
       ),
       _ => DifferentialTactics.diffUnpackEvolutionDomainInitially
-      , needsTool = false
     ),
-    PositionTacticInfo("barrier",
+    PositionTacticInfo("barrier", //@Tactic-fied
       RuleDisplayInfo(
         "Strict Barrier Certificate",
         /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
         /* premises */ List( (List("Q ∧ p=0"), List("p'>0")) )
       ),
       _ => DifferentialTactics.dgBarrier
-      , needsTool = true
     ),
-    PositionTacticInfo("dRI",
+    PositionTacticInfo("dRI", //@Tactic-fied
       RuleDisplayInfo(
         "(Conj.) Differential Radical Invariants",
         /* conclusion */ (List("p*=0"), List("[{x′=f(x) & Q}]p=0")),
         /* premises */ List( (List("Q"), List("p*=0")) )
       ),
       _ => ODEInvariance.dRI
-      , needsTool = true
     ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
@@ -348,10 +344,11 @@ object DerivationInfoRegistry {
   //<editor-fold desc="Differentials">
   /** Differential cases of [[allInfo]] */
   private[this] lazy val differentialInfos: List[DerivationInfo] = List(
-    new PositionTacticInfo("Dvariable"
+    new PositionTacticInfo("Dvariable" //@Tactic-fied
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
       , {case () => DifferentialTactics.Dvariable}),
-    PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
+
+    new PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
   )
   //</editor-fold>
 
@@ -415,27 +412,27 @@ object DerivationInfoRegistry {
         List((List("&Gamma;","P","Q"),List("&Delta;")),
           (List("&Gamma;","¬P","¬Q"),List("&Delta;"))))
       , {case () => SequentCalculus.equivR}),
-    new InputPositionTacticInfo("allL"
+    new InputPositionTacticInfo("allL" //@Tactic-fied
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
         List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
       , List(new TermArg("θ", "θ"::Nil))
       , _ => ((t:Term) => SequentCalculus.allL(t)): TypedFunc[Term, BelleExpr]),
-    new PositionTacticInfo("allR"
+    new PositionTacticInfo("allR"  //@Tactic-fied
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(x)","&Delta;"))))
       , {case () => SequentCalculus.allR}),
-    new PositionTacticInfo("existsL"
+    new PositionTacticInfo("existsL" //@Tactic-fied
       , RuleDisplayInfo(("∃L", "existsL"), (List("&Gamma;","∃x P(x)"),List("&Delta;")),
         List((List("&Gamma;","P(x)"),List("&Delta;"))))
       , {case () => SequentCalculus.existsL}),
     new PositionTacticInfo("G"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
-    new PositionTacticInfo("GV"
+    new PositionTacticInfo("GV" //@Tactic-fied DLBySubst.scala
       , RuleDisplayInfo("G&ouml;del Vacuous", (List("&Gamma;"), List("[a]P", "&Delta;"))
         , List((List("&Gamma;<sub>const</sub>"), List("P", "&Delta;<sub>const</sub>"))))
       , {case () => TactixLibrary.abstractionb}, revealInternalSteps = true),
-    new InputPositionTacticInfo("existsR"
+    new InputPositionTacticInfo("existsR" //@Tactic-fied
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
       , List(new TermArg("θ", "θ"::Nil))
@@ -464,11 +461,11 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
     new PositionTacticInfo("cohide", "W", {case () => SequentCalculus.cohide}),
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
-    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
-    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}),
-    new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
-    new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
-    new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
+    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}), //@Tactic-fied
+    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}), //@Tactic-fied
+    new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}), //@Tactic-fied
+    new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}), //@Tactic-fied
+    new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}), //@Tactic-fied
     new PositionTacticInfo("toSingleFormula", "toFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     PositionTacticInfo("CMon"
@@ -536,8 +533,8 @@ object DerivationInfoRegistry {
         ,List(
           (List("&Gamma;"),List("&Delta;","P")),
           (List("&Gamma;", "P"), List("&Delta;"))))
-      ,List(FormulaArg("P")), _ => ((fml:Formula) => ProofRuleTactics.cut(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputTacticInfo("abbrv"
+      ,List(FormulaArg("P")), _ => ((fml:Formula) => SequentCalculus.cut(fml)): TypedFunc[Formula, BelleExpr]),
+    new InputTacticInfo("abbrv" //@Tactic-fied TactixLibrary.abbrvAll
       , RuleDisplayInfo(("Abbreviate","abbrv")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
@@ -560,7 +557,7 @@ object DerivationInfoRegistry {
       , revealInternalSteps = true),
     new PositionTacticInfo("loopAuto", "loopAuto",
       {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
-    new InputPositionTacticInfo("throughout",
+    new InputPositionTacticInfo("throughout", //@Tactic-fied
       RuleDisplayInfo("Loop Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("j(x)", "&Delta;")),
@@ -569,7 +566,7 @@ object DerivationInfoRegistry {
           (List("j(x)"),List("[d]j(x)")),
           (List("j(x)"),List("P"))))
       , List(FormulaArg("j(x)")), _ => ((fml: Formula) => TactixLibrary.throughout(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("con",
+    new InputPositionTacticInfo("con", //@Tactic-fied
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
           (List("&Gamma;"),List("∃x. j(x)", "&Delta;")),
@@ -608,7 +605,7 @@ object DerivationInfoRegistry {
         List((List("P(y)"),List("Q(y)"))))
       , List(VariableArg("x"),VariableArg("y"))
       , _ => ((x:Variable) => ((y:Variable) => TactixLibrary.uniformRename(x,y)): TypedFunc[Variable, BelleExpr]): TypedFunc[Variable, TypedFunc[Variable, BelleExpr]]),
-    new InputPositionTacticInfo("stutter"
+    new InputPositionTacticInfo("stutter" //@Tactic-fied
       , RuleDisplayInfo(("[:=]", "[:=]"), (List("&Gamma;"), List("P","&Delta;"))
         , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(VariableArg("x"))
       , _ => ((x:Variable) => DLBySubst.stutter(x)): TypedFunc[Variable, BelleExpr]),
@@ -622,7 +619,7 @@ object DerivationInfoRegistry {
       FormulaArg("equality") :: Nil,
       _ => ((f:Formula) => ArithmeticSimplification.transformEquality(f)): TypedFunc[Formula, BelleExpr]),
 
-    new InputPositionTacticInfo(
+    new InputPositionTacticInfo(  //@Tactic-fied
       "discreteGhost",
       RuleDisplayInfo(("iG", "iG"), (List("&Gamma;"),List("P","&Delta;")),
         List((List("&Gamma;"), List("[gv:=gt;]P","&Delta;")))),
@@ -647,7 +644,7 @@ object DerivationInfoRegistry {
       TactixLibrary.existsL, TacticIndex.existsRStutter,
       ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
     )}),
-    PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
+    PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}), //@Tactic-fied
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true, revealInternalSteps = true),
     new TacticInfo("explore", "explore", {case () => (gen:Generator.Generator[GenProduct]) => gen match {
@@ -669,14 +666,14 @@ object DerivationInfoRegistry {
       case _ => {
         case Some(Number(timeout)) => TactixLibrary.QE(Nil, None, Some(timeout.toInt))
         case _ => TactixLibrary.QE }: TypedFunc[Option[Term], BelleExpr]
-      }: TypedFunc[Option[String], _], needsTool = true, revealInternalSteps = true),
-    new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}, needsTool = true),
-    //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
-    new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
-    new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}, needsTool = true),
-    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
+      }: TypedFunc[Option[String], _], revealInternalSteps = true),
+    new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}),
+    //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}),
+    new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}),
+    new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}),
+    new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),  //@Tactic-fied
     //@todo universal closure may come with list of named symbols
-    new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}),
+    new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}), //@Tactic-fied
 
     InputPositionTacticInfo("useAt"
       , "useAt"
@@ -777,20 +774,22 @@ object DerivationInfoRegistry {
     ),
 
     // Differential tactics
-    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
+    new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}), //@Tactic-fied
     new PositionTacticInfo("ODE",
       "Auto",
-      {case () => TactixLibrary.ODE}, needsTool = true, revealInternalSteps = true),
+      {case () => TactixLibrary.ODE}, revealInternalSteps = true),
     new PositionTacticInfo("odeInvC",
       "odeInvC",
-      {case () => TactixLibrary.odeInvariantComplete}, needsTool = true),
-    new PositionTacticInfo("dgZeroMonomial",
-      "dgZeroMonomial",
-      {case () => DifferentialTactics.dgZeroMonomial}, needsTool = true),
-    new PositionTacticInfo("dgZeroPolynomial",
-      "dgZeroPolynomial",
-      {case () => DifferentialTactics.dgZeroPolynomial}, needsTool = true),
-    new PositionTacticInfo("dI",
+      {case () => TactixLibrary.odeInvariantComplete}),
+    // Not @Tactic-fied because deprecated.
+    // new PositionTacticInfo("dgZeroMonomial",
+    //  "dgZeroMonomial",
+    //  {case () => DifferentialTactics.dgZeroMonomial}),
+    // Not @Tactic-fied because deprecated.
+    // new PositionTacticInfo("dgZeroPolynomial",
+    //  "dgZeroPolynomial",
+    //  {case () => DifferentialTactics.dgZeroPolynomial}),
+    new PositionTacticInfo("dI", //@Tactic-fied
       RuleDisplayInfo("Differential Invariant",
         (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;")),
         /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/),
@@ -807,15 +806,15 @@ object DerivationInfoRegistry {
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solve}, needsTool = true, revealInternalSteps = true),
+      {case () => TactixLibrary.solve}, revealInternalSteps = true),
     new PositionTacticInfo("solveEnd",
       RuleDisplayInfo("Solution",
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( q(sol(t)) → [x:=sol(t)]p(x) )")))),
-      {case () => TactixLibrary.solveEnd}, needsTool = true, revealInternalSteps = true),
+      {case () => TactixLibrary.solveEnd}, revealInternalSteps = true),
     new PositionTacticInfo("DGauto",
       "DGauto",
-      {case () => TactixLibrary.DGauto}, needsTool = true),
+      {case () => TactixLibrary.DGauto}),
 
     // DLBySubst
     //new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
@@ -823,20 +822,20 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}),
 
     // numerical bound tactics
-    new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}, needsTool = true),
+    new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}),
     InputTacticInfo("intervalCutTerms",
       RuleDisplayInfo(("Interval Arithmetic Cut","intervalCutTerms"),
         (List("&Gamma;"),List("&Delta;")),
         /* premises */ List((List("&Gamma;"), List("a <= trm", "trm <= b"), true),
           (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false)))
-      ,List(new TermArg("trm")), _ => ((t:Term) => IntervalArithmeticV2.intervalCutTerms(t)): TypedFunc[Term, BelleExpr]),
+      ,List(new TermArg("trm")), _ => ((t:Term) => IntervalArithmeticV2.intervalCutTerms(scala.collection.immutable.Seq(t))): TypedFunc[Term, BelleExpr]),
     PositionTacticInfo("intervalCut"
       , RuleDisplayInfo(("Interval Arithmetic Cut", "intervalCut"),
         (List("&Gamma;"),List("&Delta;")),
         List((List("&Gamma;"), List("a <= trm", "trm <= b"), true), (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false))
       )
       , {case () => IntervalArithmeticV2.intervalCut}),
-    new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}, needsTool = true),
+    new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}), //@Tactic-fied
 
     // assertions and messages
     InputTacticInfo("print"

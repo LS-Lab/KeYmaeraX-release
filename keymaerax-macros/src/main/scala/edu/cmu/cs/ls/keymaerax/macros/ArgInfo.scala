@@ -17,6 +17,11 @@ case class FormulaArg (override val name: String, override val allowsFresh: List
   val sort = "formula"
 }
 
+case class GeneratorArg (override val name: String) extends ArgInfo {
+  val sort = "generator"
+  override val allowsFresh: List[String] = Nil
+}
+
 class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "expression"
 }
@@ -40,14 +45,20 @@ case class StringArg (override val name: String, override val allowsFresh: List[
 case class SubstitutionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "subst"
 }
+
+case class PosInExprArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
+  val sort = "posinexpr"
+}
+
 case class OptionArg(arg: ArgInfo) extends ArgInfo {
   val name: String = arg.name
   val sort: String = "option[" + arg.sort + "]"
   val allowsFresh: List[String] = arg.allowsFresh
 }
 @deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
-// @TODO: Use argInfo for elementSort instead
-case class ListArg (override val name: String, elementSort: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
-  val sort = "list"
+case class ListArg (arg: ArgInfo) extends ArgInfo {
+  val name: String = arg.name
+  val sort: String = "list[" + arg.sort + "]"
+  val allowsFresh: List[String] = arg.allowsFresh
 }
 

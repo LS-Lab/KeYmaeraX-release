@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivedAxiomInfo}
+import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivedAxiomInfo, Tactic}
 import DerivationInfoAugmentors._
 
 import scala.collection.immutable._
@@ -32,8 +32,8 @@ protected object FOQuantifierTactics {
     })
 
   /** Inverse all instantiate, i.e., introduces a universally quantified Variable for each Term as specified by what. */
-  def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
-    def allInstI(t: Term, v: Variable): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+  def allInstantiateInverse(what: (Term, Variable)*): DependentPositionTactic = TacticFactory.anon ((pos: Position) => {
+    def allInstI(t: Term, v: Variable): DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
       val fml = sequent.sub(pos) match {
         case Some(fml: Formula) => fml
         case Some(e) => throw new TacticInapplicableFailure("allInstantiateInverse only applicable to formulas, but got " + e.prettyString)
@@ -48,10 +48,10 @@ protected object FOQuantifierTactics {
   })
 
   /** @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.allL]] */
-  def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-  //@note can be internalized to a USubst tactic with internalized if-condition language
-    //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
-    "allL" byWithInputs (instance match {case Some(i) => i::Nil case _ => Nil}, (pos: Position, sequent: Sequent) => {
+  def allInstantiate(quantified: Option[Variable], instance: Option[Term]): DependentPositionTactic =
+    //@Tactic in [[SequentCalculus]]
+    //@note can be internalized to a USubst tactic with internalized if-condition language
+    TacticFactory.anon ((pos: Position, sequent: Sequent) => {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
@@ -82,7 +82,7 @@ protected object FOQuantifierTactics {
 
           //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
-          ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+          SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
             cohide('Rlast) & CMon(pos.inExpr) & byUS(Ax.allInst) & done
             )
@@ -95,9 +95,8 @@ protected object FOQuantifierTactics {
       }
     })
 
-  def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
-    "existsR" byWithInputs (instance match {case Some(i) => i::Nil case _ => Nil}, (pos: Position, sequent: Sequent) => {
+  def existsInstantiate(quantified: Option[Variable], instance: Option[Term]): DependentPositionTactic =
+    TacticFactory.anon ((pos: Position, sequent: Sequent) => {
       def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
       def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
 
@@ -128,7 +127,7 @@ protected object FOQuantifierTactics {
 
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
-            ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
+            SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
               cohide(pos) & CMon(pos.inExpr) & byUS(Ax.existsGeneralize, subst) & done
               )
@@ -141,72 +140,67 @@ protected object FOQuantifierTactics {
       }
     })
 
-
-  /** @see [[SequentCalculus.allR]] */
-  lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("allR") {
-    //@note could also try to skolemize directly and then skolemize to a fresh name index otherwise
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        if (!pos.isSucc) throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
-        val xs = sequent.sub(pos) match {
-          case Some(Forall(vars, _)) => vars
-          case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
-        val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
-        //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
-        val renaming =
-          if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRenaming(np._1, np._2)(_)).reduce[BelleExpr](_&_)).reduce[BelleExpr](_ & _)
-          else {assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_&_)}
-        // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
-        val backrenaming =
-          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRenaming(np._2, np._1)).reduce[BelleExpr](_ & _)
-          else {assert(namePairs.size == 1); ProofRuleTactics.uniformRenaming(namePairs.head._2, namePairs.head._1)}
-        renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
-      }
-    }
-
-    /** Finds positions where to bound rename */
-    private def outerMostBoundPos(x: Variable, s: Sequent): IndexedSeq[Position] = {
-      outerMostBoundPos(x, s.ante, AntePosition.apply) ++ outerMostBoundPos(x, s.succ, SuccPosition.apply)
-    }
-
-    private def outerMostBoundPos(x: Variable, fmls: IndexedSeq[Formula], posFactory: (Int, List[Int]) => Position): IndexedSeq[Position] = {
-      fmls.map(outerMostBoundPos(x, _)).
-        zipWithIndex.flatMap({case (posInExpr, i) => posInExpr.map(pie => posFactory(i+1, pie.pos)) })
-    }
-
-    private def outerMostBoundPos(x: Variable, fml: Formula): List[PosInExpr] = {
-      var outerMostBound: List[PosInExpr] = List()
-      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-        override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-          case Forall(xs, _) if xs.contains(x) && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
-          case Exists(xs, _) if xs.contains(x) && !outerMostBound.exists(_.isPrefixOf(p))  => outerMostBound = outerMostBound :+ p; Left(None)
-          case Box(Assign(y, _), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
-          case Box(AssignAny(y), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
-          case Diamond(Assign(y, _), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
-          case Diamond(AssignAny(y), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
-          case _ => Left(None)
-        }
-      }, fml)
-      outerMostBound
-    }
+  /** Finds positions where to bound rename */
+  private def outerMostBoundPos(x: Variable, s: Sequent): IndexedSeq[Position] = {
+    outerMostBoundPos(x, s.ante, AntePosition.apply) ++ outerMostBoundPos(x, s.succ, SuccPosition.apply)
   }
 
+  private def outerMostBoundPos(x: Variable, fmls: IndexedSeq[Formula], posFactory: (Int, List[Int]) => Position): IndexedSeq[Position] = {
+    fmls.map(outerMostBoundPos(x, _)).
+      zipWithIndex.flatMap({ case (posInExpr, i) => posInExpr.map(pie => posFactory(i + 1, pie.pos)) })
+  }
+
+  private def outerMostBoundPos(x: Variable, fml: Formula): List[PosInExpr] = {
+    var outerMostBound: List[PosInExpr] = List()
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+        case Forall(xs, _) if xs.contains(x) && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
+        case Exists(xs, _) if xs.contains(x) && !outerMostBound.exists(_.isPrefixOf(p))  => outerMostBound = outerMostBound :+ p; Left(None)
+        case Box(Assign(y, _), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
+        case Box(AssignAny(y), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
+        case Diamond(Assign(y, _), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
+        case Diamond(AssignAny(y), _) if x==y  && !outerMostBound.exists(_.isPrefixOf(p)) => outerMostBound = outerMostBound :+ p; Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    outerMostBound
+  }
+
+  /** [[SequentCalculus.allR]] */
+  private[btactics] val allSkolemize: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+    //@Tactic in [[SequentCalculus]]
+    if (!pos.isSucc) throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
+    val xs = sequent.sub(pos) match {
+      case Some(Forall(vars, _)) => vars
+      case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+    }
+    val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
+    //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
+    val renaming =
+      if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_&_)).reduce[BelleExpr](_ & _)
+      else {assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_&_)}
+    // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
+    val backrenaming =
+      if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
+      else {assert(namePairs.size == 1); ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)}
+    renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
+  })
+
   /**
-   * Skolemizes an existential quantifier in the antecedent.
-   * @see [[allSkolemize]]
-   */
-  lazy val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
+    * [[SequentCalculus.existsL]]
+    * Skolemizes an existential quantifier in the antecedent.
+    */
+  private[btactics] val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
 
   /**
    * Generalizes existential quantifiers, but only at certain positions. All positions have to refer to the same term.
-   * @example{{{
+   * @example {{{
    *           \exists z z=a+b |-
    *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: Nil)(AntePosition(0))
    *                 a+b = a+b |-
    * }}}
-   * @example{{{
+   * @example {{{
    *           \exists z z=z |-
    *           ----------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: PosInExpr(1::Nil) :: Nil)(AntePosition(0))
    *               a+b = a+b |-
@@ -232,7 +226,7 @@ protected object FOQuantifierTactics {
             SubstitutionPair(aT, sequent.sub(pos.topLevel ++ where.head).get) :: Nil)
 
           cut(Imply(fml, Exists(Variable("x_") :: Nil, fmlRepl))) <(
-            /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRenaming(Variable("x_"), x)('Llast)),
+            /* use */ implyL('Llast) <(closeIdWith('Rlast), hide(pos, fml) & ProofRuleTactics.boundRename(Variable("x_"), x)('Llast)),
             /* show */ cohide('Rlast) & TactixLibrary.by(Ax.existsGeneralize, subst)
             )
         case Some(e) => throw new TacticInapplicableFailure("existsGeneralize only applicable to formulas, but got " + e.prettyString)
@@ -255,11 +249,11 @@ protected object FOQuantifierTactics {
    * @param x The universally quantified variable to introduce.
    * @param t The term to generalize.
    * @return The position tactic.
-   * @example{{{\forall z \forall x x^2 >= -z^2
+   * @example {{{\forall z \forall x x^2 >= -z^2
    *            ------------------------------- universalGenT(z, f())
    *            \forall x x^2 >= -f()^2
    * }}}
-   * @example{{{\forall z \forall x x^2 >= -z^2
+   * @example {{{\forall z \forall x x^2 >= -z^2
    *            ------------------------------- universalGenT(z, y+5)
    *            \forall x x^2 >= -(y+5)^2
    * }}}
@@ -306,12 +300,12 @@ protected object FOQuantifierTactics {
   /**
    * Computes the universal closure of the formula at the specified position. Uses the provided order of quantifiers.
    * Reverse alphabetical order for non-mentioned variables (for all variables if order == Nil).
-   * @example{{{
+   * @example {{{
    *           |- \forall a forall z forall x (x>0 & a=2 & z<5)
    *         ---------------------------------------------------universalClosure(Variable("a")::Nil)
    *           |- x>0 & a=2 & z<5
    * }}}
-   * @example{{{
+   * @example {{{
    *           |- \forall z forall x forall a (x>0 & a=2 & z<5)
    *         ---------------------------------------------------universalClosure()
    *           |- x>0 & a=2 & z<5
@@ -319,7 +313,7 @@ protected object FOQuantifierTactics {
    * @param order The order of quantifiers.
    * @return The tactic.
    */
-  def universalClosure(order: Seq[NamedSymbol] = Nil): DependentPositionTactic = "universalClosure" byWithInputs (order, (pos: Position, sequent: Sequent) => {
+  def universalClosure(order: Seq[NamedSymbol]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     // fetch non-bound variables and parameterless function symbols
     require(pos.isTopLevel, "Universal closure only at top-level")
     val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos.top)).toSet ++ StaticSemantics.signature(sequent(pos.top))
@@ -337,10 +331,13 @@ protected object FOQuantifierTactics {
     if (sorted.isEmpty) skip
     else sorted.map(t => universalGen(None, t)(pos)).reduce[BelleExpr](_ & _)
   })
-  lazy val universalClosure: DependentPositionTactic = universalClosure()
 
-  /** repeated application of [[TactixLibrary.allL]] */
-  def allLs(vs: List[Term]) : DependentPositionTactic = "allLs" by { pos: Position =>
+  @Tactic(names = ("∀Cl", "allClosure"), displayLevel = "browse")
+  val universalClosure: DependentPositionTactic = anon { pos: Position => universalClosure(Nil)(pos) }
+
+  /** Repeated application of [[TactixLibrary.allL]] */
+  //@todo won't compile @Tactic(displayLevel = "internal")
+  def allLs(vs: List[Term]): DependentPositionTactic = anon { pos: Position =>
     vs.map(allL(_)(pos): BelleExpr).reduceLeft(_ & _)
   }
 }

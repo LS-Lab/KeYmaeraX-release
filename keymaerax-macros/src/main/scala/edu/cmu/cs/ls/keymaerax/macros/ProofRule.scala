@@ -7,24 +7,25 @@ import scala.collection.immutable.Nil
 import scala.reflect.macros.whitebox
 
 /**
- *  Annotation for derived axioms, which allows decentralized AxiomInfo
- * This annotation can only be applied to val declarations whose right-hand-sides are applications of [[derivedRule]]
- * or related functions, see [[Ax]] for examples.
- *
- *  @param names    Display names
- *  @param codeName You almost never need to specify this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
- *                  `codeName`` will be inferred from the val that is annotated by this `@ProofRule` and is strongly recommended to be identical to it.
- *  @param premises String of premises when (if) the rule is displayed  on the UI.
- *                  Rules with premises must have conclusions.
- *                  Premises are separated by ;; and each premise is optionally a sequent.  "P;; A, B |- C" specifies two
- *                  premises, the latter of which is a sequent with two assumptions. An asterisk "*" indicates a rule that
- *                  closes a branch.
- *  @param conclusion Conclusion of rule displayed on UI.
- *                  The name of each input is given in [[inputs]], which may be generated from the [[def]].
- *                  Sequent syntax is optionally supported:   A, B |- C, D
- *  @param displayLevel Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
- *  @author Brandon Bohrer
- *  */
+  * Annotation for core or derived axiomatic rules, which allows decentralized [[AxiomaticRuleInfo]].
+  * This annotation can only be applied to val declarations whose right-hand-sides are applications of [[derivedRule]]
+  * or related functions, see [[Ax]] for examples.
+  *
+  * @param names    Display names
+  * @param codeName You almost never need to specify this argument. Permanent unique code name used to invoke this axiom in tactics as a string and for Lemma storage.
+  *                 `codeName`` will be inferred from the val that is annotated by this `@ProofRule` and is strongly recommended to be identical to it.
+  * @param premises String of premises when (if) the rule is displayed  on the UI.
+  *                 Rules with premises must have conclusions.
+  *                 Premises are separated by ;; and each premise is optionally a sequent.  "P;; A, B |- C" specifies two
+  *                 premises, the latter of which is a sequent with two assumptions. An asterisk "*" indicates a rule that
+  *                 closes a branch.
+  * @param conclusion Conclusion of rule displayed on UI.
+  *                   The name of each input is given in [[inputs]], which may be generated from the [[def]].
+  *                   Sequent syntax is optionally supported:   A, B |- C, D
+  * @param displayLevel Where to show the axiom: "internal" (not on UI at all), "browse", "menu", "all" (on UI everywhere)
+  * @author Brandon Bohrer
+  * @see [[TacticInfo]]
+  */
 class ProofRule(val names: Any = false, /* false is a sigil value, user value should be string, strings, or displayinfo*/
                 val codeName: String = "",
                 val premises: String = "",

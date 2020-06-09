@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.infrastruct.{Context, FormulaTools, PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -42,8 +43,12 @@ object Approximator extends Logging {
     * @param n The number of terms to expand the series/
     * @return The relevant tactic.
     */
-  def autoApproximate(n: Number) = new DependentPositionWithAppliedInputTactic("autoApproximate", n::Nil) {
-    override def factory(pos: Position): DependentTactic = anon((sequent: Sequent) => sequent.sub(pos) match {
+  @Tactic("Approximate",
+    conclusion = "Γ |- [{X'=F}], Δ",
+    premises = "Γ |- [{X'=F & Α(n)}], Δ"
+  )
+  def autoApproximate(n: Number) : DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
+    sequent.sub(pos) match {
       case Some(m:Modal) if(m.program.isInstanceOf[ODESystem]) => {
         val system = m.program.asInstanceOf[ODESystem]
         val t = timeVar(system.ode)
@@ -58,7 +63,7 @@ object Approximator extends Logging {
       }
       case Some(e) => throw new TacticInapplicableFailure("autoApproximate only applicable on positions of form [{ODE}]P, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-    })
+    }
   }
 
 
@@ -66,9 +71,12 @@ object Approximator extends Logging {
   //endregion
 
   //region Approximation for {{{e'=e}}}
-
-  def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic =
-      "expApproximate" byWithInputs(e::n::Nil, (pos: Position, sequent: Sequent) => {
+  @Tactic("e'=e Approximation",
+    conclusion = "Γ |- [{c1,exp'=exp,c2}], Δ",
+    premises = "Γ |- [{c1,exp'=exp,c2 & approximate(n)}], Δ",
+    inputs = "exp:variable;;n:number"
+  )
+  def expApproximate(e: Variable, n: Number): DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
     val t = timeVarInModality(sequent.sub(pos))
 
     val N = n.value.toInt
@@ -99,12 +107,15 @@ object Approximator extends Logging {
     }
 
     DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", DEBUG) & cutTactics.reduce(_ & _)
-  })
+  }
 
-  /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}.
+  /** Cuts in Taylor approximations for circular dynamics {{{x'=y,y'=-x}}}.
     * @todo Good error messages for when the first cut or two fail ==> "missing assumptions." */
-  def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic =
-      "circularApproximate" byWithInputs(s::c::n::Nil, (pos: Position, sequent: Sequent) => {
+  @Tactic("Circular Dynamics Approximation",
+    conclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
+    premises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
+    inputs = "sin:variable;;cos:variable;;num:number")
+  def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionTactic = anon {(pos: Position, sequent: Sequent) =>
     val t = timeVarInModality(sequent.sub(pos))
 
     //Get the number of terms we should expand.
@@ -151,7 +162,7 @@ object Approximator extends Logging {
       )
 
     DebuggingTactics.debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) & isOnCircle & cutTactics.reduce(_ & _)
-  })
+  }
 
   //region Definitions of series.
 

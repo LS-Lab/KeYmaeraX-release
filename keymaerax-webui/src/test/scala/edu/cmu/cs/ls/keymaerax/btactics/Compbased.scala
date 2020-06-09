@@ -266,13 +266,13 @@ class Compbased extends TacticTestBase {
         |          | abs(y-yo) > v^2 / (2*B()) + V()*(v/B()))""".stripMargin.asFormula
 
     def di(a: String): DependentPositionTactic = diffInvariant(
-      "0<=t".asFormula,
-      "dx^2 + dy^2 = 1".asFormula,
-      s"v = old(v) + $a*t".asFormula,
-      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula,
-      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula,
-      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula,
-      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula)
+      "0<=t".asFormula ::
+      "dx^2 + dy^2 = 1".asFormula ::
+      s"v = old(v) + $a*t".asFormula ::
+      s"-t * (v - $a/2*t) <= x - old(x) & x - old(x) <= t * (v - $a/2*t)".asFormula ::
+      s"-t * (v - $a/2*t) <= y - old(y) & y - old(y) <= t * (v - $a/2*t)".asFormula ::
+      "-t * V() <= xo - old(xo) & xo - old(xo) <= t * V()".asFormula ::
+      "-t * V() <= yo - old(yo) & yo - old(yo) <= t * V()".asFormula :: Nil)
 
     val dw: BelleExpr = exhaustiveEqR2L(hide=true)('Llast)*5 /* 5 old(...) in DI */ & SaturateTactic(andL('L)) &
       print("Before diffWeaken") & dW(1) & print("After diffWeaken")

@@ -41,7 +41,7 @@ import scala.reflect.runtime.{universe => ru}
   * }}}
   * Equivalently one can also write `TactixLibrary.useAt` or `TactixLibrary.byUS` because [[TactixLibrary]] extends [[UnifyUSCalculus]].
   *
-  * 
+  *
   * = Adding Derived Axioms and Derived Axiomatic Rules =
   *
   * Core Axioms are loaded from the core and their meta information is annotated in this file e.g. as follows:
@@ -337,7 +337,7 @@ object Ax extends Logging {
     key = "0", recursor = "*", unifier = "full")
   val assignbAxiom = coreAxiom("[:=] assign")
   @Axiom("[:=]=", conclusion = "__[x:=e]P__↔∀x(x=e→P)", displayLevel = "all",
-    key = "0", recursor = "*;0.1", unifier = "surjlinearpretend")
+    key = "0", recursor = "0.1;*", unifier = "surjlinearpretend")
   val assignbeq = coreAxiom("[:=] assign equality")
   @Axiom("[:=]", conclusion = "__[x:=x]P__↔P")
   val selfassignb = coreAxiom("[:=] self assign")
@@ -494,8 +494,8 @@ object Ax extends Logging {
   @Axiom("[]T", conclusion = "__[a]⊤__", displayLevel = "all",
     key = "", recursor = "", unifier = "surjlinear")
   val boxTrue = coreAxiom("[]T system")
-  @Axiom("K", conclusion = "[a](P→Q) → ([a]P → __[a]Q__)",
-    key = "1.1", recursor = "*", unifier = "surjlinear")
+  @Axiom("K", conclusion = "[a](P→Q) → (__[a]P → [a]Q__)",
+    key = "1", recursor = "*")
   val K = coreAxiom("K modal modus ponens")
   //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I-> axiom, because its sole purpose is to derive the stronger equivalence form
   @Axiom(("I<sub>→</sub>", "Iind"), conclusion = "P∧[a<sup>*</sup>](P→[a]P)→__[a<sup>*</sup>]P__", displayLevel = "internal",
@@ -686,6 +686,20 @@ object Ax extends Logging {
         ,
         hide(1) & HilbertCalculus.boxTrue(1)
         )
+  )
+
+  /**
+    * Rule "all generalization".
+    * Premise p(||) |- q(||)
+    * Conclusion \forall x p(||) |- \forall x q(||)
+    * End.
+    */
+  @ProofRule("M∀",  premises = "P |- Q", conclusion = "∀x P |- ∀ x Q")
+  lazy val monall = derivedRuleSequent("all monotone",
+    Sequent(immutable.IndexedSeq("\\forall x_ p_(||)".asFormula), immutable.IndexedSeq("\\forall x_ q_(||)".asFormula)),
+    implyRi()(-1,1) &
+      useAt(allDistElim)(1) &
+      byUS(allGeneralize)
   )
 
   /**
@@ -1187,8 +1201,8 @@ object Ax extends Logging {
     *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
     * }}}
     */
-  @Axiom(("∀→","all->"), conclusion = "(∀x (p(x)→q(x))) → (∀x p(x) → __∀x q(x)__)",
-    key = "1.1"
+  @Axiom(("∀→","all->"), conclusion = "(∀x (p(x)→q(x))) → (__∀x p(x) → ∀x q(x)__)",
+    key = "1", recursor = "*"
   )
   lazy val allDist = derivedAxiom("all distribute",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p(x_)->q(x_))) -> ((\\forall x_ p(x_))->(\\forall x_ q(x_)))".asFormula)),
@@ -1196,11 +1210,11 @@ object Ax extends Logging {
 
   /**
     * {{{Axiom "all distribute".
-    *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
+    *   (\forall x (P->Q)) -> ((\forall x P)->(\forall x Q))
     * }}}
     */
-  @Axiom(("∀→","all->"), conclusion = "(∀x (P→Q)) → (∀x P → __∀x Q__)",
-    key = "1.1", unifier = "surjlinear")
+  @Axiom(("∀→","all->"), conclusion = "(∀x (P→Q)) → (__∀x P → ∀x Q__)",
+    key = "1", recursor = "*")
   lazy val allDistElim = derivedAxiom("all distribute elim",
     Sequent(IndexedSeq(), IndexedSeq("(\\forall x_ (p_(||)->q_(||))) -> ((\\forall x_ p_(||))->(\\forall x_ q_(||)))".asFormula)),
     implyR(1) & implyR(1) & ProofRuleTactics.skolemizeR(1) & useAt(alle)(-1) & useAt(alle)(-2) & prop)
@@ -1571,7 +1585,8 @@ object Ax extends Logging {
     * @Derived from [:=] assign equality, quantifier dualities
     * @Derived by ":= assign dual" from "[:=] assign equality exists".
     */
-  @Axiom("<:=>", key = "0", recursor = "*;0.1")
+  @Axiom("<:=>", conclusion = "__<x:=e>P__↔∃x(x=e∧P)", displayLevel = "all",
+    key = "0", recursor = "0.1;*")
   lazy val assigndEquality = derivedAxiom("<:=> assign equality",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
@@ -2822,7 +2837,7 @@ object Ax extends Logging {
     * @Derived
     * }}}
     */
-  @Axiom("DC", conclusion = "(__[{x'=f(x)&Q}]P__↔[{x'=f(x)&Q∧R}]P)←[{x'=f(x)&Q}]R", displayLevel = "menu",
+  @Axiom("DC", conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R", displayLevel = "menu",
     key = "1.0", recursor = "*", unifier = "surjlinear", inputs = "R:formula")
   lazy val DC = derivedAxiom("DC differential cut",
     Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
@@ -3163,7 +3178,8 @@ object Ax extends Logging {
     * End.
     * }}}
     */
-  @Axiom("DCd", key = "1.0", recursor = "*")
+  @Axiom("DCd", conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R",
+    key = "1.0", recursor = "*")
   lazy val DCd = derivedAxiom("DCd diamond differential cut",
     Sequent(IndexedSeq(), IndexedSeq("(<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)".asFormula)),
       useAt(diamond, PosInExpr(1::Nil))(1, 1::0::Nil) &

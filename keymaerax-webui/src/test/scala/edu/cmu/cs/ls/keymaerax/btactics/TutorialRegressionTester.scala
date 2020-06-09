@@ -50,13 +50,13 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
     else throw new IllegalArgumentException(s"URL must end in either .json, .kya, or .kyx, but got $url")
   })
 
-  tutorialName should "parse all models" in {
+  tutorialName should "parse all models" in withZ3 { _ =>
     forEvery (tutorialEntries) { (tutorialName, name, model, _, _, _, _, _) =>
       withClue(tutorialName + "/" + name) { KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false) }
     }
   }
 
-  it should "parse all tactics" in {
+  it should "parse all tactics" in withZ3 { _ =>
     forEvery (tutorialEntries.filter(_._7.nonEmpty)) { (tutorialName, name, model, _, _, _, tactics, _) =>
       val defs = KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false).defs
       forEvery (table(tactics)) { ( tname, ttext) =>
