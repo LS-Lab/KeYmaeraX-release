@@ -248,6 +248,9 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
     def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, isCoreAnon: Option[Boolean]): Tree = {
+      // [[isCoreAnon]] represents "which anon function" was on the RHS of the definition.
+      // If this is empty, the @Tactic is a forward to another BelleExpr. [[forward]] has overloads for most (@TODO all)
+      // tactic classes, so in each case we just call [[forward]]
       if (isCoreAnon.isEmpty) {
         return q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).forward($acc)"""
       }

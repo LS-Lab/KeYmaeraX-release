@@ -425,6 +425,21 @@ object TacticFactory {
 
     /** Creates a named tactic */
     def by(t: BelleExpr): BelleExpr = NamedTactic(name, t)
+    // Renamed version of by(BelleExpr): BelleExpr for name consistency
+    def forward(t: BelleExpr): BelleExpr = name by t
+    def forward(t: BuiltInTactic): BuiltInTactic = name by ((ps: ProvableSig) => t.result(ps))
+    def forward(t: BuiltInPositionTactic): BuiltInPositionTactic =  by ((pr: ProvableSig, pos: Position) => t.computeResult(pr, pos))
+    def forward(t: BuiltInLeftTactic): BuiltInLeftTactic = by ((pr: ProvableSig, pos: AntePosition) => t.computeResult(pr, pos))
+    def forward(t: BuiltInRightTactic): BuiltInRightTactic = by ((pr: ProvableSig, pos: SuccPosition) => t.computeResult(pr, pos))
+    def forward(t: CoreLeftTactic): CoreLeftTactic = coreby ((pr: ProvableSig, pos: AntePosition) => t.computeResult(pr, pos))
+    def forward(t: CoreRightTactic): CoreRightTactic = coreby ((pr: ProvableSig, pos: SuccPosition) => t.computeResult(pr, pos))
+    def forward(t: DependentTactic): DependentTactic = by ((seq: Sequent) => t)
+    def forward(t: DependentPositionTactic): DependentPositionTactic = by ((pos: Position, seq: Sequent) => t(pos))
+    def forward(t: DependentPositionWithAppliedInputTactic): DependentPositionWithAppliedInputTactic = byWithInputs(t.inputs, (pos: Position, seq: Sequent) => t(pos))
+    def forward(t: BuiltInTwoPositionTactic): BuiltInTwoPositionTactic = by ((ps: ProvableSig, posOne: Position, posTwo: Position) => t.computeResult(ps, posOne, posTwo))
+    // @TODO: implement
+    //def forward(t: AppliedBuiltinTwoPositionTactic): AppliedBuiltinTwoPositionTactic = "ANON" by t
+    def forward(t: InputTactic): InputTactic = byWithInputs(t.inputs, t)
 
     def byTactic(t: ((ProvableSig, Position, Position) => BelleExpr)) = new DependentTwoPositionTactic(name) {
       override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {
@@ -678,4 +693,5 @@ object TacticFactory {
   def inputanonR(t: ((ProvableSig, SuccPosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsR(Nil:Seq[Any], t)
   def inputanonL(t: ((ProvableSig, AntePosition) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" corebyWithInputsL(Nil:Seq[Any], t)
   def inputanon(t: => BelleExpr): InputTactic = "ANON" byWithInputs( Nil, t)
+
 }
