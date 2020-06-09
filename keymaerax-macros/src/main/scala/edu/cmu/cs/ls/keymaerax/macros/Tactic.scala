@@ -76,7 +76,7 @@ class TacticImpl(val c: blackbox.Context) {
         case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
       }
     }
-    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, String, Boolean) = {
+    def paramify(tn: TermName, params: Seq[Tree]): (String, DisplayInfo, String, List[ArgInfo], Boolean) = {
       val defaultMap: Map[String, Tree] = Map(
         "names"    -> Literal(Constant(false)),
         "codeName" -> Literal(Constant("")),
@@ -108,17 +108,17 @@ class TacticImpl(val c: blackbox.Context) {
       }
       val displayInfo = (inputs, premisesString, conclusionString) match {
         case (Nil, "", "") => simpleDisplay
-        case (_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case (Nil, "", concl) if concl != "" => AxiomDisplayInfo(simpleDisplay, concl)
         case (ins, "", concl) if concl != "" && ins.nonEmpty => InputAxiomDisplayInfo(simpleDisplay, concl, inputs)
         case (ins, prem, concl) if concl != "" && prem != "" =>
           val (prem, conc) = (parseSequents(premisesString)(c), parseSequent(conclusionString)(c))
           RuleDisplayInfo(simpleDisplay, conc, prem)
+        //case (_::_, "", "") => SimpleDisplayInfo(codeName, codeName)
         case _ => c.abort(c.enclosingPosition, "Unsupported argument combination for @Tactic: If premises or inputs are given, conclusion must be given")
       }
-      (codeName, displayInfo, displayLevel, revealInternal)
+      (codeName, displayInfo, displayLevel, inputs, revealInternal)
     }
-    def getParams (tn: TermName): (String, DisplayInfo, String, Boolean) = {
+    def getParams (tn: TermName): (String, DisplayInfo, String, List[ArgInfo], Boolean) = {
         c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)
         case q"new $annotation()" => paramify(tn, Nil)
@@ -248,6 +248,9 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
     def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, isCoreAnon: Option[Boolean]): Tree = {
+      if (isCoreAnon.isEmpty) {
+        return q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).forward($acc)"""
+      }
       (args, pos) match {
         case (Nil, NoPos()) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
@@ -301,7 +304,7 @@ class TacticImpl(val c: blackbox.Context) {
       val funStr = Literal(Constant(funName))
       val argExpr = args match {
         case Nil => q"Nil"
-        case _ => args.foldRight[Tree](q"Nil")({case (ai, acc) => q"${ai.name} :: $acc"})
+        case _ => args.foldRight[Tree](q"Nil")({case (ai, acc) => q"${Ident(TermName(ai.name))} :: $acc"})
       }
       // if no "anon" function present, then tactic is a simple forwarding expression like val e: BelleExpr = <tac>
       val baseType = inferType(tRet, args, pos, isCoreAnon)
@@ -327,20 +330,21 @@ class TacticImpl(val c: blackbox.Context) {
     }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, tRet: Tree, isDef: Boolean
                 , isCoreAnon: Option[Boolean]): c.Expr[Any] = {
-      val (codeName, display, displayLevel, revealInternalSteps) = getParams(declName)
-      val (generatorOpt, inputs) = getInputs(inArgs)
+      val (codeName, display, displayLevel, parsedArgs, revealInternalSteps) = getParams(declName)
+      val (generatorOpt, defArgs) = getInputs(inArgs)
+      val displayInputs = if (parsedArgs.nonEmpty) parsedArgs else defArgs
       val needsGenerator = generatorOpt.isDefined
       if (codeName.exists(c => c =='\"'))
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
       // AST for literal strings for the names
       val codeString = Literal(Constant(codeName))
-      val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, inputs, generatorOpt, tRet, isCoreAnon)
+      val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, defArgs, generatorOpt, tRet, isCoreAnon)
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
-      val info = (inputs, positions) match {
+      val info = (displayInputs, positions) match {
         case (Nil, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case (_ :: _, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)},  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case (_ :: _, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)},  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
         case (Nil, _: OnePos | _: AntePos | _: SuccPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case (_ :: _, _: OnePos | _: AntePos | _: SuccPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(inputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case (_ :: _, _: OnePos | _: AntePos | _: SuccPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
         case (Nil, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
         case (_ :: _, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
         case (x, y) => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: ($x, $y)")
@@ -349,7 +353,7 @@ class TacticImpl(val c: blackbox.Context) {
       // the tactic info to the global derivation info table
       if(isDef) {
         val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
-        if (inputs.isEmpty)
+        if (defArgs.isEmpty)
           c.Expr(q"""$mods def $declName: $baseType = $application""")
         else
         c.Expr(q"""$mods def $declName (..$argSeq): $baseType = $application""")
@@ -394,6 +398,12 @@ class TacticImpl(val c: blackbox.Context) {
       c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
     val isCoreAnon = fOpt match { case Some(f) => coreAnon(f.toString) case None => None }
     val positions = getPositioning(params)
-    assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
+    val res = assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
+    // Print debug info when applied to any tactic in this set
+    val debugTactics: Set[String] = Set()
+    if(debugTactics.contains(codeName.decodedName.toString)) {
+      println(s"DEBUG (${codeName}): \n$res\n")
+    }
+    res
   }
 }
