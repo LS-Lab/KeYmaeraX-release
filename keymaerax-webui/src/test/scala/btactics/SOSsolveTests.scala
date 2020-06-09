@@ -118,12 +118,11 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
   }
   def naturalExponentCheck(seq: Sequent) : Unit = (seq.ante++seq.succ).foreach(naturalExponentCheck)
 
-  lazy val preprocess = SaturateTactic((useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(1) & notR(1))|!skip) &
-    fullSimpTac(faxs = composeIndex(defaultFaxs, chaseIndex), taxs = emptyTaxs) &
-    SaturateTactic(onAll(?(alphaRule | betaRule | existsL('L) | closeF)
-      /* @note it seems weird to have to use the ?, but there are cases where this fails with positions locating outside a goal.
-      * Probably when none of the alternatives match the first subgoal...
-      * */)) &
+  lazy val preprocess =
+    SaturateTactic(onAll(
+      SaturateTactic((useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(1) & notR(1))|!skip) &
+      fullSimpTac(faxs = composeIndex(defaultFaxs, chaseIndex), taxs = emptyTaxs) &
+      SaturateTactic(onAll(?(alphaRule | betaRule | existsL('L) | closeF))))) &
     onAll(PolynomialArith.normAnte)
 
   override def timeLimit = Span(365, Days)
