@@ -981,7 +981,7 @@ trait UnifyUSCalculus {
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]]
     */
   @Tactic(premises = "P↔Q",
-        conclusion = "C{P}↔C{Q}") 
+        conclusion = "C{P}↔C{Q}", codeName = "CECongruence")
   def CE(inEqPos: PosInExpr): InputTactic =
     inputanon {  (sequent: Sequent) =>
       val p_ = UnitPredicational("p_", AnyArg)
@@ -1110,7 +1110,7 @@ trait UnifyUSCalculus {
     * @see [[HilbertCalculus.mond]]
     */
   @Tactic(premises = "P→Q",
-    conclusion = "C{P}→C{Q}")
+    conclusion = "C{P}→C{Q}", codeName = "CMonCongruence")
   def CMon(inEqPos: PosInExpr): InputTactic = anon { (sequent: Sequent) =>
     require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
     sequent.succ.head match {
