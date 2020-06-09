@@ -1,11 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.{Configuration, core}
-import edu.cmu.cs.ls.keymaerax.core.{RenamingClashException, _}
+import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -42,22 +41,14 @@ private object ProofRuleTactics extends Logging {
     * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-//@todo  @Tactic("UR",
-//    premises = "P(y) |- Q(y)",
-//    conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
-//  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanon { (pr: ProvableSig) =>
-//    requireOneSubgoal(pr, "UR(" + what + "~~>" + repl + ")")
-//    pr(core.UniformRenaming(what, repl), 0)
-//  }
+  @Tactic("UR",
+    premises = "P(y) |- Q(y)",
+    conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
   def uniformRename(what: Variable, repl: Variable): InputTactic = inputanonP {(provable: ProvableSig) =>
-    /**
-      * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
-      */
       requireOneSubgoal(provable, "UniformRename(" + what + "~~>" + repl + ")")
       provable(core.UniformRenaming(what, repl), 0)
     }
 
-  import TacticFactory._
   /**
     * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
     *
@@ -75,7 +66,7 @@ private object ProofRuleTactics extends Logging {
   @Tactic("BR",
     premises = "Γ |- ∀y Q(y), Δ",
     conclusion = "Γ |- ∀x Q(x), Δ", inputs = "x:variable;;y:variable")
-  def boundRename(what: Variable, repl: Variable): DependentPositionTactic = anon {(pos:Position, sequent:Sequent) =>
+  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)
       topBoundRenaming(what,repl)(pos)
     else {
