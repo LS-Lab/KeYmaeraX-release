@@ -432,7 +432,7 @@ object TactixLibrary extends HilbertCalculus
                 logger.warn("ChooseSome: error listing options " + err, err)
                 List[Formula]().iterator
             },
-            (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
+            (inv: Formula) => loop(inv)(pos) & onAll(auto & done) & done
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
@@ -509,11 +509,13 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dW]]
     * @see [[dG]]
     */
-  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
-    DifferentialTactics.mathematicaSplittingODE(pos)
-    // if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
-    // else if (ToolProvider.qeTool(Some("WolframEngine")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
-    // else DifferentialTactics.ODE(pos)
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    // use and check invSupplier (user-defined annotations from input file)
+    invSupplier(seq, pos).toList.map(inv => dC(inv._1)(pos) <(
+      skip,
+      DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) &
+        DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant("User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and correct invariant.\n" + details))
+    )).reduceOption[BelleExpr](_ & _).getOrElse(skip) & DifferentialTactics.mathematicaSplittingODE(pos)
   })
 
   /**
