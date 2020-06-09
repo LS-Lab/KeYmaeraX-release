@@ -58,7 +58,7 @@ class TacticImpl(val c: blackbox.Context) {
   private case class OnePos(lname: ValDef, rname: Option[ValDef], useProvable: Boolean = false) extends PosArgs
   private case class TwoPos(provableName: ValDef, pos1Name: ValDef, pos2Name: ValDef) extends PosArgs
   private case class SequentArg(sequentName: ValDef) extends PosArgs
-  private case class NoPos() extends PosArgs
+  private case class NoPos(provableName: Option[ValDef]) extends PosArgs
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
     val paramNames = List("names", "codeName", "premises", "conclusion", "displayLevel", "needsGenerator", "revealInternalSteps", "inputs")
@@ -143,9 +143,10 @@ class TacticImpl(val c: blackbox.Context) {
       val supportedArgs = "Unit, Position, Sequent, (Position, Sequent), or (ProvableSig, Position, Position)"
       params.toList match {
         // ValDef is also used for argument specifications
-        case Nil => NoPos()
+        case Nil => NoPos(None)
         case (posDef: ValDef) :: Nil =>
           posDef.tpt match {
+            case (tq"ProvableSig") => NoPos(Some(posDef))
             case (tq"Position") => OnePos(posDef, None)
             case (tq"Sequent") => SequentArg(posDef)
             case tq"AntePosition" => AntePos(None, posDef)
@@ -255,7 +256,7 @@ class TacticImpl(val c: blackbox.Context) {
         return q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).forward($acc)"""
       }
       (args, pos) match {
-        case (Nil, NoPos()) =>
+        case (Nil, NoPos(None)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
         case (Nil, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)"""
@@ -263,8 +264,10 @@ class TacticImpl(val c: blackbox.Context) {
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname) =>  $acc)"""
         case (Nil, OnePos(pname, Some(sname), _)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)"""
-        case (_::_, NoPos()) =>
+        case (_::_, NoPos(None)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)"""
+        case (_::_, NoPos(Some(pname))) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname) => $acc)"""
         case (_::_, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)"""
         case (_::_, OnePos(pname, None, _)) =>
@@ -387,7 +390,7 @@ class TacticImpl(val c: blackbox.Context) {
     }
     def coreAnon(s: String): Option[Boolean] = {
       s match {
-        case "anon" |  "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" => Some(false)
+        case "anon" |  "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" | "inputanonP" => Some(false)
         case "coreanon" => Some(true)
         case _ => None
       }

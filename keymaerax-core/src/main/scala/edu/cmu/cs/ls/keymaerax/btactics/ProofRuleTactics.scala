@@ -49,17 +49,13 @@ private object ProofRuleTactics extends Logging {
 //    requireOneSubgoal(pr, "UR(" + what + "~~>" + repl + ")")
 //    pr(core.UniformRenaming(what, repl), 0)
 //  }
-  def uniformRename(what: Variable, repl: Variable): InputTactic = "uniformRename" byWithInputs(what::repl::Nil,
-  new BuiltInTactic("UniformRenaming") {
+  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanonP {(provable: ProvableSig) =>
     /**
       * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
       */
-    override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
+      requireOneSubgoal(provable, "UniformRename(" + what + "~~>" + repl + ")")
       provable(core.UniformRenaming(what, repl), 0)
     }
-  }
-)
 
   import TacticFactory._
   /**
