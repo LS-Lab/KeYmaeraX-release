@@ -515,7 +515,7 @@ object TactixLibrary extends HilbertCalculus
       skip,
       DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) &
         DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
-          "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\n" + details))
+          "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
     ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) & DifferentialTactics.mathematicaSplittingODE(pos)
   })
 
