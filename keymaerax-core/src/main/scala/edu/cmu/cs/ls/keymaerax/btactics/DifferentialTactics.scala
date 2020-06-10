@@ -1136,7 +1136,8 @@ private object DifferentialTactics extends Logging {
           DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
         case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
           diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
-        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ??? //todo: throw an error
+        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) =>
+          throw BelleCEX("ODE postcondition does not overlap with precondition", Map.empty, seq)
         case (inv, proofHint) =>
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
