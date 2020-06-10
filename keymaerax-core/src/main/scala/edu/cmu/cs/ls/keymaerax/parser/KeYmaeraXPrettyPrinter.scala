@@ -589,7 +589,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
   protected def docOf(term: Term): Doc = term match {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
     case FuncOf(f, Nothing)     => Doc.text(f.asString + "()")
-    //@todo if f(pairs) skip parentheses
+    case FuncOf(f, c: Pair)     => (Doc.text(f.asString) + Doc.lineBreak + docOf(c)).grouped
     case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineBreak + docOf(c), ")").nested(2)).grouped
     case p: Pair                =>
       /** Flattens pairs in right-associative way */
@@ -610,6 +610,7 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
 
   protected def docOf(formula: Formula): Doc = formula match {
     case True|False|DotFormula  => Doc.text(ppOp(formula))
+    case PredOf(p, c: Pair)     => (Doc.text(p.asString) + Doc.lineBreak + docOf(c)).grouped
     case PredOf(p, c)           => (Doc.text(p.asString) + Doc.lineBreak + encloseText("(", docOf(c), ")").nested(2)).grouped
     case PredicationalOf(p, c)  => (Doc.text(p.asString) + Doc.lineBreak + encloseText("{", docOf(c), "}").nested(2)).grouped
     case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line + wrapRightDoc(f, docOf(f.right))).grouped
