@@ -511,11 +511,12 @@ object TactixLibrary extends HilbertCalculus
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     // use and check invSupplier (user-defined annotations from input file)
-    invSupplier(seq, pos).toList.map(inv => dC(inv._1)(pos) <(
+    invSupplier(seq, pos).toList.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
       skip,
       DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) &
-        DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant("User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and correct invariant.\n" + details))
-    )).reduceOption[BelleExpr](_ & _).getOrElse(skip) & DifferentialTactics.mathematicaSplittingODE(pos)
+        DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
+          "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\n" + details))
+    ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) & DifferentialTactics.mathematicaSplittingODE(pos)
   })
 
   /**
