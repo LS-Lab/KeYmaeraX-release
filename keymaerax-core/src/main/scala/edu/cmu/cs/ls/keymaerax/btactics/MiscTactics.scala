@@ -147,7 +147,7 @@ object DebuggingTactics {
   def assertProvableSize(provableSize: Int, ex: String => Throwable = new TacticAssertionError(_)): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.length != provableSize)
-        throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
+        throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size} subgoals:\n" + provable.prettyString)
       provable
     }
   }
