@@ -58,7 +58,7 @@ class TacticImpl(val c: blackbox.Context) {
   private case class OnePos(lname: ValDef, rname: Option[ValDef], useProvable: Boolean = false) extends PosArgs
   private case class TwoPos(provableName: ValDef, pos1Name: ValDef, pos2Name: ValDef) extends PosArgs
   private case class SequentArg(sequentName: ValDef) extends PosArgs
-  private case class NoPos() extends PosArgs
+  private case class NoPos(provableName: Option[ValDef]) extends PosArgs
   // Would just use PosInExpr but can't pull in core
   def apply(annottees: c.Expr[Any]*): c.Expr[Any] = {
     val paramNames = List("names", "codeName", "premises", "conclusion", "displayLevel", "needsGenerator", "revealInternalSteps", "inputs")
@@ -143,9 +143,10 @@ class TacticImpl(val c: blackbox.Context) {
       val supportedArgs = "Unit, Position, Sequent, (Position, Sequent), or (ProvableSig, Position, Position)"
       params.toList match {
         // ValDef is also used for argument specifications
-        case Nil => NoPos()
+        case Nil => NoPos(None)
         case (posDef: ValDef) :: Nil =>
           posDef.tpt match {
+            case (tq"ProvableSig") => NoPos(Some(posDef))
             case (tq"Position") => OnePos(posDef, None)
             case (tq"Sequent") => SequentArg(posDef)
             case tq"AntePosition" => AntePos(None, posDef)
@@ -248,11 +249,14 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
     def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, isCoreAnon: Option[Boolean]): Tree = {
+      // [[isCoreAnon]] represents "which anon function" was on the RHS of the definition.
+      // If this is empty, the @Tactic is a forward to another BelleExpr. [[forward]] has overloads for most (@TODO all)
+      // tactic classes, so in each case we just call [[forward]]
       if (isCoreAnon.isEmpty) {
         return q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).forward($acc)"""
       }
       (args, pos) match {
-        case (Nil, NoPos()) =>
+        case (Nil, NoPos(None)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
         case (Nil, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)"""
@@ -260,8 +264,10 @@ class TacticImpl(val c: blackbox.Context) {
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname) =>  $acc)"""
         case (Nil, OnePos(pname, Some(sname), _)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)"""
-        case (_::_, NoPos()) =>
+        case (_::_, NoPos(None)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)"""
+        case (_::_, NoPos(Some(pname))) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname) => $acc)"""
         case (_::_, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)"""
         case (_::_, OnePos(pname, None, _)) =>
@@ -328,6 +334,24 @@ class TacticImpl(val c: blackbox.Context) {
       val argTySeq: Seq[Tree] = argSeq.map(_.tpt)
       (curried, argSeq, argTySeq, base)
     }
+    def sdContains(sd: SequentDisplay, s: String): Boolean = {
+      sd.ante.exists(n => n.contains(s)) || sd.succ.exists(n => n.contains(s))
+    }
+    // Error check: Web UI uses axiom/rule display to let user input arguments of tactic. This requires every argument
+    // name to appear in the displayinfo.
+    def missingInput(displayLevel: String, args: List[ArgInfo], display: DisplayInfo): Option[ArgInfo] = {
+      // Input doesn't need to appear in displayinfo if UI can't show the tactic anyway
+      if (displayLevel == "internal") None
+      else {
+        args.find((ai: ArgInfo) => {
+          display match {
+            case (_: AxiomDisplayInfo) | (_: SimpleDisplayInfo) => true
+            case InputAxiomDisplayInfo(names, displayFormula, _input) => !displayFormula.contains(ai.name)
+            case RuleDisplayInfo(sd, conc, prem) => !(sdContains(conc, ai.name) || prem.exists(sd => sdContains(sd, ai.name)))
+          }
+        })
+      }
+    }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, tRet: Tree, isDef: Boolean
                 , isCoreAnon: Option[Boolean]): c.Expr[Any] = {
       val (codeName, display, displayLevel, parsedArgs, revealInternalSteps) = getParams(declName)
@@ -349,6 +373,8 @@ class TacticImpl(val c: blackbox.Context) {
         case (_ :: _, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
         case (x, y) => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: ($x, $y)")
       }
+      missingInput(displayLevel, displayInputs, display).
+        map(ai => c.abort(c.enclosingPosition, s"Tactic $declName must mention every input in DisplayInfo, but argument $ai is not mentioned in DisplayInfo $display"))
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
       if(isDef) {
@@ -364,7 +390,7 @@ class TacticImpl(val c: blackbox.Context) {
     }
     def coreAnon(s: String): Option[Boolean] = {
       s match {
-        case "anon" |  "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" => Some(false)
+        case "anon" |  "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" | "inputanonP" => Some(false)
         case "coreanon" => Some(true)
         case _ => None
       }
@@ -387,12 +413,22 @@ class TacticImpl(val c: blackbox.Context) {
           (true, mds, codeName, inArgs, tRet, Some(f), Nil, pickRhs(f, rhs))
         case q"$mds def ${codeName: TermName}(..$inArgs): $tRet = $rhs" :: Nil =>
           (true, mds, codeName, inArgs, tRet, None, Nil, rhs)
+        case q"$mds def ${codeName: TermName}: $tRet = ${f: Ident}(((..$params) => $rhs))" :: Nil =>
+          (true, mds, codeName, Nil, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
+        case q"$mds def ${codeName: TermName}: $tRet = ${f: Ident}($rhs)" :: Nil =>
+          (true, mds, codeName, Nil, tRet, Some(f), Nil, pickRhs(f, rhs))
+        case q"$mds def ${codeName: TermName}: $tRet = $rhs" :: Nil =>
+          (true, mds, codeName, Nil, tRet, None, Nil, rhs)
         case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}((..$params) => $rhs)" :: Nil =>
           (false, mds, codeName, Nil, tRet, Some(f), params, pickRhs(f, rhs, Some(params)))
         case q"$mds val ${codeName: TermName}: $tRet = ${f: Ident}($rhs)" :: Nil=>
           (false, mds, codeName, Nil, tRet, Some(f), Nil, pickRhs(f, rhs))
         case q"$mds val ${codeName: TermName}: $tRet = $rhs" :: Nil =>
           (false, mds, codeName, Nil, tRet, None, Nil, rhs)
+        case _ :: _ :: _ =>
+          c.abort(c.enclosingPosition, "Expected one tactic definition, got multiple: " + annottees.map(show(_)))
+        case _ =>
+          c.abort(c.enclosingPosition, "Expected tactic definition, got: " + annottees.map(show(_)))
       }
     if (!isTactic(tRet))
       c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)

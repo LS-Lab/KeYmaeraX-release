@@ -423,7 +423,7 @@ private object DLBySubst {
     conclusion =  "Γ |- [{a;b}<sup>*</sup>]P, Δ",
     displayLevel = "browse"
   )
-  def throughout(invariant: Formula): DependentPositionTactic = anon (throughout(invariant, SaturateTactic(alphaRule))(_: Position))
+  def throughout(J: Formula): DependentPositionTactic = anon (throughout(J, SaturateTactic(alphaRule))(_: Position))
   def throughout(invariant: Formula, pre: BelleExpr): DependentPositionTactic = anon ((pos: Position) => {
     require(pos.isTopLevel && pos.isSucc, "throughout only at top-level in succedent, but got " + pos)
     lazy val split: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
