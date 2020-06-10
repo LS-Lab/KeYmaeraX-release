@@ -54,15 +54,14 @@ object InvariantProvers {
         USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
       SearchAndRescueAgain(jj :: Nil,
-        loop(subst(jj))(pos) < (nil, nil, chase(pos) & DebuggingTactics.print("Chasing [a]P?") & OnAll(
-          Idioms.doIfElse(
+        loop(subst(jj))(pos) < (nil, nil, chase(pos) & OnAll(
+          Idioms.doIf(
             (pr: ProvableSig) => pr.subgoals.headOption.exists(_.sub(pos ++ PosInExpr(1::Nil)) match {
               case Some(Box(_, _)) => true
               case _ => false
             }))(
             //@todo chase will not always make progress, e.g., in [...][x:=x+1;][x'=2]P
-            chase(pos ++ PosInExpr(1::Nil)),
-            skip
+            chase(pos ++ PosInExpr(1::Nil))
           )
         )),
         feedOneAfterTheOther(cand),
@@ -210,11 +209,18 @@ object InvariantProvers {
       }
 
       SearchAndRescueAgain(jjl :: jja :: Nil,
-        //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
             /* use jja() |- */
-            chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
+            chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(
+              Idioms.doIf(_.subgoals.headOption.exists(_.sub(pos ++ PosInExpr(1::Nil)) match {
+                case Some(Box(_, _)) => true
+                case _ => false
+              }))(
+                //@todo chase will not always make progress, e.g., in [...][x:=x+1;][x'=2]P
+                chase(pos ++ PosInExpr(1::Nil))
+              ) & ?(QE)
+            )
             ,
             /* show |- jja() is postponed since only provable when eventually jja()~>True instantiated */
             cohide('Rlast, jja)
