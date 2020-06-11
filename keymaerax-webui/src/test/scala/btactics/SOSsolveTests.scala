@@ -280,7 +280,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
           val parent = outfile.getParentFile
           if (parent != null) parent.mkdirs()
           val timers = Seq(qeTimer, totalTimer, preprocTimer, sosTimer, witnessTimer)
-          val timings = Seq(status.name) ++ timers.map(timer => if (status==Success) timer.getTimeMs else 0.0)
+          val timings = Seq(status.name) ++ timers.map(timer => if (status==Success || timer==qeTimer) timer.getTimeMs else 0.0)
           val fw = new FileWriter(f, true)
           fw.append(timings.mkString(" ") + "\n")
           fw.close()
