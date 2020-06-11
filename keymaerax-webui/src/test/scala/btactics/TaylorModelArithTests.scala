@@ -174,6 +174,10 @@ class TaylorModelArithTests extends TacticTestBase {
     x.dropEmptyInterval.get.conclusion.succ.loneElement shouldBe "x=0+0.15/1*(1*e0^1)+0+1.4/1*1+0".asFormula
   }
 
+  it should "prettyPrv" in withMathematica { _ =>
+    println(tma.TM("e0".asTerm, ring.ofTerm("e0".asTerm), Number(0), Number(0), IndexedSeq(), QE).prettyPrv)
+  }
+
   "timeStep" should "van der Pol" in withMathematica { qeTool =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       // TODO: generate a context like this from "x : [1.25, 1.55]" and "y : [2.35, 2.45]"?!
