@@ -24,7 +24,6 @@ import scala.collection.immutable._
   *
   * @author Andre Platzer
   * @see [[UnificationMatch]]
-  * @see [[UnifyAxiomInstantiationTest]]
   */
 @SummaryTest
 @UsualTest
