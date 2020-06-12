@@ -19,7 +19,6 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic}
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._
 import org.apache.logging.log4j.scala.Logger
@@ -800,8 +799,8 @@ trait UnifyUSCalculus {
       useAt(Ax.randomb, PosInExpr(1::Nil))(1, subPos ++ 1) &
       condEquivCongruence(Box(AssignAny(x.head), p), PosInExpr(towards.pos.updated(0, 1)), subPos, commute, op)
     case DotFormula =>
-      val p = "p_()".asFormula
-      val q = "q_()".asFormula
+      val p = PredOf(Function("p_",None,Unit,Bool), Nothing)
+      val q = PredOf(Function("q_",None,Unit,Bool), Nothing)
       val fact =
         if (commute) Equiv(Imply(And(op(p, q), q), p), True)
         else Equiv(Imply(And(op(p, q), p), q), True)
