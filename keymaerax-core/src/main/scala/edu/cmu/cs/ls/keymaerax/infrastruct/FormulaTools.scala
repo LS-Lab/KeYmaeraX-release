@@ -111,10 +111,10 @@ object FormulaTools extends Logging {
         And(negationNormalForm(p), negationNormalForm(Not(q))),
         And(negationNormalForm(Not(p)), negationNormalForm(q))
       )
-      case Forall(vs, p) => Exists(vs, negationNormalForm(p))
-      case Exists(vs, p) => Forall(vs, negationNormalForm(p))
-      case Box(prg, p) => Box(prg, negationNormalForm(p))
-      case Diamond(prg, p) => Diamond(prg, negationNormalForm(p))
+      case Forall(vs, p) => Exists(vs, negationNormalForm(Not(p)))
+      case Exists(vs, p) => Forall(vs, negationNormalForm(Not(p)))
+      case Box(prg, p) => Box(prg, negationNormalForm(Not(p)))
+      case Diamond(prg, p) => Diamond(prg, negationNormalForm(Not(p)))
       case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
     }
     case Imply(p,q) => Or(negationNormalForm(Not(p)), negationNormalForm(q))
