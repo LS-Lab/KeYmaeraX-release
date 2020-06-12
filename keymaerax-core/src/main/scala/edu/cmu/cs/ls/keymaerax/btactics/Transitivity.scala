@@ -25,7 +25,8 @@ import scala.collection.immutable
   */
 object Transitivity {
 
-  @Tactic(names = "Close Transitive")
+  @Tactic(names = "Close Transitive",
+    conclusion = "a>=b, b >= c, c >= z |- a >= z")
   val closeTransitive : DependentTactic = anon ((s: Sequent) => {
 
     val transitiveInequalities = search(s) match {
