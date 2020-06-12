@@ -35,12 +35,12 @@ object ArithmeticSimplification {
   /** Simplifies arithmetic by removing formulas that are **probably** irrelevant to the current sub-goal.
     * Does not necessarily retain validity??? */
 // todo: unsure
-//  @Tactic(names="Smart Hide",
-//    premises="Γ<sub>hide</sub> |- Δ",
+  @Tactic(names="Smart Hide",
+    premises="Γ<sub>hide</sub> |- Δ",
 //     smartHide -------------------------
-//    conclusion="Γ |- Δ",
-//    displayLevel="browse")
-  lazy val smartHide = anon ( (p : ProvableSig) => {
+    conclusion="Γ |- Δ",
+    displayLevel="browse")
+  lazy val smartHide: BuiltInTactic = anon ( (p : ProvableSig) => {
     assert(p.subgoals.length == 1, s"smartHide is only relevant to Provables with one subgoal; found ${p.subgoals.length} subgoals")
 
       //Should already be sorted highest-to-lowest, but check just in case.

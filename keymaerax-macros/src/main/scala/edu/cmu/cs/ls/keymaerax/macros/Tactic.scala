@@ -129,7 +129,7 @@ class TacticImpl(val c: blackbox.Context) {
     def isTactic(tRet: Tree): Boolean = {
       tRet match {
         case tq"DependentTactic" | tq"DependentPositionTactic" | tq"InputPositionTactic"
-             | tq"BuiltInLeftTactic" | tq"BuiltInRightTactic"
+             | tq"BuiltInLeftTactic" | tq"BuiltInRightTactic" | tq"BuiltInTactic" | tq"BuiltInPositionTactic"
              | tq"CoreLeftTactic" | tq"CoreRightTactic"
              | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic" | tq"InputTactic"
              | tq"DependentPositionWithAppliedInputTactic"
@@ -222,30 +222,33 @@ class TacticImpl(val c: blackbox.Context) {
 
     def inferType(defaultType: Tree, args: List[ArgInfo], pos: PosArgs, isCoreAnon: Option[Boolean]): Tree = {
       // Only infer type if annotation is empty
-      if (defaultType != tq"") return defaultType
-      (args, pos) match {
-        case (Nil, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic"
-        case (_::_, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic"
-        case (Nil, _: AntePos | _: OnePos | _: SuccPos) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic"
-        case (_::_, _: OnePos | _: AntePos | _: SuccPos) =>
-          tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"
-        case (Nil, _: TwoPos | _: AnteSuccPos) =>
-          (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic")
-        case (_::_, _: TwoPos | _: AnteSuccPos) =>
-          (tq"edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic")
-        case (Nil, AntePos(Some(sname), pname)) =>
-          if (isCoreAnon.contains(true))
-            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic")
-          else
-            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
-        case (Nil, SuccPos(Some(sname), pname)) =>
-          if (isCoreAnon.contains(true))
-            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
-          else
-            (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
-        case (_::_, _: SuccPos | _: AntePos) =>
-          c.abort(c.enclosingPosition, "Argument combination not yet supported")
-        case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos")
+      defaultType match {
+        case tq"" =>
+          (args, pos) match {
+            case (Nil, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic"
+            case (_ :: _, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic"
+            case (Nil, _: AntePos | _: OnePos | _: SuccPos) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic"
+            case (_ :: _, _: OnePos | _: AntePos | _: SuccPos) =>
+              tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionWithAppliedInputTactic"
+            case (Nil, _: TwoPos | _: AnteSuccPos) =>
+              (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInTwoPositionTactic")
+            case (_ :: _, _: TwoPos | _: AnteSuccPos) =>
+              (tq"edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic")
+            case (Nil, AntePos(Some(sname), pname)) =>
+              if (isCoreAnon.contains(true))
+                (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic")
+              else
+                (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
+            case (Nil, SuccPos(Some(sname), pname)) =>
+              if (isCoreAnon.contains(true))
+                (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
+              else
+                (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
+            case (_ :: _, _: SuccPos | _: AntePos) =>
+              c.abort(c.enclosingPosition, "Argument combination not yet supported")
+            case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos; $defaultType")
+          }
+        case _ => defaultType
       }
     }
     def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, isCoreAnon: Option[Boolean]): Tree = {
@@ -258,6 +261,8 @@ class TacticImpl(val c: blackbox.Context) {
       (args, pos) match {
         case (Nil, NoPos(None)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
+        case (Nil, NoPos(Some(arg))) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($arg) => $acc)"""
         case (Nil, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)"""
         case (Nil, OnePos(pname, None, _)) =>
@@ -302,7 +307,7 @@ class TacticImpl(val c: blackbox.Context) {
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, (($provable, $pos1, $pos2) =>  $acc))"""
         case (_::_, _: SuccPos | _: AntePos | _: AnteSuccPos) =>
           c.abort(c.enclosingPosition, "Argument combination not yet supported")
-        case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos")
+        case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos; ")
       }
     }
     // Type and term ASTs which wrap acc in position and/or input arguments as anonymous lambdas
@@ -430,8 +435,11 @@ class TacticImpl(val c: blackbox.Context) {
         case _ =>
           c.abort(c.enclosingPosition, "Expected tactic definition, got: " + annottees.map(show(_)))
       }
-    if (!isTactic(tRet))
-      c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass)
+    tRet match {
+      case tq"" => c.abort(c.enclosingPosition, "@Tactic expects a return type annotation on tactics. Please annotate the return type, see MiscTactics.scala for supported types")
+      case _ => if (!isTactic(tRet))
+        c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass + ", see MiscTactics.scala for supported types")
+    }
     val isCoreAnon = fOpt match { case Some(f) => coreAnon(f.toString) case None => None }
     val positions = getPositioning(params)
     val res = assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
