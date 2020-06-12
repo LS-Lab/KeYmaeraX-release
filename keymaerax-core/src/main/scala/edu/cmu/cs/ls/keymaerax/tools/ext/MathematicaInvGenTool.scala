@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.tools.ext
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.TacticInapplicableFailure
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
@@ -50,8 +51,22 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = -1 // reap must be outermost, so do not set tool timeout (which is automatically translated to timeconstrained), but instead use commandTimeout in timeConstrained below
     val commandTimeout = Configuration.Pegasus.invGenTimeout(-1)
 
-    val vars = list(DifferentialHelper.getPrimedVariables(ode).map(k2m):_*)
-    val vectorField = list(DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)):_*)
+    val primedVars = DifferentialHelper.getPrimedVariables(ode)
+    val atomicODEs = DifferentialHelper.atomicOdes(ode)
+    val constantSlopeVars = atomicODEs.filter(_.e.isInstanceOf[Number]).map(_.xp.x)
+    val isTimeTriggered = FormulaTools.conjuncts(ode.constraint).exists({
+      //@todo most common case
+      case LessEqual(x, y) => y match {
+        case t: Term if StaticSemantics.freeVars(t).intersect(primedVars.toSet).isEmpty => constantSlopeVars.contains(x)
+        case _ => false
+      }
+      case _ => false
+    })
+
+    if (isTimeTriggered) throw new TacticInapplicableFailure("Pegasus does not yet support time-triggered systems")
+
+    val vars = list(primedVars.map(k2m):_*)
+    val vectorField = list(atomicODEs.map(o => k2m(o.e)):_*)
     val problem = list(
       k2m(assumptions.reduceOption(And).getOrElse(True)),
       list(vectorField, vars, k2m(ode.constraint)),
