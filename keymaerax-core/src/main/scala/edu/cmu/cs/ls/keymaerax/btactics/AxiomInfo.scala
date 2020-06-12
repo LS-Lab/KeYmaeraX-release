@@ -123,16 +123,16 @@ object DerivationInfoRegistry {
   /** Modality cases of [[allInfo]] */
   private[this] val modalityInfos: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
-    PositionTacticInfo("diamondd"
+    PositionTacticInfo("diamondd" //@Tactic-fied
       , AxiomDisplayInfo(("<·>d", "<.>d"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ &not;[a]&not;P")
       , {case () => HilbertCalculus.useAt(Ax.diamond, PosInExpr(1::Nil))}),
-    PositionTacticInfo("boxd"
+    PositionTacticInfo("boxd" //@Tactic-fied
       , AxiomDisplayInfo(("[·]d", "[.]d"), "<span class=\"k4-axiom-key\">[a]P</span> ↔ &not;&langle;a&rangle;&not;P")
       , {case () => HilbertCalculus.useAt(Ax.box, PosInExpr(1::Nil))}),
-    new PositionTacticInfo("assignb"
+    new PositionTacticInfo("assignb" //@Tactic-fied
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
       , {case () => TactixLibrary.assignb}, revealInternalSteps = true),
-    new PositionTacticInfo("assignd", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), {case () => HilbertCalculus.assignd}),
+    new PositionTacticInfo("assignd", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), {case () => HilbertCalculus.assignd}), //@Tactic-fied
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}, revealInternalSteps = true), //@Tactic-fied
     new InputPositionTacticInfo("assignbExistsRule", //@Tactic-fied
       RuleDisplayInfo(

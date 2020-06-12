@@ -125,6 +125,8 @@ trait HilbertCalculus extends UnifyUSCalculus {
 
   /** diamond: <.> reduce double-negated box `![a]!p(x)` to a diamond `⟨a⟩p(x)`. */
   lazy val diamond            : DependentPositionTactic = useAt(Ax.diamond)
+  @Tactic(("<·>d", "<.>d"), conclusion = "__&langle;a&rangle;P__ ↔ &not;[a]&not;P")
+  lazy val diamondd            : DependentPositionTactic = HilbertCalculus.useAt(Ax.diamond, PosInExpr(1::Nil))
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation.
     * Box assignment by substitution assignment [v:=t();]p(v) <-> p(t()) (preferred),
     * or by equality assignment [x:=f();]p(||) <-> \forall x (x=f() -> p(||)) as a fallback.
@@ -156,7 +158,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
     * }}}
     * @see [[DLBySubst.assignEquality]] */
-  @Tactic(revealInternalSteps = true)
+  @Tactic("[:=]", revealInternalSteps = true, conclusion = "__[x:=e]p(x)__↔p(e)")
   lazy val assignb            : DependentPositionTactic = anon { (pos:Position) =>
     if (INTERNAL) useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) /*|! useAt(DerivedAxioms.assignbup)(pos)*/
     else useAt(Ax.assignbAxiom)(pos) |! useAt(Ax.selfassignb)(pos) |! DLBySubst.assignEquality(pos)
@@ -183,9 +185,12 @@ trait HilbertCalculus extends UnifyUSCalculus {
   //
 
   /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
-  lazy val box                : DependentPositionTactic = useAt(Ax.box)
+  lazy val box  : DependentPositionTactic = useAt(Ax.box)
+  @Tactic(("[·]d", "[.]d"), conclusion = "__[a]P__ ↔ &not;&langle;a&rangle;&not;P")
+  lazy val boxd : DependentPositionTactic = HilbertCalculus.useAt(Ax.box, PosInExpr(1::Nil))
+
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
-  @Tactic(revealInternalSteps = true)
+  @Tactic("<:=>", revealInternalSteps = true, conclusion = "__&langle;x:=e&rangle;p(x)__↔p(e)")
   lazy val assignd            : DependentPositionTactic = anon { (pos:Position) =>
     useAt(Ax.assigndAxiom)(pos) |! useAt(Ax.selfassignd)(pos) |! DLBySubst.assigndEquality(pos)
   }
