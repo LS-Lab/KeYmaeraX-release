@@ -234,8 +234,9 @@ object TactixLibrary extends HilbertCalculus
     }
   })
 
-  val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
-                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
+  @Tactic()
+  val prop: BelleExpr = anon {allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
+                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)}
 
   /** Automated propositional reasoning, only keeps result if proved. */
   val propAuto: BelleExpr = "propAuto" by (prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods"))
@@ -328,7 +329,8 @@ object TactixLibrary extends HilbertCalculus
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
-  def auto: BelleExpr = "auto" by master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done
+  @Tactic()
+  def auto: BelleExpr = anon {master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done}
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */

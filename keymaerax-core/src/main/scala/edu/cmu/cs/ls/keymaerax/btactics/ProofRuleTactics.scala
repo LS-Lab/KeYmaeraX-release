@@ -153,6 +153,8 @@ private object ProofRuleTactics extends Logging {
     *                              Use [[BoundRenaming]] to resolve.
     */
   //@todo@Tactic("skolem")
+  @Tactic(premises = "Γ |- p(x), Δ",
+    conclusion = "Γ |- ∀x p(x), Δ", codeName = "skolem")
   val skolemizeR: BuiltInRightTactic = new BuiltInRightTactic("skolemizeR") {
     override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)

@@ -23,7 +23,7 @@ class TacticStatisticsTest extends TacticTestBase {
   }
 
   it should "count the tactics in a sequence" in {
-    val t = BelleParser("hideR(1);hideL(-2);closeId")
+    val t = BelleParser("hideR(1);hideL(-2);id")
     TacticStatistics.size(t) shouldBe 3
     TacticStatistics.lines(t) shouldBe 1
   }

@@ -399,7 +399,7 @@ trait SequentCalculus {
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@note do not forward to closeIdWith (performance)
   @Tactic("Close by identity", premises = "*",
-    conclusion = "Γ, P |- P, Δ")
+    conclusion = "Γ, P |- P, Δ", codeName = "id")
   val closeId: DependentTactic = anon {(seq: Sequent) => close}
   // alternative implementation
   /*anon {(seq: Sequent) =>

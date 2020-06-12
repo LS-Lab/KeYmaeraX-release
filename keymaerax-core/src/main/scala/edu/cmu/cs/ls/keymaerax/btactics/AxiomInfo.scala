@@ -463,8 +463,7 @@ object DerivationInfoRegistry {
     new TacticInfo("closeTrue"
       , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
       ,{case () => TactixLibrary.closeT}),
-    //@todo
-    new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
+    new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}), //@Tactic-fied
     new PositionTacticInfo("cohide", "W", {case () => SequentCalculus.cohide}), //@Tactic-fied
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}), //@Tactic-fied
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}), //@Tactic-fied
@@ -520,13 +519,9 @@ object DerivationInfoRegistry {
     // @Tactic-ified
     new TacticInfo("closeTransitive", RuleDisplayInfo("closeTransitive", (List("a>=b", "b >= c", "c >= z"), List("a >= z")), Nil), {case () => Transitivity.closeTransitive}),
     //@note deprecated use id instead
-    new TacticInfo("closeId",
-      RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
-      {case () => TactixLibrary.closeId}),
-    // @TODO
     new TacticInfo("id",
       RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
-      {case () => TactixLibrary.closeId}),
+      {case () => TactixLibrary.closeId}), //@Tactic-fied
     PositionTacticInfo("idWith", // @Tactic-ified
       RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => TactixLibrary.closeIdWith}),
@@ -539,7 +534,6 @@ object DerivationInfoRegistry {
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
         /*premise*/    List((List("&Gamma;", "x=y", "P(y)"), List("Q(y)", "&Delta;")))),
       {case () => (pos: AntePosition) => TactixLibrary.eqL2R(pos)}),
-    //      {case () => ProofRuleTactics.trivialCloser}), //@todo This is a 4.1b3 merge conflict. I'm not sure what the correct behavior is.
 
     // Proof rule input tactics
     new InputTacticInfo("cut" // @Tactic-ified
@@ -655,12 +649,10 @@ object DerivationInfoRegistry {
     PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}, revealInternalSteps = true),
     // @TODO
     PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}, revealInternalSteps = true),
-    // @TODO
-    PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}, revealInternalSteps = true),
+    PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}, revealInternalSteps = true),  //@Tactic-fied
     // @TODO
     PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}, revealInternalSteps = true),
-    // @TODO
-    PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
+    PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),  //@Tactic-fied
     // @TODO
     PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(
       TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
@@ -676,8 +668,7 @@ object DerivationInfoRegistry {
       case cgen: ConfigurableGenerator[GenProduct] => TactixLibrary.explore(cgen)
       case _ => ??? // extract annotated invariants into a configurable generator
     } }, needsGenerator = true, revealInternalSteps = true),
-    // @TODO
-    new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true, revealInternalSteps = true),
+    new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true, revealInternalSteps = true),  //@Tactic-fied
     // @TODO
     InputTacticInfo("useSolver"
       , "useSolver"
