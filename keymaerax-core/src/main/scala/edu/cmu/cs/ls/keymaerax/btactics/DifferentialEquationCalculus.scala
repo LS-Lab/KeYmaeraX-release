@@ -93,8 +93,10 @@ trait DifferentialEquationCalculus {
     * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[HilbertCalculus.DC]]
     */
-    //@todo@Tactic
-  def dC(formula: Formula)     : DependentPositionTactic = DifferentialTactics.diffCut(formula)
+  @Tactic("Differential Cut", conclusion = "&Gamma; |- [{x′=f(x) & Q}]P, &Delta;",
+    premises = "&Gamma; |- [{x′=f(x) & Q}]R, &Delta; ;; &Gamma; |- [{x′=f(x) & (Q∧R)}]P, &Delta;",
+    revealInternalSteps = true)
+  def dC(R: Formula)     : DependentPositionTactic = DifferentialTactics.diffCut(R)
   def dC(formulas: List[Formula]) : DependentPositionTactic = DifferentialTactics.diffCut(formulas)
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant).

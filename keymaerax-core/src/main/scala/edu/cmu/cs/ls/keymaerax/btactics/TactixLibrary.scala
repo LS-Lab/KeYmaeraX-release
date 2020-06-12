@@ -662,7 +662,8 @@ object TactixLibrary extends HilbertCalculus
   /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
   @Tactic(
     names = ("Abbreviate", "abbrv"),
-    codeName = "abbrv", //@todo name clash with abbrv above
+    codeName = "abbrv", //@todo name clash with abbrv above (response from BB: not a name clash if only one is annotated. This
+    // appears to be correct because it maintains backwards-compatibility)
     premises = "Γ(x), x=e |- Δ(x)",
     conclusion = "Γ(e) |- Δ(e)",
     inputs = "e:term;;x[x]:option[variable]"

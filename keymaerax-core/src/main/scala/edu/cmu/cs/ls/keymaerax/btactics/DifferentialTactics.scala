@@ -702,7 +702,7 @@ private object DifferentialTactics extends Logging {
   //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   //@Tactic in HilbertCalculus.Derive.Dvar same
   @Tactic(names="x'",
-    conclusion="(x)' = x",
+    conclusion="__(x)'__ = x",
     displayLevel="internal")
   private[btactics] lazy val Dvariable: DependentPositionTactic = anon ( (pos:Position, sequent:Sequent) => {
 

@@ -114,7 +114,7 @@ object Approximator extends Logging {
   @Tactic("Circular Dynamics Approximation",
     conclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
     premises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
-    inputs = "sin:variable;;cos:variable;;num:number")
+    inputs = "sin[sin]:variable;;cos[cos]:variable;;num:number")
   def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionTactic = anon {(pos: Position, sequent: Sequent) =>
     val t = timeVarInModality(sequent.sub(pos))
 

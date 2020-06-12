@@ -310,7 +310,7 @@ trait SequentCalculus {
   // closing tactics
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  @Tactic(premises = "*", conclusion = "Γ, P |- P, Δ")
+  @Tactic("Close by ⊥/⊤", premises = "*", conclusion = "Γ, P |- P, Δ")
   val close: BelleExpr = anon {(seq: Sequent) => findClose(seq)}
   // alternative implementation
   //@todo optimizable seems like complicated and possibly slow code???
@@ -398,7 +398,7 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@note do not forward to closeIdWith (performance)
-  @Tactic(premises = "*",
+  @Tactic("Close by identity", premises = "*",
     conclusion = "Γ, P |- P, Δ")
   val closeId: DependentTactic = anon {(seq: Sequent) => close}
   // alternative implementation

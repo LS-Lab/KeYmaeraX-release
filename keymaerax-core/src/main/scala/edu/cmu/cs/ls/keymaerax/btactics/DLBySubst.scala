@@ -443,7 +443,7 @@ private object DLBySubst {
     premises =          "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // Loop Convergence -----------------------------------------------------------
     conclusion =        "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
-    inputs = "x:variable;;J[x]:formula",
+    inputs = "x[x]:variable;;J(x)[x]:formula",
     displayLevel = "all"
   )
   def con(x: Variable, J: Formula): DependentPositionTactic = anon (con(x, J, SaturateTactic(alphaRule))(_: Position))
