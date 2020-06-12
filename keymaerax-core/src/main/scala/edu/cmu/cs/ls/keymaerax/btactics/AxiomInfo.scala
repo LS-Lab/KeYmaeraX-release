@@ -641,11 +641,9 @@ object DerivationInfoRegistry {
     PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
     // @TODO
     PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}, revealInternalSteps = true),
-    // @TODO
-    PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}, revealInternalSteps = true),
+    PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}, revealInternalSteps = true),  //@Tactic-fied
     PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}, revealInternalSteps = true),  //@Tactic-fied
-    // @TODO
-    PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}, revealInternalSteps = true),
+    PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}, revealInternalSteps = true),  //@Tactic-fied
     PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),  //@Tactic-fied
     // @TODO
     PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(

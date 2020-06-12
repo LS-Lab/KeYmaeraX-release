@@ -105,6 +105,7 @@ object TactixLibrary extends HilbertCalculus
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
      else HilbertCalculus.stepAt(pos))
+      //@todo optimizable: move assignb tactic into AxIndex once supported
     |! assignb(pos))
 
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
@@ -124,7 +125,8 @@ object TactixLibrary extends HilbertCalculus
   )(notL::andL::notR::implyR::orR::allR::existsL::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
-  val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
+  @Tactic(codeName = "unfold", revealInternalSteps = true)
+  val unfoldProgramNormalize: BelleExpr = anon {normalize(andR)}
 
   /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
     * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
@@ -234,12 +236,13 @@ object TactixLibrary extends HilbertCalculus
     }
   })
 
-  @Tactic()
+  @Tactic(revealInternalSteps = true)
   val prop: BelleExpr = anon {allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)}
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  val propAuto: BelleExpr = "propAuto" by (prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods"))
+  @Tactic(revealInternalSteps = true)
+  val propAuto: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
 
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
