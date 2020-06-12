@@ -209,6 +209,12 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "t_=0->[{x'=2,t_'=1&true}]x>b ==> ".asSequent
   }
 
+  it should "FEATURE_REQUEST: instantiate ODE solution result" in {
+    //@todo useAt seems to not work correctly
+    proveBy("z<=m, v>=0, d>=0, b()>0, \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(-b())*s_+v>=0)->(-b())*t_+v>=0&((-b())*(t_^2/2)+v*t_+z>=m->(-b())*t_+v<=d)) ==> v^2-d^2<=2*b()*(m-z)".asSequent,
+      allInstantiate(None, Some("t_".asTerm))(-5, PosInExpr(0::1::0::Nil))).subgoals.loneElement shouldBe "==> true".asSequent
+  }
+
   "existsR" should "instantiate simple formula" in {
     val result = proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists x x>0".asFormula)),
