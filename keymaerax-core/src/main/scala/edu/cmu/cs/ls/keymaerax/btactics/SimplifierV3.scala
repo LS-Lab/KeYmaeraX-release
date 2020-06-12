@@ -1042,9 +1042,57 @@ object SimplifierV3 {
 
   //Turns a formula into Negation Normal Form
   private def to_NNF(f:Formula) : Option[(Formula,ProvableSig)] = {
+    def l2r(prv: ProvableSig, recursors: List[Int]*) : List[(ProvableSig, PosInExpr, List[PosInExpr])] =
+      List((prv, PosInExpr(0::Nil), recursors.toList.map(PosInExpr(_))))
+    def recurseFml(recursors: List[Int]*) : List[(ProvableSig, PosInExpr, List[PosInExpr])] = {
+      l2r(Ax.equivReflexive.provable, recursors : _*)
+    }
+    val A = List()  // All / Whole subexpression
+    val L = List(0) // Left
+    val C = List(0) // Child
+    val R = List(1) // Right
+    def Left(xs: List[Int]) = 0::xs
+    def Right(xs: List[Int]) = 1::xs
+    val LL = Left(L)
+    val LR = Left(R)
+    val RL = Right(L)
+    val RR = Right(R)
+    val chaseNeg = chaseCustomFor({
+      case formula: AtomicFormula => Nil
+      case formula@Not(g:AtomicFormula) => g match {
+        case Equal(a,b) => l2r(Ax.notEqual.provable)
+        case NotEqual(a,b) => l2r(Ax.notNotEqual.provable)
+        case Greater(a,b) => l2r(Ax.notGreater.provable)
+        case GreaterEqual(a,b) => l2r(Ax.notGreaterEqual.provable)
+        case Less(a,b) => l2r(Ax.notLess.provable)
+        case LessEqual(a,b) => l2r(Ax.notLessEqual.provable)
+        case True => l2r(notT)
+        case False => l2r(notF)
+        case _ => throw new IllegalArgumentException("to_NNF of formula " + formula + " not implemented")
+      }
+      case formula@Not(g:CompositeFormula) => g match {
+        case Not(f) => l2r(Ax.doubleNegation.provable, A)
+        case And(p,q) => l2r(Ax.notAnd.provable, L, R)
+        case Or(p,q) => l2r(Ax.notOr.provable, L, R)
+        case Imply(p,q) => l2r(Ax.notImply.provable, L, R)
+        case Equiv(p,q) => l2r(Ax.notEquiv.provable, LL, RL, LR, RR)
+        case Forall(vs, p) => l2r(Ax.notAll.provable, C)
+        case Exists(vs, p) => l2r(Ax.notExists.provable, C)
+        case Box(prg, p) => l2r(Ax.notBox.provable, C)
+        case Diamond(prg, p) => l2r(Ax.notDiamond.provable, C)
+        case _ => throw new IllegalArgumentException("to_NNF of formula " + formula + " not implemented")
+      }
+      case Imply(p,q) => l2r(Ax.implyExpand.provable, L, R)
+      case Equiv(p,q) => l2r(Ax.equivExpandAnd.provable, LL, RL, LR, RR)
+      case f:BinaryCompositeFormula => recurseFml(L, R)
+      case f:Quantified             => recurseFml(C)
+      case f:Modal                  => recurseFml(C)
+      case expression => throw new IllegalArgumentException("to_NNF of expression " + expression + " not implemented")
+    })
     val nnff = FormulaTools.negationNormalForm(f)
     if(nnff != f) {
-      val pr = proveBy(Equiv(f,nnff),QE) //todo: propositional reasoning should do it
+      val prv = chaseNeg(Position(1, 1::Nil))(Ax.equivReflexive.provable(USubst(Seq(SubstitutionPair("p_()".asFormula, f)))))
+      val pr = proveBy(Equiv(f,nnff), by(prv))
       require(pr.isProved, "NNF normalization failed:"+f+" "+nnff)
       Some(nnff,pr)
     }

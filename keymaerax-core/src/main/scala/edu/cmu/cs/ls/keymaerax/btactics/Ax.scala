@@ -975,6 +975,13 @@ object Ax extends Logging {
   lazy val equivExpand = derivedFormula("<-> expand",
     "(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())".asFormula, prop)
 
+  /** Convert <-> to two conjunctions:
+    * (p_() <-> q_()) <-> (p_()&q_())|(!p_()&!q_())
+    */
+  @Axiom(("↔2∧","<->2&"),  unifier = "full")
+  lazy val equivExpandAnd = derivedFormula("<-> expand and",
+    "(p_() <-> q_()) <-> (p_()&q_())|(!p_()&!q_())".asFormula, prop)
+
   /**
     * {{{Axiom "-> distributes over &".
     *  (p() -> (q()&r())) <-> ((p()->q()) & (p()->r()))
