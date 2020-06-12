@@ -540,6 +540,7 @@ object TactixLibrary extends HilbertCalculus
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
+  @Tactic()
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
 

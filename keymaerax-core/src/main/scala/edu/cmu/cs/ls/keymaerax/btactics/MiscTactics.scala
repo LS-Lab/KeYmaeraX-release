@@ -219,9 +219,9 @@ case class Case(fml: Formula, simplify: Boolean = true) {
 object Idioms {
   import TacticFactory._
 
-  lazy val nil: BelleExpr = new BuiltInTactic("nil") with NoOpTactic {
-    override def result(provable: ProvableSig): ProvableSig = provable
-  }
+  @Tactic()
+  lazy val nil: BelleExpr = anon {(provable: ProvableSig) => provable}
+
   /** no-op nil */
   lazy val ident: BelleExpr = nil
 

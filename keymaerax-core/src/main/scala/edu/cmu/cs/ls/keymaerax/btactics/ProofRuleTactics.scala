@@ -164,18 +164,17 @@ private object ProofRuleTactics extends Logging {
   }
 
   @deprecated("Use SequentCalculus.closeT instead")
-  private[btactics] def closeTrue = new BuiltInRightTactic("CloseTrue") {
-    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      provable(core.CloseTrue(pos.top), 0)
-    }
+  @Tactic()
+  private[btactics] val closeTrue = anon {(provable: ProvableSig, pos: SuccPosition) =>
+    requireOneSubgoal(provable, "closeTrue")
+    provable(core.CloseTrue(pos.top), 0)
   }
 
   @deprecated("Use SequentCalculus.closeF instead")
-  private[btactics] def closeFalse = new BuiltInLeftTactic("CloseFalse") {
-    override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      provable(core.CloseFalse(pos.top), 0)
-    }
+  @Tactic()
+  private[btactics] val closeFalse = anon { (provable: ProvableSig, pos: AntePosition) =>
+    requireOneSubgoal(provable, "closeFalse")
+    provable(core.CloseFalse(pos.top), 0)
   }
+
 }

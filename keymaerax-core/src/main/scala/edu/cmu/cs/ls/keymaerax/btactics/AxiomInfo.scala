@@ -74,10 +74,8 @@ object DerivationInfoRegistry {
     }
   }
 
-  //@todo
-  private val needsCodeName = "TODOTHISAXIOMSTILLNEEDSACODENAME"
+  private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
   /** Unsure whether linear matcher suffices so default to false */
-  //@todo avoid the use of unsure
   private val unsure = 'full
   /** unsure because of variable renaming being separate from substitution */
   private val unren = 'full
@@ -165,14 +163,14 @@ object DerivationInfoRegistry {
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
           (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
-      , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
+      , List(FormulaArg("R"))
       , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr], revealInternalSteps = true),
     InputPositionTacticInfo("dR" // @Tactic-fied
       , RuleDisplayInfo("Differential Refine"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
           (List("&Gamma;"), List("[{x′=f(x) & R}]P","&Delta;"))))
-      , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
+      , List(FormulaArg("R")) //@todo Lists not supported by dR. So cannot be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
       , _ => ((fml: Formula) => DifferentialTactics.diffRefine(fml)): TypedFunc[Formula, BelleExpr]),
     PositionTacticInfo("dCi" // @Tactic-fied
       , RuleDisplayInfo("dCi"
@@ -398,8 +396,7 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("implyR"
       , RuleDisplayInfo(("→R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
       , {case () => SequentCalculus.implyR}),
-    // @TODO
-    new TwoPositionTacticInfo("implyRi", "implyRi", _ => SequentCalculus.implyRi()),
+    new TwoPositionTacticInfo("implyRi", "implyRi", _ => SequentCalculus.implyRi()),  //@Tactic-fied
     new PositionTacticInfo("implyL"
       , RuleDisplayInfo(("→L", "->L"), (List("P→Q","&Gamma;"),List("&Delta;")),
         List((List("&Gamma;"),List("&Delta;","P")),
@@ -456,11 +453,10 @@ object DerivationInfoRegistry {
     new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}), //@Tactic-fied but broken
     new PositionTacticInfo("cohideL", "W", {case () => SequentCalculus.cohideL}), //@Tactic-fied
     new PositionTacticInfo("cohideR", "W", {case () => SequentCalculus.cohideR}), //@Tactic-fied
-    // @TODO: These codeNames are necessary and TactixLibrary is broken without them.
-    new TacticInfo("closeFalse"
+    new TacticInfo("closeFalse"  //@Tactic-fied
       , RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
       , {case () => TactixLibrary.closeF}),
-    new TacticInfo("closeTrue"
+    new TacticInfo("closeTrue"  //@Tactic-fied
       , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
       ,{case () => TactixLibrary.closeT}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}), //@Tactic-fied
@@ -471,8 +467,7 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}), //@Tactic-fied
     new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}), //@Tactic-fied
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}), //@Tactic-fied
-    //@TODO
-    new PositionTacticInfo("toSingleFormula", "toFormula", {case () => PropositionalTactics.toSingleFormula}),
+    new PositionTacticInfo("toSingleFormula", "toFormula", {case () => PropositionalTactics.toSingleFormula}),  //@Tactic-fied
 
     PositionTacticInfo("CMon" //@Tactic-fied
       , RuleDisplayInfo("CMon", (List(), List("C{o}→C{k}")), List((List(), List("o→k"))))
@@ -621,8 +616,7 @@ object DerivationInfoRegistry {
         , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(VariableArg("x"))
       , _ => ((x:Variable) => DLBySubst.stutter(x)): TypedFunc[Variable, BelleExpr]),
 
-    // @TODO
-    new TacticInfo("nil", "nil", {case () => Idioms.nil}),
+    new TacticInfo("nil", "nil", {case () => Idioms.nil}),  //@Tactic-fied
 
     new InputPositionTacticInfo( // @Tactic-fied
       "transformEquality",
@@ -822,8 +816,7 @@ object DerivationInfoRegistry {
         /* premises */ List((List("&Gamma;", "Q"), List("P", "&Delta;"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/),
           (List("Q"), List("[x′:=f(x)](P)′"), true /*@todo auto for now, but shouldn't be once we can stop in the middle of dI*/))),
       {case () => DifferentialTactics.diffInd(auto = 'cex)}, revealInternalSteps = true),
-    // @TODO
-    new InputPositionTacticInfo("diffInvariant"
+    new InputPositionTacticInfo("diffInvariant"  //@Tactic-fied
       , RuleDisplayInfo("Differential Cut + Differential Invariant"
         , (List("&Gamma;"),List("[{x′ = f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & Q}]R", "&Delta;"), true),
@@ -840,8 +833,7 @@ object DerivationInfoRegistry {
         (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
         List((List("&Gamma;"), List("∀t≥0 ( q(sol(t)) → [x:=sol(t)]p(x) )")))),
       {case () => TactixLibrary.solveEnd}, revealInternalSteps = true),
-    //@TODO
-    new PositionTacticInfo("DGauto",
+    new PositionTacticInfo("DGauto",  //@Tactic-fied
       "DGauto",
       {case () => TactixLibrary.DGauto}),
 
