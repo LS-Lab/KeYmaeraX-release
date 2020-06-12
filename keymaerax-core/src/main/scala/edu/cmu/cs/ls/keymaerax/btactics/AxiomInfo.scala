@@ -285,7 +285,7 @@ object DerivationInfoRegistry {
       ),
       _ => DifferentialTactics.inverseDiffGhost
     ),
-    InputPositionTacticInfo("dbx", //todo: @Tactic-fied but broken
+    InputPositionTacticInfo("dbx", // @Tactic-fied
       RuleDisplayInfo(
         "Darboux (in)equalities",
         /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
@@ -449,7 +449,7 @@ object DerivationInfoRegistry {
       , RuleDisplayInfo("WR", (List("&Gamma;"),List("P", "&Delta;"))
         , List((List("&Gamma;"),List("&Delta;")))),
       {case () => SequentCalculus.hideR}),
-    new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}),
+    new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}), //@Tactic-fied but broken
     new PositionTacticInfo("cohideL", "W", {case () => SequentCalculus.cohideL}),
     new PositionTacticInfo("cohideR", "W", {case () => SequentCalculus.cohideR}),
     new TacticInfo("closeFalse"
@@ -594,7 +594,7 @@ object DerivationInfoRegistry {
       _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
     new InputPositionTacticInfo("edit", "edit", List(new ExpressionArg("to")),
       _ => ((expr:Expression) => TactixLibrary.edit(expr)): TypedFunc[Expression, BelleExpr]),
-    new TacticInfo("expandAll", "expandAll", _ => EqualityTactics.expandAll, revealInternalSteps = true),
+    new TacticInfo("expandAll", "expandAll", _ => EqualityTactics.expandAll, revealInternalSteps = true), //@Tactic-fied
     new InputPositionTacticInfo("boundRename"
       , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)","&Delta;")),
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
@@ -613,7 +613,7 @@ object DerivationInfoRegistry {
     //
     new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
-    new InputPositionTacticInfo(
+    new InputPositionTacticInfo( // @Tactic-fied
       "transformEquality",
       "transformEquality",
       FormulaArg("equality") :: Nil,
@@ -670,7 +670,7 @@ object DerivationInfoRegistry {
     new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}),
-    new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}),
+    new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}), //@Tactic-fied
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),  //@Tactic-fied
     //@todo universal closure may come with list of named symbols
     new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}), //@Tactic-fied
