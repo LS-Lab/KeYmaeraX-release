@@ -966,7 +966,9 @@ private object DifferentialTactics extends Logging {
         })
     })
 
-    instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
+    //@todo: useAt bug? see FOQuantifierTests "instantiate ODE solution result"
+    //instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip)
+    skip
   })
 
   /**
@@ -993,11 +995,11 @@ private object DifferentialTactics extends Logging {
 
       if (pos.isTopLevel) {
         proveWithoutCuts(false)(pos) |
-        solve(pos) & ?(endODEHeuristic) |
+        solve(pos) & ?(endODEHeuristic & QE) |
         recurseODE
       } else {
         //@note diffInd in context won't fail even if unprovable in the end; try solve first to support the usual examples
-        solve(pos) & ?(endODEHeuristic) |
+        solve(pos) & ?(endODEHeuristic & QE) |
         proveWithoutCuts(false)(pos) |
         recurseODE
       }
