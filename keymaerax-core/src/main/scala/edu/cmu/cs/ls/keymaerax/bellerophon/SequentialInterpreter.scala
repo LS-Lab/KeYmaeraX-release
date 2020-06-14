@@ -4,23 +4,20 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import java.util.concurrent.ExecutionException
+import java.util.concurrent.{CancellationException, ExecutionException}
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, TimeoutException}
+import scala.concurrent.{Await, Future, Promise, TimeoutException}
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
@@ -32,7 +29,7 @@ import scala.util.control.Breaks._
  * @author Nathan Fulton
  * @author Andre Platzer
  */
-abstract class SequentialInterpreter(val listeners: scala.collection.immutable.Seq[IOListener], val throwWithDebugInfo: Boolean = false)
+abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Seq[IOListener], val throwWithDebugInfo: Boolean = false)
   extends Interpreter with Logging {
   var isDead: Boolean = false
 
@@ -145,58 +142,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         }
     }
 
-    case BranchTactic(children) => v match {
-      case BelleProvable(p, lbl) =>
-        if (children.length != p.subgoals.length)
-          throw new IllFormedTacticApplicationException("<(e)(v) is only defined when len(e) = len(v), but " +
-            children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
-            p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
-        //Compute the results of piecewise applications of children to provable subgoals.
-        val results: Seq[Either[BelleValue, BelleThrowable]] =
-          children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
-            try {
-              Left(apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil))))
-            } catch {
-              case e: BelleThrowable =>
-                Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
-            }
-          })
-
-        val errors = results.collect({case Right(r) => r})
-        if (errors.nonEmpty) throw errors.reduce[BelleThrowable](new CompoundCriticalException(_, _))
-
-        // Compute a single provable that contains the combined effect of all the piecewise computations.
-        // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
-        // is replaced with 0 new subgoals (also means: drop labels).
-        def createLabels(parent: Option[BelleLabel], start: Int, end: Int): List[BelleLabel] =
-          (start until end).map(i => parent match { case Some(l) => BelleSubLabel(l, s"$i")
-                                                    case None => BelleTopLevelLabel(s"$i") }).toList
-
-        //@todo preserve labels from parent p (turn new labels into sublabels)
-        val (combinedResult, _, combinedLabels, combinedSubsts) =
-          results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
-            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts), subderivation: BelleProvable) =>
-              val substs = subderivation match {
-                case p: BelleDelayedSubstProvable => Some(p.subst)
-                case _ => None
-              }
-              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
-              val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
-                case (Some(origLabels), Some(newLabels)) =>
-                  Some(origLabels.patch(cidx, newLabels, 0))
-                case (Some(origLabels), None) =>
-                  Some(origLabels.patch(cidx, createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.size), 0))
-                case (None, Some(newLabels)) =>
-                  Some(createLabels(None, 0, cidx) ++ newLabels)
-                case (None, None) => None
-              }
-              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
-            })
-        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
-        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
-      case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.") //.inContext(expr, "")
-    }
-
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v
@@ -296,29 +241,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         apply(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), v)
       } catch {
         case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(OnAll(e.context), "")
-      }
-
-    case ChooseSome(options, e) =>
-      val opts = options()
-      var errors = ""
-      var result: Option[BelleValue] = None
-      while (result.isEmpty && !isDead && opts.hasNext) {
-        val o = opts.next()
-        logger.debug("ChooseSome: try " + o)
-        val someResult: Option[BelleValue] = try {
-          Some(apply(e(o), v))
-        } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
-        logger.debug("ChooseSome: try " + o + " got " + someResult)
-        (someResult, e) match {
-          case (Some(p@BelleProvable(_, _)), _) => result = Some(p)
-          case (Some(p), _: PartialTactic) => result = Some(p)
-          case (Some(_), _) => errors += "option " + o + " " + new IllFormedTacticApplicationException("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o) + "\n" // throw new BelleThrowable("Non-partials must close proof.").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o)
-          case (None, _) => // option o had an error, so consider next option
-        }
-      }
-      result match {
-        case Some(r) => r
-        case None => throw new BelleNoProgress("ChooseSome did not succeed with any of its options") //.inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
       }
 
     case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
@@ -570,10 +492,199 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
   }
 }
 
+/** Concurrent interpreter that runs parallel tactics concurrently. */
+case class ConcurrentInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = Nil,
+                                 override val throwWithDebugInfo: Boolean = false)
+  extends BelleBaseInterpreter(listeners, throwWithDebugInfo) with Logging {
+
+  override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
+    case ParallelTactic(exprs) =>
+      def firstToSucceed(in: List[Future[BelleValue]]): Future[BelleValue] = {
+        val p = Promise[BelleValue]()
+        // first to succeed completes promise `p`
+        in.foreach(_.onComplete({
+          case Success(v: BelleProvable) => p.trySuccess(v)
+          case Success(_: BelleProofSearchControl) => // option just did not work out
+          case Success(ex: BelleThrowable) => p.tryFailure(ex) // option had a critical exception: propagate
+          case Failure(ex: java.util.concurrent.ExecutionException) => ex.getCause match {
+            case _: BelleProofSearchControl => // concurrent option just did not work out
+            case e: Throwable => p.tryFailure(e) // concurrent option had a critical exception: propagate
+          }
+          case Failure(_: CancellationException) => // option was cancelled from outside
+          case Failure(ex) => p.tryFailure(ex) // propagate all other exceptions
+        }))
+        // if all fail then complete with the @todo aggregated failure
+        Future.sequence(in).foreach({
+          case v if v.forall(_.isInstanceOf[BelleThrowable]) => p.tryFailure(v.head.asInstanceOf[BelleThrowable])
+          case _ => false
+        })
+        p.future
+      }
+
+      //@note new internal interpreters because otherwise apply will notify listeners, which currently assume sequential tactic execution
+      val interpreters = exprs.map(e => e -> ConcurrentInterpreter())
+      val cancellables = interpreters.map({ case (e, i) => Cancellable(i(e, v)) })
+      println("Waiting for first one to succeed: " + expr.prettyString)
+      val foo = Await.result(firstToSucceed(cancellables.map(_.future)), Duration.Inf)
+      cancellables.foreach(_.cancel())
+      interpreters.foreach(_._2.kill())
+      println("Parallel done: " + expr.prettyString + "\n  with result: " + foo.prettyString)
+      foo
+
+    case ChooseSome(options, e) =>
+      val opts = options()
+      runExpr(ParallelTactic(opts.toList.map(e(_))), v)
+
+    //@todo duplicate with LazySequentialInterpreter
+    case BranchTactic(children) => v match {
+      case BelleProvable(p, lbl) =>
+        if (children.length != p.subgoals.length)
+          throw new IllFormedTacticApplicationException("<(e)(v) is only defined when len(e) = len(v), but " +
+            children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
+            p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
+        //Compute the results of piecewise applications of children to provable subgoals.
+        val results: Seq[BelleProvable] = children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
+          val ithResult = try {
+            apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil)))
+          } catch {
+            case e: BelleThrowable => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i)
+          }
+          ithResult match {
+            case b@BelleProvable(_, _) => b
+            case _ => throw new BelleUnexpectedProofStateError("Each piecewise application in a branching tactic should result in a provable.", p.underlyingProvable).inContext(expr, "")
+          }
+        })
+
+        // Compute a single provable that contains the combined effect of all the piecewise computations.
+        // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
+        // is replaced with 0 new subgoals (also means: drop labels).
+        def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
+
+        //@todo preserve labels from parent p (turn new labels into sublabels)
+        val (combinedResult, _, combinedLabels, combinedSubsts) =
+          results.foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
+            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts: USubst), subderivation: BelleProvable) =>
+              val substs = subderivation match {
+                case p: BelleDelayedSubstProvable => Some(p.subst)
+                case _ => None
+              }
+              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
+                case (Some(origLabels), Some(newLabels)) =>
+                  Some(origLabels.patch(cidx, newLabels, 0))
+                case (Some(origLabels), None) =>
+                  Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.length), 0))
+                case (None, Some(newLabels)) =>
+                  Some(createLabels(0, cidx) ++ newLabels)
+                case (None, None) => None
+              }
+              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+          })
+        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
+        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
+      case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
+    }
+
+    case _ => super.runExpr(expr, v)
+  }
+
+}
+
+/** Sequential interpreter that runs parallel tactics as alternatives sequentially. */
+abstract class SequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener],
+                                     override val throwWithDebugInfo: Boolean = false)
+  extends BelleBaseInterpreter(listeners, throwWithDebugInfo) with Logging {
+
+  override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
+    case ParallelTactic(expr) => runExpr(expr.reduceRight(EitherTactic), v)
+    case ChooseSome(options, e) =>
+      val opts = options()
+      var errors = ""
+      var result: Option[BelleValue] = None
+      while (result.isEmpty && !isDead && opts.hasNext) {
+        val o = opts.next()
+        logger.debug("ChooseSome: try " + o)
+        val someResult: Option[BelleValue] = try {
+          Some(apply(e(o), v))
+        } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
+        logger.debug("ChooseSome: try " + o + " got " + someResult)
+        (someResult, e) match {
+          case (Some(p@BelleProvable(_, _)), _) => result = Some(p)
+          case (Some(p), _: PartialTactic) => result = Some(p)
+          case (Some(_), _) => errors += "option " + o + " " + new IllFormedTacticApplicationException("Tactics must close their proof unless declared as partial. Use \"t partial\" instead of \"t\".").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o) + "\n" // throw new BelleThrowable("Non-partials must close proof.").inContext(ChooseSome(options, e), "Failed option in ChooseSome: " + o)
+          case (None, _) => // option o had an error, so consider next option
+        }
+      }
+      result match {
+        case Some(r) => r
+        case None => throw new BelleNoProgress("ChooseSome did not succeed with any of its options") //.inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
+      }
+    case _ => super.runExpr(expr, v)
+  }
+
+}
+
 /** Sequential interpreter that explores branching tactics exhaustively, regardless of failure of some. */
 case class ExhaustiveSequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq(),
                                            override val throwWithDebugInfo: Boolean = false)
-  extends SequentialInterpreter(listeners, throwWithDebugInfo) { }
+  extends SequentialInterpreter(listeners, throwWithDebugInfo) {
+
+  override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
+    case BranchTactic(children) => v match {
+      case BelleProvable(p, lbl) =>
+        if (children.length != p.subgoals.length)
+          throw new IllFormedTacticApplicationException("<(e)(v) is only defined when len(e) = len(v), but " +
+            children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
+            p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
+        //Compute the results of piecewise applications of children to provable subgoals.
+        val results: Seq[Either[BelleValue, BelleThrowable]] =
+          children.zip(p.subgoals).zipWithIndex.map({ case ((e_i, s_i), i) =>
+            try {
+              Left(apply(e_i, bval(s_i, lbl.getOrElse(Nil).lift(i).map(_ :: Nil))))
+            } catch {
+              case e: BelleThrowable =>
+                Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
+            }
+          })
+
+        val errors = results.collect({case Right(r) => r})
+        if (errors.nonEmpty) throw errors.reduce[BelleThrowable](new CompoundCriticalException(_, _))
+
+        // Compute a single provable that contains the combined effect of all the piecewise computations.
+        // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
+        // is replaced with 0 new subgoals (also means: drop labels).
+        def createLabels(parent: Option[BelleLabel], start: Int, end: Int): List[BelleLabel] =
+          (start until end).map(i => parent match { case Some(l) => BelleSubLabel(l, s"$i")
+          case None => BelleTopLevelLabel(s"$i") }).toList
+
+        //@todo preserve labels from parent p (turn new labels into sublabels)
+        val (combinedResult, _, combinedLabels, combinedSubsts) =
+          results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]], USubst)]((p, 0, None, USubst(scala.collection.immutable.Seq.empty)))({
+            case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]], csubsts), subderivation: BelleProvable) =>
+              val substs = subderivation match {
+                case p: BelleDelayedSubstProvable => Some(p.subst)
+                case _ => None
+              }
+              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, exhaustiveSubst(subderivation.p, csubsts), substs)
+              val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
+                case (Some(origLabels), Some(newLabels)) =>
+                  Some(origLabels.patch(cidx, newLabels, 0))
+                case (Some(origLabels), None) =>
+                  Some(origLabels.patch(cidx, createLabels(origLabels.lift(cidx), origLabels.length, origLabels.length + subderivation.p.subgoals.size), 0))
+                case (None, Some(newLabels)) =>
+                  Some(createLabels(None, 0, cidx) ++ newLabels)
+                case (None, None) => None
+              }
+              (combinedProvable, nextIdx, combinedLabels, if (substs.isDefined) csubsts ++ substs.get else csubsts)
+          })
+        if (combinedSubsts.subsDefsInput.isEmpty) BelleProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels)
+        else new BelleDelayedSubstProvable(combinedResult, if (combinedLabels.isEmpty) None else combinedLabels, combinedSubsts)
+      case _ => throw new IllFormedTacticApplicationException("Cannot perform branching on a goal that is not a BelleValue of type Provable.") //.inContext(expr, "")
+    }
+    case _ => super.runExpr(expr, v)
+  }
+
+}
 
 /** Sequential interpreter that stops exploring branching on the first failing branch. */
 case class LazySequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq(),

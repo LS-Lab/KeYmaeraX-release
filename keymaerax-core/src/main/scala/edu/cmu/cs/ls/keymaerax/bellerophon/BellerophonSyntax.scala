@@ -49,6 +49,7 @@ sealed abstract class BelleExpr(private var location: Location = UnknownLocation
   def |(other: BelleExpr)     = EitherTactic(this, other)
   /** this |! other: alternative composition executes other if applying this fails (even critically), failing if both fail. */
   def |!(other: BelleExpr)     = EitherTactic(TryCatch(this, classOf[Throwable], (ex: Throwable) => throw new TacticInapplicableFailure("Inapplicable due to critical exception", ex)), other)
+  def ||(other: BelleExpr)     = ParallelTactic(List(this, other))
   /** this*n: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
   def *(n: Int)               = RepeatTactic(this, n)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
@@ -81,10 +82,12 @@ trait NamedBelleExpr extends BelleExpr {
 
 // basic tactic combinators
 
-/** `left ; right` sequential composition executes right` on the output of `left`, failing if either fail. */
+/** `left ; right` sequential composition executes `right` on the output of `left`, failing if either fail. */
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ";" + right.prettyString + ")" }
 /** `left | right` alternative composition executes `right` if applying `left` fails, failing if both fail. */
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
+/** `left || right` alternative composition executes both `left` and `right` simultaneously and succeeds with the first success, failing if both fail. */
+case class ParallelTactic(expr: List[BelleExpr]) extends BelleExpr { override def prettyString: String = "(" + expr.map(_.prettyString).mkString("||") + ")" }
 //@note saturate and repeat tactic fully parenthesize for parser
 /** `child*` saturating repetition executes tactic `child` repeatedly to a fixpoint, casting result to type annotation,
   * diverging if no fixpoint. */
