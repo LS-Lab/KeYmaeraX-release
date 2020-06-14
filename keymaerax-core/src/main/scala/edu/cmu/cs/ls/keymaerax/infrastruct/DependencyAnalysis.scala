@@ -70,6 +70,7 @@ object DependencyAnalysis {
           val (d, f) = dependencies(p, s.union(inn),ignoreTest) //More to add
           (d, f.union(funcs))
         }
+      case Dual(p) => dependencies(p, s, ignoreTest)
       case _ => ???
     }
 
