@@ -127,7 +127,12 @@ private object EqualityTactics {
   })
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or uninterpreted function) */
-  @Tactic(names = "L=R all atoms", codeName = "atomAllL2R")
+  @Tactic(names = "L=R all atoms",
+    codeName = "atomAllL2R",
+    premises="Γ(e) |- Δ(e)",
+    // atomAllL2R -------------------------
+    conclusion="Γ(x), x=e |- Δ(e)"
+  )
   val atomExhaustiveEqL2R: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(_: Variable, _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
     case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => TactixLibrary.exhaustiveEqL2R(hide=true)(pos, fml)
@@ -262,7 +267,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  @Tactic(names = "absExp", codeName = "absExp")
+  @Tactic(names = "Expand absolute value", codeName = "absExp")
   val abs: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
@@ -337,7 +342,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  @Tactic(names = "min/max")
+  @Tactic(names = "Expand min/max")
   val minmax: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t@Pair(f, g))) if fn == "min" || fn == "max" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
@@ -417,7 +422,8 @@ private object EqualityTactics {
   })
 
   /** Expands all special functions (abs/min/max). */
-  @Tactic(revealInternalSteps = true)
+  @Tactic(names="Expand all special functions",
+    revealInternalSteps = true)
   val expandAll: BelleExpr = anon ((s: Sequent) => {
     val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>

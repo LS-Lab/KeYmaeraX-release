@@ -511,7 +511,10 @@ object TaylorModelTactics extends Logging {
       }).reduceRight(And))(localTime, Minus(time, time0))
     toc("postUnfolded")
 
-    private val boxTMEnclosure = Box(ODESystem(ode, And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep)))),
+    private def boxODETimeStep(post: Formula) =
+      Box(ODESystem(ode, And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep)))), post)
+
+    private val boxTMEnclosure = boxODETimeStep(
       (Exists(Seq(localTime),
         (And(Equal(time, Plus(time0, localTime)),
           And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)))

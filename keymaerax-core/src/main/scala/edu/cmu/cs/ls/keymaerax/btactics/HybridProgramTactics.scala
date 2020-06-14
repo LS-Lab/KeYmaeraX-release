@@ -5,9 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentPositionTactic}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Position
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 
 /**
   * Implementation: Tactics for manipulating box/diamond properties about hybrid programs.
@@ -21,7 +22,10 @@ private object HybridProgramTactics {
   /**
     * Decomposes a question of the form {a ++ b ++ c}; plant into a;plant , b;plant , c;plant
     */
-  def decomposeController = "decomposeController" by ((pos: Position, s:Sequent) => {
+  @Tactic(names = "Decompose Controller",
+    premises = "[a][c]P; ...; [b][c]P",
+    conclusion = "[{a ++ ... ++ b}; c] P")
+  val decomposeController : DependentPositionTactic = anon ((pos: Position, s:Sequent) => {
     s(pos) match {
       case Box(Compose(ctrl, plant), phi) => decomposeChoices(ctrl, pos)
       case Diamond(_,_) => throw new Exception("Diamond not spported by decomposeController")

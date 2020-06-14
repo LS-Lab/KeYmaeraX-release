@@ -388,13 +388,15 @@ private object DifferentialTactics extends Logging {
 
   /** @see [[TactixLibrary.diffInvariant]] */
   //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.diffInvariant(Formula)
-  private[btactics] def diffInvariant(formulas: List[Formula]): DependentPositionTactic =
-    "diffInvariant" byWithInputs (formulas, (pos: Position, sequent: Sequent) => {
+  @Tactic(premises = "Γ |- [x'=f(x)&R]P'",
+      conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true)
+  private[btactics] def diffInvariant(R: List[Formula]): DependentPositionTactic =
+    inputanon {(pos: Position, sequent: Sequent) =>
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
-      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
-      diffCut(formulas)(pos) <(diffIndAllButFirst:_*)
-    })
+      val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
+      diffCut(R)(pos) <(diffIndAllButFirst:_*)
+    }
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint.
     * @see AxiomaticODESolver.inverseDiffCut
@@ -702,7 +704,7 @@ private object DifferentialTactics extends Logging {
   //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   //@Tactic in HilbertCalculus.Derive.Dvar same
   @Tactic(names="x'",
-    conclusion="(x)' = x",
+    conclusion="__(x)'__ = x",
     displayLevel="internal")
   private[btactics] lazy val Dvariable: DependentPositionTactic = anon ( (pos:Position, sequent:Sequent) => {
 
@@ -1728,7 +1730,6 @@ private object DifferentialTactics extends Logging {
     starter & dgDbx(cofactor)(pos)
   })
 
-// TODO:
   @Tactic(names="Darboux (in)equalities",
     premises="Γ |- p≳0 ;; Q |- p' >= g p",
     conclusion="Γ |- [x'=f(x)&Q]p≳0, Δ",

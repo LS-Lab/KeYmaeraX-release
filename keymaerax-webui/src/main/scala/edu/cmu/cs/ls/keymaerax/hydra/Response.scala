@@ -886,7 +886,7 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
         "name" -> JsString(i.canonicalName),
         "codeName" -> JsString(i.codeName),
         "defaultKeyPos" -> {
-          val key = AxiomIndex.axiomIndex(i.canonicalName)._1
+          val key = AxIndex.axiomIndex(i)._1
           JsString(key.pos.mkString("."))
         },
         "displayInfo" -> (i.display match {
@@ -937,7 +937,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
     else JsString(scala.io.Source.fromInputStream(helpResource)(scala.io.Codec.UTF8).mkString)
   }
 
-  def axiomJson(info: DerivationInfo): JsObject = {
+  def axiomJson(info: ProvableInfo): JsObject = {
     val formulaText =
       (info, info.display) match {
         case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
@@ -950,7 +950,7 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
       "defaultKeyPos" -> {
-        val key = AxiomIndex.axiomIndex(info.canonicalName)._1
+        val key = AxIndex.axiomIndex(info)._1
         JsString(key.pos.mkString("."))
       },
       "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(info),
@@ -993,11 +993,13 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def derivationJson(derivationInfo: DerivationInfo): JsObject = {
     val derivation = derivationInfo match {
       case info: AxiomInfo => axiomJson(info)
-      case info: DerivationInfo => info.display match {
-        case _: SimpleDisplayInfo => tacticJson(info)
-        case _: AxiomDisplayInfo => axiomJson(info)
-        case _: InputAxiomDisplayInfo => axiomJson(info) //@todo usually those have tactics with RuleDisplayInfo
-        case RuleDisplayInfo(_, conclusion, premises) => ruleJson(info, conclusion, premises)
+      case info: DerivationInfo => (info, info.display) match {
+        case (_, _: SimpleDisplayInfo) => tacticJson(info)
+        case (pi: ProvableInfo, _: AxiomDisplayInfo) => axiomJson(pi)
+        case (pi: ProvableInfo, _: InputAxiomDisplayInfo) => axiomJson(pi) //@todo usually those have tactics with RuleDisplayInfo
+        case (_, RuleDisplayInfo(_, conclusion, premises)) => ruleJson(info, conclusion, premises)
+        case (_, (_: AxiomDisplayInfo) | (_: InputAxiomDisplayInfo)) =>
+          throw new IllegalArgumentException(s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo")
       }
     }
     JsObject(

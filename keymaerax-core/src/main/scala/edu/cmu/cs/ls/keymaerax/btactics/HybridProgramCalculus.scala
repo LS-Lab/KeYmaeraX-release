@@ -75,6 +75,7 @@ trait HybridProgramCalculus {
     premises =      "Γ |- [a]Q, Δ ;; Q |- P",
     // Monotonicity ------------------------
     conclusion =    "Γ |- [a]P, Δ",
+    inputs = "Q:formula",
     revealInternalSteps = true)
   def generalize(C: Formula)  : DependentPositionTactic = anon {(pos:Position) => DLBySubst.generalize(C)(pos) }
 
@@ -104,7 +105,8 @@ trait HybridProgramCalculus {
     * @note Beware that the order of premises for hybrid games is use, step, init.
     */
   @Tactic(premises = "Γ |- J, Δ ;; J |- P ;; J |- [a]J",
-    conclusion = "Γ |- [a<sup>*</sup>]P, Δ", revealInternalSteps = true)
+    conclusion = "Γ |- [a<sup>*</sup>]P, Δ", revealInternalSteps = true,
+    inputs = "J:formula", displayLevel = "full")
   def loop(invariant: Formula)  : DependentPositionTactic = anon {(pos:Position) => DLBySubst.loop(invariant)(pos) }
 
   /** iG discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.

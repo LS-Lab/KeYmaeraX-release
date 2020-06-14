@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
@@ -219,9 +219,9 @@ case class Case(fml: Formula, simplify: Boolean = true) {
 object Idioms {
   import TacticFactory._
 
-  lazy val nil: BelleExpr = new BuiltInTactic("nil") with NoOpTactic {
-    override def result(provable: ProvableSig): ProvableSig = provable
-  }
+  @Tactic()
+  lazy val nil: BelleExpr = anon {(provable: ProvableSig) => provable}
+
   /** no-op nil */
   lazy val ident: BelleExpr = nil
 

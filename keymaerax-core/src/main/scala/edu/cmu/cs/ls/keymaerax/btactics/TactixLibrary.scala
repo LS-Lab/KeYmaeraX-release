@@ -105,6 +105,7 @@ object TactixLibrary extends HilbertCalculus
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
      else HilbertCalculus.stepAt(pos))
+      //@todo optimizable: move assignb tactic into AxIndex once supported
     |! assignb(pos))
 
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
@@ -124,7 +125,8 @@ object TactixLibrary extends HilbertCalculus
   )(notL::andL::notR::implyR::orR::allR::existsL::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
-  val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
+  @Tactic(codeName = "unfold", revealInternalSteps = true)
+  val unfoldProgramNormalize: BelleExpr = anon {normalize(andR)}
 
   /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
     * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
@@ -234,11 +236,13 @@ object TactixLibrary extends HilbertCalculus
     }
   })
 
-  val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
-                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
+  @Tactic(revealInternalSteps = true)
+  val prop: BelleExpr = anon {allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
+                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)}
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  val propAuto: BelleExpr = "propAuto" by (prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods"))
+  @Tactic(revealInternalSteps = true)
+  val propAuto: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
 
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
@@ -328,7 +332,8 @@ object TactixLibrary extends HilbertCalculus
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
-  def auto: BelleExpr = "auto" by master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done
+  @Tactic()
+  def auto: BelleExpr = anon {master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done}
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
@@ -541,6 +546,7 @@ object TactixLibrary extends HilbertCalculus
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
+  @Tactic()
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
 
@@ -665,7 +671,8 @@ object TactixLibrary extends HilbertCalculus
   /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
   @Tactic(
     names = ("Abbreviate", "abbrv"),
-    codeName = "abbrv", //@todo name clash with abbrv above
+    codeName = "abbrv", //@todo name clash with abbrv above (response from BB: not a name clash if only one is annotated. This
+    // appears to be correct because it maintains backwards-compatibility)
     premises = "Γ(x), x=e |- Δ(x)",
     conclusion = "Γ(e) |- Δ(e)",
     inputs = "e:term;;x[x]:option[variable]"

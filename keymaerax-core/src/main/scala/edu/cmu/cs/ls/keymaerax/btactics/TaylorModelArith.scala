@@ -463,7 +463,8 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val (u1, u2) = IntervalArithmeticV2.eval_ivl(options.precision)(HashMap(), HashMap())(upper)
       val prettyLower = if (l1 == l2) Number(l1) else lower
       val prettyUpper = if (u1 == u2) Number(u1) else upper
-      proveBy(ProvableSig.startProof(Sequent(context, IndexedSeq(tmFormula(elem, rhsOf(poly.prettyRepresentation),
+      val prettyRepresentation = poly.resetTerm.prettyRepresentation
+      proveBy(ProvableSig.startProof(Sequent(context, IndexedSeq(tmFormula(elem, rhsOf(prettyRepresentation),
         prettyLower, prettyUpper)))).apply(CutRight(prv.conclusion.succ(0), SuccPos(0)), 0).
         apply(CoHideRight(SuccPos(0)), 1).
         apply(ImplyRight(SuccPos(0)), 1),
@@ -472,7 +473,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
           existsL(-1) & existsR("err_".asTerm)(1) & andL(-1) & andL(-2) & andR(1) &
           Idioms.<(
             cohideOnlyL(-1) &
-              useAt(poly.prettyRepresentation, PosInExpr(1::Nil))(1, 1::0::Nil) & closeId
+              useAt(prettyRepresentation, PosInExpr(1::Nil))(1, 1::0::Nil) & closeId
             ,
             hideL(-1) & IntervalArithmeticV2.intervalArithmeticBool(options.precision, new BigDecimalTool)(1)
           )
