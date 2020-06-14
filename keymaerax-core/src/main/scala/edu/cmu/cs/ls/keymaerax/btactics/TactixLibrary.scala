@@ -436,7 +436,7 @@ object TactixLibrary extends HilbertCalculus
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
-          loopPostMaster(gen)(pos) & done |
+          loopPostMaster(gen)(pos) & done ||
             ChooseSome(
               () => try {
                 gen(seq, pos).iterator.map(_._1)
