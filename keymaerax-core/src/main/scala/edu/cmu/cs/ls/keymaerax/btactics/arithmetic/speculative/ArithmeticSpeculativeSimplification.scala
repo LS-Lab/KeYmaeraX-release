@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.SignAnalysis
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -29,7 +30,13 @@ object ArithmeticSpeculativeSimplification {
 
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
-  lazy val speculativeQE: BelleExpr = "smartQE" by ((_: Sequent) => {
+  @Tactic(names="Speculative QE",
+    codeName="smartQE",
+    premises="*",
+    //    smartQE -----------
+    conclusion="Γ<sub>FOLR</sub> |- Δ<sub>FOLR</sub>",
+    displayLevel="browse")
+  lazy val speculativeQE: BelleExpr = anon ((_: Sequent) => {
     (debug("Trying abs...", DEBUG) & proveOrRefuteAbs & debug("...abs done", DEBUG)) | speculativeQENoAbs
   })
 

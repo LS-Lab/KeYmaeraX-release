@@ -634,6 +634,12 @@ object TactixLibrary extends HilbertCalculus
     * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
+  @Tactic(names="Partial QE",
+    codeName="pQE",
+    premises="Γ |- Δ",
+    //    pQE -----------
+    conclusion="Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
+    displayLevel="browse")
   def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("partialQE requires a QETool, but got None")))
 
   /** Splits propositional into many smallest possible QE calls.
@@ -815,6 +821,12 @@ object TactixLibrary extends HilbertCalculus
 
   /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
     * @see [[QE]] */
+  @Tactic(names="RCF",
+    codeName="rcf",
+    premises="*",
+    //    pQE -----------
+    conclusion="Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
+    displayLevel="browse")
   def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
