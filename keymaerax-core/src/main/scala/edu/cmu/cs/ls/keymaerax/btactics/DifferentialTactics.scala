@@ -777,16 +777,15 @@ private object DifferentialTactics extends Logging {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
-      if (sequent.succ.size <= 1) {
-        val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
-        val constFacts = sequent.ante.flatMap(FormulaTools.conjuncts).
-          filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
-        constFacts.map(diffCut(_)(pos) &
-          // diffCut may not introduce the cut if it is already in there
-          Idioms.doIf(_.subgoals.size == 2)(<(skip, V(pos) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
-      } else {
-        useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
-      }
+      val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
+      val constFacts = sequent.zipWithPositions.flatMap({
+        case (fml, pos) =>
+          if (pos.isAnte) FormulaTools.conjuncts(fml)
+          else FormulaTools.conjuncts(fml).map(Not)
+      }).filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
+      constFacts.map(diffCut(_)(pos) &
+        // diffCut may not introduce the cut if it is already in there; diffCut changes the position in the show branch to 'Rlast
+        Idioms.doIf(_.subgoals.size == 2)(<(skip, V('Rlast) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
     case Some(e) => throw new TacticInapplicableFailure("dW only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -810,29 +809,38 @@ private object DifferentialTactics extends Logging {
         }).reverse.map({ case (_, i) => exhaustiveEqR2L(AntePosition.base0(i)) & hideL(AntePosition.base0(i)) }).
           reduceOption[BelleExpr](_&_).getOrElse(skip)
 
-
-        val storeInitialVals = "ANON" by ((seq: Sequent) => {
+        val storeInitialVals = anon ((seq: Sequent) => {
           val anteSymbols = seq.ante.flatMap(StaticSemantics.symbols)
           val storePrimedVars = primedVars.filter(anteSymbols.contains)
           storePrimedVars.map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
             (exhaustiveEqR2L('Llast) & hideL('Llast))*storePrimedVars.size
         })
 
-        val dw = "ANON" by ((seq: Sequent) => {
-          diffWeakenG(pos) & implyR(1) & andL('Llast)*seq.ante.size & implyRi
-        })
+        def cutFmls(seq: Sequent, pos: SeqPos): List[Formula] = {
+          val bv = StaticSemantics.boundVars(seq(pos))
+          seq.zipWithPositions.flatMap({
+            case (fml, pp) =>
+              if (pp != pos && StaticSemantics.freeVars(fml).intersect(bv).isEmpty) {
+                if (pp.isAnte) Some(fml)
+                else Some(Not(fml))
+              } else None
+          })
+        }
 
-        val cutAllAntes = "ANON" by ((seq: Sequent) => {
-          if (seq.ante.isEmpty) skip
-          //@note all ante formulas rewritten to initial values at this point
-          else diffCut(seq.ante.reduceRight(And))(pos) <(
+        val cutAndDW = anon ((seq: Sequent) => {
+          //@note filter to include only formulas that are rewritten to initial values
+          val cuts = cutFmls(seq, pos.top)
+          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*cuts.size & implyRi
+          if (cuts.isEmpty) dw
+          else diffCut(cuts.reduceRight(And))(pos) <(
             skip,
-            V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(seq.ante.size-1) & closeIdWith('Rlast) & done
-          )
+            V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(cuts.size-1) & closeIdWith('Rlast) & done
+          ) & dw
         })
 
-        rewriteExistingGhosts & storeInitialVals & cutAllAntes & dw
+        rewriteExistingGhosts & storeInitialVals & cutAndDW
       } else {
+        //@todo unify with above
         useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
     case Some(e) => throw new TacticInapplicableFailure("dWplus only applicable to box ODEs, but got " + e.prettyString)
