@@ -678,11 +678,9 @@ object DerivationInfoRegistry {
         case Some(Number(timeout)) => TactixLibrary.QE(Nil, None, Some(timeout.toInt))
         case _ => TactixLibrary.QE }: TypedFunc[Option[Term], BelleExpr]
       }: TypedFunc[Option[String], _], revealInternalSteps = true),
-    // @TODO
-    new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}),
+    new TacticInfo("rcf", "RCF",  {case () => TactixLibrary.RCF}), //@Tactic-fied
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}),
-    // @TODO
-    new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}),
+    new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}), //@Tactic-fied
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}), //@Tactic-fied
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),  //@Tactic-fied
     //@todo universal closure may come with list of named symbols
