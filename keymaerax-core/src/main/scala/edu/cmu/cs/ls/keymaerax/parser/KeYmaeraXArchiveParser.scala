@@ -96,7 +96,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
     def exhaustiveSubst[T <: Expression](arg: T): T = try {
-      elaborateToFunctions(arg).exhaustiveSubst(USubst(substs)).asInstanceOf[T]
+      elaborateToFunctions(arg.exhaustiveSubst(USubst(substs))).asInstanceOf[T]
     } catch {
       case ex: SubstitutionClashException =>
         throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
@@ -969,8 +969,9 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     checkUseDefMatch(elaboratedModel, entry.defs)
 
     // analyze and report annotations
-    val elaboratedAnnotations = elaborateAnnotations(entry.annotations, entry.defs)
-    elaboratedAnnotations.foreach({
+    val elaboratedAnnotations = elaborateToFnsInAnnotations(entry.annotations, entry.defs)
+    val expandedAnnotations = elaborateToFnsInAnnotations(expandAnnotations(entry.annotations, entry.defs), entry.defs)
+    (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
       case (e: Program, a: Formula) =>
         typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         KeYmaeraXParser.annotationListener(e, a)
@@ -987,11 +988,23 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     * @param defs lists functions to elaborate to
     * @throws ParseException if annotations are not formulas, not attached to programs, or type analysis of annotations fails
     * */
-  private def elaborateAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+  private def elaborateToFnsInAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
     annotations.map({
       case (e: Program, a: Formula) =>
         val substPrg = defs.elaborateToFunctions(e)
         val substFml = defs.elaborateToFunctions(a)
+        (substPrg, substFml)
+      case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
+      case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
+    })
+  }
+
+  /** Expands definitions in annotations to create fully expanded annotations. */
+  private def expandAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+    annotations.map({
+      case (e: Program, a: Formula) =>
+        val substPrg = defs.exhaustiveSubst(e)
+        val substFml = defs.exhaustiveSubst(a)
         (substPrg, substFml)
       case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
       case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
