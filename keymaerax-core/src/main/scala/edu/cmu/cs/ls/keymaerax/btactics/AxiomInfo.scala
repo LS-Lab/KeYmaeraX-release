@@ -170,7 +170,7 @@ object DerivationInfoRegistry {
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]P","&Delta;"))
         , /* premises */ List((List("&Gamma;"), List("[{x′=f(x) & Q}]R", "&Delta;")),
           (List("&Gamma;"), List("[{x′=f(x) & R}]P","&Delta;"))))
-      , List(FormulaArg("R")) //@todo Lists not supported by dR. So cannot be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
+      , List(FormulaArg("R"))
       , _ => ((fml: Formula) => DifferentialTactics.diffRefine(fml)): TypedFunc[Formula, BelleExpr]),
     PositionTacticInfo("dCi" // @Tactic-fied
       , RuleDisplayInfo("dCi"
@@ -683,7 +683,6 @@ object DerivationInfoRegistry {
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}),
     // @TODO
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}),
-    // @TODO was this tacticified? where?
     new TacticInfo("smartQE", "smartQE",  {case () => ArithmeticSpeculativeSimplification.speculativeQE}), //@Tactic-fied
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),  //@Tactic-fied
     //@todo universal closure may come with list of named symbols
