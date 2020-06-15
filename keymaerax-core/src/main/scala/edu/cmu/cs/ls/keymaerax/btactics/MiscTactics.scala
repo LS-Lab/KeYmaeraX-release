@@ -629,7 +629,8 @@ object TacticFactory {
     def by(t: ProvableSig => ProvableSig): BuiltInTactic =
       new BuiltInTactic(name) {
         @inline override def result(provable: ProvableSig): ProvableSig = {
-          requireOneSubgoal(provable, name)
+          //@todo nil
+          //requireOneSubgoal(provable, name)
           t(provable)
         }
       }
