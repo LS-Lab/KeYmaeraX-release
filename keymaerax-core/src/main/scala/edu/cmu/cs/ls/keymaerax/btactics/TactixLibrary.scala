@@ -518,10 +518,13 @@ object TactixLibrary extends HilbertCalculus
     // use and check invSupplier (user-defined annotations from input file)
     invSupplier(seq, pos).toList.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
       skip,
-      DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) &
+      (if (pos.isTopLevel) DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) else DifferentialTactics.diffInd()(pos)) &
+        Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
         DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
           "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
-    ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) & DifferentialTactics.mathematicaSplittingODE(pos)
+    ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
+      (if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos)
+       else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos))
   })
 
   /**
