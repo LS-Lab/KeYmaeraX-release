@@ -2194,11 +2194,14 @@ private object DifferentialTactics extends Logging {
       implyR(pos) & generalize(interior)(pos) <(
         //@todo check always with doIfElse or use TryCatch exception?
         maxminGt & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
-          useAt(Ax.openInvariantClosure)(pos) <(
-            backGt & backGe1 & hideL('Llast),
-            backGe2 &
-              (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
-              else closeId)
+          useAt(Ax.openInvariantClosure)(pos) & Idioms.doIf(_.subgoals.length == 2)(
+            //@todo may no longer be necessary at all, useAt seems to close precondition automatically now
+            Idioms.<(
+              backGt & backGe1 & hideL('Llast),
+              backGe2 &
+                (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
+                else closeId)
+            )
           ),
           DebuggingTactics.error("Inapplicable: t_ occurs")
         )
