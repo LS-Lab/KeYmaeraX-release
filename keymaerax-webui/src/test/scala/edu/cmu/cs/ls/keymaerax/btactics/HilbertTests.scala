@@ -288,6 +288,18 @@ class HilbertTests extends TacticTestBase {
       useAt(Ax.composeb, PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
+  it should "reduce [ctrl;ode;](x>0&y<1) by composeb" in {
+    proveBy("[ctrl;ode;](x>0&y<1)".asFormula,
+      useAt(Ax.boxAnd)(1)).subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("([ctrl;ode;]x>0)&([ctrl;ode;]y<1".asFormula))
+    proveBy("[ctrl;ode;](x>0&y<1)".asFormula,
+      useAt(Ax.composeb)(1) &
+        useAt(Ax.boxAnd)(1, PosInExpr(1::Nil))).subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("[ctrl;](([ode;]x>0)&([ode;]y<1))".asFormula))
+    proveBy("[ctrl;ode;](x>0&y<1)".asFormula,
+      useAt(Ax.composeb)(1) &
+        useAt(Ax.boxAnd)(1, PosInExpr(1::Nil)) &
+    useAt(Ax.boxAnd)(1)).subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("([ctrl;][ode;]x>0)&([ctrl;][ode;]y<1)".asFormula))
+  }
+
   "Chase" should "prove [?p();?(p()->q());]p() by chase" in {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q());]p()".asFormula)),
       chase(1) & prop
