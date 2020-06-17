@@ -315,6 +315,106 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     }
   }
 
+  def paren(s: String) : String = "(" + s + ")"
+  def printOp(op: String, left: String, right: String) : String = paren(left) + " " + op + " " + paren(right)
+  def printOp(op: String, child: String) : String = op + paren(child)
+  def printOp[A](f: A=>String, op: String, left: A, right: A) : String = printOp(op, f(left), f(right))
+  def printOp[A](f: A=>String, op: String, child: A) : String = printOp(op, f(child))
+
+  /* ugly, fully parenthesized and typed (except variables) Isabelle syntax */
+  def subscript(x: String) : String = x.map("\\<^sub>" + _).mkString
+  def variableToIsabelle(v: Variable, showType: Boolean) : String = v match {
+    case BaseVariable(name, index, Real) =>
+      val vString =
+        name.replace("_", "\\<^sub>\\<p>") /* for /p/rivate */ +
+          (index match {
+            case None => ""
+            case Some(i) => subscript(i.toString)
+          })
+      if (showType) paren(vString+"::real") else vString
+    case _ => throw new IllegalArgumentException("variableToIsabelle: " + v)
+  }
+  case class ToIsabelleTermException(message: String) extends IllegalArgumentException(message)
+  def toIsabelle(t: Term, typeReal: Boolean) : String = t match {
+    case Plus(a, b) => printOp(toIsabelle(_:Term, typeReal), "+", a, b)
+    case Minus(a, b) => printOp(toIsabelle(_:Term, typeReal), "-", a, b)
+    case Times(a, b) => printOp(toIsabelle(_:Term, typeReal), "*", a, b)
+    case Divide(a, b) =>
+      if (typeReal) printOp(toIsabelle(_:Term, typeReal), "/", a, b)
+      else
+        throw ToIsabelleTermException("keymaerax_nonnatural_exponent")
+    case Power(a, b) => printOp("^", toIsabelle(a, typeReal), toIsabelle(b, false))
+    case Neg(a) => printOp(toIsabelle(_:Term, typeReal), "-", a)
+    case Number(n) =>
+      if (typeReal || (n.isValidInt && n.toIntExact >= 0))
+        paren(n.toString + (if(typeReal) "::real" else "::nat"))
+      else throw ToIsabelleTermException("keymaerax_nonnatural_number")
+    case v : BaseVariable => if (typeReal) variableToIsabelle(v, false) else
+      throw ToIsabelleTermException("keymaerax_variable_in_exponent")
+    case v : DifferentialSymbol => toIsabelle(Differential(v.x), typeReal) : String
+    case Differential(a) => printOp(toIsabelle(_:Term, typeReal), "(keymaerax_differential::real\\<Rightarrow>real)", a)
+    case FuncOf(Function("min", None, Tuple(Real, Real), Real, true), Pair(a, b)) => "(min::real\\<Rightarrow>real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))+paren(toIsabelle(b, typeReal))
+    case FuncOf(Function("max", None, Tuple(Real, Real), Real, true), Pair(a, b)) =>"(max::real\\<Rightarrow>real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))+paren(toIsabelle(b, typeReal))
+    case FuncOf(Function("abs", None, Real, Real, true), a) =>"(abs::real\\<Rightarrow>real)"+paren(toIsabelle(a, typeReal))
+    case _ => throw new IllegalArgumentException("toIsabelle(Term): " + t)
+  }
+  def toIsabelle(fml: Formula) : String = fml match {
+    case True => "True"
+    case False => "False"
+    case Equal(a, b) => printOp(toIsabelle(_: Term, true), "=", a, b)
+    case NotEqual(a, b) => printOp(toIsabelle(_: Term, true), "\\<noteq>", a, b)
+    case GreaterEqual(a, b) => printOp(toIsabelle(_: Term, true), "\\<ge>", a, b)
+    case Greater(a, b) => printOp(toIsabelle(_: Term, true), ">", a, b)
+    case LessEqual(a, b) => printOp(toIsabelle(_: Term, true), "\\<le>", a, b)
+    case Less(a, b) => printOp(toIsabelle(_: Term, true), "<", a, b)
+    case Not(a) => printOp(toIsabelle(_:Formula), "\\<not>", a)
+    case And(a, b) => printOp(toIsabelle(_:Formula), "\\<and>", a, b)
+    case Or(a, b) => printOp(toIsabelle(_:Formula), "\\<or>", a, b)
+    case Imply(a, b) => printOp(toIsabelle(_:Formula), "\\<longrightarrow>", a, b)
+    case Equiv(a, b) => printOp(toIsabelle(_:Formula), "\\<longleftrightarrow>", a, b)
+    case Forall(vs, a) => paren("\\<forall> " + vs.map(variableToIsabelle(_, true)).mkString(" ") + " . " + paren(toIsabelle(a)))
+    case Exists(vs, a) => paren("\\<exists> " + vs.map(variableToIsabelle(_, true)).mkString(" ") + " . " + paren(toIsabelle(a)))
+    case _ => throw new IllegalArgumentException("toIsabelle(Formula): " + fml)
+  }
+  def toIsabelle(filterFalse: Option[Int], entry: (String, Sequent, Sequent)) : String = entry match {
+    case (s: String, _: Sequent, seq: Sequent) if (seq.ante.length == 0 && seq.succ.length == 1) =>
+      val converted = try {
+        s + "#" + toIsabelle(seq.succ(0)) + "\n"
+      } catch {
+        case ToIsabelleTermException(msg) => s + "#" + msg + "\n"
+      }
+      if (filterFalse.isDefined) {
+        val qe = proveBy(seq, ?(QE(timeout = filterFalse)))
+        if (qe.subgoals.exists(_.succ.contains(False)))
+          s + "#" + "keymaerax_qe_reduces_to_false\n"
+        else converted
+      } else converted
+    case _ => throw new IllegalArgumentException("toIsabelle(logEntry)")
+  }
+
+  it should "convert to Isabelle" in withMathematica { _ =>
+    val logPath = Configuration.path(Configuration.Keys.SOSSOLVE_LOG_PATH)
+    val logfilename = logPath + Configuration(Configuration.Keys.SOSSOLVE_LOG_INPUT)
+    val outfileName = logfilename + ".isabelle.txt"
+    val outfile = new java.io.File(outfileName)
+    val parent = outfile.getParentFile
+    if (parent != null) parent.mkdirs()
+    val fw0 = new FileWriter(outfile, false)
+    fw0.write("")
+    fw0.close()
+    val fw = new FileWriter(outfile, true)
+    var i = 0
+    def writeToIsabelle(entry : (String, Sequent, Sequent)) : Unit = {
+      i = i + 1
+      println(i)
+      fw.append(toIsabelle(Some(1), entry))
+    }
+    withTemporaryConfig(Map(Configuration.Keys.DEBUG -> "false")){
+      QELogger.processLog(QELogger.parseStr, writeToIsabelle, logfilename)
+    }
+    fw.close()
+  }
+
   it should "not fail" in withMathematica { _ =>
     val fml = "\\forall z \\forall y \\forall x \\forall w9_0 \\forall w8_0 \\forall w7_0 \\forall w6_0 \\forall w5_0 \\forall w4_0 \\forall w3_0 \\forall w2_0 \\forall w10_0 \\forall w1 (\\forall w2 \\exists w3 \\forall w4 \\exists w5 \\forall w6 \\exists w7 \\forall w8 \\exists w9 \\forall w10 \\exists w11 \\forall w12 \\exists w13 \\forall w14 \\exists w15 \\forall w16 \\exists w17 \\forall w18 \\exists w19 \\forall w20 w11*100*w12^2*w13^2*w14^4*w15^777*w16^(15/552)*w7^44*w18^8*w19^2*w20^20+y^100*x^1000<=y^100*x^999*w1*w2^2*w3^3*w4^4*w5^5*w6^6*w7^7*w8^8*w9^9*w10^10&x^2+y^2!=y^2&y^100*x^1000+w1*w5_0*w7_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&y^2+y^2!=y^2&y^100*x^1000+w3_0*w7_0*w8_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&w1^2+y^2!=y^2&y^100*x^1000+w1*w2_0*w3_0*w4_0*w7_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&z^2+y^2!=y^2&9000*y^1000/2*z<=z^12->x^2+y^2+w1^2+z^2>0)".asFormula
     println(proveBy(fml, QE))
