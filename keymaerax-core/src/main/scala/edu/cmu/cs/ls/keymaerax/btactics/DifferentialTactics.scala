@@ -964,21 +964,21 @@ private object DifferentialTactics extends Logging {
   })
 
   /** Tries to instantiate the evolution domain fact with the ODE duration (assumes monotonicity). */
-  lazy val endODEHeuristic: BelleExpr = "ANON" by ((seq: Sequent) => {
+  lazy val endODEHeuristic: BelleExpr = anon ((seq: Sequent) => {
     val instantiators = (seq.ante.indices.map(AntePosition.base0(_)) ++ seq.succ.indices.map(SuccPosition.base0(_))).
       flatMap(pos => {
         Idioms.mapSubpositions(pos, seq, {
           case (Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
           LessEqual(_, BaseVariable("s_", _, Real)),
           LessEqual(BaseVariable("s_", _, Real), t@BaseVariable("t_", _, Real))), _)), pp: Position) =>
-            Some(allL(s, t)(pp))
+            val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(seq(pp.top), pp.inExpr)
+            if (polarity < 0) Some(allL(s, t)(pp) & pp.parent.flatMap(_.parent).map(SimplifierV3.simplify(_)).getOrElse(skip))
+            else None
           case _ => None
         })
     })
 
-    //@todo: useAt bug? see FOQuantifierTests "instantiate ODE solution result"
-    //instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip)
-    skip
+    instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
   /**

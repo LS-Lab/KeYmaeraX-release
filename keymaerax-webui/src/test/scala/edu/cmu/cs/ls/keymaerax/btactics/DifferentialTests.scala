@@ -1420,6 +1420,22 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (-Y()+Z())*(t_^2/2)+x*t_+y<b)".asSequent
   }
 
+  "endODEHeuristic" should "instantiate with duration in positive polarity in succedent" in withQE { _ =>
+    proveBy("x>=0 ==> [{x'=1 & x<=5}]x>=0".asSequent, solve(1) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "x>=0 ==> \\forall t_ (t_>=0->t_+x<=5->t_+x>=0)".asSequent
+  }
+
+  it should "not try to instantiate in negative polarity in succedent" in withQE { _ =>
+    proveBy(" ==> ![{x'=1 & x<=5}]x>=0".asSequent, solve(1, 0::Nil) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "==> !\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->s_+x<=5)->t_+x<=5&t_+x>=0)".asSequent
+  }
+
+  it should "instantiate in negative polarity in antecedent" in withQE { _ =>
+    proveBy("![{x'=1 & x<=5}]x>=0, x>=0 ==> ".asSequent, solve(-1, 0::Nil) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "!\\forall t_ (t_>=0->t_+x<=5->t_+x>=0), x>=0 ==> ".asSequent
+  }
+
+  it should "not try to instantiate in positive polarity in antecedent" in withQE { _ =>
+    proveBy("[{x'=1 & x<=5}]x>=0 ==> ".asSequent, solve(-1) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->s_+x<=5)->t_+x<=5&t_+x>=0) ==> ".asSequent
+  }
+
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {
     val result = proveBy("[{x'=3&x>=0}]x>=0".asFormula, DifferentialTactics.diffUnpackEvolutionDomainInitially(1))
     result.subgoals.loneElement shouldBe "x>=0 ==> [{x'=3&x>=0}]x>=0".asSequent
