@@ -270,7 +270,7 @@ object TactixLibrary extends HilbertCalculus
       }
     }
 
-    def composeChase: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    def composeChase: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
       val decompose = Idioms.mapSubpositions(pos, seq, {
         case (Box(Compose(_, _), _), pp: Position) => Some(chase(3, 3, (e: Expression) => e match {
           case Box(Compose(_, _), _) => Ax.composeb :: Nil
@@ -282,7 +282,7 @@ object TactixLibrary extends HilbertCalculus
       decompose.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
-    def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
       val solvers = Idioms.mapSubpositions(pos, seq, {
         case (Box(ODESystem(_, _), q), pp: Position) =>
           if (pp.isTopLevel) {
@@ -294,7 +294,7 @@ object TactixLibrary extends HilbertCalculus
       solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
-    def decomposeToODE: BelleExpr = "ANON" by ((seq: Sequent) => {
+    def decomposeToODE: BelleExpr = anon ((seq: Sequent) => {
       if (seq.isFOL) {
         skip /* master continues */
       } else {
@@ -306,12 +306,14 @@ object TactixLibrary extends HilbertCalculus
       }
     })
 
+    val dWContextRobust = anon ((pos: Position, _: Sequent) => Idioms.doIf((_: ProvableSig) => pos.isTopLevel)(dWPlus(pos)))
+
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWPlus, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWContextRobust, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
           ((Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done) | ?(QE & (if (keepQEFalse) nil else done)))))))
   }
