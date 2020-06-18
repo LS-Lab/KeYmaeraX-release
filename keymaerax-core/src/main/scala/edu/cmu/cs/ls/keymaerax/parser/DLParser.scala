@@ -17,9 +17,26 @@ import scala.collection.immutable._
 
 /**
   * Differential Dynamic Logic parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
+  * @example
+  * Parsing formulas from strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]:
+  * {{{
+  * val parser = DLParser
+  * val fml0 = parser("x!=5")
+  * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+  * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+  * // parse only formulas
+  * val fml3 = parser.formulaParser("x>=0 -> [{x'=2}]x>=0")
+  * // parse only programs/games
+  * val prog1 = parser.programParser("x:=x+1;{x'=2}")
+  * // parse only terms
+  * val term1 = parser.termParser("x^2+2*x+1")
+  * }}}
   * @author Andre Platzer
+  * @see [[KeYmaeraXParser]]
   */
 object DLParser extends DLParser {
+  assert(OpSpec.statementSemicolon, "This parser is built for formulas whose atomic statements end with a ;")
+  assert(OpSpec.negativeNumber, "This parser accepts negative number literals although it does not give precedence to them")
 
   /** Converts Parsed.Failure to corresponding ParseException to throw. */
   private[keymaerax] def parseException(f: Parsed.Failure): ParseException = {

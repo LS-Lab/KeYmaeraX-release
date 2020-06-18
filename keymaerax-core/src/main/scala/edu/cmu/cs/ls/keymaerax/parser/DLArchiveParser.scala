@@ -18,7 +18,7 @@ import scala.collection.immutable._
 /**
   * Parse a differential dynamic logic archive file string to a list of archive entries.
   * Splits a KeYmaera X archive into its parts and forwards to respective problem/tactic parsers. An archive contains
-  * at least one entry combining a model in the .kyx format and possibly a (partial) proof tactic.
+  * at least one entry combining a model in the `.kyx` format and possibly a (partial) proof tactic.
   *
   * Format example:
   * {{{
@@ -36,6 +36,7 @@ import scala.collection.immutable._
   *
   * @author Andre Platzer
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
+  * @see [[KeYmaeraXArchiveParser]]
   */
 object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 

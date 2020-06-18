@@ -19,7 +19,11 @@ import edu.cmu.cs.ls.keymaerax.core._
   *     Parser: String => Expression
   * }}}
   * Parsers are adjoint to printers, i.e., they reparse printed expressions as the original expressions
-  * but fail to parse syntactically ill-formed strings.
+  * but fail to parse syntactically ill-formed strings:
+  * {{{
+  *   parser(printer(expr)) == expr
+  * }}}
+  *
   * @author Andre Platzer
   * @see [[TokenParser]]
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
