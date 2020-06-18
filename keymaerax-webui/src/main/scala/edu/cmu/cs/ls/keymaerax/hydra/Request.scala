@@ -1083,9 +1083,15 @@ class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) ext
   }
 }
 
-class GetModelListRequest(db : DBAbstraction, userId : String) extends UserRequest(userId) with ReadRequest {
+class GetModelListRequest(db: DBAbstraction, userId: String, folder: Option[String]) extends UserRequest(userId) with ReadRequest {
   def resultingResponses(): List[Response] = {
-    new ModelListResponse(db.getModelList(userId).filterNot(_.temporary)) :: Nil
+    //@todo folders in DB
+    val allModels = db.getModelList(userId).filterNot(_.temporary)
+    val models = folder match {
+      case None => allModels
+      case Some(f) => allModels.filter(_.name.startsWith(f + "/")).map(m => m.copy(name = m.name.stripPrefix(f + "/")))
+    }
+    new ModelListResponse(models) :: Nil
   }
 }
 

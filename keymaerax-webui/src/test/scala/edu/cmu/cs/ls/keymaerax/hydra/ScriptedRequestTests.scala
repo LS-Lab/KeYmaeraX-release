@@ -376,7 +376,7 @@ class ScriptedRequestTests extends TacticTestBase {
     // import all tutorials, creates user too
     importExamplesIntoDB(db)
     val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
-    val models = new GetModelListRequest(db.db, userName).getResultingResponses(t).loneElement.getJson
+    val models = new GetModelListRequest(db.db, userName, None).getResultingResponses(t).loneElement.getJson
     val modelInfos = models.asInstanceOf[JsArray].elements.
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)

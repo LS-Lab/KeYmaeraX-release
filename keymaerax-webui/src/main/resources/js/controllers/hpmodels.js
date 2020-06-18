@@ -111,6 +111,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   $scope.models = [];
   $scope.userId = sessionService.getUser();
   $scope.intro.firstTime = firstTime;
+  $scope.workingDir = [];
 
   $scope.intro.introOptions = {
     steps: [
@@ -149,15 +150,31 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     doneLabel: 'Done'
   }
 
-  $http.get("models/users/" + $scope.userId).then(function(response) {
-      $scope.models = response.data;
-  });
-
   $scope.examples = [];
   $scope.activeTutorialSlide = 0;
   $http.get("examples/user/" + $scope.userId + "/all").then(function(response) {
       $scope.examples = response.data;
   });
+
+  $scope.readModelList = function(folder) {
+    if (folder.length > 0) {
+      $http.get("models/users/" + $scope.userId + "/" + encodeURIComponent(folder.join("/"))).then(function(response) {
+        $scope.models = response.data;
+      });
+    } else {
+      $http.get("models/users/" + $scope.userId + "/").then(function(response) {
+        $scope.models = response.data;
+      });
+    }
+  }
+
+  $scope.readModelList($scope.workingDir);
+
+  $scope.setWorkingDir = function(folderIdx) {
+    if (folderIdx == undefined) $scope.workingDir = [];
+    else $scope.workingDir = $scope.workingDir.slice(0, folderIdx);
+    $scope.readModelList($scope.workingDir);
+  }
 
   $scope.open = function (modelId) {
     var modalInstance = $uibModal.open({
@@ -172,6 +189,11 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       }
     });
   };
+
+  $scope.openFolder = function(folder) {
+    $scope.workingDir.push(folder);
+    $scope.readModelList($scope.workingDir);
+  }
 
   $scope.openNewModelDialog = function() {
     $uibModal.open({
@@ -344,6 +366,21 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       function (newModels) { if (newModels) Models.setModels(newModels); }
   );
   $scope.$emit('routeLoaded', {theview: 'models'});
+});
+
+angular.module('keymaerax.controllers').filter("unique", function() {
+  return function(items, property) {
+    var result = [];
+    var propVals = [];
+    angular.forEach(items, function(item) {
+      var propVal = item[property];
+      if (propVals.indexOf(propVal) === -1) {
+        propVals.push(propVal);
+        result.push(item);
+      }
+    });
+    return result;
+  };
 });
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl',

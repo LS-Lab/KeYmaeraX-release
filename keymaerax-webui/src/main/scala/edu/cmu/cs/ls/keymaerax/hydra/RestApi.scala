@@ -245,8 +245,8 @@ object RestApi extends Logging {
   }}
 
   // GET /models/user returns a list of all models belonging to this user. The cookie must be set.
-  val modelList: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment) {userId => { pathEnd { get {
-    val request = new GetModelListRequest(database, userId)
+  val modelList: SessionToken=>Route = (t : SessionToken) => pathPrefix("models" / "users" / Segment / Segment.?) {(userId, folder) => { pathEnd { get {
+    val request = new GetModelListRequest(database, userId, folder)
     completeRequest(request, t)
   }}}}
 

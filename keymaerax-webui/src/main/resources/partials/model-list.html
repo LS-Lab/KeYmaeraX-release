@@ -76,6 +76,13 @@
 
     <hr/>
 
+    <span class="row" ng-if="workingDir.length > 0">
+        <a ng-click="setWorkingDir(undefined)">KeYmaera X</a>
+        <span ng-repeat="folder in workingDir">
+            <span> / </span><a ng-click="setWorkingDir($index+1)">{{folder}}</a>
+        </span>
+    </span>
+
     <span class="row">
     <p class="col-md-12" ng-if="models.length <= 0" ng-cloak>
         Your database does not contain models so far. Upload new models or import tutorial models above.
@@ -90,7 +97,17 @@
         </tr>
         </thead>
         <tbody>
-        <tr ng-repeat="model in models | orderBy:'name'">
+        <tr ng-repeat="model in models | filter:{folder:'!null'} | orderBy:'name' | unique:'folder' track by model.id">
+            <td ng-if="model.folder" class="k4-abbreviate">
+                <div>
+                    <i class="fa fa-folder"></i><button class="btn btn-link" ng-click="openFolder(model.folder)">{{ model.folder }}</button>
+                </div>
+            </td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr ng-repeat="model in models | filter:{folder:null} | orderBy:'name' track by model.id">
             <td class="k4-abbreviate" id="modelopen">
                 <div>
                 <button class="btn btn-link" ng-click="open(model.id)"
@@ -111,10 +128,10 @@
                 </div>
             </td>
             <td class="k4-abbreviate"><button class="btn btn-link" ng-if="model.hasTactic"
-                        ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></button></td>
-            <td ng-model="model" id="modelactions"
+                                              ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></button></td>
+            <td ng-if="$first" ng-model="model" id="modelactions"
                 data-intro="Start new proofs, generate monitor code, synthesize test cases, and download .kyx models and proofs."
-                data-position="bottom" ng-if="$first">
+                data-position="bottom">
                 <span class="pull-right">
                 <a class="btn btn-default" ng-if="model.isExercise" ng-click="open(model.id)" uib-tooltip="Start exercise"><i class="fa fa-pencil-square-o"></i></a>
                 <a class="btn btn-default" ng-if="!model.isExercise" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
@@ -126,7 +143,7 @@
                 <a class="btn btn-default" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
                 </span>
             </td>
-            <td ng-model="model" ng-if="!$first">
+            <td ng-if="!$first" ng-model="model">
                 <span class="pull-right">
                 <a class="btn btn-default" ng-if="model.isExercise" ng-click="open(model.id)" uib-tooltip="Start exercise"><i class="fa fa-pencil-square-o"></i></a>
                 <a class="btn btn-default" ng-if="!model.isExercise" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
