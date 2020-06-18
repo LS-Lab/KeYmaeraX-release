@@ -54,6 +54,8 @@ object PolynomialArithV2 {
       def prettyRepresentation: ProvableSig
       // resetTerm.term = some internal representation
       def resetTerm : Polynomial
+      // resetRepresentation(newRepresentation).representation = newRepresentation
+      def resetRepresentation(newRepresentation: ProvableSig) : Polynomial
 
       // result.term = term + other.term
       def +(other: Polynomial) : Polynomial
@@ -1686,6 +1688,10 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def forgetPrv = Empty(None)
     override def treeSketch: String = "."
     override def degree(include: Term => Boolean) = 0
+    override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
+      require(rhsOf(newRepresentation)==rhsOf(prv))
+      Empty(Some(prv))
+    }
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value.rhs, right.rhs).reduceLeft(Plus))
@@ -1696,6 +1702,10 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def treeSketch: String = "[" + left.treeSketch + ", " + value.powersString + ", " + right.treeSketch + "]"
     override def degree(include: Term => Boolean) : Int =
       left.degree(include) max value.degree(include) max right.degree(include)
+    override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
+      require(rhsOf(newRepresentation)==rhsOf(prv))
+      Branch2(left, value, right, Some(prv))
+    }
   }
   case class Branch3(left: TreePolynomial, value1: Monomial, mid: TreePolynomial, value2: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
     lazy val defaultPrv = equalReflex(Seq(left.rhs, value1.rhs, mid.rhs, value2.rhs, right.rhs).reduceLeft(Plus))
@@ -1706,6 +1716,11 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def treeSketch: String = "{" + left.treeSketch + ", " + value1.powersString + ", " + mid.treeSketch + ", " + value2.powersString + ", " + right.treeSketch + "}"
     override def degree(include: Term => Boolean) : Int =
       left.degree(include) max value1.degree(include) max mid.degree(include) max value2.degree(include) max right.degree(include)
+    override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
+      require(rhsOf(newRepresentation)==rhsOf(prv))
+      Branch3(left, value1, mid, value2, right, Some(prv))
+    }
+
   }
 
 }
