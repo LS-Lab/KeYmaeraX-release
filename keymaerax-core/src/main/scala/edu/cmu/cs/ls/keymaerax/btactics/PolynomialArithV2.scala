@@ -50,7 +50,7 @@ object PolynomialArithV2 {
       val term: Term
       // proof of "term = some internal representation"
       def representation: ProvableSig
-      // proof of "term = some internal representation"
+      // proof of "term = some pretty representation"
       def prettyRepresentation: ProvableSig
       // resetTerm.term = some internal representation
       def resetTerm : Polynomial
