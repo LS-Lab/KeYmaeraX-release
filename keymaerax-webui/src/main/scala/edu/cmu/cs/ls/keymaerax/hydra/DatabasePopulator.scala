@@ -98,9 +98,9 @@ object DatabasePopulator extends Logging {
     * Returns Left(modelName, ID) on success, Right(modelName) on failure */
   def importModel(db: DBAbstraction, user: String, prove: Boolean)(entry: TutorialEntry): Either[(String, Int), String] = {
     val now = Calendar.getInstance()
-    val entryName = db.getUniqueModelName(user, entry.name)
-    logger.info("Importing model " + entryName + "...")
-    val result = db.createModel(user, entryName, entry.model, now.getTime.toString, entry.description,
+    backupPriorModel(db, user, entry.name)
+    logger.info("Importing model " + entry.name + "...")
+    val result = db.createModel(user, entry.name, entry.model, now.getTime.toString, entry.description,
       entry.link, entry.title, entry.tactic.headOption.map(_._2)) match {
       case Some(modelId) =>
         entry.tactic.foreach({ case (tname, ttext, _) =>
@@ -114,6 +114,18 @@ object DatabasePopulator extends Logging {
     }
     logger.info("...done")
     result
+  }
+
+  /** Creates a backup if a model with name `entryName` already exists in the database. */
+  private def backupPriorModel(db: DBAbstraction, user: String, entryName: String): Unit = {
+    val backupName = db.getUniqueModelName(user, entryName)
+    db.getModelList(user).find(_.name == entryName) match {
+      case Some(e) => db.updateModel(e.modelId, backupName,
+        if (e.title != "") Some(e.title) else None,
+        if (e.description != "") Some(e.description) else None,
+        if (e.keyFile != "") Some(e.keyFile) else None)
+      case None => // nothing to do
+    }
   }
 
   /** Prepares an interpreter for executing tactics. */
