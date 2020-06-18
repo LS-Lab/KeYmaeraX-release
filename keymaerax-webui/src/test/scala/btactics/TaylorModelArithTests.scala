@@ -136,16 +136,6 @@ class TaylorModelArithTests extends TacticTestBase {
       "\\exists err_ ((1/3*x+y)^2=0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2+err_&-0.32102<=err_&err_<=0.33240)".asFormula
   }
 
-  it should "form Horner" in withMathematica { qeTool =>
-    import tma._
-    import ring._
-    val hornerPrv = toHorner(ofTerm("(x0()+y0()+z0())^2".asTerm))
-    hornerPrv shouldBe 'proved
-    hornerPrv.conclusion.ante shouldBe 'empty
-    hornerPrv.conclusion.succ.loneElement shouldBe
-      "(x0()+y0()+z0())^2=z0()*z0()+y0()*(z0()*2+y0())+x0()*(z0()*2+y0()*2+x0())".asFormula
-  }
-
   it should "collect higher order terms" in withMathematica { qeTool =>
     import tma._
     import ring._

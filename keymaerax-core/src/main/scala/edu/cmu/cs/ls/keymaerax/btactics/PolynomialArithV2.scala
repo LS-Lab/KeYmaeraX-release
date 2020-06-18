@@ -111,6 +111,15 @@ object PolynomialArithV2 {
       // Some(proof of "term = 0") or None
       def zeroTest : Option[ProvableSig]
 
+      // proof of "poly.term = horner form"
+      def hornerForm(variableOrder: Option[List[Term]] = None) : ProvableSig  = {
+        val vars = symbols(term)
+        val ringsLib = new RingsLibrary(vars) // for non-certified computations @todo: initialize only once?!
+        val ringVars = variableOrder.getOrElse(vars).map(ringsLib.toRing).toList
+        val horner = ringsLib.toHorner(ringsLib.toRing(term), ringVars)
+        equate(ofTerm(horner)).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
+      }
+
     }
 
     // result.term = n

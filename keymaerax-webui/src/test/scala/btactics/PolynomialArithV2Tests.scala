@@ -100,6 +100,24 @@ class PolynomialArithV2Tests extends TacticTestBase {
     prv.conclusion.succ.loneElement shouldBe "4*x^4+1+3*x^3+2*x = ((-7)+-x+4*x^2)*(x^2+x+2)+(15+11*x)".asFormula
   }
 
+  it should "form Horner" in withMathematica { qeTool =>
+    import ring._
+    val poly = ofTerm("(x0()+y0()+z0())^2".asTerm)
+    val hornerPrv = poly.hornerForm()
+    hornerPrv shouldBe 'proved
+    hornerPrv.conclusion.ante shouldBe 'empty
+    hornerPrv.conclusion.succ.loneElement shouldBe
+      "(x0()+y0()+z0())^2=z0()*z0()+y0()*(z0()*2+y0())+x0()*(z0()*2+y0()*2+x0())".asFormula
+    val horner2Prv = poly.hornerForm(Some(List("x0()".asTerm)))
+    horner2Prv.conclusion.succ.loneElement shouldBe
+      "(x0()+y0()+z0())^2=z0()^2+2*y0()*z0()+y0()^2+x0()*(2*z0()+2*y0()+x0())".asFormula
+    val horner3Prv = poly.hornerForm(Some(List("z0()".asTerm, "x0()".asTerm)))
+    horner3Prv.conclusion.succ.loneElement shouldBe
+      "(x0()+y0()+z0())^2=y0()^2+x0()*(2*y0()+x0())+z0()*(2*y0()+x0()*2+z0())".asFormula
+  }
+
+
+
   // expose implementation details
   lazy val ring23 = ring.asInstanceOf[TwoThreeTreePolynomialRing]
 

@@ -173,16 +173,6 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     QE & done
   )
 
-  // proof of "poly.term = horner form"
-  // TODO: add to PolynomialLibrary
-  def toHorner(poly: Polynomial) : ProvableSig  = {
-    val vars = symbols(poly.term)
-    val ringsLib = new RingsLibrary(vars) // for non-certified computations @todo: initialize only once?!
-    val ringVars = vars.map(ringsLib.toRing).toList
-    val horner = ringsLib.toHorner(ringsLib.toRing(poly.term), ringVars)
-    poly.equate(ofTerm(horner)).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
-  }
-
   /**
     * data structure with certifying computations
     * maintains the invariant
@@ -247,7 +237,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     /** collect terms of higher order in interval remainder */
     def collectHigherOrderTerms(implicit options: TaylorModelOptions) : TM = {
       val (polyLow, polyHigh, partitionPrv) = poly.resetTerm.partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
-      val hornerPrv = toHorner(polyHigh)
+      val hornerPrv = polyHigh.hornerForm()
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
@@ -273,7 +263,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
 
     /** prove interval enclosure of Taylor model */
     def interval(implicit options: TaylorModelOptions) : (Term, Term, ProvableSig) = {
-      val hornerPrv = toHorner(poly.resetTerm)
+      val hornerPrv = poly.resetTerm.hornerForm()
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
@@ -306,7 +296,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       checkCompatibleContext(other)
       val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
 
-      val hornerPrv = toHorner(polyHigh)
+      val hornerPrv = polyHigh.hornerForm()
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val poly2 = rhsOf(other.poly.representation)
@@ -358,7 +348,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     /** exact square */
     def squareExact(implicit options: TaylorModelOptions) : TM = {
       val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
-      val hornerPrv = toHorner(polyHigh)
+      val hornerPrv = polyHigh.hornerForm()
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       def intervalBounds(i1: Term) : Term = Seq(rem, Times(Times(Number(2), i1), poly1), Power(i1, Number(2))).reduceLeft(Plus)
@@ -436,7 +426,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     def approx(implicit options: TaylorModelOptions) : TM = {
       val (polyApproxPrv, poly1, poly2) = poly.approx(options.precision)
       val poly1rep = rhsOf(poly1.representation)
-      val poly2repPrv = toHorner(poly2)
+      val poly2repPrv = poly2.hornerForm()
       val poly2rep = rhsOf(poly2repPrv)
       val (ivlPrv, l2, u2) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i1 => Plus(poly2rep, i1))(lower, upper)
       val newPrv = useDirectlyConst(weakenWith(context, approxPrv.fact),
