@@ -95,6 +95,10 @@ object PolynomialArithV2 {
 
       // coefficient (numerator, denominator) of monomial (x_i, p_i)_(i) x_i^p_i:
       def coefficient(monomial: Seq[(Term, Int)]) : (BigDecimal, BigDecimal)
+
+      // Some(proof of "term = 0") or None
+      def zeroTest : Option[ProvableSig]
+
     }
 
     // result.term = n
