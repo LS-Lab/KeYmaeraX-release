@@ -56,6 +56,17 @@ object PolynomialArithV2 {
       def resetTerm : Polynomial
       // resetRepresentation(newRepresentation).representation = newRepresentation
       def resetRepresentation(newRepresentation: ProvableSig) : Polynomial
+      // prettyTerm.representation = prettyRepresentation
+      def prettyTerm : Polynomial = {
+        val repr = representation
+        val prettyRepr = prettyRepresentation
+        val prettyPrv = proveBy(Equal(PolynomialArithV2Helpers.rhsOf(prettyRepr), PolynomialArithV2Helpers.rhsOf(repr)),
+          useAt(repr, PosInExpr(1::Nil))(1, 1::Nil) &
+          useAt(prettyRepr, PosInExpr(1::Nil))(1, 0::Nil) &
+          byUS(Ax.equalReflexive)
+        )
+        resetRepresentation(prettyPrv)
+      }
 
       // result.term = term + other.term
       def +(other: Polynomial) : Polynomial
