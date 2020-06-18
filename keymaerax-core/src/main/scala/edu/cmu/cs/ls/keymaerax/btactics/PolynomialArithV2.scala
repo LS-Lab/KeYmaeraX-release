@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2.{NonSupportedDivisorException, NonSupportedExponentException}
+import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
 
 import scala.collection.immutable._
 
@@ -151,6 +152,24 @@ object PolynomialArithV2 {
     }
 
     implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
+
+    // quotient and remainder:
+    // divideAndRemainder(poly1, poly2) = (quot, rem, proof of "poly1.term = quot.term * poly2.term + rem.term")
+    def divideAndRemainder(poly1: Polynomial, poly2: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig) = {
+      val rep1 = PolynomialArithV2Helpers.rhsOf(poly1.representation)
+      val rep2 = PolynomialArithV2Helpers.rhsOf(poly2.representation)
+      val ringsLibrary = new RingsLibrary(Traversable(rep1, rep2))
+      val quotRem = ringsLibrary.ring.divideAndRemainder(ringsLibrary.toRing(rep1), ringsLibrary.toRing(rep2)).map { p =>
+        val poly = ofTerm(ringsLibrary.fromRing(p))
+        if (pretty) poly.prettyTerm else poly
+      }
+      val (quot, rem) = (quotRem(0), quotRem(1))
+      poly1.equate(quot * poly2 + rem) match {
+        case Some(prv) => (quot, rem, prv)
+        case None => throw new RuntimeException("unexpected failure: cannot prove polynomial division")
+      }
+    }
+
   }
 
   def denseVariableOrdering(variables: IndexedSeq[Term]): Ordering[Term] =
