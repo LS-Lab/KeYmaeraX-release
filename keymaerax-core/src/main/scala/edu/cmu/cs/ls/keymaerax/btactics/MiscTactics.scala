@@ -220,7 +220,7 @@ object Idioms {
   import TacticFactory._
 
   @Tactic()
-  lazy val nil: BelleExpr = anon {(provable: ProvableSig) => provable}
+  lazy val nil: BelleExpr = anons {(provable: ProvableSig) => provable} 
 
   /** no-op nil */
   lazy val ident: BelleExpr = nil
@@ -629,8 +629,13 @@ object TacticFactory {
     def by(t: ProvableSig => ProvableSig): BuiltInTactic =
       new BuiltInTactic(name) {
         @inline override def result(provable: ProvableSig): ProvableSig = {
-          //@todo nil
-          //requireOneSubgoal(provable, name)
+          t(provable)
+        }
+      }
+    def bys(t: ProvableSig => ProvableSig): BuiltInTactic =
+      new BuiltInTactic(name) {
+        @inline override def result(provable: ProvableSig): ProvableSig = {
+          requireOneSubgoal(provable, name)
           t(provable)
         }
       }
@@ -677,6 +682,7 @@ object TacticFactory {
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = "ANON" by t
   def anon(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" by t
+  def anons(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" bys t
   def anon(t: ((ProvableSig, Position) => ProvableSig)): BuiltInPositionTactic = "ANON" by t
   def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
   def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t
