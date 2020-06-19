@@ -4950,4 +4950,147 @@ object Ax extends Logging {
     Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus)),
     QE & done)
 
+
+  /** Taylor Model Arithmetic [[edu.cmu.cs.ls.keymaerax.btactics.TaylorModelArith]] */
+
+  @Axiom("taylorModelPlusPrv")
+  lazy val taylorModelPlusPrv = derivedFormula("taylorModelPlusPrv",
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
+      "poly1_() + poly2_() = poly_() &" +
+      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
+      "  (l_() <= i1_ + i2_ & i1_ + i2_ <= u_())))" +
+      ") ->" +
+      "\\exists err_ (elem1_() + elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
+
+  @Axiom("taylorModelMinusPrv")
+  lazy val taylorModelMinusPrv = derivedFormula("taylorModelMinusPrv",
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
+      "poly1_() - poly2_() = poly_() &" +
+      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
+      "  (l_() <= i1_ - i2_ & i1_ - i2_ <= u_())))" +
+      ") ->" +
+      "\\exists err_ (elem1_() - elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
+
+  @Axiom("taylorModelCollectPrv")
+  lazy val taylorModelCollectPrv = derivedFormula("taylorModelCollectPrv",
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "poly1_() = polyLow_() + polyHigh_() &" +
+      "polyLow_() = poly_() &" +
+      "polyHigh_() = rem_() & " +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= rem_() + i1_ & rem_() + i1_  <= u_())))" +
+      ") ->" +
+      "\\exists err_ (elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    QE & done
+  )
+
+  @Axiom("taylorModelIntervalPrv")
+  lazy val taylorModelIntervalPrv = derivedFormula("taylorModelIntervalPrv",
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "poly1_() = rem_() &" +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= rem_() + i1_ & rem_() + i1_  <= u_())))" +
+      ") ->" +
+      "l_() <= elem1_() & elem1_() <= u_()").asFormula,
+    QE & done
+  )
+
+  @Axiom("taylorModelEmptyIntervalPrv")
+  lazy val taylorModelEmptyIntervalPrv = derivedFormula("taylorModelEmptyIntervalPrv",
+    ("(\\exists err_ (elem1_() = poly1_() + err_ & 0 <= err_ & err_ <= 0)) -> elem1_() = poly1_()").asFormula, QE & done)
+
+  @Axiom("taylorModelTimesPrv")
+  lazy val taylorModelTimesPrv = derivedFormula("taylorModelTimesPrv",
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
+      "poly1_() * poly2_() = polyLow_() + polyHigh_() &" +
+      "polyLow_() = poly_() &" +
+      "polyHigh_() = rem_() & " +
+      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
+      "  (l_() <= rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ & rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ <= u_())))" + // @todo: horner form for poly1, poly2 ?!
+      ") ->" +
+      "\\exists err_ (elem1_() * elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & andL(-5) & existsL(-1) & existsL(-1) & allL("err__0".asTerm)(-4) & allL("err_".asTerm)(-4) &
+      existsR("rem_() + err__0 * poly2_() + err_ * poly1_() + err__0 * err_".asTerm)(1) & QE & done
+  )
+
+  @Axiom("taylorModelSquarePrv")
+  lazy val taylorModelSquarePrv = derivedFormula("taylorModelSquarePrv",//@todo: is there a better scheme than just multiplication?
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "poly1_()^2 = polyLow_() + polyHigh_() &" +
+      "polyLow_() = poly_() &" +
+      "polyHigh_() = rem_() & " +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= rem_() + 2 * i1_ * poly1_() + i1_^2 & rem_() + 2 * i1_ * poly1_() + i1_^2 <= u_())))" + // @todo: horner form for poly1 ?!
+      ") ->" +
+      "\\exists err_ (elem1_()^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & existsL(-1) & allL("err_".asTerm)(-4) &
+      existsR("rem_() + 2 * err_ * poly1_() + err_^2".asTerm)(1) & QE & done
+  )
+
+  @Axiom("taylorModelPowerOne")
+  lazy val taylorModelPowerOne = derivedFormula("taylorModelPowerOne",(
+    "(\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_()))" +
+      " ->" +
+      "\\exists err_ (elem1_()^1 = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())").asFormula, QE & done)
+
+  @Axiom("taylorModelPowerEven")
+  lazy val taylorModelPowerEven = derivedFormula("taylorModelPowerEven",(
+    "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ ((elem1_()^m_())^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "(n_() = 2*m_() <-> true)" +
+      ")" +
+      "->" +
+      "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2 = elem1_()^(2*m_())".asFormula) & Idioms.<(
+      eqL2R(-4)(-2) & hideL(-4) & useAt(Ax.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
+      cohideR(2) & QE & done
+    )
+  )
+
+  @Axiom("taylorModelPowerOdd")
+  lazy val taylorModelPowerOdd = derivedFormula("taylorModelPowerOdd",(
+    "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "(\\exists err_ ((elem1_()^m_())^2*elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "(n_() = 2*m_() + 1 <-> true)" +
+      ")" +
+      "->" +
+      "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2*elem1_() = elem1_()^(2*m_() + 1)".asFormula) & Idioms.<(
+      eqL2R(-4)(-2) & hideL(-4) & useAt(Ax.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
+      cohideR(2) & QE & done
+    )
+  )
+
+  @Axiom("taylorModelNegPrv")
+  lazy val taylorModelNegPrv = derivedFormula("taylorModelNegPrv",
+    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
+      "-poly1_() = poly_() &" +
+      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
+      "  (l_() <= -i1_ & -i1_ <= u_())))" +
+      ") ->" +
+      "\\exists err_ (-elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
+
+  @Axiom("taylorModelExactPrv")
+  lazy val taylorModelExactPrv = derivedFormula("taylorModelExactPrv",
+    ("elem_() = poly_() ->" +
+      "\\exists err_ (elem_() = poly_() + err_ & 0 <= err_ & err_ <= 0)").asFormula, QE & done
+  )
+
+  @Axiom("taylorModelApproxPrv")
+  lazy val taylorModelApproxPrv = derivedFormula("taylorModelApproxPrv",
+    ("(" +
+      "\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_()) &" +
+      "poly_() = poly1_() + poly2_() &" +
+      "poly1_() = poly1rep_() &" +
+      "poly2_() = poly2rep_() &" +
+      "(\\forall i1_ (l_() <= i1_ & i1_ <= u_() ->" +
+      "   l2_() <= poly2rep_() + i1_ & poly2rep_() + i1_ <= u2_()))" +
+      ") ->" +
+      "\\exists err_ (elem_() = poly1rep_() + err_ & l2_() <= err_ & err_ <= u2_())").asFormula,
+    QE & done
+  )
+
 }

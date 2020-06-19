@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.{BigDecimalTool, RingsLibrary}
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
+import DerivationInfoAugmentors._
 
 import scala.collection.immutable._
 
@@ -46,133 +47,6 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     ProvableSig.startProof(Sequent(context, prv.conclusion.succ)).apply(CoHideRight(SuccPos(0)), 0).apply(prv, 0)
   }
 
-  private val plusPrv = AnonymousLemmas.remember(
-    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
-      "poly1_() + poly2_() = poly_() &" +
-      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
-      "  (l_() <= i1_ + i2_ & i1_ + i2_ <= u_())))" +
-      ") ->" +
-      "\\exists err_ (elem1_() + elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
-
-  private val minusPrv = AnonymousLemmas.remember(
-    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
-      "poly1_() - poly2_() = poly_() &" +
-      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
-      "  (l_() <= i1_ - i2_ & i1_ - i2_ <= u_())))" +
-      ") ->" +
-      "\\exists err_ (elem1_() - elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
-
-  private val collectPrv = AnonymousLemmas.remember(
-    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "poly1_() = polyLow_() + polyHigh_() &" +
-      "polyLow_() = poly_() &" +
-      "polyHigh_() = rem_() & " +
-      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
-      "  (l_() <= rem_() + i1_ & rem_() + i1_  <= u_())))" +
-      ") ->" +
-      "\\exists err_ (elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
-    QE & done
-  )
-
-  private val intervalPrv = AnonymousLemmas.remember(
-    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "poly1_() = rem_() &" +
-      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
-      "  (l_() <= rem_() + i1_ & rem_() + i1_  <= u_())))" +
-      ") ->" +
-      "l_() <= elem1_() & elem1_() <= u_()").asFormula,
-    QE & done
-  )
-
-  private val emptyIntervalPrv = AnonymousLemmas.remember(
-    ("(\\exists err_ (elem1_() = poly1_() + err_ & 0 <= err_ & err_ <= 0)) -> elem1_() = poly1_()").asFormula, QE & done)
-
-  private val timesPrv = AnonymousLemmas.remember(
-    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "(\\exists err_ (elem2_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_())) &" +
-      "poly1_() * poly2_() = polyLow_() + polyHigh_() &" +
-      "polyLow_() = poly_() &" +
-      "polyHigh_() = rem_() & " +
-      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
-      "  (l_() <= rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ & rem_() + i1_ * poly2_() + i2_ * poly1_() + i1_ * i2_ <= u_())))" + // @todo: horner form for poly1, poly2 ?!
-      ") ->" +
-      "\\exists err_ (elem1_() * elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
-    implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & andL(-5) & existsL(-1) & existsL(-1) & allL("err__0".asTerm)(-4) & allL("err_".asTerm)(-4) &
-      existsR("rem_() + err__0 * poly2_() + err_ * poly1_() + err__0 * err_".asTerm)(1) & QE & done
-  )
-
-  private val squarePrv = AnonymousLemmas.remember(//@todo: is there a better scheme than just multiplication?
-    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "poly1_()^2 = polyLow_() + polyHigh_() &" +
-      "polyLow_() = poly_() &" +
-      "polyHigh_() = rem_() & " +
-      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
-      "  (l_() <= rem_() + 2 * i1_ * poly1_() + i1_^2 & rem_() + 2 * i1_ * poly1_() + i1_^2 <= u_())))" + // @todo: horner form for poly1 ?!
-      ") ->" +
-      "\\exists err_ (elem1_()^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
-    implyR(1) & andL(-1) & andL(-2) & andL(-3) & andL(-4) & existsL(-1) & allL("err_".asTerm)(-4) &
-      existsR("rem_() + 2 * err_ * poly1_() + err_^2".asTerm)(1) & QE & done
-  )
-
-  private val powerOne = AnonymousLemmas.remember((
-    "(\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_()))" +
-    " ->" +
-    "\\exists err_ (elem1_()^1 = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())").asFormula, QE & done)
-
-  private val powerEven = AnonymousLemmas.remember((
-    "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "(\\exists err_ ((elem1_()^m_())^2 = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
-      "(n_() = 2*m_() <-> true)" +
-      ")" +
-      "->" +
-      "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
-    implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2 = elem1_()^(2*m_())".asFormula) & Idioms.<(
-      eqL2R(-4)(-2) & hideL(-4) & useAt(Ax.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
-      cohideR(2) & QE & done
-    )
-  )
-
-  private val powerOdd = AnonymousLemmas.remember((
-    "((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "(\\exists err_ ((elem1_()^m_())^2*elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
-      "(n_() = 2*m_() + 1 <-> true)" +
-      ")" +
-      "->" +
-      "\\exists err_ (elem1_()^n_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
-    implyR(1) & andL(-1) & andL(-2) & cut("(elem1_()^m_())^2*elem1_() = elem1_()^(2*m_() + 1)".asFormula) & Idioms.<(
-      eqL2R(-4)(-2) & hideL(-4) & useAt(Ax.equivTrue, PosInExpr(0 :: Nil))(-3) & eqR2L(-3)(-2) & QE & done,
-      cohideR(2) & QE & done
-    )
-  )
-
-  private val negPrv = AnonymousLemmas.remember(
-    ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
-      "-poly1_() = poly_() &" +
-      "(\\forall i1_ (l1_() <= i1_ & i1_ <= u1_() ->" +
-      "  (l_() <= -i1_ & -i1_ <= u_())))" +
-      ") ->" +
-      "\\exists err_ (-elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula, QE & done)
-
-  private val exactPrv = AnonymousLemmas.remember(
-    ("elem_() = poly_() ->" +
-      "\\exists err_ (elem_() = poly_() + err_ & 0 <= err_ & err_ <= 0)").asFormula, QE & done
-  )
-
-  private val approxPrv = AnonymousLemmas.remember(
-    ("(" +
-      "\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_()) &" +
-      "poly_() = poly1_() + poly2_() &" +
-      "poly1_() = poly1rep_() &" +
-      "poly2_() = poly2rep_() &" +
-      "(\\forall i1_ (l_() <= i1_ & i1_ <= u_() ->" +
-      "   l2_() <= poly2rep_() + i1_ & poly2rep_() + i1_ <= u2_()))" +
-      ") ->" +
-      "\\exists err_ (elem_() = poly1rep_() + err_ & l2_() <= err_ & err_ <= u2_())").asFormula,
-    QE & done
-  )
-
   /**
     * data structure with certifying computations
     * maintains the invariant
@@ -191,7 +65,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val newPoly = poly.resetTerm + other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(lower, upper)(other.lower, other.upper)
-      val newPrv = useDirectlyConst(weakenWith(context, plusPrv.fact), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelPlusPrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", rhsOf(poly.representation)),
         ("l1_", lower),
@@ -216,7 +90,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val newPoly = poly.resetTerm - other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Minus)(lower, upper)(other.lower, other.upper)
-      val newPrv = useDirectlyConst(weakenWith(context, minusPrv.fact), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelMinusPrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", rhsOf(poly.representation)),
         ("l1_", lower),
@@ -241,7 +115,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, collectPrv.fact), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelCollectPrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -268,7 +142,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
       (l, u,
-        useDirectlyConst(weakenWith(context, intervalPrv.fact), Seq(
+        useDirectlyConst(weakenWith(context, Ax.taylorModelIntervalPrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -285,7 +159,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     /** returns an equality, no quantifiers */
     def dropEmptyInterval: Option[ProvableSig] = if (lower == Number(0) && upper == Number(0)) Some {
       val poly1 = rhsOf(poly.representation)
-      useDirectlyConst(weakenWith(context, emptyIntervalPrv.fact), Seq(
+      useDirectlyConst(weakenWith(context, Ax.taylorModelEmptyIntervalPrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", poly1)
       ), Seq(prv))
@@ -302,7 +176,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val poly2 = rhsOf(other.poly.representation)
       def intervalBounds(i1: Term, i2: Term) : Term = Seq(rem, Times(i1, poly2), Times(i2, poly1), Times(i1, i2)).reduceLeft(Plus)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(context)(intervalBounds)(lower, upper)(other.lower, other.upper)
-      val newPrv = useDirectlyConst(weakenWith(context, timesPrv.fact), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelTimesPrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -333,7 +207,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val newPoly = -(poly.resetTerm)
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(IndexedSeq())(Neg)(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, negPrv.fact), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelNegPrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", rhsOf(poly.representation)),
         ("l1_", lower),
@@ -353,7 +227,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val poly1 = rhsOf(poly.representation)
       def intervalBounds(i1: Term) : Term = Seq(rem, Times(Times(Number(2), i1), poly1), Power(i1, Number(2))).reduceLeft(Plus)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(intervalBounds)(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, squarePrv.fact), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelSquarePrv.provable), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -376,7 +250,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
     /** approximate exponentiation */
     def ^(n: Int)(implicit options: TaylorModelOptions) : TM = n match {
       case 1 =>
-        val newPrv = useDirectlyConst(weakenWith(context, powerOne.fact), Seq(
+        val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelPowerOne.provable), Seq(
           ("elem1_", elem),
           ("poly1_", rhsOf(poly.representation)),
           ("l1_", lower),
@@ -388,7 +262,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
         val p = (this ^ m).square(options)
         val newPrv =
-          useDirectlyConst(weakenWith(context, powerEven.fact), Seq(
+          useDirectlyConst(weakenWith(context, Ax.taylorModelPowerEven.provable), Seq(
             ("elem1_", elem),
             ("poly1_", rhsOf(poly.representation)),
             ("l1_", lower),
@@ -406,7 +280,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
         val p = (this ^ m).square * this
         val newPrv =
-          useDirectlyConst(weakenWith(context, powerOdd.fact), Seq(
+          useDirectlyConst(weakenWith(context, Ax.taylorModelPowerOdd.provable), Seq(
             ("elem1_", elem),
             ("poly1_", rhsOf(poly.representation)),
             ("l1_", lower),
@@ -429,7 +303,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
       val poly2repPrv = poly2.hornerForm()
       val poly2rep = rhsOf(poly2repPrv)
       val (ivlPrv, l2, u2) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i1 => Plus(poly2rep, i1))(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, approxPrv.fact),
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelApproxPrv.provable),
         Seq(
           ("elem_", elem),
           ("poly_", rhsOf(poly.representation)),
@@ -480,7 +354,7 @@ class TaylorModelArith { // @note a class and not an object in order to initiali
 
   /** constructs a Taylor model with zero interval part */
   def Exact(elem: Polynomial, context: IndexedSeq[Formula]): TM = {
-    val newPrv = useDirectlyConst(weakenWith(context, exactPrv.fact),
+    val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelExactPrv.provable),
       Seq(("elem_", elem.term), ("poly_", rhsOf(elem.representation))),
       Seq(weakenWith(context, elem.representation))
     )
