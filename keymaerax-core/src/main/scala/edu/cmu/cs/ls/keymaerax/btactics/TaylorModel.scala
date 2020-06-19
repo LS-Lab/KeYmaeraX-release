@@ -141,15 +141,6 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  // TODO: sort in somewhere
-  private lazy val partialVacuousExistsAxiom2 = remember(
-    "\\exists x_ (p_() & q_(x_)) <-> p_() & \\exists x_ q_(x_)".asFormula,
-    equivR(1) <(
-      existsL(-1) & andR(1) <(prop & done, existsR("x_".asVariable)(1) & prop & done),
-      andL('L) & existsL(-2) & existsR("x_".asVariable)(1) & prop & done
-    )
-  )
-
   private def rewriteFormula(prv: ProvableSig) = "rewriteFormula" by { (pos: Position, seq: Sequent) =>
     val failFast = new BuiltInTactic("ANON") with NoOpTactic {
       override def result(provable: ProvableSig): ProvableSig = throw new TacticInapplicableFailure("Fail")
@@ -223,29 +214,17 @@ object TaylorModelTactics extends Logging {
   }
 
   // Specialized Tactics
-  private val namespace = "taylormodel"
-  private def remember(fml: Formula, tac: BelleExpr) = AnonymousLemmas.remember(fml, tac, namespace)
-  private lazy val unfoldExistsLemma = remember("\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
-    existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms.<(QE & done, implyR(1) & eqL2R(-3)(1) & closeId),
-    existsR("r_() - s_()".asTerm)(1) & prop & QE & done))
-
-  private lazy val foldAndLessEqExistsLemma = remember(("(a() <= x_ - b() & x_ - b() <= c()) <->" +
-    "(\\exists xr_ (x_ = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula, QE & done)
   private def foldAndLessEqExists(but: Seq[Variable] = Nil) = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
     Idioms.mapSubpositions(pos, seq, {
       case (And(LessEqual(_, Minus(v1: Variable, _)), LessEqual(Minus(v2: Variable, _), _)), pos)
         if v1 == v2 && !but.contains(v1)
       =>
-        Some(useAt(foldAndLessEqExistsLemma, PosInExpr(0::Nil))(pos): BelleExpr)
+        Some(useAt(Ax.foldAndLessEqExistsLemma, PosInExpr(0::Nil))(pos): BelleExpr)
       case _ =>
         None
     }).reduceLeft(_ & _)
   }
 
-  private lazy val leTimesMonoLemma =
-    remember("0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() + cU_() -> R_() <= max((0,h_() * U_())) + cU_()".asFormula, QE & done)
-  private lazy val timesLeMonoLemma =
-    remember("0 <= t_() & t_() <= h_() -> t_() * L_() + cL_() <= U_() -> min((0,h_() * L_())) + cL_() <= U_()".asFormula, QE & done)
   private[btactics] def coarsenTimesBounds(t: Term) = "coarsenTimesBounds" by { (seq: Sequent) =>
     val leTimesMono = "leTimesMono" by { (pos: Position, seq: Sequent) =>
       pos.checkAnte
@@ -266,7 +245,7 @@ object TaylorModelTactics extends Logging {
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
                         andR(1) & Idioms.<(closeId, closeId),
                         cohideR(1) &
-                          useAt(leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
+                          useAt(Ax.leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
                           done
                       )
                     )
@@ -292,7 +271,7 @@ object TaylorModelTactics extends Logging {
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
                         andR(1) & Idioms.<(closeId, closeId),
-                        cohideR(1) & useAt(timesLeMonoLemma, PosInExpr(Nil))(1) & done
+                        cohideR(1) & useAt(Ax.timesLeMonoLemma, PosInExpr(Nil))(1) & done
                       )
                     )
               }
@@ -311,26 +290,21 @@ object TaylorModelTactics extends Logging {
   }
 
   // only the cases that I need here...
-  private lazy val minGtNorm = remember("min((f_(),g_()))>h_()<->(f_()>h_()&g_()>h_())".asFormula, QE& done)
-  private lazy val minLeNorm = remember("min((f_(),g_()))<=h_()<->(f_()<=h_()|g_()<=h_())".asFormula, QE& done)
-  private lazy val minGeNorm = remember("min((f_(),g_()))>=h_()<->(f_()>=h_()&g_()>=h_())".asFormula, QE& done)
-  private lazy val leMaxNorm = remember("h_()<=max((f_(),g_()))<->(h_()<=f_()|h_()<=g_())".asFormula, QE& done)
   private [btactics] def unfoldMinMax = chaseCustom({
-    case Greater(FuncOf(BigDecimalQETool.minF, _), _) => (minGtNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case GreaterEqual(FuncOf(BigDecimalQETool.minF, _), _) => (minGeNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case LessEqual(FuncOf(BigDecimalQETool.minF, _), _) => (minLeNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
-    case LessEqual(_, FuncOf(BigDecimalQETool.maxF, _)) => (leMaxNorm.fact, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case Greater(FuncOf(BigDecimalQETool.minF, _), _) => (Ax.minGtNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case GreaterEqual(FuncOf(BigDecimalQETool.minF, _), _) => (Ax.minGeNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case LessEqual(FuncOf(BigDecimalQETool.minF, _), _) => (Ax.minLeNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
+    case LessEqual(_, FuncOf(BigDecimalQETool.maxF, _)) => (Ax.leMaxNorm.provable, PosInExpr(0::Nil), List(PosInExpr(0::Nil), PosInExpr(1::Nil)))::Nil
     case _ => Nil
   })
 
-  private lazy val trivialInequality = remember("(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
   private def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     val ssp = seq.sub(pos)
     seq.sub(pos) match {
       case Some(LessEqual(a, b)) =>
-        useAt(trivialInequality, PosInExpr(1::Nil))(pos) & andR(pos) &
+        useAt(Ax.trivialInequality, PosInExpr(1::Nil))(pos) & andR(pos) &
           Idioms.<(QE & done, QE & done) // TODO: this is purely algebraic, optimize for that?
       case Some(And(f, g)) =>
         andR(pos) & Idioms.<(solveTrivialInequalities(1), solveTrivialInequalities(1))
@@ -339,23 +313,19 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  private lazy val refineConjunction = remember("((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
-  private lazy val trivialRefineLtGt = remember("(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
-  private lazy val trivialRefineGeLe = remember("(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula, QE & done)
-
   private [btactics] def refineTrivialInequalities : DependentPositionTactic = "refineTrivialStrictInequalities" by { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     val ssp = seq.sub(pos)
     seq.sub(pos) match {
       case Some(Imply(And(_, _), And(_, _))) =>
-        useAt(refineConjunction, PosInExpr(1::Nil))(pos) & andR(pos) &
+        useAt(Ax.refineConjunction, PosInExpr(1::Nil))(pos) & andR(pos) &
           Idioms.<(refineTrivialInequalities(1), refineTrivialInequalities(1))
       case Some(Imply(Less(_, _), Greater(_, _))) =>
-        useAt(trivialRefineLtGt, PosInExpr(1::Nil))(pos) & Idioms.<(
+        useAt(Ax.trivialRefineLtGt, PosInExpr(1::Nil))(pos) & Idioms.<(
           QE & done) // TODO: this is purely algebraic, optimize for that?
       case Some(Imply(GreaterEqual(_, _), LessEqual(_, _))) =>
-        useAt(trivialRefineGeLe, PosInExpr(1::Nil))(pos) & Idioms.<(
+        useAt(Ax.trivialRefineGeLe, PosInExpr(1::Nil))(pos) & Idioms.<(
           QE & done) // TODO: this is purely algebraic, optimize for that?
       case _ =>
         throw new IllegalArgumentException("solveTrivialInequalities cannot be applied here: " + ssp)
@@ -521,33 +491,31 @@ object TaylorModelTactics extends Logging {
           :: post).reduceRight(And)))
     )
 
-    lazy val eqAddIff = remember("f_() = g_() + h_() <-> h_() = f_() - g_()".asFormula, QE & done)
-    lazy val plusDiffRefl = remember("f_() = g_() + (f_() - g_())".asFormula, QE & done)
     val postEq = proveBy(Equiv(boxTMEnclosure.child, postUnfolded),
       equivR(1) &
         Idioms.<(
           existsLstable(-1) & andLstable(-1) & andLstable(-1) &
-            useAt(eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & eqL2R(-1)(-3) &
+            useAt(Ax.eqAddIff, PosInExpr(0 :: Nil))(-1) & eqL2R(-1)(-2) & eqL2R(-1)(-3) &
             andR(1) & Idioms.<(close(-3, 1), skip) & hideL(-3) & hideL(-1) &
           andLstable('Llast) * (dim-1) &
           (1 to dim).map { i =>
             val p = -i
             val l = -(dim + i)
             existsLstable(p) & andLstable(p) &
-              useAt(eqAddIff, PosInExpr(0 :: Nil))(p) & eqL2R(p)(l)
+              useAt(Ax.eqAddIff, PosInExpr(0 :: Nil))(p) & eqL2R(p)(l)
             : BelleExpr}.reduceLeft(_ & _) &
             hideL(-1) * dim &
             (andR(1) & Idioms.<(closeId, skip))*(dim - 1) & closeId,
           existsR(Minus(time, time0))(1) &
             andLstable(-1) &
             andR(1) & Idioms.<(andR(1) & Idioms.<(
-                cohideR(1) & byUS(plusDiffRefl),
+                cohideR(1) & byUS(Ax.plusDiffRefl),
                 closeId
               ), hideL(-1)) &
             andLstable('Llast) * (dim - 1) &
             (andR(1) & Idioms.<(
-              useAt(unfoldExistsLemma)(1) & closeId, skip)) * (dim - 1) &
-            useAt(unfoldExistsLemma)(1) & closeId
+              useAt(Ax.unfoldExistsLemma)(1) & closeId, skip)) * (dim - 1) &
+            useAt(Ax.unfoldExistsLemma)(1) & closeId
         )
     )
 

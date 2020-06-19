@@ -5093,4 +5093,45 @@ object Ax extends Logging {
     QE & done
   )
 
+
+  /** Taylor Model [[edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics]] */
+
+  @Axiom("unfoldExistsLemma")
+  lazy val unfoldExistsLemma = derivedFormula("unfoldExistsLemma","\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
+    existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms.<(QE & done, implyR(1) & eqL2R(-3)(1) & closeId),
+    existsR("r_() - s_()".asTerm)(1) & prop & QE & done))
+
+  @Axiom("foldAndLessEqExistsLemma")
+  lazy val foldAndLessEqExistsLemma = derivedFormula("foldAndLessEqExistsLemma",("(a() <= x_ - b() & x_ - b() <= c()) <->" +
+    "(\\exists xr_ (x_ = xr_ + b() & (a() <= xr_ & xr_ <= c())))").asFormula, QE & done)
+
+  @Axiom("leTimesMonoLemma")
+  lazy val leTimesMonoLemma = derivedFormula("leTimesMonoLemma","0 <= t_() & t_() <= h_() -> R_() <= t_() * U_() + cU_() -> R_() <= max((0,h_() * U_())) + cU_()".asFormula, QE & done)
+  @Axiom("timesLeMonoLemma")
+  lazy val timesLeMonoLemma = derivedFormula("timesLeMonoLemma","0 <= t_() & t_() <= h_() -> t_() * L_() + cL_() <= U_() -> min((0,h_() * L_())) + cL_() <= U_()".asFormula, QE & done)
+
+  @Axiom("minGtNorm")
+  lazy val minGtNorm = derivedFormula("minGtNorm","min((f_(),g_()))>h_()<->(f_()>h_()&g_()>h_())".asFormula, QE& done)
+  @Axiom("minLeNorm")
+  lazy val minLeNorm = derivedFormula("minLeNorm","min((f_(),g_()))<=h_()<->(f_()<=h_()|g_()<=h_())".asFormula, QE& done)
+  @Axiom("minGeNorm")
+  lazy val minGeNorm = derivedFormula("minGeNorm","min((f_(),g_()))>=h_()<->(f_()>=h_()&g_()>=h_())".asFormula, QE& done)
+  @Axiom("leMaxNorm")
+  lazy val leMaxNorm = derivedFormula("leMaxNorm","h_()<=max((f_(),g_()))<->(h_()<=f_()|h_()<=g_())".asFormula, QE& done)
+
+  @Axiom("trivialInequality")
+  lazy val trivialInequality = derivedFormula("trivialInequality","(x_() = 0 & y_() = 0) -> x_() <= y_()".asFormula, QE & done)
+
+  @Axiom("refineConjunction")
+  lazy val refineConjunction = derivedFormula("refineConjunction","((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
+  @Axiom("trivialRefineLtGt")
+  lazy val trivialRefineLtGt = derivedFormula("trivialRefineLtGt","(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
+  @Axiom("trivialRefineGeLe")
+  lazy val trivialRefineGeLe = derivedFormula("trivialRefineGeLe","(v_() - w_() - y_() + x_() = 0) -> (v_() >= w_() -> x_() <= y_())".asFormula, QE & done)
+
+  @Axiom("eqAddIff")
+  lazy val eqAddIff = derivedFormula("eqAddIff","f_() = g_() + h_() <-> h_() = f_() - g_()".asFormula, QE & done)
+  @Axiom("plusDiffRefl")
+  lazy val plusDiffRefl = derivedFormula("plusDiffRefl","f_() = g_() + (f_() - g_())".asFormula, QE & done)
+
 }
