@@ -58,16 +58,7 @@ object PolynomialArithV2 {
       // resetRepresentation(newRepresentation).representation = newRepresentation
       def resetRepresentation(newRepresentation: ProvableSig) : Polynomial
       // prettyTerm.representation = prettyRepresentation
-      def prettyTerm : Polynomial = {
-        val repr = representation
-        val prettyRepr = prettyRepresentation
-        val prettyPrv = proveBy(Equal(PolynomialArithV2Helpers.rhsOf(prettyRepr), PolynomialArithV2Helpers.rhsOf(repr)),
-          useAt(repr, PosInExpr(1::Nil))(1, 1::Nil) &
-          useAt(prettyRepr, PosInExpr(1::Nil))(1, 0::Nil) &
-          byUS(Ax.equalReflexive)
-        )
-        resetRepresentation(prettyPrv)
-      }
+      def prettyTerm : Polynomial
 
       // result.term = term + other.term
       def +(other: Polynomial) : Polynomial
@@ -112,13 +103,11 @@ object PolynomialArithV2 {
       def zeroTest : Option[ProvableSig]
 
       // proof of "poly.term = horner form"
-      def hornerForm(variableOrder: Option[List[Term]] = None) : ProvableSig  = {
-        val vars = symbols(term)
-        val ringsLib = new RingsLibrary(vars) // for non-certified computations @todo: initialize only once?!
-        val ringVars = variableOrder.getOrElse(vars).map(ringsLib.toRing).toList
-        val horner = ringsLib.toHorner(ringsLib.toRing(term), ringVars)
-        equate(ofTerm(horner)).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
-      }
+      def hornerForm(variableOrder: Option[List[Term]] = None) : ProvableSig
+
+      // quotient and remainder:
+      // divideAndRemainder(other) = ((pretty)quot, (pretty)rem, proof of "term = quot.term * other.term + rem.term")
+      def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig)
 
     }
 
@@ -161,23 +150,6 @@ object PolynomialArithV2 {
     }
 
     implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
-
-    // quotient and remainder:
-    // divideAndRemainder(poly1, poly2) = (quot, rem, proof of "poly1.term = quot.term * poly2.term + rem.term")
-    def divideAndRemainder(poly1: Polynomial, poly2: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig) = {
-      val rep1 = PolynomialArithV2Helpers.rhsOf(poly1.representation)
-      val rep2 = PolynomialArithV2Helpers.rhsOf(poly2.representation)
-      val ringsLibrary = new RingsLibrary(Traversable(rep1, rep2))
-      val quotRem = ringsLibrary.ring.divideAndRemainder(ringsLibrary.toRing(rep1), ringsLibrary.toRing(rep2)).map { p =>
-        val poly = ofTerm(ringsLibrary.fromRing(p))
-        if (pretty) poly.prettyTerm else poly
-      }
-      val (quot, rem) = (quotRem(0), quotRem(1))
-      poly1.equate(quot * poly2 + rem) match {
-        case Some(prv) => (quot, rem, prv)
-        case None => throw new RuntimeException("unexpected failure: cannot prove polynomial division")
-      }
-    }
 
   }
 
@@ -1114,9 +1086,19 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
-    def representation: ProvableSig = prv
+    override def representation: ProvableSig = prv
     def forgetPrv: TreePolynomial
-    def resetTerm: Polynomial = forgetPrv
+    override def resetTerm: Polynomial = forgetPrv
+    override def prettyTerm : Polynomial = {
+      val repr = representation
+      val prettyRepr = prettyRepresentation
+      val prettyPrv = proveBy(Equal(PolynomialArithV2Helpers.rhsOf(prettyRepr), PolynomialArithV2Helpers.rhsOf(repr)),
+        useAt(repr, PosInExpr(1::Nil))(1, 1::Nil) &
+          useAt(prettyRepr, PosInExpr(1::Nil))(1, 0::Nil) &
+          byUS(Ax.equalReflexive)
+      )
+      resetRepresentation(prettyPrv)
+    }
 
     def treeSketch: String
     lazy val (eq, lhs, rhs) = prv.conclusion.succ(0) match { case eq @ Equal(lhs, rhs) => (eq, lhs, rhs) }
@@ -1698,6 +1680,28 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       }
     }
 
+    override def hornerForm(variableOrder: Option[List[Term]] = None) : ProvableSig  = {
+      val vars = symbols(term)
+      val ringsLib = new RingsLibrary(vars) // for non-certified computations @todo: initialize only once?!
+      val ringVars = variableOrder.getOrElse(vars).map(ringsLib.toRing).toList
+      val horner = ringsLib.toHorner(ringsLib.toRing(term), ringVars)
+      equate(ofTerm(horner)).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
+    }
+
+    override def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig) = {
+      val rep1 = PolynomialArithV2Helpers.rhsOf(representation)
+      val rep2 = PolynomialArithV2Helpers.rhsOf(other.representation)
+      val ringsLibrary = new RingsLibrary(Traversable(rep1, rep2))
+      val quotRem = ringsLibrary.ring.divideAndRemainder(ringsLibrary.toRing(rep1), ringsLibrary.toRing(rep2)).map { p =>
+        val poly = ofTerm(ringsLibrary.fromRing(p))
+        if (pretty) poly.prettyTerm else poly
+      }
+      val (quot, rem) = (quotRem(0), quotRem(1))
+      equate(quot * other + rem) match {
+        case Some(prv) => (quot, rem, prv)
+        case None => throw new RuntimeException("unexpected failure: cannot prove polynomial division")
+      }
+    }
 
   }
 
