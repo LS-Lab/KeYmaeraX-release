@@ -28,7 +28,7 @@ trait TimeStepOptions {
   * Here, a Taylor model is a data structure maintaining a proof that some term is element of the Taylor model.
   *
   * */
-class TaylorModelArith { // @note a class and not an object in order to initialize everything when constructing the class (@derive could help)
+object TaylorModelArith {
   import PolynomialArithV2.ring._
   import PolynomialArithV2Helpers._
 
