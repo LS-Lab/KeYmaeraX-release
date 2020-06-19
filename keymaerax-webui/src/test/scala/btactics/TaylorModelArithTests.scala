@@ -33,17 +33,24 @@ class TaylorModelArithTests extends TacticTestBase {
   implicit val defaultTimeStepOptions = new TimeStepOptions {
     def remainderEstimation(i: Integer) = (0.0001, 0.0001)
   }
-  lazy val tma = new TaylorModelArith()
-  lazy val x0 = ring.ofTerm("x0()".asTerm)
-  lazy val y0 = ring.ofTerm("y0()".asTerm)
-  lazy val tm1 = tma.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
-  lazy val tm2 = tma.TM("y".asTerm, ring.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
-  lazy val third = tma.Exact(ring.ofTerm("1/3".asTerm), context3)
-  lazy val tm3 = third *! tm1
-  lazy val tm100000 = tma.Exact(ring.ofTerm("0.000001".asTerm), context3) *! tm1
-  lazy val tm1234 = tma.Exact(ring.ofTerm("12.34".asTerm), context3) *! tm2
+  val tma = new TaylorModelArith()
+  lazy val lazyVals = new {
+    val x0 = ring.ofTerm("x0()".asTerm)
+    val y0 = ring.ofTerm("y0()".asTerm)
+    val tm1 = tma.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
+    val tm2 = tma.TM("y".asTerm, ring.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
+    val third = tma.Exact(ring.ofTerm("1/3".asTerm), context3)
+    val tm3 = third *! tm1
+    val tm100000 = tma.Exact(ring.ofTerm("0.000001".asTerm), context3) *! tm1
+    val tm1234 = tma.Exact(ring.ofTerm("12.34".asTerm), context3) *! tm2
+  }
+  import lazyVals._
 
-  "Taylor models" should "add exactly" in withMathematica { qeTool =>
+  "Taylor models" should "initialize lazy values" in withMathematica { _ =>
+    lazyVals
+  }
+
+  it should "add exactly" in withMathematica { qeTool =>
     (tm1 +! tm2).prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ (x+y=1.5*x0()+err_&-0.01<=err_&err_<=0.12)".asFormula
   }
