@@ -27,7 +27,7 @@ import scala.util.{Failure, Success, Try}
   */
 object ArithmeticSpeculativeSimplification {
 
-  private val DEBUG = false
+  private val DEBUG = true
 
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
@@ -41,23 +41,25 @@ object ArithmeticSpeculativeSimplification {
     (debug("Trying abs...", DEBUG) & proveOrRefuteAbs & debug("...abs done", DEBUG)) | speculativeQENoAbs
   })
 
+  /** QE with smart hiding. */
+  private lazy val smartHideQE: BelleExpr =
+    (debug("Bound", DEBUG) & hideNonmatchingBounds & smartHide & QE & done) |
+    (debug("Non-Bound", DEBUG) & smartHide & QE & TactixLibrary.done)
+
   /** QE without handling abs */
   private lazy val speculativeQENoAbs: BelleExpr = "QE" by ((_: Sequent) => {
-    (debug("Trying orIntro and smart hiding...", DEBUG) & (orIntro((debug("Bound", DEBUG) & hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (debug("Non-Bound", DEBUG) & smartHide & QE() & TactixLibrary.done)) & debug("... orIntro and smart hiding successful", DEBUG))) |
-    (debug("orIntro failed, trying smart hiding...", DEBUG) & ((hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (smartHide & QE()) & TactixLibrary.done) & debug("...smart hiding successful", DEBUG)) |
-    (debug("All simplifications failed, falling back to ordinary QE", DEBUG) & QE() & TactixLibrary.done)
+    (debug("Trying orIntro and smart hiding...", DEBUG) & orIntro(smartHideQE) & debug("... orIntro and smart hiding successful", DEBUG)) |
+    (debug("orIntro failed, trying smart hiding...", DEBUG) & smartHideQE & debug("...smart hiding successful", DEBUG)) |
+    (debug("All simplifications failed, falling back to ordinary QE", DEBUG) & QE & done)
   })
 
   /** Uses the disjunction introduction proof rule to prove a disjunctions by proving any 1 of the disjuncts. */
   def orIntro(finish: BelleExpr): BelleExpr = "orIntro" by ((sequent: Sequent) => {
     def toSingleSucc(retain: Int): BelleExpr = {
-      sequent.succ.indices.filter(_ != retain).sorted.reverse.map(i => hideR(i+1)).reduceLeft[BelleExpr](_&_)
+      sequent.succ.indices.patch(retain, List.empty, 1).reverse.map(i => hideR(SuccPos(i))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
     }
-
-    if (sequent.succ.size > 1) {
-      //@todo CounterExample might provide insight on which of the formulas are needed
-      sequent.succ.indices.map(i => toSingleSucc(i) & finish).reduceLeft[BelleExpr](_|_) | finish
-    } else finish
+    //@todo CounterExample might provide insight on which of the formulas are needed
+    sequent.succ.indices.map(toSingleSucc(_) & finish & done).reduceLeftOption[BelleExpr](_|_).getOrElse(skip)
   })
 
   /** Assert that there is no counter example. skip if none, error if there is. */
@@ -80,11 +82,18 @@ object ArithmeticSpeculativeSimplification {
 
   /** Splits absolute value functions to create more, but hopefully simpler, goals. */
   def exhaustiveAbsSplit: BelleExpr = "absSplit" by ((sequent: Sequent) => {
+    val absTerms = scala.collection.mutable.Set[Term]() // remember which abs are expanded already (absExp tactic expands same term everywhere)
+
     def absPos(fml: Formula): List[PosInExpr] = {
       val result = ListBuffer[PosInExpr]()
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-          case FuncOf(Function("abs", _, _, _, true), _) => result += p; Left(None)
+          case FuncOf(Function("abs", _, _, _, true), _) =>
+            if (!absTerms.contains(e)) {
+              result += p
+              absTerms.add(e)
+            }
+            Left(None)
           case _ => Left(None)
         }
       }, fml)
