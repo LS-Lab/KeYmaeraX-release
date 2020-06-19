@@ -281,7 +281,7 @@ object PolynomialArithV2 {
   /** normalizeAt "term" rewrites polynomial term to distributive normal form
     * normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
     * */
-  private lazy val eqNormalize = Ax.eqNormalize.provable
+  private val eqNormalize = Ax.eqNormalize.provable
   val normalizeAt : DependentPositionTactic = "normalizeAt" by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
@@ -852,16 +852,16 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   val timesBranch3 = anyArgify(Ax.timesBranch3.provable)
 
   // Lemmas for Power
-  lazy val powerZero = anyArgify(Ax.powerZero.provable)
-  lazy val powerOne = anyArgify(Ax.powerOne.provable)
+  val powerZero = anyArgify(Ax.powerZero.provable)
+  val powerOne = anyArgify(Ax.powerOne.provable)
   val powerEven = anyArgify(Ax.powerEven.provable)
   val powerOdd = anyArgify(Ax.powerOdd.provable)
-  lazy val powerPoly = anyArgify(Ax.powerPoly.provable)
+  val powerPoly = anyArgify(Ax.powerPoly.provable)
 
   // Lemmas for division
-  lazy val divideNumber = anyArgify(Ax.divideNumber.provable)
-  lazy val divideRat = anyArgify(Ax.divideRat.provable)
-  lazy val divideNeg = anyArgify(Ax.divideNeg.provable)
+  val divideNumber = anyArgify(Ax.divideNumber.provable)
+  val divideRat = anyArgify(Ax.divideRat.provable)
+  val divideNeg = anyArgify(Ax.divideNeg.provable)
 
   // Lemmas for negation
   val negateEmpty = anyArgify(Ax.negateEmpty.provable)
@@ -1593,8 +1593,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
-  lazy val varPowerLemma = anyArgify(Ax.varPowerLemma.provable)
-  lazy val varLemma = anyArgify(Ax.varLemma.provable)
+  val varPowerLemma = anyArgify(Ax.varPowerLemma.provable)
+  val varLemma = anyArgify(Ax.varLemma.provable)
   def Var(term: Term) : TreePolynomial =
     Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, 1)), None), Empty(None),
       Some(varLemma(substAny("v_", term))))
@@ -1602,8 +1602,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, power)), None), Empty(None),
       Some(useDirectly(varPowerLemma, Seq(("v_", term), ("n_", Number(power))), Seq())))
 
-  lazy val constLemma = anyArgify(Ax.constLemma.provable)
-  lazy val rationalLemma = anyArgify(Ax.rationalLemma.provable)
+  val constLemma = anyArgify(Ax.constLemma.provable)
+  val rationalLemma = anyArgify(Ax.rationalLemma.provable)
   def Const(num: BigDecimal, denom: BigDecimal) : TreePolynomial =
     Branch2(Empty(None), Monomial(Coefficient(num, denom, None), IndexedSeq(), None), Empty(None),
       Some(useDirectly(rationalLemma, Seq(("n_", Number(num)), ("d_", Number(denom))), Seq())))
