@@ -33,7 +33,7 @@ import scala.collection.immutable._
 object PolynomialArithV2 {
 
   /**
-    * Polynomial Ring in a given sequence of [[variables]] (e.g., Seq(x1, ..., xn)).
+    * Polynomial Ring:
     *
     * - interface that describes [[Polynomial]]s and operations on them
     * - constructors for Polynomials from constant numbers, variables, and recursively from terms
