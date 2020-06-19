@@ -3810,6 +3810,18 @@ object Ax extends Logging {
   )
 
   /**
+    * {{{Axiom "identity *".
+    *    1*f() = f()
+    * End.
+    * }}}
+    */
+  @Axiom("I*")
+  lazy val identityTimes = derivedAxiom("identity *", Sequent(IndexedSeq(), IndexedSeq("1*f_() = f_()".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable))(1) &
+      byUS(proveBy("\\forall x (1*x = x)".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
     * {{{Axiom "+ inverse".
     *    f() + (-f()) = 0
     * End.
@@ -4597,4 +4609,345 @@ object Ax extends Logging {
         closeId
       )
     )
+
+
+  /** Polynomial Arithmetic [[edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2]] */
+
+  @Axiom("eqNormalize")
+  lazy val eqNormalize = derivedFormula("eqNormalize", "s_() = t_() <-> s_() - t_() = 0".asFormula, QE)
+
+  @Axiom("coefficientTimesPrv")
+  lazy val coefficientTimesPrv = derivedFormula("coefficientTimesPrv",
+    ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rn_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
+      "l_()*r_() = pn_()/pd_()").asFormula, QE & done)
+
+  @Axiom("coefficientPlusPrv")
+  lazy val coefficientPlusPrv = derivedFormula("coefficientPlusPrv",
+    ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rd_() + rn_()*ld_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
+      "l_()+r_() = pn_()/pd_()").asFormula, QE & done)
+
+  @Axiom("coefficientNegPrv")
+  lazy val coefficientNegPrv = derivedFormula("coefficientNegPrv",
+  ("(x_() = xn_()/xd_() & ((-xn_()=nxn_() & xd_() != 0)<-> true)) ->" +
+    "-x_() = nxn_()/xd_()").asFormula, QE & done)
+
+  @Axiom("coefficientBigDecimalPrv")
+  lazy val coefficientBigDecimalPrv = derivedFormula("coefficientBigDecimalPrv",
+    ("(x_() = xn_()/xd_() & ((xn_()/xd_()=bd_() & xd_() != 0)<-> true)) ->" +
+      "x_() = bd_()").asFormula, QE & done)
+
+  @Axiom("plusTimes")
+  lazy val plusTimes = derivedFormula("plusTimes","l_() = a_()*b_() & r_() = c_()*b_() & a_() + c_() = d_() -> l_() + r_() = d_()*b_()".asFormula, QE & done)
+
+  @Axiom("negTimes")
+  lazy val negTimes = derivedFormula("negTimes", "l_() = a_()*b_() & -a_() = c_() -> -l_() = c_()*b_()".asFormula, QE & done)
+
+  @Axiom("powerLemma")
+  lazy val powerLemma = derivedFormula("powerLemma", "(i_() >= 0 & j_() >= 0 & i_() + j_() = k_()) -> x_()^i_() * x_()^j_() = x_() ^ k_()".asFormula,
+    prop & eqR2L(-3)(1) & cohideR(1) & QE & done)
+
+  @Axiom("monomialTimesLemma")
+  lazy val monomialTimesLemma = derivedFormula("monomialTimesLemma",
+    ("(l_() = cl_() * xls_() &" +
+      " r_() = cr_() * xrs_() &" +
+      " cl_() * cr_() = c_() &" +
+      " xls_() * xrs_() = xs_()" +
+      ") -> l_() * r_() = c_() * xs_()").asFormula, QE & done)
+
+  @Axiom("timesPowersBoth")
+  lazy val timesPowersBoth = derivedFormula("timesPowersBoth",("(((i_() >= 0 & j_() >= 0 & i_() + j_() = k_())<->true) & xs_() * ys_() = xys_())" +
+    "->" +
+    "(xs_() * x_()^i_()) * (ys_() * x_()^j_()) = xys_() * x_()^k_()").asFormula,
+    prop & cutR("x_()^i_()*x_()^j_() = x_()^k_()".asFormula)(1) & Idioms.<(
+      useAt(powerLemma, PosInExpr(1::Nil))(1) & prop & done,
+      implyR(1) & eqR2L(-6)(1) & hideL(-6) & hideL(-3) & eqR2L(-1)(1) & cohideR(1) & QE & done
+    ))
+
+  @Axiom("timesPowersLeft")
+  lazy val timesPowersLeft = derivedFormula("timesPowersLeft",("(xs_() * ys_() = xys_()) -> xs_() * x_() * (ys_()) = xys_() * x_()").asFormula,
+    QE & done
+  )
+
+  @Axiom("timesPowersRight")
+  lazy val timesPowersRight = derivedFormula("timesPowersRight",("(xs_() * ys_() = xys_()) -> xs_() * (ys_()*y_()) = xys_() * y_()").asFormula,
+    QE & done
+  )
+  @Axiom("timesPowers1Right")
+  lazy val timesPowers1Right = derivedFormula("timesPowers1Right",("xs_() * 1 = xs_()").asFormula, QE & done)
+  @Axiom("timesPowers1Left")
+  lazy val timesPowers1Left = derivedFormula("timesPowers1Left",("1 * ys_() = ys_()").asFormula, QE & done)
+
+    @Axiom("zez")
+  lazy val zez = derivedFormula("zez","0 = 0".asFormula, byUS(Ax.equalReflexive))
+
+  @Axiom("emptySprout")
+  lazy val emptySprout = derivedFormula("emptySprout","s_() = 0 & t_() = u_() -> s_() + t_() = 0 + u_() + 0".asFormula, QE & done)
+
+  // @todo: should these be constructed more systematically?! e.g., define common subformulas only once. would make the code more robust...
+  @Axiom("branch2Left ")
+  lazy val branch2Left  = derivedFormula("branch2Left ","t_() = l_() + v_() + r_() & l_() + x_() = lx_() -> t_() + x_() = lx_() + v_()  + r_() ".asFormula, QE & done)
+  @Axiom("branch2Value")
+  lazy val branch2Value = derivedFormula("branch2Value","t_() = l_() + v_() + r_() & v_() + x_() = vx_() -> t_() + x_() = l_()  + vx_() + r_() ".asFormula, QE & done)
+  @Axiom("branch2Right")
+  lazy val branch2Right = derivedFormula("branch2Right","t_() = l_() + v_() + r_() & r_() + x_() = rx_() -> t_() + x_() = l_()  + v_()  + rx_()".asFormula, QE & done)
+
+  /** @note for the Left case, could actually just use [[branch2Left]] */
+  @Axiom("branch2GrowLeft")
+  lazy val branch2GrowLeft = derivedFormula("branch2GrowLeft","t_() = l_() + v_() + r_() & l_() + x_() = l1_() + lv_() + l2_() -> t_() + x_() = l1_() + lv_() + l2_() + v_() + r_()".asFormula, QE & done)
+  @Axiom("branch2GrowRight")
+  lazy val branch2GrowRight = derivedFormula("branch2GrowRight","t_() = l_() + v_() + r_() & r_() + x_() = r1_() + rv_() + r2_() -> t_() + x_() = l_()                  + v_() + r1_() + rv_() + r2_()".asFormula, QE & done)
+
+  @Axiom("branch3Left")
+  lazy val branch3Left = derivedFormula("branch3Left","t_() = l_() + v_() + m_() + w_() + r_() & l_() + x_() = lx_() -> t_() + x_() = lx_() + v_()  + m_()  + w_()  + r_() ".asFormula, QE & done)
+  @Axiom("branch3Value1")
+  lazy val branch3Value1 = derivedFormula("branch3Value1","t_() = l_() + v_() + m_() + w_() + r_() & v_() + x_() = vx_() -> t_() + x_() = l_()  + vx_() + m_()  + w_()  + r_() ".asFormula, QE & done)
+  @Axiom("branch3Mid")
+  lazy val branch3Mid = derivedFormula("branch3Mid","t_() = l_() + v_() + m_() + w_() + r_() & m_() + x_() = mx_() -> t_() + x_() = l_()  + v_()  + mx_() + w_()  + r_() ".asFormula, QE & done)
+  @Axiom("branch3Value2")
+  lazy val branch3Value2 = derivedFormula("branch3Value2","t_() = l_() + v_() + m_() + w_() + r_() & w_() + x_() = wx_() -> t_() + x_() = l_()  + v_()  + m_()  + wx_() + r_() ".asFormula, QE & done)
+  @Axiom("branch3Right")
+  lazy val branch3Right = derivedFormula("branch3Right","t_() = l_() + v_() + m_() + w_() + r_() & r_() + x_() = rx_() -> t_() + x_() = l_()  + v_()  + m_()  + w_()  + rx_()".asFormula, QE & done)
+
+  @Axiom("branch3GrowLeft")
+  lazy val branch3GrowLeft = derivedFormula("branch3GrowLeft",("t_() = l_() + v_() + m_() + w_() + r_() & l_() + x_() = l1_() + lv_() + l2_() ->" +
+    "t_() + x_() = (l1_() + lv_() + l2_()) + v_()  + (m_()  + w_()  + r_())").asFormula, QE & done)
+
+  @Axiom("branch3GrowMid")
+  lazy val branch3GrowMid = derivedFormula("branch3GrowMid",("t_() = l_() + v_() + m_() + w_() + r_() & m_() + x_() = m1_() + mv_() + m2_() ->" +
+    "t_() + x_() = (l_() + v_() + m1_()) + mv_()  + (m2_()  + w_()  + r_())").asFormula, QE & done)
+  @Axiom("branch3GrowRight")
+  lazy val branch3GrowRight = derivedFormula("branch3GrowRight",("t_() = l_() + v_() + m_() + w_() + r_() & r_() + x_() = r1_() + rv_() + r2_() ->" +
+    "t_() + x_() = (l_() + v_() + m_()) + w_()  + (r1_()  + rv_()  + r2_())").asFormula, QE & done)
+
+  // Lemmas for Add
+  @Axiom("plusEmpty")
+  lazy val plusEmpty = derivedFormula("plusEmpty",("t_() = s_() & u_() = 0 -> t_() + u_() = s_()").asFormula, QE & done)
+  @Axiom("plusBranch2")
+  lazy val plusBranch2 = derivedFormula("plusBranch2",("(s_() = l_() + v_() + r_() & t_() + l_() + v_() + r_() = sum_()) ->" +
+    "t_() + s_() = sum_()").asFormula, QE & done)
+  @Axiom("plusBranch3")
+  lazy val plusBranch3 = derivedFormula("plusBranch3",("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() + l_() + v1_() + m_() + v2_() + r_() = sum_()) ->" +
+    "t_() + s_() = sum_()").asFormula, QE & done)
+
+  // Lemmas for Minus
+  @Axiom("minusEmpty")
+  lazy val minusEmpty = derivedFormula("minusEmpty",("t_() = s_() & u_() = 0 -> t_() - u_() = s_()").asFormula, QE & done)
+  @Axiom("minusBranch2")
+  lazy val minusBranch2 = derivedFormula("minusBranch2",("(s_() = l_() + v_() + r_() & t_() - l_() - v_() - r_() = sum_()) ->" +
+    "t_() - s_() = sum_()").asFormula, QE & done)
+  @Axiom("minusBranch3")
+  lazy val minusBranch3 = derivedFormula("minusBranch3",("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() - l_() - v1_() - m_() - v2_() - r_() = sum_()) ->" +
+    "t_() - s_() = sum_()").asFormula, QE & done)
+
+  // Lemmas for Minus Monomial
+  @Axiom("plusMinus")
+  lazy val plusMinus = derivedFormula("plusMinus","t_() + (-x_()) = s_() -> t_() - x_() = s_()".asFormula, QE & done)
+
+  // Lemmas for Times Monomial
+  @Axiom("monTimesZero")
+  lazy val monTimesZero = derivedFormula("monTimesZero","t_() = 0 -> t_() * x_() = 0".asFormula, QE & done)
+  @Axiom("monTimesBranch2")
+  lazy val monTimesBranch2 = derivedFormula("monTimesBranch2",
+    ("(t_() = l_() + v_() + r_() &" +
+      "l_() * x_() = lx_() &" +
+      "v_() * x_() = vx_() &" +
+      "r_() * x_() = rx_()) -> t_() * x_() = lx_() + vx_() + rx_()").asFormula, QE & done)
+  @Axiom("monTimesBranch3")
+  lazy val monTimesBranch3 = derivedFormula("monTimesBranch3",
+    ("(t_() = l_() + v1_() + m_() + v2_() + r_() &" +
+      "l_() * x_() = lx_() &" +
+      "v1_() * x_() = v1x_() &" +
+      "m_() * x_() = mx_() &" +
+      "v2_() * x_() = v2x_() &" +
+      "r_() * x_() = rx_()) -> t_() * x_() = lx_() + v1x_() + mx_() + v2x_() + rx_()").asFormula, QE & done)
+
+  // Lemmas for Times
+  @Axiom("timesEmpty")
+  lazy val timesEmpty = derivedFormula("timesEmpty",("t_() = 0 -> t_() * u_() = 0").asFormula, QE & done)
+  @Axiom("timesBranch2")
+  lazy val timesBranch2 = derivedFormula("timesBranch2",("(t_() = l_() + v_() + r_() & l_()*u_() + u_() * v_() + r_()*u_() = sum_()) ->" +
+    "t_() * u_() = sum_()").asFormula, QE & done)
+  @Axiom("timesBranch3")
+  lazy val timesBranch3 = derivedFormula("timesBranch3",("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_()*u_() + u_()*v1_() + m_()*u_() + u_()*v2_() + r_()*u_() = sum_()) ->" +
+    "t_() * u_() = sum_()").asFormula, QE & done)
+
+  // Lemmas for Power
+  @Axiom("powerZero")
+  lazy val powerZero = derivedFormula("powerZero",("1 = one_() -> t_() ^ 0 = one_()").asFormula, QE & done)
+  @Axiom("powerOne")
+  lazy val powerOne = derivedFormula("powerOne",("t_() = s_() -> t_() ^ 1 = s_()").asFormula, QE & done)
+  @Axiom("powerEven")
+  lazy val powerEven = derivedFormula("powerEven",("((n_() = 2*m_() <-> true) & t_()^m_() = p_() & p_()*p_() = r_()) ->" +
+    "t_() ^ n_() = r_()").asFormula,
+    implyR(1) & andL(-1) & andL(-2) &
+      useAt(Ax.equivTrue, PosInExpr(0::Nil))(-1) &
+      eqL2R(-1)(1) & hideL(-1) &
+      cutR("t_() ^ (2*m_()) = (t_()^m_())^2".asFormula)(1) & Idioms.<(
+      QE & done,
+      implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
+    )
+  )
+  @Axiom("powerOdd")
+  lazy val powerOdd = derivedFormula("powerOdd",("((n_() = 2*m_() + 1 <-> true) & t_()^m_() = p_() & p_()*p_()*t_() = r_()) ->" +
+    "t_() ^ n_() = r_()").asFormula,
+    implyR(1) & andL(-1) & andL(-2) &
+      useAt(Ax.equivTrue, PosInExpr(0::Nil))(-1) &
+      eqL2R(-1)(1) & hideL(-1) &
+      cutR("t_() ^ (2*m_() + 1) = (t_()^m_())^2*t_()".asFormula)(1) & Idioms.<(
+      QE & done,
+      implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
+    )
+  )
+  @Axiom("powerPoly")
+  lazy val powerPoly = derivedFormula("powerPoly","(q_() = i_() & p_()^i_() = r_()) -> p_()^q_() = r_()".asFormula,
+    implyR(1) & andL(-1) &
+      eqL2R(-1)(1, 0::1::Nil) &
+      hideL(-1) &
+      closeId
+  )
+
+  // Lemmas for division
+  @Axiom("divideNumber")
+  lazy val divideNumber = derivedFormula("divideNumber","(q_() = i_() & p_()*(1/i_()) = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done
+  )
+  @Axiom("divideRat")
+  lazy val divideRat = derivedFormula("divideRat","(q_() = n_()/d_() & p_()*(d_()/n_()) = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done
+  )
+  @Axiom("divideNeg")
+  lazy val divideNeg = derivedFormula("divideNeg","(-p_()/-q_() = r_()) -> p_()/q_() = r_()".asFormula,
+    QE & done
+  )
+
+  // Lemmas for negation
+  @Axiom("negateEmpty")
+  lazy val negateEmpty = derivedFormula("negateEmpty","t_() = 0 -> -t_() = 0".asFormula, QE & done)
+  @Axiom("negateBranch2")
+  lazy val negateBranch2 = derivedFormula("negateBranch2",("(t_() = l_() + v_() + r_() & -l_() = nl_() & -v_() = nv_() & -r_() = nr_()) ->" +
+    "-t_() = nl_() + nv_() + nr_()").asFormula, QE & done)
+  @Axiom("negateBranch3")
+  lazy val negateBranch3 = derivedFormula("negateBranch3",("(t_() = l_() + v1_() + m_() + v2_() + r_() & -l_() = nl_() & -v1_() = nv1_() & -m_() = nm_() & -v2_() = nv2_() & -r_() = nr_()) ->" +
+    "-t_() = nl_() + nv1_() + nm_() + nv2_() + nr_()").asFormula, QE & done)
+
+
+  // Lemmas for normalization
+  @Axiom("normalizeCoeff0")
+  lazy val normalizeCoeff0 = derivedFormula("normalizeCoeff0","(c_() = 0 / d_() ) -> c_() = 0".asFormula, QE & done)
+  @Axiom("normalizeCoeff1")
+  lazy val normalizeCoeff1 = derivedFormula("normalizeCoeff1","(c_() = n_() / 1 ) -> c_() = n_()".asFormula, QE & done)
+
+  @Axiom("normalizeMonom0")
+  lazy val normalizeMonom0 = derivedFormula("normalizeMonom0","(x_() = c_() * ps_() & c_() = 0) -> x_() = 0".asFormula, QE & done)
+  @Axiom("normalizeMonomCS")
+  lazy val normalizeMonomCS = derivedFormula("normalizeMonomCS",("(x_() = c_() * ps_() & c_() * ps_() = cps_()) ->" +
+    "x_() = cps_()").asFormula, QE & done)
+  @Axiom("normalizeMonomNCS")
+  lazy val normalizeMonomNCS = derivedFormula("normalizeMonomNCS",("(x_() = c_() * ps_() & -c_() = m_() & m_() * ps_() = cps_()) ->" +
+    "x_() = -cps_()").asFormula, QE & done)
+
+  @Axiom("normalizePowers1V")
+  lazy val normalizePowers1V = derivedFormula("normalizePowers1V","(c_() = 1) -> c_() * (1 * v_()^1) = v_()".asFormula, QE & done)
+  @Axiom("normalizePowers1R")
+  lazy val normalizePowers1R = derivedFormula("normalizePowers1R","(c_() = 1) -> c_() * (1 * t_()) = t_()".asFormula, QE & done)
+  @Axiom("normalizePowersC1")
+  lazy val normalizePowersC1 = derivedFormula("normalizePowersC1","(c_() = d_()) -> c_() * 1 = d_()".asFormula, QE & done)
+  @Axiom("normalizePowersCV")
+  lazy val normalizePowersCV = derivedFormula("normalizePowersCV","(c_() = d_()) -> c_() * (1 * v_()^1) = d_()*v_()".asFormula, QE & done)
+  @Axiom("normalizePowersCP")
+  lazy val normalizePowersCP = derivedFormula("normalizePowersCP","(c_() = d_()) -> c_() * (1 * t_()) = d_()*t_()".asFormula, QE & done)
+  @Axiom("normalizePowersRV")
+  lazy val normalizePowersRV = derivedFormula("normalizePowersRV","(c_() * ps_() = cps_()) -> c_() * (ps_() * v_()^1) = cps_() * v_()".asFormula, QE & done)
+  @Axiom("normalizePowersRP")
+  lazy val normalizePowersRP = derivedFormula("normalizePowersRP","(c_() * ps_() = cps_()) -> c_() * (ps_() * t_()) = cps_() * t_()".asFormula, QE & done)
+
+  @Axiom("normalizeBranch2")
+  lazy val normalizeBranch2 = derivedFormula("normalizeBranch2",("(t_() = l_() + v_() + r_() & l_() = ln_() & v_() = vn_() & r_() = rn_()) ->" +
+    "t_() = ln_() + vn_() + rn_()").asFormula, QE & done)
+  @Axiom("normalizeBranch3")
+  lazy val normalizeBranch3 = derivedFormula("normalizeBranch3",("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = ln_() & v1_() = v1n_() & m_() = mn_() & v2_() = v2n_() & r_() = rn_()) ->" +
+    "t_() = ln_() + v1n_() + mn_() + v2n_() + rn_()").asFormula, QE & done)
+
+  @Axiom("reassocRight0")
+  lazy val reassocRight0 = derivedFormula("reassocRight0",(
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = 0   &" +
+      "l_() = ll_()" +
+      ") ->" +
+      "t_() = ll_()").asFormula, QE & done)
+  @Axiom("reassocRightPlus")
+  lazy val reassocRightPlus = derivedFormula("reassocRightPlus",(
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = rs_() + rr_() &" +
+      "l_() + rs_() = lrs_()" +
+      ") ->" +
+      "t_() = lrs_() + rr_()").asFormula, QE & done)
+  @Axiom("reassocLeft0RightConst")
+  lazy val reassocLeft0RightConst = derivedFormula("reassocLeft0RightConst",(
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = c_() &" +
+      "l_() = 0" +
+      ") ->" +
+      "t_() = c_()").asFormula, QE & done)
+  @Axiom("reassocRightConst")
+  lazy val reassocRightConst = derivedFormula("reassocRightConst",(
+    "(" +
+      "t_() = l_() + r_() &" +
+      "r_() = c_() &" +
+      "l_() = ll_()" +
+      ") ->" +
+      "t_() = ll_() + c_()").asFormula, QE & done)
+
+  // lemmas to prove equality
+  @Axiom("equalityBySubtraction")
+  lazy val equalityBySubtraction = derivedFormula("equalityBySubtraction","t_() - s_() = 0 -> t_() = s_()".asFormula, QE & done)
+
+  // Lemmas for partition
+  @Axiom("partition2")
+  lazy val partition2 = derivedFormula("partition2",("(t_() = r_() & t1_() = r1_() & t2_() = r2_() & t_() - t1_() - t2_() = 0) -> t_() = t1_() + t2_()".asFormula),
+    QE & done)
+
+  // Lemmas for splitting coefficients
+  @inline
+  private def nz(t: Term) : Formula = NotEqual(t, Number(0))
+  @inline
+  def splitCoefficientNumericCondition(n: Term, d: Term, n1: Term, d1: Term, n2: Term, d2: Term) =
+    And(Equal(Times(Times(n, d1), d2), Times(d, Plus(Times(d1, n2), Times(d2, n1)))), And(nz(d), And(nz(d1), nz(d2))))
+
+  @Axiom("splitCoefficient")
+  lazy val splitCoefficient = derivedFormula("splitCoefficient",
+    Imply(And("c_() = n_()/d_()".asFormula,
+      Equiv(splitCoefficientNumericCondition("n_()".asTerm, "d_()".asTerm, "n1_()".asTerm, "d1_()".asTerm, "n2_()".asTerm, "d2_()".asTerm), True)),
+      "c_() = n1_()/d1_() + n2_()/d2_()".asFormula),
+    QE & done)
+  @Axiom("splitMonomial")
+  lazy val splitMonomial = derivedFormula("splitMonomial","(c_() = c1_() + c2_() & m_() = c_() * x_()) -> m_() = c1_() * x_() + c2_() * x_()".asFormula, QE & done)
+  @Axiom("splitEmpty ")
+  lazy val splitEmpty  = derivedFormula("splitEmpty ","t_() = 0 -> t_() = 0 + 0".asFormula, QE & done)
+  @Axiom("splitBranch2 ")
+  lazy val splitBranch2  = derivedFormula("splitBranch2 ",("(t_() = l_() + v_() + r_() & l_() = l1_() + l2_() & v_() = v1_() + v2_() & r_() = r1_() + r2_())" +
+    "->" +
+    "t_() = (l1_() + v1_() + r1_()) + (l2_() + v2_() + r2_())").asFormula, QE & done)
+  @Axiom("splitBranch3 ")
+  lazy val splitBranch3  = derivedFormula("splitBranch3 ",("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = l1_() + l2_() & v1_() = v11_() + v12_() & m_() = m1_() + m2_() & v2_() = v21_() + v22_() & r_() = r1_() + r2_())" +
+    "->" +
+    "t_() = (l1_() + v11_() + m1_() + v21_() + r1_()) + (l2_() + v12_() + m2_() + v22_() + r2_())").asFormula, QE & done)
+
+  @Axiom("varPowerLemma")
+  lazy val varPowerLemma = derivedFormula("varPowerLemma","v_()^n_() = 0 + 1 / 1 * (1 * v_()^n_()) + 0".asFormula, QE & done)
+  @Axiom("varLemma")
+  lazy val varLemma = derivedFormula("varLemma","v_() = 0 + 1 / 1 * (1 * v_()^1) + 0".asFormula, QE & done)
+
+  @Axiom("constLemma")
+  lazy val constLemma = derivedFormula("constLemma",
+    Equal("n_()".asTerm, Seq(Number(0), Times(Divide("n_()".asTerm, Number(1)), Number(1)), Number(0)).reduceLeft(Plus)),
+    QE & done)
+  @Axiom("rationalLemma")
+  lazy val rationalLemma = derivedFormula("rationalLemma",
+    Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus)),
+    QE & done)
+
 }

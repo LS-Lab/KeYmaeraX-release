@@ -557,7 +557,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
   "proveBy with useAt and useFor" should "be slower than useDirectly" taggedAs SlowTest in withMathematica { _ =>
     import PolynomialArithV2Helpers._
-    val add0 = rememberAny("x_() = 0 -> (x_() + 0 = 0)".asFormula, QE & done)
+    val add0 = anyArgify(proveBy("x_() = 0 -> (x_() + 0 = 0)".asFormula, QE & done))
     val xvar = "x_(||)".asTerm
 
     def lhs(prv: ProvableSig) = prv.conclusion.succ(0).asInstanceOf[Equal].left

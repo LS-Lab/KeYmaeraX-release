@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2.{NonSupportedDivisorException, NonSupportedExponentException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
-
+import edu.cmu.cs.ls.keymaerax.macros._
 import scala.collection.immutable._
 
 /**
@@ -281,7 +281,7 @@ object PolynomialArithV2 {
   /** normalizeAt "term" rewrites polynomial term to distributive normal form
     * normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
     * */
-  private lazy val eqNormalize = remember("s_() = t_() <-> s_() - t_() = 0".asFormula,QE)
+  private lazy val eqNormalize = Ax.eqNormalize.provable
   val normalizeAt : DependentPositionTactic = "normalizeAt" by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
@@ -308,7 +308,7 @@ object PolynomialArithV2Helpers {
 
   def substAny(s: String, t: Term) = USubst(Seq(SubstitutionPair(anyR(s), t)))
 
-  def anyArgify(prv: ProvableSig) = {
+  def anyArgify(prv: ProvableSig): ProvableSig = {
     require(prv.isProved)
     val us = USubst(StaticSemantics.signature(prv.conclusion).flatMap{
       case f@Function(n, None, Unit, Real, false) => Some(SubstitutionPair(FuncOf(f, Nothing), UnitFunctional(n, AnyArg, Real)))
@@ -316,6 +316,7 @@ object PolynomialArithV2Helpers {
     }.toIndexedSeq)
     prv(us)
   }
+  def anyArgify(ax: DerivedAxiomInfo): ProvableSig = anyArgify(ax.provable)
 
   val equalReflex = anyArgify(Ax.equalReflexive.provable)
   val spat = "s_(||)".asTerm
@@ -362,8 +363,6 @@ object PolynomialArithV2Helpers {
       impliesElim(PsQ, conjPrv)
     }
 
-  def rememberAny(fml: Formula, be: BelleExpr) = anyArgify(remember(fml, be).fact)
-
   def byExact(assm: ProvableSig) = "byExact" by { (prv: ProvableSig, pos: SuccPosition) =>
     assert(prv.subgoals.length==1, "require one subgoal byExact")
     prv.apply(assm, 0)
@@ -408,19 +407,11 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   val constLd = constR("ld_")
   val constRn = constR("rn_")
   val constRd = constR("rd_")
-  val coefficientTimesPrv = rememberAny(
-    ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rn_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
-      "l_()*r_() = pn_()/pd_()").asFormula, QE & done)
-  val coefficientPlusPrv = rememberAny(
-    ("(l_() = ln_()/ld_() & r_() = rn_()/rd_() & ((ln_()*rd_() + rn_()*ld_() = pn_() & ld_()*rd_()=pd_() & ld_() != 0 & rd_() != 0)<-> true)) ->" +
-      "l_()+r_() = pn_()/pd_()").asFormula, QE & done)
-  val coefficientNegPrv = rememberAny(
-    ("(x_() = xn_()/xd_() & ((-xn_()=nxn_() & xd_() != 0)<-> true)) ->" +
-      "-x_() = nxn_()/xd_()").asFormula, QE & done)
+  val coefficientTimesPrv = anyArgify(Ax.coefficientTimesPrv)
+  val coefficientPlusPrv = anyArgify(Ax.coefficientPlusPrv)
+  val coefficientNegPrv = anyArgify(Ax.coefficientNegPrv)
 
-  val coefficientBigDecimalPrv = rememberAny(
-    ("(x_() = xn_()/xd_() & ((xn_()/xd_()=bd_() & xd_() != 0)<-> true)) ->" +
-      "x_() = bd_()").asFormula, QE & done)
+  val coefficientBigDecimalPrv = anyArgify(Ax.coefficientBigDecimalPrv)
 
   /**
   * prv: lhs = rhs
@@ -554,14 +545,13 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
-  val identityTimes = rememberAny("1*f_() = f_()".asFormula, QE & done)
-  val timesIdentity = rememberAny("f_()*1 = f_()".asFormula, QE & done)
+  val identityTimes = anyArgify(Ax.identityTimes)
+  val timesIdentity = anyArgify(Ax.timesIdentity)
 
-  val plusTimes = rememberAny("l_() = a_()*b_() & r_() = c_()*b_() & a_() + c_() = d_() -> l_() + r_() = d_()*b_()".asFormula, QE & done)
-  val negTimes = rememberAny("l_() = a_()*b_() & -a_() = c_() -> -l_() = c_()*b_()".asFormula, QE & done)
+  val plusTimes = anyArgify(Ax.plusTimes)
+  val negTimes = anyArgify(Ax.negTimes)
 
-  val powerLemma = rememberAny("(i_() >= 0 & j_() >= 0 & i_() + j_() = k_()) -> x_()^i_() * x_()^j_() = x_() ^ k_()".asFormula,
-    prop & eqR2L(-3)(1) & cohideR(1) & QE & done)
+  val powerLemma = anyArgify(Ax.powerLemma)
   private def mkConstN(s: String, i: Int) = s + i.toString + "_"
   private def mkConst(s: String, i: Int) = FuncOf(Function(mkConstN(s, i), None, Unit, Real), Nothing)
 
@@ -573,30 +563,15 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     * ->
     * l*r=c*xs
     * */
-  val monomialTimesLemma = rememberAny(
-    ("(l_() = cl_() * xls_() &" +
-      " r_() = cr_() * xrs_() &" +
-      " cl_() * cr_() = c_() &" +
-      " xls_() * xrs_() = xs_()" +
-      ") -> l_() * r_() = c_() * xs_()").asFormula, QE & done)
+  val monomialTimesLemma = anyArgify(Ax.monomialTimesLemma.provable)
 
-  val timesPowersBoth = rememberAny(("(((i_() >= 0 & j_() >= 0 & i_() + j_() = k_())<->true) & xs_() * ys_() = xys_())" +
-    "->" +
-    "(xs_() * x_()^i_()) * (ys_() * x_()^j_()) = xys_() * x_()^k_()").asFormula,
-    prop & cutR("x_()^i_()*x_()^j_() = x_()^k_()".asFormula)(1) & Idioms.<(
-      useAt(powerLemma, PosInExpr(1::Nil))(1) & prop & done,
-      implyR(1) & eqR2L(-6)(1) & hideL(-6) & hideL(-3) & eqR2L(-1)(1) & cohideR(1) & QE & done
-    ))
+  val timesPowersBoth = anyArgify(Ax.timesPowersBoth.provable)
 
-  val timesPowersLeft = rememberAny(("(xs_() * ys_() = xys_()) -> xs_() * x_() * (ys_()) = xys_() * x_()").asFormula,
-    QE & done
-  )
+  val timesPowersLeft = anyArgify(Ax.timesPowersLeft.provable)
 
-  val timesPowersRight = rememberAny(("(xs_() * ys_() = xys_()) -> xs_() * (ys_()*y_()) = xys_() * y_()").asFormula,
-    QE & done
-  )
-  val timesPowers1Right = rememberAny(("xs_() * 1 = xs_()").asFormula, QE & done)
-  val timesPowers1Left = rememberAny(("1 * ys_() = ys_()").asFormula, QE & done)
+  val timesPowersRight = anyArgify(Ax.timesPowersRight.provable)
+  val timesPowers1Right = anyArgify(Ax.timesPowers1Right.provable)
+  val timesPowers1Left = anyArgify(Ax.timesPowers1Left.provable)
 
   val constF = anyR("f_")
   val constX = anyR("x_")
@@ -827,181 +802,102 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
-  val zez = rememberAny("0 = 0".asFormula, byUS(Ax.equalReflexive))
+  val zez = anyArgify(Ax.zez.provable)
 
-  val emptySprout = rememberAny("s_() = 0 & t_() = u_() -> s_() + t_() = 0 + u_() + 0".asFormula, QE & done)
+  val emptySprout = anyArgify(Ax.emptySprout.provable)
 
   // Lemmas for insert (i.e., add monomial)
 
   // @todo: should these be constructed more systematically?! e.g., define common subformulas only once. would make the code more robust...
-  val branch2Left  = rememberAny("t_() = l_() + v_() + r_() & l_() + x_() = lx_() -> t_() + x_() = lx_() + v_()  + r_() ".asFormula, QE & done)
-  val branch2Value = rememberAny("t_() = l_() + v_() + r_() & v_() + x_() = vx_() -> t_() + x_() = l_()  + vx_() + r_() ".asFormula, QE & done)
-  val branch2Right = rememberAny("t_() = l_() + v_() + r_() & r_() + x_() = rx_() -> t_() + x_() = l_()  + v_()  + rx_()".asFormula, QE & done)
+  val branch2Left  = anyArgify(Ax.branch2Left .provable)
+  val branch2Value = anyArgify(Ax.branch2Value.provable)
+  val branch2Right = anyArgify(Ax.branch2Right.provable)
 
   /** @note for the Left case, could actually just use [[branch2Left]] */
-  val branch2GrowLeft =  rememberAny("t_() = l_() + v_() + r_() & l_() + x_() = l1_() + lv_() + l2_() -> t_() + x_() = l1_() + lv_() + l2_() + v_() + r_()                 ".asFormula, QE & done)
-  val branch2GrowRight = rememberAny("t_() = l_() + v_() + r_() & r_() + x_() = r1_() + rv_() + r2_() -> t_() + x_() = l_()                  + v_() + r1_() + rv_() + r2_()".asFormula, QE & done)
+  val branch2GrowLeft =  anyArgify(Ax.branch2GrowLeft.provable)
+  val branch2GrowRight = anyArgify(Ax.branch2GrowRight.provable)
 
-  val branch3Left =   rememberAny("t_() = l_() + v_() + m_() + w_() + r_() & l_() + x_() = lx_() -> t_() + x_() = lx_() + v_()  + m_()  + w_()  + r_() ".asFormula, QE & done)
-  val branch3Value1 = rememberAny("t_() = l_() + v_() + m_() + w_() + r_() & v_() + x_() = vx_() -> t_() + x_() = l_()  + vx_() + m_()  + w_()  + r_() ".asFormula, QE & done)
-  val branch3Mid =    rememberAny("t_() = l_() + v_() + m_() + w_() + r_() & m_() + x_() = mx_() -> t_() + x_() = l_()  + v_()  + mx_() + w_()  + r_() ".asFormula, QE & done)
-  val branch3Value2 = rememberAny("t_() = l_() + v_() + m_() + w_() + r_() & w_() + x_() = wx_() -> t_() + x_() = l_()  + v_()  + m_()  + wx_() + r_() ".asFormula, QE & done)
-  val branch3Right =  rememberAny("t_() = l_() + v_() + m_() + w_() + r_() & r_() + x_() = rx_() -> t_() + x_() = l_()  + v_()  + m_()  + w_()  + rx_()".asFormula, QE & done)
+  val branch3Left = anyArgify(Ax.branch3Left.provable)
+  val branch3Value1 = anyArgify(Ax.branch3Value1.provable)
+  val branch3Mid =    anyArgify(Ax.branch3Mid.provable)
+  val branch3Value2 = anyArgify(Ax.branch3Value2.provable)
+  val branch3Right =  anyArgify(Ax.branch3Right.provable)
 
-  val branch3GrowLeft = rememberAny(("t_() = l_() + v_() + m_() + w_() + r_() & l_() + x_() = l1_() + lv_() + l2_() ->" +
-    "t_() + x_() = (l1_() + lv_() + l2_()) + v_()  + (m_()  + w_()  + r_())").asFormula, QE & done)
+  val branch3GrowLeft = anyArgify(Ax.branch3GrowLeft.provable)
 
-  val branch3GrowMid = rememberAny(("t_() = l_() + v_() + m_() + w_() + r_() & m_() + x_() = m1_() + mv_() + m2_() ->" +
-    "t_() + x_() = (l_() + v_() + m1_()) + mv_()  + (m2_()  + w_()  + r_())").asFormula, QE & done)
-  val branch3GrowRight = rememberAny(("t_() = l_() + v_() + m_() + w_() + r_() & r_() + x_() = r1_() + rv_() + r2_() ->" +
-    "t_() + x_() = (l_() + v_() + m_()) + w_()  + (r1_()  + rv_()  + r2_())").asFormula, QE & done)
+  val branch3GrowMid = anyArgify(Ax.branch3GrowMid.provable)
+  val branch3GrowRight = anyArgify(Ax.branch3GrowRight.provable)
 
   // Lemmas for Add
-  val plusEmpty = rememberAny(("t_() = s_() & u_() = 0 -> t_() + u_() = s_()").asFormula, QE & done)
-  val plusBranch2 = rememberAny(("(s_() = l_() + v_() + r_() & t_() + l_() + v_() + r_() = sum_()) ->" +
-    "t_() + s_() = sum_()").asFormula, QE & done)
-  val plusBranch3 = rememberAny(("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() + l_() + v1_() + m_() + v2_() + r_() = sum_()) ->" +
-    "t_() + s_() = sum_()").asFormula, QE & done)
+  val plusEmpty = anyArgify(Ax.plusEmpty.provable)
+  val plusBranch2 = anyArgify(Ax.plusBranch2.provable)
+  val plusBranch3 = anyArgify(Ax.plusBranch3.provable)
 
   // Lemmas for Minus
-  val minusEmpty = rememberAny(("t_() = s_() & u_() = 0 -> t_() - u_() = s_()").asFormula, QE & done)
-  val minusBranch2 = rememberAny(("(s_() = l_() + v_() + r_() & t_() - l_() - v_() - r_() = sum_()) ->" +
-    "t_() - s_() = sum_()").asFormula, QE & done)
-  val minusBranch3 = rememberAny(("(s_() = l_() + v1_() + m_() + v2_() + r_() & t_() - l_() - v1_() - m_() - v2_() - r_() = sum_()) ->" +
-    "t_() - s_() = sum_()").asFormula, QE & done)
+  val minusEmpty = anyArgify(Ax.minusEmpty.provable)
+  val minusBranch2 = anyArgify(Ax.minusBranch2.provable)
+  val minusBranch3 = anyArgify(Ax.minusBranch3.provable)
 
   // Lemmas for Minus Monomial
-  val plusMinus = rememberAny("t_() + (-x_()) = s_() -> t_() - x_() = s_()".asFormula, QE & done)
+  val plusMinus = anyArgify(Ax.plusMinus.provable)
 
   // Lemmas for Times Monomial
-  val monTimesZero = rememberAny("t_() = 0 -> t_() * x_() = 0".asFormula, QE & done)
-  val monTimesBranch2 = rememberAny(
-    ("(t_() = l_() + v_() + r_() &" +
-      "l_() * x_() = lx_() &" +
-      "v_() * x_() = vx_() &" +
-      "r_() * x_() = rx_()) -> t_() * x_() = lx_() + vx_() + rx_()").asFormula, QE & done)
-  val monTimesBranch3 = rememberAny(
-    ("(t_() = l_() + v1_() + m_() + v2_() + r_() &" +
-      "l_() * x_() = lx_() &" +
-      "v1_() * x_() = v1x_() &" +
-      "m_() * x_() = mx_() &" +
-      "v2_() * x_() = v2x_() &" +
-      "r_() * x_() = rx_()) -> t_() * x_() = lx_() + v1x_() + mx_() + v2x_() + rx_()").asFormula, QE & done)
+  val monTimesZero = anyArgify(Ax.monTimesZero.provable)
+  val monTimesBranch2 = anyArgify(Ax.monTimesBranch2.provable)
+  val monTimesBranch3 = anyArgify(Ax.monTimesBranch3.provable)
 
   // Lemmas for Times
-  val timesEmpty = rememberAny(("t_() = 0 -> t_() * u_() = 0").asFormula, QE & done)
-  val timesBranch2 = rememberAny(("(t_() = l_() + v_() + r_() & l_()*u_() + u_() * v_() + r_()*u_() = sum_()) ->" +
-    "t_() * u_() = sum_()").asFormula, QE & done)
-  val timesBranch3 = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_()*u_() + u_()*v1_() + m_()*u_() + u_()*v2_() + r_()*u_() = sum_()) ->" +
-    "t_() * u_() = sum_()").asFormula, QE & done)
+  val timesEmpty = anyArgify(Ax.timesEmpty.provable)
+  val timesBranch2 = anyArgify(Ax.timesBranch2.provable)
+  val timesBranch3 = anyArgify(Ax.timesBranch3.provable)
 
   // Lemmas for Power
-  lazy val powerZero = rememberAny(("1 = one_() -> t_() ^ 0 = one_()").asFormula, QE & done)
-  lazy val powerOne = rememberAny(("t_() = s_() -> t_() ^ 1 = s_()").asFormula, QE & done)
-  val powerEven = rememberAny(("((n_() = 2*m_() <-> true) & t_()^m_() = p_() & p_()*p_() = r_()) ->" +
-    "t_() ^ n_() = r_()").asFormula,
-    implyR(1) & andL(-1) & andL(-2) &
-      useAt(Ax.equivTrue, PosInExpr(0::Nil))(-1) &
-      eqL2R(-1)(1) & hideL(-1) &
-      cutR("t_() ^ (2*m_()) = (t_()^m_())^2".asFormula)(1) & Idioms.<(
-      QE & done,
-      implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
-    )
-  )
-  val powerOdd = rememberAny(("((n_() = 2*m_() + 1 <-> true) & t_()^m_() = p_() & p_()*p_()*t_() = r_()) ->" +
-    "t_() ^ n_() = r_()").asFormula,
-    implyR(1) & andL(-1) & andL(-2) &
-      useAt(Ax.equivTrue, PosInExpr(0::Nil))(-1) &
-      eqL2R(-1)(1) & hideL(-1) &
-      cutR("t_() ^ (2*m_() + 1) = (t_()^m_())^2*t_()".asFormula)(1) & Idioms.<(
-      QE & done,
-      implyR(1) & eqL2R(-3)(1) & hideL(-3) & eqL2R(-1)(1) & hideL(-1) & QE & done
-    )
-  )
-  lazy val powerPoly = rememberAny("(q_() = i_() & p_()^i_() = r_()) -> p_()^q_() = r_()".asFormula,
-    implyR(1) & andL(-1) &
-      eqL2R(-1)(1, 0::1::Nil) &
-      hideL(-1) &
-      closeId
-  )
+  lazy val powerZero = anyArgify(Ax.powerZero.provable)
+  lazy val powerOne = anyArgify(Ax.powerOne.provable)
+  val powerEven = anyArgify(Ax.powerEven.provable)
+  val powerOdd = anyArgify(Ax.powerOdd.provable)
+  lazy val powerPoly = anyArgify(Ax.powerPoly.provable)
 
   // Lemmas for division
-  lazy val divideNumber = rememberAny("(q_() = i_() & p_()*(1/i_()) = r_()) -> p_()/q_() = r_()".asFormula,
-    QE & done
-  )
-  lazy val divideRat = rememberAny("(q_() = n_()/d_() & p_()*(d_()/n_()) = r_()) -> p_()/q_() = r_()".asFormula,
-    QE & done
-  )
-  lazy val divideNeg = rememberAny("(-p_()/-q_() = r_()) -> p_()/q_() = r_()".asFormula,
-    QE & done
-  )
+  lazy val divideNumber = anyArgify(Ax.divideNumber.provable)
+  lazy val divideRat = anyArgify(Ax.divideRat.provable)
+  lazy val divideNeg = anyArgify(Ax.divideNeg.provable)
 
   // Lemmas for negation
-  val negateEmpty = rememberAny("t_() = 0 -> -t_() = 0".asFormula, QE & done)
-  val negateBranch2 = rememberAny(("(t_() = l_() + v_() + r_() & -l_() = nl_() & -v_() = nv_() & -r_() = nr_()) ->" +
-    "-t_() = nl_() + nv_() + nr_()").asFormula, QE & done)
-  val negateBranch3 = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & -l_() = nl_() & -v1_() = nv1_() & -m_() = nm_() & -v2_() = nv2_() & -r_() = nr_()) ->" +
-    "-t_() = nl_() + nv1_() + nm_() + nv2_() + nr_()").asFormula, QE & done)
+  val negateEmpty = anyArgify(Ax.negateEmpty.provable)
+  val negateBranch2 = anyArgify(Ax.negateBranch2.provable)
+  val negateBranch3 = anyArgify(Ax.negateBranch3.provable)
 
 
   // Lemmas for normalization
-  val normalizeCoeff0 = rememberAny("(c_() = 0 / d_() ) -> c_() = 0".asFormula, QE & done)
-  val normalizeCoeff1 = rememberAny("(c_() = n_() / 1 ) -> c_() = n_()".asFormula, QE & done)
+  val normalizeCoeff0 = anyArgify(Ax.normalizeCoeff0.provable)
+  val normalizeCoeff1 = anyArgify(Ax.normalizeCoeff1.provable)
 
-  val normalizeMonom0 = rememberAny("(x_() = c_() * ps_() & c_() = 0) -> x_() = 0".asFormula, QE & done)
-  val normalizeMonomCS = rememberAny(("(x_() = c_() * ps_() & c_() * ps_() = cps_()) ->" +
-    "x_() = cps_()").asFormula, QE & done)
-  val normalizeMonomNCS = rememberAny(("(x_() = c_() * ps_() & -c_() = m_() & m_() * ps_() = cps_()) ->" +
-    "x_() = -cps_()").asFormula, QE & done)
+  val normalizeMonom0 = anyArgify(Ax.normalizeMonom0.provable)
+  val normalizeMonomCS = anyArgify(Ax.normalizeMonomCS.provable)
+  val normalizeMonomNCS = anyArgify(Ax.normalizeMonomNCS.provable)
 
-  val normalizePowers1V = rememberAny("(c_() = 1) -> c_() * (1 * v_()^1) = v_()".asFormula, QE & done)
-  val normalizePowers1R = rememberAny("(c_() = 1) -> c_() * (1 * t_()) = t_()".asFormula, QE & done)
-  val normalizePowersC1 = rememberAny("(c_() = d_()) -> c_() * 1 = d_()".asFormula, QE & done)
-  val normalizePowersCV = rememberAny("(c_() = d_()) -> c_() * (1 * v_()^1) = d_()*v_()".asFormula, QE & done)
-  val normalizePowersCP = rememberAny("(c_() = d_()) -> c_() * (1 * t_()) = d_()*t_()".asFormula, QE & done)
-  val normalizePowersRV = rememberAny("(c_() * ps_() = cps_()) -> c_() * (ps_() * v_()^1) = cps_() * v_()".asFormula, QE & done)
-  val normalizePowersRP = rememberAny("(c_() * ps_() = cps_()) -> c_() * (ps_() * t_()) = cps_() * t_()".asFormula, QE & done)
+  val normalizePowers1V = anyArgify(Ax.normalizePowers1V.provable)
+  val normalizePowers1R = anyArgify(Ax.normalizePowers1R.provable)
+  val normalizePowersC1 = anyArgify(Ax.normalizePowersC1.provable)
+  val normalizePowersCV = anyArgify(Ax.normalizePowersCV.provable)
+  val normalizePowersCP = anyArgify(Ax.normalizePowersCP.provable)
+  val normalizePowersRV = anyArgify(Ax.normalizePowersRV.provable)
+  val normalizePowersRP = anyArgify(Ax.normalizePowersRP.provable)
 
-  val normalizeBranch2 = rememberAny(("(t_() = l_() + v_() + r_() & l_() = ln_() & v_() = vn_() & r_() = rn_()) ->" +
-    "t_() = ln_() + vn_() + rn_()").asFormula, QE & done)
-  val normalizeBranch3 = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = ln_() & v1_() = v1n_() & m_() = mn_() & v2_() = v2n_() & r_() = rn_()) ->" +
-    "t_() = ln_() + v1n_() + mn_() + v2n_() + rn_()").asFormula, QE & done)
+  val normalizeBranch2 = anyArgify(Ax.normalizeBranch2.provable)
+  val normalizeBranch3 = anyArgify(Ax.normalizeBranch3.provable)
 
-  val reassocRight0 = rememberAny((
-    "(" +
-      "t_() = l_() + r_() &" +
-      "r_() = 0   &" +
-      "l_() = ll_()" +
-      ") ->" +
-      "t_() = ll_()").asFormula, QE & done)
-  val reassocRightPlus = rememberAny((
-    "(" +
-      "t_() = l_() + r_() &" +
-      "r_() = rs_() + rr_() &" +
-      "l_() + rs_() = lrs_()" +
-      ") ->" +
-      "t_() = lrs_() + rr_()").asFormula, QE & done)
-  val reassocLeft0RightConst = rememberAny((
-    "(" +
-      "t_() = l_() + r_() &" +
-      "r_() = c_() &" +
-      "l_() = 0" +
-      ") ->" +
-      "t_() = c_()").asFormula, QE & done)
-  val reassocRightConst = rememberAny((
-    "(" +
-      "t_() = l_() + r_() &" +
-      "r_() = c_() &" +
-      "l_() = ll_()" +
-      ") ->" +
-      "t_() = ll_() + c_()").asFormula, QE & done)
+  val reassocRight0 = anyArgify(Ax.reassocRight0.provable)
+  val reassocRightPlus = anyArgify(Ax.reassocRightPlus.provable)
+  val reassocLeft0RightConst = anyArgify(Ax.reassocLeft0RightConst.provable)
+  val reassocRightConst = anyArgify(Ax.reassocRightConst.provable)
 
   // lemmas to prove equality
-  val equalityBySubtraction = rememberAny("t_() - s_() = 0 -> t_() = s_()".asFormula, QE & done)
+  val equalityBySubtraction = anyArgify(Ax.equalityBySubtraction.provable)
 
   // Lemmas for partition
-  val partition2 = rememberAny(("(t_() = r_() & t1_() = r1_() & t2_() = r2_() & t_() - t1_() - t2_() = 0) -> t_() = t1_() + t2_()".asFormula),
-    QE & done)
+  val partition2 = anyArgify(Ax.partition2.provable)
 
   // Lemmas for splitting coefficients
   @inline
@@ -1010,19 +906,11 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   def splitCoefficientNumericCondition(n: Term, d: Term, n1: Term, d1: Term, n2: Term, d2: Term) =
     And(Equal(Times(Times(n, d1), d2), Times(d, Plus(Times(d1, n2), Times(d2, n1)))), And(nz(d), And(nz(d1), nz(d2))))
 
-  val splitCoefficient = rememberAny(
-    Imply(And("c_() = n_()/d_()".asFormula,
-      Equiv(splitCoefficientNumericCondition("n_()".asTerm, "d_()".asTerm, "n1_()".asTerm, "d1_()".asTerm, "n2_()".asTerm, "d2_()".asTerm), True)),
-      "c_() = n1_()/d1_() + n2_()/d2_()".asFormula),
-    QE & done)
-  val splitMonomial = rememberAny("(c_() = c1_() + c2_() & m_() = c_() * x_()) -> m_() = c1_() * x_() + c2_() * x_()".asFormula, QE & done)
-  val splitEmpty  = rememberAny("t_() = 0 -> t_() = 0 + 0".asFormula, QE & done)
-  val splitBranch2  = rememberAny(("(t_() = l_() + v_() + r_() & l_() = l1_() + l2_() & v_() = v1_() + v2_() & r_() = r1_() + r2_())" +
-    "->" +
-    "t_() = (l1_() + v1_() + r1_()) + (l2_() + v2_() + r2_())").asFormula, QE & done)
-  val splitBranch3  = rememberAny(("(t_() = l_() + v1_() + m_() + v2_() + r_() & l_() = l1_() + l2_() & v1_() = v11_() + v12_() & m_() = m1_() + m2_() & v2_() = v21_() + v22_() & r_() = r1_() + r2_())" +
-    "->" +
-    "t_() = (l1_() + v11_() + m1_() + v21_() + r1_()) + (l2_() + v12_() + m2_() + v22_() + r2_())").asFormula, QE & done)
+  val splitCoefficient = anyArgify(Ax.splitCoefficient.provable)
+  val splitMonomial = anyArgify(Ax.splitMonomial.provable)
+  val splitEmpty  = anyArgify(Ax.splitEmpty .provable)
+  val splitBranch2  = anyArgify(Ax.splitBranch2 .provable)
+  val splitBranch3  = anyArgify(Ax.splitBranch3 .provable)
 
 
   /** drop parentheses of a sum of terms on the rhs of prv to the left, e.g.,
@@ -1705,8 +1593,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
-  lazy val varPowerLemma = rememberAny("v_()^n_() = 0 + 1 / 1 * (1 * v_()^n_()) + 0".asFormula, QE & done)
-  lazy val varLemma = rememberAny("v_() = 0 + 1 / 1 * (1 * v_()^1) + 0".asFormula, QE & done)
+  lazy val varPowerLemma = anyArgify(Ax.varPowerLemma.provable)
+  lazy val varLemma = anyArgify(Ax.varLemma.provable)
   def Var(term: Term) : TreePolynomial =
     Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, 1)), None), Empty(None),
       Some(varLemma(substAny("v_", term))))
@@ -1714,13 +1602,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, power)), None), Empty(None),
       Some(useDirectly(varPowerLemma, Seq(("v_", term), ("n_", Number(power))), Seq())))
 
-  lazy val constLemma = rememberAny(
-    Equal("n_()".asTerm, Seq(Number(0), Times(Divide(constR("n_"), Number(1)), Number(1)), Number(0)).reduceLeft(Plus)),
-    QE & done)
-  lazy val rationalLemma = rememberAny(
-    Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus)),
-    QE & done)
-
+  lazy val constLemma = anyArgify(Ax.constLemma.provable)
+  lazy val rationalLemma = anyArgify(Ax.rationalLemma.provable)
   def Const(num: BigDecimal, denom: BigDecimal) : TreePolynomial =
     Branch2(Empty(None), Monomial(Coefficient(num, denom, None), IndexedSeq(), None), Empty(None),
       Some(useDirectly(rationalLemma, Seq(("n_", Number(num)), ("d_", Number(denom))), Seq())))
