@@ -94,7 +94,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val z = ofTerm("z".asTerm)
     val p1 = 4*(x^4) + 1 + 3*(x^3) + 2*x
     val p2 = (x^2) + x + 2
-    val (quot, rem, prv) = divideAndRemainder(p1, p2)
+    val (quot, rem, prv) = p1.divideAndRemainder(p2)
     quot.term shouldBe "((-7)+-x+4*x^2)".asTerm
     rem.term shouldBe "15 + 11 * x".asTerm
     prv.conclusion.succ.loneElement shouldBe "4*x^4+1+3*x^3+2*x = ((-7)+-x+4*x^2)*(x^2+x+2)+(15+11*x)".asFormula
