@@ -271,13 +271,13 @@ trait SequentCalculus {
   val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
   /** all left: instantiate a universal quantifier for variable `x` in the antecedent by the concrete instance `inst`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
-  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e`. */
-  def allL(e: Term)              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, Some(e))(_: Position) }
-  /** all left: instantiate a universal quantifier in the antecedent by itself. */
-  //@todo annotation must be on def allL(e: Term), otherwise it won't be an input tactic. can make it e: Option[Term] to get behavior of val allL.
+  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
   @Tactic(premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
-  val allL                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allInstantiate(None, None)(pos)}
+  def allL(e: Option[Term])              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
+  def allL(e: Term)                      : DependentPositionTactic = allL(Some(e))
+  /** all left: instantiate a universal quantifier in the antecedent by itself. */
+  val allL                          : DependentPositionTactic = allL(None)
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   //@todo turn this into a more general function that obtains data from the sequent.
   def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
