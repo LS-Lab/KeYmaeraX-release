@@ -20,6 +20,147 @@ import edu.cmu.cs.ls.keymaerax.macros._
 import scala.collection.immutable._
 
 /**
+  * Polynomial Ring:
+  *
+  * - interface that describes [[Polynomial]]s and operations on them
+  * - constructors for Polynomials from constant numbers, variables, and recursively from terms
+  * */
+trait PolynomialRing {
+
+  /**
+    * Interface to [[Polynomial]]s:
+    * - a [[term]] that keeps track of how the polynomial was constructed
+    * - a proof for the internal [[representation]] of the polynomial
+    * - arithmetic
+    * - test for zero
+    * */
+  trait Polynomial {
+    val term: Term
+    // proof of "term = some internal representation"
+    def representation: ProvableSig
+    // proof of "term = some pretty representation"
+    def prettyRepresentation: ProvableSig
+    // resetTerm.term = some internal representation
+    def resetTerm : Polynomial
+    // resetRepresentation(newRepresentation).representation = newRepresentation
+    def resetRepresentation(newRepresentation: ProvableSig) : Polynomial
+    // prettyTerm.representation = prettyRepresentation
+    def prettyTerm : Polynomial
+
+    // result.term = term + other.term
+    def +(other: Polynomial) : Polynomial
+
+    // result.term = term - other.term
+    def -(other: Polynomial) : Polynomial
+
+    // result.term = term * other.term
+    def *(other: Polynomial) : Polynomial
+
+    // result.term = -term
+    def unary_- : Polynomial
+
+    // result.term = term ^ n
+    def ^(n: Int) : Polynomial
+
+    // result.term = term ^ other.term if other.term normalizes to an integer constant
+    def ^(other: Polynomial) : Polynomial
+
+    // result.term = term / other.term if other.term normalizes to a nonzero constant
+    def /(other: Polynomial) : Polynomial
+
+    // Some(proof of "term = other.term") by equating coefficients
+    def equate(other: Polynomial) : Option[ProvableSig]
+
+    // partition monomials (where (num, denom, (x_i, p_i)_(i)) represents num/denom*(x_1^p^1 * ... * x_n^p_n)
+    // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
+    //   where p1's monomials satisfy P and p2's monomials satisfy !P
+    def partition(P: (BigDecimal, BigDecimal, PowerProduct) => Boolean) : (Polynomial, Polynomial, ProvableSig)
+
+    // approx(prec) = (proof of "term = p1.term + p2.term", p1, p2)
+    //   where the coefficients p1 are rounded to (decimal) precision [[prec]]
+    def approx(prec: Int) : (ProvableSig, Polynomial, Polynomial)
+
+    // degree with respect to the variables for which "include" is true
+    def degree(include: Term=>Boolean = _ => true) : Int
+
+    // coefficient (numerator, denominator) of monomial (x_i, p_i)_(i) x_i^p_i:
+    def coefficient(powerProduct: PowerProduct) : (BigDecimal, BigDecimal)
+
+    // Some(proof of "term = 0") or None
+    def zeroTest : Option[ProvableSig]
+
+    // proof of "poly.term = horner form"
+    def hornerForm(variableOrder: Option[List[Term]] = None) : ProvableSig
+
+    // quotient and remainder:
+    // divideAndRemainder(other) = ((pretty)quot, (pretty)rem, proof of "term = quot.term * other.term + rem.term")
+    def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig)
+
+  }
+
+  trait PowerProduct {
+    def sparse : Seq[(Term, Int)]
+    val degree : Int
+  }
+  def ofSparse(seq: Seq[(Term, Int)]) : PowerProduct
+  def ofSparse(seq: (Term, Int)*) : PowerProduct
+
+  // result.term = n
+  def Const(n: BigDecimal) : Polynomial
+
+  // result.term = num/denom
+  def Const(num: BigDecimal, denom: BigDecimal) : Polynomial
+
+  // result.term = t ^ n
+  def Var(t: Term, n: Int) : Polynomial
+
+  // result.term = t
+  def Var(t: Term) : Polynomial
+
+  // result.term = t
+  def ofTerm(t: Term) : Polynomial = t match {
+    case Plus(a, b)  => ofTerm(a) + ofTerm(b)
+    case Minus(a, b) => ofTerm(a) - ofTerm(b)
+    case Times(a, b) => ofTerm(a) * ofTerm(b)
+    case Neg(a)      => -ofTerm(a)
+    case Power(a, Number(i)) if i.isValidInt && i >= 0 => ofTerm(a) ^ i.toIntExact
+    case Power(a, b) => ofTerm(a) ^ ofTerm(b)
+    case Divide(a, b) => ofTerm(a) / ofTerm(b)
+    case Number(n) => Const(n)
+    case term: Term => Var(term)
+  }
+
+  // subterms that are interpreted as variables
+  def symbols(t: Term) : Seq[Term] = t match {
+    case Plus(a, b)  => symbols(a) ++ symbols(b)
+    case Minus(a, b) => symbols(a) ++ symbols(b)
+    case Times(a, b) => symbols(a) ++ symbols(b)
+    case Neg(a)      => symbols(a)
+    case Power(a, Number(i)) if i.isValidInt && i >= 0 => symbols(a)
+    case Power(a, b) => symbols(a) ++ symbols(b)
+    case Divide(a, b) => symbols(a) ++ symbols(b)
+    case Number(n) => Seq()
+    case term: Term => Seq(term)
+  }
+
+  implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
+
+  // Prove "t1 = t2" by equating coefficients
+  def equate(t1: Term, t2: Term) : Option[ProvableSig]
+
+  // Prove an equality by equating coefficients
+  val equate : DependentPositionTactic
+
+  // distributive normal form
+  def normalize(term: Term) : ProvableSig
+
+  // normalizeAt "term" rewrites polynomial term to distributive normal form
+  // normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
+  val normalizeAt : DependentPositionTactic
+
+}
+
+/**
   * Polynomial Arithmetic.
   *
   * Computations are carried out fairly efficiently in a distributive representation.
@@ -30,135 +171,36 @@ import scala.collection.immutable._
   *
   * @author Fabian Immler
   */
-object PolynomialArithV2 {
+object PolynomialArithV2 extends TwoThreeTreePolynomialRing(
+  MonomialOrders.variableConstantOrdering,
+  MonomialOrders.grevlex(MonomialOrders.variableConstantOrdering)) {
 
-  /**
-    * Polynomial Ring:
-    *
-    * - interface that describes [[Polynomial]]s and operations on them
-    * - constructors for Polynomials from constant numbers, variables, and recursively from terms
-    * */
-  trait PolynomialRing {
+  /** constructor for given variable and monomial orderings */
+  def PolynomialRing(variableOrdering: Ordering[Term],
+                     monomialOrdering: Ordering[IndexedSeq[(Term, Int)]]): PolynomialRing =
+    TwoThreeTreePolynomialRing(variableOrdering, monomialOrdering)
 
-    /**
-      * Interface to [[Polynomial]]s:
-      * - a [[term]] that keeps track of how the polynomial was constructed
-      * - a proof for the internal [[representation]] of the polynomial
-      * - arithmetic
-      * - test for zero
-      * */
-    trait Polynomial {
-      val term: Term
-      // proof of "term = some internal representation"
-      def representation: ProvableSig
-      // proof of "term = some pretty representation"
-      def prettyRepresentation: ProvableSig
-      // resetTerm.term = some internal representation
-      def resetTerm : Polynomial
-      // resetRepresentation(newRepresentation).representation = newRepresentation
-      def resetRepresentation(newRepresentation: ProvableSig) : Polynomial
-      // prettyTerm.representation = prettyRepresentation
-      def prettyTerm : Polynomial
+  /** report operations not supported by polynomial arithmetic in computations */
+  trait NonSupportedOperationException extends IllegalArgumentException
+  final case class NonSupportedExponentException(message: String)
+    extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
+  final case class NonSupportedDivisorException(message: String)
+    extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
 
-      // result.term = term + other.term
-      def +(other: Polynomial) : Polynomial
-
-      // result.term = term - other.term
-      def -(other: Polynomial) : Polynomial
-
-      // result.term = term * other.term
-      def *(other: Polynomial) : Polynomial
-
-      // result.term = -term
-      def unary_- : Polynomial
-
-      // result.term = term ^ n
-      def ^(n: Int) : Polynomial
-
-      // result.term = term ^ other.term if other.term normalizes to an integer constant
-      def ^(other: Polynomial) : Polynomial
-
-      // result.term = term / other.term if other.term normalizes to a nonzero constant
-      def /(other: Polynomial) : Polynomial
-
-      // Some(proof of "term = other.term") by equating coefficients
-      def equate(other: Polynomial) : Option[ProvableSig]
-
-      // partition monomials (where (num, denom, (x_i, p_i)_(i)) represents num/denom*(x_1^p^1 * ... * x_n^p_n)
-      // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
-      //   where p1's monomials satisfy P and p2's monomials satisfy !P
-      def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
-
-      // approx(prec) = (proof of "term = p1.term + p2.term", p1, p2)
-      //   where the coefficients p1 are rounded to (decimal) precision [[prec]]
-      def approx(prec: Int) : (ProvableSig, Polynomial, Polynomial)
-
-      // degree with respect to the variables for which "include" is true
-      def degree(include: Term=>Boolean = _ => true) : Int
-
-      // coefficient (numerator, denominator) of monomial (x_i, p_i)_(i) x_i^p_i:
-      def coefficient(monomial: Seq[(Term, Int)]) : (BigDecimal, BigDecimal)
-
-      // Some(proof of "term = 0") or None
-      def zeroTest : Option[ProvableSig]
-
-      // proof of "poly.term = horner form"
-      def hornerForm(variableOrder: Option[List[Term]] = None) : ProvableSig
-
-      // quotient and remainder:
-      // divideAndRemainder(other) = ((pretty)quot, (pretty)rem, proof of "term = quot.term * other.term + rem.term")
-      def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig)
-
+  /** report operations not supported by polynomial arithmetic in tactics */
+  final case class NonSupportedOperationInapplicability(cause: NonSupportedOperationException)
+    extends TacticInapplicableFailure("Tactic inapplicable because of an operation that is not supported by polynomial arithmetic.", cause)
+  def reportBelleThrowables[R](block: => R) =
+    try {
+      block
+    } catch {
+      case nonSupportedOperationException: NonSupportedOperationException =>
+        throw NonSupportedOperationInapplicability(nonSupportedOperationException)
     }
 
-    // result.term = n
-    def Const(n: BigDecimal) : Polynomial
+}
 
-    // result.term = num/denom
-    def Const(num: BigDecimal, denom: BigDecimal) : Polynomial
-
-    // result.term = t ^ n
-    def Var(t: Term, n: Int) : Polynomial
-
-    // result.term = t
-    def Var(t: Term) : Polynomial
-
-    // result.term = t
-    def ofTerm(t: Term) : Polynomial = t match {
-      case Plus(a, b)  => ofTerm(a) + ofTerm(b)
-      case Minus(a, b) => ofTerm(a) - ofTerm(b)
-      case Times(a, b) => ofTerm(a) * ofTerm(b)
-      case Neg(a)      => -ofTerm(a)
-      case Power(a, Number(i)) if i.isValidInt && i >= 0 => ofTerm(a) ^ i.toIntExact
-      case Power(a, b) => ofTerm(a) ^ ofTerm(b)
-      case Divide(a, b) => ofTerm(a) / ofTerm(b)
-      case Number(n) => Const(n)
-      case term: Term => Var(term)
-    }
-
-    // subterms that are interpreted as variables
-    def symbols(t: Term) : Seq[Term] = t match {
-      case Plus(a, b)  => symbols(a) ++ symbols(b)
-      case Minus(a, b) => symbols(a) ++ symbols(b)
-      case Times(a, b) => symbols(a) ++ symbols(b)
-      case Neg(a)      => symbols(a)
-      case Power(a, Number(i)) if i.isValidInt && i >= 0 => symbols(a)
-      case Power(a, b) => symbols(a) ++ symbols(b)
-      case Divide(a, b) => symbols(a) ++ symbols(b)
-      case Number(n) => Seq()
-      case term: Term => Seq(term)
-    }
-
-    implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
-
-  }
-
-  def denseVariableOrdering(variables: IndexedSeq[Term]): Ordering[Term] =
-    new Ordering[Term] {
-      private val lookup = variables.zipWithIndex.toMap
-      def compare(x: Term, y: Term): Int = lookup(x).compareTo(lookup(y))
-    }
-
+object MonomialOrders {
   val variableConstantOrdering: Ordering[Term] = Ordering.by{
     case BaseVariable(n, i, Real) => (0, n, i)
     case FuncOf(Function(n, i, Unit, Real, false), Nothing) => (1, n, i)
@@ -228,70 +270,6 @@ object PolynomialArithV2 {
         case 0 => compareAt(lx - 1, ly - 1)
         case c => c
       }
-    }
-  }
-
-  /** default polynomial ring implementation */
-  val ring : PolynomialRing = TwoThreeTreePolynomialRing(variableConstantOrdering, revlex(variableConstantOrdering))
-
-  /** constructor for given variable and monomial orderings */
-  def PolynomialRing(variableOrdering: Ordering[Term],
-                     monomialOrdering: Ordering[IndexedSeq[(Term, Int)]]): PolynomialRing =
-    TwoThreeTreePolynomialRing(variableOrdering, monomialOrdering)
-
-  /** Prove "t1 = t2" by equating coefficients */
-  def equate(t1: Term, t2: Term) : Option[ProvableSig] = ring.ofTerm(t1).equate(ring.ofTerm(t2))
-
-  /** report operations not supported by polynomial arithmetic in computations */
-  trait NonSupportedOperationException extends IllegalArgumentException
-  final case class NonSupportedExponentException(message: String)
-    extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
-  final case class NonSupportedDivisorException(message: String)
-    extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
-
-  /** report operations not supported by polynomial arithmetic in tactics */
-  final case class NonSupportedOperationInapplicability(cause: NonSupportedOperationException)
-    extends TacticInapplicableFailure("Tactic inapplicable because of an operation that is not supported by polynomial arithmetic.", cause)
-  def reportBelleThrowables[R](block: => R) =
-    try {
-      block
-    } catch {
-      case nonSupportedOperationException: NonSupportedOperationException =>
-        throw NonSupportedOperationInapplicability(nonSupportedOperationException)
-    }
-
-  /** Prove an equality by equating coefficients */
-  val equate : DependentPositionTactic = "equate" by { (pos: Position, seq: Sequent) =>
-    pos.checkTop
-    pos.checkSucc
-    seq.sub(pos) match {
-      case Some(Equal(t1, t2)) =>
-        reportBelleThrowables{ equate(t1, t2) } match {
-          case None => throw new TacticInapplicableFailure("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
-          case Some(prv) => cohideR(pos) & by(prv)
-        }
-      case Some(e) => throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-    }
-  }
-
-  /** distributive normal form */
-  def normalize(term: Term) : ProvableSig = ring.ofTerm(term).prettyRepresentation
-
-  /** normalizeAt "term" rewrites polynomial term to distributive normal form
-    * normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
-    * */
-  private val eqNormalize = Ax.eqNormalize.provable
-  val normalizeAt : DependentPositionTactic = "normalizeAt" by { (pos: Position, seq: Sequent) =>
-    seq.sub(pos) match {
-      case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
-        useAt(reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
-      case Some(Equal(s, t)) =>
-        useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
-      case Some(t: Term) =>
-        useAt(reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos)
-      case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
   }
 
@@ -394,7 +372,7 @@ object PolynomialArithV2Helpers {
 *
 */
 case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
-                                      monomialOrdering: Ordering[IndexedSeq[(Term, Int)]]) extends PolynomialArithV2.PolynomialRing {
+                                      monomialOrdering: Ordering[IndexedSeq[(Term, Int)]]) extends PolynomialRing {
   import PolynomialArithV2Helpers._
   val constL = constR("l_")
   val constR_ = constR("r_")
@@ -582,11 +560,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     * rhs: representation of `coeff*powers.map(^)`
     *
     * */
-  case class Monomial(coeff: Coefficient, powers: IndexedSeq[(Term, Int)], prvO: Option[ProvableSig] = None) {
-    assert(powers.map(_._1).sorted(variableOrdering) == powers.map(_._1))
-    assert(powers.map(_._1).distinct == powers.map(_._1))
-    assert(powers.forall(_._2 > 0))
-
+  case class Monomial(coeff: Coefficient, powerProduct: SparsePowerProduct, prvO: Option[ProvableSig] = None) {
+    val powers = powerProduct.sparse.toIndexedSeq
     lazy val powersTerm: Term = powers.map{case (v, i) => Power(v, Number(i))}.foldLeft(Number(1): Term)(Times)
 
     def monomialTerm(coeff: Term): Term = Times(coeff, powersTerm)
@@ -601,7 +576,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     lazy val defaultPrv = equalReflex(monomialTerm(coeff.rhs))
 
-    def forgetPrv = Monomial(coeff, powers, Some(defaultPrv))
+    def forgetPrv = Monomial(coeff, powerProduct, Some(defaultPrv))
 
     // @note detour for "dependent" default argument
     val prv = prvO.getOrElse(defaultPrv)
@@ -702,14 +677,14 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       )
       val monomialTimesLemmaInst = monomialTimesLemma(substOfInst(inst))
       val newPrv = impliesElim(monomialTimesLemmaInst, Seq(prv, that.prv, newCoeff.prv, newPowersPrv))
-      Monomial(newCoeff, newPowers, Some(newPrv))
+      Monomial(newCoeff, wfPowerProduct(newPowers), Some(newPrv))
     }
 
     def unary_- : Monomial = {
       val newCoeff = -(coeff.forgetPrv)
       val newPrv = useDirectly(negTimes, Seq(("l_", lhs), ("a_", coeff.rhs), ("b_", rhs.right), ("c_", newCoeff.rhs)),
         Seq(prv, newCoeff.prv))
-      Monomial(newCoeff, powers, Some(newPrv))
+      Monomial(newCoeff, powerProduct, Some(newPrv))
     }
 
     // TODO: weird signature for addition...
@@ -718,7 +693,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
       val inst = Seq(("l_", lhs), ("r_", that.lhs), ("a_", coeff.rhs), ("b_", rhs.right), ("c_", that.coeff.rhs), ("d_", newCoeff.rhs))
       val newPrv = useDirectly(plusTimes, inst, Seq(prv, that.prv, newCoeff.prv))
-      Monomial(newCoeff, powers, Some(newPrv))
+      Monomial(newCoeff, powerProduct, Some(newPrv))
     } else None
 
     def normalizePowers(c: Coefficient, t: Term): (ProvableSig, Term) = t match {
@@ -790,7 +765,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     def approx(prec: Int) : (ProvableSig, Monomial, Monomial) = {
       val (cPrv, c1, c2) = coeff.forgetPrv.approx(prec)
       (useDirectly(splitMonomial, Seq(("c_", coeff.rhs), ("x_", powersTerm), ("c1_", c1.rhs), ("c2_", c2.rhs), ("m_", lhs)),
-        Seq(cPrv, prv)), Monomial(c1, powers), Monomial(c2, powers))
+        Seq(cPrv, prv)), Monomial(c1, powerProduct), Monomial(c2, powerProduct))
     }
 
     def isConstant = powers.forall{case (t, i) => i == 0 } || coeff.num.compare(0) == 0
@@ -1516,8 +1491,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     def ofMonomials(monomials: Seq[Monomial]): TreePolynomial = monomials.foldLeft[TreePolynomial](Empty(None))(_ + _)
 
-    def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
-      def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denom, m.powers)
+    def partition(P: (BigDecimal, BigDecimal, PowerProduct) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
+      def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denom, m.powerProduct)
       val (pos, neg) = partitionMonomials(PMonomial)(Seq(), Seq())
       val p1 = ofMonomials(pos)
       val p2 = ofMonomials(neg)
@@ -1561,8 +1536,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           Branch3(l2, v12, m2, v22, r2, None))
     }
 
-    override def coefficient(monomial: Seq[(Term, Int)]): (BigDecimal, BigDecimal) = {
-      lookup(monomial.toIndexedSeq) match {
+    override def coefficient(powerProduct: PowerProduct): (BigDecimal, BigDecimal) = {
+      lookup(powerProduct.sparse.toIndexedSeq) match {
         case None => (0, 1)
         case Some(v) => (v.coeff.num, v.coeff.denom)
       }
@@ -1576,7 +1551,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       equate(ofTerm(horner)).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
     }
 
-    override def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig) = {
+    override def divideAndRemainder(other: Polynomial, pretty: Boolean = false) : (Polynomial, Polynomial, ProvableSig) = {
       val rep1 = PolynomialArithV2Helpers.rhsOf(representation)
       val rep2 = PolynomialArithV2Helpers.rhsOf(other.representation)
       val ringsLibrary = new RingsLibrary(Traversable(rep1, rep2))
@@ -1593,21 +1568,38 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
+  // invariants: sorted w.r.t. variable ordering, no zero exponents
+  case class SparsePowerProduct(sparse : Seq[(Term, Int)]) extends PowerProduct {
+    assert(sparse.map(_._1).sorted(variableOrdering) == sparse.map(_._1))
+    assert(sparse.map(_._1).distinct == sparse.map(_._1))
+    assert(sparse.forall(_._2 > 0))
+    val degree = sparse.map(_._2).sum
+  }
+  def ofSparse(seq: Seq[(Term, Int)]) : SparsePowerProduct = {
+    require(seq.forall(_._2 >= 0), "SparsePowerProduct: nonnegative exponents only")
+    require(seq.map(_._1).distinct == seq.map(_._1), "SparsePowerProduct: variables must be unique")
+    SparsePowerProduct(seq.filter(_._2 > 0).sortBy(_._1)(variableOrdering))
+  }
+  def ofSparse(powers: (Term, Int)*) : SparsePowerProduct = ofSparse(powers.toIndexedSeq)
+
+  /** trust that wellformedness (wf) properties of [[SparsePowerProduct]] are maintained */
+  private def wfPowerProduct(seq: Seq[(Term, Int)]) = SparsePowerProduct(seq)
+
   val varPowerLemma = anyArgify(Ax.varPowerLemma.provable)
   val varLemma = anyArgify(Ax.varLemma.provable)
   def Var(term: Term) : TreePolynomial =
-    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, 1)), None), Empty(None),
+    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), wfPowerProduct(Seq((term, 1))), None), Empty(None),
       Some(varLemma(substAny("v_", term))))
   def Var(term: Term, power: Int) : TreePolynomial =
-    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, power)), None), Empty(None),
+    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), wfPowerProduct(Seq((term, power))), None), Empty(None),
       Some(useDirectly(varPowerLemma, Seq(("v_", term), ("n_", Number(power))), Seq())))
 
   val constLemma = anyArgify(Ax.constLemma.provable)
   val rationalLemma = anyArgify(Ax.rationalLemma.provable)
   def Const(num: BigDecimal, denom: BigDecimal) : TreePolynomial =
-    Branch2(Empty(None), Monomial(Coefficient(num, denom, None), IndexedSeq(), None), Empty(None),
+    Branch2(Empty(None), Monomial(Coefficient(num, denom, None), wfPowerProduct(Seq()), None), Empty(None),
       Some(useDirectly(rationalLemma, Seq(("n_", Number(num)), ("d_", Number(denom))), Seq())))
-  def Const(num: BigDecimal) : TreePolynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), IndexedSeq(), None), Empty(None),
+  def Const(num: BigDecimal) : TreePolynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), wfPowerProduct(IndexedSeq()), None), Empty(None),
     Some(constLemma(substAny("n_", Number(num)))))
 
   lazy val One : TreePolynomial = Const(1)
@@ -1651,6 +1643,40 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       Branch3(left, value1, mid, value2, right, Some(prv))
     }
 
+  }
+
+  def equate(t1: Term, t2: Term) : Option[ProvableSig] = ofTerm(t1).equate(ofTerm(t2))
+
+  val equate: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    pos.checkTop
+    pos.checkSucc
+    seq.sub(pos) match {
+      case Some(Equal(t1, t2)) =>
+        PolynomialArithV2.reportBelleThrowables {
+          equate(t1, t2)
+        } match {
+          case None => throw new TacticInapplicableFailure("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
+          case Some(prv) => cohideR(pos) & by(prv)
+        }
+      case Some(e) => throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+  }
+
+  def normalize(term: Term) : ProvableSig = ofTerm(term).prettyRepresentation
+
+  private val eqNormalize = Ax.eqNormalize.provable
+  val normalizeAt : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    seq.sub(pos) match {
+      case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
+        useAt(PolynomialArithV2.reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
+      case Some(Equal(s, t)) =>
+        useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
+      case Some(t: Term) =>
+        useAt(PolynomialArithV2.reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos)
+      case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
   }
 
 }
