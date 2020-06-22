@@ -124,7 +124,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   object PA4 {
     import ring23._
     def DenseVar(x: Int, i: Int) : TreePolynomial = ring23.Var(pa4Vars(x), i)
-    def DenseSeq(xs: Int*) : IndexedSeq[(Term, Int)] = xs.zipWithIndex.map{case (i, x) => (pa4Vars(x), i)}.filter(_._2>0).toIndexedSeq
+    def DenseSeq(xs: Int*) : SparsePowerProduct = ofSparse(xs.zipWithIndex.map{case (i, x) => (pa4Vars(x), i)}.filter(_._2>0).toIndexedSeq)
     val x = pa4Vars(0)
     val y = pa4Vars(1)
     val f = pa4Vars(2)
@@ -188,8 +188,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val z = "z".asTerm
     val pa = ring23
     val c = pa.Coefficient(1, 1)
-    val m1 = pa.Monomial(c, IndexedSeq((x, 2), (y, 1), (z, 3)))
-    val m2 = pa.Monomial(c, IndexedSeq((y, 1)))
+    val m1 = pa.Monomial(c, pa.ofSparse((x, 2), (y, 1), (z, 3)))
+    val m2 = pa.Monomial(c, pa.ofSparse((y, 1)))
     val res1 = m1.timesPowers(IndexedSeq((y, 1)))
     val res2 = m1.timesPowers(IndexedSeq((x, 1), (z, 1)))
     val res3 = m2.timesPowers(IndexedSeq((z, 1)))
@@ -398,7 +398,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     import PolynomialArithV2Helpers._
     val t = "2*x + 3*x*y + 4*y^2 + 2*x^2 + x^2*y^2 + x^3 + 4*x^4".asTerm
     val poly = ofTerm(t)
-    val (pos, neg, prv) = poly.partition{(_, _, powers) => powers.map(_._2).sum<=2 && !powers.map(_._1).contains(PA4.y)}
+    val (pos, neg, prv) = poly.partition{(_, _, powers) => powers.degree <=2 && !powers.sparse.map(_._1).contains(PA4.y)}
     rhsOf(pos.prettyRepresentation) shouldBe "2*x+2*x^2".asTerm
     rhsOf(neg.prettyRepresentation) shouldBe "4*y^2+3*x*y+x^3+x^2*y^2+4*x^4".asTerm
     lhsOf(prv) shouldBe t
@@ -420,14 +420,14 @@ class PolynomialArithV2Tests extends TacticTestBase {
   it should "coefficient" in withMathematica { _ =>
     import ring23._
     val poly = ofTerm("2*x + 3*x*y + 4/3*y^2 + 0*x^2 + 42".asTerm)
-    poly.coefficient(Seq(("x".asTerm, 1))) shouldBe (2, 1)
-    poly.coefficient(Seq(("x".asTerm, 1), ("y".asTerm, 0))) shouldBe (2, 1)
-    poly.coefficient(Seq(("x".asTerm, 1), ("y".asTerm, 1))) shouldBe (3, 1)
-    poly.coefficient(Seq(("x".asTerm, 1), ("z".asTerm, 0))) shouldBe (2, 1)
-    poly.coefficient(Seq(("z".asTerm, 1))) shouldBe (0, 1)
-    poly.coefficient(Seq(("x".asTerm, 2))) shouldBe (0, 1)
-    poly.coefficient(Seq(("y".asTerm, 2))) shouldBe (4, 3)
-    poly.coefficient(Seq()) shouldBe (42, 1)
+    poly.coefficient(ofSparse(("x".asTerm, 1))) shouldBe (2, 1)
+    poly.coefficient(ofSparse(("x".asTerm, 1), ("y".asTerm, 0))) shouldBe (2, 1)
+    poly.coefficient(ofSparse(("x".asTerm, 1), ("y".asTerm, 1))) shouldBe (3, 1)
+    poly.coefficient(ofSparse(("x".asTerm, 1), ("z".asTerm, 0))) shouldBe (2, 1)
+    poly.coefficient(ofSparse(("z".asTerm, 1))) shouldBe (0, 1)
+    poly.coefficient(ofSparse(("x".asTerm, 2))) shouldBe (0, 1)
+    poly.coefficient(ofSparse(("y".asTerm, 2))) shouldBe (4, 3)
+    poly.coefficient(ofSparse()) shouldBe (42, 1)
   }
 
   "Normalization" should "normalize Coefficients" in withMathematica { _ =>

@@ -87,7 +87,7 @@ object PolynomialArithV2 {
       // partition monomials (where (num, denom, (x_i, p_i)_(i)) represents num/denom*(x_1^p^1 * ... * x_n^p_n)
       // partition(P) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where p1's monomials satisfy P and p2's monomials satisfy !P
-      def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean) : (Polynomial, Polynomial, ProvableSig)
+      def partition(P: (BigDecimal, BigDecimal, PowerProduct) => Boolean) : (Polynomial, Polynomial, ProvableSig)
 
       // approx(prec) = (proof of "term = p1.term + p2.term", p1, p2)
       //   where the coefficients p1 are rounded to (decimal) precision [[prec]]
@@ -97,7 +97,7 @@ object PolynomialArithV2 {
       def degree(include: Term=>Boolean = _ => true) : Int
 
       // coefficient (numerator, denominator) of monomial (x_i, p_i)_(i) x_i^p_i:
-      def coefficient(monomial: Seq[(Term, Int)]) : (BigDecimal, BigDecimal)
+      def coefficient(powerProduct: PowerProduct) : (BigDecimal, BigDecimal)
 
       // Some(proof of "term = 0") or None
       def zeroTest : Option[ProvableSig]
@@ -110,6 +110,13 @@ object PolynomialArithV2 {
       def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig)
 
     }
+
+    trait PowerProduct {
+      def sparse : Seq[(Term, Int)]
+      val degree : Int
+    }
+    def ofSparse(seq: Seq[(Term, Int)]) : PowerProduct
+    def ofSparse(seq: (Term, Int)*) : PowerProduct
 
     // result.term = n
     def Const(n: BigDecimal) : Polynomial
@@ -551,11 +558,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     * rhs: representation of `coeff*powers.map(^)`
     *
     * */
-  case class Monomial(coeff: Coefficient, powers: IndexedSeq[(Term, Int)], prvO: Option[ProvableSig] = None) {
-    assert(powers.map(_._1).sorted(variableOrdering) == powers.map(_._1))
-    assert(powers.map(_._1).distinct == powers.map(_._1))
-    assert(powers.forall(_._2 > 0))
-
+  case class Monomial(coeff: Coefficient, powerProduct: SparsePowerProduct, prvO: Option[ProvableSig] = None) {
+    val powers = powerProduct.sparse.toIndexedSeq
     lazy val powersTerm: Term = powers.map{case (v, i) => Power(v, Number(i))}.foldLeft(Number(1): Term)(Times)
 
     def monomialTerm(coeff: Term): Term = Times(coeff, powersTerm)
@@ -570,7 +574,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     lazy val defaultPrv = equalReflex(monomialTerm(coeff.rhs))
 
-    def forgetPrv = Monomial(coeff, powers, Some(defaultPrv))
+    def forgetPrv = Monomial(coeff, powerProduct, Some(defaultPrv))
 
     // @note detour for "dependent" default argument
     val prv = prvO.getOrElse(defaultPrv)
@@ -671,14 +675,14 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       )
       val monomialTimesLemmaInst = monomialTimesLemma(substOfInst(inst))
       val newPrv = impliesElim(monomialTimesLemmaInst, Seq(prv, that.prv, newCoeff.prv, newPowersPrv))
-      Monomial(newCoeff, newPowers, Some(newPrv))
+      Monomial(newCoeff, wfPowerProduct(newPowers), Some(newPrv))
     }
 
     def unary_- : Monomial = {
       val newCoeff = -(coeff.forgetPrv)
       val newPrv = useDirectly(negTimes, Seq(("l_", lhs), ("a_", coeff.rhs), ("b_", rhs.right), ("c_", newCoeff.rhs)),
         Seq(prv, newCoeff.prv))
-      Monomial(newCoeff, powers, Some(newPrv))
+      Monomial(newCoeff, powerProduct, Some(newPrv))
     }
 
     // TODO: weird signature for addition...
@@ -687,7 +691,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
       val inst = Seq(("l_", lhs), ("r_", that.lhs), ("a_", coeff.rhs), ("b_", rhs.right), ("c_", that.coeff.rhs), ("d_", newCoeff.rhs))
       val newPrv = useDirectly(plusTimes, inst, Seq(prv, that.prv, newCoeff.prv))
-      Monomial(newCoeff, powers, Some(newPrv))
+      Monomial(newCoeff, powerProduct, Some(newPrv))
     } else None
 
     def normalizePowers(c: Coefficient, t: Term): (ProvableSig, Term) = t match {
@@ -759,7 +763,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     def approx(prec: Int) : (ProvableSig, Monomial, Monomial) = {
       val (cPrv, c1, c2) = coeff.forgetPrv.approx(prec)
       (useDirectly(splitMonomial, Seq(("c_", coeff.rhs), ("x_", powersTerm), ("c1_", c1.rhs), ("c2_", c2.rhs), ("m_", lhs)),
-        Seq(cPrv, prv)), Monomial(c1, powers), Monomial(c2, powers))
+        Seq(cPrv, prv)), Monomial(c1, powerProduct), Monomial(c2, powerProduct))
     }
 
     def isConstant = powers.forall{case (t, i) => i == 0 } || coeff.num.compare(0) == 0
@@ -1485,8 +1489,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
     def ofMonomials(monomials: Seq[Monomial]): TreePolynomial = monomials.foldLeft[TreePolynomial](Empty(None))(_ + _)
 
-    def partition(P: (BigDecimal, BigDecimal, Seq[(Term, Int)]) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
-      def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denom, m.powers)
+    def partition(P: (BigDecimal, BigDecimal, PowerProduct) => Boolean): (Polynomial, Polynomial, ProvableSig) = {
+      def PMonomial(m: Monomial) : Boolean = P(m.coeff.num, m.coeff.denom, m.powerProduct)
       val (pos, neg) = partitionMonomials(PMonomial)(Seq(), Seq())
       val p1 = ofMonomials(pos)
       val p2 = ofMonomials(neg)
@@ -1530,8 +1534,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
           Branch3(l2, v12, m2, v22, r2, None))
     }
 
-    override def coefficient(monomial: Seq[(Term, Int)]): (BigDecimal, BigDecimal) = {
-      lookup(monomial.toIndexedSeq) match {
+    override def coefficient(powerProduct: PowerProduct): (BigDecimal, BigDecimal) = {
+      lookup(powerProduct.sparse.toIndexedSeq) match {
         case None => (0, 1)
         case Some(v) => (v.coeff.num, v.coeff.denom)
       }
@@ -1562,21 +1566,38 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   }
 
+  // invariants: sorted w.r.t. variable ordering, no zero exponents
+  case class SparsePowerProduct(sparse : Seq[(Term, Int)]) extends PowerProduct {
+    assert(sparse.map(_._1).sorted(variableOrdering) == sparse.map(_._1))
+    assert(sparse.map(_._1).distinct == sparse.map(_._1))
+    assert(sparse.forall(_._2 > 0))
+    val degree = sparse.map(_._2).sum
+  }
+  def ofSparse(seq: Seq[(Term, Int)]) : SparsePowerProduct = {
+    require(seq.forall(_._2 >= 0), "SparsePowerProduct: nonnegative exponents only")
+    require(seq.map(_._1).distinct == seq.map(_._1), "SparsePowerProduct: variables must be unique")
+    SparsePowerProduct(seq.filter(_._2 > 0).sortBy(_._1)(variableOrdering))
+  }
+  def ofSparse(powers: (Term, Int)*) : SparsePowerProduct = ofSparse(powers.toIndexedSeq)
+
+  /** trust that wellformedness (wf) properties of [[SparsePowerProduct]] are maintained */
+  private def wfPowerProduct(seq: Seq[(Term, Int)]) = SparsePowerProduct(seq)
+
   val varPowerLemma = anyArgify(Ax.varPowerLemma.provable)
   val varLemma = anyArgify(Ax.varLemma.provable)
   def Var(term: Term) : TreePolynomial =
-    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, 1)), None), Empty(None),
+    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), wfPowerProduct(Seq((term, 1))), None), Empty(None),
       Some(varLemma(substAny("v_", term))))
   def Var(term: Term, power: Int) : TreePolynomial =
-    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), IndexedSeq((term, power)), None), Empty(None),
+    Branch2(Empty(None), Monomial(Coefficient(1, 1, None), wfPowerProduct(Seq((term, power))), None), Empty(None),
       Some(useDirectly(varPowerLemma, Seq(("v_", term), ("n_", Number(power))), Seq())))
 
   val constLemma = anyArgify(Ax.constLemma.provable)
   val rationalLemma = anyArgify(Ax.rationalLemma.provable)
   def Const(num: BigDecimal, denom: BigDecimal) : TreePolynomial =
-    Branch2(Empty(None), Monomial(Coefficient(num, denom, None), IndexedSeq(), None), Empty(None),
+    Branch2(Empty(None), Monomial(Coefficient(num, denom, None), wfPowerProduct(Seq()), None), Empty(None),
       Some(useDirectly(rationalLemma, Seq(("n_", Number(num)), ("d_", Number(denom))), Seq())))
-  def Const(num: BigDecimal) : TreePolynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), IndexedSeq(), None), Empty(None),
+  def Const(num: BigDecimal) : TreePolynomial = Branch2(Empty(None), Monomial(Coefficient(num, 1, None), wfPowerProduct(IndexedSeq()), None), Empty(None),
     Some(constLemma(substAny("n_", Number(num)))))
 
   lazy val One : TreePolynomial = Const(1)

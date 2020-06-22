@@ -110,7 +110,7 @@ object TaylorModelArith {
 
     /** collect terms of higher order in interval remainder */
     def collectHigherOrderTerms(implicit options: TaylorModelOptions) : TM = {
-      val (polyLow, polyHigh, partitionPrv) = poly.resetTerm.partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
+      val (polyLow, polyHigh, partitionPrv) = poly.resetTerm.partition{case (n, d, powers) => powers.degree <= options.order}
       val hornerPrv = polyHigh.hornerForm()
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
@@ -168,7 +168,7 @@ object TaylorModelArith {
     /** exact multiplication */
     def *!(other: TM)(implicit options: TaylorModelOptions) : TM = {
       checkCompatibleContext(other)
-      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
+      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.degree <= options.order}
 
       val hornerPrv = polyHigh.hornerForm()
       val rem = rhsOf(hornerPrv)
@@ -221,7 +221,7 @@ object TaylorModelArith {
 
     /** exact square */
     def squareExact(implicit options: TaylorModelOptions) : TM = {
-      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.map(_._2).sum <= options.order}
+      val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.degree <= options.order}
       val hornerPrv = polyHigh.hornerForm()
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
@@ -415,8 +415,8 @@ object TaylorModelArith {
       val instantiation = instantiateLemma(options.precision,
         rhsOf(t0),
         Number(h),
-        (i, j) => mkTerm(x0(i).poly.coefficient(Seq((rvars(j), 1)))),
-        i => mkTerm(x0(i).poly.coefficient(Seq())),
+        (i, j) => mkTerm(x0(i).poly.coefficient(ofSparse((rvars(j), 1)))),
+        i => mkTerm(x0(i).poly.coefficient(ofSparse())),
         i => rIntervals(i)._1,
         i => rIntervals(i)._2,
         timeStepOptions.remainderEstimation
