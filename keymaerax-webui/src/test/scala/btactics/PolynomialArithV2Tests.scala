@@ -33,7 +33,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val a4 = Power(aT, Number(4))
 
     // directly produce Provables
-    val prv = equate(a4, bT).get
+    val prv = ring.equate(a4, bT).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
     prv.conclusion.succ.loneElement shouldBe Equal(a4, bT)
@@ -42,15 +42,15 @@ class PolynomialArithV2Tests extends TacticTestBase {
     // Tactics
 
     // prove (and close) equality
-    val res = proveBy(Equal(a4, bT), equate(1) & done)
+    val res = proveBy(Equal(a4, bT), ring.equate(1) & done)
     res shouldBe 'proved
 
     // normalize to zero on rhs and normal form (0 when applied on valid equality) on lhs
-    val res2 = proveBy(Equal(a4, bT), normalizeAt(1))
+    val res2 = proveBy(Equal(a4, bT), ring.normalizeAt(1))
     res2.subgoals.loneElement shouldBe "==> 0 = 0".asSequent
 
     // normalize term (fully distributed and ordered according to default monomial order)
-    val res3 = proveBy(Equal(a4, bT), normalizeAt(1, 0::Nil))
+    val res3 = proveBy(Equal(a4, bT), ring.normalizeAt(1, 0::Nil))
     res3.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(Equal(bN, bT)))
   }
 
@@ -80,7 +80,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
       "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
       "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6" +
       "- 13824/81*y*z^9+256*z^12)").asTerm)
-    val prv = equate(t1, t2).get
+    val prv = ring.equate(t1, t2).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
     prv.conclusion.succ.loneElement shouldBe Equal(t1, t2)

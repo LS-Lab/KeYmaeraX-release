@@ -151,6 +151,19 @@ object PolynomialArithV2 {
 
     implicit def ofInt(i: Int) : Polynomial = Const(BigDecimal(i))
 
+    // Prove "t1 = t2" by equating coefficients
+    def equate(t1: Term, t2: Term) : Option[ProvableSig]
+
+    // Prove an equality by equating coefficients
+    val equate : DependentPositionTactic
+
+    // distributive normal form
+    def normalize(term: Term) : ProvableSig
+
+    // normalizeAt "term" rewrites polynomial term to distributive normal form
+    // normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
+    val normalizeAt : DependentPositionTactic
+
   }
 
   def denseVariableOrdering(variables: IndexedSeq[Term]): Ordering[Term] =
@@ -239,9 +252,6 @@ object PolynomialArithV2 {
                      monomialOrdering: Ordering[IndexedSeq[(Term, Int)]]): PolynomialRing =
     TwoThreeTreePolynomialRing(variableOrdering, monomialOrdering)
 
-  /** Prove "t1 = t2" by equating coefficients */
-  def equate(t1: Term, t2: Term) : Option[ProvableSig] = ring.ofTerm(t1).equate(ring.ofTerm(t2))
-
   /** report operations not supported by polynomial arithmetic in computations */
   trait NonSupportedOperationException extends IllegalArgumentException
   final case class NonSupportedExponentException(message: String)
@@ -259,41 +269,6 @@ object PolynomialArithV2 {
       case nonSupportedOperationException: NonSupportedOperationException =>
         throw NonSupportedOperationInapplicability(nonSupportedOperationException)
     }
-
-  /** Prove an equality by equating coefficients */
-  val equate : DependentPositionTactic = "equate" by { (pos: Position, seq: Sequent) =>
-    pos.checkTop
-    pos.checkSucc
-    seq.sub(pos) match {
-      case Some(Equal(t1, t2)) =>
-        reportBelleThrowables{ equate(t1, t2) } match {
-          case None => throw new TacticInapplicableFailure("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
-          case Some(prv) => cohideR(pos) & by(prv)
-        }
-      case Some(e) => throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-    }
-  }
-
-  /** distributive normal form */
-  def normalize(term: Term) : ProvableSig = ring.ofTerm(term).prettyRepresentation
-
-  /** normalizeAt "term" rewrites polynomial term to distributive normal form
-    * normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
-    * */
-  private val eqNormalize = Ax.eqNormalize.provable
-  val normalizeAt : DependentPositionTactic = "normalizeAt" by { (pos: Position, seq: Sequent) =>
-    seq.sub(pos) match {
-      case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
-        useAt(reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
-      case Some(Equal(s, t)) =>
-        useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
-      case Some(t: Term) =>
-        useAt(reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos)
-      case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
-      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
-    }
-  }
 
 }
 
@@ -1651,6 +1626,40 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       Branch3(left, value1, mid, value2, right, Some(prv))
     }
 
+  }
+
+  def equate(t1: Term, t2: Term) : Option[ProvableSig] = ofTerm(t1).equate(ofTerm(t2))
+
+  val equate: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    pos.checkTop
+    pos.checkSucc
+    seq.sub(pos) match {
+      case Some(Equal(t1, t2)) =>
+        PolynomialArithV2.reportBelleThrowables {
+          equate(t1, t2)
+        } match {
+          case None => throw new TacticInapplicableFailure("Terms not equal (by equating coefficients): " + t1 + ", " + t2)
+          case Some(prv) => cohideR(pos) & by(prv)
+        }
+      case Some(e) => throw new TacticInapplicableFailure("equate only applicable to equalities, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+  }
+
+  def normalize(term: Term) : ProvableSig = ofTerm(term).prettyRepresentation
+
+  private val eqNormalize = Ax.eqNormalize.provable
+  val normalizeAt : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
+    seq.sub(pos) match {
+      case Some(Equal(t, Number(n))) if n.compareTo(0) == 0 =>
+        useAt(PolynomialArithV2.reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos ++ PosInExpr(0::Nil))
+      case Some(Equal(s, t)) =>
+        useAt(eqNormalize, PosInExpr(0::Nil))(pos) & normalizeAt(pos)
+      case Some(t: Term) =>
+        useAt(PolynomialArithV2.reportBelleThrowables{ normalize(t) }, PosInExpr(0::Nil))(pos)
+      case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
   }
 
 }
