@@ -54,69 +54,69 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "add approximately" in withMathematica { qeTool =>
     (tm1 +! tm100000).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x+0.000001*x=1.000001*x0()+1.000001*y0()+err_&-0.010001<=err_&err_<=0.020001)".asFormula
+      "\\exists err_ (x+0.000001*x=1.000001*y0()+1.000001*x0()+err_&-0.010001<=err_&err_<=0.020001)".asFormula
     (tm1 + tm100000).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x+0.000001*x=x0()+y0()+err_&-0.010003<=err_&err_<=0.020003)".asFormula
+      "\\exists err_ (x+0.000001*x=y0()+x0()+err_&-0.010003<=err_&err_<=0.020003)".asFormula
   }
 
   it should "subtract exactly" in withMathematica { qeTool =>
     (tm1 -! tm2).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x-y=0.5*x0()+2*y0()+err_&-0.11<=err_&err_<=0.02)".asFormula
+      "\\exists err_ (x-y=2*y0()+0.5*x0()+err_&-0.11<=err_&err_<=0.02)".asFormula
   }
 
   it should "subtract approximately" in withMathematica { qeTool =>
     (tm1 -! tm100000).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x-0.000001*x=0.999999*x0()+0.999999*y0()+err_&-0.010001<=err_&err_<=0.020001)".asFormula
+      "\\exists err_ (x-0.000001*x=0.999999*y0()+0.999999*x0()+err_&-0.010001<=err_&err_<=0.020001)".asFormula
     (tm1 - tm100000).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x-0.000001*x=0.9999*x0()+0.9999*y0()+err_&-0.010199<=err_&err_<=0.020199)".asFormula
+      "\\exists err_ (x-0.000001*x=0.9999*y0()+0.9999*x0()+err_&-0.010199<=err_&err_<=0.020199)".asFormula
   }
 
   it should "multiply exactly" in withMathematica { qeTool =>
     (tm1 *! tm2).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x*y=0.5*x0()^2+- 0.5*x0()*y0()+- y0()^2+err_&-0.231<=err_&err_<=0.232)".asFormula
+      "\\exists err_ (x*y=-y0()^2+-(0.5*x0()*y0())+0.5*x0()^2+err_&(-0.231)<=err_&err_<=0.232)".asFormula
   }
 
   it should "multiply approximately" in withMathematica { qeTool =>
     (tm1234 *! tm1234).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (12.34*y*(12.34*y)=38.068900*x0()^2+- 152.27560*x0()*y0()+152.2756*y0()^2+err_&-45.684<=err_&err_<=47.207)".asFormula
+      "\\exists err_ (12.34*y*(12.34*y)=152.2756*y0()^2+-(152.27560*x0()*y0())+38.068900*x0()^2+err_&(-45.684)<=err_&err_<=47.207)".asFormula
     (tm1234 * tm1234).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (12.34*y*(12.34*y)=38.06*x0()^2+- 152.3*x0()*y0()+152.2*y0()^2+err_&-45.793<=err_&err_<=47.316)".asFormula
+      "\\exists err_ (12.34*y*(12.34*y)=152.2*y0()^2+-(152.3*x0()*y0())+38.06*x0()^2+err_&(-45.793)<=err_&err_<=47.316)".asFormula
   }
 
   it should "negate" in withMathematica { qeTool =>
     (-tm1).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (-x=-x0()+- y0()+err_&-0.02<=err_&err_<=0.01)".asFormula
+      "\\exists err_ (-x=-y0()+-x0()+err_&(-0.02)<=err_&err_<=0.01)".asFormula
   }
 
   it should "square exactly" in withMathematica { qeTool =>
     tm1.squareExact.prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^2=x0()^2+2*x0()*y0()+y0()^2+err_&-0.08<=err_&err_<=0.0804)".asFormula
+      "\\exists err_ (x^2=y0()^2+2*x0()*y0()+x0()^2+err_&(-0.08)<=err_&err_<=0.0804)".asFormula
   }
 
   it should "square approximately" in withMathematica { qeTool =>
     tm1234.squareExact.prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ ((12.34*y)^2=38.068900*x0()^2+- 152.27560*x0()*y0()+152.2756*y0()^2+err_&-45.683<=err_&err_<=47.206)".asFormula
+      "\\exists err_ ((12.34*y)^2=152.2756*y0()^2+-(152.27560*x0()*y0())+38.068900*x0()^2+err_&(-45.683)<=err_&err_<=47.206)".asFormula
     tm1234.square.prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ ((12.34*y)^2=38.06*x0()^2+- 152.3*x0()*y0()+152.2*y0()^2+err_&-45.792<=err_&err_<=47.315)".asFormula
+      "\\exists err_ ((12.34*y)^2=152.2*y0()^2+-(152.3*x0()*y0())+38.06*x0()^2+err_&(-45.792)<=err_&err_<=47.315)".asFormula
   }
 
   it should "^1" in withMathematica { qeTool =>
     (tm1^1).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^1=x0()+y0()+err_&-0.01<=err_&err_<=0.02)".asFormula
+      "\\exists err_ (x^1=y0()+x0()+err_&-0.01<=err_&err_<=0.02)".asFormula
   }
 
   it should "^(2*n)" in withMathematica { qeTool =>
     (tm1^4).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^4=x0()^4+4*x0()^3*y0()+6*x0()^2*y0()^2+4*x0()*y0()^3+y0()^4+err_&-0.64<=err_&err_<=0.64967)".asFormula
+      "\\exists err_ (x^4=y0()^4+4*x0()*y0()^3+6*x0()^2*y0()^2+4*x0()^3*y0()+x0()^4+err_&(-0.64)<=err_&err_<=0.64967)".asFormula
   }
   it should "^(2*n + 1)" in withMathematica { qeTool =>
     (tm1^3).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (x^3=x0()^3+3*x0()^2*y0()+3*x0()*y0()^2+y0()^3+err_&-0.2024<=err_&err_<=0.24241)".asFormula
+      "\\exists err_ (x^3=y0()^3+3*x0()*y0()^2+3*x0()^2*y0()+x0()^3+err_&(-0.2024)<=err_&err_<=0.24241)".asFormula
   }
 
   it should "exponentiate approximately" in withMathematica { qeTool =>
     (tm1234^3).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ ((12.34*y)^3=234.8*x0()^3+- 1410*x0()^2*y0()+2818*x0()*y0()^2+- 1879*y0()^3+err_&-1122.4<=err_&err_<=1359.0)".asFormula
+      "\\exists err_ ((12.34*y)^3=-(1879*y0()^3)+2818*x0()*y0()^2+-(1410*x0()^2*y0())+234.8*x0()^3+err_&(-1122.4)<=err_&err_<=1359.0)".asFormula
   }
 
   it should "exact" in withMathematica { qeTool =>
@@ -137,7 +137,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val tm = (tm3 +! tm2).squareExact
     val tmA = tm.approx
     tmA.prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ ((1/3*x+y)^2=0.6944*x0()^2+- 1.112*x0()*y0()+0.4444*y0()^2+err_&-0.32102<=err_&err_<=0.33240)".asFormula
+      "\\exists err_ ((1/3*x+y)^2=0.4444*y0()^2+-(1.112*x0()*y0())+0.6944*x0()^2+err_&(-0.32102)<=err_&err_<=0.33240)".asFormula
   }
 
   it should "collect higher order terms" in withMathematica { qeTool =>
@@ -149,7 +149,7 @@ class TaylorModelArithTests extends TacticTestBase {
     res0.prettyPrv.conclusion.succ.loneElement shouldBe
       "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+err_&(-6.8403)<=err_&err_<=7.2716)".asFormula
     res1.prettyPrv.conclusion.succ.loneElement shouldBe
-      "\\exists err_ ((1/3*x+y+1/3)^3=0.2776*x0()+-(0.2222*y0())+0.03699+err_&(-6.3405)<=err_&err_<=6.7718)".asFormula
+      "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+-(0.2222*y0())+0.2776*x0()+err_&(-6.3405)<=err_&err_<=6.7718)".asFormula
   }
 
   it should "interval" in withMathematica { qeTool =>
@@ -165,7 +165,7 @@ class TaylorModelArithTests extends TacticTestBase {
   it should "drop empty interval" in withMathematica { qeTool =>
     val context = IndexedSeq("x = 1.4 + 0.15 * e0".asFormula)
     val x = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
-    x.dropEmptyInterval.get.conclusion.succ.loneElement shouldBe "x=0+0.15/1*(1*e0^1)+0+1.4/1*1+0".asFormula
+    x.dropEmptyInterval.get.conclusion.succ.loneElement shouldBe "x=0+1.4/1*1+0+0.15/1*(1*e0^1)+0".asFormula
   }
 
   it should "prettyPrv" in withMathematica { _ =>
