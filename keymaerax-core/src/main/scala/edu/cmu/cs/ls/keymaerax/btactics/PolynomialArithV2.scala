@@ -166,12 +166,6 @@ object PolynomialArithV2 {
 
   }
 
-  def denseVariableOrdering(variables: IndexedSeq[Term]): Ordering[Term] =
-    new Ordering[Term] {
-      private val lookup = variables.zipWithIndex.toMap
-      def compare(x: Term, y: Term): Int = lookup(x).compareTo(lookup(y))
-    }
-
   val variableConstantOrdering: Ordering[Term] = Ordering.by{
     case BaseVariable(n, i, Real) => (0, n, i)
     case FuncOf(Function(n, i, Unit, Real, false), Nothing) => (1, n, i)
