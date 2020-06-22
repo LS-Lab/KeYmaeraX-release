@@ -1549,7 +1549,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       equate(ofTerm(horner)).getOrElse(throw new RuntimeException("zeroTest failed for horner form - this should not happen!"))
     }
 
-    override def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig) = {
+    override def divideAndRemainder(other: Polynomial, pretty: Boolean = false) : (Polynomial, Polynomial, ProvableSig) = {
       val rep1 = PolynomialArithV2Helpers.rhsOf(representation)
       val rep2 = PolynomialArithV2Helpers.rhsOf(other.representation)
       val ringsLibrary = new RingsLibrary(Traversable(rep1, rep2))
