@@ -387,7 +387,10 @@ object KeYmaeraX {
       case tool => throw new Exception("Unknown tool " + tool + "; use one of " + Tools.tools.mkString("|"))
     }
 
-    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    DerivationInfoRegistry.init
+    Ax.prepopulateDerivedLemmaDatabase()
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter())
     KeYmaeraXTool.init(Map.empty)
 
     val generator = new ConfigurableGenerator[GenProduct]()
