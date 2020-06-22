@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, Tactic, TacticInfo}
@@ -287,7 +288,8 @@ object TactixLibrary extends HilbertCalculus
         case (Box(ODESystem(_, _), q), pp: Position) =>
           if (pp.isTopLevel) {
             if (q.isFOL) Some(odeR(pp))
-            else Some(chase(pp ++ PosInExpr(1::Nil)) & odeR(pp))
+            //@note chase may make progress on some but not all postconditions (e.g. not on loops)
+            else Some(chase(pp ++ PosInExpr(1::Nil)) & SimplifierV3.simplify(pp ++ PosInExpr(1::Nil)) & odeR(pp))
           } else Some(solve(pp))
         case _ => None
       })
@@ -308,14 +310,16 @@ object TactixLibrary extends HilbertCalculus
 
     val dWContextRobust = anon ((pos: Position, _: Sequent) => Idioms.doIf((_: ProvableSig) => pos.isTopLevel)(dWPlus(pos)))
 
+    val autoQE = QE(timeout = Some(5)) | ArithmeticSpeculativeSimplification.speculativeQE
+
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWContextRobust, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, /*dWContextRobust,*/ solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
-          ((Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done) | ?(QE & (if (keepQEFalse) nil else done)))))))
+          ((Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done) | ?(autoQE & (if (keepQEFalse) nil else done)))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
@@ -518,14 +522,21 @@ object TactixLibrary extends HilbertCalculus
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     // use and check invSupplier (user-defined annotations from input file)
-    invSupplier(seq, pos).toList.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
+    val invs = invSupplier(seq, pos).toList
+    invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
       skip,
       (if (pos.isTopLevel) DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) else DifferentialTactics.diffInd()(pos)) &
         Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
         DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
           "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
     ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
-      (if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos)
+      (if (pos.isTopLevel && invs.nonEmpty) dW(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify & QE & done | DifferentialTactics.mathematicaSplittingODE(pos)
+       else if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos) |
+        (seq.sub(pos) match {
+          // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)
+          case Some(Box(ODESystem(_, q), p)) if q != True && !p.isFOL => dWPlus(pos)
+          case _ => skip
+        })
        else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos))
   })
 
