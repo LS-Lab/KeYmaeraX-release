@@ -24,10 +24,9 @@ class PolynomialArithV2Tests extends TacticTestBase {
     "- 209952/6561*x^2*y*z^3+96*x^2*z^6+7776/-6561*x*y^3+11337408/531441*x*y^2*z^3" +
     "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^(3+2*x+1-x+2-x)" +
     "- 13824/81*y*z^9+256*z^12").asTerm
-  val bN = ("x^4+- 216/81*x^3*y+16*x^3*z^3+17496/6561*x^2*y^2+" +
-    "- 32*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3+" +
-    "- 128*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6+" +
-    "- 13824/81*y*z^9+256*z^12").asTerm
+  val bN = ("16/81*y^4+-(7776/6561*x*y^3)+17496/6561*x^2*y^2+-(216/81*x^3*y)+x^4+-(31104/6561*y^3*z^3)+" +
+    "11337408/531441*x*y^2*z^3+-(32*x^2*y*z^3)+16*x^3*z^3+279936/6561*y^2*z^6+-(128*x*y*z^6)+96*x^2*z^6+" +
+    "-(13824/81*y*z^9)+256*x*z^9+256*z^12").asTerm
 
   "PolynomialArithV2" should "be the interface to work with this library" in withMathematica { _ =>
     val a4 = Power(aT, Number(4))
@@ -272,32 +271,32 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val pp = new KeYmaeraXPrettierPrinter(100)
     val zero = Empty(None)
     def x(i: Int) = Var(PA4.x, i)
-    val res1 = zero + x(2) // insert empty
-    res1.treeSketch shouldBe "[., x^2, .]"
-    val res2 = res1 + x(4) // sprout in left of 2-Node
-    res2.treeSketch shouldBe "{., x^4, ., x^2, .}"
-    val res2u = res2 + x(4) // update in left of 3-Node
-    res2u.treeSketch shouldBe "{., 2 x^4, ., x^2, .}"
-    val res2v = res2u + x(2) // update in right of 3-Node
-    res2v.treeSketch shouldBe "{., 2 x^4, ., 2 x^2, .}"
-    val res3 = res2v + x(8)  // sprout in left of 3-Node
-    res3.treeSketch shouldBe "[[., x^8, .], 2 x^4, [., 2 x^2, .]]"
-    val res4 = res3 + x(8) // update value of 2-Node
-    res4.treeSketch shouldBe "[[., 2 x^8, .], 2 x^4, [., 2 x^2, .]]"
+    val res1 = zero + x(8) // insert empty
+    res1.treeSketch shouldBe "[., x^8, .]"
+    val res2 = res1 + x(6) // sprout in left of 2-Node
+    res2.treeSketch shouldBe "{., x^6, ., x^8, .}"
+    val res2u = res2 + x(6) // update in left of 3-Node
+    res2u.treeSketch shouldBe "{., 2 x^6, ., x^8, .}"
+    val res2v = res2u + x(8) // update in right of 3-Node
+    res2v.treeSketch shouldBe "{., 2 x^6, ., 2 x^8, .}"
+    val res3 = res2v + x(2)  // sprout in left of 3-Node
+    res3.treeSketch shouldBe "[[., x^2, .], 2 x^6, [., 2 x^8, .]]"
+    val res4 = res3 + x(2) // update value of 2-Node
+    res4.treeSketch shouldBe "[[., 2 x^2, .], 2 x^6, [., 2 x^8, .]]"
     val res5 = res4 + x(5) // sprout in right of 2-Node
-    res5.treeSketch shouldBe "[{., 2 x^8, ., x^5, .}, 2 x^4, [., 2 x^2, .]]"
-    val res6 = res5 + x(2) // stay in right of 2-Node (after an update)
-    res6.treeSketch shouldBe "[{., 2 x^8, ., x^5, .}, 2 x^4, [., 3 x^2, .]]"
-    val res7 = res6 + x(7) // sprout in mid of 3-Node
-    res7.treeSketch shouldBe "{[., 2 x^8, .], x^7, [., x^5, .], 2 x^4, [., 3 x^2, .]}"
-    val res8 = res7 + x(8) // stay in left of 3-node (after an update)
-    res8.treeSketch shouldBe "{[., 3 x^8, .], x^7, [., x^5, .], 2 x^4, [., 3 x^2, .]}"
+    res5.treeSketch shouldBe "[{., 2 x^2, ., x^5, .}, 2 x^6, [., 2 x^8, .]]"
+    val res6 = res5 + x(8) // stay in right of 2-Node (after an update)
+    res6.treeSketch shouldBe "[{., 2 x^2, ., x^5, .}, 2 x^6, [., 3 x^8, .]]"
+    val res7 = res6 + x(3) // sprout in mid of 3-Node
+    res7.treeSketch shouldBe "{[., 2 x^2, .], x^3, [., x^5, .], 2 x^6, [., 3 x^8, .]}"
+    val res8 = res7 + x(2) // stay in left of 3-node (after an update)
+    res8.treeSketch shouldBe "{[., 3 x^2, .], x^3, [., x^5, .], 2 x^6, [., 3 x^8, .]}"
     val res9 = res8 + x(5) // stay in mid of 3-node (after an update)
-    res9.treeSketch shouldBe "{[., 3 x^8, .], x^7, [., 2 x^5, .], 2 x^4, [., 3 x^2, .]}"
-    val res10 = res9 + x(3) // stay in right of 3-node (after a sprout)
-    res10.treeSketch shouldBe "{[., 3 x^8, .], x^7, [., 2 x^5, .], 2 x^4, {., x^3, ., 3 x^2, .}}"
-    val res11 = res10 + x(1) // sprout in right of 3-node
-    res11.treeSketch shouldBe "[[[., 3 x^8, .], x^7, [., 2 x^5, .]], 2 x^4, [[., x^3, .], 3 x^2, [., x^1, .]]]"
+    res9.treeSketch shouldBe "{[., 3 x^2, .], x^3, [., 2 x^5, .], 2 x^6, [., 3 x^8, .]}"
+    val res10 = res9 + x(7) // stay in right of 3-node (after a sprout)
+    res10.treeSketch shouldBe "{[., 3 x^2, .], x^3, [., 2 x^5, .], 2 x^6, {., x^7, ., 3 x^8, .}}"
+    val res11 = res10 + x(9) // sprout in right of 3-node
+    res11.treeSketch shouldBe "[[[., 3 x^2, .], x^3, [., 2 x^5, .]], 2 x^6, [[., x^7, .], 3 x^8, [., x^9, .]]]"
   }
 
   it should "cover all cases of add Polynomial" in withMathematica { _ =>
@@ -307,7 +306,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     def x(i: Int) = DenseVar(0, i)
     def y(i: Int) = DenseVar(1, i)
     val res = y(2) + (x(1) + x(2) + y(1) + y(2) + y(3))
-    res.treeSketch shouldBe "{[., x^2, .], x^1, [., y^3, .], 2 y^2, [., y^1, .]}"
+    res.treeSketch shouldBe "{[., y^1, .], x^1, [., 2 y^2, .], x^2, [., y^3, .]}"
   }
 
   it should "cover all cases of subtract Polynomial" in withMathematica { _ =>
@@ -317,7 +316,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     def x(i: Int) = DenseVar(0, i)
     def y(i: Int) = DenseVar(1, i)
     val res = y(2) - (x(1) - x(2) - y(1) - y(2) - y(3))
-    res.treeSketch shouldBe "{[., x^2, .], -x^1, [., y^3, .], 2 y^2, [., y^1, .]}"
+    res.treeSketch shouldBe "{[., y^1, .], -x^1, [., 2 y^2, .], x^2, [., y^3, .]}"
   }
 
   it should "multiply with monomials" in withMathematica { _ =>
@@ -329,7 +328,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val m = Monomial(Coefficient(3, 4), DenseSeq(1, 2, 3, 0))
     val res = (x(1) + x(2) + y(1) + y(2) + y(3)) * m
     res.prv.conclusion.succ(0) shouldBe ("(x^1+x^2+y^1+y^2+y^3)*(3/4*(1*x^1*y^2*f()^3))=" +
-      "0+3/4*(1*x^3*y^2*f()^3)+0+3/4*(1*x^2*y^2*f()^3)+(0+3/4*(1*x^1*y^5*f()^3)+0)+3/4*(1*x^1*y^4*f()^3)+(0+3/4*(1*x^1*y^3*f()^3)+0)").asFormula
+      "0+3/4*(1*x^1*y^3*f()^3)+0+3/4*(1*x^2*y^2*f()^3)+(0+3/4*(1*x^1*y^4*f()^3)+0)+3/4*(1*x^3*y^2*f()^3)+(0+3/4*(1*x^1*y^5*f()^3)+0)").asFormula
   }
 
   it should "power" in withMathematica { _ =>
@@ -339,12 +338,12 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val y = DenseVar(1, 1)
     val pp = new KeYmaeraXPrettierPrinter(100)
     ((x + y)^0).treeSketch shouldBe "[., 1 , .]"
-    ((x + y)^1).treeSketch shouldBe "{., x^1, ., y^1, .}"
-    ((x + y)^2).treeSketch shouldBe "[[., x^2, .], 2 x^1 y^1, [., y^2, .]]"
-    ((x + y)^3).treeSketch shouldBe "[[., x^3, .], 3 x^2 y^1, {., 3 x^1 y^2, ., y^3, .}]"
-    ((x + y)^4).treeSketch shouldBe "{[., x^4, .], 4 x^3 y^1, [., 6 x^2 y^2, .], 4 x^1 y^3, [., y^4, .]}"
-    ((x + y)^5).treeSketch shouldBe "{[., x^5, .], 5 x^4 y^1, [., 10 x^3 y^2, .], 10 x^2 y^3, {., 5 x^1 y^4, ., y^5, .}}"
-    ((x + y)^6).treeSketch shouldBe "[[[., x^6, .], 6 x^5 y^1, [., 15 x^4 y^2, .]], 20 x^3 y^3, [[., 15 x^2 y^4, .], 6 x^1 y^5, [., y^6, .]]]"
+    ((x + y)^1).treeSketch shouldBe "{., y^1, ., x^1, .}"
+    ((x + y)^2).treeSketch shouldBe "[[., y^2, .], 2 x^1 y^1, [., x^2, .]]"
+    ((x + y)^3).treeSketch shouldBe "[[., y^3, .], 3 x^1 y^2, {., 3 x^2 y^1, ., x^3, .}]"
+    ((x + y)^4).treeSketch shouldBe "{[., y^4, .], 4 x^1 y^3, [., 6 x^2 y^2, .], 4 x^3 y^1, [., x^4, .]}"
+    ((x + y)^5).treeSketch shouldBe "{[., y^5, .], 5 x^1 y^4, [., 10 x^2 y^3, .], 10 x^3 y^2, {., 5 x^4 y^1, ., x^5, .}}"
+    ((x + y)^6).treeSketch shouldBe "[[[., y^6, .], 6 x^1 y^5, [., 15 x^2 y^4, .]], 20 x^3 y^3, [[., 15 x^4 y^2, .], 6 x^5 y^1, [., x^6, .]]]"
   }
 
   it should "power polynomial" in withMathematica { _ =>
@@ -367,8 +366,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     import PA4._
     def x(i: Int) = DenseVar(0, i)
     val tree = (1 until 10).map(x).reduce(_ + _)
-    tree.treeSketch    shouldBe "[{[., x^9, .], x^8, [., x^7, .], x^6, [., x^5, .]}, x^4, [[., x^3, .], x^2, [., x^1, .]]]"
-    (-tree).treeSketch shouldBe "[{[., -x^9, .], -x^8, [., -x^7, .], -x^6, [., -x^5, .]}, -x^4, [[., -x^3, .], -x^2, [., -x^1, .]]]"
+    tree.treeSketch    shouldBe "[[[., x^1, .], x^2, [., x^3, .]], x^4, {[., x^5, .], x^6, [., x^7, .], x^8, [., x^9, .]}]"
+    (-tree).treeSketch shouldBe "[[[., -x^1, .], -x^2, [., -x^3, .]], -x^4, {[., -x^5, .], -x^6, [., -x^7, .], -x^8, [., -x^9, .]}]"
   }
 
   it should "subtract Monomials" in withMathematica { _ =>
@@ -378,8 +377,10 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val tree = (1 until 10).map(x).reduce(_ + _)
     val m1 = Monomial(Coefficient(2, 1), DenseSeq(1, 0, 0, 0))
     val m2 = Monomial(Coefficient(1, 1), DenseSeq(0, 1, 0, 0))
-    println((tree-m1).treeSketch)
-    println((tree-m2).treeSketch)
+    (tree-m1).treeSketch shouldBe
+      "[[[., -x^1, .], x^2, [., x^3, .]], x^4, {[., x^5, .], x^6, [., x^7, .], x^8, [., x^9, .]}]"
+    (tree-m2).treeSketch shouldBe
+      "[[{., -y^1, ., x^1, .}, x^2, [., x^3, .]], x^4, {[., x^5, .], x^6, [., x^7, .], x^8, [., x^9, .]}]"
 
   }
   it should "work with many variables" in withMathematica { _ =>
@@ -388,8 +389,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     def x(i: Int, p: Int) = DenseVar(i, p)
     val a = (Const(3)*x(19, 2) + Const(5)*x(0, 4) + x(1, 2) + Const(123)*x(10, 3))*(x(17, 1) + x(5, 2) + x(15, 7))
     val b = (x(17, 2) + x(0, 3)*x(15, 4))*(x(0, 1)*x(15,3) + x(3, 2) + x(1, 8))
-    a.treeSketch shouldBe "{[[., 5 x00^4 x05^2, .], 5 x00^4 x15^7, [., 5 x00^4 x17^1, .]], x01^2 x05^2, [[., x01^2 x15^7, .], x01^2 x17^1, [., 123 x05^2 x10^3, .]], 3 x05^2 x19^2, [[., 123 x10^3 x15^7, .], 123 x10^3 x17^1, {., 3 x15^7 x19^2, ., 3 x17^1 x19^2, .}]}"
-    b.treeSketch shouldBe "{[., x00^4 x15^7, .], x00^3 x01^8 x15^4, [., x00^3 x03^2 x15^4, .], x00^1 x15^3 x17^2, {., x01^8 x17^2, ., x03^2 x17^2, .}}"
+    a.treeSketch shouldBe "{[{., 3 x17^1 x19^2, ., x01^2 x17^1, .}, 3 x05^2 x19^2, [., 123 x10^3 x17^1, .]], x01^2 x05^2, [[., 5 x00^4 x17^1, .], 123 x05^2 x10^3, [., 5 x00^4 x05^2, .]], 3 x15^7 x19^2, [[., x01^2 x15^7, .], 123 x10^3 x15^7, [., 5 x00^4 x15^7, .]]}"
+    b.treeSketch shouldBe "{[., x03^2 x17^2, .], x00^1 x15^3 x17^2, [., x00^3 x03^2 x15^4, .], x01^8 x17^2, {., x00^4 x15^7, ., x00^3 x01^8 x15^4, .}}"
   }
 
   it should "partition polynomials" in withMathematica { _ =>
@@ -398,8 +399,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val t = "2*x + 3*x*y + 4*y^2 + 2*x^2 + x^2*y^2 + x^3 + 4*x^4".asTerm
     val poly = ofTerm(t)
     val (pos, neg, prv) = poly.partition{(_, _, powers) => powers.map(_._2).sum<=2 && !powers.map(_._1).contains(PA4.y)}
-    rhsOf(pos.prettyRepresentation) shouldBe "2*x^2+2*x".asTerm
-    rhsOf(neg.prettyRepresentation) shouldBe "4*x^4+x^3+x^2*y^2+3*x*y+4*y^2".asTerm
+    rhsOf(pos.prettyRepresentation) shouldBe "2*x+2*x^2".asTerm
+    rhsOf(neg.prettyRepresentation) shouldBe "4*y^2+3*x*y+x^3+x^2*y^2+4*x^4".asTerm
     lhsOf(prv) shouldBe t
     rhsOf(prv) shouldBe Plus(pos.term, neg.term)
   }
@@ -458,7 +459,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val p = (0 until 5).map(i => Const((i % 3) - 2) * DenseVar(i % 2, i % 3 + 1)).reduceLeft(_ + _) ^ 2
     p.normalized shouldBe 'proved
     p.normalized.conclusion.succ(0) shouldBe
-      "(-2*x^1+-1*y^2+0*x^3+-2*y^1+-1*x^2)^2=x^4+4*x^3+2*x^2*y^2+4*x^2*y+4*x^2+4*x*y^2+8*x*y+y^4+4*y^3+4*y^2".asFormula
+      "(-2*x^1+-1*y^2+0*x^3+-2*y^1+-1*x^2)^2=4*y^2+8*x*y+4*x^2+4*y^3+4*x*y^2+4*x^2*y+4*x^3+y^4+2*x^2*y^2+x^4".asFormula
   }
 
   it should "split coefficients" in withMathematica { _ =>
@@ -476,8 +477,8 @@ class PolynomialArithV2Tests extends TacticTestBase {
     import PolynomialArithV2Helpers._
     val t = (1 to 9).map(i => Times(Divide(Number(1), Number(i)), Power("x".asTerm, Number(i)))).reduceLeft(Plus)
     val (prv, a, r) = ofTerm(t).asInstanceOf[TreePolynomial].approx(5)
-    a.treeSketch shouldBe "[{[., 0.1111 x^9, .], 0.125 x^8, [., 0.1428 x^7, .], 0.1666 x^6, [., 0.2 x^5, .]}, 0.25 x^4, [[., 0.3333 x^3, .], 0.5 x^2, [., x^1, .]]]"
-    r.treeSketch shouldBe "[{[., 0.0001/9 x^9, .], 0 x^8, [., 0.0004/7 x^7, .], 0.0004/6 x^6, [., 0 x^5, .]}, 0 x^4, [[., 0.0001/3 x^3, .], 0 x^2, [., 0 x^1, .]]]"
+    a.treeSketch shouldBe "[[[., x^1, .], 0.5 x^2, [., 0.3333 x^3, .]], 0.25 x^4, {[., 0.2 x^5, .], 0.1666 x^6, [., 0.1428 x^7, .], 0.125 x^8, [., 0.1111 x^9, .]}]"
+    r.treeSketch shouldBe "[[[., 0 x^1, .], 0 x^2, [., 0.0001/3 x^3, .]], 0 x^4, {[., 0 x^5, .], 0.0004/6 x^6, [., 0.0004/7 x^7, .], 0 x^8, [., 0.0001/9 x^9, .]}]"
     lhsOf(prv) shouldBe t
     rhsOf(prv) shouldBe Plus(a.lhs, r.lhs)
   }

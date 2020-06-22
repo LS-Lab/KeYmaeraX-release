@@ -239,7 +239,7 @@ object PolynomialArithV2 {
   }
 
   /** default polynomial ring implementation */
-  val ring : PolynomialRing = TwoThreeTreePolynomialRing(variableConstantOrdering, revlex(variableConstantOrdering))
+  val ring : PolynomialRing = TwoThreeTreePolynomialRing(variableConstantOrdering, grevlex(variableConstantOrdering))
 
   /** constructor for given variable and monomial orderings */
   def PolynomialRing(variableOrdering: Ordering[Term],
