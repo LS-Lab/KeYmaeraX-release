@@ -20,9 +20,6 @@ import org.scalatest.LoneElement._
   */
 class TaylorModelArithTests extends TacticTestBase {
 
-  import PolynomialArithV2._
-  import PolynomialArithV2Helpers._
-
   val context3 = ("-1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1, -1 <= z0(), z0() <= 1," +
     "x = x0() + y0() + rx, -0.01 <= rx, rx <= 0.02," +
     "y = 0.5*x0() - y0() + ry, 0 <= ry, ry <= 0.1").split(',').map(_.asFormula).toIndexedSeq
@@ -34,14 +31,15 @@ class TaylorModelArithTests extends TacticTestBase {
     def remainderEstimation(i: Integer) = (0.0001, 0.0001)
   }
   lazy val lazyVals = new {
-    val x0 = ring.ofTerm("x0()".asTerm)
-    val y0 = ring.ofTerm("y0()".asTerm)
+    import PolynomialArithV2._
+    val x0 = ofTerm("x0()".asTerm)
+    val y0 = ofTerm("y0()".asTerm)
     val tm1 = TaylorModelArith.TM("x".asTerm, x0 + y0, "-0.01".asTerm, "0.02".asTerm, context3, QE)
-    val tm2 = TaylorModelArith.TM("y".asTerm, ring.Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
-    val third = TaylorModelArith.Exact(ring.ofTerm("1/3".asTerm), context3)
+    val tm2 = TaylorModelArith.TM("y".asTerm, Const(BigDecimal("0.5")) * x0 - y0, "0".asTerm, "0.1".asTerm, context3, QE)
+    val third = TaylorModelArith.Exact(ofTerm("1/3".asTerm), context3)
     val tm3 = third *! tm1
-    val tm100000 = TaylorModelArith.Exact(ring.ofTerm("0.000001".asTerm), context3) *! tm1
-    val tm1234 = TaylorModelArith.Exact(ring.ofTerm("12.34".asTerm), context3) *! tm2
+    val tm100000 = TaylorModelArith.Exact(ofTerm("0.000001".asTerm), context3) *! tm1
+    val tm1234 = TaylorModelArith.Exact(ofTerm("12.34".asTerm), context3) *! tm2
   }
   import lazyVals._
 
@@ -123,7 +121,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "exact" in withMathematica { qeTool =>
     import TaylorModelArith._
-    import ring._
+    import PolynomialArithV2._
     val a = ofTerm("x0()".asTerm)
     val b = ofTerm("1".asTerm)
     val c = ofTerm("1/3".asTerm)
@@ -144,7 +142,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "collect higher order terms" in withMathematica { qeTool =>
     import TaylorModelArith._
-    import ring._
+    import PolynomialArithV2._
     val tm = (tm3 + tm2 + third) ^ 3
     val res0 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 0})
     val res1 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 1})
@@ -156,7 +154,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "interval" in withMathematica { qeTool =>
     import TaylorModelArith._
-    import ring._
+    import PolynomialArithV2._
     val tm = (tm3 + tm2 + third) ^ 3
     tm.interval._1 shouldBe "(-68034)*10^(-4)".asTerm
     tm.interval._2 shouldBe "73086*10^(-4)".asTerm
@@ -166,12 +164,12 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "drop empty interval" in withMathematica { qeTool =>
     val context = IndexedSeq("x = 1.4 + 0.15 * e0".asFormula)
-    val x = TaylorModelArith.TM("x".asTerm, ring.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
+    val x = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
     x.dropEmptyInterval.get.conclusion.succ.loneElement shouldBe "x=0+0.15/1*(1*e0^1)+0+1.4/1*1+0".asFormula
   }
 
   it should "prettyPrv" in withMathematica { _ =>
-    println(TaylorModelArith.TM("e0".asTerm, ring.ofTerm("e0".asTerm), Number(0), Number(0), IndexedSeq(), QE).prettyPrv)
+    println(TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), IndexedSeq(), QE).prettyPrv)
   }
 
   "timeStep" should "van der Pol" in withMathematica { qeTool =>
@@ -179,10 +177,10 @@ class TaylorModelArithTests extends TacticTestBase {
       // TODO: generate a context like this from "x : [1.25, 1.55]" and "y : [2.35, 2.45]"?!
       val context = "t = 0, x = 1.4 + 0.15 * e0, y = 2.4 + 0.05 * e1, -1 <= e0, e0 <= 1, -1 <= e1, e1 <= 1".split(',').map(_.asFormula).toIndexedSeq
       val vdp = new TaylorModelArith.TemplateLemmas("{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram, 3)
-      val x = TaylorModelArith.TM("x".asTerm, ring.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
-      val y = TaylorModelArith.TM("y".asTerm, ring.ofTerm("2.4 + 0.05 * e1".asTerm), Number(0), Number(0), context, QE)
-      val r0 = TaylorModelArith.TM("e0".asTerm, ring.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
-      val r1 = TaylorModelArith.TM("e1".asTerm, ring.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val x = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
+      val y = TaylorModelArith.TM("y".asTerm, PolynomialArithV2.ofTerm("2.4 + 0.05 * e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 = TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 = TaylorModelArith.TM("e1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
       val res = vdp.timeStepPreconditionedODE(Seq(x, y), Seq(r0, r1), t, 0.01)
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res.conclusion.succ.loneElement))

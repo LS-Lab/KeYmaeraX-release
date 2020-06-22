@@ -29,7 +29,7 @@ trait TimeStepOptions {
   *
   * */
 object TaylorModelArith {
-  import PolynomialArithV2.ring._
+  import PolynomialArithV2._
   import PolynomialArithV2Helpers._
 
   private def tmFormula(elem: Term, poly: Term, lower: Term, upper: Term) = {

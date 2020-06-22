@@ -17,8 +17,6 @@ import org.scalatest.LoneElement._
   * @author Fabian Immler
   */
 class PolynomialArithV2Tests extends TacticTestBase {
-  import PolynomialArithV2._
-
   val aT = "-x + 2/3*y - 4*z^3".asTerm
   val bT = ("x^4 -216/81*x^3*y+16*x^(5-2)*z^3+17496/6561*x^(2*1)*y^2" +
     "- 209952/6561*x^2*y*z^3+96*x^2*z^6+7776/-6561*x*y^3+11337408/531441*x*y^2*z^3" +
@@ -32,7 +30,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
     val a4 = Power(aT, Number(4))
 
     // directly produce Provables
-    val prv = ring.equate(a4, bT).get
+    val prv = PolynomialArithV2.equate(a4, bT).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
     prv.conclusion.succ.loneElement shouldBe Equal(a4, bT)
@@ -41,20 +39,20 @@ class PolynomialArithV2Tests extends TacticTestBase {
     // Tactics
 
     // prove (and close) equality
-    val res = proveBy(Equal(a4, bT), ring.equate(1) & done)
+    val res = proveBy(Equal(a4, bT), PolynomialArithV2.equate(1) & done)
     res shouldBe 'proved
 
     // normalize to zero on rhs and normal form (0 when applied on valid equality) on lhs
-    val res2 = proveBy(Equal(a4, bT), ring.normalizeAt(1))
+    val res2 = proveBy(Equal(a4, bT), PolynomialArithV2.normalizeAt(1))
     res2.subgoals.loneElement shouldBe "==> 0 = 0".asSequent
 
     // normalize term (fully distributed and ordered according to default monomial order)
-    val res3 = proveBy(Equal(a4, bT), ring.normalizeAt(1, 0::Nil))
+    val res3 = proveBy(Equal(a4, bT), PolynomialArithV2.normalizeAt(1, 0::Nil))
     res3.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(Equal(bN, bT)))
   }
 
   "PolynomialArithV2.ring" should "be a 'computer algebra' interface to work with this library" in withMathematica { _ =>
-    import ring._
+    import PolynomialArithV2._
     val a = ofTerm(aT)
     val b = ofTerm(bT)
     val prv = (a^4).equate(b).get
@@ -64,7 +62,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "implicitly convert integers" in withMathematica { _ =>
-    import ring._
+    import PolynomialArithV2._
     val x = ofTerm("x".asTerm)
     val a = (x + 2)*(x - 2)
     val b = (x^2) - 4
@@ -79,15 +77,14 @@ class PolynomialArithV2Tests extends TacticTestBase {
       "- 209952/6561*x^2*y*z^3+96*x^2*z^6+- 7776/6561*x*y^3+11337408/531441*x*y^2*z^3" +
       "- 839808/6561*x*y*z^6+256*x*z^9+16/81*y^4+- 31104/6561*y^3*z^3+279936/6561*y^2*z^6" +
       "- 13824/81*y*z^9+256*z^12)").asTerm)
-    val prv = ring.equate(t1, t2).get
+    val prv = PolynomialArithV2.equate(t1, t2).get
     prv shouldBe 'proved
     prv.conclusion.ante shouldBe 'empty
     prv.conclusion.succ.loneElement shouldBe Equal(t1, t2)
   }
 
   it should "polynomial division" in withMathematica { _ =>
-    import ring._
-    import PolynomialArithV2Helpers._
+    import PolynomialArithV2._
     val x = ofTerm("x".asTerm)
     val y = ofTerm("y".asTerm)
     val z = ofTerm("z".asTerm)
@@ -100,7 +97,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
   }
 
   it should "form Horner" in withMathematica { qeTool =>
-    import ring._
+    import PolynomialArithV2._
     val poly = ofTerm("(x0()+y0()+z0())^2".asTerm)
     val hornerPrv = poly.hornerForm()
     hornerPrv shouldBe 'proved
@@ -118,7 +115,7 @@ class PolynomialArithV2Tests extends TacticTestBase {
 
 
   // expose implementation details
-  lazy val ring23 = ring.asInstanceOf[TwoThreeTreePolynomialRing]
+  lazy val ring23 = PolynomialArithV2.asInstanceOf[TwoThreeTreePolynomialRing]
 
   val pa4Vars = "x,y,f(),g()".split(',').map(_.asTerm).toIndexedSeq
   object PA4 {
