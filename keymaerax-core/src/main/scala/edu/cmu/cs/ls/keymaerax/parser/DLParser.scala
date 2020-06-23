@@ -137,6 +137,12 @@ class DLParser extends Parser {
     case f: Parsed.Failure => throw parseException(f)
   })
 
+  /** Parse the input string in the concrete syntax as a differential dynamic logic sequent. */
+  override val sequentParser: String => Sequent = (s => fastparse.parse(s, fullSequent(_)) match {
+    case Parsed.Success(value, index) => value
+    case f: Parsed.Failure => throw parseException(f)
+  })
+
 
   /** A pretty-printer that can write the output that this parser reads
     *
@@ -178,6 +184,7 @@ class DLParser extends Parser {
 
   def expression[_: P]: P[Expression] = P( NoCut(formula) | NoCut(term) | program )
 
+  def fullSequent[_: P]: P[Sequent]   = P( sequent ~ End )
 
   //*****************
   // terminals
@@ -394,6 +401,14 @@ class DLParser extends Parser {
 
   /** diffProgram: Parses a dL differential program. */
   def diffProgram[_: P]: P[DifferentialProgram] = P( diffProduct )
+
+  //*****************
+  // sequent parser
+  //*****************
+
+  /** sequent `aformula1 , aformula2 , ... , aformulan ==>  sformula1 , sformula2 , ... , sformulam`. */
+  def sequent[_: P]: P[Sequent] = P( formula.rep(sep=","./) ~ "==>" ~ formula.rep(sep=","./)).
+    map({case (ante, succ) => Sequent(ante.to, succ.to)})
 
 }
 
