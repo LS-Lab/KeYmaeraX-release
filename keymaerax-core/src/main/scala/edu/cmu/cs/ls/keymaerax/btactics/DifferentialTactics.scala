@@ -953,7 +953,7 @@ private object DifferentialTactics extends Logging {
               }
             } catch {
               // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
-              case _: Exception => skip
+              case ex: Throwable => skip
             }
           case _ =>
             logger.warn("ODE counterexample not called at box ODE in succedent")
@@ -1232,7 +1232,7 @@ private object DifferentialTactics extends Logging {
         } else {
           // Try to prove postcondition invariant. If we don't have an invariant generator, try hard immediately.
           (if (ToolProvider.invGenTool().isEmpty) odeInvariant(tryHard = true, useDw = true)(pos) & done
-          else odeInvariant()(pos) & done) |
+           else odeInvariant()(pos) & done) |
             // Counterexample check
             cexODE(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
               // Some additional cases
@@ -1894,6 +1894,7 @@ private object DifferentialTactics extends Logging {
     val invTactic =
       if(tryHard)
       {
+        diffInd()(pos) | //@todo should not be necessary but much faster on some examples, see ODETests "prove STTT Example 9b subgoal fast"
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
@@ -1901,6 +1902,7 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
+        diffInd()(pos) | //@todo should not be necessary but much faster on some examples, see ODETests "prove STTT Example 9b subgoal fast"
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
         ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)

@@ -92,6 +92,10 @@ class ODETests extends TacticTestBase {
     proveBy("x=1 ==> \\forall y (y>=0 -> [{x'=y}@invariant(x>=1)]x>=0)".asSequent, ODE(1, 0::1::Nil)).subgoals.loneElement shouldBe "x=1 ==> \\forall y (y>=0 -> x>=1 -> x>=0 & \\forall x (x>=1->y>=0))".asSequent
   }
 
+  it should "prove STTT Example 9b subgoal fast" in withMathematica { _ =>
+    proveBy("Kp()=2, Kd()=3, 5/4*(x-xr)^2+(x-xr)*v/2+v^2/4 < ((S()-xm_0)/2)^2, xr=(xm_0+S())/2, v>=0, xm_0<=x, xm=x, 5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2\n  ==>  [{x'=v,v'=-Kp()*(x-(xm+S())/2)-Kd()*v&v>=0}]5/4*(x-(xm+S())/2)^2+(x-(xm+S())/2)*v/2+v^2/4 < ((S()-xm)/2)^2".asSequent, ODE(1)) shouldBe 'proved
+  }
+
   it should "FEATURE_REQUEST: work in existential context" taggedAs TodoTest in withQE { _ =>
     proveBy("x=1 ==> \\exists y [{x'=y}@invariant(x>=1)]x>=0".asSequent, ODE(1, 0::Nil)) shouldBe 'proved // or at least not fail in dC
   }
