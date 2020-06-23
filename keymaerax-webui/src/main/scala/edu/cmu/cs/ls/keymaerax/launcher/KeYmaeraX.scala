@@ -388,9 +388,9 @@ object KeYmaeraX {
     }
 
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter())
     DerivationInfoRegistry.init
     Ax.prepopulateDerivedLemmaDatabase()
-    BelleInterpreter.setInterpreter(LazySequentialInterpreter())
     KeYmaeraXTool.init(Map.empty)
 
     val generator = new ConfigurableGenerator[GenProduct]()
