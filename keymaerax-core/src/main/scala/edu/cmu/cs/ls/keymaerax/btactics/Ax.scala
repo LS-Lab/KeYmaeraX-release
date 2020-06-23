@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
@@ -15,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
+
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
 import scala.reflect.runtime.{universe => ru}
@@ -276,7 +278,7 @@ object Ax extends Logging {
   private val context = Function("ctx_", None, Bool, Bool) // predicational symbol
 
   /** populates the derived lemma database with all of the lemmas in the case statement above.*/
-  private[keymaerax] def prepopulateDerivedLemmaDatabase() = {
+  private[keymaerax] def prepopulateDerivedLemmaDatabase(): Unit = {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
 
     val lemmas = getClass.getDeclaredFields.filter(f => classOf[StorableInfo].isAssignableFrom(f.getType))
@@ -291,10 +293,26 @@ object Ax extends Logging {
     val fields = fns.map(fn => ru.typeOf[Ax.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
+    val exclude: Set[String] = Configuration(Configuration.Keys.QE_TOOL).toLowerCase() match {
+      case "z3" => Set(
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerLemma",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.timesPowersBoth",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerEven",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerOdd",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideNumber",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideRat",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.normalizeCoeff0",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerEven",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerOdd"
+      )
+      case _ => Set.empty
+    }
+
     var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
     fieldMirrors.indices.foreach(idx => {
       try {
-        fieldMirrors(idx)()
+        val fm = fieldMirrors(idx)
+        if (!exclude.contains(fm.symbol.fullName)) fm()
       } catch {
         case e: Throwable =>
           failures += (fns(idx) -> e)
