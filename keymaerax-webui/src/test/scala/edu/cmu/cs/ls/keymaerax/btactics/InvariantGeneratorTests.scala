@@ -40,6 +40,17 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
       contain theSameElementsAs(("[x:=x+1;]x>=2".asFormula, None) :: ("x>=1".asFormula, None) ::Nil)
   }
 
+  it should "not include implied postcondition conjuncts if it has a counterexample tool" in withMathematica { _ =>
+    //@todo also filter last element (post)?
+    InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2 & y>=3)".asSequent, SuccPos(0)).toList should
+      contain theSameElementsAs(("x>=3".asFormula, None) :: ("x>=3&y>=3".asFormula, None) :: ("x>=1&x>=2&y>=3".asFormula, None) ::Nil)
+  }
+
+  it should "not fail on missing counterexample tool" in {
+    InvariantGenerator.loopInvariantGenerator("x>=2 & x>=3 ==> [{x:=x+1;}*](x>=1 & x>=2)".asSequent, SuccPos(0)).toList should
+      contain theSameElementsAs(("x>=3".asFormula, None) :: ("x>=1".asFormula, None) :: ("x>=2".asFormula, None) :: ("x>=3&x>=1&x>=2".asFormula, None) :: ("x>=1&x>=2".asFormula, None) ::Nil)
+  }
+
   "Differential invariant generator" should "use Pegasus lazily" in {
     //@note pegasusInvariantGenerator asks ToolProvider.invGenTool
 

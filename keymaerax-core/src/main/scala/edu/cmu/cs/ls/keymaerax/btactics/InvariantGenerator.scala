@@ -160,12 +160,26 @@ object InvariantGenerator extends Logging {
   /** A simplistic invariant and differential invariant candidate generator.
     * @author Andre Platzer */
   lazy val simpleInvariantCandidates: Generator[GenProduct] = (sequent,pos) => {
-    def combinedAssumptions(loop: Loop): Formula = {
-      sequent.ante.toList.filter(fml => !StaticSemantics.freeVars(fml).intersect(StaticSemantics.boundVars(loop)).isEmpty).reduceOption(And).getOrElse(True)
+    def combinedAssumptions(loop: Loop, post: Formula): List[Formula] = {
+      val anteConjuncts = sequent.ante.toList.flatMap(FormulaTools.conjuncts)
+      val postConjuncts = FormulaTools.conjuncts(post)
+      val loopBV = StaticSemantics.boundVars(loop)
+      val combined = anteConjuncts.
+        filter(fml => !postConjuncts.contains(fml) && !StaticSemantics.freeVars(fml).intersect(loopBV).isEmpty)
+      val anteInvCandidate = combined.reduceRightOption(And).getOrElse(True)
+      if (ToolProvider.cexTool().isDefined) {
+        postConjuncts.filter(fml => TactixLibrary.findCounterExample(Imply(anteInvCandidate, fml)).isDefined) match {
+          case Nil => combined
+          case missingPost => combined ++ missingPost
+        }
+      } else combined ++ postConjuncts
     }
     sequent.sub(pos) match {
       case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).distinct.map(_ -> None).toStream.distinct
-      case Some(Box(l: Loop, post))      => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).map(_ -> None).toStream.distinct
+      case Some(Box(l: Loop, post))      =>
+        val combined = combinedAssumptions(l, post).distinct
+        //@todo also filter post that is now added at the end?
+        (combined :+ combined.reduceRightOption(And).getOrElse(True) :+ post).map(_ -> None).toStream.distinct
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }}
