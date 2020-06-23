@@ -133,7 +133,7 @@ private object DLBySubst {
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
         cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) &
-          byUS(Ax.selfassignb.provable(URename("x_".asVariable,x,semantic=true))) & done
+          byUS(Ax.selfassignb.provable(URename("x_".asVariable, x, semantic=true))) & done
       )
     case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
   })
@@ -228,15 +228,15 @@ private object DLBySubst {
   private[btactics] val assignEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
-    case Some(Box(Assign(x, t), p)) =>
+    case Some(Box(Assign(x, _), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      val rename = if(universal)
-        Ax.assignbeq.provable(URename("x_".asVariable,x,semantic=true))
-      else
-        Ax.assignbequalityexists.provable(URename("x_".asVariable,x,semantic=true))
+      val rename =
+        if (universal) Ax.assignbeq.provable(URename("x_".asVariable, x, semantic=true))
+        else Ax.assignbequalityexists.provable(URename("x_".asVariable, x, semantic=true))
 
-      (if (universal) useAt(rename)(pos) else useAt(rename)(pos)) &
+      //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
+      ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
        else ident)

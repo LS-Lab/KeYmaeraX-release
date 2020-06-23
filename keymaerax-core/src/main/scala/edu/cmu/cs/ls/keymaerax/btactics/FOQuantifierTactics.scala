@@ -124,15 +124,13 @@ protected object FOQuantifierTactics {
               (x,Box(Assign(x, t), p), skip,
                 (us: Subst) => RenUSubst(("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p)) :: Nil))
           }
-          val rename = Ax.existsGeneralize.provable(URename(Variable("x_"),v,true))
+          val rename = Ax.existsGeneralize.provable(URename(Variable("x_"), v, semantic=true))
 
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
             SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
-                cohide(pos) &
-                //TODO: this step is apparently a no-op? CMon(pos.inExpr) &
-                byUS(rename, subst) & done
+                cohide(pos) & CMon(pos.inExpr) & byUS(rename, subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
@@ -172,8 +170,8 @@ protected object FOQuantifierTactics {
   /** [[SequentCalculus.allR]] */
   private[btactics] val allSkolemize: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     //@Tactic in [[SequentCalculus]]
-    if (!(pos.isSucc && pos.isTopLevel))
-      throw new IllFormedTacticApplicationException("All skolemize only applicable in top level position in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
+    if (!pos.isSucc)
+      throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
     val xs = sequent.sub(pos) match {
       case Some(Forall(vars, _)) => vars
       case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
@@ -184,7 +182,7 @@ protected object FOQuantifierTactics {
     // No renaming necessary if the bound variables are fresh
     val noRename = StaticSemantics.freeVars(sequent).intersect(xs.toSet).isEmpty
     
-    if(noRename) ProofRuleTactics.skolemizeR(pos)
+    if (noRename) ProofRuleTactics.skolemizeR(pos)
     else {
       //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
       val renaming =

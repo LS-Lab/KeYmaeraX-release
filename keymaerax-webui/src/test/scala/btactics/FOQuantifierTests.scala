@@ -268,7 +268,7 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "z=1, y=z+1  ==>  [{y'=f(|y|)^2,z'=g(|y|),a'=h(||)&true}]y>=0".asSequent
   }
 
-  it should "instantiate in the presence of space exceptions with self reference" taggedAs TodoTest in {
+  it should "FEATURE_REQUEST: instantiate in the presence of space exceptions with self reference" taggedAs TodoTest in {
     val result = proveBy("z=1, ==> \\exists y [{y'=f(|y|)^2, z' = g(|y|), a'=h(||)}]y>=0".asSequent,
       existsR("z+y".asTerm)(1)
     )
