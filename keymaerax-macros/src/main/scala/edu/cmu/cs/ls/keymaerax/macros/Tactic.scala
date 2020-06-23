@@ -50,6 +50,11 @@ class Tactic(val names: Any = false, /* false is a sigil value, user value shoul
 
 class TacticImpl(val c: blackbox.Context) {
   import c.universe._
+  private trait AnonSort
+  private case object CoreAnonSort extends AnonSort
+  private case object SimpleAnonSort extends AnonSort
+  private case object UnguardedAnonSort extends AnonSort
+
   private trait PosArgs
   private case class AnteSuccPos(anteName: ValDef, succName: ValDef) extends PosArgs
   private case class AntePos(provableName: Option[ValDef], posName: ValDef) extends PosArgs
@@ -220,7 +225,7 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
 
-    def inferType(defaultType: Tree, args: List[ArgInfo], pos: PosArgs, isCoreAnon: Option[Boolean]): Tree = {
+    def inferType(defaultType: Tree, args: List[ArgInfo], pos: PosArgs, anonSort: Option[AnonSort]): Tree = {
       // Only infer type if annotation is empty
       defaultType match {
         case tq"" =>
@@ -235,12 +240,12 @@ class TacticImpl(val c: blackbox.Context) {
             case (_ :: _, _: TwoPos | _: AnteSuccPos) =>
               (tq"edu.cmu.cs.ls.keymaerax.bellerophon.AppliedBuiltInTwoPositionTactic")
             case (Nil, AntePos(Some(sname), pname)) =>
-              if (isCoreAnon.contains(true))
+              if (anonSort.contains(CoreAnonSort))
                 (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreLeftTactic")
               else
                 (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInLeftTactic")
             case (Nil, SuccPos(Some(sname), pname)) =>
-              if (isCoreAnon.contains(true))
+              if (anonSort.contains(CoreAnonSort))
                 (tq"edu.cmu.cs.ls.keymaerax.bellerophon.CoreRightTactic")
               else
                 (tq"edu.cmu.cs.ls.keymaerax.bellerophon.BuiltInRightTactic")
@@ -251,16 +256,20 @@ class TacticImpl(val c: blackbox.Context) {
         case _ => defaultType
       }
     }
-    def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, isCoreAnon: Option[Boolean]): Tree = {
+    def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, anonSort: Option[AnonSort]): Tree = {
       // [[isCoreAnon]] represents "which anon function" was on the RHS of the definition.
       // If this is empty, the @Tactic is a forward to another BelleExpr. [[forward]] has overloads for most (@TODO all)
       // tactic classes, so in each case we just call [[forward]]
-      if (isCoreAnon.isEmpty) {
+      if (anonSort.isEmpty) {
         return q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).forward($acc)"""
       }
       (args, pos) match {
         case (Nil, NoPos(None)) =>
-          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
+          if(anonSort.contains(UnguardedAnonSort)) {
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).bys($acc)"""
+          } else {
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
+          }
         case (Nil, NoPos(Some(arg))) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($arg) => $acc)"""
         case (Nil, SequentArg(sequentName)) =>
@@ -284,7 +293,7 @@ class TacticImpl(val c: blackbox.Context) {
         case (Nil, AntePos(None, pname)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byL(($pname) =>  $acc)"""
         case (Nil, AntePos(Some(sname), pname)) =>
-          if (isCoreAnon.contains(true))
+          if (anonSort.contains(CoreAnonSort))
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)"""
           else
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)"""
@@ -293,7 +302,7 @@ class TacticImpl(val c: blackbox.Context) {
         case (Nil, SuccPos(None, pname)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byR(($pname) =>  $acc)"""
         case (Nil, SuccPos(Some(sname), pname)) =>
-          if (isCoreAnon.contains(true))
+          if (anonSort.contains(CoreAnonSort))
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)"""
           else
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)"""
@@ -311,15 +320,15 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
     // Type and term ASTs which wrap acc in position and/or input arguments as anonymous lambdas
-    def argue(funName: String, acc: Tree, pos: PosArgs, args: List[ArgInfo], generatorOpt: Option[ArgInfo], tRet: Tree, isCoreAnon: Option[Boolean]): (Tree, Seq[ValDef], Seq[Tree], (Tree, Tree)) = {
+    def argue(funName: String, acc: Tree, pos: PosArgs, args: List[ArgInfo], generatorOpt: Option[ArgInfo], tRet: Tree, anonSort: Option[AnonSort]): (Tree, Seq[ValDef], Seq[Tree], (Tree, Tree)) = {
       val funStr = Literal(Constant(funName))
       val argExpr = args match {
         case Nil => q"Nil"
         case _ => args.foldRight[Tree](q"Nil")({case (ai, acc) => q"${Ident(TermName(ai.name))} :: $acc"})
       }
       // if no "anon" function present, then tactic is a simple forwarding expression like val e: BelleExpr = <tac>
-      val baseType = inferType(tRet, args, pos, isCoreAnon)
-      val baseTerm = arguePos(funStr, argExpr, args, pos, acc, isCoreAnon)
+      val baseType = inferType(tRet, args, pos, anonSort)
+      val baseTerm = arguePos(funStr, argExpr, args, pos, acc, anonSort)
       val base = (baseTerm, baseType)
       def aiToVal(ai: ArgInfo): ValDef = {
         val name = ai.name
@@ -358,7 +367,7 @@ class TacticImpl(val c: blackbox.Context) {
       }
     }
     def assemble(mods: Modifiers, declName: TermName, inArgs: Seq[Tree], positions: PosArgs, rhs: Tree, tRet: Tree, isDef: Boolean
-                , isCoreAnon: Option[Boolean]): c.Expr[Any] = {
+                 , anonSort: Option[AnonSort]): c.Expr[Any] = {
       val (codeName, display, displayLevel, parsedArgs, revealInternalSteps) = getParams(declName)
       val (generatorOpt, defArgs) = getInputs(inArgs)
       val displayInputs = if (parsedArgs.nonEmpty) parsedArgs else defArgs
@@ -367,7 +376,7 @@ class TacticImpl(val c: blackbox.Context) {
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
       // AST for literal strings for the names
       val codeString = Literal(Constant(codeName))
-      val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, defArgs, generatorOpt, tRet, isCoreAnon)
+      val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, defArgs, generatorOpt, tRet, anonSort)
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
       val info = (displayInputs, positions) match {
         case (Nil, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
@@ -393,15 +402,16 @@ class TacticImpl(val c: blackbox.Context) {
         c.Expr(q"""$mods val $declName: $baseType = $application""")
       }
     }
-    def coreAnon(s: String): Option[Boolean] = {
+    def anonSort(s: String): Option[AnonSort] = {
       s match {
-        case "anon" |  "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" | "inputanonP" => Some(false)
-        case "coreanon" => Some(true)
+        case "anon"  | "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" | "inputanonP" => Some(SimpleAnonSort)
+        case  "anons" => Some(UnguardedAnonSort)
+        case "coreanon" => Some(CoreAnonSort)
         case _ => None
       }
     }
     def pickRhs(f: Ident, rhs: Tree, params: Option[Seq[Tree]] = None): Tree = {
-      if (coreAnon(f.toString).isDefined) {
+      if (anonSort(f.toString).isDefined) {
         rhs
       } else {
         params match {
@@ -440,7 +450,7 @@ class TacticImpl(val c: blackbox.Context) {
       case _ => if (!isTactic(tRet))
         c.abort(c.enclosingPosition, "Invalid annottee: Expected val(or def) <tactic>: <Tactic> = <anon> ((args) => rhs)..., got: " + tRet + " " + tRet.getClass + ", see MiscTactics.scala for supported types")
     }
-    val isCoreAnon = fOpt match { case Some(f) => coreAnon(f.toString) case None => None }
+    val isCoreAnon = fOpt match { case Some(f) => anonSort(f.toString) case None => None }
     val positions = getPositioning(params)
     val res = assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
     // Print debug info when applied to any tactic in this set

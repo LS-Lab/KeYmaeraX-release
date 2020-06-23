@@ -147,7 +147,7 @@ object DebuggingTactics {
   def assertProvableSize(provableSize: Int, ex: String => Throwable = new TacticAssertionError(_)): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.length != provableSize)
-        throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
+        throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size} subgoals:\n" + provable.prettyString)
       provable
     }
   }
@@ -220,7 +220,7 @@ object Idioms {
   import TacticFactory._
 
   @Tactic()
-  lazy val nil: BelleExpr = anon {(provable: ProvableSig) => provable}
+  lazy val nil: BelleExpr = anons {(provable: ProvableSig) => provable} 
 
   /** no-op nil */
   lazy val ident: BelleExpr = nil
@@ -629,6 +629,12 @@ object TacticFactory {
     def by(t: ProvableSig => ProvableSig): BuiltInTactic =
       new BuiltInTactic(name) {
         @inline override def result(provable: ProvableSig): ProvableSig = {
+          t(provable)
+        }
+      }
+    def bys(t: ProvableSig => ProvableSig): BuiltInTactic =
+      new BuiltInTactic(name) {
+        @inline override def result(provable: ProvableSig): ProvableSig = {
           requireOneSubgoal(provable, name)
           t(provable)
         }
@@ -676,6 +682,7 @@ object TacticFactory {
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = "ANON" by t
   def anon(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" by t
+  def anons(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" bys t
   def anon(t: ((ProvableSig, Position) => ProvableSig)): BuiltInPositionTactic = "ANON" by t
   def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
   def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t

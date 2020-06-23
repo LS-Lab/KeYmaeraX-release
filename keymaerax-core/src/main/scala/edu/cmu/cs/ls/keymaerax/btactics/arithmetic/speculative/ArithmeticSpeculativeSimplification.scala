@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.SignAnalysis
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -65,6 +66,7 @@ object ArithmeticSpeculativeSimplification {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
       case Success(None) => skip
       case Failure(_: ProverSetupException) => skip //@note no counterexample tool, so no counterexample
+      case Failure(_: MathematicaComputationAbortedException) => skip
       case Failure(ex) => throw ex //@note fail with all other exceptions
     }
   })

@@ -18,7 +18,7 @@ import scala.collection.immutable._
 /**
   * Parse a differential dynamic logic archive file string to a list of archive entries.
   * Splits a KeYmaera X archive into its parts and forwards to respective problem/tactic parsers. An archive contains
-  * at least one entry combining a model in the .kyx format and possibly a (partial) proof tactic.
+  * at least one entry combining a model in the `.kyx` format and possibly a (partial) proof tactic.
   *
   * Format example:
   * {{{
@@ -36,6 +36,7 @@ import scala.collection.immutable._
   *
   * @author Andre Platzer
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
+  * @see [[KeYmaeraXArchiveParser]]
   */
 object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
@@ -70,7 +71,8 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
 
   // implementation
 
-  def sort[_: P]: P[Sort] = P( ("Real" | "Bool" | "HP").! ).map({case "Real" => Real case "Bool" => Bool case "HP" => Trafo})
+  def sort[_: P]: P[Sort] = P( ("Real" | "Bool" | "HP" | "HG").! ).
+    map({case "Real" => Real case "Bool" => Bool case "HP" => Trafo case "HG" => Trafo})
 
   /** parse a label */
   def label[_: P]: P[String] = {
@@ -219,9 +221,10 @@ object DLArchiveParser extends (String => List[ParsedArchiveEntry]) {
       )).rep(sep=","./)
   ).map({case (ty,decllist) => decllist.map({case (n,idx,args) => ((n,idx), (Some(args), ty, Some(Nil), None, UnknownLocation))}).toList})
 
-  /** `HP name ::= program;` program definition. */
+  /** `HP name ::= {program};` | `HG name ::= {program};` program definition. */
+    //@todo better return type with ProgramConst/SystemConst instead of Name
   def progDef[_: P]: P[(Name,Signature)] = P(
-    "HP" ~~ blank ~ ident ~ "::=" ~ ("{" ~ (NoCut(program) | odeprogram) ~ "}" /*| NoCut(program)*/) ~ ";".?
+    ("HP" | "HG") ~~ blank ~ ident ~ "::=" ~ ("{" ~ (NoCut(program) | odeprogram) ~ "}" /*| NoCut(program)*/) ~ ";".?
   ).map({case (s,idx,p) => ((s,idx),(Some(Unit), Trafo, None, Some(p), UnknownLocation))})
 
   /** `ProgramVariables Real x; Real y,z; End.` parsed. */

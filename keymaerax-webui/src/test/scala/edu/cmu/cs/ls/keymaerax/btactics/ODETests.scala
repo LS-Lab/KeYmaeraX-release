@@ -85,6 +85,17 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
+  it should "fall back to dI in non-top positions" in withQE { _ =>
+    //@todo support true ODE in context
+    proveBy("x=1 ==> \\exists y [{x'=y}]x>=1".asSequent, ODE(1, 0::Nil)).subgoals.loneElement shouldBe "x=1 ==> \\exists y (x>=1&y>=0)".asSequent
+    proveBy("x=1 ==> \\forall y (y>=0 -> [{x'=y}]x>=1)".asSequent, ODE(1, 0::1::Nil)).subgoals.loneElement shouldBe "x=1 ==> \\forall y (y>=0 -> x>=1&y>=0)".asSequent
+    proveBy("x=1 ==> \\forall y (y>=0 -> [{x'=y}@invariant(x>=1)]x>=0)".asSequent, ODE(1, 0::1::Nil)).subgoals.loneElement shouldBe "x=1 ==> \\forall y (y>=0 -> x>=1 -> x>=0 & \\forall x (x>=1->y>=0))".asSequent
+  }
+
+  it should "FEATURE_REQUEST: work in existential context" taggedAs TodoTest in withQE { _ =>
+    proveBy("x=1 ==> \\exists y [{x'=y}@invariant(x>=1)]x>=0".asSequent, ODE(1, 0::Nil)) shouldBe 'proved // or at least not fail in dC
+  }
+
   "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3 { _ =>
     the [BelleThrowable] thrownBy TactixLibrary.proveBy("\\forall x_0 (x_0>0&true->\\forall x (x>0->-x>=0))".asFormula, QE) should have message
       "QE with Z3 gives SAT. Cannot reduce the following formula to True:\n\\forall x_0 \\forall x (x_0>0&x>0->-x>=0)\n"

@@ -18,8 +18,9 @@ import scala.annotation.tailrec
   * The Bellerophon parser
   *
   * @author Nathan Fulton
+  * @see [[DLBelleParser]]
   */
-object BelleParser extends (String => BelleExpr) with Logging {
+object BelleParser extends TacticParser with Logging {
   case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
                             parent: Option[DefScope[K, V]] = None) {
     def get(key: K): Option[V] = defs.get(key) match {
@@ -30,6 +31,10 @@ object BelleParser extends (String => BelleExpr) with Logging {
       }
     }
   }
+
+  override val tacticParser: String => BelleExpr = this
+  override val expressionParser: Parser = KeYmaeraXParser
+  override val printer: BelleExpr => String = BellePrettyPrinter
 
   /** Parses the string `s` as a Bellerophon tactic. Does not use invariant generators and does not expand definitions. */
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)

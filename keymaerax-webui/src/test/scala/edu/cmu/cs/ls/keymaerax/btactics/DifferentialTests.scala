@@ -102,6 +102,13 @@ class DifferentialTests extends TacticTestBase {
       subgoals.loneElement shouldBe "A>0&A>1, B=1, C=2&D=3, x_0=4 ==> x>0 -> x>0".asSequent
   }
 
+  it should "retain negated context" in withQE { _ =>
+    proveBy("A>0&A>1, C=2&D=3, x=4 ==> [{x'=1&x>0}]x>0, !B=1".asSequent, dW(1)).
+      subgoals.loneElement shouldBe "==> x>0 & A>0 & A>1 & C=2 & D=3 & !!B=1 -> x>0".asSequent
+    proveBy("A>0&A>1, C=2&D=3 ==> [{x'=1&x>0}]x>0, !B=1, !x=4".asSequent, DifferentialTactics.diffWeakenPlus(1)).
+      subgoals.loneElement shouldBe "A>0&A>1, C=2&D=3 ==> !B=1, !x_0=4, x>0 -> x>0".asSequent
+  }
+
   it should "keep initial conditions" in withQE { _ =>
     proveBy(("dx_0^2+dy_0^2=1&x^2+y^2>0, dx_0=dx, dy_0=dy, old=dy*x-(dx-1)*y " +
       " ==> [{x'=dx-1,y'=dy,dx'=0,dy'=0 & dx=dx_0&dy=dy_0&dy*x-(dx-1)*y=old}](dx^2+dy^2=1 & x^2+y^2>0)").asSequent, dW(1)).
@@ -113,9 +120,24 @@ class DifferentialTests extends TacticTestBase {
       " ==> dx=dx_0&dy=dy_0&dy*x-(dx-1)*y=old -> dx^2+dy^2=1&x^2+y^2>0").asSequent
   }
 
+  it should "support box assumptions" in withQE { _ =>
+    proveBy(
+      """x_0<=m, A()>=0, b()>0, true, t=0,
+        |[{x'=v,v'=A(),t'=1&v>=0&t<=ep()}][{x'=v,v'=-b()&true}]x<=m,
+        |t_1=0, v_0>=0&t_1<=ep(), time_=0, t_1=t_0, v_0=v, x_0=x
+        |==>
+        |[{x'=v,v'=A(),t_0'=1,time_'=1&(v>=0&t_0<=ep())&time_>=0&t_0=time_+t_1&v=A()*time_+v_0&x=1/2*A()*time_^2+time_*v_0+x_0}]x<=m""".stripMargin.asSequent,
+      DifferentialTactics.diffWeakenPlus(1)).subgoals.loneElement shouldBe
+      """x_0<=m, A()>=0, b()>0, true, t=0, t_1=0, v_0>=0&t_1<=ep(), time__0=0
+        |==>
+        |(v>=0&t_0<=ep())&time_>=0&t_0=time_+t_1&v=A()*time_+v_0&x=1/2*A()*time_^2+time_*v_0+x_0->x<=m""".stripMargin.asSequent
+  }
+
   it should "work if not sole formula in succedent" in withQE { _ =>
-    val result = proveBy("A>0&A>1, B=1, C=2&D=3, x=4 ==> Blah=1, [{x'=1&x>2}]x>0, Blub=3".asSequent, dW(2))
-    result.subgoals.loneElement shouldBe "A>0&A>1, B=1, C=2&D=3, x_0=4 ==> Blah=1, Blub=3, x>2 -> x>0".asSequent
+    proveBy("A>0&A>1, B=1, C=2&D=3, x=4 ==> Blah=1, [{x'=1&x>2}]x>0, Blub=3".asSequent, dW(2)).subgoals.
+      loneElement shouldBe "==> x>2 & A>0 & A>1 & B=1 & C=2 & D=3 & !Blah=1 & !Blub=3 -> x>0".asSequent
+    proveBy("A>0&A>1, B=1, C=2&D=3, x=4 ==> Blah=1, [{x'=1&x>2}]x>0, Blub=3".asSequent, DifferentialTactics.diffWeakenPlus(2)).subgoals.
+      loneElement shouldBe "A>0&A>1, B=1, C=2&D=3, x_0=4 ==> Blah=1, Blub=3, x>2 -> x>0".asSequent
   }
 
   "Differential effect" should "introduce a differential assignment" in {
@@ -682,9 +704,9 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head shouldBe "y=1 ==> [x:=0;]\\forall y_0 (y_0=y -> \\forall x_0 (x_0=x -> [{x'=1,y'=-1 & true & (x>=x_0 & y<=y_0)}]x>=0))".asSequent
   }
 
-  it should "FEATURE_REQUEST: keep positioning stable in succedent" taggedAs(TodoTest) in withQE { _ =>
+  it should "FEATURE_REQUEST: keep positioning stable in succedent" taggedAs TodoTest in withQE { _ =>
     //@todo useAt has unstable positioning (when fixing: some tactics - e.g., ODE - may change midway from using pos to 'Rlast as a workaround)
-    val result = proveBy("x=0 ==> [{x'=y}]x>=-1, !y<0".asSequent, dC("x>=0".asFormula)(2))
+    val result = proveBy("x=0 ==> !y!=3, [{x'=y}]x>=-1, !y<0".asSequent, dC("x>=0".asFormula)(2))
     result.subgoals(0) shouldBe "x=0 ==> !y!=3, [{x'=y & true & x>=0}]x>=-1, !y<0".asSequent
     result.subgoals(1) shouldBe "x=0 ==> !y!=3, [{x'=y}]x>=0, !y<0".asSequent
   }
@@ -1396,6 +1418,22 @@ class DifferentialTests extends TacticTestBase {
   it should "solve double integrator with sum of constants" in withQE { _ =>
     val result = proveBy("y<b, x<=0, Y()>=0, Z()<Y() ==> [{y'=x, x'=-Y()+Z()}]y<b".asSequent, solve(1))
     result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (-Y()+Z())*(t_^2/2)+x*t_+y<b)".asSequent
+  }
+
+  "endODEHeuristic" should "instantiate with duration in positive polarity in succedent" in withQE { _ =>
+    proveBy("x>=0 ==> [{x'=1 & x<=5}]x>=0".asSequent, solve(1) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "x>=0 ==> \\forall t_ (t_>=0->t_+x<=5->t_+x>=0)".asSequent
+  }
+
+  it should "not try to instantiate in negative polarity in succedent" in withQE { _ =>
+    proveBy(" ==> ![{x'=1 & x<=5}]x>=0".asSequent, solve(1, 0::Nil) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "==> !\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->s_+x<=5)->t_+x<=5&t_+x>=0)".asSequent
+  }
+
+  it should "instantiate in negative polarity in antecedent" in withQE { _ =>
+    proveBy("![{x'=1 & x<=5}]x>=0, x>=0 ==> ".asSequent, solve(-1, 0::Nil) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "!\\forall t_ (t_>=0->t_+x<=5->t_+x>=0), x>=0 ==> ".asSequent
+  }
+
+  it should "not try to instantiate in positive polarity in antecedent" in withQE { _ =>
+    proveBy("[{x'=1 & x<=5}]x>=0 ==> ".asSequent, solve(-1) & DifferentialTactics.endODEHeuristic).subgoals.loneElement shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->s_+x<=5)->t_+x<=5&t_+x>=0) ==> ".asSequent
   }
 
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {

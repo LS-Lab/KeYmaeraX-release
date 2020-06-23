@@ -63,7 +63,7 @@ class FileLemmaDB extends LemmaDBBase with Logging {
   }))
 
   /** @inheritdoc */
-  final override def writeLemma(id: LemmaID, lemma: String): Unit = {
+  final override def writeLemma(id: LemmaID, lemma: String): Unit = synchronized {
     val f = file(id)
     if (!f.getParentFile.exists() && !f.getParentFile.mkdirs()) throw new IllegalStateException("Unable to create lemma " + id)
     val pw = new PrintWriter(f)

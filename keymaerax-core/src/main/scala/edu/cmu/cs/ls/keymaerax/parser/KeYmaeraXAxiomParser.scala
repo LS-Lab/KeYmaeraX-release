@@ -12,6 +12,7 @@ import org.apache.logging.log4j.scala.Logging
  * Parse an axiom string to a list of named formulas that are to be used as axioms in a theory.
  * Created by nfulton on 6/11/15.
  * @author nfulton
+  * @see [[DLAxiomParser]]
  */
 object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logging {
   /**

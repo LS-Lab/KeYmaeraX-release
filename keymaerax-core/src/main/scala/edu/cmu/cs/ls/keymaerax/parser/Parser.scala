@@ -19,7 +19,11 @@ import edu.cmu.cs.ls.keymaerax.core._
   *     Parser: String => Expression
   * }}}
   * Parsers are adjoint to printers, i.e., they reparse printed expressions as the original expressions
-  * but fail to parse syntactically ill-formed strings.
+  * but fail to parse syntactically ill-formed strings:
+  * {{{
+  *   parser(printer(expr)) == expr
+  * }}}
+  *
   * @author Andre Platzer
   * @see [[TokenParser]]
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
@@ -89,13 +93,16 @@ object ParserHelper {
     * @todo DANGER hack: actually just returns a version of 's' that is converted into ASCII (replacing non-ASCII bytes with '?') and then stripping all the '?' from the prefix of the string.
     * In particular, ay also remove completely valid '?' characters if that's what's at the beginning of the string. */
   def removeBOM(s : String): String = {
-    val asASCII = new String(s.getBytes("US-ASCII"), "US-ASCII")
-    //Find the length of a uniformly-'?' prefix on asSCII, then remove that many characters from s.
-    //This preserves other unicode characters is s, only removing the potential BOM.
-    //@todo be less indiscriminate and only remove these guys: https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding
-    var toRemove = 0
-    while(asASCII(toRemove) == '?')
-      toRemove += 1
-    s.substring(toRemove)
+    if (s.isEmpty) s
+    else {
+      val asASCII = new String(s.getBytes("US-ASCII"), "US-ASCII")
+      //Find the length of a uniformly-'?' prefix on asSCII, then remove that many characters from s.
+      //This preserves other unicode characters is s, only removing the potential BOM.
+      //@todo be less indiscriminate and only remove these guys: https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding
+      var toRemove = 0
+      while (asASCII(toRemove) == '?')
+        toRemove += 1
+      s.substring(toRemove)
+    }
   }
 }

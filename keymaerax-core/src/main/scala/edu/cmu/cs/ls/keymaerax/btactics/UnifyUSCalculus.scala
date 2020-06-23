@@ -111,10 +111,10 @@ trait UnifyUSCalculus {
   /** skip is a no-op tactic that has no effect
     * @see [[TactixLibrary.done]] */
   @Tactic()
-  val skip : BelleExpr = anon {Idioms.ident}
+  val skip : BelleExpr = Idioms.ident
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
-  val nil : BelleExpr = anon {skip}
+  val nil : BelleExpr = skip
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
   @Tactic()
@@ -551,10 +551,11 @@ trait UnifyUSCalculus {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
           // unify keyPart against target expression by single-sided matching
-          val subst = if (OPTIMIZE)
-            inst(matcher.unifiable(keyPart, expr))
-          else try {
-            inst(defaultMatcher.unifiable(keyPart, expr))
+          val subst = try {
+            if (OPTIMIZE)
+              inst(matcher.unifiable(keyPart, expr))
+            else
+              inst(defaultMatcher.unifiable(keyPart, expr))
           } catch {
             case ex: InapplicableUnificationKeyFailure => throw ex.inContext("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\tat " + pos + "\n  against: " + keyPart + "\tat " + key + "\n  of:      " + codeName + "\n  unsuccessful")
           }

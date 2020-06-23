@@ -270,7 +270,7 @@ object TactixLibrary extends HilbertCalculus
       }
     }
 
-    def composeChase: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    def composeChase: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
       val decompose = Idioms.mapSubpositions(pos, seq, {
         case (Box(Compose(_, _), _), pp: Position) => Some(chase(3, 3, (e: Expression) => e match {
           case Box(Compose(_, _), _) => Ax.composeb :: Nil
@@ -282,7 +282,7 @@ object TactixLibrary extends HilbertCalculus
       decompose.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
-    def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
       val solvers = Idioms.mapSubpositions(pos, seq, {
         case (Box(ODESystem(_, _), q), pp: Position) =>
           if (pp.isTopLevel) {
@@ -294,7 +294,7 @@ object TactixLibrary extends HilbertCalculus
       solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
-    def decomposeToODE: BelleExpr = "ANON" by ((seq: Sequent) => {
+    def decomposeToODE: BelleExpr = anon ((seq: Sequent) => {
       if (seq.isFOL) {
         skip /* master continues */
       } else {
@@ -306,14 +306,16 @@ object TactixLibrary extends HilbertCalculus
       }
     })
 
+    val dWContextRobust = anon ((pos: Position, _: Sequent) => Idioms.doIf((_: ProvableSig) => pos.isTopLevel)(dWPlus(pos)))
+
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWPlus, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWContextRobust, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
-          (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
+          ((Idioms.must(DifferentialTactics.endODEHeuristic) & QE & done) | ?(QE & (if (keepQEFalse) nil else done)))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
@@ -437,11 +439,11 @@ object TactixLibrary extends HilbertCalculus
                 logger.warn("ChooseSome: error listing options " + err, err)
                 List[Formula]().iterator
             },
-            (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
+            (inv: Formula) => loop(inv)(pos) & onAll(auto & done) & done
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
-          loopPostMaster(gen)(pos) & done |
+          loopPostMaster(gen)(pos) & done ||
             ChooseSome(
               () => try {
                 gen(seq, pos).iterator.map(_._1)
@@ -514,11 +516,17 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dW]]
     * @see [[dG]]
     */
-  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
-    DifferentialTactics.mathematicaSplittingODE(pos)
-    // if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
-    // else if (ToolProvider.qeTool(Some("WolframEngine")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
-    // else DifferentialTactics.ODE(pos)
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    // use and check invSupplier (user-defined annotations from input file)
+    invSupplier(seq, pos).toList.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
+      skip,
+      (if (pos.isTopLevel) DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) else DifferentialTactics.diffInd()(pos)) &
+        Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
+        DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
+          "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
+    ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
+      (if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos)
+       else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos))
   })
 
   /**
