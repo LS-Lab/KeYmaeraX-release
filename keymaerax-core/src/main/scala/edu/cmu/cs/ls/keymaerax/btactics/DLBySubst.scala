@@ -18,6 +18,7 @@ import DerivationInfoAugmentors._
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success, Try}
 
 /**
   * Implementation: some dL tactics using substitution tactics.
@@ -388,6 +389,45 @@ private object DLBySubst {
           }}))(afterGhostsPos)
     }
     pre & discreteGhosts(ov, sequent, doloop)(pos)
+  })
+
+  /** Analyzes a loop for counterexamples. */
+  def cexLoop(inv: Formula): DependentPositionTactic = "cexLoop" by ((pos: Position, seq: Sequent) => {
+    val cexProgram = unfoldProgramNormalize & OnAll(
+      Idioms.doIfElse(_.subgoals.forall(_.isFOL))(
+        //@todo nested loops, loops in postcondition, ODEs in postcondition
+        ToolTactics.assertNoCex,
+        ToolProvider.invGenTool().map(t => {
+          anon((pos: Position, seq: Sequent) => seq.sub(pos) match {
+            case Some(Box(ode: ODESystem, post)) =>
+              val preImpPostCEX = Try(TactixLibrary.findCounterExample(Imply(seq.ante.reduceRightOption(And).getOrElse(True), post))).getOrElse(None)
+              if (preImpPostCEX.isDefined) throw BelleCEX("ODE Counterexample", preImpPostCEX.get, seq)
+              else Try(t.refuteODE(ode, seq.ante, post)) match {
+                case Success(None) => skip
+                case Success(Some(cex)) => throw BelleCEX("ODE Counterexample", cex, seq)
+                case Failure(_) => skip
+              }
+            case _ => skip
+          })(pos)
+        }).getOrElse(skip)
+      )
+    )
+
+    seq.sub(pos) match {
+      case Some(Box(Loop(_), post)) =>
+        // proveBy throws BelleCEX when counterexamples found
+        proveBy(seq,
+          //@note uses loop to preserve constants/initial conditions consistently
+          loop(inv)(pos) <(
+            //@todo support for non-FOL invariant
+            ToolTactics.assertNoCex,
+            Idioms.doIfElse(_.subgoals.forall(_.isFOL))(ToolTactics.assertNoCex, cexProgram),
+            (if (!post.isFOL) chase(pos ++ PosInExpr(1::Nil)) else skip) & cexProgram
+          )
+        )
+        // if proveBy succeeds, no CEX was found, so skip. otherwise BelleCEX was thrown from within proveBy.
+        skip
+    }
   })
 
   /**
