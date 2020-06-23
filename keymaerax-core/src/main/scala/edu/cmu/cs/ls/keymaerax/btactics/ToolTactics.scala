@@ -12,13 +12,14 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolInternalException}
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolInternalException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 
 import scala.annotation.tailrec
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
+import scala.util.{Failure, Success, Try}
 
 /**
  * Implementation: Tactics that execute and use the output of tools.
@@ -42,6 +43,17 @@ private object ToolTactics {
       case _ => throw new InputFormatFailure("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
     }
     nil
+  })
+
+  /** Assert that there is no counter example. skip if none, error if there is. */
+  lazy val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
+    Try(findCounterExample(sequent.toFormula)) match {
+      case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
+      case Success(None) => skip
+      case Failure(_: ProverSetupException) => skip //@note no counterexample tool, so no counterexample
+      case Failure(_: MathematicaComputationAbortedException) => skip
+      case Failure(ex) => throw ex //@note fail with all other exceptions
+    }
   })
 
   /** Performs QE and fails if the goal isn't closed. */

@@ -7,19 +7,16 @@ package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
-import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, ToolTactics}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.signanalysis.{Sign, SignAnalysis}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, ExpressionTraversal, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
 
 /**
   * Tactics for simplifying arithmetic sub-goals.
@@ -62,21 +59,10 @@ object ArithmeticSpeculativeSimplification {
     sequent.succ.indices.map(toSingleSucc(_) & finish & done).reduceLeftOption[BelleExpr](_|_).getOrElse(skip)
   })
 
-  /** Assert that there is no counter example. skip if none, error if there is. */
-  lazy val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
-    Try(findCounterExample(sequent.toFormula)) match {
-      case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
-      case Success(None) => skip
-      case Failure(_: ProverSetupException) => skip //@note no counterexample tool, so no counterexample
-      case Failure(_: MathematicaComputationAbortedException) => skip
-      case Failure(ex) => throw ex //@note fail with all other exceptions
-    }
-  })
-
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
   lazy val proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
-    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & assertNoCex & QE & done) | speculativeQENoAbs)
+    if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & ToolTactics.assertNoCex & QE & done) | speculativeQENoAbs)
     else throw new TacticInapplicableFailure("Sequent does not contain abs")
   })
 
