@@ -103,6 +103,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
     case Left(Some(expr: Expression)) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
     case Left(Some(expr)) => "\"" + expr + "\""
+    case Left(expr) => "\"" + expr + "\""
     case Left(None) => ""
     case Right(loc) => loc.prettyString
   }
