@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
+import DerivationInfoAugmentors._
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
@@ -131,7 +132,8 @@ private object DLBySubst {
       val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
-        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS(Ax.selfassignb) & done
+        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) &
+          byUS(Ax.selfassignb.provable(URename("x_".asVariable,x,semantic=true))) & done
       )
     case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
   })
@@ -229,9 +231,12 @@ private object DLBySubst {
     case Some(Box(Assign(x, t), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRename(x, y)(pos) &
-      (if (universal) useAt(Ax.assignbeq)(pos) else useAt(Ax.assignbequalityexists)(pos)) &
-      ProofRuleTactics.uniformRename(y, x) &
+      val rename = if(universal)
+        Ax.assignbeq.provable(URename("x_".asVariable,x,semantic=true))
+      else
+        Ax.assignbequalityexists.provable(URename("x_".asVariable,x,semantic=true))
+
+      (if (universal) useAt(rename)(pos) else useAt(rename)(pos)) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
        else ident)

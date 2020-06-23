@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics]].
@@ -257,6 +258,21 @@ class FOQuantifierTests extends TacticTestBase {
     )
     //note: there is a reordering of the succedents after existsR!
     result.subgoals.loneElement shouldBe "x=y, z=1  ==>  z_0!=1, y!=1, [{z'=1&true}]x=z".asSequent
+  }
+
+  it should "instantiate in the presence of space exceptions" in {
+    val result = proveBy("z=1 ==> \\exists y [{y'=f(|y|)^2, z' = g(|y|), a'=h(||)}]y>=0".asSequent,
+      existsR("z+1".asTerm)(1)
+    )
+    println(result)
+    result.subgoals.loneElement shouldBe "z=1, y=z+1  ==>  [{y'=f(|y|)^2,z'=g(|y|),a'=h(||)&true}]y>=0".asSequent
+  }
+
+  it should "instantiate in the presence of space exceptions with self reference" taggedAs TodoTest in {
+    val result = proveBy("z=1, ==> \\exists y [{y'=f(|y|)^2, z' = g(|y|), a'=h(||)}]y>=0".asSequent,
+      existsR("z+y".asTerm)(1)
+    )
+    // todo: this is hard and/or impossible since cannot "invent" an old name for y
   }
 
   "exists generalize" should "only generalize the specified occurrences of t" in {

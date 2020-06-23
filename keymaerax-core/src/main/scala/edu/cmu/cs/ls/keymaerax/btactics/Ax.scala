@@ -3306,7 +3306,7 @@ object Ax extends Logging {
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgtOpen]]
     */
-  @Axiom("DBX>", conclusion = "(e>0 → <span class=k4-axiom-key>[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e)'≥ge", displayLevel = "menu",
+  @Axiom("DBX>", conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e)'≥ge", displayLevel = "menu",
     key = "1.1", unifier = "surjlinearpretend")
   lazy val DBXgt =
     derivedAxiom("DBX>",
@@ -3361,7 +3361,7 @@ object Ax extends Logging {
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
     * @see [[DBXgt]]
     */
-  @Axiom("DBX> open", conclusion = "(e>0 → <span class=k4-axiom-key>[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e>0→(e)'≥ge)",
+  @Axiom("DBX> open", conclusion = "(e>0 → __[x'=f(x)&Q]e>0__) ← [x'=f(x)&Q](e>0→(e)'≥ge)",
     key = "1.1", unifier = "surjlinearpretend")
   lazy val DBXgtOpen =
     derivedAxiom("DBX> open",
