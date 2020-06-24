@@ -168,7 +168,7 @@ object InvariantGenerator extends Logging {
         filter(fml => !postConjuncts.contains(fml) && !StaticSemantics.freeVars(fml).intersect(loopBV).isEmpty)
       val anteInvCandidate = combined.reduceRightOption(And).getOrElse(True)
       if (ToolProvider.cexTool().isDefined) {
-        postConjuncts.filter(fml => TactixLibrary.findCounterExample(Imply(anteInvCandidate, fml)).isDefined) match {
+        postConjuncts.filter(fml => fml.isFOL && TactixLibrary.findCounterExample(Imply(anteInvCandidate, fml)).isDefined) match {
           case Nil => combined
           case missingPost => combined ++ missingPost
         }
