@@ -423,8 +423,8 @@ class DifferentialTests extends TacticTestBase {
                      |==> 1:  [{x'=2&true}][x':=2;](f(x,y()))'>=0	Box}""".stripMargin
   }
 
-  //@todo unsupported so far (substitution clash in derive)
-  it should "prove with quantified postconditions" ignore withMathematica { _ =>
+
+  it should "FEATURE_REQUEST: prove with quantified postconditions" taggedAs TodoTest in withMathematica { _ =>
     proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI()(1)) shouldBe 'proved
   }
 
@@ -437,8 +437,12 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x>=0 ==> [{x'=1}]x>=0, false".asSequent, dI()(1)) shouldBe 'proved
   }
 
-  //@todo unsupported so far (substitution clash)
-  "Derive" should "derive quantifiers" ignore {
+  it should "not be applicable on non-FOL postcondition" in withQE { _ =>
+    the [TacticInapplicableFailure] thrownBy proveBy("x>=0, y>=1 ==> [{x'=2}][{x'=5&y>=2} ++ y:=y+1;](x>=0 & y>=2)".asSequent, dI()(1)) should
+      have message "diffInd only applicable to FOL postconditions, but got [{x'=5&y>=2}++y:=y+1;](x>=0&y>=2)"
+  }
+
+  "Derive" should "FEATURE_REQUEST: derive quantifiers" taggedAs TodoTest in {
     proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\exists x x'>=0".asSequent
   }
 
@@ -1008,6 +1012,11 @@ class DifferentialTests extends TacticTestBase {
     }
   }
 
+  it should "not constify bound postcondition" in {
+    proveBy("x>=0, y>=1, z=2 ==> [{x'=5&y>=1}][{x'=z} ++ y:=z+1;](x>=0 & y>=1)".asSequent, DifferentialTactics.Dconstify(skip)(1)).
+      subgoals.loneElement shouldBe "x>=0, y>=1, z()=2 ==> [{x'=5&y>=1}][{x'=z()}++y:=z()+1;](x>=0&y>=1)".asSequent
+  }
+
   "DG" should "add y'=1 to [x'=2]x>0" in {
     val result = proveBy("[{x'=2}]x>0".asFormula, dG("{y'=0*y+1}".asDifferentialProgram, None)(1))
     result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
@@ -1365,7 +1374,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>0 ==> \\forall t_ (t_>=0 -> t_+x>0)".asSequent
   }
 
-  it should "solve diamond explicit-form ODE" ignore withQE { _ =>
+  it should "FEATURE_REQUEST: solve diamond explicit-form ODE" taggedAs TodoTest in withQE { _ =>
     val result = proveBy("x>0 ==> <{x'=0*x+1}>x>0".asSequent, solve(1))
     result.subgoals.loneElement shouldBe "x>0 ==> \\exists t_ (t_>=0 & t_+x>0)".asSequent
   }

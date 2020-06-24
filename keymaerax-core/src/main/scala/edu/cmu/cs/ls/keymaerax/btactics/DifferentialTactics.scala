@@ -144,7 +144,9 @@ private object DifferentialTactics extends Logging {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         if (!pos.isSucc) throw new IllFormedTacticApplicationException("diffInd only applicable to succedent positions, but got " + pos.prettyString)
         val diFml: Formula = sequent.sub(pos) match {
-          case Some(b@Box(_: ODESystem, _)) => b
+          case Some(b@Box(_: ODESystem, p)) =>
+            if (p.isFOL) b
+            else throw new TacticInapplicableFailure("diffInd only applicable to FOL postconditions, but got " + p.prettyString)
           case Some(e) => throw new TacticInapplicableFailure("diffInd only applicable to box ODEs in succedent, but got " + e.prettyString)
           case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
         }
@@ -439,7 +441,7 @@ private object DifferentialTactics extends Logging {
     val (ctx, expr) = seq.at(pos)
     expr match {
       case Box(ode@ODESystem(_, _), p) =>
-        val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
+        val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(p) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
         val ctxBoundConsts = StaticSemantics.boundVars(ctx(True)).intersect(consts)
         if (ctxBoundConsts.isEmpty) constify(consts, inner)
         else throw new TacticInapplicableFailure("Unable to constify in context " + ctx + ", because it binds " + ctxBoundConsts.toSet[Variable].map(_.prettyString).mkString(","))
