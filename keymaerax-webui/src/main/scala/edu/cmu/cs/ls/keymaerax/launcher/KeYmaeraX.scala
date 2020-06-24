@@ -416,7 +416,7 @@ object KeYmaeraX {
 
     val mathematicaConfig =
       if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options('mathkernel).toString,
-        "libDir" -> options('jlink).toString)
+        "libDir" -> options('jlink).toString, "tcpip" -> options.getOrElse('tcpip, "true").toString)
       else DefaultConfiguration.defaultMathematicaConfig
 
     val linkNamePath = mathematicaConfig.get("linkName") match {
