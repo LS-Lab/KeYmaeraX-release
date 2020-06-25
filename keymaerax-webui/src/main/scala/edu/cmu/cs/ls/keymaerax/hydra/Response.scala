@@ -734,7 +734,8 @@ object Helpers {
     case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp, "topop")::printJson(q ++ 1, e, fp)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp, "topop")::printJson(q ++ 1, t.right, fp)::Nil
     case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
-    case c: ProgramConst => print(c.prettyString, fp)::Nil
+    case c: ProgramConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
+    case c: SystemConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
   }
 
   private def printRecPrgJson(q: PosInExpr, expr: Program, fp: FormatProvider)(implicit top: Position, topExpr: Expression): List[JsValue] = expr match {
@@ -749,7 +750,8 @@ object Helpers {
     case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp)::printJson(q ++ 1, e, fp)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp)::printJson(q ++ 1, t.right, fp)::Nil
     case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
-    case c: ProgramConst => print(c.prettyString, fp)::Nil
+    case c: ProgramConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
+    case c: SystemConst => print(c.asString /* needs to be consistent with OpSpec.statementSemicolon (inaccessible here) */ + ";", fp)::Nil
   }
 
   /** Only first node's sequent is printed. */
@@ -886,7 +888,7 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
         "name" -> JsString(i.canonicalName),
         "codeName" -> JsString(i.codeName),
         "defaultKeyPos" -> {
-          val key = AxiomIndex.axiomIndex(i.canonicalName)._1
+          val key = AxIndex.axiomIndex(i)._1
           JsString(key.pos.mkString("."))
         },
         "displayInfo" -> (i.display match {
@@ -949,11 +951,16 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
       "formula" -> JsString(formulaText),
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
-      "defaultKeyPos" -> {
-        val key = AxiomIndex.axiomIndex(info.canonicalName)._1
-        JsString(key.pos.mkString("."))
-      },
-      "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(info),
+      "defaultKeyPos" -> (info match {
+        case pi: ProvableInfo =>
+          val key = AxIndex.axiomIndex(pi)._1
+          JsString(key.pos.mkString("."))
+        case _ => JsString("0")
+      }),
+      "displayInfoParts" -> (info match {
+        case pi: ProvableInfo => RequestHelper.jsonDisplayInfoComponents(pi)
+        case _ => JsNull
+      }),
       "input" -> inputsJson(info.inputs),
       "help" -> helpJson(info.codeName)
     )
@@ -993,11 +1000,13 @@ case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Optio
   def derivationJson(derivationInfo: DerivationInfo): JsObject = {
     val derivation = derivationInfo match {
       case info: AxiomInfo => axiomJson(info)
-      case info: DerivationInfo => info.display match {
-        case _: SimpleDisplayInfo => tacticJson(info)
-        case _: AxiomDisplayInfo => axiomJson(info)
-        case _: InputAxiomDisplayInfo => axiomJson(info) //@todo usually those have tactics with RuleDisplayInfo
-        case RuleDisplayInfo(_, conclusion, premises) => ruleJson(info, conclusion, premises)
+      case info: DerivationInfo => (info, info.display) match {
+        case (_, _: SimpleDisplayInfo) => tacticJson(info)
+        case (pi: DerivationInfo, _: AxiomDisplayInfo) => axiomJson(pi)
+        case (pi: DerivationInfo, _: InputAxiomDisplayInfo) => axiomJson(pi) //@todo usually those have tactics with RuleDisplayInfo
+        case (_, RuleDisplayInfo(_, conclusion, premises)) => ruleJson(info, conclusion, premises)
+        case (_, (_: AxiomDisplayInfo) | (_: InputAxiomDisplayInfo)) =>
+          throw new IllegalArgumentException(s"Unexpected derivation info $derivationInfo displays as axiom but is not AxiomInfo")
       }
     }
     JsObject(

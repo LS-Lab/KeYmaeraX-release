@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{DLAxiomParser, DLParser, KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, ParseException}
+import edu.cmu.cs.ls.keymaerax.parser.{DLAxiomParser, DLParser, KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, ParseException, Parser}
 import fastparse._
 import MultiLineWhitespace._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
@@ -31,8 +31,9 @@ object DLBelleParser extends DLBelleParser {
 /**
   * Bellerophon tactic parser for Differential Dynamic Logic reads input strings in the concrete syntax of Bellerophon tactics for KeYmaera X.
   * @author Andre Platzer
+  * @see [[BelleParser]]
   */
-class DLBelleParser extends (String => BelleExpr) {
+class DLBelleParser extends TacticParser {
 
   //@todo fill both vals with life
   private val generator: Option[Generator.Generator[GenProduct]] = None
@@ -40,6 +41,10 @@ class DLBelleParser extends (String => BelleExpr) {
 
   /** Which formula/term/program parser this archive parser uses. */
   val expParser = DLParser
+
+  override val tacticParser: String => BelleExpr = this
+  override val expressionParser: Parser = DLParser
+  override val printer: BelleExpr => String = BellePrettyPrinter
 
   /** Parse the input string as a Bellerophon tactic.
     *
@@ -77,9 +82,9 @@ class DLBelleParser extends (String => BelleExpr) {
   def namedCombinator[_: P]: P[BelleExpr] = P( ("doall".!) ~~ "(" ~ tactic ~ ")" ).
     map({case ("doall", t) => OnAll(t)})
   def parenTac[_: P]: P[BelleExpr] = P( "(" ~ tactic ~ ")" )
-  def baseTac[_: P]: P[BelleExpr] = P( namedCombinator | atomicTactic | NoCut(at) |
-    branchTac | NoCut(repeatTac) | parenTac
-  )
+  def baseTac[_: P]: P[BelleExpr] = P( (namedCombinator | atomicTactic | NoCut(at) |
+    branchTac | parenTac) ~~ ("*" ~ integer | "*".! ~ !CharIn("0-9")).?
+  ).map({case (t,None) => t case (t,Some(n:Integer)) => RepeatTactic(t,n) case (t,Some("*")) => SaturateTactic(t)})
 
   def branchTac[_: P]: P[BelleExpr] = P( "<" ~/ "(" ~ baseTac.rep(min=1,sep=","./) ~ ")").
     map(BranchTactic)

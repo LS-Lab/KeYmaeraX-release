@@ -316,7 +316,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -340,7 +340,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("a", None) -> (Some(Unit), Trafo, None, Some("?x>1;".asProgram), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -364,7 +364,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("a", None) -> (Some(Unit), Trafo, None, Some("{x'=5}".asProgram), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [{x'=5}]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -375,7 +375,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | Definitions HP a ::= { x:=x+1;?x>1; } End.
+        | Definitions HP a ::= { x:=x+1;?x>1; }; End.
         | ProgramVariables Real x; End.
         | Problem x!=0 -> [a;]x>1 End.
         |End.
@@ -388,7 +388,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("a", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;?x>1;".asProgram), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [x:=x+1;?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -399,7 +399,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     val input =
       """
         |ArchiveEntry "Entry 1"
-        | Definitions HP a ::= { ?x>1;x:=x+1; } End.
+        | Definitions HP a ::= { ?x>1;x:=x+1; }; End.
         | ProgramVariables Real x; End.
         | Problem x!=0 -> [a;]x>1 End.
         |End.
@@ -412,7 +412,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("a", None) -> (Some(Unit), Trafo, None, Some("?x>1;x:=x+1;".asProgram), UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "x!=0 -> [a;]x>1".asFormula
+    entry.model shouldBe "x!=0 -> [a{|^@|};]x>1".asFormula
     entry.expandedModel shouldBe "x!=0 -> [?x>1;x:=x+1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -440,7 +440,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a{|^@|};]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -508,7 +508,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("x", None) -> (None, Real, None, None, UnknownLocation),
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a;]p(x)".asFormula
+    entry.model shouldBe "p(x) & y>=0 -> q(x,y,f()) & [a{|^@|};]p(x)".asFormula
     entry.expandedModel shouldBe "x>1 & y>=0 -> x+y>1 & [?x>1;]x>1".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -533,7 +533,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("t", None) -> (None, Real, None, None, UnknownLocation),
         ("x", None) -> (None, Real, None, None, UnknownLocation)
       )))
-    entry.model shouldBe "[a;]x<=2".asFormula
+    entry.model shouldBe "[a{|^@|};]x<=2".asFormula
     entry.expandedModel shouldBe "[{x'=x, t'=1 & x<=2}]x<=2".asFormula
     entry.tactics shouldBe empty
     entry.info shouldBe empty
@@ -881,7 +881,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("y", None) -> (None, Real, None, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Proof 1", "implyR(1) & QE", implyR(1) & QE) :: Nil
+    entry.tactics shouldBe ("Proof 1", "implyR(1) ; QE", implyR(1) & QE) :: Nil
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
     entry.problemContent shouldBe """ArchiveEntry "Entry 1"
@@ -1054,6 +1054,30 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       )))
     entry.model shouldBe "x>y() -> [ctrl;]x>=y()".asFormula
     entry.tactics shouldBe ("Simple", "implyR(1) ; dC(\"y=old(y)\", 1)", implyR(1) & dC("y()=old(y())".asFormula)(1)) :: Nil
+    entry.info shouldBe empty
+    entry.fileContent shouldBe input.trim()
+  }
+
+  it should "not elaborate to program constants when definitions contain duals" in withQE { _ =>
+    val input =
+      """
+        |ArchiveEntry "Entry 1"
+        | Definitions Real y(); HP ctrl ::= { x:=x+1;^@ }; End.
+        | ProgramVariables Real x; End.
+        | Problem x>y -> [ctrl;]x>=y End.
+        |End.
+      """.stripMargin
+    val entry = parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, None, UnknownLocation),
+        ("y", None) -> (Some(Unit), Real, Some(Nil), None, UnknownLocation),
+        ("ctrl", None) -> (Some(Unit), Trafo, None, Some("x:=x+1;".asProgram), UnknownLocation)
+      )))
+    entry.model shouldBe "x>y() -> [ctrl;]x>=y()".asFormula
+    entry.tactics shouldBe empty
     entry.info shouldBe empty
     entry.fileContent shouldBe input.trim()
   }
@@ -2453,9 +2477,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """.stripMargin
     ) should have message
       """<somewhere> All definitions and uses must match, but found the following mismatches:
-        |Symbol 'inc;' defined as Program, but used as DifferentialProgram in {inc}
+        |Symbol 'inc{|^@|};' defined as Program, but used as DifferentialProgram in {inc}
         |Found:    {inc} at <somewhere>
-        |Expected: inc;""".stripMargin
+        |Expected: inc{|^@|};""".stripMargin
 
     the [ParseException] thrownBy parse(
       """ProgramVariables Real x; End.
@@ -2467,9 +2491,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
       """.stripMargin
     ) should have message
       """<somewhere> All definitions and uses must match, but found the following mismatches:
-        |Symbol 'inc;' defined as Program, but used as DifferentialProgram in {inc}
+        |Symbol 'inc{|^@|};' defined as Program, but used as DifferentialProgram in {inc}
         |Found:    {inc} at <somewhere>
-        |Expected: inc;""".stripMargin
+        |Expected: inc{|^@|};""".stripMargin
   }
 
   it should "report illegal name overloading" in {

@@ -87,15 +87,17 @@ trait DifferentialEquationCalculus {
     *         --------------------------------------------------diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1)
     *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
     * }}}
-    * @param formula the formula that will be cut into the differential equation (in that order if it is a list).
-    *                 The formulas are typically shown to be differential invariants subsequently.
-    *                 They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
+    * @param R the formula that will be cut into the differential equation (in that order if it is a list).
+    *          The formulas are typically shown to be differential invariants subsequently.
+    *          They can use old(x) and old(y) etc. to refer to the initial values of x and y, respectively.
     * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[HilbertCalculus.DC]]
     */
-    //@todo@Tactic
-  def dC(formula: Formula)     : DependentPositionTactic = DifferentialTactics.diffCut(formula)
-  def dC(formulas: List[Formula]) : DependentPositionTactic = DifferentialTactics.diffCut(formulas)
+  def dC(R: Formula)       : DependentPositionTactic = DifferentialTactics.diffCut(R)
+  @Tactic("Differential Cut", conclusion = "&Gamma; |- [{x′=f(x) & Q}]P, &Delta;",
+    premises = "&Gamma; |- [{x′=f(x) & Q}]R, &Delta; ;; &Gamma; |- [{x′=f(x) & (Q∧R)}]P, &Delta;",
+    revealInternalSteps = true)
+  def dC(R: List[Formula]) : DependentPositionTactic = DifferentialTactics.diffCut(R)
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant).
     * (uses DI, DW, DE, QE)

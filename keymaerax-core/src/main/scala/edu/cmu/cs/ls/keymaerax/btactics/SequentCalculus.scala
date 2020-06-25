@@ -269,15 +269,15 @@ trait SequentCalculus {
   @Tactic(premises = "Γ |- p(x), Δ",
     conclusion = "Γ |- ∀x p(x), Δ")
   val allR                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allSkolemize(pos)}
-  /** all left: instantiate a universal quantifier for variable x in the antecedent by the concrete instance `term`. */
+  /** all left: instantiate a universal quantifier for variable `x` in the antecedent by the concrete instance `inst`. */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
-  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e`. */
-  def allL(e: Term)              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, Some(e))(_: Position) }
-  /** all left: instantiate a universal quantifier in the antecedent by itself. */
-  //@todo annotation must be on def allL(e: Term), otherwise it won't be an input tactic. can make it e: Option[Term] to get behavior of val allL.
+  /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
   @Tactic(premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
-  val allL                          : DependentPositionTactic = anon {(pos:Position) => FOQuantifierTactics.allInstantiate(None, None)(pos)}
+  def allL(e: Option[Term])              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
+  def allL(e: Term)                      : DependentPositionTactic = allL(Some(e))
+  /** all left: instantiate a universal quantifier in the antecedent by itself. */
+  val allL                          : DependentPositionTactic = allL(None)
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   //@todo turn this into a more general function that obtains data from the sequent.
   def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
@@ -310,7 +310,7 @@ trait SequentCalculus {
   // closing tactics
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  @Tactic(premises = "*", conclusion = "Γ, P |- P, Δ")
+  @Tactic("Close by ⊥/⊤", premises = "*", conclusion = "Γ, P |- P, Δ")
   val close: BelleExpr = anon {(seq: Sequent) => findClose(seq)}
   // alternative implementation
   //@todo optimizable seems like complicated and possibly slow code???
@@ -398,8 +398,8 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@note do not forward to closeIdWith (performance)
-  @Tactic(premises = "*",
-    conclusion = "Γ, P |- P, Δ")
+  @Tactic("Close by identity", premises = "*",
+    conclusion = "Γ, P |- P, Δ", codeName = "id")
   val closeId: DependentTactic = anon {(seq: Sequent) => close}
   // alternative implementation
   /*anon {(seq: Sequent) =>

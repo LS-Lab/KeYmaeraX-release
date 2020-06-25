@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position, RenUSubst, UnificationMatchUSubstAboveURen}
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -24,6 +25,7 @@ private object PropositionalTactics extends Logging {
    * @see [[SequentCalculus.implyR]]
    */
   private[btactics] lazy val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
+  //@todo @Tactic()
   private[btactics] def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = "implyRi" by ((p: ProvableSig, a: Position, s: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
     val sequent = p.subgoals.head
@@ -150,14 +152,15 @@ private object PropositionalTactics extends Logging {
    *   (A ^ B) -> (S \/ T \/ U)
    * }}}
    */
-  val toSingleFormula: DependentTactic  = "toSingleFormula" by ((sequent: Sequent) => {
+  @Tactic()
+  val toSingleFormula: DependentTactic  = anon {(sequent: Sequent) =>
     cut(sequent.toFormula) <(
       /* use */ implyL('Llast) <(
         hideR(1)*sequent.succ.size & (andR(1) <(close, skip))*(sequent.ante.size-1) & onAll(close),
         hideL(-1)*sequent.ante.size & (orL(-1) <(close, skip))*(sequent.succ.size-1) & onAll(close)),
       /* show */ cohide('Rlast)
       )
-  })
+  }
 
   //region Equivalence Rewriting
 

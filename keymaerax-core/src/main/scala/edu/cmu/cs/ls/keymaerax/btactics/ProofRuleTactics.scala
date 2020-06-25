@@ -1,11 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.{Configuration, core}
-import edu.cmu.cs.ls.keymaerax.core.{RenamingClashException, _}
+import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -42,26 +41,14 @@ private object ProofRuleTactics extends Logging {
     * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-//@todo  @Tactic("UR",
-//    premises = "P(y) |- Q(y)",
-//    conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
-//  def uniformRename(what: Variable, repl: Variable): InputTactic = anon { (pr: ProvableSig) =>
-//    requireOneSubgoal(pr, "UR(" + what + "~~>" + repl + ")")
-//    pr(core.UniformRenaming(what, repl), 0)
-//  }
-  def uniformRename(what: Variable, repl: Variable): InputTactic = "uniformRename" byWithInputs(what::repl::Nil,
-  new BuiltInTactic("UniformRenaming") {
-    /**
-      * @throws RenamingClashException if uniform renaming what~>repl is not admissible for s (because a semantic symbol occurs).
-      */
-    override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
+  @Tactic("UR",
+    premises = "P(y) |- Q(y)",
+    conclusion = "P(x) |- Q(x)", inputs = "x:variable ;; y:variable")
+  def uniformRename(what: Variable, repl: Variable): InputTactic = inputanonP {(provable: ProvableSig) =>
+      requireOneSubgoal(provable, "UniformRename(" + what + "~~>" + repl + ")")
       provable(core.UniformRenaming(what, repl), 0)
     }
-  }
-)
 
-  import TacticFactory._
   /**
     * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
     *
@@ -79,7 +66,7 @@ private object ProofRuleTactics extends Logging {
   @Tactic("BR",
     premises = "Γ |- ∀y Q(y), Δ",
     conclusion = "Γ |- ∀x Q(x), Δ", inputs = "x:variable;;y:variable")
-  def boundRename(what: Variable, repl: Variable): DependentPositionTactic = anon {(pos:Position, sequent:Sequent) =>
+  def boundRename(what: Variable, repl: Variable): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)
       topBoundRenaming(what,repl)(pos)
     else {
@@ -166,6 +153,8 @@ private object ProofRuleTactics extends Logging {
     *                              Use [[BoundRenaming]] to resolve.
     */
   //@todo@Tactic("skolem")
+  @Tactic(premises = "Γ |- p(x), Δ",
+    conclusion = "Γ |- ∀x p(x), Δ", codeName = "skolem")
   val skolemizeR: BuiltInRightTactic = new BuiltInRightTactic("skolemizeR") {
     override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
       requireOneSubgoal(provable, name)
@@ -175,18 +164,17 @@ private object ProofRuleTactics extends Logging {
   }
 
   @deprecated("Use SequentCalculus.closeT instead")
-  private[btactics] def closeTrue = new BuiltInRightTactic("CloseTrue") {
-    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      provable(core.CloseTrue(pos.top), 0)
-    }
+  @Tactic()
+  private[btactics] val closeTrue: BuiltInRightTactic = anon {(provable: ProvableSig, pos: SuccPosition) =>
+    requireOneSubgoal(provable, "closeTrue")
+    provable(core.CloseTrue(pos.top), 0)
   }
 
   @deprecated("Use SequentCalculus.closeF instead")
-  private[btactics] def closeFalse = new BuiltInLeftTactic("CloseFalse") {
-    override def computeResult(provable: ProvableSig, pos: AntePosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      provable(core.CloseFalse(pos.top), 0)
-    }
+  @Tactic()
+  private[btactics] val closeFalse: BuiltInLeftTactic = anon { (provable: ProvableSig, pos: AntePosition) =>
+    requireOneSubgoal(provable, "closeFalse")
+    provable(core.CloseFalse(pos.top), 0)
   }
+
 }

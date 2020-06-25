@@ -388,13 +388,15 @@ private object DifferentialTactics extends Logging {
 
   /** @see [[TactixLibrary.diffInvariant]] */
   //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.diffInvariant(Formula)
-  private[btactics] def diffInvariant(formulas: List[Formula]): DependentPositionTactic =
-    "diffInvariant" byWithInputs (formulas, (pos: Position, sequent: Sequent) => {
+  @Tactic(premises = "Γ |- [x'=f(x)&R]P'",
+      conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true)
+  private[btactics] def diffInvariant(R: List[Formula]): DependentPositionTactic =
+    inputanon {(pos: Position, sequent: Sequent) =>
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
-      val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
-      diffCut(formulas)(pos) <(diffIndAllButFirst:_*)
-    })
+      val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
+      diffCut(R)(pos) <(diffIndAllButFirst:_*)
+    }
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint.
     * @see AxiomaticODESolver.inverseDiffCut
@@ -702,7 +704,7 @@ private object DifferentialTactics extends Logging {
   //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
   //@Tactic in HilbertCalculus.Derive.Dvar same
   @Tactic(names="x'",
-    conclusion="(x)' = x",
+    conclusion="__(x)'__ = x",
     displayLevel="internal")
   private[btactics] lazy val Dvariable: DependentPositionTactic = anon ( (pos:Position, sequent:Sequent) => {
 
@@ -775,16 +777,15 @@ private object DifferentialTactics extends Logging {
     case Some(Box(a: ODESystem, p)) =>
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
-      if (sequent.succ.size <= 1) {
-        val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
-        val constFacts = sequent.ante.flatMap(FormulaTools.conjuncts).
-          filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
-        constFacts.map(diffCut(_)(pos) &
-          // diffCut may not introduce the cut if it is already in there
-          Idioms.doIf(_.subgoals.size == 2)(<(skip, V(pos) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
-      } else {
-        useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
-      }
+      val primedVars = DifferentialHelper.getPrimedVariables(a).toSet
+      val constFacts = sequent.zipWithPositions.flatMap({
+        case (fml, pos) =>
+          if (pos.isAnte) FormulaTools.conjuncts(fml)
+          else FormulaTools.conjuncts(fml).map(Not)
+      }).filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
+      constFacts.map(diffCut(_)(pos) &
+        // diffCut may not introduce the cut if it is already in there; diffCut changes the position in the show branch to 'Rlast
+        Idioms.doIf(_.subgoals.size == 2)(<(skip, V('Rlast) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
     case Some(e) => throw new TacticInapplicableFailure("dW only applicable to box ODEs, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
   })
@@ -808,29 +809,38 @@ private object DifferentialTactics extends Logging {
         }).reverse.map({ case (_, i) => exhaustiveEqR2L(AntePosition.base0(i)) & hideL(AntePosition.base0(i)) }).
           reduceOption[BelleExpr](_&_).getOrElse(skip)
 
-
-        val storeInitialVals = "ANON" by ((seq: Sequent) => {
+        val storeInitialVals = anon ((seq: Sequent) => {
           val anteSymbols = seq.ante.flatMap(StaticSemantics.symbols)
           val storePrimedVars = primedVars.filter(anteSymbols.contains)
           storePrimedVars.map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
             (exhaustiveEqR2L('Llast) & hideL('Llast))*storePrimedVars.size
         })
 
-        val dw = "ANON" by ((seq: Sequent) => {
-          diffWeakenG(pos) & implyR(1) & andL('Llast)*seq.ante.size & implyRi
-        })
+        def cutFmls(seq: Sequent, pos: SeqPos): List[Formula] = {
+          val bv = StaticSemantics.boundVars(seq(pos))
+          seq.zipWithPositions.flatMap({
+            case (fml, pp) =>
+              if (pp != pos && StaticSemantics.freeVars(fml).intersect(bv).isEmpty) {
+                if (pp.isAnte) Some(fml)
+                else Some(Not(fml))
+              } else None
+          })
+        }
 
-        val cutAllAntes = "ANON" by ((seq: Sequent) => {
-          if (seq.ante.isEmpty) skip
-          //@note all ante formulas rewritten to initial values at this point
-          else diffCut(seq.ante.reduceRight(And))(pos) <(
+        val cutAndDW = anon ((seq: Sequent) => {
+          //@note filter to include only formulas that are rewritten to initial values
+          val cuts = cutFmls(seq, pos.top)
+          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*cuts.size & implyRi
+          if (cuts.isEmpty) dw
+          else diffCut(cuts.reduceRight(And))(pos) <(
             skip,
-            V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(seq.ante.size-1) & closeIdWith('Rlast) & done
-          )
+            V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(cuts.size-1) & closeIdWith('Rlast) & done
+          ) & dw
         })
 
-        rewriteExistingGhosts & storeInitialVals & cutAllAntes & dw
+        rewriteExistingGhosts & storeInitialVals & cutAndDW
       } else {
+        //@todo unify with above
         useAt(Ax.DW)(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
     case Some(e) => throw new TacticInapplicableFailure("dWplus only applicable to box ODEs, but got " + e.prettyString)
@@ -954,19 +964,21 @@ private object DifferentialTactics extends Logging {
   })
 
   /** Tries to instantiate the evolution domain fact with the ODE duration (assumes monotonicity). */
-  lazy val endODEHeuristic: BelleExpr = "ANON" by ((seq: Sequent) => {
+  lazy val endODEHeuristic: BelleExpr = anon ((seq: Sequent) => {
     val instantiators = (seq.ante.indices.map(AntePosition.base0(_)) ++ seq.succ.indices.map(SuccPosition.base0(_))).
       flatMap(pos => {
         Idioms.mapSubpositions(pos, seq, {
           case (Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
           LessEqual(_, BaseVariable("s_", _, Real)),
           LessEqual(BaseVariable("s_", _, Real), t@BaseVariable("t_", _, Real))), _)), pp: Position) =>
-            Some(allL(s, t)(pp))
+            val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(seq(pp.top), pp.inExpr)
+            if (polarity < 0) Some(allL(s, t)(pp) & pp.parent.flatMap(_.parent).map(SimplifierV3.simplify(_)).getOrElse(skip))
+            else None
           case _ => None
         })
     })
 
-    instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
+    instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
   /**
@@ -993,11 +1005,11 @@ private object DifferentialTactics extends Logging {
 
       if (pos.isTopLevel) {
         proveWithoutCuts(false)(pos) |
-        solve(pos) & ?(endODEHeuristic) |
+        solve(pos) & ?(endODEHeuristic & QE) |
         recurseODE
       } else {
         //@note diffInd in context won't fail even if unprovable in the end; try solve first to support the usual examples
-        solve(pos) & ?(endODEHeuristic) |
+        solve(pos) & ?(endODEHeuristic & QE) |
         proveWithoutCuts(false)(pos) |
         recurseODE
       }
@@ -1136,7 +1148,8 @@ private object DifferentialTactics extends Logging {
           DifferentialTactics.diffWeakenG(pos) & timeoutQE & done
         case (True, Some(PegasusProofHint(true, Some("PreDomFalse")))) =>
           diffUnpackEvolutionDomainInitially(pos) & hideR(pos) & timeoutQE & done
-        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) => ??? //todo: throw an error
+        case (True, Some(PegasusProofHint(true, Some("PreNoImpPost")))) =>
+          throw BelleCEX("ODE postcondition does not overlap with precondition", Map.empty, seq)
         case (inv, proofHint) =>
           //@todo workaround for diffCut/useAt unstable positioning
           val afterCutPos: PositionLocator = if (seq.succ.size > 1) LastSucc(0) else Fixed(pos)
@@ -1725,7 +1738,6 @@ private object DifferentialTactics extends Logging {
     starter & dgDbx(cofactor)(pos)
   })
 
-// TODO:
   @Tactic(names="Darboux (in)equalities",
     premises="Γ |- p≳0 ;; Q |- p' >= g p",
     conclusion="Γ |- [x'=f(x)&Q]p≳0, Δ",
@@ -2190,11 +2202,14 @@ private object DifferentialTactics extends Logging {
       implyR(pos) & generalize(interior)(pos) <(
         //@todo check always with doIfElse or use TryCatch exception?
         maxminGt & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
-          useAt(Ax.openInvariantClosure)(pos) <(
-            backGt & backGe1 & hideL('Llast),
-            backGe2 &
-              (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
-              else closeId)
+          useAt(Ax.openInvariantClosure)(pos) & Idioms.doIf(_.subgoals.length == 2)(
+            //@todo may no longer be necessary at all, useAt seems to close precondition automatically now
+            Idioms.<(
+              backGt & backGe1 & hideL('Llast),
+              backGe2 &
+                (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
+                else closeId)
+            )
           ),
           DebuggingTactics.error("Inapplicable: t_ occurs")
         )

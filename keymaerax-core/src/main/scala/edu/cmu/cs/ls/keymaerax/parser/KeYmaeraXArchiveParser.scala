@@ -11,11 +11,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefTactic}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefScope}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleLexer, BelleParser}
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
-import edu.cmu.cs.ls.keymaerax.infrastruct.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, FormulaTools, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{DependencyAnalysis, ExpressionTraversal, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.ParseState
 
 import scala.annotation.tailrec
@@ -24,7 +23,7 @@ import scala.collection.mutable.ListBuffer
 
 /**
   * Splits a KeYmaera X archive into its parts and forwards to respective problem/tactic parsers. An archive contains
-  * at least one entry combining a model in the .kyx format and possibly a (partial) proof tactic.
+  * at least one entry combining a model in the `.kyx`` format and possibly a (partial) proof tactic.
   *
   * Format example:
   * {{{
@@ -41,6 +40,7 @@ import scala.collection.mutable.ListBuffer
   *
   * @author Stefan Mitsch
   * @see [[https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics Wiki]]
+  * @see [[DLArchiveParser]]
   */
 object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
   /** The entry name, kyx file content (model), definitions, parsed model, and parsed named tactics. */
@@ -96,7 +96,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
     def exhaustiveSubst[T <: Expression](arg: T): T = try {
-      elaborateToFunctions(arg).exhaustiveSubst(USubst(substs)).asInstanceOf[T]
+      elaborateToFunctions(arg.exhaustiveSubst(USubst(substs))).asInstanceOf[T]
     } catch {
       case ex: SubstitutionClashException =>
         throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
@@ -104,6 +104,26 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
 
     /** Elaborates variable uses of declared functions. */
     def elaborateToFunctions[T <: Expression](expr: T): T = expr.elaborateToFunctions(asNamedSymbols.toSet).asInstanceOf[T]
+
+    /** Elaborates program constants to system constants if their definition is dual-free. */
+    def elaborateToSystemConsts(expr: Formula): Formula = {
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+          case ProgramConst(name, space) =>
+            decls.find(_._1._1 == name).flatMap(_._2._4) match {
+              case Some(prg: Program) =>
+                if (FormulaTools.dualFree(prg)) Right(SystemConst(name, space))
+                else Left(None)
+              case Some(_) => Left(None) // symbol is not defined as a program (typeAnalysis error will be raised later)
+              case None => Left(None) // undefined symbol (could be program or game)
+            }
+          case _ => Left(None)
+        }
+      }, expr) match {
+        case Some(f) => f
+        case None => ???
+      }
+    }
 
     /** Elaborates all declarations to dots. */
     def elaborateWithDots: Declaration = Declaration(decls.map(d => elaborateWithDots(d._1, d._2)))
@@ -161,7 +181,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     /** Turns a function declaration (with defined body) into a substitution pair. */
     private def declAsSubstitutionPair(name: Name, signature: Signature): SubstitutionPair = {
       require(signature._4.isDefined, "Substitution only for defined functions")
-      val (_, (domain, sort, _, Some(interpretation), _)) = elaborateWithDots(name, signature)
+      val (_, (domain, sort, _, Some(interpretation), loc)) = elaborateWithDots(name, signature)
 
       val (arg, sig) = domain match {
         case Some(Unit) => (Nothing, Unit)
@@ -175,7 +195,12 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
         case Trafo =>
           assert(name._2.isEmpty, "Expected no index in program const name, but got " + name._2)
           assert(signature._1.getOrElse(Unit) == Unit, "Expected domain Unit in program const signature, but got " + signature._1)
-          ProgramConst(name._1)
+          interpretation match {
+            case prg: Program =>
+              if (FormulaTools.dualFree(prg)) SystemConst(name._1)
+              else ProgramConst(name._1)
+            case e => throw ParseException("Definition of " + name._1 + " is not a program, but a " + e.kind, loc)
+          }
       }
 
       SubstitutionPair(what, interpretation)
@@ -513,8 +538,8 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
         case PERIOD => reduce(shift(st), 1, Bottom, r :+ defs :+ defsBlock)
         case END_BLOCK => shift(st)
         case _ if isReal(la) || isBool(la) || isProgram(la) => shift(st)
-        case _ => throw ParseException("Unexpected definition", st, 
-          Expected.ExpectTerminal(END_BLOCK) :: 
+        case _ => throw ParseException("Unexpected definition", st,
+          Expected.ExpectTerminal(END_BLOCK) ::
           Expected.ExpectTerminal(IDENT("Real")) ::
           Expected.ExpectTerminal(IDENT("Bool")) ::
           Expected.ExpectTerminal(IDENT("HP")) :: Nil)
@@ -680,8 +705,8 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
         case END_BLOCK => shift(st)
         case _ if isReal(la) => shift(st)
         case _ if isBool(la) || isProgram(la) => throw ParseException("Predicate and program definitions only allowed in Definitions block", st, nextTok, "Real")
-        case _ => throw ParseException("Unexpected program variable definition", st, 
-          Expected.ExpectTerminal(END_BLOCK) :: 
+        case _ => throw ParseException("Unexpected program variable definition", st,
+          Expected.ExpectTerminal(END_BLOCK) ::
           Expected.ExpectTerminal(IDENT("Real")) :: Nil)
       }
       case r :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(END_BLOCK, _) => la match {
@@ -957,7 +982,7 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
   def elaborate(entry: ParsedArchiveEntry): ParsedArchiveEntry = {
     // elaborate model and check
     val elaboratedModel = try {
-      entry.defs.elaborateToFunctions(entry.model).asInstanceOf[Formula]
+      entry.defs.elaborateToSystemConsts(entry.defs.elaborateToFunctions(entry.model).asInstanceOf[Formula])
     } catch {
       case ex: AssertionError => throw ParseException(ex.getMessage, ex)
     }
@@ -969,8 +994,9 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     checkUseDefMatch(elaboratedModel, entry.defs)
 
     // analyze and report annotations
-    val elaboratedAnnotations = elaborateAnnotations(entry.annotations, entry.defs)
-    elaboratedAnnotations.foreach({
+    val elaboratedAnnotations = elaborateToFnsInAnnotations(entry.annotations, entry.defs)
+    val expandedAnnotations = elaborateToFnsInAnnotations(expandAnnotations(entry.annotations, entry.defs), entry.defs)
+    (elaboratedAnnotations ++ expandedAnnotations).distinct.foreach({
       case (e: Program, a: Formula) =>
         typeAnalysis(entry.name, entry.defs ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, a)
         KeYmaeraXParser.annotationListener(e, a)
@@ -987,11 +1013,23 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     * @param defs lists functions to elaborate to
     * @throws ParseException if annotations are not formulas, not attached to programs, or type analysis of annotations fails
     * */
-  private def elaborateAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+  private def elaborateToFnsInAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
     annotations.map({
       case (e: Program, a: Formula) =>
         val substPrg = defs.elaborateToFunctions(e)
         val substFml = defs.elaborateToFunctions(a)
+        (substPrg, substFml)
+      case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
+      case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
+    })
+  }
+
+  /** Expands definitions in annotations to create fully expanded annotations. */
+  private def expandAnnotations(annotations: List[(Expression, Expression)], defs: Declaration): List[(Expression, Expression)] = {
+    annotations.map({
+      case (e: Program, a: Formula) =>
+        val substPrg = defs.exhaustiveSubst(e)
+        val substFml = defs.exhaustiveSubst(a)
         (substPrg, substFml)
       case (_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
       case (e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)

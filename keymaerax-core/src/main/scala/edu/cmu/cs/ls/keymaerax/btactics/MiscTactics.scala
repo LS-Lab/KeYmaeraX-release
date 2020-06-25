@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
@@ -147,7 +147,7 @@ object DebuggingTactics {
   def assertProvableSize(provableSize: Int, ex: String => Throwable = new TacticAssertionError(_)): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.length != provableSize)
-        throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size}")
+        throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size} subgoals:\n" + provable.prettyString)
       provable
     }
   }
@@ -219,9 +219,9 @@ case class Case(fml: Formula, simplify: Boolean = true) {
 object Idioms {
   import TacticFactory._
 
-  lazy val nil: BelleExpr = new BuiltInTactic("nil") with NoOpTactic {
-    override def result(provable: ProvableSig): ProvableSig = provable
-  }
+  @Tactic()
+  lazy val nil: BelleExpr = anons {(provable: ProvableSig) => provable} 
+
   /** no-op nil */
   lazy val ident: BelleExpr = nil
 
@@ -533,7 +533,11 @@ object TacticFactory {
     def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInput(input, new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     })
-
+    def byWithInputsP(input: Seq[Any], t: ProvableSig => ProvableSig): InputTactic = byWithInputs(input, new BuiltInTactic(name) {
+      override def result(provable : ProvableSig): ProvableSig = {
+        t(provable)
+      }
+    })
 
     /** Creates a BuiltInRightTactic from a function turning provables and succedent positions into new provables.
       * @example {{{
@@ -622,7 +626,13 @@ object TacticFactory {
 
     /** Creates a BuiltInTactic from a function turning provables and antecedent positions into new provables.
      */
-    def by(t: (ProvableSig) => ProvableSig): BuiltInTactic =
+    def by(t: ProvableSig => ProvableSig): BuiltInTactic =
+      new BuiltInTactic(name) {
+        @inline override def result(provable: ProvableSig): ProvableSig = {
+          t(provable)
+        }
+      }
+    def bys(t: ProvableSig => ProvableSig): BuiltInTactic =
       new BuiltInTactic(name) {
         @inline override def result(provable: ProvableSig): ProvableSig = {
           requireOneSubgoal(provable, name)
@@ -672,6 +682,7 @@ object TacticFactory {
   // augment anonymous tactics
   def anon(t: BelleExpr): BelleExpr = "ANON" by t
   def anon(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" by t
+  def anons(t: ((ProvableSig) => ProvableSig)): BuiltInTactic = "ANON" bys t
   def anon(t: ((ProvableSig, Position) => ProvableSig)): BuiltInPositionTactic = "ANON" by t
   def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
   def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t
@@ -687,6 +698,7 @@ object TacticFactory {
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
    * will transform them to the correct byWithInputs */
   def inputanon(t: Sequent => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
+  def inputanonP(t: ProvableSig => ProvableSig): InputTactic = "ANON" byWithInputsP(Nil, t)
   def inputanon(t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanon(t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanonP(t: ((ProvableSig, Position) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputsP(Nil:Seq[Any], t)

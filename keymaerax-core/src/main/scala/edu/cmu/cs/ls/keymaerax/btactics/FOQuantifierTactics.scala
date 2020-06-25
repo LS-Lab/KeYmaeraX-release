@@ -116,20 +116,21 @@ protected object FOQuantifierTactics {
           val t = inst(vars)
           val p = exists(qf)
 
-          val (assign, assignPreprocess, subst) = t match {
+          val (v,assign, assignPreprocess, subst) = t match {
             case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
-              (Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos),
-                (us: Subst) => RenUSubst(("x_".asVariable, vinst) :: ("f()".asTerm, "x_".asVariable) :: ("p_(.)".asFormula, Box(Assign("x_".asVariable, DotTerm()), p.replaceAll(x, "x_".asVariable))) :: Nil))
+              (vinst,Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos),
+                (us: Subst) => RenUSubst( ("f()".asTerm, vinst) :: ("p_(.)".asFormula, Box(Assign(vinst, DotTerm()), p.replaceAll(x,vinst))) :: Nil))
             case _ =>
-              (Box(Assign(x, t), p), skip,
-                (us: Subst) => RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t.replaceFree(x, "x_".asVariable)) :: ("p_(.)".asFormula, Box(Assign("x_".asVariable, DotTerm()), p.replaceAll(x, "x_".asVariable))) :: Nil))
+              (x,Box(Assign(x, t), p), skip,
+                (us: Subst) => RenUSubst(("f()".asTerm, t) :: ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p)) :: Nil))
           }
+          val rename = Ax.existsGeneralize.provable(URename(Variable("x_"), v, semantic=true))
 
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
             SequentCalculus.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
-              cohide(pos) & CMon(pos.inExpr) & byUS(Ax.existsGeneralize, subst) & done
+                cohide(pos) & CMon(pos.inExpr) & byUS(rename, subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new InputFormatFailure("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
@@ -169,22 +170,34 @@ protected object FOQuantifierTactics {
   /** [[SequentCalculus.allR]] */
   private[btactics] val allSkolemize: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     //@Tactic in [[SequentCalculus]]
-    if (!pos.isSucc) throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
+    if (!pos.isSucc)
+      throw new IllFormedTacticApplicationException("All skolemize only applicable in the succedent, not position " + pos + " in sequent " + sequent.prettyString)
     val xs = sequent.sub(pos) match {
       case Some(Forall(vars, _)) => vars
       case Some(e) => throw new TacticInapplicableFailure("allR only applicable to universal quantifiers, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }
     val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
-    //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
-    val renaming =
-      if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_&_)).reduce[BelleExpr](_ & _)
-      else {assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_&_)}
-    // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
-    val backrenaming =
-      if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
-      else {assert(namePairs.size == 1); ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)}
-    renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
+
+    // No renaming necessary if the bound variables are fresh
+    val noRename = StaticSemantics.freeVars(sequent).intersect(xs.toSet).isEmpty
+    
+    if (noRename) ProofRuleTactics.skolemizeR(pos)
+    else {
+      //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
+      val renaming =
+        if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRename(np._1, np._2)(_)).reduce[BelleExpr](_ & _)).reduce[BelleExpr](_ & _)
+        else {
+          assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRename(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_ & _)
+        }
+      // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
+      val backrenaming =
+        if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRename(np._2, np._1)).reduce[BelleExpr](_ & _)
+        else {
+          assert(namePairs.size == 1); ProofRuleTactics.uniformRename(namePairs.head._2, namePairs.head._1)
+        }
+      renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
+    }
   })
 
   /**

@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.macros.{DerivationInfo, Tactic, TacticInfo}
@@ -105,6 +106,7 @@ object TactixLibrary extends HilbertCalculus
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos)
      else HilbertCalculus.stepAt(pos))
+      //@todo optimizable: move assignb tactic into AxIndex once supported
     |! assignb(pos))
 
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
@@ -124,7 +126,8 @@ object TactixLibrary extends HilbertCalculus
   )(notL::andL::notR::implyR::orR::allR::existsL::DLBySubst.safeabstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
-  val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
+  @Tactic(codeName = "unfold", revealInternalSteps = true)
+  val unfoldProgramNormalize: BelleExpr = anon {normalize(andR)}
 
   /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
     * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
@@ -234,11 +237,13 @@ object TactixLibrary extends HilbertCalculus
     }
   })
 
-  val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
-                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
+  @Tactic(revealInternalSteps = true)
+  val prop: BelleExpr = anon {allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
+                                                ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)}
 
   /** Automated propositional reasoning, only keeps result if proved. */
-  val propAuto: BelleExpr = "propAuto" by (prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods"))
+  @Tactic(revealInternalSteps = true)
+  val propAuto: BelleExpr = anon {prop & DebuggingTactics.done("Not provable propositionally, please try other proof methods")}
 
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
@@ -266,7 +271,7 @@ object TactixLibrary extends HilbertCalculus
       }
     }
 
-    def composeChase: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    def composeChase: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
       val decompose = Idioms.mapSubpositions(pos, seq, {
         case (Box(Compose(_, _), _), pp: Position) => Some(chase(3, 3, (e: Expression) => e match {
           case Box(Compose(_, _), _) => Ax.composeb :: Nil
@@ -278,19 +283,20 @@ object TactixLibrary extends HilbertCalculus
       decompose.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
-    def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
       val solvers = Idioms.mapSubpositions(pos, seq, {
         case (Box(ODESystem(_, _), q), pp: Position) =>
           if (pp.isTopLevel) {
             if (q.isFOL) Some(odeR(pp))
-            else Some(chase(pp ++ PosInExpr(1::Nil)) & odeR(pp))
+            //@note chase may make progress on some but not all postconditions (e.g. not on loops)
+            else Some(chase(pp ++ PosInExpr(1::Nil)) & SimplifierV3.simplify(pp ++ PosInExpr(1::Nil)) & odeR(pp))
           } else Some(solve(pp))
         case _ => None
       })
       solvers.reduceOption[BelleExpr](_ & _).getOrElse(skip)
     })
 
-    def decomposeToODE: BelleExpr = "ANON" by ((seq: Sequent) => {
+    def decomposeToODE: BelleExpr = anon ((seq: Sequent) => {
       if (seq.isFOL) {
         skip /* master continues */
       } else {
@@ -302,14 +308,18 @@ object TactixLibrary extends HilbertCalculus
       }
     })
 
+    val dWContextRobust = anon ((pos: Position, _: Sequent) => Idioms.doIf((_: ProvableSig) => pos.isTopLevel)(dWPlus(pos)))
+
+    val autoQE = QE(timeout = Some(5)) | ArithmeticSpeculativeSimplification.speculativeQE
+
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, dWPlus, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, /*dWContextRobust,*/ solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
-          (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
+          ((Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done) | ?(autoQE & (if (keepQEFalse) nil else done)))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
@@ -328,7 +338,8 @@ object TactixLibrary extends HilbertCalculus
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
-  def auto: BelleExpr = "auto" by master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done
+  @Tactic()
+  def auto: BelleExpr = anon {master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done}
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
@@ -432,11 +443,11 @@ object TactixLibrary extends HilbertCalculus
                 logger.warn("ChooseSome: error listing options " + err, err)
                 List[Formula]().iterator
             },
-            (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
+            (inv: Formula) => loop(inv)(pos) & onAll(auto & done) & done
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
-          loopPostMaster(gen)(pos) & done |
+          loopPostMaster(gen)(pos) & done ||
             ChooseSome(
               () => try {
                 gen(seq, pos).iterator.map(_._1)
@@ -509,11 +520,24 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dW]]
     * @see [[dG]]
     */
-  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
-    DifferentialTactics.mathematicaSplittingODE(pos)
-    // if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
-    // else if (ToolProvider.qeTool(Some("WolframEngine")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
-    // else DifferentialTactics.ODE(pos)
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    // use and check invSupplier (user-defined annotations from input file)
+    val invs = invSupplier(seq, pos).toList
+    invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
+      skip,
+      (if (pos.isTopLevel) DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) else DifferentialTactics.diffInd()(pos)) &
+        Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
+        DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
+          "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
+    ))).reduceOption[BelleExpr](_ & _).getOrElse(skip) &
+      (if (pos.isTopLevel && invs.nonEmpty) dW(pos) & SaturateTactic(alphaRule) & SimplifierV3.fullSimplify & QE & done | DifferentialTactics.mathematicaSplittingODE(pos)
+       else if (pos.isTopLevel) DifferentialTactics.mathematicaSplittingODE(pos) |
+        (seq.sub(pos) match {
+          // make progress on nonFOL postcondition (mathematicaSplittingODE only handles FOL postcondition)
+          case Some(Box(ODESystem(_, q), p)) if q != True && !p.isFOL => dWPlus(pos)
+          case _ => skip
+        })
+       else DifferentialTactics.diffInd()(pos) & SimplifierV3.simplify(pos))
   })
 
   /**
@@ -538,6 +562,7 @@ object TactixLibrary extends HilbertCalculus
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
+  @Tactic()
   lazy val DGauto: DependentPositionTactic = DifferentialTactics.DGauto
 
 
@@ -625,6 +650,12 @@ object TactixLibrary extends HilbertCalculus
     * Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
+  @Tactic(names="Partial QE",
+    codeName="pQE",
+    premises="Γ |- Δ",
+    //    pQE -----------
+    conclusion="Γ<sub>FOLR∀∃</sub> |- Δ<sub>FOLR∀∃</sub>",
+    displayLevel="browse")
   def partialQE: BelleExpr = ToolTactics.partialQE(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("partialQE requires a QETool, but got None")))
 
   /** Splits propositional into many smallest possible QE calls.
@@ -662,7 +693,8 @@ object TactixLibrary extends HilbertCalculus
   /** abbrv(e, x) Abbreviate term `e` to name `x` (new name if omitted) and use that name at all occurrences of that term. */
   @Tactic(
     names = ("Abbreviate", "abbrv"),
-    codeName = "abbrv", //@todo name clash with abbrv above
+    codeName = "abbrv", //@todo name clash with abbrv above (response from BB: not a name clash if only one is annotated. This
+    // appears to be correct because it maintains backwards-compatibility)
     premises = "Γ(x), x=e |- Δ(x)",
     conclusion = "Γ(e) |- Δ(e)",
     inputs = "e:term;;x[x]:option[variable]"
@@ -805,6 +837,12 @@ object TactixLibrary extends HilbertCalculus
 
   /** Real-closed field arithmetic on a single formula without any extra smarts and simplifications.
     * @see [[QE]] */
+  @Tactic(names="RCF",
+    codeName="rcf",
+    premises="*",
+    //    pQE -----------
+    conclusion="Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
+    displayLevel="browse")
   def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */

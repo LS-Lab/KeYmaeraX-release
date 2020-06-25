@@ -198,6 +198,9 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
       case e@_ => throw ParseException("Input does not parse as a differential program but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
+  //@todo
+  override val sequentParser: String => Sequent = _ => throw new UnsupportedOperationException("Not yet implemented")
+
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
 
   def parse(input: TokenStream): Expression = {

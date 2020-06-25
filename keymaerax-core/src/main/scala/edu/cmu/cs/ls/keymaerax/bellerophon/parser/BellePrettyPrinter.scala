@@ -83,7 +83,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         }
         case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
         case it : InputTactic =>
-          val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
+          val eargs = it.inputs.map(input => argPrinter(Left(input))).filter(_.isEmpty).mkString(", ")
           it.name + "(" + eargs + ")"
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
         case NamedTactic(name, _) if name != "ANON" => name
@@ -101,7 +101,9 @@ object BellePrettyPrinter extends (BelleExpr => String) {
 
   private def argPrinter(arg: BelleParser.TacticArg) = arg match {
     case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
-    case Left(expr) => "\"" + expr + "\""
+    case Left(Some(expr: Expression)) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
+    case Left(Some(expr)) => "\"" + expr + "\""
+    case Left(None) => ""
     case Right(loc) => loc.prettyString
   }
 

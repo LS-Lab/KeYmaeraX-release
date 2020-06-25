@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.macros.Tactic
+import DerivationInfoAugmentors._
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
@@ -131,7 +132,8 @@ private object DLBySubst {
       val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
         skip,
-        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) & byUS(Ax.selfassignb) & done
+        cohide(hidePos) & equivifyR(1) & commute & CE(pos.inExpr) &
+          byUS(Ax.selfassignb.provable(URename("x_".asVariable, x, semantic=true))) & done
       )
     case (_, e) => throw new TacticInapplicableFailure("stutter only applicable to formulas, but got " + e.prettyString)
   })
@@ -226,12 +228,15 @@ private object DLBySubst {
   private[btactics] val assignEquality: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     //@note have already failed assigning directly so grab fresh name index otherwise
     // [x:=f(x)]P(x)
-    case Some(Box(Assign(x, t), p)) =>
+    case Some(Box(Assign(x, _), p)) =>
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
-      ProofRuleTactics.boundRename(x, y)(pos) &
-      (if (universal) useAt(Ax.assignbeq)(pos) else useAt(Ax.assignbequalityexists)(pos)) &
-      ProofRuleTactics.uniformRename(y, x) &
+      val rename =
+        if (universal) Ax.assignbeq.provable(URename("x_".asVariable, x, semantic=true))
+        else Ax.assignbequalityexists.provable(URename("x_".asVariable, x, semantic=true))
+
+      //@note boundRename and uniformRename for ODE/loop postconditions, and also for the desired effect of "old" having indices and "new" remaining x
+      ProofRuleTactics.boundRename(x, y)(pos) & useAt(rename)(pos) & ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
        else ident)
@@ -423,7 +428,7 @@ private object DLBySubst {
     conclusion =  "Γ |- [{a;b}<sup>*</sup>]P, Δ",
     displayLevel = "browse"
   )
-  def throughout(invariant: Formula): DependentPositionTactic = anon (throughout(invariant, SaturateTactic(alphaRule))(_: Position))
+  def throughout(J: Formula): DependentPositionTactic = anon (throughout(J, SaturateTactic(alphaRule))(_: Position))
   def throughout(invariant: Formula, pre: BelleExpr): DependentPositionTactic = anon ((pos: Position) => {
     require(pos.isTopLevel && pos.isSucc, "throughout only at top-level in succedent, but got " + pos)
     lazy val split: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -443,7 +448,7 @@ private object DLBySubst {
     premises =          "Γ |- ∃x J(x) ;; x≤0, J(x) |- P ;; x>0, J(x) |- ⟨a⟩J(x-1)",
     // Loop Convergence -----------------------------------------------------------
     conclusion =        "Γ |- ⟨a<sup>*</sup>⟩P, Δ",
-    inputs = "x:variable;;J[x]:formula",
+    inputs = "x[x]:variable;;J(x)[x]:formula",
     displayLevel = "all"
   )
   def con(x: Variable, J: Formula): DependentPositionTactic = anon (con(x, J, SaturateTactic(alphaRule))(_: Position))

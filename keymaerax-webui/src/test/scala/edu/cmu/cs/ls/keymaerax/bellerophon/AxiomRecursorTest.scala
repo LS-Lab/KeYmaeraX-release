@@ -17,7 +17,6 @@ import DerivationInfoAugmentors._
   *
   * @author Andre Platzer
   * @see [[UnificationMatch]]
-  * @see [[UnifyAxiomInstantiationTest]]
   * @see [[UnificationMatchTest]]
   * @see [[AxiomInfo.theKey]]
   * @see [[AxiomInfo.theRecursor]]

@@ -2737,8 +2737,8 @@ object RequestHelper {
          |End.""".stripMargin
     }
 
-  def jsonDisplayInfoComponents(di: DerivationInfo): JsValue = {
-    val keyPos = AxiomIndex.axiomIndex(di.canonicalName)._1
+  def jsonDisplayInfoComponents(di: ProvableInfo): JsValue = {
+    val keyPos = AxIndex.axiomIndex(di)._1
 
     //@todo need more verbose axiom info
     ProvableInfo.locate(di.canonicalName) match {
