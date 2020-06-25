@@ -613,7 +613,7 @@ object KeYmaeraX {
         }
 
         if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
-          ProofStatistics(name, tacticName, "disproved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
+          ProofStatistics(name, tacticName, "unfinished (cex)", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
         } else {
           ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
         }
@@ -623,6 +623,10 @@ object KeYmaeraX {
         BelleInterpreter.kill()
         // prover shutdown cleanup is done when KeYmaeraX exits
         ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1)
+      case _: Throwable =>
+        BelleInterpreter.kill()
+        // prover shutdown cleanup is done when KeYmaeraX exits
+        ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1)
     }
 
     proofStatistics
