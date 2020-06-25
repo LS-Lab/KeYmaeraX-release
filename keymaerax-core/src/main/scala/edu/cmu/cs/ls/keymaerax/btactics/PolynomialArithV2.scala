@@ -44,7 +44,7 @@ trait PolynomialRing {
     def resetTerm : Polynomial
     // resetRepresentation(newRepresentation).representation = newRepresentation
     def resetRepresentation(newRepresentation: ProvableSig) : Polynomial
-    // prettyTerm.representation = prettyRepresentation
+    // prettyTerm.term = rhsOf(prettyRepresentation)
     def prettyTerm : Polynomial
 
     // result.term = term + other.term
@@ -1612,7 +1612,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def degree(include: Term => Boolean) = 0
     override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
       require(rhsOf(newRepresentation)==rhsOf(prv))
-      Empty(Some(prv))
+      Empty(Some(newRepresentation))
     }
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
@@ -1626,7 +1626,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       left.degree(include) max value.degree(include) max right.degree(include)
     override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
       require(rhsOf(newRepresentation)==rhsOf(prv))
-      Branch2(left, value, right, Some(prv))
+      Branch2(left, value, right, Some(newRepresentation))
     }
   }
   case class Branch3(left: TreePolynomial, value1: Monomial, mid: TreePolynomial, value2: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
@@ -1640,7 +1640,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       left.degree(include) max value1.degree(include) max mid.degree(include) max value2.degree(include) max right.degree(include)
     override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
       require(rhsOf(newRepresentation)==rhsOf(prv))
-      Branch3(left, value1, mid, value2, right, Some(prv))
+      Branch3(left, value1, mid, value2, right, Some(newRepresentation))
     }
 
   }
