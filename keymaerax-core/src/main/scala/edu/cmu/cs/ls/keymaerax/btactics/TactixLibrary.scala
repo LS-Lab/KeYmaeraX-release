@@ -447,7 +447,7 @@ object TactixLibrary extends HilbertCalculus
           )
         case _ =>
           logger.info("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
-          loopPostMaster(gen)(pos) & done ||
+//@todo     loopPostMaster(gen)(pos) & done ||
             ChooseSome(
               () => try {
                 gen(seq, pos).iterator.map(_._1)
@@ -456,7 +456,7 @@ object TactixLibrary extends HilbertCalculus
                   logger.warn("ChooseSome: error listing options " + err, err)
                   List[Formula]().iterator
               },
-              (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
+              (inv: Formula) => DLBySubst.cexLoop(inv)(pos) & loop(inv)(pos) & onAll(auto) & done
             )
       }
     case _ => throw new TacticInapplicableFailure("Loopauto is applicable to nondeterministic repetition only")
