@@ -308,16 +308,16 @@ object TactixLibrary extends HilbertCalculus
       }
     })
 
-    val dWContextRobust = anon ((pos: Position, _: Sequent) => Idioms.doIf((_: ProvableSig) => pos.isTopLevel)(dWPlus(pos)))
-
-    val autoQE = QE(timeout = Some(5)) | ArithmeticSpeculativeSimplification.speculativeQE
+    val autoQE = QE /* @todo  Idioms.must(ArithmeticSpeculativeSimplification.autoMonotonicityTransform) & DebuggingTactics.print("autoQE") &
+      (QE(timeout = Some(5)) | DebuggingTactics.print("smartQE") & ArithmeticSpeculativeSimplification.speculativeQE) |
+      (QE(timeout = Some(5)) | ArithmeticSpeculativeSimplification.speculativeQE)*/
 
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, /*dWContextRobust,*/ solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.safeabstractionb, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
           ((Idioms.must(DifferentialTactics.endODEHeuristic) & autoQE & done) | ?(autoQE & (if (keepQEFalse) nil else done)))))))
   }
