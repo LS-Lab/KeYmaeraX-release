@@ -525,7 +525,9 @@ object TactixLibrary extends HilbertCalculus
     val invs = invSupplier(seq, pos).toList
     invs.map(inv => dC(inv._1)(pos) & Idioms.doIf(_.subgoals.size == 2)(Idioms.<(
       skip,
-      (if (pos.isTopLevel) DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) else DifferentialTactics.diffInd()(pos)) &
+      //@todo how to handle multiple archive entries with same dynamics but conflicting annotations?
+      (if (pos.isTopLevel) DifferentialTactics.odeInvariant(tryHard = true, useDw = true)(pos) | ODEInvariance.dRI(pos)
+       else DifferentialTactics.diffInd()(pos)) &
         Idioms.doIf(p => p.subgoals.nonEmpty && p.subgoals.forall(_.isFOL))(onAll(QE)) &
         DebuggingTactics.assertProvableSize(0, (details: String) => new UnprovableAnnotatedInvariant(
           "User-supplied invariant " + inv._1.prettyString + " not proved; please double-check and adapt invariant.\nFor example, invariant may hold on some branches but not all: consider using conditional annotations @invariant( (x'=0 -> invA), (x'=2 -> invB) ).\n" + details))
