@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
+import java.net.URLEncoder
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{FileSystems, FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
 import java.security.Permission
@@ -528,7 +529,8 @@ object KeYmaeraX {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    val pw = outputFileName.map(new PrintWriter(_))
+    val pw = outputFileName.map(fn => new PrintWriter(URLEncoder.encode(fn, "UTF-8").
+      replaceAllLiterally(URLEncoder.encode(File.separator, "UTF-8"), File.separator)))
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
 
@@ -728,7 +730,8 @@ object KeYmaeraX {
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    new PrintWriter(outputFileName)
+    new PrintWriter(URLEncoder.encode(outputFileName, "UTF-8").
+      replaceAllLiterally(URLEncoder.encode(File.separator, "UTF-8"), File.separator))
 
     val t = tacticString match {
       case Some(tac) => ("user", "user", tac) :: Nil
