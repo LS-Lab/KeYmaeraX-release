@@ -951,8 +951,11 @@ object KeYmaeraXArchiveParser /*extends (String => List[ParsedArchiveEntry])*/ {
     entry.problem match {
       case Left(problem) =>
         val tactics =
-          if (parseTactics) entry.tactics.map(convert(_, definitions))
-          else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
+          if (parseTactics) {
+            //@note tactics hard to elaborate later (expandAllDefs must use elaborated symbols to not have substitution clashes)
+            val elaboratedDefinitions = elaborateDefinitions(entry)._1.map(convert).reduceOption(_++_).getOrElse(Declaration(Map.empty))
+            entry.tactics.map(convert(_, elaboratedDefinitions))
+          } else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
 
         val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"exercise")
 
