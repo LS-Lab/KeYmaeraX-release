@@ -490,7 +490,7 @@ object KeYmaeraX {
 
   /** Reads the value of 'tactic from the `options` (either a file name or a tactic expression).
     * Default [[TactixLibrary.auto]] if `options` does not contain 'tactic. */
-  private def readTactic(options: OptionMap): Option[BelleExpr] = {
+  private def readTactic(options: OptionMap, defs: Declaration): Option[BelleExpr] = {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
@@ -503,7 +503,8 @@ object KeYmaeraX {
         } else {
           Some(BelleParser(source))
         }
-      case Some(t) if !File(t.toString).exists => Some(BelleParser(t.toString))
+      case Some(t) if !File(t.toString).exists =>
+        Some(BelleParser.parseWithInvGen(t.toString, None, defs, expandAll = false))
       case None => None
     }
   }
@@ -725,7 +726,7 @@ object KeYmaeraX {
     })
 
     val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
-    val tacticString = readTactic(options)
+    val tacticString = readTactic(options, entry.defs)
     val reqTacticName = options.get('tacticName)
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
