@@ -330,7 +330,11 @@ object BelleParser extends TacticParser with Logging {
           }
       }
       case r :+ BelleToken(EXPANDALLDEFS, loc) =>
-        ParserState(r :+ ParsedBelleExpr(ExpandAll(defs.substs), loc), st.input)
+        if (defs.substs.nonEmpty) ParserState(r :+ ParsedBelleExpr(ExpandAll(defs.substs), loc), st.input)
+        else st.input match {
+          case BelleToken(SEQ_COMBINATOR, _) :: rest => ParserState(r, rest)
+          case _ => ParserState(r, st.input)
+        }
       //endregion
 
       //region Stars and Repitition
