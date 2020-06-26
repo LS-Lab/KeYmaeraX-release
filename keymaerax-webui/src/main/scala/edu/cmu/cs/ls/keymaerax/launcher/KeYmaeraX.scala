@@ -1071,8 +1071,9 @@ object KeYmaeraX {
     val archiveContent = KeYmaeraXArchiveParser.parseFromFile(kyxFile)
 
     //@note remove all tactics, e.model does not contain annotations anyway
-    //@note remove all definitions too, those might be used as proof hints
-    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
+    //@note fully expand model and remove all definitions too, those might be used as proof hints
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(model = e.defs.exhaustiveSubst(e.model),
+      defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
     val printer = new KeYmaeraXArchivePrinter()
     val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
