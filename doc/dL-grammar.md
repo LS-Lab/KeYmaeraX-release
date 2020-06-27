@@ -17,8 +17,8 @@ All logical and program operators except `<-` and `<->` are right-associative.
 
     T ::= x | x' | num | ∙ | f(T) | f() | T^T | T*T | T/T | -T | T+T | T-T | (T)' | (T,T) | (T) 
 
-Arithmetic operators are left-associative, i.e. `x-y-z` is `(x-y)-z`.
-Except that `T^T` and pairs are right-associative, i.e. `x^4^2` is `x^(4^2)`.
+Arithmetic operators are left-associative, i.e., `x-y-z` is `(x-y)-z`.
+Except that `T^T` and pairs are right-associative, i.e., `x^4^2` is `x^(4^2)`.
 
 ===Formulas===
 
@@ -26,21 +26,21 @@ Except that `T^T` and pairs are right-associative, i.e. `x^4^2` is `x^(4^2)`.
         | !F | \forall x F | \exists x F | [P]F | <P>F 
         | F&F | F|F | F->F | F<->F | true | false | (F)' | (F)
 
-Logical operators are right-associative, i.e. `p()->q()->r()` is `p()->(q()->r())`.
+Logical operators are right-associative, i.e., `p()->q()->r()` is `p()->(q()->r())`.
 Except that `<->` is non-associative and `<-` is left-associative.
 
 ===Programs===
 
     P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | {P} | if (F) {P} else {P} | if (F) {P}
 
-Operators are right-associative.
-Even the invisible `;` in `P P` is right-associative, i.e. x:=1;x:=2;x:=3; is x:=1;{x:=2;x:=3;}
+Operators are right-associative, i.e., `x:=1;++x:=2;++x:=3;` is `x:=1;++{x:=2;++x:=3;}`.
+Even the invisible `;` in `P P` is right-associative, i.e. `x:=1;x:=2;x:=3;` is `x:=1;{x:=2;x:=3;}`
 
 ===Differential Programs===
 
     D ::= c | x'=T | D,D
 
-Program operators are right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,{y'=2,z'=3}
+Program operators are right-associative, i.e., x'=1,y'=2,z'=3 is x'=1,{y'=2,z'=3}
 
 ===Types===
 
