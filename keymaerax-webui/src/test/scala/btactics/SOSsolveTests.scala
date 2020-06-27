@@ -5,70 +5,135 @@ import java.io.FileWriter
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith.doubleNeg
-import edu.cmu.cs.ls.keymaerax.btactics.SOSSolve.{SOSSolveAborted, SOSSolveNoSOS}
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{chaseIndex, composeIndex, defaultFaxs, emptyTaxs, fullSimpTac}
+import edu.cmu.cs.ls.keymaerax.btactics.SOSSolve.{ExponentOutOfScopeFailure, NonUniversalOutOfScopeFailure, RatFormError, SOSSolveAborted, SOSSolveNoSOS, SOSWelldefinedDivisionFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettierPrinter
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
+import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool.Witness
 import org.scalatest.PrivateMethodTester
-import org.scalatest.time.{Days, Hours, Span}
+import org.scalatest.LoneElement._
+import org.scalatest.time.{Days, Span}
 
 import scala.collection.immutable._
 
 class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
-  val prob1 = ("!(-200 + 10 * t1uscore0dollarskuscore0 + vuscore2dollarskuscore0 = 0 &" +
-    "t1uscore0dollarskuscore0 >= 0 &" +
-    "stuscore2dollarskuscore0 = 0 &" +
-    "-2000 * stuscore2dollarskuscore0 - 4000 * suscore2dollarskuscore0 -" +
-    "  200 * stuscore2dollarskuscore0 * tuscore2dollarskuscore0 - 5 * tuscore2dollarskuscore0^2 +" +
-    "  10 * stuscore2dollarskuscore0 * tuscore2dollarskuscore0^2 + zuscore2dollarskuscore0 = 0 &" +
-    "tuscore2dollarskuscore0 >= 0 &" +
-    "suscore2dollarskuscore0 >= 0 &" +
-    "vuscore2dollarskuscore0 >= 0 &" +
-    "zuscore2dollarskuscore0 >= 0 &" +
-    "-200 * stuscore2dollarskuscore0 - 10 * tuscore2dollarskuscore0 +" +
-    "  20 * stuscore2dollarskuscore0 * tuscore2dollarskuscore0 + vuscore2dollarskuscore0 = 0 &" +
-    "t1uscore0dollarskuscore0 + tuscore2dollarskuscore0 < 0)").asFormula
+  val prob1 = ("!(-200 + 10 * t10_0 + v2_0 = 0 &" +
+    "t10_0 >= 0 &" +
+    "st2_0 = 0 &" +
+    "-2000 * st2_0 - 4000 * s2_0 -" +
+    "  200 * st2_0 * t2_0 - 5 * t2_0^2 +" +
+    "  10 * st2_0 * t2_0^2 + z2_0 = 0 &" +
+    "t2_0 >= 0 &" +
+    "s2_0 >= 0 &" +
+    "v2_0 >= 0 &" +
+    "z2_0 >= 0 &" +
+    "-200 * st2_0 - 10 * t2_0 +" +
+    "  20 * st2_0 * t2_0 + v2_0 = 0 &" +
+    "t10_0 + t2_0 < 0)").asFormula
   val polys1 = (
-    "stuscore2dollarskuscore0," +
-      "-200 + 10 * t1uscore0dollarskuscore0 + vuscore2dollarskuscore0," +
-      "-200 * stuscore2dollarskuscore0 - 10 * tuscore2dollarskuscore0 + 20 * stuscore2dollarskuscore0 * tuscore2dollarskuscore0 + vuscore2dollarskuscore0," +
-      "-2000 * stuscore2dollarskuscore0 - 4000 * suscore2dollarskuscore0 - 200 * stuscore2dollarskuscore0 * tuscore2dollarskuscore0 - 5 * tuscore2dollarskuscore0^2 + 10 * stuscore2dollarskuscore0 * tuscore2dollarskuscore0^2 + zuscore2dollarskuscore0," +
-      "-GEQ11^2 + suscore2dollarskuscore0," +
-      "-GEQ12^2 + t1uscore0dollarskuscore0," +
-      "-GEQ13^2 + tuscore2dollarskuscore0," +
-      "-GEQ14^2 + vuscore2dollarskuscore0," +
-      "-GEQ15^2 +  zuscore2dollarskuscore0," +
-      "-1 + GT16^2 * (-t1uscore0dollarskuscore0 - tuscore2dollarskuscore0)"
+    "st2_0," +
+      "-200 + 10 * t10_0 + v2_0," +
+      "-200 * st2_0 - 10 * t2_0 + 20 * st2_0 * t2_0 + v2_0," +
+      "-2000 * st2_0 - 4000 * s2_0 - 200 * st2_0 * t2_0 - 5 * t2_0^2 + 10 * st2_0 * t2_0^2 + z2_0," +
+      "-GEQ11^2 + s2_0," +
+      "-GEQ12^2 + t10_0," +
+      "-GEQ13^2 + t2_0," +
+      "-GEQ14^2 + v2_0," +
+      "-GEQ15^2 +  z2_0," +
+      "-1 + GT16^2 * (-t10_0 - t2_0)"
     ).split(',').map(_.asTerm).toList
-  val vars1 = ("vuscore2dollarskuscore0, t1uscore0dollarskuscore0, stuscore2dollarskuscore0, zuscore2dollarskuscore0," +
-    "tuscore2dollarskuscore0, suscore2dollarskuscore0, GEQ11, GEQ12, GEQ13, GEQ14, GEQ15, GT16").split(',').map(_.asTerm).toList
+  val vars1 = ("v2_0, t10_0, st2_0, z2_0," +
+    "t2_0, s2_0, GEQ11, GEQ12, GEQ13, GEQ14, GEQ15, GT16").split(',').map(_.asTerm).toList
 
   "sosSolveTool" should "return the certificate" in withMathematica { _ =>
     val sosSolveTool = ToolProvider.sosSolveTool().getOrElse(throw new RuntimeException("no SOSSolveTool configured"))
     sosSolveTool.sosSolve(polys1, vars1, 1, None) shouldBe
-      Left("1+20*GT16^2".asTerm,
-        "1/10*(200*GT16^2+-20*GT16^2*tuscore2dollarskuscore0), -1/10*GT16^2, 1/10*GT16^2, 0, 0, 0, 0, 0, 0, -1".split(',').map(_.asTerm).toList)
-  } /* to verify: cofactors * polys = sos */
+      Witness("1+20*GT16^2".asTerm,
+        "20*GT16^2+(-2)*GEQ13^2*GT16^2, 0, 0, 0, (-1)".split(',').map(_.asTerm).toList,
+        List(
+          (2,"v2_0","200+(-10)*t10_0","1"),
+          (2,"t10_0","1/10*(200+(-200)*st2_0+(-10)*t2_0+20*st2_0*t2_0)", "(-10)"),
+          (2,"z2_0","4000*s2_0+2000*st2_0+200*st2_0*t2_0+5*t2_0^2+(-10)*st2_0*t2_0^2","1"),
+          (4,"t2_0","GEQ13^2","1"),
+          (2,"s2_0","GEQ11^2","1")).map{case (i, a, b, c) => (i, a.asTerm, b.asTerm, c.asTerm)}
+      )
+  }
 
   "SOSSolve" should "prove using the certificate" in withMathematica { _ =>
     val pp = new KeYmaeraXPrettierPrinter(100)
     TaylorModelTactics.Timing.tic()
-    PolynomialArithV2.ring
+    PolynomialArithV2
     TaylorModelTactics.Timing.toc("Initialized PolynomialArithV2")
     proveBy(prob1, prop &
       PolynomialArith.prepareArith &
       SOSSolve.witnessSOS(1, SOSSolve.lexicographicVariableOrdering)) shouldBe 'proved
   }
 
-  def isConstant(t: Term) : Boolean = t match {
+  "SOSSolve.sos()" should "find a certificate and prove" in withMathematica { _ =>
+    proveBy(prob1, SOSSolve.sos()) shouldBe 'proved
+  }
+
+  it should "illustrate automatic and interactive treatment of division" in withMathematica { _ =>
+    // a more or less arbitrary goal arising from the etcs case study
+    val fml = "((A>=0&ep>=0&1>=0&1>0&sbsc>0&ms>0&g>0&-1<=0&0<=1&v_1<=vdes&0<=Tw&Tw<=A&v_1^2-d^2<=2*(1*sbsc/ms)*(m-z)&d>=0&t>=0&v>=0&t<=ep&v_1>=0&0<=ep->(1*Tw/1-(ms*0+ms*g*0)-((v*(1-1)+1)*sbsc+0))/ms=0+(Tw/ms-1*sbsc/ms)*1|m-z<=(v_1^2-d^2)/(2*1*sbsc/ms)+(A/ms/(1*sbsc/ms)+1)*(A/ms/2*ep^2+ep*v_1)|em=1))".asFormula
+    import SOSSolve._
+    // without handling rational functions: should produce a meaningful error message
+    val ex1 = the [RatFormError] thrownBy proveBy(fml, sos())
+    ex1.getMessage should include ("Try a RatForm strategy to eliminate rational functions.")
+
+    // prove welldefinedness of divisions with sossolve
+    proveBy(fml, sos(RatForm(true))) shouldBe 'proved
+
+    // assume welldefinedness of divisions: fails, but gives a hint at how to fix:
+    val ex2 = the [RatFormError] thrownBy proveBy(fml, sos(RatForm(false)))
+    ex2.getMessage should include ("try to cut in '2*ms^2*sbsc > 0' or '2*ms^2*sbsc < 0'")
+
+    // Manually (here also with sos) cut in the missing sign assumption
+    proveBy(fml, prop & cut("2*ms^2*sbsc > 0".asFormula) & Idioms.<(
+      sos(RatForm(false)),
+      cut("ms>0&sbsc>0".asFormula) & Idioms.<(
+        cohideOnlyL('Llast) & cohideOnlyR('Rlast) & sos(),
+        prop & done
+      )
+    )) shouldBe 'proved
+  }
+
+  "ratFormAnte and elimRatForm" should "test" in withMathematica { _ =>
+    val seq = Sequent("b > 0, x + y/b = 0, x - y/2 = 0, x / b + x + y/(2*b) = 0".split(',').map(_.asFormula).toIndexedSeq, IndexedSeq())
+    val ratFormPrv = proveBy(seq, SOSSolve.ratFormAnte)
+    ratFormPrv.subgoals.loneElement.ante shouldBe "b/1>0,(y+b*x)/b=0, (-y+2*x)/2=0, (y+2*x+2*b*x)/(2*b)=0".split(',').map(_.asFormula).toIndexedSeq
+    ratFormPrv.subgoals.loneElement.succ shouldBe 'empty
+
+    // eliminate rational forms (with sign assumptions expected in the
+    val ex = the [RatFormError] thrownBy proveBy(ratFormPrv, SOSSolve.elimRatForms(false))
+    ex.getMessage should include ("try to cut in '2*b > 0' or '2*b < 0'")
+
+    val prv = proveBy(ratFormPrv, cut("2*b>0".asFormula) & Idioms.<(skip, QE))
+    val prv2 = proveBy(prv, SOSSolve.elimRatForms(false))
+    prv2.subgoals.loneElement.ante shouldBe "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0, 2*b>0".split(',').map(_.asFormula).toIndexedSeq
+    prv2.subgoals.loneElement.succ shouldBe 'empty
+
+    val prv3 = proveBy(ratFormPrv, SOSSolve.elimRatForms(true))
+    println(prv3)
+    prv3.subgoals.length shouldBe 2
+    prv3.subgoals(0).ante shouldBe "b>0, y+b*x=0, -y+2*x=0, y+2*x+2*b*x=0".split(',').map(_.asFormula).toIndexedSeq
+    prv3.subgoals(0).succ shouldBe 'empty
+    prv3.subgoals(1).ante shouldBe "b>0, y+b*x=0, -y+2*x=0".split(',').map(_.asFormula).toIndexedSeq
+    prv3.subgoals(1).succ shouldBe IndexedSeq("2*b != 0".asFormula)
+  }
+
+}
+
+/** Test SOSsolve on benchmark suites in the QELogger format */
+@IgnoreInBuildTest
+class SOSsolveQELoggerTests extends TacticTestBase with PrivateMethodTester {
+    override def timeLimit = Span(365, Days)
+
+  def isConstant(t: Term): Boolean = t match {
     case t: BinaryCompositeTerm => isConstant(t.left) && isConstant(t.right)
     case t: UnaryCompositeTerm => isConstant(t.child)
     case n: Number => true
@@ -77,17 +142,18 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     case _ => ???
   }
 
-  def denominators(t: Term) : Seq[Term] = t match {
-    case Divide(a, b) => if(isConstant(b)) denominators(a) else Seq(b)++denominators(a)++denominators(b)
-    case t: BinaryCompositeTerm => denominators(t.left)++denominators(t.right)
+  def denominators(t: Term): Seq[Term] = t match {
+    case Divide(a, b) => if (isConstant(b)) denominators(a) else Seq(b) ++ denominators(a) ++ denominators(b)
+    case t: BinaryCompositeTerm => denominators(t.left) ++ denominators(t.right)
     case t: UnaryCompositeTerm => denominators(t.child)
     case t: AtomicTerm => Seq()
     case t: FuncOf => denominators(t.child)
     case _ => ???
   }
-  def denominators(fml: Formula) : Seq[Term] = fml match {
-    case fml: BinaryCompositeFormula => denominators(fml.left)++denominators(fml.right)
-    case fml: ComparisonFormula => denominators(fml.left)++denominators(fml.right)
+
+  def denominators(fml: Formula): Seq[Term] = fml match {
+    case fml: BinaryCompositeFormula => denominators(fml.left) ++ denominators(fml.right)
+    case fml: ComparisonFormula => denominators(fml.left) ++ denominators(fml.right)
     case fml: UnaryCompositeFormula => denominators(fml.child)
     case fml: AtomicFormula => Seq()
     case fml: PredOf => denominators(fml.child)
@@ -95,39 +161,10 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     case _ =>
       ???
   }
-  def denominators(seq: Sequent) : Seq[Term] = (seq.ante++seq.succ).flatMap(denominators)
 
-  private lazy val ringX = PolynomialArithV2.ring.ofTerm("x".asVariable)
-  def naturalExponentCheck(t: Term) : Unit = t match {
-    case Power(a, b) => ringX ^ PolynomialArithV2.ring.ofTerm(b); naturalExponentCheck(a)
-    case t: BinaryCompositeTerm => naturalExponentCheck(t.left); naturalExponentCheck(t.right)
-    case t: UnaryCompositeTerm => naturalExponentCheck(t.child)
-    case t: AtomicTerm => ()
-    case t: FuncOf => naturalExponentCheck(t.child)
-    case _ => ???
-  }
-  def naturalExponentCheck(fml: Formula) : Unit = fml match {
-    case fml: BinaryCompositeFormula => naturalExponentCheck(fml.left); naturalExponentCheck(fml.right)
-    case fml: ComparisonFormula => naturalExponentCheck(fml.left); naturalExponentCheck(fml.right)
-    case fml: UnaryCompositeFormula => naturalExponentCheck(fml.child)
-    case fml: AtomicFormula => ()
-    case fml: PredOf => naturalExponentCheck(fml.child)
-    case fml: PredicationalOf => naturalExponentCheck(fml.child)
-    case _ =>
-      ???
-  }
-  def naturalExponentCheck(seq: Sequent) : Unit = (seq.ante++seq.succ).foreach(naturalExponentCheck)
+  def denominators(seq: Sequent): Seq[Term] = (seq.ante ++ seq.succ).flatMap(denominators)
 
-  lazy val preprocess =
-    SaturateTactic(onAll(
-      SaturateTactic((useAt(Ax.doubleNegation, PosInExpr(1 :: Nil))(1) & notR(1))|!skip) &
-      fullSimpTac(faxs = composeIndex(defaultFaxs, chaseIndex), taxs = emptyTaxs) &
-      SaturateTactic(onAll(?(alphaRule | betaRule | existsL('L) | closeF))))) &
-    onAll(PolynomialArith.normAnte)
-
-  override def timeLimit = Span(365, Days)
-
-  it should "try to prove stuff generated by QELogger" in withMathematica { _ =>
+  "SOSSolve" should "try to prove stuff generated by QELogger" in withMathematica { _ =>
     import java.text.SimpleDateFormat
     import java.util.Date
     import java.util.Calendar
@@ -153,11 +190,14 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     final case object Success             extends Status { val name = "success"; val message = "Success."}
     final case object Aborted             extends Status { val name = "aborted"; val message = "Aborted, likely due to timeout."}
     final case object NoSOS               extends Status { val name = "nosos--"; val message = "No SOS found (internal error or degree bound exceeded?)."}
-    final case object RatTacFailure       extends Status { val name = "rattac-"; val message = "Division was not handled by ratTac."}
+    final case object DivisorElimination  extends Status { val name = "divelim"; val message = "Division was not eliminated."}
+    final case object DivisorWellDefined  extends Status { val name = "divwell"; val message = "Division could not be proved to be well-defined."}
     final case object Unknown             extends Status { val name = "unknown"; val message = "Unknown error - investigate exception trace!"}
     final case object OutOfScopeUniversal extends Status { val name = "nonuniv"; val message = "Out of scope, non-universal."}
     final case object OutOfScopePower     extends Status { val name = "nonpow-"; val message = "Out of scope, non-natural power."}
     final case object QEFalse             extends Status { val name = "qefalse"; val message = "QE reduces to false."}
+    final case object SubgoalFalse        extends Status { val name = "prprcF-"; val message = "QE reduces to false after preprocessing - likely the result of eliminating an ill-defined division."}
+    final case object SubgoalTimeout      extends Status { val name = "prprcTO"; val message = "QE timed out after preprocessing - likely the result of eliminating an ill-defined division."}
     final case object QETimeout           extends Status { val name = "qeto---"; val message = "QE timed out."}
 
     class Counter(status: Status) {
@@ -180,11 +220,14 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     val success = new Counter(Success)
     val aborted = new Counter(Aborted)
     val noSos = new Counter(NoSOS)
-    val ratTacFailure = new Counter(RatTacFailure)
+    val divisorElimination = new Counter(DivisorElimination)
+    val divisorWelldefinedness = new Counter(DivisorWellDefined)
     val unknown = new Counter(Unknown)
-    val outofScopeQuantifier = new Counter(OutOfScopeUniversal)
+    val outofScopeUniversal = new Counter(OutOfScopeUniversal)
     val outofScopePower = new Counter(OutOfScopePower)
     val qeFalse = new Counter(QEFalse)
+    val subgoalFalse = new Counter(SubgoalFalse)
+    val subgoalTimeout = new Counter(SubgoalTimeout)
     val qeTimeout = new Counter(QETimeout)
     var i = 0
 
@@ -192,18 +235,25 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     val outfile = new java.io.File(outfileName)
 
     def isForall(fml: Formula) = fml.isInstanceOf[Forall]
-    def processEntry(degree: Int, variableOrdering: Ordering[Variable], timeout: Int)(entry: (String, Sequent, Sequent)) = entry match {
+
+    val preprocessOnly = false
+
+    def processEntry(degree: Int, variableOrdering: Ordering[Variable], timeout: Int)(entry: (String, Sequent, Sequent)): Unit = entry match {
       case (n, seq0, seq) =>
         val totalTimer = Timer()
         val qeTimer = Timer()
         val preprocTimer = Timer()
+        val ratFormTimer = Timer()
         val sosTimer = Timer()
         val witnessTimer = Timer()
         println(i + "/" + lineCount + "(" + n + "): " + seq.toString.replace('\n', ' '))
         i = i + 1
         print("trying QE...")
         val qeTry = qeTimer.time {
-          proveBy(seq, ?(QE(timeout = Some(timeout))))
+          if(preprocessOnly)
+            proveBy(True, closeT)
+          else
+            proveBy(seq, ?(QE(timeout = Some(timeout))))
         }
         val status = if (!qeTry.isProved) {
           if (qeTry.subgoals.exists(_.succ.contains(False))) {
@@ -212,62 +262,60 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
             qeTimeout.inc(n, seq0, seq)
           }
         } else totalTimer.time {
-          println("preprocessing...")
-          val preprocessed = preprocTimer.time {
-            proveBy(seq, preprocess)
-          }
-          val outofscope = preprocessed.subgoals.flatMap(subgoal => subgoal.ante.find(isForall(_))).headOption
-          if (outofscope.isDefined) {
-            outofScopeQuantifier.inc()
-          } else {
-            try {
-              preprocessed.subgoals.foreach(naturalExponentCheck)
-              println(preprocessed.subgoals.length + " subgoal(s):")
-              val res = for ((subgoal, subgoalN) <- preprocessed.subgoals.zipWithIndex) yield {
-                println("Subgoal " + subgoalN + ": " + subgoal.ante.mkString(", ") + subgoal.succ.mkString(" ==> ", ", ", ""))
-                val denoms = denominators(subgoal)
-                if (denoms.isEmpty)
-                  proveBy(subgoal, SOSSolve.witnessSOS(degree, variableOrdering, Some(timeout), sosTimer, witnessTimer))
-                else {
-                  println("strengthen assumptions for preprocessing of rational functions...")
-                  val noRat = preprocTimer.time {
-                    proveBy(Sequent(subgoal.ante ++ denoms.map(NotEqual(_, Number(0))), subgoal.succ),
-                      PolynomialArith.ratTac & OnAll(preprocess))
-                  }
-                  proveBy(noRat, OnAll(SOSSolve.witnessSOS(degree, variableOrdering, Some(timeout), sosTimer, witnessTimer)))
-                }
-              }
-              if (res.forall(_.isProved)) {
-                success.inc()
-              } else {
-                ???
-              }
-            } catch {
-              case SOSSolveAborted() =>
-                aborted.inc(n, seq0, seq)
-              case SOSSolveNoSOS() =>
-                noSos.inc(n, seq0, seq)
-              case PolynomialArithV2.NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedDivisorException) =>
-                ratTacFailure.inc(n, seq0, seq)
-              case PolynomialArithV2.NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedExponentException) =>
-                outofScopePower.inc(n, seq0, seq)
-              case PolynomialArithV2.NonSupportedExponentException(_) =>
-                outofScopePower.inc(n, seq0, seq)
-              case ex =>
-                print("Unexpected failure:")
-                println(ex)
-                unknown.inc(n, seq0, seq)
+          try {
+            val ratFormStrategy = SOSSolve.RatForm(true)
+//            val ratFormStrategy = SOSSolve.NoRatForm
+            println("preprocessing...")
+            val preprocessed = preprocTimer.time {
+              proveBy(seq, OnAll(SOSSolve.preprocess(ratFormStrategy)))
             }
+            println("preprocessed.")
+            val res = if(preprocessOnly)Seq() else for ((subgoal, subgoalN) <- preprocessed.subgoals.zipWithIndex) yield {
+              println("Subgoal " + subgoalN + ": " + subgoal.ante.mkString(", ") + subgoal.succ.mkString(" ==> ", ", ", ""))
+              proveBy(subgoal,
+                SOSSolve.sos(ratFormStrategy,
+                  Some(degree),
+                  Some(variableOrdering),
+                  Some(Some(timeout)),
+                  sosTimer,
+                  witnessTimer,
+                  skipPreprocessing = true))
+            }
+            if (res.forall(_.isProved)) {
+              success.inc()
+            } else {
+              ???
+            }
+          } catch {
+            case SOSSolveAborted() =>
+              aborted.inc(n, seq0, seq)
+            case SOSSolveNoSOS() =>
+              noSos.inc(n, seq0, seq)
+            case PolynomialArithV2.NonSupportedOperationInapplicability(_: PolynomialArithV2.NonSupportedExponentException) =>
+              outofScopePower.inc(n, seq0, seq)
+            case PolynomialArithV2.NonSupportedExponentException(_) =>
+              outofScopePower.inc(n, seq0, seq)
+            case SOSWelldefinedDivisionFailure(_) =>
+              divisorWelldefinedness.inc(n, seq0, seq)
+            case NonUniversalOutOfScopeFailure(_) =>
+              outofScopeUniversal.inc(n, seq0, seq)
+            case ExponentOutOfScopeFailure(_) =>
+              outofScopeUniversal.inc(n, seq0, seq)
+            case ex =>
+              print("Unexpected failure:")
+              println(ex)
+              unknown.inc(n, seq0, seq)
           }
         }
         println("Timings[ms]")
         println("  QE      : " + qeTimer.getTimeMs)
         println("    preproc : " + preprocTimer.getTimeMs)
+        println("    ratForm : " + ratFormTimer.getTimeMs)
         if (status == Success) {
           println("    SOSsolve: " + sosTimer.getTimeMs)
           println("    verify  : " + witnessTimer.getTimeMs)
           println("       witness/search: " + (witnessTimer.getTimeMs / sosTimer.getTimeMs))
-          println("       prove/search  : " + ((preprocTimer.getTimeMs + witnessTimer.getTimeMs) / sosTimer.getTimeMs))
+          println("       prove/search  : " + ((preprocTimer.getTimeMs + ratFormTimer.getTimeMs + witnessTimer.getTimeMs) / sosTimer.getTimeMs))
           println("  Sum       : " + (sosTimer.getTimeMs + witnessTimer.getTimeMs))
           println("  Total     : " + totalTimer.getTimeMs)
           println("    Accuracy: " + (sosTimer.getTimeMs + witnessTimer.getTimeMs) / totalTimer.getTimeMs)
@@ -279,7 +327,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
           val f = outfile
           val parent = outfile.getParentFile
           if (parent != null) parent.mkdirs()
-          val timers = Seq(qeTimer, totalTimer, preprocTimer, sosTimer, witnessTimer)
+          val timers = Seq(qeTimer, totalTimer, preprocTimer, ratFormTimer, sosTimer, witnessTimer)
           val timings = Seq(status.name) ++ timers.map(timer => if (status==Success || timer==qeTimer) timer.getTimeMs else 0.0)
           val fw = new FileWriter(f, true)
           fw.append(timings.mkString(" ") + "\n")
@@ -289,7 +337,7 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
             throw ex
         }
 
-        val expected = aborted.count + noSos.count + ratTacFailure.count + unknown.count
+        val expected = aborted.count + noSos.count + divisorElimination.count + divisorWelldefinedness.count + unknown.count
         println("Success  : " + success.count)
         println("Expected : " + expected)
         if (success.count + expected > 0)
@@ -297,9 +345,12 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
 
         println("Aborted(T): " + aborted.count)
         println("NoSOS(T)  : " + noSos.count)
-        println("non-universal: " + outofScopeQuantifier.count)
+        println("non-universal: " + outofScopeUniversal.count)
         println("non-natural power: " + outofScopePower.count)
-        println("ratTacFail: " + ratTacFailure.count)
+        println("divisor elimination: " + divisorElimination.count)
+        println("divisor welldefinedness: " + divisorWelldefinedness.count)
+        println("subgoalFalse: " + subgoalFalse.count)
+        println("subgoalTimeout: " + subgoalTimeout.count)
         println("Unknown   : " + unknown.count)
         println("QE false  : " + qeFalse.count)
         println("QE timeout: " + qeTimeout.count)
@@ -315,6 +366,11 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     }
   }
 
+}
+
+/** Convert QE Logs to Isabelle syntax */
+@IgnoreInBuildTest
+class ConvertQELogToIsabelle extends TacticTestBase with PrivateMethodTester {
   def paren(s: String) : String = "(" + s + ")"
   def printOp(op: String, left: String, right: String) : String = paren(left) + " " + op + " " + paren(right)
   def printOp(op: String, child: String) : String = op + paren(child)
@@ -391,8 +447,12 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
       } else converted
     case _ => throw new IllegalArgumentException("toIsabelle(logEntry)")
   }
+  "toIsabelle" should "convert" in withMathematica { _ =>
+    val fml = "(A>=0&ep>=0&1>=0&1>0&sbsc>0&ms>0&g>0&-1<=0&0<=1&v_1<=vdes&0<=Tw&Tw<=A&v_1^2-d^2<=2*(1*sbsc/ms)*(m-z)&d>=0&t>=0&v>=0&t<=ep&v_1>=0&0<=ep->(1*Tw/1-(ms*0+ms*g*0)-((v*(1-1)+1)*sbsc+0))/ms=0+(Tw/ms-1*sbsc/ms)*1|m-z<=(v_1^2-d^2)/(2*1*sbsc/ms)+(A/ms/(1*sbsc/ms)+1)*(A/ms/2*ep^2+ep*v_1)|em=1)".asFormula
+    println(toIsabelle(fml))
+  }
 
-  it should "convert to Isabelle" in withMathematica { _ =>
+  "QE logs" should "convert to Isabelle" in withMathematica { _ =>
     val logPath = Configuration.path(Configuration.Keys.SOSSOLVE_LOG_PATH)
     val logfilename = logPath + Configuration(Configuration.Keys.SOSSOLVE_LOG_INPUT)
     val outfileName = logfilename + ".isabelle.txt"
@@ -415,8 +475,4 @@ class SOSsolveTests extends TacticTestBase with PrivateMethodTester {
     fw.close()
   }
 
-  it should "not fail" in withMathematica { _ =>
-    val fml = "\\forall z \\forall y \\forall x \\forall w9_0 \\forall w8_0 \\forall w7_0 \\forall w6_0 \\forall w5_0 \\forall w4_0 \\forall w3_0 \\forall w2_0 \\forall w10_0 \\forall w1 (\\forall w2 \\exists w3 \\forall w4 \\exists w5 \\forall w6 \\exists w7 \\forall w8 \\exists w9 \\forall w10 \\exists w11 \\forall w12 \\exists w13 \\forall w14 \\exists w15 \\forall w16 \\exists w17 \\forall w18 \\exists w19 \\forall w20 w11*100*w12^2*w13^2*w14^4*w15^777*w16^(15/552)*w7^44*w18^8*w19^2*w20^20+y^100*x^1000<=y^100*x^999*w1*w2^2*w3^3*w4^4*w5^5*w6^6*w7^7*w8^8*w9^9*w10^10&x^2+y^2!=y^2&y^100*x^1000+w1*w5_0*w7_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&y^2+y^2!=y^2&y^100*x^1000+w3_0*w7_0*w8_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&w1^2+y^2!=y^2&y^100*x^1000+w1*w2_0*w3_0*w4_0*w7_0<=y^100*x^999*w1*w2_0^2*w3_0^3*w4_0^4*w5_0^5*w6_0^6*w7_0^7*w8_0^8*w9_0^9*w10_0^10&z^2+y^2!=y^2&9000*y^1000/2*z<=z^12->x^2+y^2+w1^2+z^2>0)".asFormula
-    println(proveBy(fml, QE))
-  }
 }

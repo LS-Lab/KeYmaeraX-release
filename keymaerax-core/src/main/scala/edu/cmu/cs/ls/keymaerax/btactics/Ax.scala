@@ -4638,8 +4638,59 @@ object Ax extends Logging {
 
   /** Polynomial Arithmetic [[edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2]] */
 
-  @Axiom("eqNormalize")
+  @Axiom("eqNormalize", key = "0", recursor = "")
   lazy val eqNormalize = derivedFormula("eqNormalize", "s_() = t_() <-> s_() - t_() = 0".asFormula, QE)
+
+  @Axiom("neNormalize", key = "0", recursor = "")
+  lazy val neNormalize = derivedFormula("neNormalize", "s_() != t_() <-> s_() - t_() != 0".asFormula, QE)
+
+  @Axiom("gtNormalize", key = "0", recursor = "")
+  lazy val gtNormalize: DerivedAxiomInfo = derivedFormula("gtNormalize", "f_()>g_() <-> f_()-g_()>0".asFormula, QE)
+
+  @Axiom("geNormalize", key = "0", recursor = "")
+  lazy val geNormalize: DerivedAxiomInfo = derivedFormula("geNormalize", "f_()>=g_() <-> f_()-g_()>=0".asFormula, QE)
+  
+  @Axiom("divNeEq")
+  lazy val divNeEq: DerivedAxiomInfo = derivedFormula("divNeEq", "G_()!=0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  
+  @Axiom("divNeNe")
+  lazy val divNeNe: DerivedAxiomInfo = derivedFormula("divNeNe", "G_()!=0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  
+  @Axiom("divGtEq")
+  lazy val divGtEq: DerivedAxiomInfo = derivedFormula("divGtEq", "G_()>0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  
+  @Axiom("divLtEq")
+  lazy val divLtEq: DerivedAxiomInfo = derivedFormula("divLtEq", "G_()<0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  
+  @Axiom("divGtNe")
+  lazy val divGtNe: DerivedAxiomInfo = derivedFormula("divGtNe", "G_()>0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  
+  @Axiom("divLtNe")
+  lazy val divLtNe: DerivedAxiomInfo = derivedFormula("divLtNe", "G_()<0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  
+  @Axiom("divGtGt")
+  lazy val divGtGt: DerivedAxiomInfo = derivedFormula("divGtGt", "G_()>0 -> F_()/G_() > 0 -> F_() > 0".asFormula, QE)
+  
+  @Axiom("divLtGt")
+  lazy val divLtGt: DerivedAxiomInfo = derivedFormula("divLtGt", "G_()<0 -> F_()/G_() > 0 -> F_() < 0".asFormula, QE)
+  
+  @Axiom("divGtGe")
+  lazy val divGtGe: DerivedAxiomInfo = derivedFormula("divGtGe", "G_()>0 -> F_()/G_() >= 0 -> F_() >= 0".asFormula, QE)
+  
+  @Axiom("divLtGe")
+  lazy val divLtGe: DerivedAxiomInfo = derivedFormula("divLtGe", "G_()<0 -> F_()/G_() >= 0 -> F_() <= 0".asFormula, QE)
+  
+  @Axiom("divGtLt")
+  lazy val divGtLt: DerivedAxiomInfo = derivedFormula("divGtLt", "G_()>0 -> F_()/G_() < 0 -> F_() < 0".asFormula, QE)
+  
+  @Axiom("divLtLt")
+  lazy val divLtLt: DerivedAxiomInfo = derivedFormula("divLtLt", "G_()<0 -> F_()/G_() < 0 -> F_() > 0".asFormula, QE)
+  
+  @Axiom("divGtLe")
+  lazy val divGtLe: DerivedAxiomInfo = derivedFormula("divGtLe", "G_()>0 -> F_()/G_() <= 0 -> F_() <= 0".asFormula, QE)
+  
+  @Axiom("divLtLe")
+  lazy val divLtLe: DerivedAxiomInfo = derivedFormula("divLtLe", "G_()<0 -> F_()/G_() <= 0 -> F_() >= 0".asFormula, QE)
 
   @Axiom("coefficientTimesPrv")
   lazy val coefficientTimesPrv = derivedFormula("coefficientTimesPrv",

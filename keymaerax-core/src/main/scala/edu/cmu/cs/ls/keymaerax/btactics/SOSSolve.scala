@@ -4,13 +4,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
+import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2.{NonSupportedDivisorException, NonSupportedOperationInapplicability}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ext.BigDecimalTool
 import edu.cmu.cs.ls.keymaerax.tools.ext.SOSsolveTool._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
@@ -83,6 +82,11 @@ object SOSSolve {
 
   case class SOSSolveAborted() extends BelleProofSearchControl("sossolve aborted")
   case class SOSSolveNoSOS() extends BelleProofSearchControl("sossolve did not find sos")
+  case class RatFormError(msg: String) extends TacticInapplicableFailure(msg)
+  trait OutOfScope extends TacticInapplicableFailure
+  final case class ExponentOutOfScopeFailure(msg: String) extends TacticInapplicableFailure(msg) with OutOfScope
+  final case class NonUniversalOutOfScopeFailure(msg: String) extends TacticInapplicableFailure(msg) with OutOfScope
+  case class SOSWelldefinedDivisionFailure(msg: String) extends TacticInapplicableFailure(msg)
 
   private def witnessSOSaux(sos :Term, cofactors: List[Term],witnessTimer: Timer) : DependentTactic = {
     val name = "witnessSOSaux"
@@ -130,6 +134,7 @@ object SOSSolve {
     augmentedVariableOrdering(v => if (v.name.startsWith("wit_")) 1 else 0:Int,
       lexicographicVariableOrdering)
 
+  // search for a witness with SOSsolveTool and prove the goal
   def witnessSOS(degree: Int, variableOrdering: Ordering[Variable], timeout: Option[Int] = None, sosTimer: Timer = NoTimer, witnessTimer: Timer = NoTimer) : DependentTactic = {
     val name = "witnessSOS"
     name by { (seq: Sequent) =>
@@ -154,6 +159,7 @@ object SOSSolve {
     }
   }
 
+  // clear succedent and normalize antecedent to negation normal form
   val normalizeNNF = "ANON" by { (seq: Sequent) =>
     (seq.zipAnteWithPositions.flatMap { case(fml, pos) =>
       SimplifierV3.baseNormalize(fml) match {
@@ -168,4 +174,332 @@ object SOSSolve {
     }).foldLeft(skip)(_ & _) & SaturateTactic(notR('R))
   }
 
+  // turns a ~ b into a - b ~ 0 in the antecedent
+  def normalizeZeroRhs : DependentTactic = anon { (seq: Sequent) =>
+    seq.zipAnteWithPositions.map { case (fml, pos) =>
+      fml match {
+        case cmp: ComparisonFormula if cmp.right == Number(0) => skip
+        case LessEqual(_, _) => useAt(Ax.metricLe)(pos)
+        case Less(_, _) => useAt(Ax.metricLt)(pos)
+        case GreaterEqual(_, _) => useAt(Ax.geNormalize)(pos)
+        case Greater(_, _) => useAt(Ax.gtNormalize)(pos)
+        case Equal(_, _) => useAt(Ax.eqNormalize)(pos)
+        case NotEqual(_, _) => useAt(Ax.neNormalize)(pos)
+        case _ => throw new TacticInapplicableFailure("normalizeZeroRhs expects only comparisonFormulas in the antecedent")
+      }
+    }.reduceLeftOption(_ & _).getOrElse(skip)
+  }
+
+  private def definedOrElse[T](x: Option[T], f: => Option[T]) : Option[T] = x match {
+    case None => f
+    case Some(x) => Some(x)
+  }
+
+  // (ab)use PolynomialArithV2 to check for natural exponents
+  private lazy val ringX = PolynomialArithV2.ofTerm("x".asVariable)
+  def naturalExponentCheck(t: Term): Option[Term] = try {
+    t match {
+      case Power(a, b) => ringX ^ PolynomialArithV2.ofTerm(b); naturalExponentCheck(a)
+      case t: BinaryCompositeTerm => definedOrElse(naturalExponentCheck(t.left), naturalExponentCheck(t.right))
+      case t: UnaryCompositeTerm => naturalExponentCheck(t.child)
+      case t: AtomicTerm => None
+      case t: FuncOf => naturalExponentCheck(t.child)
+      case _ => ???
+    }
+  } catch {
+    case PolynomialArithV2.NonSupportedExponentException(_) => Some(t)
+  }
+
+  def naturalExponentCheck(fml: Formula): Option[Term] = try {
+    fml match {
+      case fml: BinaryCompositeFormula => definedOrElse(naturalExponentCheck(fml.left), naturalExponentCheck(fml.right))
+      case fml: ComparisonFormula => definedOrElse(naturalExponentCheck(fml.left), naturalExponentCheck(fml.right))
+      case fml: UnaryCompositeFormula => naturalExponentCheck(fml.child)
+      case fml: Quantified => naturalExponentCheck(fml.child)
+      case fml: Modal => naturalExponentCheck(fml.child)
+      case fml: AtomicFormula => None
+      case fml: PredOf => naturalExponentCheck(fml.child)
+      case fml: PredicationalOf => naturalExponentCheck(fml.child)
+      case _ =>
+        ???
+    }
+  }
+  def naturalExponentCheck(seq: Sequent): Option[Term] = (seq.ante ++ seq.succ).collectFirst(scala.Function.unlift(naturalExponentCheck))
+
+  def naturalExponentCheck : DependentTactic = anon { (seq: Sequent) => naturalExponentCheck(seq) match {
+    case None => skip
+    case Some(t) => throw ExponentOutOfScopeFailure("(non natural number) exponent out of scope: " + t)
+  }}
+
+  // is the formula fml allowed to occur in the antecedent of a universal problem in negation normal form?
+  def nonUniversal(fml: Formula): Boolean = fml match {
+    case cmp: ComparisonFormula => false
+    case cmp: BinaryCompositeFormula => throw new IllegalArgumentException("universalCheck: preprocessing should have eliminated binary composite formulas - " + fml)
+    case cmp: UnaryCompositeFormula => throw new IllegalArgumentException("universalCheck: preprocessing should have eliminated unary composite formulas - " + fml)
+    case a: AtomicFormula => throw new IllegalArgumentException("universalCheck: preprocessing should have eliminated atomic formulas - " + fml)
+    case a: ApplicationOf => true
+    case m: Modal => true
+    case Exists(_, _) => throw new IllegalArgumentException("universalCheck: preprocessing should have eliminated existential quantifiers - " + fml)
+    case Forall(_, _) => true
+  }
+  // check if antecedent is a universal problem
+  def universalCheck : DependentTactic = anon { (seq: Sequent) =>
+    require(seq.succ.length == 0, "universalCheck: preprocessing should have emptied succedent - " + seq.succ)
+    (seq.ante).find(nonUniversal) match {
+      case Some(fml) => throw NonUniversalOutOfScopeFailure("(non universal) formula in the antecedent out of scope: " + fml)
+      case None => skip
+    }
+  }
+
+  // normalize to rational form on the lhs
+  def ratFormLhs = anon { (seq: Sequent) =>
+    seq.zipAnteWithPositions.map {
+      case (cmp: ComparisonFormula, pos) =>
+        cmp.right match {
+          case (Number(n)) if n.compareTo(0) == 0 =>
+            useAt(PolynomialArithV2.ratForm(cmp.left)._3, PosInExpr(0::Nil))(pos++PosInExpr(0::Nil))
+          case _ =>
+            throw new TacticInapplicableFailure("ratFormLhs expects formulas with 0 on the rhs")
+        }
+    }.reduceLeftOption[BelleExpr](_ & _).getOrElse(skip)
+  }
+
+
+  // turns "a/Number(d) ~ 0" to "a ~ 0" if "d > 0" occurs in the antecedent
+  def solveNumericDenominators : DependentTactic = TacticFactory.anon { (seq: Sequent) =>
+    require(seq.succ.length==0, "proveNonzeros requires empty succedent")
+    seq.zipAnteWithPositions.map {
+      case (cmp: ComparisonFormula, pos) if cmp.right == Number(0) =>
+        cmp.left match {
+          case Divide(n, Number(d)) if d.compareTo(0) > 0 =>
+            val prv = cmp match {
+              case Equal(_, _) => Ax.divGtEq
+              case NotEqual(_, _) => Ax.divGtNe
+              case Greater(_, _) => Ax.divGtGt
+              case GreaterEqual(_, _) => Ax.divGtGe
+              case Less(_, _) => Ax.divGtLt
+              case LessEqual(_, _) => Ax.divGtLe
+            }
+            cutL(cmp.reapply(n, Number(0)))(pos) & Idioms.<(
+              skip,
+              useAt(prv, PosInExpr(1::Nil))(1) &
+                cohideR(1) &
+                useAt(ProvableSig.proveArithmetic(BigDecimalQETool, Greater(Number(d), Number(0))), PosInExpr(0::Nil))(1) &
+                closeT
+            )
+          case _ => skip
+        }
+      case _ =>
+        throw new TacticInapplicableFailure("elimNumericDenominators expects formulas with 0 on the rhs")
+    }.reduceLeftOption(_ & _).getOrElse(skip)
+  }
+
+  // turns "a/b ~ 0" to "a ~ 0" if "b > 0" occurs in the antecedent
+  def solvePositiveDenominators : DependentTactic = TacticFactory.anon { (seq: Sequent) =>
+    require(seq.succ.length==0, "elimPositiveDenominators requires empty succedent")
+    seq.zipAnteWithPositions.map {
+      case (cmp: ComparisonFormula, pos) if cmp.right == Number(0) =>
+        cmp.left match {
+          case Divide(n, d) =>
+            if (seq.ante.exists(_ == Greater(d, Number(0)))) {
+              val prv = cmp match {
+                case Equal(_, _) => Ax.divGtEq
+                case NotEqual(_, _) => Ax.divGtNe
+                case Greater(_, _) => Ax.divGtGt
+                case GreaterEqual(_, _) => Ax.divGtGe
+                case Less(_, _) => Ax.divGtLt
+                case LessEqual(_, _) => Ax.divGtLe
+              }
+              cutL(cmp.reapply(n, Number(0)))(pos) & Idioms.<(
+                skip,
+                useAt(prv, PosInExpr(1 :: Nil))(1) & closeId
+              )
+            } else skip
+          case _ => skip
+        }
+      case _ =>
+        throw new TacticInapplicableFailure("elimPositiveDenominators expects formulas with 0 on the rhs")
+    }.reduceLeftOption(_ & _).getOrElse(skip)
+  }
+
+  private def flip(cmp: ComparisonFormula): ComparisonFormula = cmp match {
+    case Equal(a, b) => Equal(a, b)
+    case NotEqual(a, b) => NotEqual(a, b)
+    case Greater(a, b) => Less(a, b)
+    case GreaterEqual(a, b) => LessEqual(a, b)
+    case Less(a, b) => Greater(a, b)
+    case LessEqual(a, b) => GreaterEqual(a, b)
+  }
+  // turns "a/b ~ 0" to "a ~ 0" if "b < 0" occurs in the antecedent
+  def solveNegativeDenominators : DependentTactic = TacticFactory.anon { (seq: Sequent) =>
+    require(seq.succ.length==0, "elimNegativeDenominators requires empty succedent")
+    seq.zipAnteWithPositions.map {
+      case (cmp: ComparisonFormula, pos) if cmp.right == Number(0) =>
+        cmp.left match {
+          case Divide(n, d) =>
+            if (seq.ante.exists(_ == Less(d, Number(0)))) {
+              val prv = cmp match {
+                case Equal(_, _) => Ax.divLtEq
+                case NotEqual(_, _) => Ax.divLtNe
+                case Greater(_, _) => Ax.divLtGt
+                case GreaterEqual(_, _) => Ax.divLtGe
+                case Less(_, _) => Ax.divLtLt
+                case LessEqual(_, _) => Ax.divLtLe
+              }
+              cutL(flip(cmp).reapply(n, Number(0)))(pos) & Idioms.<(
+                skip,
+                useAt(prv, PosInExpr(1::Nil))(1) & closeId
+              )
+            } else skip
+          case _ => skip
+        }
+      case _ =>
+        throw new TacticInapplicableFailure("elimNegativeDenominators expects formulas with 0 on the rhs")
+    }.reduceLeftOption(_ & _).getOrElse(skip)
+  }
+  // turns "a/b ~= 0" to "a ~= 0" if "b != 0" occurs in the antecedent
+  def solveNonzeroDenominators : DependentTactic = TacticFactory.anon { (seq: Sequent) =>
+    require(seq.succ.length==0, "elimNegativeDenominators requires empty succedent")
+    seq.zipAnteWithPositions.map {
+      case (cmp: ComparisonFormula, pos) if cmp.right == Number(0) =>
+        cmp match {
+          case Equal(_, _) | NotEqual(_, _) =>
+            cmp.left match {
+              case Divide(n, d) =>
+                if(seq.ante.exists(_ == NotEqual(d, Number(0)))) {
+                  val prv = cmp match {
+                    case Equal(_, _) => Ax.divNeEq
+                    case NotEqual(_, _) => Ax.divNeNe
+                  }
+                  cutL(cmp.reapply(n, Number(0)))(pos) & Idioms.<(
+                    skip,
+                    useAt(prv, PosInExpr(1::Nil))(1) & closeId
+                  )
+                } else skip
+              case _ => skip
+            }
+          case _ => skip
+        }
+      case _ =>
+        throw new TacticInapplicableFailure("elimNonzeroDenominators expects formulas with 0 on the rhs")
+    }.reduceLeftOption(_ & _).getOrElse(skip)
+  }
+
+  def subgoalNonzeroDenominators = anon { (seq: Sequent) =>
+    val denominators = seq.zipAnteWithPositions.flatMap{
+      case (Equal(Divide(num, denom), Number(n)), pos) if n.compareTo(0) == 0 => Some(true, num, denom, pos)
+      case (NotEqual(Divide(num, denom), Number(n)), pos) if n.compareTo(0) == 0 => Some(false, num, denom, pos)
+      case _ => None
+    }
+    def elimDenoms(denoms: List[(Boolean, Term, Term, Position)]) : BelleExpr = denoms match {
+      case (eq, num, denom, pos)::denoms =>
+        val (cmp, divNePrv) = if (eq) (Equal, Ax.divNeEq) else (NotEqual, Ax.divNeNe)
+        cutL(cmp(num, Number(0)))(pos) &
+         Idioms.<(elimDenoms(denoms),
+           useAt(divNePrv, PosInExpr(1::Nil))(1) &
+             denoms.map{case (_, _, _, pos) => hideL(pos)}.reduceLeftOption[BelleExpr](_ & _).getOrElse(skip)
+         )
+      case Nil => skip
+    }
+    elimDenoms(denominators.reverse)
+  }
+
+  // split formulas in negation normal form in the antecedent
+  def splitAnte : BelleExpr = TacticFactory.anon {(seq: Sequent) =>
+    seq.zipAnteWithPositions.collectFirst {
+      case (Exists(_, _), pos) => existsL(pos) & splitAnte
+      case (And(_, _), pos) => andL(pos) & splitAnte
+      case (Or(_, _), pos) => orL(pos) & Idioms.<(splitAnte, splitAnte)
+      case (True, pos) => hideL(pos) & splitAnte
+      case (False, pos) => cohideL(pos) & closeF
+    }.getOrElse(skip)
+  }
+
+  // check that all rational functions have been eliminated
+  def checkNoRatForm = anon { (seq: Sequent) =>
+    seq.ante.foreach {
+      case cmp: ComparisonFormula =>
+        cmp.left match {
+          case Divide(_, denom) => throw RatFormError(s"division was not eliminated (try to cut in \'${denom} > 0\' or \'${denom} < 0\')")
+          case _ => ()
+        }
+      case _ =>
+        throw new TacticInapplicableFailure("expects only comparisons in the antecedent")
+    }
+    skip
+  }
+
+  // turn the antecedent to 'rational form', where p_i and q_i are without division:
+  // p_0(||)/q_0(||) ~ 0, ..., p_n(||) / q_n(||) ~ 0  |-
+  // -------------------------------------------------------
+  // r_0(||) ~ 0, ..., r_n(||) ~ 0  |-
+  def ratFormAnte = OnAll(normalizeZeroRhs & ratFormLhs)
+
+  // try to eliminate all rational forms and raise RatFormError otherwise.
+  // may produce additional subgoals if branchNonzeroDenominators=true
+  def elimRatForms(branchNonzeroDenominators: Boolean = false) =
+    OnAll(
+      solveNumericDenominators &
+      solvePositiveDenominators &
+      solveNegativeDenominators &
+      solveNonzeroDenominators &
+      (if (branchNonzeroDenominators) subgoalNonzeroDenominators else skip) &
+      OnAll(checkNoRatForm)
+    )
+
+  // what to do about rational functions while preprocessing?
+  trait RatFormStrategy
+  // not expecting to deal with rational functions (division by constant numbers happen to work)
+  final case object NoRatForm extends RatFormStrategy
+  // normalize to rational form and eliminate divisions (with or without creating additional subgoals)
+  final case class RatForm(branchNonzeroDenominators: Boolean) extends RatFormStrategy
+
+  // preprocess real arithmetic sequent
+  def preprocess(strategy: RatFormStrategy): BelleExpr =
+    normalizeNNF &
+      splitAnte &
+      OnAll(universalCheck & naturalExponentCheck) &
+      (strategy match {
+        case NoRatForm => OnAll(PolynomialArith.normAnte)
+        case RatForm(true) => OnAll(PolynomialArith.normAnte & ratFormAnte & elimRatForms(true))
+        case RatForm(false) => OnAll(ratFormAnte & elimRatForms(false) & PolynomialArith.normAnte)
+      })
+
+  /** "main" method to preprocessing, sos witness generation, and proving. */
+  def sos(ratFormStrategy: RatFormStrategy = NoRatForm,
+          degree: Option[Int] = None,
+          variableOrdering: Option[Ordering[Variable]] = None,
+          timeout: Option[Option[Int]] = None,
+          sosTimer: Timer = NoTimer,
+          witnessTimer: Timer = NoTimer,
+          skipPreprocessing: Boolean = false
+         ): BelleExpr = anon {
+    val defaultTimeout = Some(60)
+    val defaultDegree = 100
+    (if(skipPreprocessing) skip else preprocess(ratFormStrategy)) &
+      TryCatch(
+        OnAll(
+          anon { (seq: Sequent) =>
+            val sostac = SOSSolve.witnessSOS(degree.getOrElse(defaultDegree), variableOrdering.getOrElse(deferAuxiliaryVariableOrdering), timeout.getOrElse(defaultTimeout),
+              sosTimer,
+              witnessTimer
+            )
+            if (!seq.succ.isEmpty) {
+              require(seq.succ.length == 1 && seq.succ(0).isInstanceOf[NotEqual], "sos: preprocess left something unexpected in the succedent " + seq.succ)
+              useAt(Ax.notEqual, PosInExpr(1::Nil))(1) & notR(1) &
+                ?(sostac) |! anon {(seq: Sequent) => throw SOSWelldefinedDivisionFailure(seq.toString)}
+            } else {
+              sostac
+            }
+          }
+        ),
+        classOf[NonSupportedOperationInapplicability],
+        ( ex: NonSupportedOperationInapplicability) =>
+          ex.cause match {
+            case NonSupportedDivisorException(message) =>
+              throw RatFormError("Rational function occured: " + message + "\nTry a RatForm strategy to eliminate rational functions.")
+            case ex => throw ex
+          }
+      )
+  }
 }

@@ -195,7 +195,9 @@ object PolynomialArithV2 extends TwoThreeTreePolynomialRing(
 
   /** report operations not supported by polynomial arithmetic in tactics */
   final case class NonSupportedOperationInapplicability(cause: NonSupportedOperationException)
-    extends TacticInapplicableFailure("Tactic inapplicable because of an operation that is not supported by polynomial arithmetic.", cause)
+    extends TacticInapplicableFailure("Tactic inapplicable because of an operation that is not supported by polynomial arithmetic: " +
+      cause.getMessage
+      , cause)
   def reportBelleThrowables[R](block: => R) =
     try {
       block
@@ -954,6 +956,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   final case class UnknownPolynomialImplementationException(other: Polynomial) extends
     RuntimeException("only TreePolynomials are supported, but got " + other)
 
+  val equalReflexive = Ax.equalReflexive.provable
+
   sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
     override def representation: ProvableSig = prv
@@ -965,7 +969,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       val prettyPrv = proveBy(Equal(PolynomialArithV2Helpers.rhsOf(prettyRepr), PolynomialArithV2Helpers.rhsOf(repr)),
         useAt(repr, PosInExpr(1::Nil))(1, 1::Nil) &
           useAt(prettyRepr, PosInExpr(1::Nil))(1, 0::Nil) &
-          byUS(Ax.equalReflexive)
+          byUS(equalReflexive)
       )
       resetRepresentation(prettyPrv)
     }
@@ -1380,7 +1384,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number, Divide, or Neg.")
           }
         } else {
-          throw NonSupportedDivisorException("Divisor must be a constant polynomial.")
+          throw NonSupportedDivisorException(s"Divisor ${other.term} must be a constant polynomial.")
         }
       case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
