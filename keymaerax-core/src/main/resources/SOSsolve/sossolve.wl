@@ -86,6 +86,7 @@ ReduceBasis[monbasis_List, gcoeff_List, gb_List, vars_List, filter_, monOrder_]:
 		]
 	]
 	];
+	filpos=filpos // DeleteDuplicates;
 	If[Not[filter] || Length[filpos]==0,Break[]];
 	Print["Filtering monomials: ",mb[[filpos]]];
 	mb=Delete[mb,List/@filpos];
@@ -137,7 +138,6 @@ RoundResult[res_,monbasis_,gtrm_,gb_,vars_,skipround_,monOrder_]:= Module[{
 	(* Heuristic: just clip all vals that are < 0 to 0
 	vals = Map[Clip[#,{0,Infinity}]&,vals]; *)
 	If[Not[AllTrue[vals, # >= 0&]],
-		Print["failure: ",vals];
 		If[skipround,Return[{}], Continue[]]
 	];
 
@@ -302,8 +302,13 @@ ConvertPrimalRaw[constraints_,cs_,k_]:=Module[{prim,ns,sol},
 	(* Exact orthogonalization is too slow:
 		ns = Orthogonalize[ns]; *)
 	sol = LinearSolve[prim,cs];
+	If[Head[sol]===LinearSolve || Length[sol]==0 || Length[ns]===0, Return[{}]];
 	Return[{ns,sol}]
 ]
+
+MonomialQ[a_,L_List] :=
+PolynomialQ[a, L] &&               (* must be Polynomial and *)
+  Head[Expand[a, x_ /; MemberQ[L, x]]] =!= Plus;
 
 
 (* Given:
@@ -370,10 +375,13 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 	If[primal,
 		Block[{ns,bs},
 		Print["Solving in primal form"];
-		{ns,bs} = ConvertPrimalRaw[constraints,cs,k];
+		{tt,nsbs} = Timing[ConvertPrimalRaw[constraints,cs,k]];
+		Print["Converted to primal time: ",tt];
+		If[Length[nsbs]===0, Print["Conversion to primal failed."];Return[{}]];
+		{ns,bs}=nsbs;
 		bs = ExpandSymmetric[bs,k];
 		ns = Map[ExpandSymmetric[#,k]&,ns];
-		If[Length[ns]===0,Return[{}]];
+		If[Length[ns]===0, Print[bs];Return[{}]];
 	
 		{tt,res}=Timing[
 			SemidefiniteOptimization[ConstantArray[0,Length[ns]],
@@ -392,9 +400,11 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 
 	(* Solving in dual form *)
 	Print["Solving in dual form"];
+	cos=DiagonalMatrix[Map[If[MonomialQ[#,vars],1,0.01]&,monbasis]];
+	
 	{tt,res}=Timing[
 		SemidefiniteOptimization[cs,
-		Join[{IdentityMatrix[k]},constraints],
+		Join[{cos},constraints],
 		{"DualityGap","DualMaximizer"},
 		Method->"DSDP"]
 	];
@@ -410,54 +420,6 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 ]
 
 
-(*https://mathematica.stackexchange.com/questions/113492/how-to-generate-higher-dimensional-convex-hull*)
-ConvexDependentQ[corners_, cand_] := Module[
-   {w, ws},
-   w = Array[ws, Length@corners];
-   1 == Length@
-     FindInstance[
-      w.corners == cand && Total[w] == 1 && 
-       And @@ Table[w[[i]] >= 0, {i, Length@w}], w]
-   ];
- 
-ConvexReduce[data_] := Module[
-   {corners, ncorners, test},
-   corners = data;
-   Do[
-    ncorners = Delete[corners, Position[corners, data[[i]]]];
-    test = ConvexDependentQ[ncorners, data[[i]]];
-    If[test, corners = ncorners];
-    , {i, Length@data}
-    ];
-   corners
-   ];
-   
-ConvexHullCorners[data_] := Module[
-   {corners, rd},
-   corners = {};
-   Do[
-    corners = 
-      Join[corners,
-       Select[data, 
-        Min[data[[;; , i]]] == #[[i]] || 
-          Max[data[[;; , i]]] == #[[i]] &]];
-    , {i, Length@data[[1]]}
-    ];
-   corners = DeleteDuplicates@corners;
-   rd = Delete[data, First@Position[data, #] & /@ corners];
-   Do[
-    If[ConvexDependentQ[corners, rd[[i]]], , AppendTo[corners, rd[[i]]]]
-    , {i, Length@rd}
-    ];
-   ConvexReduce@DeleteDuplicates@corners
-   ];
-
-FilterPolytope[mons_,vars_,polytope_,monOrder_]:=Module[{mm},
-	(* Print[Map[2*CoefficientRules[#,vars,monOrder][[1]][[1]]&,mons]]; *)
-	mm=Select[mons,ConvexDependentQ[polytope,2*CoefficientRules[#,vars,monOrder][[1]][[1]]]&];
-	Return[mm];
-]
-
 SolveNorm[f_,test_]:=Block[{eqs,norm,c},
 	eqs=Map[#-f[[1]]&,Drop[f,1]];
 	norm=NullSpace[eqs][[1]];
@@ -469,10 +431,21 @@ SolveNorm[f_,test_]:=Block[{eqs,norm,c},
 *)
 ConstraintRep[msco_]:=Block[{pts,facets,chullpts,mid,facetsraw,hyps,dim},
 	Print["No. input points: ",Length[msco]];
+	If[Length[msco]==0,Return[{}]];
 	dim=Length[msco[[1]]];
+	If[dim===0, Return[{}]];
 	Print["dimension ",dim];
-	If[dim <= 2, Print["Dimension too low."];Return[{}]];
-	{pts,facets}=NDConvexHull`CHNQuickHull[msco];
+	If[dim==1,
+		min=Min[msco];
+		max=Max[msco];
+		hyps={{{1},min,1},{{1},max,-1}};
+		Return[hyps]
+	];
+	If[dim>2,
+		{pts,facets}=NDConvexHull`CHNQuickHull[msco],
+		pts=NDConvexHull`CH2QuickHull[msco];
+		facets=Transpose[{pts,RotateLeft[pts,1]}]
+	];
 	Print["Converting hull with ",Length[facets]," facets in dimension ",dim
 		," to constraint representation."];
 	chullpts=msco[[pts]];
@@ -512,6 +485,23 @@ ExtendConstraints[constraints_,dirs_]:=Block[{},
 ];
 
 
+TruncateEigen[mat_]:=Block[{vals,vecs,pos},
+	(* Truncate small eigenvalues *)
+	{vals,vecs}=Eigensystem[mat];
+	pos=Position[vals,_?(# > 0.1&)]//Flatten;
+	vals=vals[[pos]];
+	vecs=Orthogonalize[vecs[[pos]]];
+	Transpose[vecs].DiagonalMatrix[vals].vecs
+]
+
+
+monomialList[poly_,vars_,monOrder_]:=Block[{},
+Times @@ (vars ^#) & /@ CoefficientRules[poly,vars,monOrder][[All,1]]
+]
+Ptwise[a_,b_]:=Block[{}, Map[#*b &,a]//Flatten]
+ListHalf[ls_]:=Tuples[Map[If[EvenQ[#],{#/2},{Floor[#/2],Ceiling[#/2]}]&,ls]];
+
+
 (* Input:
 polys {p_1,p_2,...} - polynomials assumed to be = 0
 ineqs {g_1,g_2,...} - polynomials assumed to be \[NotEqual] 0
@@ -534,7 +524,7 @@ FindWitness[polysPre_List, ineqs_List,
 	res,monbasis,constraints,cs, rres,
 	soscoeff, sos, seq, pos,
 	trunclim, primaltrunclim,
-	pts,facets,hullconstraints
+	pts,facets,hullconstraints,primalmonbound,tt
 	},
 	
 	(* The return is a 5-element list:
@@ -554,10 +544,13 @@ FindWitness[polysPre_List, ineqs_List,
 
 	(* Some of these can be made parameters, but these defaults should be more or less representative *)
 	maxcofdeg=15; (* Max degree of cofactors *)
-	(* hullbound=500; stops using convex hull if (number of points * dimension) is above this number *)	
+	hullbound=2000; (*stops using convex hull if (number of points * dimension^2) is above this number *)	
 	
 	trunclim=15; (* Controls rounding truncation when attempting to round solution 10^-0, 10^-1, ..., 10^-trunclim*) 
 	primaltrunclim=15; (* Same as above but used for the final primal truncation *)
+	primalmonbound=80;
+	
+	diagthresh = 10^-6;
 	
 	(* Eliminate linear equations *)
 	{polys,vars,lininst}=If[ineqs==={},
@@ -588,6 +581,12 @@ FindWitness[polysPre_List, ineqs_List,
 	{gb, conv} = GroebnerBasis`BasisAndConversionMatrix[polys, vars, MonomialOrder -> monOrder];
 	Print["Groebner basis: ",gb];
 	
+	mpolys = Map[monomialList[#,vars,monOrder]&,polys]; 
+	mconv = Map[monomialList[#,vars,monOrder]&,conv,{2}]; 
+	ls={};
+	For[i=1,i<=Length[mconv],i++,
+		ls=Join[ls,MapThread[Ptwise,{mconv[[i]],mpolys}]//Flatten];
+	];
 	(* Trivial: Groebner basis already trivially reduces gtrm to 0 *)
 	{redseq,redg} = PolynomialReduce[gtrm,gb,vars,MonomialOrder -> monOrder];
 	If[redg===0,
@@ -601,28 +600,33 @@ FindWitness[polysPre_List, ineqs_List,
 	gcoeff=CoefficientRules[redg,ivars,monOrder];
 	
 	Print["Reduced variable set: ",ivars];
+
+	ls=Select[DeleteDuplicates[ls],MonomialQ[#,ivars]&];
+	lscoeffs=Flatten[Map[ListHalf,Map[CoefficientRules[#,ivars,monOrder][[1]][[1]]&,ls]],1]//DeleteDuplicates;
+	lsmons= Map[FromCoefficientRules[{#->1},ivars]&,lscoeffs];
 	
 	(* Computing the "approximate" convex hull from the Groebner basis *)
 	ms = Map[CoefficientRules[#,ivars,monOrder]&, gb];
-	msco = Flatten[Map[#[[1]]&,ms,{2}],1];
-	(* hullconstraints is a list of constraints in higher dimension
-		otherwise it's just a list of points *)
-	If[Length[ivars]>2,
-		hullconstraints = ConstraintRep[msco],
-		hullconstraints = ConvexHullCorners[msco]
+	msco = Flatten[Map[#[[1]]&,ms,{2}],1] // DeleteDuplicates;
+	If[Length[ivars]^2*Length[msco] > hullbound,
+		Print["Switched to bounding box"];
+		msco=Join[{ConstantArray[0,Length[ivars]]},DiagonalMatrix[Map[Max,Transpose[msco]]]]
 	];
+	(* hullconstraints is a list of constraints *)
+	hullconstraints = ConstraintRep[msco];
 	vv = IdentityMatrix[Length[ivars]];
 	
 	(* Some book-keeping:
 		done tracks the monomial lists that have already been done
 		prevdeg *)
 	done = {};	
+	primaldone={};
 	prevdeg=1;
 
 	(* Outer loop: loop over the cofactor degrees *)
 	For[polydeg=0, polydeg <= maxcofdeg, polydeg++,
 	Print["Using polytope from cofactor degree: ",polydeg];
-	Print[hullconstraints];
+	(*Print[hullconstraints];*)
 
 		(* Inner loop: loop over the monomial degrees *)
 		For[deg=1, deg <= degBound, deg++,	
@@ -630,19 +634,17 @@ FindWitness[polysPre_List, ineqs_List,
 		
 		(* All monomials up to the degree bound and filtered under the Newton polytope *)
 		prem = allMonomials[ivars,deg];
-		
 		Print["Initial length: ",Length[prem]];
 		
-		{tt,prem} = Timing[
-			If[Length[ivars]>2,
-			FilterPolytopeConstraint[prem,ivars,hullconstraints,monOrder],
-			FilterPolytope[prem,ivars,hullconstraints,monOrder]]];
+		{tt,prem} = Timing[FilterPolytopeConstraint[prem,ivars,hullconstraints,monOrder]];
 		Print["After Newton polytope: ",Length[prem], " Time: ",tt];
 
 		{tt,prem} = Timing[Select[prem, PolynomialReduce[#,gb,ivars,MonomialOrder->monOrder][[2]]===#&]];
 		Print["Standard monomials (not reduced): ",Length[prem]," Time: ",tt];
-
-				(* Filter linearly dependent monomials -- these essentially do not filter anything more *)
+		prem = Join[prem,lsmons]//DeleteDuplicates;
+		Print["Monomials (with heuristics): ",Length[prem]];
+		
+		(* Filter linearly dependent monomials -- these essentially do not filter anything more *)
 		(* {tt,prem}=Timing[ReduceLin[prem, gb, ivars, monOrder]];
 		Print["After linear filter: ",Length[prem], " Time: ",tt]; *)
 		If[MemberQ[done,prem] || Length[prem]===0,
@@ -656,68 +658,124 @@ FindWitness[polysPre_List, ineqs_List,
 		If[rm==={}, Continue[]];
 		
 		{res,monbasis,constraints,cs} = rm;
+		
+		(* Refine the result by repeatedly discarding monomials with small diagonal entries until solving fails *)
+		While[True,
+			diagonal = Diagonal[Normal[res]];
+			Print["Diagonal: ",diagonal];
+			posvals=Position[diagonal,_?(# >= diagthresh&)]//Flatten;
+			If[Length[posvals] == Length[diagonal], Break[]];
+			rm2 = MonSolve[gb, ivars, gcoeff, monbasis[[posvals]], True, False, monOrder];
+			If[rm2==={},
+				Break[],
+				{res,monbasis,constraints,cs} = rm2]
+		];
+		(* Experimental
+		{vals,vecs}=Eigensystem[Normal[res]];
+		pos=Position[vals,_?(# > diagthresh&)]//Flatten;
+		vals=vals[[pos]];
+		vecs=Rationalize[Map[Chop[#,diagthresh]&,vecs[[pos]]],diagthresh];
+		polys= vecs.monbasis;
+		newmons = Join[polys,monbasis];
+		rm2 = MonSolve[gb, ivars, gcoeff, newmons, True, False, monOrder];
+		If[rm2==={},,{res,monbasis,constraints,cs} = rm2]
+		
+		(* Refine the result by repeatedly discarding monomials with small diagonal entries until solving fails *)
+		While[True,
+			diagonal = Diagonal[Normal[res]];
+			Print["Diagonal: ",diagonal];
+			posvals=Position[diagonal,_?(# \[GreaterEqual] diagthresh&)]//Flatten;
+			If[Length[posvals] == Length[diagonal], Break[]];
+			rm2 = MonSolve[gb, ivars, gcoeff, monbasis[[posvals]], True, False, monOrder];
+			If[rm2==={},
+				Break[],
+				{res,monbasis,constraints,cs} = rm2]
+		];*)
+		
+		Print["Monomials after diagonal filtering: ",Length[monbasis]];	
+		Print[monbasis];
+		(*Transpose[vecs].DiagonalMatrix[vals].vecs*)
+		
+		
 		(* Attempt to round the result *)
 		rres = RoundResult[Normal[res], monbasis, gtrm, gb, ivars, False, monOrder];
 
 		(* Naive rounding failed. Trying harder. *)
 		If[Length[rres]==0,
-		
 			(* Attempt to resolve by truncating "zeros" *)
 			Print["Rounding heuristic failed, attempt resolve."];
 			Block[{diag, prev, i, thresh, goodpos, rmloc, monbasisloc, constraintsloc,
-				resloc, csloc, bs, ns, ys, j, yss,rr},
+				resloc, csloc, bs, ns, ys, j, yss,rr,trybasis,
+				vals,vecs,posvals,ppp,ord,ordsub,cur},
 			
+			(* The set up here is as follows:
+				From the initial input set "monbasis",
+				Construct a list of (sub-) monomial (or polynomial) bases to try
+				For each group, attempt to solve in primal form *)
+			trybasis={};
+			
+			(* Truncation based on numerical SVD *)
+			{vals,vecs}=Eigensystem[Normal[res]];
+			posvals=Position[vals,_?(# >= diagthresh&)]//Flatten;
+			vals=vals[[posvals]];
+			ppp=Map[monbasis[[#[[2]]]]&,Position[vecs[[posvals]],_?(# > 10^-6&)]]//DeleteDuplicates;
+			trybasis=Join[trybasis,{ppp}];
 			(* Truncation based on the diagonal *)
 			diag=Normal[Diagonal[res]];
-			prev={};
+			(*Print["Diagonal: ",diag];*)
+			ord=Reverse[Ordering[diag]];
+			For[i=1, i <= 10, i++,
+				ordsub = Take[ord,Round[i/10*Length[diag]]];
+				trybasis=Join[trybasis,{monbasis[[ordsub]]}]];
+			trybasis=Map[Sort,trybasis]//DeleteDuplicates;
+
+			trybasis=Select[trybasis,Length[#]<=primalmonbound&];
+			(* Don't bother with primal if it will take too long *)
 			
-			For[i=0, i <= trunclim, i++,
+			For[i=1,i<=Length[trybasis],i++,
+			cur=trybasis[[i]];
+			If[MemberQ[primaldone,cur],Continue[]];
 			
-			If[i < trunclim,
-			(* Truncate *)
-				thresh=10^-i;
-				goodpos=Position[diag,_?(#>thresh&)]//Flatten; (* Filter monomials with coefficients < threshold *)
-				If[monbasis[[goodpos]]===prev, Continue[]]; (* Ignore if no new monomials are introduced *)
-				Print["Truncating (and re-solve) at: ",thresh];
-				prev=monbasis[[goodpos]];
-				Print["Keeping monomials: ", prev];
-				(* Solve in dual *)
-				rmloc = MonSolve[gb,ivars,gcoeff, prev, False, False, monOrder];
-				If[rmloc==={},Continue[]];
-				{resloc,monbasisloc,constraintsloc,csloc}=rm;
-				rres = RoundResult[Normal[resloc],monbasisloc,gtrm,gb,ivars,False, monOrder];
-				If[Length[rres]==0,, Print["Dual Done."]; Break[]];
-			,
-			(* No truncate or (dual) resolve on last iteration *)
-				If[monbasis===prev, Continue[]];
-				Print["Final iteration, skipping truncation"];
-				prev=monbasis;
-			];
-			(* Resolve in primal again *)			
-			rmloc = MonSolve[gb,ivars,gcoeff, prev, False, True, monOrder];
+			primaldone=Join[{cur},primaldone];
+			Print["Trying: ",cur];
+			rmloc = MonSolve[gb,ivars,gcoeff, cur, True, True, monOrder];
 			If[rmloc==={},Continue[]];
 			{bs,ns,ys,monbasisloc,constraintsloc,csloc}=rmloc;
+			(*
+			rrraw = bs+ys.ns;
+			(* Refine the result by repeatedly discarding monomials with small diagonal entries until solving fails *)
+			While[True,
+				diagonal = Diagonal[rrraw];
+				Print["Diagonal: ",diagonal];
+				posvals=Position[diagonal,_?(# \[GreaterEqual] 10&)]//Flatten;
+				If[Length[posvals] == Length[diagonal], Break[]];
+				rmloc2 = MonSolve[gb, ivars, gcoeff, monbasisloc[[posvals]], True, True, monOrder];
+				If[rmloc2==={},
+					Break[],
+					{bs,ns,ys,monbasisloc,constraintsloc,csloc}=rmloc2;
+					rrraw = bs+ys.ns
+				]
+			];*)
+				
 			For[j=1,j <= primaltrunclim,j++,
 				yss = Rationalize[Round[Normal[ys],10^-j]];
 				rr = bs+yss.ns;
-				(*
-				Print[N[Eigenvalues[rr]]];
-				Print[bs // MatrixForm];
-				Print[yss];
+				(*Print[bs//MatrixForm];
 				Print[Map[MatrixForm,ns]];
-				Print[Map[MatrixForm,constraintsloc]];
-				Print[csloc];
-				ppp=1+monbasisloc.(bs+yss[[1]]*ns[[1]]).monbasisloc;
-				Print[ppp];
+				Print[Length[rr]];
+				Print[MatrixRank[rr]];*)
+				(*Print[Diagonal[rr]];
+				Print["rr: ",rr];
+				Print["Eigenvalues: ",N[Eigenvalues[rr]]];
+				ppp=1+monbasisloc.(rr).monbasisloc;
 				Print[PolynomialReduce[ppp,gb,ivars,MonomialOrder->monOrder]];
-				Print[PolynomialReduce[ppp,gb,vars,MonomialOrder->monOrder]];
-				Print[ppp," ",gb," ",ivars]; *)
+				Print[ppp];*)
 				rres = RoundResult[rr,monbasisloc,gtrm,gb,ivars,True, monOrder];
-				If[Length[rres]==0, Continue[], Break[]]
+				If[Length[rres]==0, , Break[]];
 			];
-			If[Length[rres]==0, Continue[], Print["Primal Done."];Break[]];
+			If[Length[rres]==0, , Print["Primal Done."];Break[]];
 			];
-		]
+			];
 		];
 		If[Length[rres]==0, Continue[]];
 		(* Return successfully afer cleaning it up somewhat *)
@@ -734,12 +792,7 @@ FindWitness[polysPre_List, ineqs_List,
 		];
 
 	(* Extend the convex hull *)
-	If[Length[ivars]>2,
-		hullconstraints=ExtendConstraints[hullconstraints,vv],
-		fvv=Function[{a},Map[#+a&,Join[{{0,0}},vv]]];
-		msco=Flatten[Map[fvv[#]&,hullconstraints],1]//DeleteDuplicates;
-		hullconstraints = ConvexHullCorners[msco]
-	];
+	hullconstraints=ExtendConstraints[hullconstraints,vv]
 	];
 	(* Exit outer loop *)
 	Return[failure];
