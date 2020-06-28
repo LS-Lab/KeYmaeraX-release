@@ -32,7 +32,7 @@ BeginPackage["NDConvexHull`"]
 CHNGiftWrapping::usage = "CHNGiftWrapping[vts] returns {sorted list of vertices, sorted list of simplexes} The simplexes are sorted with the last two indices reversed if needed so that the sorting will be an even permutation.  The gift wrapping algorithm is used."
 CHNChanShattering::usage = "CHNChanShattering[vts] returns {sorted list of vertices, sorted list of simplexes} The simplexes are sorted with the last two indices reversed if needed so that the sorting will be an even permutation.  Chan's algorithm is used."
 CHNQuickHull::usage = "CHNQuickHull[vts] returns {sorted list of vertices, sorted list of simplexes} The simplexes are sorted with the last two indices reversed if needed so that the sorting will be an even permutation.  The quick hull algorithm is used."
-
+CH2QuickHull::usage = ""
 CHNIncremental::usage = "CHNIncremental[vts] returns {sorted list of vertices, sorted list of simplexes} The simplexes are sorted with the last two indices reversed if needed so that the sorting will be an even permutation.  The incremental convex hull algorithm is used." 
 
 
@@ -173,6 +173,24 @@ CircumTest[vts_] := Module[{data}, data = CircumData[vts];
 
 CircumTestArray[a_, n_] := 
   CircumTest[Array[a, {n + 1, n}]] // Factor;
+
+(* Equivalent to Det[{v1,v2}] *)
+Cross2D[v1_,v2_] :=v1[[1]]*v2[[2]] - v1[[2]]*v2[[1]]
+(* Edges and triangle-edge references *)
+TriEdges[tri_] := {{tri[[1]],tri[[2]]},{tri[[2]],tri[[3]]},{tri[[3]],tri[[1]]}}
+TriEdgeRefs[tri_,trieds_,edtri_] := Module[{eds,ed},
+eds = TriEdges[tri];
+trieds[tri] = eds;
+Do[edtri[ed] = tri,{ed,eds}];
+]
+(* 2D triangle area. Factor of 1/2 ignored *)
+TriArea2D[vts_] := Cross2D[vts[[2]]-vts[[1]],vts[[3]]-vts[[1]]]
+(* 2D triangle orientation -- true if canonical *)
+TriOrient2D[vts_] := TriArea2D[vts] > 0
+(* Speed up testing of 2D triangle area and orientation *)
+TriAreaData2D[vts_] := {Mean[vts],{-#[[2]],#[[1]]}& @ (vts[[2]] - vts[[1]])}
+TriAreaEval2D[data_,vt_] := data[[2]].(vt - data[[1]])
+TriOrientEval2D[data_,vt_] := TriAreaEval2D[data,vt] > 0
 
 (* Assumes that the faces are already in canonical form *)
 
@@ -545,6 +563,80 @@ CHNGenIncremental[vts_, extradims_, orient_, datafunc_, dataorient_] :=
 CHNIncremental[vts_] := 
  CHNGenIncremental[vts, 0, SimplexOrient, SimplexVolData, 
   SimplexOrientEval];
+
+CH2QHExternalVertices[vts_,vtixs_,seg_] := Module[{tdval,ixvts,ixpos,ixmax},
+	(* ixvts = {#,TriArea2D[vts[[{seg[[2]],seg[[1]],#}]]]}& /@ vtixs; *)
+	tdval =  TriAreaData2D[vts[[seg[[{2,1}]]]]];
+	ixvts = {#,TriAreaEval2D[tdval,vts[[#]]]}& /@ vtixs;
+	ixpos = #[[1]]& /@ Select[ixvts,#[[2]]>0&];
+	ixmax = If[Length[ixvts] > 0,
+	#[[1]]& @ MaxBySortByFunc[ixvts,#[[2]]&],
+	Null];
+	{ixpos,ixmax}
+];
+
+CH2QuickHull[vts_] := Module[{nvts,ix1,ix2,ixvts,tdval,ixvtria,ivtng,ivtps,ixps,ixng,taps,tang,ix3,hull,k,kn,hlen,seg,extvts,kx,kxn,evsimx,evs,ixh,ixhn,ixmax,seg1,seg2},
+	(* Degenerate cases *)
+	nvts = Length[vts];
+	If[nvts <= 2,Return[Range[nvts]]];
+	(* Starting points: first two *)
+	ix1 = IndexMin[First /@ vts];
+	ix2 = IndexMax[First /@ vts];
+	(* Starting points: third one *)
+	ixvts = Complement[Range[nvts],{ix1,ix2}];
+	(* ixvtria = {#,TriArea2D[vts[[{ix1,ix2,#}]]]}& /@ ixvts; *)
+	tdval = TriAreaData2D[vts[[{ix1,ix2}]]];
+	ixvtria = {#,TriAreaEval2D[tdval,vts[[#]]]}& /@ ixvts;
+	ivtng = MinBySortByFunc[ixvtria,#[[2]]&];
+	ivtps = MaxBySortByFunc[ixvtria,#[[2]]&];
+	ixng = ivtng[[1]];
+	ixps = ivtps[[1]];
+	tang = - ivtng[[2]];
+	taps = ivtps[[2]];
+	hull = If[taps >= tang,
+	ix3 = ixps;
+	{ix1,ix2,ix3},
+	ix3 = ixng;
+	{ix2,ix1,ix3}];
+	ixvts = Complement[ixvts,{ix3}];
+	(* Find the outward vertices for each edge *)
+	hlen = Length[hull];
+	Do[kn = Mod[k,hlen]+1;
+		seg =hull[[{k,kn}]];
+		extvts [seg] = CH2QHExternalVertices[vts,ixvts,seg],
+		{k,hlen}];
+	While[True,
+	(* Search for an edge with outward points *)
+	kx = Null;
+	kxn = Null;
+	hlen = Length[hull];
+	Do[
+	kn = Mod[k,hlen]+1;
+	seg = hull[[{k,kn}]];
+	evsimx = extvts[seg];
+	evs = evsimx[[1]];
+	ixmax = evsimx[[2]];
+	If[Length[evs] > 0,
+	kx = k;
+	kxn = kn;
+	Break[]
+	],
+	{k,hlen}];
+	If[kx === Null,Break[]];
+	(* Find a point on the hull from it *)
+	ixh = hull[[kx]];
+	ixhn = hull[[kxn]];
+	evs = Complement[evs,{ixmax}];
+	hull = If[kxn < kx,Join[Take[hull,{kxn,kx}],{ixmax}],
+	Join[Take[hull,{kxn,-1}],Take[hull,{1,kx}],{ixmax}]];
+	(* Find the outward points for the new hull segments *)
+	seg1 = {ixh,ixmax};
+	seg2 = {ixmax,ixhn};
+	extvts[seg1] = CH2QHExternalVertices[vts,evs,seg1];
+	extvts[seg2] = CH2QHExternalVertices[vts,evs,seg2];
+];
+RotateToMin[hull]
+]
   
 End[];
 EndPackage[];

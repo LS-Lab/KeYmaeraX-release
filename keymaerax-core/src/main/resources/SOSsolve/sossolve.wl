@@ -332,7 +332,7 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 	redseq,redg,
 	prem, monbasis, R, coeffs, umonomials,
 	constraints, cs, k, tt, res, i},
-	
+		
 	prem = mons;	
 	Print["No. input monomials: ",Length[prem]];
 	
@@ -378,10 +378,11 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 		{tt,nsbs} = Timing[ConvertPrimalRaw[constraints,cs,k]];
 		Print["Converted to primal time: ",tt];
 		If[Length[nsbs]===0, Print["Conversion to primal failed."];Return[{}]];
-		{ns,bs}=nsbs;
-		bs = ExpandSymmetric[bs,k];
-		ns = Map[ExpandSymmetric[#,k]&,ns];
-		If[Length[ns]===0, Print[bs];Return[{}]];
+		{nss,bss}=nsbs;
+		
+		bs = ExpandSymmetric[bss,k];
+		ns = Map[ExpandSymmetric[#,k]&,nss];
+		If[Length[ns]===0, Return[{}]];
 	
 		{tt,res}=Timing[
 			SemidefiniteOptimization[ConstantArray[0,Length[ns]],
@@ -393,7 +394,38 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 		If[MemberQ[res[[2]],Indeterminate],
 			Print["No solution"];
 			Return[{}]];
-		Print["Primal solution: ", res[[2]]];
+
+		vals= res[[2]];
+		Print["Primal solution: ",vals];
+		(*
+		For[ctr=1,ctr <= 19,ctr++,
+		Print["Refining solution space"];
+		Print["Before: ",Length[nss]];
+		as=Round[10^20 vals];
+		mat=Join[IdentityMatrix[Length[vals]],{-as}]//Transpose;
+		lattice=LatticeReduce[mat];
+		rr=Transpose[Drop[Transpose[lattice],-1]][[1;;1]];
+		nss=NullSpace[rr].nss;
+		Print["After: ",Length[nss]];
+		
+		bs = ExpandSymmetric[bss,k];
+		ns = Map[ExpandSymmetric[#,k]&,nss];
+		If[Length[ns]===0, Return[{}]];
+	
+		{tt,res}=Timing[
+			SemidefiniteOptimization[ConstantArray[0,Length[ns]],
+			Join[{bs},ns],
+			{"DualityGap","PrimalMinimizer"}]
+		];
+		Print["SDP time: ",tt];
+		Print["Duality gap: ",res[[1]]];
+		If[MemberQ[res[[2]],Indeterminate],
+			Print["No solution"];
+			Return[{}]];
+		vals= res[[2]];
+		Print["Primal solution: ",vals];
+		]; *)
+		
 		Return[{bs,ns,res[[2]],monbasis,constraints,cs}];
 		]
 	];
@@ -418,6 +450,96 @@ MonSolve[gb_List,vars_List,gcoeff_List, mons_List, filter_, primal_, monOrder_]:
 	Print["Eigenvalues: ",Eigenvalues[res[[2]]]];
 	Return[{res[[2]],monbasis,constraints,cs}];
 ]
+
+
+(* Directly solve the SOS problem in primal form *)
+DirectSolve[poly_,vars_List, mb_List, monOrder_]:=Module[{
+	redseq,redg,
+	prem, monbasis, R, coeffs, umonomials,
+	constraints, cs, k, tt, res, i},
+	Print["Directly solving: SOS = ",poly," vars: ",vars];
+	Print["Monomials: ",mb];
+	
+	R= KroneckerProduct[mb,mb];
+	coeffs = Table[CoefficientRules[R[[i, j]],vars,monOrder],
+		{i, Length[mb]}, {j, Length[mb]}];
+
+	umonomials = Flatten[Map[#[[1]]&,coeffs,{3}],2]//DeleteDuplicates;
+	
+	gcoeff=CoefficientRules[poly,vars,monOrder];
+	
+	Print["Solving for constraints "];
+	(* Compute the constraints *)
+	constraints={};
+	cs={};
+	(* For each unique monomial, we add a constraint *)
+	For[i=1,i <= Length[umonomials],i++,
+	Block[{lk,mon,umon,coeff,constr},
+		umon = umonomials[[i]];
+		mon = FromCoefficientRules[{umon->1},vars];
+		lk=Flatten[Map[Lookup[#,{umon},0]&,coeffs,{2}],{3}][[1]];
+		coeff=Lookup[gcoeff,{umon},0][[1]];
+		constraints=Append[constraints,lk];
+		cs=Append[cs,coeff];
+	]
+	];
+	If[Length[constraints]===0, Return[{}]];
+	
+	(* Finally solve the SDP *)
+	k=Length[mb];
+	Print["Total constraints: ",Length[constraints]];
+	Print["Dimension: ",Length[mb]];
+	
+	primal=False;
+	(* Solving in primal *)
+	If[primal,
+		Block[{ns,bs},
+		Print["Solving in primal form"];
+		{tt,nsbs} = Timing[ConvertPrimalRaw[constraints,cs,k]];
+		Print["Converted to primal time: ",tt];
+		If[Length[nsbs]===0, Print["Conversion to primal failed."];Return[{}]];
+		{ns,bs}=nsbs;
+		bs = ExpandSymmetric[bs,k];
+		ns = Map[ExpandSymmetric[#,k]&,ns];
+		If[Length[ns]===0, Print[bs];Return[{}]];
+	
+		{tt,res}=Timing[
+			SemidefiniteOptimization[ConstantArray[0,Length[ns]],
+			Join[{bs},ns],
+			{"DualityGap","PrimalMinimizer"}]
+		];
+		Print["SDP time: ",tt];
+		Print["Duality gap: ",res[[1]]];
+		If[MemberQ[res[[2]],Indeterminate],
+			Print["No solution"];
+			Return[{}]];
+		Print["Primal solution: ", res[[2]]];
+		Return[{bs,ns,res[[2]],monbasis,constraints,cs}];
+		]
+	];
+
+	(* Solving in dual form *)
+	Print["Solving in dual form"];
+	cos=DiagonalMatrix[Map[If[MonomialQ[#,vars],1,0.01]&,mb]];
+	Print[cos];
+	
+	{tt,res}=Timing[
+		SemidefiniteOptimization[cs,
+		Join[{cos},constraints],
+		{"DualityGap","DualMaximizer"},
+		Method->"DSDP"]
+	];
+
+	Print["SDP time: ",tt];
+	Print["Duality gap: ",res[[1]]];
+	If[MemberQ[res[[2]],Indeterminate,{2}],
+		Print["No solution"];
+		Return[{}]];
+
+	Print["Eigenvalues: ",Eigenvalues[res[[2]]]];
+	Print[Normal[res[[2]]]//MatrixForm];
+	Return[{res[[2]],mb,constraints,cs}];
+];
 
 
 SolveNorm[f_,test_]:=Block[{eqs,norm,c},
@@ -581,12 +703,14 @@ FindWitness[polysPre_List, ineqs_List,
 	{gb, conv} = GroebnerBasis`BasisAndConversionMatrix[polys, vars, MonomialOrder -> monOrder];
 	Print["Groebner basis: ",gb];
 	
+	(*ls = Map[monomialList[#,vars,monOrder]&,gb]//Flatten//DeleteDuplicates;*)
 	mpolys = Map[monomialList[#,vars,monOrder]&,polys]; 
 	mconv = Map[monomialList[#,vars,monOrder]&,conv,{2}]; 
 	ls={};
 	For[i=1,i<=Length[mconv],i++,
 		ls=Join[ls,MapThread[Ptwise,{mconv[[i]],mpolys}]//Flatten];
 	];
+	
 	(* Trivial: Groebner basis already trivially reduces gtrm to 0 *)
 	{redseq,redg} = PolynomialReduce[gtrm,gb,vars,MonomialOrder -> monOrder];
 	If[redg===0,
@@ -625,25 +749,33 @@ FindWitness[polysPre_List, ineqs_List,
 
 	(* Outer loop: loop over the cofactor degrees *)
 	For[polydeg=0, polydeg <= maxcofdeg, polydeg++,
+	
 	Print["Using polytope from cofactor degree: ",polydeg];
 	(*Print[hullconstraints];*)
 
 		(* Inner loop: loop over the monomial degrees *)
-		For[deg=1, deg <= degBound, deg++,	
+		For[deg=0, deg <= degBound, deg++,
+		If[deg > 0 && monomials!={},
+			Print["Fixed monomials failed"];
+			Return[failure]
+		];
+		
 		Print["Degree bound: ",deg];
 		
-		(* All monomials up to the degree bound and filtered under the Newton polytope *)
-		prem = allMonomials[ivars,deg];
-		Print["Initial length: ",Length[prem]];
-		
-		{tt,prem} = Timing[FilterPolytopeConstraint[prem,ivars,hullconstraints,monOrder]];
-		Print["After Newton polytope: ",Length[prem], " Time: ",tt];
-
-		{tt,prem} = Timing[Select[prem, PolynomialReduce[#,gb,ivars,MonomialOrder->monOrder][[2]]===#&]];
-		Print["Standard monomials (not reduced): ",Length[prem]," Time: ",tt];
-		prem = Join[prem,lsmons]//DeleteDuplicates;
-		Print["Monomials (with heuristics): ",Length[prem]];
-		
+		If[monomials=={},
+			(* All monomials up to the degree bound and filtered under the Newton polytope *)
+			prem = allMonomials[ivars,deg];
+			Print["Initial length: ",Length[prem]];	
+			{tt,prem} = Timing[FilterPolytopeConstraint[prem,ivars,hullconstraints,monOrder]];
+			Print["After Newton polytope: ",Length[prem], " Time: ",tt];
+			Print["Heuristics: ",lsmons//Sort//DeleteDuplicates];
+			prem = Join[prem,lsmons]//DeleteDuplicates;
+			Print["Monomials (with heuristics): ",Length[prem]];
+			{tt,prem} = Timing[Select[prem, PolynomialReduce[#,gb,ivars,MonomialOrder->monOrder][[2]]===#&]];
+			Print["Standard monomials (not reduced): ",Length[prem]," Time: ",tt],
+			prem = monomials;
+			Print["Using fixed monomials: ",Length[prem]]
+		];
 		(* Filter linearly dependent monomials -- these essentially do not filter anything more *)
 		(* {tt,prem}=Timing[ReduceLin[prem, gb, ivars, monOrder]];
 		Print["After linear filter: ",Length[prem], " Time: ",tt]; *)
@@ -658,13 +790,18 @@ FindWitness[polysPre_List, ineqs_List,
 		If[rm==={}, Continue[]];
 		
 		{res,monbasis,constraints,cs} = rm;
-		
+		lthresh=diagthresh;
 		(* Refine the result by repeatedly discarding monomials with small diagonal entries until solving fails *)
 		While[True,
 			diagonal = Diagonal[Normal[res]];
+			Print["Threshold: ",lthresh];
 			Print["Diagonal: ",diagonal];
-			posvals=Position[diagonal,_?(# >= diagthresh&)]//Flatten;
-			If[Length[posvals] == Length[diagonal], Break[]];
+			posvals=Position[diagonal,_?(# >= lthresh&)]//Flatten;
+
+			If[Length[posvals] == Length[diagonal],
+				lthresh=lthresh*10;
+				Continue[];
+			];
 			rm2 = MonSolve[gb, ivars, gcoeff, monbasis[[posvals]], True, False, monOrder];
 			If[rm2==={},
 				Break[],
@@ -764,12 +901,18 @@ FindWitness[polysPre_List, ineqs_List,
 				Print[Map[MatrixForm,ns]];
 				Print[Length[rr]];
 				Print[MatrixRank[rr]];*)
-				(*Print[Diagonal[rr]];
-				Print["rr: ",rr];
+				Print[Diagonal[rr]];
+				(*Print["rr: ",rr // MatrixForm];*)
 				Print["Eigenvalues: ",N[Eigenvalues[rr]]];
 				ppp=1+monbasisloc.(rr).monbasisloc;
 				Print[PolynomialReduce[ppp,gb,ivars,MonomialOrder->monOrder]];
-				Print[ppp];*)
+				(* {seq,result}=PolynomialReduce[ppp,gb,ivars,MonomialOrder->monOrder];			
+				ds=DirectSolve[seq.gb-gtrm,ivars,monbasisloc,monOrder];
+				If[ds==={}, Continue[]];
+				{res,monbasis,constraints,cs} = ds;
+				rres = RoundResult[Normal[res], monbasis, gtrm, gb, ivars, False, monOrder];
+				Print["resolve ",rres]; *)
+				
 				rres = RoundResult[rr,monbasisloc,gtrm,gb,ivars,True, monOrder];
 				If[Length[rres]==0, , Break[]];
 			];
