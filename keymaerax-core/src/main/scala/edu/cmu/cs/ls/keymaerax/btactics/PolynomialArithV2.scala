@@ -97,6 +97,8 @@ trait PolynomialRing {
     // divideAndRemainder(other) = ((pretty)quot, (pretty)rem, proof of "term = quot.term * other.term + rem.term")
     def divideAndRemainder(other: Polynomial, pretty: Boolean = true) : (Polynomial, Polynomial, ProvableSig)
 
+    // variables of this polynomial
+    def variables : Set[Term]
   }
 
   trait PowerProduct {
@@ -1576,6 +1578,9 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
         case None => throw new RuntimeException("unexpected failure: cannot prove polynomial division")
       }
     }
+
+    def monomials : Seq[Monomial] = partitionMonomials(_ => true)(Seq(), Seq())._1
+    override def variables : Set[Term] = monomials.foldLeft[Set[Term]](Set()){ case (vars, mon) => vars++mon.powerProduct.sparse.map(_._1) }
 
   }
 

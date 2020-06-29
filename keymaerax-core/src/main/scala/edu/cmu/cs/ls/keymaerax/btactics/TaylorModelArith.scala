@@ -202,6 +202,33 @@ object TaylorModelArith {
     /** approximate multiplication */
     def *(other: TM)(implicit options: TaylorModelOptions) : TM = (this *! other).approx
 
+    /** exact division by constant */
+    def /!(const: BigDecimal)(implicit options: TaylorModelOptions) : TM = {
+      val inv = Divide(Number(1), Number(const))
+      val q = Number(const)
+      val r = Times(elem, inv)
+      val numberPrv = useDirectly(divideNumber, Seq(
+        ("p_", elem),
+        ("q_", q),
+        ("i_", q),
+        ("r_", r)
+        ), Seq(equalReflex(q), equalReflex(r)))
+      val other = Exact(ofTerm(inv), context)
+      val res = this *! other
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelDivideExactPrv.provable), Seq(
+        ("elem1_", elem),
+        ("inv_", inv),
+        ("poly_", rhsOf(res.poly.representation)),
+        ("l_", res.lower),
+        ("u_", res.upper),
+        ("elem2_", q)
+      ), Seq(res.prv,
+        weakenWith(context, numberPrv)))
+      TM(Divide(elem, q), res.poly.resetTerm, res.lower, res.upper, newPrv)
+    }
+    /** approximate division */
+    def /(const: BigDecimal)(implicit options: TaylorModelOptions) : TM = (this /! const).approx
+
     /** exact negation */
     def unary_-(implicit options: TaylorModelOptions) : TM = {
       val newPoly = -(poly.resetTerm)
@@ -298,7 +325,7 @@ object TaylorModelArith {
 
     /** round coefficients of polynomial part, incorporate error in interval */
     def approx(implicit options: TaylorModelOptions) : TM = {
-      val (polyApproxPrv, poly1, poly2) = poly.approx(options.precision)
+      val (polyApproxPrv, poly1, poly2) = poly.resetTerm.approx(options.precision)
       val poly1rep = rhsOf(poly1.representation)
       val poly2repPrv = poly2.hornerForm()
       val poly2rep = rhsOf(poly2repPrv)
@@ -343,6 +370,47 @@ object TaylorModelArith {
           )
         )
       )
+    }
+
+    /** insert arguments (arguments(i).elem must be a variable of this Taylor model) into this Taylor model */
+    def evaluate(arguments: Seq[TM])(implicit options: TaylorModelOptions) : TM = {
+      val vars = poly.variables
+      require(arguments.map(_.elem).forall(vars.contains), "arguments(i).elem must be a variable of this TaylorModel")
+      arguments.foreach(checkCompatibleContext)
+      val argumentMap = arguments.map(tm => (tm.elem, tm)).toMap
+      val horner = poly.hornerForm()
+
+      /** @note: this must be somewhat compatible with [[PolynomialArithV2.ofTerm]] */
+      def evalTerm(t: Term): TM = t match {
+        case Plus(a, b)  => evalTerm(a) + evalTerm(b)
+        case Minus(a, b) => evalTerm(a) - evalTerm(b)
+        case Times(a, b) => evalTerm(a) * evalTerm(b)
+        case Neg(a)      => -evalTerm(a)
+        case Power(a, Number(i)) if i.isValidInt && i >= 0 => evalTerm(a) ^ i.toIntExact
+        case Power(_, _) => throw new IllegalArgumentException("Taylor model in exponent is not supported")
+        case Divide(a, Number(i)) => evalTerm(a) / i
+        case Divide(_, _) => throw new IllegalArgumentException("Taylor model in denominator is not supported")
+        case Number(n) => Exact(ofTerm(Number(n)), context)
+        case term: Term => argumentMap.get(term).getOrElse(Exact(ofTerm(term), context))
+      }
+      val evalPoly : TM = evalTerm(rhsOf(horner))
+      val (ivlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(lower, upper)(evalPoly.lower, evalPoly.upper)
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelEvalPrv.provable),
+        Seq(
+          ("elem_", elem),
+          ("poly1_", rhsOf(poly.representation)),
+          ("l1_", lower),
+          ("u1_", upper),
+          ("polyrep_", rhsOf(horner)),
+          ("poly2_", rhsOf(evalPoly.poly.representation)),
+          ("l2_", evalPoly.lower),
+          ("u2_", evalPoly.upper),
+          ("l_", l),
+          ("u_", u)
+        ),
+        Seq(prv, weakenWith(context, horner), evalPoly.prv, weakenWith(context, ivlPrv))
+      )
+      TM(elem, evalPoly.poly, l, u, newPrv)
     }
   }
 

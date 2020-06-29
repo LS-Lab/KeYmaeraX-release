@@ -5261,6 +5261,15 @@ object Ax extends Logging {
       existsR("rem_() + err__0 * poly2_() + err_ * poly1_() + err__0 * err_".asTerm)(1) & QE & done
   )
 
+  @Axiom("taylorModelDivideExactPrv")
+  lazy val taylorModelDivideExactPrv = derivedFormula("taylorModelDivideExactPrv",
+    ("((\\exists err_ (elem1_() * inv_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "elem1_()/elem2_() = elem1_() * inv_()" +
+      ") ->" +
+      "\\exists err_ (elem1_() / elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    implyR(1) & andL(-1) & eqL2R(-2)(1) & closeId
+  )
+
   @Axiom("taylorModelSquarePrv")
   lazy val taylorModelSquarePrv = derivedFormula("taylorModelSquarePrv",//@todo: is there a better scheme than just multiplication?
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
@@ -5335,6 +5344,19 @@ object Ax extends Logging {
       "   l2_() <= poly2rep_() + i1_ & poly2rep_() + i1_ <= u2_()))" +
       ") ->" +
       "\\exists err_ (elem_() = poly1rep_() + err_ & l2_() <= err_ & err_ <= u2_())").asFormula,
+    QE & done
+  )
+
+  @Axiom("taylorModelEvalPrv")
+  lazy val taylorModelEvalPrv = derivedFormula("taylorModelEvalPrv",
+    ("(" +
+      "\\exists err_ (elem_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_()) &" +
+      "poly1_() = polyrep_() &" +
+      "\\exists err_ (polyrep_() = poly2_() + err_ & l2_() <= err_ & err_ <= u2_()) &" +
+      "(\\forall i1_ \\forall i2_ (l1_() <= i1_ & i1_ <= u1_() & l2_() <= i2_ & i2_ <= u2_() ->" +
+      "  (l_() <= i1_ + i2_ & i1_ + i2_ <= u_())))"+
+      ") ->" +
+      "\\exists err_ (elem_() = poly2_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
     QE & done
   )
 

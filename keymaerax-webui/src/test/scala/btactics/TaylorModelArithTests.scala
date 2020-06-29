@@ -114,6 +114,15 @@ class TaylorModelArithTests extends TacticTestBase {
       "\\exists err_ (x^3=y0()^3+3*x0()*y0()^2+3*x0()^2*y0()+x0()^3+err_&(-0.2024)<=err_&err_<=0.24241)".asFormula
   }
 
+  it should "/!const" in withMathematica { qeTool =>
+    (tm1 /! 3).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x/3=1/3*y0()+1/3*x0()+err_&(-0.0033334)<=err_&err_<=0.0066668)".asFormula
+  }
+  it should "/const" in withMathematica { qeTool =>
+    (tm1 / 3).prettyPrv.conclusion.succ(0) shouldBe
+      "\\exists err_ (x/3=0.3333*y0()+0.3333*x0()+err_&(-0.0034001)<=err_&err_<=0.0067335)".asFormula
+  }
+
   it should "exponentiate approximately" in withMathematica { qeTool =>
     (tm1234^3).prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ ((12.34*y)^3=-(1879*y0()^3)+2818*x0()*y0()^2+-(1410*x0()^2*y0())+234.8*x0()^3+err_&(-1122.4)<=err_&err_<=1359.0)".asFormula
@@ -170,6 +179,27 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "prettyPrv" in withMathematica { _ =>
     println(TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), IndexedSeq(), QE).prettyPrv)
+  }
+
+  it should "evaluate" in withMathematica { _ =>
+        val context = ("x = 1/3 * x0()^2 + 1/5 * x0() * y0() + 5/8 * y0()^2, -1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1," +
+      "x0() <= 1/100*y0() + 0.0001," +
+      "x0() >= 1/100*y0()," +
+      "y0() = 12.34").split(',').map(_.asFormula).toIndexedSeq
+    val x = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1/3 * x0()^2 + 1/5 * x0() * y0() + 5/8 * y0()^2".asTerm),
+      Number(0),
+      Number(0),
+      context,
+      QE).approx
+    val x0 = TaylorModelArith.TM("x0()".asTerm, PolynomialArithV2.ofTerm("1/100*y0()".asTerm), Number(0), Number(0.0001), context, QE)
+    val y0 = TaylorModelArith.TM("y0()".asTerm, PolynomialArithV2.ofTerm("12.34".asTerm), Number(0), Number(0), context, QE)
+    val xFml = "\\exists err_ (x=0.625*y0()^2+0.2*x0()*y0()+0.3333*x0()^2+err_&(-0.000033334)<=err_&err_<=0.000033334)".asFormula
+    x.prettyPrv.conclusion.succ(0) shouldBe xFml
+    x.evaluate(Seq()).prettyPrv.conclusion.succ(0) shouldBe xFml
+    x.evaluate(Seq(x0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=0.6270*y0()^2+err_&0.0050419<=err_&err_<=0.0053640)".asFormula
+    x.evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.16+2.468*x0()+0.3333*x0()^2+err_&0.012216<=err_&err_<=0.012284)".asFormula
+    x.evaluate(Seq(x0, y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.16+0.02468*y0()+0.00003333*y0()^2+err_&0.012216<=err_&err_<=0.012540)".asFormula // @note insertion is simultaneous and not recursive
+    x.evaluate(Seq(x0)).evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.47+err_&0.011843<=err_&err_<=0.012166)".asFormula
   }
 
   "timeStep" should "van der Pol" in withMathematica { qeTool =>
