@@ -457,6 +457,35 @@ object TaylorModelArith {
     )
   }
 
+  /** t subterm of s ? */
+  def subtermOf(t: Term, s: Term) : Boolean =
+    if (s == t)
+      true
+    else
+      s match {
+        case binop: BinaryCompositeTerm => subtermOf(t, binop.left) || subtermOf(t, binop.right)
+        case unop: UnaryCompositeTerm => subtermOf(t, unop.child)
+        case app: FuncOf => subtermOf(t, app.child)
+        case a: AtomicTerm => false
+        case _ => ???
+      }
+  /** t subterm of fml ? */
+  def subtermOf(t: Term, fml: Formula) : Boolean = fml match {
+    case cmp: ComparisonFormula => subtermOf(t, cmp.left) || subtermOf(t, cmp.right)
+    case binop: BinaryCompositeFormula => subtermOf(t, binop.left) || subtermOf(t, binop.right)
+    case unop: UnaryCompositeFormula => subtermOf(t, unop.child)
+    case app: PredOf => subtermOf(t, app.child)
+    case app: PredicationalOf => subtermOf(t, app.child)
+    case m: Modal => throw new IllegalArgumentException("not expecting modal formula here")
+    case q: Quantified => subtermOf(t, q.child)
+    case a: AtomicFormula => false
+    case _ => ???
+  }
+
+  /** delete formulas that contain ts from context, written "context \ ts" */
+  def trimContext(context: Seq[Formula], ts: Seq[Term]) : Seq[Formula] =
+    context.filter(fml => !ts.exists(subtermOf(_, fml)))
+
   /* @todo: naming... */
   class TemplateLemmas(ode: DifferentialProgram, order: Int) extends TaylorModel(ode, order) {
     /* time step for the left Taylor model of a (linearly) preconditioned flow pipe (x0 o r0) */

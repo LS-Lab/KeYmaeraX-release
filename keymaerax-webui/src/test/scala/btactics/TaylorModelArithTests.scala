@@ -202,6 +202,11 @@ class TaylorModelArithTests extends TacticTestBase {
     x.evaluate(Seq(x0)).evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.47+err_&0.011843<=err_&err_<=0.012166)".asFormula
   }
 
+  it should "trimContext" in {
+    TaylorModelArith.trimContext("0 <= x(), x() <= 1, x <= y, -1 <= y(), y() <= 1".split(',').map(_.asFormula).toIndexedSeq,
+      Seq("x()".asTerm, "y()".asTerm)).loneElement shouldBe "x<=y".asFormula
+  }
+
   "timeStep" should "van der Pol" in withMathematica { qeTool =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
       // TODO: generate a context like this from "x : [1.25, 1.55]" and "y : [2.35, 2.45]"?!
