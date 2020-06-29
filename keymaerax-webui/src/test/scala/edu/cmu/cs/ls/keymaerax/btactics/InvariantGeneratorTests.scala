@@ -51,6 +51,11 @@ class InvariantGeneratorTests extends TacticTestBase with PrivateMethodTester {
       contain theSameElementsAs(("x>=3".asFormula, None) :: ("x>=1".asFormula, None) :: ("x>=2".asFormula, None) :: ("x>=3&x>=1&x>=2".asFormula, None) :: ("x>=1&x>=2".asFormula, None) ::Nil)
   }
 
+  it should "not fail on non-FOL postcondition" in withMathematica { _ =>
+    InvariantGenerator.loopInvariantGenerator("x>=1 ==> [{x:=x+1;}*][x:=x+1;]x>=2".asSequent, SuccPos(0)).toList should
+      contain theSameElementsAs(("[x:=x+1;]x>=2".asFormula, None) :: ("x>=1".asFormula, None) ::Nil)
+  }
+
   "Differential invariant generator" should "use Pegasus lazily" in {
     //@note pegasusInvariantGenerator asks ToolProvider.invGenTool
 

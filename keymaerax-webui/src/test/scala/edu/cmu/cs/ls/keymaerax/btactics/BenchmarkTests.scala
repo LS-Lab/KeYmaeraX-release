@@ -40,9 +40,14 @@ class BenchmarkTests extends Suites(
   // export
 //  new BenchmarkExporter("Export", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx")
   // benchmark problems
+//  new BenchmarkExporter("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx"),
+//  new BenchmarkExporter("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx"),
+//  new BenchmarkExporter("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx"),
   new BenchmarkTester("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx", 300, genCheck=false),
-  new BenchmarkTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300, genCheck=true),
-  new BenchmarkTester("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx", 900, genCheck=false)
+  new BenchmarkTester("Games", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/games.kyx", 300, genCheck=false),
+//  new BenchmarkTester("Counterexamples", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/counterexample.kyx", 300, genCheck=false),
+  new BenchmarkTester("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx", 1500, genCheck=false),
+  new BenchmarkTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300, genCheck=true)
 )
 
 object BenchmarkTests {
@@ -107,7 +112,15 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
     val printer = KeYmaera3PrettyPrinter
     val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
     val printedEntries = entries.map(e =>
-      e.name.replaceAll("[ :\\/\\(\\)]", "_") -> printer.printFile(e.model.asInstanceOf[Formula]))
+      e.name.replaceAll("[ :\\/\\(\\)]", "_") -> (
+        try {
+          printer.printFile(e.model.asInstanceOf[Formula])
+        } catch {
+          case ex: Throwable =>
+            ex.printStackTrace()
+            ""
+        })
+    )
 
     val archive = File(EXPORT_DIR + url.substring(url.lastIndexOf("/")+1))
     archive.createDirectory()
@@ -125,7 +138,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
 class BenchmarkTester(val benchmarkName: String, val url: String,
                       val timeout: Int, val genCheck: Boolean) extends TacticTestBase with AppendedClues {
 
-  private val entries = {
+  private lazy val entries = {
     println("Reading " + url)
     try {
       DatabasePopulator.readKyx(url)
@@ -146,16 +159,21 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     withTemporaryConfig(Map(
         Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true",
         Configuration.Keys.ODE_TIMEOUT_FINALQE -> "120",
-        Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
-        Configuration.Keys.Pegasus.INVCHECK_TIMEOUT ->"60",
+        Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "180",
+        Configuration.Keys.Pegasus.INVCHECK_TIMEOUT ->"20", // 60
         Configuration.Keys.LOG_QE_DURATION -> "true")) {
       tool.setOperationTimeout(120)
       testcode
     }
   }
 
+  it should "print benchmark index files" ignore withMathematica { _ =>
+    val fileName = "./kyx/" + url.substring(url.lastIndexOf("/")+1)
+    println(entries.map(e => fileName + "#" + e.name + ";" + timeout + ";0").mkString("\n"))
+  }
+
   it should "prove interactive benchmarks" in withMathematica { tool => setTimeouts(tool) {
-    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
+    val results = entries.filter(_.name=="").map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_interactive.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
@@ -166,15 +184,30 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
   }
 
-  it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool => setTimeouts(tool) {
-    val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.headOption.map(_._2)))
+  it should "prove interactive benchmarks with Z3" in withZ3 { _ =>
+    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
+    val writer = new PrintWriter(benchmarkName + "_interactive_z3.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
+    writer.close()
+    forEvery(tableResults(results)) { (_, _, status, _, cause) =>
+      status should (be("proved") withClue cause or be("skipped"))
+    }
+  }
+
+  it should "prove benchmarks with proof hints and Mathematica" ignore withMathematica { tool => setTimeouts(tool) {
+    val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.lastOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_withhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     forEvery(tableResults(results)) { (_, name, status, _, cause) =>
-      if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved" withClue cause
-      else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
+      cause match {
+        case Some(c) => throw c
+        case None =>
+          if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved"
+          else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
+      }
     }
   }
   }
@@ -185,19 +218,20 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 //  }
 
   it should "prove benchmarks without proof hints and in Mathematica" in withMathematica { tool => setTimeouts(tool) {
-    val results = entries.map(e => runAuto(e.name, e.model))
+    val results = entries.filter(_.name!="Chinese Train Control System Level 3 (CTCS-3)").map(e => runAuto(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_auto.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     forEvery(tableResults(results)) { (_, name, status, _, cause) =>
-      if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved" withClue cause
+      if (cause.isDefined) throw cause.get
+      else if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved"
       else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
     }
   }
   }
 
-  it should "generate invariants" in withMathematica { tool => setTimeouts(tool) {
+  it should "generate invariants" ignore withMathematica { tool => setTimeouts(tool) {
     val results = entries.map(e => runInvGen(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_invgen.csv")
     writer.write(
@@ -273,14 +307,17 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 
   private def runEntry(name: String, modelContent: String, modelParser: String => (Formula, KeYmaeraXArchiveParser.Declaration), tactic: Option[String]): BenchmarkResult = {
     beforeEach()
-    withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+    //@note connect to mathematica over TCPIP for better control over shutting down kernel
+    withTemporaryConfig(Map(Configuration.Keys.MATH_LINK_TCPIP -> "true")) {
+      withMathematicaMatlab(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+    }
     val (model, defs) = modelParser(modelContent)
     val result = tactic match {
       case Some(t) =>
         println(s"Proving $name")
 
         val hasDefinitions = defs.decls.exists(_._2._3.isDefined)
-        val tacticExpands = "(expand(?!All))|(expandAllDefs)".r.findFirstIn(t).nonEmpty
+        val tacticExpands = "(expand\\s)|(expandAllDefs)".r.findFirstIn(t).nonEmpty
         if (hasDefinitions) println(s"Example has definitions, auto-expanding at proof start: " + (!tacticExpands))
         val theTactic = BelleParser.parseWithInvGen(t, None, defs, hasDefinitions && !tacticExpands)
 
@@ -289,6 +326,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         try {
           val proof = failAfter(Span(timeout, Seconds))({
             proveBy(model, theTactic)
+//            withTacticProgress(theTactic, "_ALL" :: Nil) { proveBy(model, _) }
           })((testThread: Thread) => {
             theInterpreter.kill()
             testThread.interrupt()
@@ -304,7 +342,9 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         } catch {
           case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
             -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
-          case ex => BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
+          case ex =>
+            ex.printStackTrace()
+            BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
         }
       case None =>
         println("Skipping " + name + " for lack of tactic")
