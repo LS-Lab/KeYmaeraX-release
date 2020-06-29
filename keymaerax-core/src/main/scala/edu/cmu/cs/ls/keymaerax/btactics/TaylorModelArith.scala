@@ -412,6 +412,14 @@ object TaylorModelArith {
       )
       TM(elem, evalPoly.poly, l, u, newPrv)
     }
+
+    def weakenContext(formula: Formula) = {
+      val l = prv.conclusion.ante.length
+      val newPrv = ProvableSig.startProof(Sequent(prv.conclusion.ante++Seq(formula), prv.conclusion.succ)).
+        apply(HideLeft(AntePos(l)), 0).
+        apply(prv, 0)
+      TM(elem, poly, lower, upper, newPrv)
+    }
   }
 
   /** constructs a Taylor model by proving the required certificate with a tactic */

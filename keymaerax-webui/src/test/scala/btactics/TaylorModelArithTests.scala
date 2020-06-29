@@ -202,6 +202,12 @@ class TaylorModelArithTests extends TacticTestBase {
     x.evaluate(Seq(x0)).evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.47+err_&0.011843<=err_&err_<=0.012166)".asFormula
   }
 
+  it should "weakenContext" in withMathematica { _ =>
+    val prv = tm1.weakenContext("P()".asFormula).prv
+    prv shouldBe 'proved
+    prv.conclusion.ante shouldBe tm1.prv.conclusion.ante++Seq("P()".asFormula)
+  }
+
   it should "trimContext" in {
     TaylorModelArith.trimContext("0 <= x(), x() <= 1, x <= y, -1 <= y(), y() <= 1".split(',').map(_.asFormula).toIndexedSeq,
       Seq("x()".asTerm, "y()".asTerm)).loneElement shouldBe "x<=y".asFormula
