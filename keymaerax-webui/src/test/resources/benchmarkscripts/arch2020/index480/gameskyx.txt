@@ -1,0 +1,3 @@
+./kyx480/games.kyx#Dual Filibuster Game;300;0
+./kyx480/games.kyx#Push-around cart;300;0
+./kyx480/games.kyx#Goalie in robot soccer;300;0

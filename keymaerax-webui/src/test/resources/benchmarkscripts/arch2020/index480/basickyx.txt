@@ -1,0 +1,60 @@
+./kyx480/basic.kyx#Static semantics correctness: Assignment 1;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 2;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 3;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 4;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 5;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 6;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 7;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 8;300;0
+./kyx480/basic.kyx#Static semantics correctness: Assignment 9;300;0
+./kyx480/basic.kyx#Dynamics: Cascaded;300;0
+./kyx480/basic.kyx#Dynamics: Single integrator time;300;0
+./kyx480/basic.kyx#Dynamics: Single integrator;300;0
+./kyx480/basic.kyx#Dynamics: Double integrator;300;0
+./kyx480/basic.kyx#Dynamics: Triple integrator;300;0
+./kyx480/basic.kyx#Dynamics: Exponential decay (1);300;0
+./kyx480/basic.kyx#Dynamics: Exponential decay (2);300;0
+./kyx480/basic.kyx#Dynamics: Exponential decay (3);300;0
+./kyx480/basic.kyx#Dynamics: Exponential growth (1);300;0
+./kyx480/basic.kyx#Dynamics: Exponential growth (2);300;0
+./kyx480/basic.kyx#Dynamics: Exponential growth (4);300;0
+./kyx480/basic.kyx#Dynamics: Exponential growth (5);300;0
+./kyx480/basic.kyx#Dynamics: Rotational dynamics (1);300;0
+./kyx480/basic.kyx#Dynamics: Rotational dynamics (2);300;0
+./kyx480/basic.kyx#Dynamics: Rotational dynamics (3);300;0
+./kyx480/basic.kyx#Dynamics: Spiral to equilibrium;300;0
+./kyx480/basic.kyx#Dynamics: Open cases;300;0
+./kyx480/basic.kyx#Dynamics: Closed cases;300;0
+./kyx480/basic.kyx#Dynamics: Conserved quantity;300;0
+./kyx480/basic.kyx#Dynamics: Darboux equality;300;0
+./kyx480/basic.kyx#Dynamics: Fractional Darboux equality;300;0
+./kyx480/basic.kyx#Dynamics: Darboux inequality;300;0
+./kyx480/basic.kyx#Dynamics: Bifurcation;300;0
+./kyx480/basic.kyx#Dynamics: Parametric switching between two different damped oscillators;300;0
+./kyx480/basic.kyx#Dynamics: Nonlinear 1;300;0
+./kyx480/basic.kyx#Dynamics: Nonlinear 2;300;0
+./kyx480/basic.kyx#Dynamics: Nonlinear 4;300;0
+./kyx480/basic.kyx#Dynamics: Nonlinear 5;300;0
+./kyx480/basic.kyx#Dynamics: Riccati;300;0
+./kyx480/basic.kyx#Dynamics: Nonlinear differential cut;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 1;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 2;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 3a;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 4a;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 4b;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 4c;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 5;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 6;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 7;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 9a;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 9b;300;0
+./kyx480/basic.kyx#STTT Tutorial: Example 10;300;0
+./kyx480/basic.kyx#LICS: Example 1 Continuous car accelerates forward;300;0
+./kyx480/basic.kyx#LICS: Example 2 Single car drives forward;300;0
+./kyx480/basic.kyx#LICS: Example 3a event-triggered car drives forward;300;0
+./kyx480/basic.kyx#LICS: Example 4a safe stopping of time-triggered car;300;0
+./kyx480/basic.kyx#LICS: Example 4b progress of time-triggered car;300;0
+./kyx480/basic.kyx#LICS: Example 4c relative safety of time-triggered car;300;0
+./kyx480/basic.kyx#LICS: Example 5 Controllability Equivalence;300;0
+./kyx480/basic.kyx#LICS: Example 6 MPC Acceleration Equivalence;300;0
+./kyx480/basic.kyx#LICS: Example 7 Model-Predictive Control Design Car;300;0
