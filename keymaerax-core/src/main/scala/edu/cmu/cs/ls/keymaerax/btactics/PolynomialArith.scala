@@ -706,7 +706,8 @@ object PolynomialArith extends Logging {
     }
   }
 
-  lazy val equalityByNormalisation = "equalityByNormalisation" by { (pos: Position, seq: Sequent) =>
+  lazy val equalityByNormalisation = PolynomialArithV2.equate
+  /*"equalityByNormalisation" by { (pos: Position, seq: Sequent) =>
       pos.checkTop
       pos.checkSucc
       seq.sub(pos) match {
@@ -717,7 +718,7 @@ object PolynomialArith extends Logging {
         case Some(e) => throw new TacticInapplicableFailure("equalityByNormalisation only applicable to equalities, but got " + e.prettyString)
         case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
       }
-    }
+    } */
 
   //Polynomial division: no proof needed, although the polynomials need to be pre-normalised
   //todo: Might this be implemented in terms of mulMono with -ve power? (probably not because ordering gets messed up)
@@ -938,7 +939,7 @@ object PolynomialArith extends Logging {
           case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
           case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
           case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
-          case _ => DebuggingTactics.print("Hiding: "+fi._1) & hideR(ind)
+          case _ => ident
         }) & tac
       }
     }
@@ -955,7 +956,7 @@ object PolynomialArith extends Logging {
           case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
           case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
           case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => DebuggingTactics.print("Hiding: "+fi._1) & hideL(ind)
+          case _ => ident
         }) & tac
       }
     }
@@ -991,7 +992,7 @@ object PolynomialArith extends Logging {
           //case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
           //case Less(f, g) => useAt(ltAnteZ)(ind) & andL(ind) & existsL(ind)
           case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => DebuggingTactics.print("Hiding: "+fi._1) & hideL(ind)
+          case _ => ident
         }) & tac
       } & SaturateTactic(notR('R))
     }
@@ -1035,7 +1036,7 @@ object PolynomialArith extends Logging {
   //The actual linear elimination tactic takes a list
   def linearElim(ls:List[(Int,Term,Term,Term)]) : BelleExpr =
   {
-    val itopos = ls.map(p => (AntePosition(p._1+1),p._2,p._3,p._4))
+    val itopos = ls.map(p => (AntePosition(p._1),p._2,p._3,p._4))
 
     itopos.foldLeft(ident)( (tac,p) => tac & (rewriteEquality _).tupled(p) & exhaustiveEqL2R(true)(p._1))
   }
@@ -1216,7 +1217,8 @@ object PolynomialArith extends Logging {
         else
           List(existsOr1)
       case Or(_,_) => List(existsOr2,existsOr3)
-      case _ => List()
+      case f =>
+        List()
     }
   }
 
@@ -1248,9 +1250,13 @@ object PolynomialArith extends Logging {
     }
   }
 
-  lazy val normAntes1 = fullSimpTac(ths = ths,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false)
+  lazy val normAntes0 = fullSimpTac(ths = ths,faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
+  lazy val normAntes1 = SaturateTactic(fullSimpTac(ths = Nil,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false))
   lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
-  lazy val normaliseNNF = clearSuccNNF & SaturateTactic(onAll(alphaRule)) & relaxStrict2 & hideTopNeq & normAntes1 & SaturateTactic(existsL('L)) & normAntes2 & SaturateTactic(notR('R))
+  lazy val normaliseNNF = clearSuccNNF & SaturateTactic(onAll(alphaRule)) & relaxStrict2 & hideTopNeq &
+    normAntes0 &
+    normAntes1 &
+    SaturateTactic(existsL('L)) & SaturateTactic(andL('L)) & normAntes2 & SaturateTactic(notR('R))
 
   //Just to rearrange things back into equalities first then inequalities
   lazy val resortEqs = hideTopNeq & SaturateTactic(notR('R))

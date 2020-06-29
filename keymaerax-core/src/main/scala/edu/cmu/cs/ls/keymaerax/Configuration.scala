@@ -43,6 +43,10 @@ object Configuration {
     val PORT = "PORT"
     val PROOF_TERM = "PROOF_TERM"
     val QE_LOG_PATH = "QE_LOG_PATH"
+    val SOSSOLVE_LOG_PATH = "SOSSOLVE_LOG_PATH"
+    val SOSSOLVE_LOG_INPUT = "SOSSOLVE_LOG_INPUT"
+    val SOSSOLVE_LOG_TIMEOUT = "SOSSOLVE_LOG_TIMEOUT"
+    val SOSSOLVE_VARIABLE_ORDERING = "SOSSOLVE_VARIABLE_ORDERING"
     val QE_TOOL = "QE_TOOL"
     val CEX_SEARCH_DURATION = "CEX_SEARCH_DURATION"
     val MATHEMATICA_QE_METHOD = "QE_METHOD"
@@ -55,6 +59,10 @@ object Configuration {
     val QE_ALLOW_INTERPRETED_FNS = "QE_ALLOW_INTERPRETED_FNS"
     val ODE_TIMEOUT_FINALQE = "ODE_TIMEOUT_FINALQE"
     val ODE_USE_NILPOTENT_SOLVE = "ODE_USE_NILPOTENT_SOLVE"
+    object SOSsolve {
+      val PATH = "SOSSOLVE_PATH"
+      val MAIN_FILE = "SOSSOLVE_MAIN_FILE"
+    }
     object Pegasus {
       val PATH = "PEGASUS_PATH"
       val MAIN_FILE = "PEGASUS_MAIN_FILE"
@@ -218,6 +226,13 @@ object Configuration {
       def sufficiencyTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.SUFFICIENCY_TIMEOUT).getOrElse(default)
       def dwTimeout(default: Int = -1): Int = get[Int](Configuration.Keys.Pegasus.InvariantExtractor.DW_TIMEOUT).getOrElse(default)
     }
+  }
+
+  /** Pegasus configuration access shortcuts. */
+  object SOSsolve {
+    def relativePath: String = apply(Configuration.Keys.SOSsolve.PATH).replaceAllLiterally("/", File.separator)
+    def absolutePath: String = Configuration.path(Configuration.Keys.SOSsolve.PATH)
+    def mainFile(default: String): String = get[String](Configuration.Keys.SOSsolve.MAIN_FILE).getOrElse(default)
   }
 
   //</editor-fold>

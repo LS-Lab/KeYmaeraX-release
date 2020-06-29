@@ -993,6 +993,13 @@ object Ax extends Logging {
   lazy val equivExpand = derivedFormula("<-> expand",
     "(p_() <-> q_()) <-> (p_()->q_())&(q_()->p_())".asFormula, prop)
 
+  /** Convert <-> to two conjunctions:
+    * (p_() <-> q_()) <-> (p_()&q_())|(!p_()&!q_())
+    */
+  @Axiom(("↔2∧","<->2&"),  unifier = "full")
+  lazy val equivExpandAnd = derivedFormula("<-> expand and",
+    "(p_() <-> q_()) <-> (p_()&q_())|(!p_()&!q_())".asFormula, prop)
+
   /**
     * {{{Axiom "-> distributes over &".
     *  (p() -> (q()&r())) <-> ((p()->q()) & (p()->r()))
@@ -4631,8 +4638,59 @@ object Ax extends Logging {
 
   /** Polynomial Arithmetic [[edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2]] */
 
-  @Axiom("eqNormalize")
+  @Axiom("eqNormalize", key = "0", recursor = "")
   lazy val eqNormalize = derivedFormula("eqNormalize", "s_() = t_() <-> s_() - t_() = 0".asFormula, QE)
+
+  @Axiom("neNormalize", key = "0", recursor = "")
+  lazy val neNormalize = derivedFormula("neNormalize", "s_() != t_() <-> s_() - t_() != 0".asFormula, QE)
+
+  @Axiom("gtNormalize", key = "0", recursor = "")
+  lazy val gtNormalize: DerivedAxiomInfo = derivedFormula("gtNormalize", "f_()>g_() <-> f_()-g_()>0".asFormula, QE)
+
+  @Axiom("geNormalize", key = "0", recursor = "")
+  lazy val geNormalize: DerivedAxiomInfo = derivedFormula("geNormalize", "f_()>=g_() <-> f_()-g_()>=0".asFormula, QE)
+  
+  @Axiom("divNeEq")
+  lazy val divNeEq: DerivedAxiomInfo = derivedFormula("divNeEq", "G_()!=0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  
+  @Axiom("divNeNe")
+  lazy val divNeNe: DerivedAxiomInfo = derivedFormula("divNeNe", "G_()!=0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  
+  @Axiom("divGtEq")
+  lazy val divGtEq: DerivedAxiomInfo = derivedFormula("divGtEq", "G_()>0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  
+  @Axiom("divLtEq")
+  lazy val divLtEq: DerivedAxiomInfo = derivedFormula("divLtEq", "G_()<0 -> F_()/G_() = 0 -> F_() = 0".asFormula, QE)
+  
+  @Axiom("divGtNe")
+  lazy val divGtNe: DerivedAxiomInfo = derivedFormula("divGtNe", "G_()>0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  
+  @Axiom("divLtNe")
+  lazy val divLtNe: DerivedAxiomInfo = derivedFormula("divLtNe", "G_()<0 -> F_()/G_() != 0 -> F_() != 0".asFormula, QE)
+  
+  @Axiom("divGtGt")
+  lazy val divGtGt: DerivedAxiomInfo = derivedFormula("divGtGt", "G_()>0 -> F_()/G_() > 0 -> F_() > 0".asFormula, QE)
+  
+  @Axiom("divLtGt")
+  lazy val divLtGt: DerivedAxiomInfo = derivedFormula("divLtGt", "G_()<0 -> F_()/G_() > 0 -> F_() < 0".asFormula, QE)
+  
+  @Axiom("divGtGe")
+  lazy val divGtGe: DerivedAxiomInfo = derivedFormula("divGtGe", "G_()>0 -> F_()/G_() >= 0 -> F_() >= 0".asFormula, QE)
+  
+  @Axiom("divLtGe")
+  lazy val divLtGe: DerivedAxiomInfo = derivedFormula("divLtGe", "G_()<0 -> F_()/G_() >= 0 -> F_() <= 0".asFormula, QE)
+  
+  @Axiom("divGtLt")
+  lazy val divGtLt: DerivedAxiomInfo = derivedFormula("divGtLt", "G_()>0 -> F_()/G_() < 0 -> F_() < 0".asFormula, QE)
+  
+  @Axiom("divLtLt")
+  lazy val divLtLt: DerivedAxiomInfo = derivedFormula("divLtLt", "G_()<0 -> F_()/G_() < 0 -> F_() > 0".asFormula, QE)
+  
+  @Axiom("divGtLe")
+  lazy val divGtLe: DerivedAxiomInfo = derivedFormula("divGtLe", "G_()>0 -> F_()/G_() <= 0 -> F_() <= 0".asFormula, QE)
+  
+  @Axiom("divLtLe")
+  lazy val divLtLe: DerivedAxiomInfo = derivedFormula("divLtLe", "G_()<0 -> F_()/G_() <= 0 -> F_() >= 0".asFormula, QE)
 
   @Axiom("coefficientTimesPrv")
   lazy val coefficientTimesPrv = derivedFormula("coefficientTimesPrv",
@@ -4968,6 +5026,175 @@ object Ax extends Logging {
     Equal("n_() / d_()".asTerm, Seq(Number(0), Times("n_()/d_()".asTerm, Number(1)), Number(0)).reduceLeft(Plus)),
     QE & done)
 
+  // Power of Divide
+  @Axiom("powerDivide0")
+  lazy val powerDivide0 = derivedFormula("powerDivide0",
+    "(x_()/y_()) ^ 0 = x_()^0 / y_()^0".asFormula, QE & done
+  )
+  @Axiom("powerDivideEven")
+  lazy val powerDivideEven = derivedFormula("powerDivideEven",
+    ("(" +
+      " (n_() = 2*m_() <-> true) &" +
+      " (x_()/y_())^m_() = x_() ^ m_() / y_() ^ m_()" +
+      ") ->" +
+      "(x_()/y_())^n_() = x_()^n_() / y_()^n_()").asFormula,
+    prop &
+      useAt(Ax.powerEven, PosInExpr(1::Nil), (subst: Option[Subst]) =>
+        subst.getOrElse(RenUSubst(Seq()))++RenUSubst(Seq(("p_()".asTerm, "x_()^m_()/y_()^m_()".asTerm))))(1) &
+      andR(1) & Idioms.<(
+      useAt(Ax.equivTrue)(1) & closeId,
+      andR(1) & Idioms.<(
+        closeId,
+        useAt(Ax.ratFormTimes, PosInExpr(1::Nil), (subst: Option[Subst]) =>
+          subst.getOrElse(RenUSubst(Seq()))++RenUSubst(Seq(
+            ("nx_()".asTerm, "x_()^m_()".asTerm),
+            ("dx_()".asTerm, "y_()^m_()".asTerm),
+            ("ny_()".asTerm, "x_()^m_()".asTerm),
+            ("dy_()".asTerm, "y_()^m_()".asTerm)
+          )
+          ))(1) &
+          andR(1) & Idioms.<(cohideR(1) & byUS(Ax.equalReflexive),
+          andR(1) & Idioms.<(cohideR(1) & byUS(Ax.equalReflexive),
+            andR(1) & Idioms.<(
+              useAt(Ax.equalSym, PosInExpr(1::0::Nil))(1) & Idioms.<(closeT,
+                useAt(Ax.powerEven, PosInExpr(1::Nil), (subst: Option[Subst]) =>
+                  subst.getOrElse(RenUSubst(Seq()))++RenUSubst(Seq(("p_()".asTerm, "x_()^m_()".asTerm))))(1) &
+                  andR(1) & Idioms.<(prop & done, prop & OnAll(cohideR(1) & byUS(Ax.equalReflexive)))
+              ),
+              useAt(Ax.equalSym, PosInExpr(1::0::Nil))(1) & Idioms.<(closeT,
+                useAt(Ax.powerEven, PosInExpr(1::Nil), (subst: Option[Subst]) =>
+                  subst.getOrElse(RenUSubst(Seq()))++RenUSubst(Seq(("p_()".asTerm, "y_()^m_()".asTerm))))(1) &
+                  andR(1) & Idioms.<(prop & done, prop & OnAll(cohideR(1) & byUS(Ax.equalReflexive)))
+              )
+            )
+          )
+        )
+      ))
+  )
+
+  @Axiom("powerDivideOdd")
+  lazy val powerDivideOdd = derivedFormula("powerDivideOdd",
+    ("((n_() = 2*m_()+1 <-> true) & (x_()/y_())^m_() = x_() ^ m_() / y_() ^ m_()) ->" +
+      "(x_()/y_())^n_() = x_()^n_() / y_()^n_()").asFormula,
+    prop &
+      useAt(Ax.powerOdd, PosInExpr(1 :: Nil), (subst: Option[Subst]) =>
+        subst.getOrElse(RenUSubst(Seq())) ++ RenUSubst(Seq(("p_()".asTerm, "x_()^m_()/y_()^m_()".asTerm))))(1) &
+      andR(1) & Idioms.<(
+      useAt(Ax.equivTrue)(1) & closeId,
+      andR(1) & Idioms.<(
+        closeId,
+        cut(("x_()^m_()/y_()^m_()*(x_()^m_()/y_()^m_())*(x_()/y_()) =" +
+          "(x_()^m_()*x_()^m_()*x_())/(y_()^m_()*y_()^m_()*y_())").asFormula) &
+          Idioms.<(
+            eqL2R(-4)(1) & hideL(-4) &
+              cut("x_()^n_() = x_()^m_()*x_()^m_()*x_()".asFormula) & Idioms.<(
+              eqR2L(-4)(1) & hideL(-4) &
+                cut("y_()^n_() = y_()^m_()*y_()^m_()*y_()".asFormula) & Idioms.<(
+                eqR2L(-4)(1) & hideL(-4) & cohideR(1) & byUS(Ax.equalReflexive),
+                hideR(1) & useAt(Ax.powerOdd, PosInExpr(1 :: Nil), (subst: Option[Subst]) =>
+                  subst.getOrElse(RenUSubst(Seq())) ++ RenUSubst(Seq(("p_()".asTerm, "y_()^m_()".asTerm))))(1) &
+                  andR(1) & Idioms.<(prop & done, prop & OnAll(cohideR(1) & byUS(Ax.equalReflexive)))
+              ),
+              hideR(1) & useAt(Ax.powerOdd, PosInExpr(1 :: Nil), (subst: Option[Subst]) =>
+                subst.getOrElse(RenUSubst(Seq())) ++ RenUSubst(Seq(("p_()".asTerm, "x_()^m_()".asTerm))))(1) &
+                andR(1) & Idioms.<(prop & done, prop & OnAll(cohideR(1) & byUS(Ax.equalReflexive)))
+            )
+            ,
+            cohideR(2) & QE & done
+          )
+      ))
+  )
+
+
+  // Lemmas for rational forms
+  @Axiom("ratFormAdd")
+  lazy val ratFormAdd = derivedFormula("ratFormAdd",
+    ("(x_() = nx_() / dx_() &" +
+      "y_() = ny_() / dy_() &" +
+      "gcd_() * rx_() = dx_() &" +
+      "gcd_() * ry_() = dy_() &" +
+      "nx_() * ry_() + ny_() * rx_() = nz_() &" +
+      "rx_() * gcd_() * ry_() = dz_())" +
+      "->" +
+      "x_() + y_() = nz_() / dz_()").asFormula,
+    implyR(1) & andL('Llast)*5 &
+      (eqL2R(-1)(1) & hideL(-1))*2 &
+      (eqR2L(-1)(1) & hideL(-1))*4 &
+      QE & done
+  )
+  @Axiom("ratFormMinus")
+  lazy val ratFormMinus = derivedFormula("ratFormMinus",
+    ("(x_() = nx_() / dx_() &" +
+      "y_() = ny_() / dy_() &" +
+      "gcd_() * rx_() = dx_() &" +
+      "gcd_() * ry_() = dy_() &" +
+      "nx_() * ry_() - ny_() * rx_() = nz_() &" +
+      "rx_() * gcd_() * ry_() = dz_())" +
+      "->" +
+      "x_() - y_() = nz_() / dz_()").asFormula,
+    implyR(1) & andL('Llast)*5 &
+      (eqL2R(-1)(1) & hideL(-1))*2 &
+      (eqR2L(-1)(1) & hideL(-1))*4 &
+      QE & done
+  )
+  @Axiom("ratFormDivide")
+  lazy val ratFormDivide = derivedFormula("ratFormDivide",
+    ("(x_() = nx_() / dx_() &" +
+      "y_() = ny_() / dy_() &" +
+      "nx_() * dy_() = nz_() &" +
+      "ny_() * dx_() = dz_())" +
+      "->" +
+      "x_() / y_() = nz_() / dz_()").asFormula,
+    implyR(1) & andL('Llast)*3 &
+      (eqL2R(-1)(1) & hideL(-1))*2 &
+      (eqR2L(-1)(1) & hideL(-1))*2 &
+      QE & done
+  )
+  @Axiom("ratFormTimes")
+  lazy val ratFormTimes = derivedFormula("ratFormTimes",
+    ("(x_() = nx_() / dx_() &" +
+      "y_() = ny_() / dy_() &" +
+      "nx_() * ny_() = nz_() &" +
+      "dx_() * dy_() = dz_())" +
+      "->" +
+      "x_() * y_() = nz_() / dz_()").asFormula,
+    implyR(1) & andL('Llast)*3 &
+      (eqL2R(-1)(1) & hideL(-1))*2 &
+      (eqR2L(-1)(1) & hideL(-1))*2 &
+      QE & done
+  )
+  @Axiom("ratFormPower")
+  lazy val ratFormPower = derivedFormula("ratFormPower",
+    ("(x_() = nx_() / dx_() &" +
+      "y_() = ny_() / dy_() &" +
+      "ny_() / dy_() = m_() & " +
+      "(nx_() / dx_())^m_() = nx_()^m_() / dx_() ^ m_() &" +
+      "nx_()^m_() = nz_() &" +
+      "dx_()^m_() = dz_()" +
+      ")" +
+      "->" +
+      "x_() ^ y_() = nz_() / dz_()").asFormula,
+    implyR(1) & andL('Llast)*5 &
+      (eqL2R(-1)(1) & hideL(-1))*6 &
+      cohideR(1) & byUS(Ax.equalReflexive)
+  )
+  @Axiom("ratFormNeg")
+  lazy val ratFormNeg = derivedFormula("ratFormNeg",
+    ("(x_() = nx_() / dx_() &" +
+      "-nx_() = nz_())" +
+      "->" +
+      "-x_() = nz_() / dx_()").asFormula,
+    implyR(1) & andL('Llast)*1 &
+      (eqL2R(-1)(1) & hideL(-1))*1 &
+      (eqR2L(-1)(1) & hideL(-1))*1 &
+      QE & done
+  )
+
+  @Axiom("divideIdentity")
+  lazy val divideIdentity = derivedFormula("divideIdentity",
+    "(x_() = y_() & 1 = z_()) -> x_() = y_() / z_()".asFormula,
+    QE & done
+  )
 
   /** Taylor Model Arithmetic [[edu.cmu.cs.ls.keymaerax.btactics.TaylorModelArith]] */
 

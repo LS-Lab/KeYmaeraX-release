@@ -461,6 +461,22 @@ class PolynomialArithV2Tests extends TacticTestBase {
     rhsOf(prv) shouldBe Plus(a.lhs, r.lhs)
   }
 
+  "powerDivideLemma" should "be proved quickly" in withMathematica { _ =>
+    TaylorModelTactics.Timing.tic()
+    for (i <- 0 to 1000) {
+      PolynomialArithV2.powerDivideLemma(i)
+    }
+    TaylorModelTactics.Timing.toc("Should only take fractions of a second")
+  }
+
+  "ratForm" should "convert terms to rational form" in withMathematica { _ =>
+    val t = "(b * x^2 + y - (z/2/b)^4) / (-b/-b^2)".asTerm
+    val (n, d, prv) = PolynomialArithV2.ratForm(t)
+    n.term shouldBe "b^2*z^4+-(16*b^6*y)+-(16*b^7*x^2)".asTerm
+    d.term shouldBe "-(16*b^5)".asTerm
+    prv.conclusion.succ(0) shouldBe Equal(t, Divide(n.term, d.term))
+  }
+
   var time = System.nanoTime()
   def tic() = {
     time = System.nanoTime()

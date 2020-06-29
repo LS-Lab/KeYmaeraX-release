@@ -30,7 +30,7 @@ import scala.util.Try
   * 2) We don't get any static exhaustiveness checking when we case on an axiom
   *
   * AxiomInfo exists to help fix that. An AxiomInfo is just a collection of per-axiom information. The tests for
-  * this object dynamically ensure it is exhaustive with respect to AxiomBase and DerivedAxioms. By adding a new
+  * this object dynamically ensure it is exhaustive with respect to AxiomBase and Ax. By adding a new
   * field to AxiomInfo you can ensure that all new axioms will have to have that field.
   * Created by bbohrer on 12/28/15.
   */
@@ -87,7 +87,7 @@ object DerivationInfoRegistry {
     val storedNames = list.filter(_.isInstanceOf[StorableInfo]).map(_.asInstanceOf[StorableInfo].storedName)
     list.forall({
       case ax: CoreAxiomInfo => ProvableSig.axiom.contains(ax.canonicalName) ensures(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
-      case _: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
+      case _: DerivedAxiomInfo => true //@todo can't ask Ax.derivedAxiom yet since still initializing, besides that'd be circular
       case _ => true
     }
     ) &&

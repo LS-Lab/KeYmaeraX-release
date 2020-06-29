@@ -14,9 +14,10 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2.{NonSupportedDivisorException, NonSupportedExponentException}
+import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2.{NonPolynomialArithmeticException, NonSupportedDivisorException, NonSupportedExponentException, NonSupportedOperationException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
 import edu.cmu.cs.ls.keymaerax.macros._
+
 import scala.collection.immutable._
 
 /**
@@ -44,7 +45,7 @@ trait PolynomialRing {
     def resetTerm : Polynomial
     // resetRepresentation(newRepresentation).representation = newRepresentation
     def resetRepresentation(newRepresentation: ProvableSig) : Polynomial
-    // prettyTerm.representation = prettyRepresentation
+    // prettyTerm.term = rhsOf(prettyRepresentation)
     def prettyTerm : Polynomial
 
     // result.term = term + other.term
@@ -158,6 +159,9 @@ trait PolynomialRing {
   // normalizeAt "t1 = t2" rewrites to "normalize(t1 - t2) = 0"
   val normalizeAt : DependentPositionTactic
 
+  // ratForm(term) = (num, denom, proof of "term = num.term / denom.term")
+  def ratForm(term: Term) : (Polynomial, Polynomial, ProvableSig)
+
 }
 
 /**
@@ -186,10 +190,14 @@ object PolynomialArithV2 extends TwoThreeTreePolynomialRing(
     extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
   final case class NonSupportedDivisorException(message: String)
     extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
+  final case class NonPolynomialArithmeticException(message: String)
+    extends IllegalArgumentException(message) with PolynomialArithV2.NonSupportedOperationException
 
   /** report operations not supported by polynomial arithmetic in tactics */
   final case class NonSupportedOperationInapplicability(cause: NonSupportedOperationException)
-    extends TacticInapplicableFailure("Tactic inapplicable because of an operation that is not supported by polynomial arithmetic.", cause)
+    extends TacticInapplicableFailure("Tactic inapplicable because of an operation that is not supported by polynomial arithmetic: " +
+      cause.getMessage
+      , cause)
   def reportBelleThrowables[R](block: => R) =
     try {
       block
@@ -525,6 +533,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
 
   val identityTimes = anyArgify(Ax.identityTimes)
   val timesIdentity = anyArgify(Ax.timesIdentity)
+  val divideIdentity = anyArgify(Ax.divideIdentity)
 
   val plusTimes = anyArgify(Ax.plusTimes)
   val negTimes = anyArgify(Ax.negTimes)
@@ -947,6 +956,8 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
   final case class UnknownPolynomialImplementationException(other: Polynomial) extends
     RuntimeException("only TreePolynomials are supported, but got " + other)
 
+  val equalReflexive = Ax.equalReflexive.provable
+
   sealed trait TreePolynomial extends Polynomial {
     val prv: ProvableSig
     override def representation: ProvableSig = prv
@@ -958,7 +969,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       val prettyPrv = proveBy(Equal(PolynomialArithV2Helpers.rhsOf(prettyRepr), PolynomialArithV2Helpers.rhsOf(repr)),
         useAt(repr, PosInExpr(1::Nil))(1, 1::Nil) &
           useAt(prettyRepr, PosInExpr(1::Nil))(1, 0::Nil) &
-          byUS(Ax.equalReflexive)
+          byUS(equalReflexive)
       )
       resetRepresentation(prettyPrv)
     }
@@ -1373,7 +1384,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
             case _ => throw new RuntimeException("Constant polynomials must normalize to Number, Divide, or Neg.")
           }
         } else {
-          throw NonSupportedDivisorException("Divisor must be a constant polynomial.")
+          throw NonSupportedDivisorException(s"Divisor ${other.term} must be a constant polynomial.")
         }
       case _ => throw UnknownPolynomialImplementationException(other: Polynomial)
     }
@@ -1612,7 +1623,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
     override def degree(include: Term => Boolean) = 0
     override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
       require(rhsOf(newRepresentation)==rhsOf(prv))
-      Empty(Some(prv))
+      Empty(Some(newRepresentation))
     }
   }
   case class Branch2(left: TreePolynomial, value: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
@@ -1626,7 +1637,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       left.degree(include) max value.degree(include) max right.degree(include)
     override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
       require(rhsOf(newRepresentation)==rhsOf(prv))
-      Branch2(left, value, right, Some(prv))
+      Branch2(left, value, right, Some(newRepresentation))
     }
   }
   case class Branch3(left: TreePolynomial, value1: Monomial, mid: TreePolynomial, value2: Monomial, right: TreePolynomial, prvO: Option[ProvableSig]) extends TreePolynomial {
@@ -1640,7 +1651,7 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       left.degree(include) max value1.degree(include) max mid.degree(include) max value2.degree(include) max right.degree(include)
     override def resetRepresentation(newRepresentation: ProvableSig): Polynomial = {
       require(rhsOf(newRepresentation)==rhsOf(prv))
-      Branch3(left, value1, mid, value2, right, Some(prv))
+      Branch3(left, value1, mid, value2, right, Some(newRepresentation))
     }
 
   }
@@ -1677,6 +1688,183 @@ case class TwoThreeTreePolynomialRing(variableOrdering: Ordering[Term],
       case Some(e) => throw new TacticInapplicableFailure("normalizeAt only applicable to equalities or terms, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
+  }
+
+  private val ratFormAdd = anyArgify(Ax.ratFormAdd.provable)
+  private val ratFormMinus = anyArgify(Ax.ratFormMinus.provable)
+  private val ratFormTimes = anyArgify(Ax.ratFormTimes.provable)
+  private val ratFormDivide = anyArgify(Ax.ratFormDivide.provable)
+  private val ratFormPower = anyArgify(Ax.ratFormPower.provable)
+  private val ratFormNeg = anyArgify(Ax.ratFormNeg.provable)
+
+  private val powerDivide0 = anyArgify(Ax.powerDivide0.provable)
+  private val powerDivideEven = anyArgify(Ax.powerDivideEven.provable)
+  private val powerDivideOdd = anyArgify(Ax.powerDivideOdd.provable)
+
+  private def provePowerDivideLemma(n: Int, maxCache: Int, cache: Int=>ProvableSig) : ProvableSig = n match {
+    case n if n <= maxCache => cache(n)
+    case n if n > 0 && n % 2 == 0 =>
+      val m = n / 2
+      val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
+      val powerDivideM = provePowerDivideLemma(m, maxCache, cache)
+      useDirectly(powerDivideEven, Seq(("n_", Number(n)), ("m_", Number(m))), Seq(mPrv, powerDivideM))
+    case n if n > 0 && n % 2 == 1 =>
+      val m = n / 2
+      val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
+      val powerDivideM = provePowerDivideLemma(m, maxCache, cache)
+      useDirectly(powerDivideOdd, Seq(("n_", Number(n)), ("m_", Number(m))), Seq(mPrv, powerDivideM))
+    case _ =>
+      throw new IllegalArgumentException("powerDivideLemma requires natural number exponent")
+  }
+  private val powerDivideLemmas = (0 to 100).map(provePowerDivideLemma(_, 0, i => powerDivide0)).toArray
+  /** lookup or prove lemma of the form "(x_(||) / y_(||))^i = x_(||)^i / y_(||)^i " */
+  def powerDivideLemma(i: Int) = if (i <= 100) powerDivideLemmas(i) else provePowerDivideLemma(i, 100, powerDivideLemmas)
+
+  def ratForm(term: Term): (Polynomial, Polynomial, ProvableSig) = {
+    lazy val ringsLibrary = new RingsLibrary(Seq(term))
+
+    def gcdAndRemainders(a: ringsLibrary.Ring, b: ringsLibrary.Ring): (ringsLibrary.Ring, ringsLibrary.Ring, ringsLibrary.Ring) = {
+      import ringsLibrary._
+      val gcd = ring.gcd(a, b)
+      val ra = ring.divideExact(a, gcd)
+      val rb = ring.divideExact(b, gcd)
+      (gcd, ra, rb)
+    }
+
+    def rec(term: Term): (Polynomial, ringsLibrary.Ring, Polynomial, ringsLibrary.Ring, ProvableSig) = term match {
+      case binop: BinaryCompositeTerm =>
+        val (nx, nxR, dx, dxR, xPrv) = rec(binop.left)
+        val (ny, nyR, dy, dyR, yPrv) = rec(binop.right)
+        binop match {
+          case Plus(_, _) | Minus(_, _) =>
+            val (ratFormLemma, polyOp, ringOp) = binop match {
+              case Plus(_, _) =>
+                (ratFormAdd,
+                  (p1: Polynomial, p2: Polynomial) => p1 + p2,
+                  (p1: ringsLibrary.Ring, p2: ringsLibrary.Ring) => p1.add(p2))
+              case Minus(_, _) =>
+                (ratFormMinus,
+                  (p1: Polynomial, p2: Polynomial) => p1 - p2,
+                  (p1: ringsLibrary.Ring, p2: ringsLibrary.Ring) => p1.subtract(p2))
+            }
+            val (gcdR, rxR, ryR) = gcdAndRemainders(dxR, dyR)
+            val gcd = ringsLibrary.fromRing(gcdR)
+            val gcdP = ofTerm(gcd)
+            val rx = ringsLibrary.fromRing(rxR)
+            val ry = ringsLibrary.fromRing(ryR)
+            val rxP = ofTerm(rx)
+            val ryP = ofTerm(ry)
+            val nz = polyOp(nx * ryP, ny * rxP)
+            val nzR = ringOp(nxR.multiply(ryR), nyR.multiply(rxR))
+            val dz = rxP * gcdP * ryP
+            val dzR = dxR.multiply(ryR)
+            val dx = gcdP * rxP
+            val dy = gcdP * ryP
+            val prv = useDirectly(ratFormLemma,
+              Seq(("x_", binop.left), ("nx_", nx.term), ("dx_", rhsOf(dx.representation)),
+                ("y_", binop.right), ("ny_", ny.term), ("dy_", rhsOf(dy.representation)),
+                ("gcd_", gcd),
+                ("rx_", rx),
+                ("ry_", ry),
+                ("nz_", rhsOf(nz.representation)),
+                ("dz_", rhsOf(dz.representation))
+              ),
+              Seq(
+                xPrv,
+                yPrv,
+                dx.representation,
+                dy.representation,
+                nz.representation,
+                dz.representation
+              ))
+            (nz.resetTerm, nzR, dz.resetTerm, dzR, prv)
+          case Times(_, _) =>
+            val (nz, nzR) = (nx * ny, nxR.multiply(nyR))
+            val (dz, dzR) = (dx * dy, dxR.multiply(dyR))
+            val prv = useDirectly(ratFormTimes,
+              Seq(("x_", binop.left), ("nx_", nx.term), ("dx_", dx.term),
+                ("y_", binop.right), ("ny_", ny.term), ("dy_", dy.term),
+                ("nz_", rhsOf(nz.representation)),
+                ("dz_", rhsOf(dz.representation))
+              ),
+              Seq(
+                xPrv,
+                yPrv,
+                nz.representation,
+                dz.representation
+              ))
+            (nz.resetTerm, nzR, dz.resetTerm, dzR, prv)
+          case Divide(_, _) =>
+            val (nz, nzR) = (nx * dy, nxR.multiply(dyR))
+            val (dz, dzR) = (ny * dx, nyR.multiply(dxR))
+            val prv = useDirectly(ratFormDivide,
+              Seq(("x_", binop.left), ("nx_", nx.term), ("dx_", dx.term),
+                ("y_", binop.right), ("ny_", ny.term), ("dy_", dy.term),
+                ("nz_", rhsOf(nz.representation)),
+                ("dz_", rhsOf(dz.representation))
+              ),
+              Seq(
+                xPrv,
+                yPrv,
+                nz.representation,
+                dz.representation
+              ))
+            (nz.resetTerm, nzR, dz.resetTerm, dzR, prv)
+          case Power(_, _) =>
+            if (dyR.isOne && nyR.isConstant) {
+              val (mNum, mDenom) = ny.coefficient(SparsePowerProduct(Seq()))
+              val m = (mNum / mDenom).toIntExact
+              val ymPrv = (ny / dy).equate(m).getOrElse(throw new RuntimeException("expected to prove that polynomial equals integer"))
+              val powerDividePrv = useDirectly(powerDivideLemma(m), Seq(("x_", nx.term), ("y_", dx.term)), Seq())
+              val (nz, nzR) = (nx ^ m, ringsLibrary.ring.pow(nxR, m))
+              val (dz, dzR) = (dx ^ m, ringsLibrary.ring.pow(dxR, m))
+              val prv = useDirectly(ratFormPower,
+                Seq(("x_", binop.left), ("nx_", nx.term), ("dx_", dx.term),
+                  ("y_", binop.right), ("ny_", ny.term), ("dy_", dy.term),
+                  ("m_", Number(m)),
+                  ("nz_", rhsOf(nz.representation)),
+                  ("dz_", rhsOf(dz.representation))
+                ),
+                Seq(
+                  xPrv,
+                  yPrv,
+                  ymPrv,
+                  powerDividePrv,
+                  nz.representation,
+                  dz.representation
+                ))
+              (nz.resetTerm, nzR, dz.resetTerm, dzR, prv)
+            } else throw NonSupportedExponentException("exponent does not normalize to a natural number: " + ny + "/" + dy)
+        }
+      case Neg(c) =>
+        val (nx, nxR, dx, dxR, xPrv) = rec(c)
+        val (nz, nzR) = (-nx, nxR.negate)
+        val prv = useDirectly(ratFormNeg,
+          Seq(("x_", c), ("nx_", nx.term), ("dx_", dx.term),
+            ("nz_", rhsOf(nz.representation))
+          ),
+          Seq(
+            xPrv,
+            nz.representation
+          ))
+        (nz.resetTerm, nzR, dx.resetTerm, dxR, prv)
+      case a: AtomicTerm =>
+        val aP = ofTerm(a)
+        (aP.resetTerm, ringsLibrary.toRing(a), 1.resetTerm, ringsLibrary.ring.getOne,
+          useDirectly(divideIdentity,
+            Seq(
+              ("x_", a),
+              ("y_", rhsOf(aP.representation)),
+              ("z_", rhsOf(1.representation))
+            ), Seq(aP.representation, 1.representation)))
+      case _ =>
+        throw NonPolynomialArithmeticException("Operation not supported by polynomial arithmetic: " + term)
+    }
+
+    val (n, _, d, _, prv) = rec(term)
+    val prettyPrv0 = useFor(n.prettyRepresentation, PosInExpr(0::Nil))(Position(1, 1::0::Nil))(prv)
+    val prettyPrv = useFor(d.prettyRepresentation, PosInExpr(0::Nil))(Position(1, 1::1::Nil))(prettyPrv0)
+    (n.prettyTerm, d.prettyTerm, prettyPrv)
   }
 
 }

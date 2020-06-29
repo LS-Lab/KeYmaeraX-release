@@ -36,17 +36,37 @@ trait Parser extends (String => Expression) {
     */
   def apply(input: String): Expression
 
-  /** Parse the input string in the concrete syntax as a differential dynamic logic term */
+  /** Parse the input string in the concrete syntax as a differential dynamic logic term.
+    * @throws ParseException whenever its `input` is not a well-formed term of differential dynamic logic or differential game logic.
+    */
   val termParser: (String => Term)
 
-  /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
+  /** Parse the input string in the concrete syntax as a differential dynamic logic formula.
+    * @throws ParseException whenever its `input` is not a well-formed formula of differential dynamic logic or differential game logic.
+    */
   val formulaParser: (String => Formula)
 
-  /** Parse the input string in the concrete syntax as a differential dynamic logic program */
+  /** Parse the input string in the concrete syntax as a differential dynamic logic program.
+    * @throws ParseException whenever its `input` is not a well-formed program of differential dynamic logic or game of differential game logic.
+    */
   val programParser: (String => Program)
 
-  /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
+  /** Parse the input string in the concrete syntax as a differential dynamic logic differential program.
+    * @throws ParseException whenever its `input` is not a well-formed differential program of differential dynamic logic or differential game of differential game logic.
+    */
   val differentialProgramParser: (String => DifferentialProgram)
+
+  /** Parse the input string in the concrete syntax as a differential dynamic logic sequent.
+    * @throws ParseException whenever its `input` is not a well-formed sequent of differential dynamic logic or differential game logic.
+    */
+  val sequentParser: (String => Sequent)
+
+//  /** Parse the input string in the concrete syntax as a differential dynamic logic inference.
+//    * @return A parser turning strings into the list of conclusion:subgoals corresponding to the input string.
+//    * @throws ParseException whenever its `input` is not a syntactically well-formed inference of differential dynamic logic or differential game logic.
+//    *                        Syntactical well-formedness does not require the inference to be according to a proof rule or axiom, merely plausible input.
+//    */
+//@todo add  val inferenceParser: (String => List[Sequent])
 
   /** A pretty-printer that can write the output that this parser reads
     * @ensures \forall e: apply(printer(e)) == e
