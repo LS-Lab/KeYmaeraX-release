@@ -780,9 +780,10 @@ object TaylorModelArith {
         case _ => throw new RuntimeException("timeStepLemma of unexpected shape")
       }
       val (timeEq, localTime, timebounds) = timeFml match {
-        case And(telt@Equal(a, Plus(b, lt)), And(l@LessEqual(c, d), u@LessEqual(e, Number(f))))
-          if a == time && b == rhsOf(t0) && c == b && d == lt && e == lt && f.compareTo(h) == 0 =>
+        case And(telt@Equal(a, Plus(b, lt)), And(l@LessEqual(Number(c), d), u@LessEqual(e, Number(f))))
+          if a == time && b == rhsOf(t0) && c.compareTo(0) == 0 && d == lt && e == lt && f.compareTo(h) == 0 =>
           (telt, lt, IndexedSeq(l, u))
+        case _ => throw new RuntimeException("timeFml of unexpected shape: " + timeFml)
       }
 
       val t1Prv = ofTerm(Plus(rhsOf(t0), Number(h))).prettyRepresentation
