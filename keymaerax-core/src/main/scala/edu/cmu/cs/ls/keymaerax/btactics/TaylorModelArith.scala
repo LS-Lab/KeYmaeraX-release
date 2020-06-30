@@ -165,6 +165,45 @@ object TaylorModelArith {
         newIvlPrv)))
     }
 
+    /** introduce new Taylor model (newElem) to partition this, insert into context of other TMs:
+      * @return
+      *   (elem = newElem + poly.filter(P) + [0, 0],
+      *    newElem = poly.filter(!P) + [lower, upper],
+      *    others.weaken(newElem)
+      *    )
+      * */
+    def partition(newElem: Term, P: (BigDecimal, BigDecimal, PowerProduct) => Boolean, others: Seq[TM] = Seq())(implicit options: TaylorModelOptions) : (TM, TM, Seq[TM]) = {
+      val (polyTrue, polyFalse, partitionPrv) = poly.resetTerm.partition(P)
+      val poly1 = ofTerm(newElem) + polyTrue
+      val poly2 = polyFalse
+      val newElemEq = Equal(newElem, Minus(elem, polyTrue.term))
+      val newContext = context:+newElemEq
+      val newElemPrv = ProvableSig.startProof(Sequent(newContext, IndexedSeq(newElemEq)))(Close(AntePos(context.length), SuccPos(0)), 0)
+      val inst = Seq(
+        ("elem_", elem),
+        ("poly_", rhsOf(poly.representation)),
+        ("l_", lower),
+        ("u_", upper),
+
+        ("polyTrue_", polyTrue.term),
+        ("polyFalse_", polyFalse.term),
+
+        ("newElem_", newElem),
+        ("poly1_", rhsOf(poly1.representation)),
+        ("poly2_", rhsOf(poly2.representation))
+      )
+      val assms = Seq(this.weakenContext(newElemEq).prv,
+        weakenWith(newContext, partitionPrv),
+        newElemPrv,
+        weakenWith(newContext, poly1.representation),
+        weakenWith(newContext, poly2.representation))
+      val newPrv1 = useDirectlyConst(weakenWith(newContext, Ax.taylorModelPartitionPrv1.provable), inst, assms)
+      val newPrv2 = useDirectlyConst(weakenWith(newContext, Ax.taylorModelPartitionPrv2.provable), inst, assms)
+      (TM(elem, poly1.resetTerm, Number(0), Number(0), newPrv1),
+        TM(newElem, poly2.resetTerm, lower, upper, newPrv2),
+      others.map(_.weakenContext(newElemEq)))
+    }
+
     /** returns an equality, no quantifiers */
     def dropEmptyInterval: Option[ProvableSig] = if (lower == Number(0) && upper == Number(0)) Some {
       val poly1 = rhsOf(poly.representation)
@@ -387,7 +426,7 @@ object TaylorModelArith {
       require(arguments.map(_.elem).forall(vars.contains), "arguments(i).elem must be a variable of this TaylorModel")
       arguments.foreach(checkCompatibleContext)
       val argumentMap = arguments.map(tm => (tm.elem, tm)).toMap
-      val horner = poly.hornerForm()
+      val horner = poly.resetTerm.hornerForm()
 
       /** @note: this must be somewhat compatible with [[PolynomialArithV2.ofTerm]] */
       def evalTerm(t: Term): TM = t match {

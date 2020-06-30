@@ -5322,6 +5322,29 @@ object Ax extends Logging {
     QE & done
   )
 
+  @Axiom("taylorModelPartitionPrv1")
+  lazy val taylorModelPartitionPrv1 = derivedFormula("taylorModelPartitionPrv1",
+    ("((\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "poly_() = polyTrue_() + polyFalse_() & " +
+      "newElem_() = elem_() - polyTrue_() & " +
+      "newElem_() + polyTrue_() = poly1_() & " +
+      "polyFalse_() = poly2_()" +
+      ") ->" +
+      "\\exists err_ (elem_() = poly1_() + err_ & 0 <= err_ & err_ <= 0)").asFormula,
+    QE & done
+  )
+  @Axiom("taylorModelPartitionPrv2")
+  lazy val taylorModelPartitionPrv2 = derivedFormula("taylorModelPartitionPrv2",
+    ("((\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "poly_() = polyTrue_() + polyFalse_() & " +
+      "newElem_() = elem_() - polyTrue_() & " +
+      "newElem_() + polyTrue_() = poly1_() & " +
+      "polyFalse_() = poly2_()" +
+      ") ->" +
+      "\\exists err_ (newElem_() = poly2_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    QE & done
+  )
+
   @Axiom("taylorModelIntervalPrv")
   lazy val taylorModelIntervalPrv = derivedFormula("taylorModelIntervalPrv",
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +
