@@ -9,6 +9,7 @@ import testHelper.KeYmaeraXTestTags.SlowTest
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ext.{BigDecimalTool, RingsLibrary}
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 
@@ -18,6 +19,7 @@ import org.scalatest.LoneElement._
 /**
   * @author Fabian Immler
   */
+@SlowTest
 class TaylorModelArithTests extends TacticTestBase {
 
   val context3 = ("-1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1, -1 <= z0(), z0() <= 1," +
@@ -406,6 +408,33 @@ class TaylorModelArithTests extends TacticTestBase {
 
       prv1.subgoals(0).ante shouldBe context1
       prv1.subgoals(0).succ.loneElement shouldBe "[{x'=y,y'=(1-x^2)*y-x,t'=1}](y < 3&x < 3&t>=0)".asFormula
+    }
+  }
+
+  "iterateTimeSteps" should "van der Pol" in withMathematica { qeTool =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val context = vdpContext
+      println("Initializing Lemmas...")
+      val vdp = vdpLemmas(2)
+      println("... initialized.")
+      val x = vdpX
+      val y = vdpY
+      val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val prv = proveBy(Sequent(context, IndexedSeq(Box(ODESystem(vdpProgram, True), "y < 3 & x < 3 & t >= 0".asFormula))), skip)
+      val (xs, rs, t1, prv1) = vdp.iterateTimeSteps(Seq(x, y), Seq(r0, r1), t, 0.025, prv, 40)
+      prv1.conclusion shouldBe prv.conclusion
+      prv1.subgoals.loneElement shouldBe
+        ("(-1) <= e0, e0 <= 1, (-1) <= e1, e1 <= 1, t = 1.000," +
+          "\\exists err_ (x = 0 + 1.913 / 1 * 1 + 0 + 1 / 1 * (1 * r0^1) + 0 + err_ & 0 <= err_ & err_ <= 0)," +
+          "\\exists err_ (y = 0 + (-0.4685) / 1 * 1 + 0 + 1 / 1 * (1 * r1^1) + 0 + err_ & 0 <= err_ & err_ <= 0)," +
+          "\\exists err_ (r0 = 0 + 0.01385 / 1 * (1 * e1^1) + 0 + 0.02691 / 1 * (1 * e0^1) + 0 + err_ &" +
+          "              (-11137) * 10^(-5) <= err_ & err_ <= 14909 * 10^(-5))," +
+          "\\exists err_ (r1 = 0 + 0.0009940 / 1 * (1 * e1^1) + 0 + (-0.03655) / 1 * (1 * e0^1) + 0 + err_ &" +
+          "              (-10686) * 10^(-5) <= err_ & err_ <= 10961 * 10^(-5))," +
+          "(-15213) * 10^(-5) <= r0, r0 <= 18985 * 10^(-5), (-14441) * 10^(-5) <= r1, r1 <= 14716 * 10^(-5)" +
+          "==> [{x'=y, y'=(1 - x^2) * y - x, t'=1}](y < 3 & x < 3 & t >= 0)").asSequent
     }
   }
 

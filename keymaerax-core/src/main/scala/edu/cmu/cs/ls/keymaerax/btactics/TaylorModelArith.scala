@@ -916,6 +916,16 @@ object TaylorModelArith {
       }
       (x1, r1, tEq1, prv4)
     }
+
+    /** the iteration of [[timeStepAndPrecondition]] */
+    def iterateTimeSteps(x0: Seq[TM], r0: Seq[TM], t0: ProvableSig, h: BigDecimal, prv: ProvableSig, n: Int)(implicit options: TaylorModelOptions, timeStepOptions: TimeStepOptions) :
+      (Seq[TM], Seq[TM], ProvableSig, ProvableSig) =
+    if (n == 0) (x0, r0, t0, prv: ProvableSig)
+    else {
+      val (x1, r1, t1, prv1) = iterateTimeSteps(x0, r0, t0, h, prv, n - 1)
+      timeStepAndPrecondition(x1, r1, t1, h, prv1)
+    }
+
   }
 
   /**
