@@ -5486,6 +5486,22 @@ object Ax extends Logging {
   lazy val refineTmExists = derivedFormula("refineTmExists", "(\\forall err_ (P(err_) -> Q(err_))) -> ((\\exists x_ P(x_)) -> (\\exists err_ Q(err_)))".asFormula,
     implyR(1) & implyR(1) & existsL(-2) & existsR("x_".asVariable)(1) & allL("x_".asVariable)(-1) & prop & done)
 
+  @Axiom("taylorModelIntervalLe")
+  lazy val taylorModelIntervalLe = derivedFormula("taylorModelIntervalLe",
+    "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (u_() <= 0 <-> true)) -> f_() <= g_()".asFormula, QE & done)
+
+  @Axiom("taylorModelIntervalLt")
+  lazy val taylorModelIntervalLt = derivedFormula("taylorModelIntervalLt",
+    "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (u_() < 0 <-> true)) -> f_() < g_()".asFormula, QE & done)
+
+  @Axiom("taylorModelIntervalGe")
+  lazy val taylorModelIntervalGe = derivedFormula("taylorModelIntervalGe",
+    "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (l_() >= 0 <-> true)) -> f_() >= g_()".asFormula, QE & done)
+
+  @Axiom("taylorModelIntervalGt")
+  lazy val taylorModelIntervalGt = derivedFormula("taylorModelIntervalGt",
+    "((l_() <= f_() - g_() & f_() - g_() <= u_()) & (l_() > 0 <-> true)) -> f_() > g_()".asFormula, QE & done)
+
 
   /** Taylor Model [[edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics]] */
 

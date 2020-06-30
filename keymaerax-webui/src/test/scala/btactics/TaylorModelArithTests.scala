@@ -202,6 +202,25 @@ class TaylorModelArithTests extends TacticTestBase {
     x.evaluate(Seq(x0)).evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.47+err_&0.011843<=err_&err_<=0.012166)".asFormula
   }
 
+  it should "evalFormula" in withMathematica { _ =>
+    import lazyVals._
+    val ctx = context3
+    val args = Map(("x".asTerm -> tm1), ("y".asTerm -> tm2))
+    val gtFml = "x > y - 10".asFormula
+    val geFml = "x^2 + 2*x*y >= -4 - y^2".asFormula
+    val ltFml = "y < x + 5".asFormula
+    val leFml = "y <= x + 5".asFormula
+    val fFml = "y > x + 5".asFormula
+    TaylorModelArith.evalFormula(gtFml, context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(geFml, context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(ltFml, context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(leFml, context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(fFml, context3, args) shouldBe None
+    TaylorModelArith.evalFormula(And(leFml, ltFml), context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(Or(fFml, And(leFml, ltFml)), context3, args).get shouldBe 'proved
+    TaylorModelArith.evalFormula(Or(And(leFml, ltFml), fFml), context3, args).get shouldBe 'proved
+  }
+
   it should "weakenContext" in withMathematica { _ =>
     val prv = tm1.weakenContext("P()".asFormula).prv
     prv shouldBe 'proved

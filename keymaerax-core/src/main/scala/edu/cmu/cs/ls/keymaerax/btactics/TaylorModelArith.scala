@@ -474,7 +474,7 @@ object TaylorModelArith {
 
   /** evaluate a Term in Taylor model arithmetic
     *  @note: this must be somewhat compatible with [[PolynomialArithV2.ofTerm]] */
-  private def evalTerm(t: Term, context: IndexedSeq[Formula], argumentMap: Map[Term, TM])(implicit options: TaylorModelOptions): TM = {
+  def evalTerm(t: Term, context: IndexedSeq[Formula], argumentMap: Map[Term, TM])(implicit options: TaylorModelOptions): TM = {
     require(argumentMap.forall{case (_, tm) => tm.context == context}, "require compatible contexts for evalTerm")
     def doEval(t: Term) : TM = t match {
       case Plus(a, b) => doEval(a) + doEval(b)
@@ -489,6 +489,62 @@ object TaylorModelArith {
       case term: Term => argumentMap.get(term).getOrElse(Exact(ofTerm(term), context))
     }
     doEval(t)
+  }
+
+  val taylorModelIntervalLe = anyArgify(Ax.taylorModelIntervalLe.provable)
+  val taylorModelIntervalGe = anyArgify(Ax.taylorModelIntervalGe.provable)
+  val taylorModelIntervalLt = anyArgify(Ax.taylorModelIntervalLt.provable)
+  val taylorModelIntervalGt = anyArgify(Ax.taylorModelIntervalGt.provable)
+
+  /** try to prove a formula using Taylor model arithmetic */
+  def evalFormula(fml: Formula, context: IndexedSeq[Formula], argumentMap: Map[Term, TM])(implicit options: TaylorModelOptions): Option[ProvableSig] = {
+    require(argumentMap.forall{case (_, tm) => tm.context == context}, "require compatible contexts for evalFormula")
+    def doEval(fml: Formula) : Option[ProvableSig] = fml match {
+      case cmp: ComparisonFormula =>
+        val f = cmp.left
+        val g = cmp.right
+        val diff = Minus(f, g)
+        val (l, u, fgIvlPrv) = evalTerm(diff, context, argumentMap).interval
+        val (cond, lemma) = cmp match {
+          case LessEqual(_, _) => (LessEqual(u, Number(0)), taylorModelIntervalLe)
+          case Less(_, _) => (Less(u, Number(0)), taylorModelIntervalLt)
+          case GreaterEqual(_, _) => (GreaterEqual(l, Number(0)), taylorModelIntervalGe)
+          case Greater(_, _) => (Greater(l, Number(0)), taylorModelIntervalGt)
+        }
+        try {
+          val prv = ProvableSig.proveArithmetic(BigDecimalQETool, cond)
+          prv.conclusion.succ(0) match {
+            case Equiv(_, True) =>
+              Some(useDirectly(weakenWith(context, lemma), Seq(("l_", l), ("u_", u), ("f_", f), ("g_", g)), Seq(fgIvlPrv, weakenWith(context, prv))))
+            case _ => None
+          }
+        } catch {
+          case _: IllegalArgumentException => None
+        }
+      case And(a, b) =>
+        doEval(a) match {
+          case Some(prva) =>
+            doEval(b) match {
+              case Some(prvb) =>
+                Some(proveBy(Sequent(context, IndexedSeq(fml)), andR(1) & Idioms.<(by(prva), by(prvb))))
+              case None => None
+            }
+          case None => None
+        }
+      case Or(a, b) =>
+        doEval(a) match {
+          case Some(prv) =>
+            Some(proveBy(Sequent(context, IndexedSeq(fml)), orR(1) & hideR(2) & by(prv)))
+          case None =>
+            doEval(b) match {
+              case Some(prv) =>
+                Some(proveBy(Sequent(context, IndexedSeq(fml)), orR(1) & hideR(1) & by(prv)))
+              case None => None
+            }
+        }
+      case _ => throw new IllegalArgumentException("evalFormula does currently not support this formula: " + fml)
+    }
+    doEval(fml)
   }
 
   /** constructs a Taylor model by proving the required certificate with a tactic */
