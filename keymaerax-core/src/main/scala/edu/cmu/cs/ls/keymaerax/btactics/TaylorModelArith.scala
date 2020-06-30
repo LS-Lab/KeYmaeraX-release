@@ -165,14 +165,14 @@ object TaylorModelArith {
         newIvlPrv)))
     }
 
-    /** introduce new Taylor model (newElem) to partition this, insert into context of other TMs:
+    /** introduce new Taylor model (newElem) to partition this, formula required for weakening:
       * @return
       *   (elem = newElem + poly.filter(P) + [0, 0],
       *    newElem = poly.filter(!P) + [lower, upper],
-      *    others.weaken(newElem)
+      *    "newElem = ..."
       *    )
       * */
-    def partition(newElem: Term, P: (BigDecimal, BigDecimal, PowerProduct) => Boolean, others: Seq[TM] = Seq())(implicit options: TaylorModelOptions) : (TM, TM, Seq[TM]) = {
+    def partition(newElem: Term, P: (BigDecimal, BigDecimal, PowerProduct) => Boolean)(implicit options: TaylorModelOptions) : (TM, TM, Equal) = {
       val (polyTrue, polyFalse, partitionPrv) = poly.resetTerm.partition(P)
       val poly1 = ofTerm(newElem) + polyTrue
       val poly2 = polyFalse
@@ -201,7 +201,7 @@ object TaylorModelArith {
       val newPrv2 = useDirectlyConst(weakenWith(newContext, Ax.taylorModelPartitionPrv2.provable), inst, assms)
       (TM(elem, poly1.resetTerm, Number(0), Number(0), newPrv1),
         TM(newElem, poly2.resetTerm, lower, upper, newPrv2),
-      others.map(_.weakenContext(newElemEq)))
+        newElemEq)
     }
 
     /** returns an equality, no quantifiers */
@@ -423,25 +423,10 @@ object TaylorModelArith {
     /** insert arguments (arguments(i).elem must be a variable of this Taylor model) into this Taylor model */
     def evaluate(arguments: Seq[TM])(implicit options: TaylorModelOptions) : TM = {
       val vars = poly.variables
-      require(arguments.map(_.elem).forall(vars.contains), "arguments(i).elem must be a variable of this TaylorModel")
-      arguments.foreach(checkCompatibleContext)
       val argumentMap = arguments.map(tm => (tm.elem, tm)).toMap
       val horner = poly.resetTerm.hornerForm()
 
-      /** @note: this must be somewhat compatible with [[PolynomialArithV2.ofTerm]] */
-      def evalTerm(t: Term): TM = t match {
-        case Plus(a, b)  => evalTerm(a) + evalTerm(b)
-        case Minus(a, b) => evalTerm(a) - evalTerm(b)
-        case Times(a, b) => evalTerm(a) * evalTerm(b)
-        case Neg(a)      => -evalTerm(a)
-        case Power(a, Number(i)) if i.isValidInt && i >= 0 => evalTerm(a) ^ i.toIntExact
-        case Power(_, _) => throw new IllegalArgumentException("Taylor model in exponent is not supported")
-        case Divide(a, Number(i)) => evalTerm(a) / i
-        case Divide(_, _) => throw new IllegalArgumentException("Taylor model in denominator is not supported")
-        case Number(n) => Exact(ofTerm(Number(n)), context)
-        case term: Term => argumentMap.get(term).getOrElse(Exact(ofTerm(term), context))
-      }
-      val evalPoly : TM = evalTerm(rhsOf(horner))
+      val evalPoly : TM = evalTerm(rhsOf(horner), context, argumentMap)
       val (ivlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(lower, upper)(evalPoly.lower, evalPoly.upper)
       val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelEvalPrv.provable),
         Seq(
@@ -468,6 +453,42 @@ object TaylorModelArith {
         apply(prv, 0)
       TM(elem, poly, lower, upper, newPrv)
     }
+
+    def transElem(eqPrv: ProvableSig): TM = {
+      require(eqPrv.isProved && eqPrv.conclusion.ante == context, "transElem requires proved equality with compatible context")
+      val elem1 = lhsOf(eqPrv)
+      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelTransElem.provable),
+        Seq(
+          ("elem_", elem),
+          ("elem1_", elem1),
+          ("poly_", rhsOf(poly.representation)),
+          ("l_", lower),
+          ("u_", upper)
+        ),
+        Seq(prv, eqPrv)
+      )
+      TM(elem1, poly, lower, upper, newPrv)
+    }
+
+  }
+
+  /** evaluate a Term in Taylor model arithmetic
+    *  @note: this must be somewhat compatible with [[PolynomialArithV2.ofTerm]] */
+  private def evalTerm(t: Term, context: IndexedSeq[Formula], argumentMap: Map[Term, TM])(implicit options: TaylorModelOptions): TM = {
+    require(argumentMap.forall{case (_, tm) => tm.context == context}, "require compatible contexts for evalTerm")
+    def doEval(t: Term) : TM = t match {
+      case Plus(a, b) => doEval(a) + doEval(b)
+      case Minus(a, b) => doEval(a) - doEval(b)
+      case Times(a, b) => doEval(a) * doEval(b)
+      case Neg(a) => -doEval(a)
+      case Power(a, Number(i)) if i.isValidInt && i >= 0 => doEval(a) ^ i.toIntExact
+      case Power(_, _) => throw new IllegalArgumentException("Taylor model in exponent is not supported")
+      case Divide(a, Number(i)) => doEval(a) / i
+      case Divide(_, _) => throw new IllegalArgumentException("Taylor model in denominator is not supported")
+      case Number(n) => Exact(ofTerm(Number(n)), context)
+      case term: Term => argumentMap.get(term).getOrElse(Exact(ofTerm(term), context))
+    }
+    doEval(t)
   }
 
   /** constructs a Taylor model by proving the required certificate with a tactic */
@@ -770,6 +791,101 @@ object TaylorModelArith {
 
     }
 
+  }
+
+  /**
+    * partition and weaken a sequence of Taylor models
+    * */
+  def partition(xs: Seq[TM], newElems: Seq[Term], P: (BigDecimal, BigDecimal, PowerProduct)=>Boolean)(implicit options: TaylorModelOptions) : (Seq[TM], Seq[TM], Seq[Equal]) = {
+    def doPartition(xs: Seq[TM], rs: Seq[TM], newElemEqs: Seq[Equal], x0s: Seq[TM], newElems: Seq[Term]) : (Seq[TM], Seq[TM], Seq[Equal]) =
+      if(x0s.length == 0) (xs.reverse, rs.reverse, newElemEqs.reverse)
+      else {
+        val (x, r, newElemEq) = x0s.head.partition(newElems.head, (n: BigDecimal, d: BigDecimal, pp: PowerProduct) => pp.degree == 0)
+        def weakenSeq(seq: Seq[TM]): Seq[TM] = seq.map(_.weakenContext(newElemEq))
+        val newXs = x+:weakenSeq(xs)
+        val newRs = r+:weakenSeq(rs)
+        val newX0s = weakenSeq(x0s.tail)
+        doPartition(newXs, newRs, newElemEq+:newElemEqs, newX0s, newElems.tail)
+      }
+    doPartition(Seq(), Seq(), Seq(), xs, newElems)
+  }
+
+  def cutEq(prv: ProvableSig, eq: Formula) = eq match {
+    case Equal(v: Variable, rhs) =>
+      val exEq = proveBy(Exists(Seq(v), eq), existsR(rhs)(1) & byUS(equalReflexive))
+      proveBy(prv.apply(Cut(exEq.conclusion.succ(0)), 0)(HideRight(SuccPos(0)), 1)(CoHideRight(SuccPos(0)), 1)(exEq, 1),
+        existsL('Llast)
+      )
+    case _ => throw new IllegalArgumentException("cutEq not with equality: " + eq)
+  }
+  def cutSeq(prvs: Seq[ProvableSig], prv: ProvableSig) : ProvableSig = {
+    val cutEvals = prvs.init.foldLeft(prv(Cut(prvs.map(_.conclusion.succ(0)).reduceRight(And)), 0)(HideRight(SuccPos(0)), 1)){case (prv, x) =>
+      prv(AndRight(SuccPos(0)), 1)(x, 1)
+    }(prvs.last, 1)
+    val L = cutEvals.subgoals(0).ante.length
+    (L - 1 until L + prvs.length - 2).foldLeft(cutEvals){ case (prv, i) => prv(AndLeft(AntePos(i)), 0) }
+  }
+
+  def hideAntes(hides: Seq[Int], prv: ProvableSig) = {
+    hides.foldLeft(prv){case (p, i) => p(HideLeft(AntePos(i)), 0) }
+  }
+
+  /**
+    * @param x = lTM(r) ... (left) Taylor model with variables in r
+    *        r = rTM(e) ... (right) Taylor model with variables in e
+    * @return (x1, r1) ...
+    *         x1 = r + c ... identity part of (lTM o rTM)
+    *         r1 = rTM'(e, i) ... higher order terms + a fresh variable for symbolic remainders
+    *
+    * x = r + c
+    * r0 = TM(e, i)
+    * */
+  def identityPrecondition(x: Seq[TM], r: Seq[TM], prv: ProvableSig)(implicit options: TaylorModelOptions) : (Seq[TM], Seq[TM], ProvableSig) = {
+    require(prv.subgoals.length==1, "identityPrecondition requires one subgoal")
+    val subgoal = prv.subgoals(0)
+    val context = x(0).context // @note could check for compatibility of all contexts?
+    require(subgoal.ante == context)
+
+    // Evaluate (x o r)
+    val x1 = x.map(_.evaluate(r))
+    val hidevars = x.map(_.elem) ++ r.map(_.elem)
+    val hides = context.zipWithIndex.reverse.flatMap{ case (fml, i) =>
+      if (hidevars.exists(subtermOf(_, fml))) Some(i)
+      else None
+    }
+    val prv2 = cutSeq(x1.map(_.prv), prv)
+    val onlyEvals = hideAntes(hides, prv2)
+
+    // partition x = Id(r) & r = ...
+    val context2 = onlyEvals.subgoals(0).ante
+    val r1s = r.map(_.elem)
+    val x1s = x1.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context2, closeId))
+    val (nxs, nrs, newEqs) = partition(x1s, r1s,  (n: BigDecimal, d: BigDecimal, pp: PowerProduct) => pp.degree == 0)
+
+    val prv3 = newEqs.foldLeft(onlyEvals)(cutEq)
+    val context3 = prv3.subgoals(0).ante
+
+    val prv4 = cutSeq((nxs++nrs).map(_.prv), prv3)
+    val context4 = prv4.subgoals(0).ante
+
+    val x4s = x1.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context4, closeId))
+    val argumentMap = x4s.map(tm => (tm.elem, tm)).toMap
+    val intervals = newEqs.map{fml =>
+      val i = context4.indexOf(fml)
+      val eqPrv = proveBy(Sequent(context4, IndexedSeq(fml)), cohideOnlyL(-i - 1) & closeId)
+      (i, evalTerm(fml.right, context4, argumentMap).transElem(eqPrv).interval)
+    }.sortBy{case (i, _) => -i}.toIndexedSeq
+    val prv5 = hideAntes(intervals.map(_._1), cutSeq(intervals.map(_._2._3), prv4))
+    val context5 = prv5.subgoals(0).ante
+    val prv6 = (context5.length - x1.length until context5.length).reverse.foldLeft(prv5){case (prv, i) =>
+      prv(AndLeft(AntePos(i)), 0)
+    }
+    val prv7 = hideAntes((context2.length - x1.length until context2.length).reverse, prv6)
+    val context7 = prv7.subgoals(0).ante
+
+    (nxs.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context7, closeId)),
+      nrs.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context7, closeId)),
+      prv7)
   }
 
 }

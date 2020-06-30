@@ -5345,6 +5345,14 @@ object Ax extends Logging {
     QE & done
   )
 
+  @Axiom("taylorModelTransElem")
+  lazy val taylorModelTransElem = derivedFormula("taylorModelTransElem",
+    ("((\\exists err_ (elem_() = poly_() + err_ & l_() <= err_ & err_ <= u_())) &" +
+      "elem1_() = elem_()) ->" +
+      "\\exists err_ (elem1_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
+    QE & done
+  )
+
   @Axiom("taylorModelIntervalPrv")
   lazy val taylorModelIntervalPrv = derivedFormula("taylorModelIntervalPrv",
     ("((\\exists err_ (elem1_() = poly1_() + err_ & l1_() <= err_ & err_ <= u1_())) &" +

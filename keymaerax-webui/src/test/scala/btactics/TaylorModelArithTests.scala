@@ -301,10 +301,62 @@ class TaylorModelArithTests extends TacticTestBase {
   "TM partition" should "partition" in withMathematica { _ =>
     import PolynomialArithV2._
     import TaylorModelArith._
-    val (l, r, context) = ((tm1 + Exact(42, tm1.context))^3).partition("fresh".asVariable, ((n: BigDecimal, d: BigDecimal, pp: PowerProduct)=>pp.degree==0), Seq(tm2^2))
+    val (l, r, newElemEq) = ((tm1 + Exact(42, tm1.context))^3).partition("fresh".asVariable, ((n: BigDecimal, d: BigDecimal, pp: PowerProduct)=>pp.degree==0))
     l.prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ ((x+42)^3=74080+fresh+err_&0<=err_&err_<=0)".asFormula
     r.prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (fresh=5292*y0()+5292*x0()+126*y0()^2+252*x0()*y0()+126*x0()^2+y0()^3+3*x0()*y0()^2+3*x0()^2*y0()+x0()^3+err_&(-50.098)<=err_&err_<=124.22)".asFormula
+    newElemEq shouldBe "fresh=(x+42)^3-(0+74080/1*1)".asFormula
 
+  }
+
+  "identityPrecondition" should "precondition" in withMathematica { _ =>
+    import PolynomialArithV2._
+    import TaylorModelArith._
+    val context = """(-1) <= e0, e0 <= 1, (-1) <= e1, e1 <= 1, t = 0.01,
+      |   \exists err_
+      |   (
+      |     x = 1.4238123046 + 0.000497600 * r1 + 0.14994210 * r0 + err_ &
+      |     (-8724) * 10^(-9) <= err_ & err_ <= 4131 * 10^(-9)
+      |   ),
+      |   \exists err_
+      |   (
+      |     y =
+      |     2.362222245 + 0.049486204 * r1 + -0.011533035 * r0 + -0.0002100 * r0 * r1 +
+      |     -0.0005400 * r0^2 +
+      |     err_ &
+      |     (-3991) * 10^(-8) <= err_ & err_ <= 1096 * 10^(-7)
+      |   ),
+      |   \exists err_ (r0 = 0.9*e0 + err_ & -0.1 <= err_ & err_ <= 0.1),
+      |   \exists err_ (r1 = 0.8*e1 + err_ & -0.2 <= err_ & err_ <= 0.2)
+      |   """.stripMargin.split(',').map(_.asFormula).toIndexedSeq
+    val x = TM("x".asTerm, ofTerm("1.4238123046 + 0.000497600 * r1 + 0.14994210 * r0".asTerm),
+      "(-8724) * 10^(-9)".asTerm, "4131 * 10^(-9)".asTerm,
+      context, QE)
+    val y = TM("y".asTerm, ofTerm("2.362222245 + 0.049486204 * r1 + -(0.011533035 * r0) + -(0.0002100 * r0 * r1) + -(0.0005400 * r0 ^ 2)".asTerm),
+      "(-3991) * 10^(-8)".asTerm, "1096 * 10^(-7)".asTerm,
+      context,
+      QE)
+    val r0 = TM("r0".asTerm, ofTerm("0.9*e0".asTerm), "-0.1".asTerm, "0.1".asTerm, context, QE)
+    val r1 = TM("r1".asTerm, ofTerm("0.8*e1".asTerm), "-0.2".asTerm, "0.2".asTerm, context, QE)
+
+    val prv = proveBy(Sequent(context, IndexedSeq("P(t, x, y)".asFormula)), skip)
+    val (xs, rs, res) = identityPrecondition(Seq(x, y), Seq(r0, r1), prv)
+    res.subgoals(0).ante shouldBe
+      ("(-1)<=e0, e0<=1, (-1)<=e1, e1<=1, t=0.01," +
+        "\\exists err_ (x=0+1.423/1*1+0+1/1*(1*r0^1)+0+err_&0<=err_&err_<=0)," +
+        "\\exists err_ (y=0+2.362/1*1+0+1/1*(1*r1^1)+0+err_&0<=err_&err_<=0)," +
+        "\\exists err_ (r0=0+0.0003980/1*(1*e1^1)+0+0.1349/1*(1*e0^1)+0+err_&(-14340)*10^(-6)<=err_&err_<=15961*10^(-6))," +
+        "\\exists err_ (r1=0+0.03958/1*(1*e1^1)+0+(-0.01039)/1*(1*e0^1)+0+(-0.0001512)/1*(1*e0^1*e1^1)+(0+(-0.0004374)/1*(1*e0^2)+0)+err_&(-11051)*10^(-6)<=err_&err_<=11565*10^(-6))," +
+        "(-14964)*10^(-5)<=r0, r0<=15127*10^(-5)," +
+        "(-61611)*10^(-6)<=r1, r1<=62125*10^(-6)").split(',').map(_.asFormula).toIndexedSeq
+    xs.forall(_.context == res.subgoals(0).ante) shouldBe true
+    rs.forall(_.context == res.subgoals(0).ante) shouldBe true
+    xs.map(_.prettyPrv.conclusion.succ(0)) shouldBe
+      List("\\exists err_ (x=1.423+r0+err_&0<=err_&err_<=0)".asFormula,
+        "\\exists err_ (y=2.362+r1+err_&0<=err_&err_<=0)".asFormula)
+    rs.map(_.prettyPrv.conclusion.succ(0)) shouldBe
+      List("\\exists err_ (r0=0.0003980*e1+0.1349*e0+err_&(-0.014340)<=err_&err_<=0.015961)".asFormula,
+        "\\exists err_ (r1=0.03958*e1+-(0.01039*e0)+-(0.0001512*e0*e1)+-(0.0004374*e0^2)+err_&(-0.011051)<=err_&err_<=0.011565)".asFormula)
+    res.subgoals(0).succ shouldBe prv.subgoals(0).succ
   }
 
 }
