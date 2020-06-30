@@ -146,7 +146,7 @@ object TaylorModelArith {
 
     /** prove interval enclosure of Taylor model */
     def interval(implicit options: TaylorModelOptions) : (Term, Term, ProvableSig) = {
-      val hornerPrv = poly.resetTerm.hornerForm()
+      val hornerPrv = if(poly.variables.isEmpty) poly.resetTerm.representation else poly.resetTerm.hornerForm()
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
