@@ -740,7 +740,8 @@ object TaylorModelArith {
 
       val initialStateEqs = (x0, initialConditionFmls1.tail).zipped.map { case (x, Equal(y, t)) if x.elem == y =>
         val eq1 = x.dropEmptyInterval.getOrElse(throw new RuntimeException("intervals have been checked for emptiness"))
-        val eq2 = weakenWith(x.context, x.poly.resetTerm.equate(ofTerm(t)).getOrElse(throw new RuntimeException("this equality should hold by construction")))
+        val eq2 = weakenWith(x.context, x.poly.resetTerm.equate(ofTerm(t)).getOrElse(throw new RuntimeException("this equality should hold by construction: " +
+          x.poly.resetTerm.term + " = " + ofTerm(t).term)))
         equalTrans(eq1, eq2)
       case e => throw new RuntimeException("Taylor model lemma (initial condition) not of expected shape: " + e)
       }

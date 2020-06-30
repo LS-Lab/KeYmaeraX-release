@@ -82,7 +82,7 @@ class TaylorModelArithTests extends TacticTestBase {
     (tm1234 *! tm1234).prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ (12.34*y*(12.34*y)=152.2756*y0()^2+-(152.27560*x0()*y0())+38.068900*x0()^2+err_&(-45.684)<=err_&err_<=47.207)".asFormula
     (tm1234 * tm1234).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ (12.34*y*(12.34*y)=152.2*y0()^2+-(152.3*x0()*y0())+38.06*x0()^2+err_&(-45.793)<=err_&err_<=47.316)".asFormula
+      "\\exists err_ (12.34*y*(12.34*y)=152.2*y0()^2+-(152.3*x0()*y0())+38.06*x0()^2+err_&(-45.709)<=err_&err_<=47.316)".asFormula
   }
 
   it should "negate" in withMathematica { qeTool =>
@@ -99,7 +99,7 @@ class TaylorModelArithTests extends TacticTestBase {
     tm1234.squareExact.prettyPrv.conclusion.succ(0) shouldBe
       "\\exists err_ ((12.34*y)^2=152.2756*y0()^2+-(152.27560*x0()*y0())+38.068900*x0()^2+err_&(-45.683)<=err_&err_<=47.206)".asFormula
     tm1234.square.prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ ((12.34*y)^2=152.2*y0()^2+-(152.3*x0()*y0())+38.06*x0()^2+err_&(-45.792)<=err_&err_<=47.315)".asFormula
+      "\\exists err_ ((12.34*y)^2=152.2*y0()^2+-(152.3*x0()*y0())+38.06*x0()^2+err_&(-45.708)<=err_&err_<=47.315)".asFormula
   }
 
   it should "^1" in withMathematica { qeTool =>
@@ -127,7 +127,7 @@ class TaylorModelArithTests extends TacticTestBase {
 
   it should "exponentiate approximately" in withMathematica { qeTool =>
     (tm1234^3).prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ ((12.34*y)^3=-(1879*y0()^3)+2818*x0()*y0()^2+-(1410*x0()^2*y0())+234.8*x0()^3+err_&(-1122.4)<=err_&err_<=1359.0)".asFormula
+      "\\exists err_ ((12.34*y)^3=-(1879*y0()^3)+2818*x0()*y0()^2+-(1410*x0()^2*y0())+234.8*x0()^3+err_&(-1122.3)<=err_&err_<=1359.0)".asFormula
   }
 
   it should "exact" in withMathematica { qeTool =>
@@ -148,7 +148,7 @@ class TaylorModelArithTests extends TacticTestBase {
     val tm = (tm3 +! tm2).squareExact
     val tmA = tm.approx
     tmA.prettyPrv.conclusion.succ(0) shouldBe
-      "\\exists err_ ((1/3*x+y)^2=0.4444*y0()^2+-(1.112*x0()*y0())+0.6944*x0()^2+err_&(-0.32102)<=err_&err_<=0.33240)".asFormula
+      "\\exists err_ ((1/3*x+y)^2=0.4444*y0()^2+-(1.112*x0()*y0())+0.6944*x0()^2+err_&(-0.32093)<=err_&err_<=0.33240)".asFormula
   }
 
   it should "collect higher order terms" in withMathematica { qeTool =>
@@ -158,19 +158,19 @@ class TaylorModelArithTests extends TacticTestBase {
     val res0 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 0})
     val res1 = tm.collectHigherOrderTerms(new TaylorModelOptions { val precision = defaultOptions.precision; val order = 1})
     res0.prettyPrv.conclusion.succ.loneElement shouldBe
-      "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+err_&(-6.8403)<=err_&err_<=7.2716)".asFormula
+      "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+err_&(-5.7016)<=err_&err_<=7.2716)".asFormula
     res1.prettyPrv.conclusion.succ.loneElement shouldBe
-      "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+-(0.2222*y0())+0.2776*x0()+err_&(-6.3405)<=err_&err_<=6.7718)".asFormula
+      "\\exists err_ ((1/3*x+y+1/3)^3=0.03699+-(0.2222*y0())+0.2776*x0()+err_&(-5.2018)<=err_&err_<=6.7718)".asFormula
   }
 
   it should "interval" in withMathematica { qeTool =>
     import TaylorModelArith._
     import PolynomialArithV2._
     val tm = (tm3 + tm2 + third) ^ 3
-    tm.interval._1 shouldBe "(-68034)*10^(-4)".asTerm
+    tm.interval._1 shouldBe "(-56647)*10^(-4)".asTerm
     tm.interval._2 shouldBe "73086*10^(-4)".asTerm
     tm.interval._3.conclusion.succ.loneElement shouldBe
-      "(-68034)*10^(-4)<=(1/3*x+y+1/3)^3&(1/3*x+y+1/3)^3<=73086*10^(-4)".asFormula
+      "(-56647)*10^(-4)<=(1/3*x+y+1/3)^3&(1/3*x+y+1/3)^3<=73086*10^(-4)".asFormula
   }
 
   it should "drop empty interval" in withMathematica { qeTool =>
@@ -184,7 +184,7 @@ class TaylorModelArithTests extends TacticTestBase {
   }
 
   it should "evaluate" in withMathematica { _ =>
-        val context = ("x = 1/3 * x0()^2 + 1/5 * x0() * y0() + 5/8 * y0()^2, -1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1," +
+    val context = ("x = 1/3 * x0()^2 + 1/5 * x0() * y0() + 5/8 * y0()^2, -1 <= x0(), x0() <= 1, -1 <= y0(), y0() <= 1," +
       "x0() <= 1/100*y0() + 0.0001," +
       "x0() >= 1/100*y0()," +
       "y0() = 12.34").split(',').map(_.asFormula).toIndexedSeq
@@ -195,13 +195,13 @@ class TaylorModelArithTests extends TacticTestBase {
       QE).approx
     val x0 = TaylorModelArith.TM("x0()".asTerm, PolynomialArithV2.ofTerm("1/100*y0()".asTerm), Number(0), Number(0.0001), context, QE)
     val y0 = TaylorModelArith.TM("y0()".asTerm, PolynomialArithV2.ofTerm("12.34".asTerm), Number(0), Number(0), context, QE)
-    val xFml = "\\exists err_ (x=0.625*y0()^2+0.2*x0()*y0()+0.3333*x0()^2+err_&(-0.000033334)<=err_&err_<=0.000033334)".asFormula
+    val xFml = "\\exists err_ (x=0.625*y0()^2+0.2*x0()*y0()+0.3333*x0()^2+err_&(-0.000000000)<=err_&err_<=0.000033334)".asFormula
     x.prettyPrv.conclusion.succ(0) shouldBe xFml
     x.evaluate(Seq()).prettyPrv.conclusion.succ(0) shouldBe xFml
-    x.evaluate(Seq(x0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=0.6270*y0()^2+err_&0.0050419<=err_&err_<=0.0053640)".asFormula
-    x.evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.16+2.468*x0()+0.3333*x0()^2+err_&0.012216<=err_&err_<=0.012284)".asFormula
-    x.evaluate(Seq(x0, y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.16+0.02468*y0()+0.00003333*y0()^2+err_&0.012216<=err_&err_<=0.012540)".asFormula // @note insertion is simultaneous and not recursive
-    x.evaluate(Seq(x0)).evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.47+err_&0.011843<=err_&err_<=0.012166)".asFormula
+    x.evaluate(Seq(x0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=0.6270*y0()^2+err_&0.0050751<=err_&err_<=0.0053640)".asFormula
+    x.evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.12+2.468*x0()+0.3333*x0()^2+err_&0.052250<=err_&err_<=0.052284)".asFormula
+    x.evaluate(Seq(x0, y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.12+0.02468*y0()+0.00003333*y0()^2+err_&0.052250<=err_&err_<=0.052540)".asFormula // @note insertion is simultaneous and not recursive
+    x.evaluate(Seq(x0)).evaluate(Seq(y0)).prettyPrv.conclusion.succ(0) shouldBe "\\exists err_ (x=95.42+err_&0.061876<=err_&err_<=0.062166)".asFormula
   }
 
   it should "evalFormula" in withMathematica { _ =>
@@ -248,8 +248,8 @@ class TaylorModelArithTests extends TacticTestBase {
       val vdp = vdpLemmas(3)
       val x = vdpX
       val y = vdpY
-      val r0 = TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
-      val r1 = TaylorModelArith.TM("e1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
       val res = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res.conclusion.succ.loneElement))
@@ -261,24 +261,24 @@ class TaylorModelArithTests extends TacticTestBase {
           |      \exists Rem0
           |        (
           |          x =
-          |          1.4 + 0.15 * e0 + 0 * e1 + 2.4 * s + 0.05 * (s * e1) + (-1.8520) * s^2 + 0 * (s * e0) +
-          |          (-0.02400) * (s^2 * e1) +
+          |          1.4 + 0.15 * r0 + 0 * r1 + 2.4 * s + 0.05 * (s * r1) + (-1.8520) * s^2 + 0 * (s * r0) +
+          |          (-0.02400) * (s^2 * r1) +
           |          (-2.4954) * s^3 +
-          |          (-0.5790) * (s^2 * e0) +
+          |          (-0.5790) * (s^2 * r0) +
           |          Rem0 &
           |          s * ((-8724) * 10^(-7)) + 0.00 <= Rem0 & Rem0 <= s * (4131 * 10^(-7)) + 0.00
           |        ) &
           |      \exists Rem1
           |        (
           |          y =
-          |          2.4 + 0 * e0 + 0.05 * e1 + (-3.704) * s + (-0.0480) * (s * e1) + (-7.48605) * s^2 +
-          |          (-1.1580) * (s * e0) +
-          |          (-0.33796) * (s^2 * e1) +
-          |          (-0.05400) * (s * e0^2) +
+          |          2.4 + 0 * r0 + 0.05 * r1 + (-3.704) * s + (-0.0480) * (s * r1) + (-7.48605) * s^2 +
+          |          (-1.1580) * (s * r0) +
+          |          (-0.33796) * (s^2 * r1) +
+          |          (-0.05400) * (s * r0^2) +
           |          10.850 * s^3 +
-          |          0.46965 * (s^2 * e0) +
-          |          (-0.02100) * (s * e0 * e1) +
-          |          0.000 * (s * e1^2) +
+          |          0.46965 * (s^2 * r0) +
+          |          (-0.02100) * (s * r0 * r1) +
+          |          0.000 * (s * r1^2) +
           |          Rem1 &
           |          s * ((-3991) * 10^(-6)) + 0.00 <= Rem1 & Rem1 <= s * (1096 * 10^(-5)) + 0.00
           |        )
@@ -292,12 +292,14 @@ class TaylorModelArithTests extends TacticTestBase {
       val vdp = vdpLemmas(1)
       val x = vdpX
       val y = vdpY
-      val r0 = TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
-      val r1 = TaylorModelArith.TM("e1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
       val (res, tmIvls, rIvls, (tmEqs, rEqs, t1Eq)) = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma("Safe(t, y, x)".asFormula)
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res))
-      val contextE = "(-1) <= e0, e0 <= 1, (-1) <= e1, e1 <= 1".split(',').toIndexedSeq.map(_.asFormula)
+      val contextE = ("r0=e0, r1=e1, (-1)<=e0, e0<=1, (-1)<=e1, e1<=1, (-1)<=r0, r0<=1, (-1)<=r1, r1<=1," +
+        "\\exists err_ (r0=0+1/1*(1*e0^1)+0+err_&0<=err_&err_<=0)," +
+        "\\exists err_ (r1=0+1/1*(1*e1^1)+0+err_&0<=err_&err_<=0),").split(',').toIndexedSeq.map(_.asFormula)
       res.subgoals.length shouldBe 2
       res.conclusion.ante shouldBe context
       res.conclusion.succ.loneElement shouldBe "[{x'=y, y'=(1 - x^2) * y - x, t'=1}]Safe(t,y,x)".asFormula
@@ -306,14 +308,14 @@ class TaylorModelArithTests extends TacticTestBase {
         IndexedSeq(
           "0 <= s",
           "s <= 0.01",
-          "\\exists err_(x = 1.4 + 2.4 * s + 0.15 * e0 + err_ & (-1020) * 10 ^ (-6) <= err_ & err_ <= 6286 * 10 ^ (-7))",
-          "\\exists err_ (y = 2.4 + -(3.704 * s) + 0.05 * e1 + err_ & (-1467) * 10 ^ (-5) <= err_ & err_ <= 1258 * 10 ^ (-5))").map(_.asFormula))
+          "\\exists err_(x = 1.4 + 2.4 * s + 0.15 * r0 + err_ & (-1020) * 10 ^ (-6) <= err_ & err_ <= 6286 * 10 ^ (-7))",
+          "\\exists err_ (y = 2.4 + -(3.704 * s) + 0.05 * r1 + err_ & (-1467) * 10 ^ (-5) <= err_ & err_ <= 1258 * 10 ^ (-5))").map(_.asFormula))
       res.subgoals(0).succ.loneElement shouldBe "Safe(0 + s,y,x)".asFormula
 
       res.subgoals(1).ante shouldBe (contextE ++
         IndexedSeq("t = 0.01",
-          "\\exists err_ (x = 1.424 + 0.15 * e0 + err_ & (-1020) * 10 ^ (-6) <= err_ & err_ <= 6286 * 10 ^ (-7))",
-          "\\exists err_ (y = 2.36296 + 0.05 * e1 + err_ & (-1467) * 10 ^ (-5) <= err_ & err_ <= 1258 * 10 ^ (-5))").map(_.asFormula)
+          "\\exists err_ (x = 1.424 + 0.15 * r0 + err_ & (-1020) * 10 ^ (-6) <= err_ & err_ <= 6286 * 10 ^ (-7))",
+          "\\exists err_ (y = 2.36296 + 0.05 * r1 + err_ & (-1467) * 10 ^ (-5) <= err_ & err_ <= 1258 * 10 ^ (-5))").map(_.asFormula)
         )
       res.subgoals(1).succ.loneElement shouldBe
         "[{x'=y, y'=(1 - x^2) * y - x, t'=1}]Safe(t,y,x)".asFormula
@@ -366,18 +368,18 @@ class TaylorModelArithTests extends TacticTestBase {
       ("(-1)<=e0, e0<=1, (-1)<=e1, e1<=1, t=0.01," +
         "\\exists err_ (x=0+1.423/1*1+0+1/1*(1*r0^1)+0+err_&0<=err_&err_<=0)," +
         "\\exists err_ (y=0+2.362/1*1+0+1/1*(1*r1^1)+0+err_&0<=err_&err_<=0)," +
-        "\\exists err_ (r0=0+0.0003980/1*(1*e1^1)+0+0.1349/1*(1*e0^1)+0+err_&(-14340)*10^(-6)<=err_&err_<=15961*10^(-6))," +
-        "\\exists err_ (r1=0+0.03958/1*(1*e1^1)+0+(-0.01039)/1*(1*e0^1)+0+(-0.0001512)/1*(1*e0^1*e1^1)+(0+(-0.0004374)/1*(1*e0^2)+0)+err_&(-11051)*10^(-6)<=err_&err_<=11565*10^(-6))," +
-        "(-14964)*10^(-5)<=r0, r0<=15127*10^(-5)," +
-        "(-61611)*10^(-6)<=r1, r1<=62125*10^(-6)").split(',').map(_.asFormula).toIndexedSeq
+        "\\exists err_ (r0=0+0.0003980/1*(1*e1^1)+0+0.1349/1*(1*e0^1)+0+err_&(-14340)*10^(-6)<=err_&err_<=15960*10^(-6))," +
+        "\\exists err_ (r1=0+0.03958/1*(1*e1^1)+0+(-0.01039)/1*(1*e0^1)+0+(-0.0001512)/1*(1*e0^1*e1^1)+(0+(-0.0004374)/1*(1*e0^2)+0)+err_&(-11052)*10^(-6)<=err_&err_<=11561*10^(-6))," +
+        "(-14964)*10^(-5)<=r0, r0<=15126*10^(-5)," +
+        "(-61612)*10^(-6)<=r1, r1<=61683*10^(-6)").split(',').map(_.asFormula).toIndexedSeq
     xs.forall(_.context == res.subgoals(0).ante) shouldBe true
     rs.forall(_.context == res.subgoals(0).ante) shouldBe true
     xs.map(_.prettyPrv.conclusion.succ(0)) shouldBe
       List("\\exists err_ (x=1.423+r0+err_&0<=err_&err_<=0)".asFormula,
         "\\exists err_ (y=2.362+r1+err_&0<=err_&err_<=0)".asFormula)
     rs.map(_.prettyPrv.conclusion.succ(0)) shouldBe
-      List("\\exists err_ (r0=0.0003980*e1+0.1349*e0+err_&(-0.014340)<=err_&err_<=0.015961)".asFormula,
-        "\\exists err_ (r1=0.03958*e1+-(0.01039*e0)+-(0.0001512*e0*e1)+-(0.0004374*e0^2)+err_&(-0.011051)<=err_&err_<=0.011565)".asFormula)
+      List("\\exists err_ (r0=0.0003980*e1+0.1349*e0+err_&(-0.014340)<=err_&err_<=0.015960)".asFormula,
+        "\\exists err_ (r1=0.03958*e1+-(0.01039*e0)+-(0.0001512*e0*e1)+-(0.0004374*e0^2)+err_&(-0.011052)<=err_&err_<=0.011561)".asFormula)
     res.subgoals(0).succ shouldBe prv.subgoals(0).succ
   }
 
