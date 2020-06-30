@@ -56,6 +56,27 @@ object TaylorModelArith {
     ProvableSig.startProof(Sequent(context, prv.conclusion.succ)).apply(CoHideRight(SuccPos(0)), 0).apply(prv, 0)
   }
 
+  /** @note: these are only here because .provable is horribly slow */
+  val taylorModelPlusPrv = Ax.taylorModelPlusPrv.provable
+  val taylorModelMinusPrv = Ax.taylorModelMinusPrv.provable
+  val taylorModelCollectPrv = Ax.taylorModelCollectPrv.provable
+  val taylorModelIntervalPrv = Ax.taylorModelIntervalPrv.provable
+  val taylorModelPartitionPrv1 = Ax.taylorModelPartitionPrv1.provable
+  val taylorModelEmptyIntervalPrv = Ax.taylorModelEmptyIntervalPrv.provable
+  val taylorModelPartitionPrv2 = Ax.taylorModelPartitionPrv2.provable
+  val taylorModelTimesPrv = Ax.taylorModelTimesPrv.provable
+  val taylorModelDivideExactPrv = Ax.taylorModelDivideExactPrv.provable
+  val taylorModelNegPrv = Ax.taylorModelNegPrv.provable
+  val taylorModelSquarePrv = Ax.taylorModelSquarePrv.provable
+  val taylorModelPowerOne = Ax.taylorModelPowerOne.provable
+  val taylorModelPowerEven = Ax.taylorModelPowerEven.provable
+  val taylorModelPowerOdd = Ax.taylorModelPowerOdd.provable
+  val taylorModelApproxPrv = Ax.taylorModelApproxPrv.provable
+  val taylorModelEvalPrv = Ax.taylorModelEvalPrv.provable
+  val taylorModelTransElem = Ax.taylorModelTransElem.provable
+  val taylorModelExactPrv = Ax.taylorModelExactPrv.provable
+
+
   /**
     * data structure with certifying computations
     * maintains the invariant
@@ -74,7 +95,7 @@ object TaylorModelArith {
       val newPoly = poly.resetTerm + other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(lower, upper)(other.lower, other.upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelPlusPrv.provable), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelPlusPrv), Seq(
         ("elem1_", elem),
         ("poly1_", rhsOf(poly.representation)),
         ("l1_", lower),
@@ -99,7 +120,7 @@ object TaylorModelArith {
       val newPoly = poly.resetTerm - other.poly.resetTerm
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Minus)(lower, upper)(other.lower, other.upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelMinusPrv.provable), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelMinusPrv), Seq(
         ("elem1_", elem),
         ("poly1_", rhsOf(poly.representation)),
         ("l1_", lower),
@@ -117,14 +138,19 @@ object TaylorModelArith {
     /** approximate subtraction */
     def -(other: TM)(implicit options: TaylorModelOptions) : TM = (this -!other).approx
 
+    private def hornerForm(poly: Polynomial) : ProvableSig = {
+      // poly.hornerForm() // @note this fails too often because denominators get out of range
+      poly.representation // fallback
+    }
+
     /** collect terms of higher order in interval remainder */
     def collectHigherOrderTerms(implicit options: TaylorModelOptions) : TM = {
       val (polyLow, polyHigh, partitionPrv) = poly.resetTerm.partition{case (n, d, powers) => powers.degree <= options.order}
-      val hornerPrv = polyHigh.hornerForm()
+      val hornerPrv = hornerForm(polyHigh)
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelCollectPrv.provable), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelCollectPrv), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -146,12 +172,12 @@ object TaylorModelArith {
 
     /** prove interval enclosure of Taylor model */
     def interval(implicit options: TaylorModelOptions) : (Term, Term, ProvableSig) = {
-      val hornerPrv = if(poly.variables.isEmpty) poly.resetTerm.representation else poly.resetTerm.hornerForm()
+      val hornerPrv = if(poly.variables.isEmpty) poly.resetTerm.representation else hornerForm(poly.resetTerm)
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i => Plus(rem, i))(lower, upper)
       (l, u,
-        useDirectlyConst(weakenWith(context, Ax.taylorModelIntervalPrv.provable), Seq(
+        useDirectlyConst(weakenWith(context, taylorModelIntervalPrv), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -197,8 +223,8 @@ object TaylorModelArith {
         newElemPrv,
         weakenWith(newContext, poly1.representation),
         weakenWith(newContext, poly2.representation))
-      val newPrv1 = useDirectlyConst(weakenWith(newContext, Ax.taylorModelPartitionPrv1.provable), inst, assms)
-      val newPrv2 = useDirectlyConst(weakenWith(newContext, Ax.taylorModelPartitionPrv2.provable), inst, assms)
+      val newPrv1 = useDirectlyConst(weakenWith(newContext, taylorModelPartitionPrv1), inst, assms)
+      val newPrv2 = useDirectlyConst(weakenWith(newContext, taylorModelPartitionPrv2), inst, assms)
       (TM(elem, poly1.resetTerm, Number(0), Number(0), newPrv1),
         TM(newElem, poly2.resetTerm, lower, upper, newPrv2),
         newElemEq)
@@ -207,7 +233,7 @@ object TaylorModelArith {
     /** returns an equality, no quantifiers */
     def dropEmptyInterval: Option[ProvableSig] = if (lower == Number(0) && upper == Number(0)) Some {
       val poly1 = rhsOf(poly.representation)
-      useDirectlyConst(weakenWith(context, Ax.taylorModelEmptyIntervalPrv.provable), Seq(
+      useDirectlyConst(weakenWith(context, taylorModelEmptyIntervalPrv), Seq(
         ("elem1_", elem),
         ("poly1_", poly1)
       ), Seq(prv))
@@ -218,13 +244,13 @@ object TaylorModelArith {
       checkCompatibleContext(other)
       val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm * other.poly.resetTerm).partition{case (n, d, powers) => powers.degree <= options.order}
 
-      val hornerPrv = polyHigh.hornerForm()
+      val hornerPrv = hornerForm(polyHigh)
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       val poly2 = rhsOf(other.poly.representation)
       def intervalBounds(i1: Term, i2: Term) : Term = Seq(rem, Times(i1, poly2), Times(i2, poly1), Times(i1, i2)).reduceLeft(Plus)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(context)(intervalBounds)(lower, upper)(other.lower, other.upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelTimesPrv.provable), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelTimesPrv), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -263,7 +289,7 @@ object TaylorModelArith {
         ), Seq(equalReflex(q), equalReflex(r)))
       val other = Exact(ofTerm(inv), context)
       val res = this *! other
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelDivideExactPrv.provable), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelDivideExactPrv), Seq(
         ("elem1_", elem),
         ("inv_", inv),
         ("poly_", rhsOf(res.poly.representation)),
@@ -282,7 +308,7 @@ object TaylorModelArith {
       val newPoly = -(poly.resetTerm)
 
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(IndexedSeq())(Neg)(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelNegPrv.provable), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelNegPrv), Seq(
         ("elem1_", elem),
         ("poly1_", rhsOf(poly.representation)),
         ("l1_", lower),
@@ -297,12 +323,12 @@ object TaylorModelArith {
     /** exact square */
     def squareExact(implicit options: TaylorModelOptions) : TM = {
       val (polyLow, polyHigh, partitionPrv) = (poly.resetTerm^2).partition{case (n, d, powers) => powers.degree <= options.order}
-      val hornerPrv = polyHigh.hornerForm()
+      val hornerPrv = hornerForm(polyHigh)
       val rem = rhsOf(hornerPrv)
       val poly1 = rhsOf(poly.representation)
       def intervalBounds(i1: Term) : Term = Seq(rem, Times(Times(Number(2), i1), poly1), Power(i1, Number(2))).reduceLeft(Plus)
       val (newIvlPrv, l, u) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(intervalBounds)(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelSquarePrv.provable), Seq(
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelSquarePrv), Seq(
         ("elem1_", elem),
         ("poly1_", poly1),
         ("l1_", lower),
@@ -325,7 +351,7 @@ object TaylorModelArith {
     /** approximate exponentiation */
     def ^(n: Int)(implicit options: TaylorModelOptions) : TM = n match {
       case 1 =>
-        val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelPowerOne.provable), Seq(
+        val newPrv = useDirectlyConst(weakenWith(context, taylorModelPowerOne), Seq(
           ("elem1_", elem),
           ("poly1_", rhsOf(poly.representation)),
           ("l1_", lower),
@@ -337,7 +363,7 @@ object TaylorModelArith {
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Times(Number(2), Number(m))))
         val p = (this ^ m).square(options)
         val newPrv =
-          useDirectlyConst(weakenWith(context, Ax.taylorModelPowerEven.provable), Seq(
+          useDirectlyConst(weakenWith(context, taylorModelPowerEven), Seq(
             ("elem1_", elem),
             ("poly1_", rhsOf(poly.representation)),
             ("l1_", lower),
@@ -355,7 +381,7 @@ object TaylorModelArith {
         val mPrv = ProvableSig.proveArithmetic(BigDecimalQETool, Equal(Number(n), Plus(Times(Number(2), Number(m)), Number(1))))
         val p = (this ^ m).square * this
         val newPrv =
-          useDirectlyConst(weakenWith(context, Ax.taylorModelPowerOdd.provable), Seq(
+          useDirectlyConst(weakenWith(context, taylorModelPowerOdd), Seq(
             ("elem1_", elem),
             ("poly1_", rhsOf(poly.representation)),
             ("l1_", lower),
@@ -375,10 +401,10 @@ object TaylorModelArith {
     def approx(implicit options: TaylorModelOptions) : TM = {
       val (polyApproxPrv, poly1, poly2) = poly.resetTerm.approx(options.precision)
       val poly1rep = rhsOf(poly1.representation)
-      val poly2repPrv = poly2.hornerForm()
+      val poly2repPrv = hornerForm(poly2)
       val poly2rep = rhsOf(poly2repPrv)
       val (ivlPrv, l2, u2) = IntervalArithmeticV2.proveUnop(new BigDecimalTool)(options.precision)(context)(i1 => Plus(poly2rep, i1))(lower, upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelApproxPrv.provable),
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelApproxPrv),
         Seq(
           ("elem_", elem),
           ("poly_", rhsOf(poly.representation)),
@@ -424,11 +450,11 @@ object TaylorModelArith {
     def evaluate(arguments: Seq[TM])(implicit options: TaylorModelOptions) : TM = {
       val vars = poly.variables
       val argumentMap = arguments.map(tm => (tm.elem, tm)).toMap
-      val horner = poly.resetTerm.hornerForm()
+      val horner = hornerForm(poly.resetTerm)
 
       val evalPoly : TM = evalTerm(rhsOf(horner), context, argumentMap)
       val (ivlPrv, l, u) = IntervalArithmeticV2.proveBinop(new BigDecimalTool)(options.precision)(IndexedSeq())(Plus)(lower, upper)(evalPoly.lower, evalPoly.upper)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelEvalPrv.provable),
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelEvalPrv),
         Seq(
           ("elem_", elem),
           ("poly1_", rhsOf(poly.representation)),
@@ -457,7 +483,7 @@ object TaylorModelArith {
     def transElem(eqPrv: ProvableSig): TM = {
       require(eqPrv.isProved && eqPrv.conclusion.ante == context, "transElem requires proved equality with compatible context")
       val elem1 = lhsOf(eqPrv)
-      val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelTransElem.provable),
+      val newPrv = useDirectlyConst(weakenWith(context, taylorModelTransElem),
         Seq(
           ("elem_", elem),
           ("elem1_", elem1),
@@ -555,7 +581,7 @@ object TaylorModelArith {
 
   /** constructs a Taylor model with zero interval part */
   def Exact(elem: Polynomial, context: IndexedSeq[Formula]): TM = {
-    val newPrv = useDirectlyConst(weakenWith(context, Ax.taylorModelExactPrv.provable),
+    val newPrv = useDirectlyConst(weakenWith(context, taylorModelExactPrv),
       Seq(("elem_", elem.term), ("poly_", rhsOf(elem.representation))),
       Seq(weakenWith(context, elem.representation))
     )
