@@ -906,7 +906,7 @@ object TaylorModelArith {
       // prepare next step with preconditioning
       val (x1, r1, prvEq1) = identityPrecondition(tmEqs, rEqs, prvEq)
       val tEq1 = proveBy(Sequent(prvEq1.subgoals(0).ante, IndexedSeq(tEq.conclusion.succ(0))), closeId)
-      val prv3 = prv2.apply(prvEq1, 1)
+      val prv3 = prv.apply(prv2, 0).apply(prvEq1, 1)
 
       // solve safety for the last step
       val tms = tmIvls.map(_.evaluate(rIvls))
