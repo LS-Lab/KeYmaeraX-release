@@ -233,10 +233,11 @@ class TaylorModelArithTests extends TacticTestBase {
   }
 
   // TODO: generate a context like this from "x : [1.25, 1.55]" and "y : [2.35, 2.45]"?!
-  val vdpContext = "t = 0, x = 1.4 + 0.15 * e0, y = 2.4 + 0.05 * e1, -1 <= e0, e0 <= 1, -1 <= e1, e1 <= 1".split(',').map(_.asFormula).toIndexedSeq
+  val vdpContext = ("t = 0, x = 1.4 + 0.15 * r0, y = 2.4 + 0.05 * r1, r0 = e0, r1 = e1, -1 <= e0, e0 <= 1, -1 <= e1, e1 <= 1," +
+    "-1 <= r0, r0 <= 1, -1 <= r1, r1 <= 1").split(',').map(_.asFormula).toIndexedSeq
   val vdpProgram = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
-  lazy val vdpX = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), vdpContext, QE)
-  lazy val vdpY = TaylorModelArith.TM("y".asTerm, PolynomialArithV2.ofTerm("2.4 + 0.05 * e1".asTerm), Number(0), Number(0), vdpContext, QE)
+  lazy val vdpX = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * r0".asTerm), Number(0), Number(0), vdpContext, QE)
+  lazy val vdpY = TaylorModelArith.TM("y".asTerm, PolynomialArithV2.ofTerm("2.4 + 0.05 * r1".asTerm), Number(0), Number(0), vdpContext, QE)
   def vdpLemmas(order: Int) = new TaylorModelArith.TemplateLemmas(vdpProgram, order)
 
   "timeStepLemma" should "van der Pol" in withMathematica { qeTool =>
@@ -292,7 +293,7 @@ class TaylorModelArithTests extends TacticTestBase {
       val r0 = TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
       val r1 = TaylorModelArith.TM("e1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
-      val (res, tmIvls, (tmEqs, t1Eq)) = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma("Safe(t, y, x)".asFormula)
+      val (res, tmIvls, rIvls, (tmEqs, rEqs, t1Eq)) = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma("Safe(t, y, x)".asFormula)
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res))
       val contextE = "(-1) <= e0, e0 <= 1, (-1) <= e1, e1 <= 1".split(',').toIndexedSeq.map(_.asFormula)
       res.subgoals.length shouldBe 2
@@ -376,6 +377,36 @@ class TaylorModelArithTests extends TacticTestBase {
       List("\\exists err_ (r0=0.0003980*e1+0.1349*e0+err_&(-0.014340)<=err_&err_<=0.015961)".asFormula,
         "\\exists err_ (r1=0.03958*e1+-(0.01039*e0)+-(0.0001512*e0*e1)+-(0.0004374*e0^2)+err_&(-0.011051)<=err_&err_<=0.011565)".asFormula)
     res.subgoals(0).succ shouldBe prv.subgoals(0).succ
+  }
+
+  "timeStepAndPrecondition" should "van der Pol" in withMathematica { qeTool =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val context = vdpContext
+      val vdp = vdpLemmas(1)
+      val x = vdpX
+      val y = vdpY
+      val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val prv = proveBy(Sequent(context, IndexedSeq(Box(ODESystem(vdpProgram, True), "y < 3 & x < 3 & t >= 0".asFormula))), skip)
+      val (xs, rs, t1, prv1) = vdp.timeStepAndPrecondition(Seq(x, y), Seq(r0, r1), t, 0.01, prv)
+
+      prv1.subgoals.length shouldBe 1
+      val context1 = prv1.subgoals(0).ante
+      xs.forall(_.context == context1) shouldBe true
+      rs.forall(_.context == context1) shouldBe true
+      xs.map(_.prettyPrv.conclusion.succ(0)) shouldBe List(
+        "\\exists err_ (x=1.424+r0+err_&0<=err_&err_<=0)",
+        "\\exists err_ (y=2.362+r1+err_&0<=err_&err_<=0)").map(_.asFormula)
+      rs.map(_.prettyPrv.conclusion.succ(0)) shouldBe List(
+        "\\exists err_ (r0=0.15*e0+err_&(-0.001020)<=err_&err_<=0.0006286)",
+        "\\exists err_ (r1=0.05*e1+err_&(-0.01371)<=err_&err_<=0.01354)").map(_.asFormula)
+      t1.conclusion.ante shouldBe context1
+      t1.conclusion.succ.loneElement shouldBe "t = 0.01".asFormula
+
+      prv1.subgoals(0).ante shouldBe context1
+      prv1.subgoals(0).succ.loneElement shouldBe "[{x'=y,y'=(1-x^2)*y-x,t'=1}](y < 3&x < 3&t>=0)".asFormula
+    }
   }
 
 }

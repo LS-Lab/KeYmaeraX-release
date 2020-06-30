@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SaturateTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SaturateTactic, TacticInapplicableFailure}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics.{TaylorModel, debugTac}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -781,13 +781,14 @@ object TaylorModelArith {
         * t1_eq: eqContext |- t=t0+h
         *
         */
-      def timeStepLemma(P: Formula) : (ProvableSig, Seq[TM], (Seq[TM], ProvableSig)) = {
+      def timeStepLemma(P: Formula) : (ProvableSig, Seq[TM], Seq[TM], (Seq[TM], Seq[TM], ProvableSig)) = {
         val timeStepLemma1 = timestepLemma(instantiation)
         val taylorModelsFml1 = SubstitutionHelper.replaceFree(taylorModelsFml)(localTime, Number(h))
         val taylorModelsEq = FormulaTools.conjuncts(taylorModelsFml1).map (refineTaylorModelFormula(_, IndexedSeq()))
         val hideOldInitialState =
           context.zipWithIndex.flatMap{ case(fml, i) => if(vars.exists(subtermOf(_, fml))) Some(hideL(-i-1)) else None }.
             reverse.reduceLeftOption[BelleExpr](_ & _).getOrElse(skip)
+        val saveRightTaylorModels = cut(r0.map(_.prv.conclusion.succ(0)).reduceRight(And)) & Idioms.<(skip, hideR(1) & by(r0.map(_.prv).reduceRight(mkAndPrv)))
         val prv = proveBy(Sequent(context, IndexedSeq(Box(ODESystem(ode, True), P))),
           useAt(timeStepLemma1, PosInExpr(1::Nil))(1) &
             andR(1) & Idioms.<(
@@ -797,6 +798,8 @@ object TaylorModelArith {
                 by(nonnegativeTimeStep)
               ),
               cut(t0.conclusion.succ(0)) & Idioms.<(eqL2R(-context.length - 1)(1) & hideL('Llast), hideR(1) & by(t0)) &
+                // "save" information about right Taylor models
+                saveRightTaylorModels &
                 // new initial state
                 hideOldInitialState &
                 allR(1) * vars.length &
@@ -815,6 +818,7 @@ object TaylorModelArith {
                     } & done
                 )
             ),
+            saveRightTaylorModels &
             // property throughout the time interval
             hideOldInitialState &
               allR(1) * vars.length &
@@ -839,14 +843,52 @@ object TaylorModelArith {
         val contextEq = prv.subgoals(1).ante
         val tmIvls = taylorModelsIvl.map{case (tmFml, tmRepFml, _, (elem, poly, l, u, iffPrv)) =>
           TM(elem, poly, l, u, proveBy(Sequent(contextIvl, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & closeId))}
+        val rTmIvls = r0.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, contextIvl, closeId))
         val tmEqs = taylorModelsEq.map{case (tmFml, tmRepFml, _, (elem, poly, l, u, iffPrv)) =>
           TM(elem, poly, l, u, proveBy(Sequent(contextEq, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & closeId))}
+        val rTmEqs = r0.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, contextEq, closeId))
         val t1 = proveBy(Sequent(contextEq, IndexedSeq(t1Eq)), closeId)
-        (prv, tmIvls, (tmEqs, t1))
+        (prv, tmIvls, rTmIvls, (tmEqs, rTmEqs, t1))
       }
 
     }
 
+    /**
+      * @param (x0, r0, t0) like for [[TimeStep]]
+      *        prv: Provable with one subgoal of the form
+      *           x = x0 o r0, t=t0 |- [{x'=ode(x)}]P(x)
+      * @return (x1, r1, t1) suitable input to iterate this function (identity preconditioned)
+      *         t1: proof of "t = t0 + h"
+      *         prv1: Provable with one subgoal of the form
+      *           x = x1 o r1, t = t0 +h |- [{x'=ode(x)}]P(x)
+      * */
+    def timeStepAndPrecondition(x0: Seq[TM], r0: Seq[TM], t0: ProvableSig, h: BigDecimal, prv: ProvableSig)(implicit options: TaylorModelOptions, timeStepOptions: TimeStepOptions) :
+      (Seq[TM], Seq[TM], ProvableSig, ProvableSig) = {
+      require(prv.subgoals.length==1, "timeStepAndPrecondition requires one subgoal")
+      val subgoal = prv.subgoals(0)
+      require(subgoal.succ.length==1, "timeStepAndPrecondition requires one succedent")
+      val timestep = new TimeStep(x0, r0, t0, h)
+      val P = subgoal.succ(0) match {
+        case Box(ODESystem(prog, True), p) if prog == ode => p
+        case _ => throw new IllegalArgumentException("timeStepAndPrecondition must be applied on a suitable unconstrained ODE evolution")
+      }
+      val (prv2, tmIvls, rIvls, (tmEqs, rEqs, tEq)) = timestep.timeStepLemma(P)
+      val prvIvl = prv2.sub(0)
+      val prvEq = prv2.sub(1)
+
+      // prepare next step with preconditioning
+      val (x1, r1, prvEq1) = identityPrecondition(tmEqs, rEqs, prvEq)
+      val tEq1 = proveBy(Sequent(prvEq1.subgoals(0).ante, IndexedSeq(tEq.conclusion.succ(0))), closeId)
+      val prv3 = prv2.apply(prvEq1, 1)
+
+      // solve safety for the last step
+      val tms = tmIvls.map(_.evaluate(rIvls))
+      val prv4 = evalFormula(prvIvl.conclusion.succ(0), prvIvl.subgoals(0).ante, tms.map(t=>(t.elem, t)).toMap) match {
+        case Some(safetyPrv) => prv3.apply(safetyPrv, 0)
+        case None => throw new TacticInapplicableFailure("Could not prove safety for the past time step: " + prvIvl.subgoals(0))
+      }
+      (x1, r1, tEq1, prv4)
+    }
   }
 
   /**
