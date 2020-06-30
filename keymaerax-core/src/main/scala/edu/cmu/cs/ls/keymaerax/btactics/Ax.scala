@@ -5451,6 +5451,10 @@ object Ax extends Logging {
     QE & done
   )
 
+  @Axiom("refineTmExists")
+  lazy val refineTmExists = derivedFormula("refineTmExists", "(\\forall err_ (P(err_) -> Q(err_))) -> ((\\exists x_ P(x_)) -> (\\exists err_ Q(err_)))".asFormula,
+    implyR(1) & implyR(1) & existsL(-2) & existsR("x_".asVariable)(1) & allL("x_".asVariable)(-1) & prop & done)
+
 
   /** Taylor Model [[edu.cmu.cs.ls.keymaerax.btactics.TaylorModelTactics]] */
 
@@ -5482,6 +5486,10 @@ object Ax extends Logging {
 
   @Axiom("refineConjunction")
   lazy val refineConjunction = derivedFormula("refineConjunction","((f_() -> h_()) & (g_() -> i_())) -> ((f_() & g_()) -> (h_() & i_()))".asFormula, prop & done)
+  @Axiom("refineLe1")
+  lazy val refineLe1 = derivedFormula("refineLe1", "g()<=h()->(f()<=g()->f()<=h())".asFormula, QE & done)
+  @Axiom("refineLe2")
+  lazy val refineLe2 = derivedFormula("refineLe2", "h()<=f()->(f()<=g()->h()<=g())".asFormula, QE & done)
   @Axiom("trivialRefineLtGt")
   lazy val trivialRefineLtGt = derivedFormula("trivialRefineLtGt","(w_() - v_() + y_() - x_() = 0) -> (v_() < w_() -> x_() > y_())".asFormula, QE & done)
   @Axiom("trivialRefineGeLe")

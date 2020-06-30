@@ -42,6 +42,15 @@ object TaylorModelArith {
     )
   }
 
+  /** takes a formula encoding a Taylor model and returns (elem, poly, lower, upper) */
+  def destTaylorModelFormula(fml: Formula): (Term, Term, Term, Term) = fml match {
+    case Exists(vars, And(Equal(elem, Plus(poly, ivl)), And(LessEqual(l, ivl1), LessEqual(ivl2, u)))) if
+    vars.length == 1 && vars(0) == ivl && ivl == ivl1 && ivl == ivl2
+    =>
+      (elem, poly, l, u)
+    case _ => throw new IllegalArgumentException("Taylor model formula of unexpected shape: " + fml)
+  }
+
   private def weakenWith(context: IndexedSeq[Formula], prv: ProvableSig) : ProvableSig = {
     assert(prv.conclusion.ante.isEmpty)
     ProvableSig.startProof(Sequent(context, prv.conclusion.succ)).apply(CoHideRight(SuccPos(0)), 0).apply(prv, 0)
@@ -490,16 +499,69 @@ object TaylorModelArith {
     case _ => ???
   }
 
+  val refineTmExists = Ax.refineTmExists.provable
+  val refineConjunction = Ax.refineConjunction.provable
+  val refineLe1 = Ax.refineLe1.provable
+  val refineLe2 = Ax.refineLe2.provable
+
+  def refineTaylorModelFormula(fml: Formula, assms: IndexedSeq[Formula])(implicit options: TaylorModelOptions) = {
+    val case2 = assms.length == 2
+    require(case2 || assms.length == 0, "only implemented for two cases")
+    val (e, p, l, u) = destTaylorModelFormula(fml)
+    val poly = PolynomialArithV2.ofTerm(p)
+    val polyPrettyPrv = poly.prettyRepresentation
+    val bounds = IntervalArithmeticV2.proveBounds(options.precision)(new BigDecimalTool)(assms)(true)(
+      IntervalArithmeticV2.BoundMap(),
+      IntervalArithmeticV2.BoundMap(),
+      Map())(Seq(l, u))
+    val lPrv = bounds._1(l)
+    val l2 = lPrv.conclusion.succ(0).asInstanceOf[LessEqual].left
+    val uPrv = bounds._2(u)
+    val u2 = uPrv.conclusion.succ(0).asInstanceOf[LessEqual].right
+    val tmFml = tmFormula(e, rhsOf(polyPrettyPrv), l2, u2)
+    val imply = Imply(fml, tmFml)
+
+    // @todo: performance critical?
+    val implyPrv = proveBy(if (case2) Imply(assms.reduce(And), imply) else imply,
+      (if (case2)(implyR(1) & andL(-1)) else skip) &
+        useAt(refineTmExists, PosInExpr(1::Nil))(1) &
+        allR(1) &
+        useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
+        useAt(polyPrettyPrv, PosInExpr(0::Nil))(1, 0:: 1 :: 0 :: Nil) & implyR(1) & closeId,
+        useAt(refineConjunction, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
+          useAt(refineLe2, PosInExpr(1 :: Nil))(1) & by(lPrv),
+          useAt(refineLe1, PosInExpr(1 :: Nil))(1) & by(uPrv)
+        )
+      )
+    )
+    val tmRepFml = tmFormula(e, rhsOf(poly.representation), l2, u2)
+    val iffPrv = proveBy(Equiv(tmFml, tmRepFml),
+      useAt(polyPrettyPrv, PosInExpr(1::Nil))(1, 0::0::0::1::0::Nil) &
+        useAt(poly.representation, PosInExpr(0::Nil))(1, 0::0::0::1::0::Nil) &
+        byUS(Ax.equivReflexive)
+    )
+    (tmFml, tmRepFml, implyPrv, (e, poly.resetTerm, l2, u2, iffPrv))
+  }
+
   /** delete formulas that contain ts from context, written "context \ ts" */
   def trimContext(context: Seq[Formula], ts: Seq[Term]) : Seq[Formula] =
     context.filter(fml => !ts.exists(subtermOf(_, fml)))
 
-  /* @todo: naming... */
+  /**
+    * generic lemmas for evolution of ODE [[ode]] with Taylor model approiximations of order [[order]]
+    * */
   class TemplateLemmas(ode: DifferentialProgram, order: Int) extends TaylorModel(ode, order) {
-    /* time step for the left Taylor model of a (linearly) preconditioned flow pipe (x0 o r0) */
-    def timeStepPreconditionedODE(x0: Seq[TM], r0: Seq[TM], t0: ProvableSig, h: BigDecimal)
-                                 (implicit options: TaylorModelOptions, timeStepOptions: TimeStepOptions)
-    = {
+
+    /** Infrastructure for a concrete Taylor model time step:
+      *
+      * Input: (linearly) preconditioned Taylor model (TM_l o RM_r), initial time t0,
+      * x0.provable: context |- x = TM_l(r) (zero interval term)
+      * r0.provable: context |- r = TM_r(e)
+      * t0:          context |- t = t0
+      * (implicitly) context |- e \in [-1, 1] (suitable for IntervalArithmeticV2) // @todo: make these assumptions more explicit
+      *
+      * */
+    class TimeStep(x0: Seq[TM], r0: Seq[TM], t0: ProvableSig, h: BigDecimal)(implicit options: TaylorModelOptions, timeStepOptions: TimeStepOptions) {
       val qeTool = new BigDecimalTool
       // x0 is the initial state of the ODE
       require(x0.map(_.elem) == state, "require x0 to be the initial state of the ODE")
@@ -516,8 +578,9 @@ object TaylorModelArith {
       val rvars = r0.map(_.elem).toIndexedSeq
       val rIntervals = r0.map(_.interval).toIndexedSeq
 
-      def mkTerm(coeff: (BigDecimal, BigDecimal)) : Term = Divide(Number(coeff._1), Number(coeff._2))
-      val instantiation = instantiateLemma(options.precision,
+      def mkTerm(coeff: (BigDecimal, BigDecimal)): Term = Divide(Number(coeff._1), Number(coeff._2))
+
+      val instantiation: USubstOne = instantiateLemma(options.precision,
         rhsOf(t0),
         Number(h),
         (i, j) => mkTerm(x0(i).poly.coefficient(ofSparse((rvars(j), 1)))),
@@ -525,43 +588,147 @@ object TaylorModelArith {
         i => rIntervals(i)._1,
         i => rIntervals(i)._2,
         timeStepOptions.remainderEstimation
-      ) ++ USubst(rvars.zipWithIndex.map{ case (r, i) => SubstitutionPair(names.right(i), r) })
-      val lemma1 = lemma(instantiation)
+      ) ++ USubst(rvars.zipWithIndex.map { case (r, i) => SubstitutionPair(names.right(i), r) })
 
-      // now discharge assumptions
-      val (initialConditionFmls, concl) = lemma1.conclusion.succ(0) match {
-        case Imply(And(And(initial_condition, _), _), concl) =>
-          (FormulaTools.conjuncts(initial_condition), concl)
-        case _ => throw new RuntimeException("Taylor model lemma not of expected shape")
-      }
-      val rightTmDomain = rIntervals.map(rIvl => rIvl._3).reduceRight(mkAndPrv)
-      val initialStateEqs = (x0, initialConditionFmls.tail).zipped.map{ case (x, Equal(y, t)) if x.elem == y =>
+      // the suffix 1 somehow stands for instantiation
+      val initialCondition1 = instantiation(initial_condition)
+      val initialConditionFmls1 = FormulaTools.conjuncts(initialCondition1)
+      val boxTMEnclosure1 = instantiation(boxTMEnclosure)
+      val numbericCondition1 = instantiation(numbericCondition)
+
+      val initialStateEqs = (x0, initialConditionFmls1.tail).zipped.map { case (x, Equal(y, t)) if x.elem == y =>
         val eq1 = x.dropEmptyInterval.getOrElse(throw new RuntimeException("intervals have been checked for emptiness"))
         val eq2 = weakenWith(x.context, x.poly.resetTerm.equate(ofTerm(t)).getOrElse(throw new RuntimeException("this equality should hold by construction")))
         equalTrans(eq1, eq2)
-        case e => throw new RuntimeException("Taylor model lemma (initial condition) not of expected shape: " + e)
+      case e => throw new RuntimeException("Taylor model lemma (initial condition) not of expected shape: " + e)
       }
-      val initialCondition = (Seq(t0)++initialStateEqs).reduceRight(mkAndPrv)
-      proveBy(Sequent(context, IndexedSeq(concl)),
-        useAt(lemma1, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
-          andR(1) & Idioms.<(
-            by(initialCondition),
-            by(rightTmDomain)
-          ),
-          andR(1) & Idioms.<(
-            debugTac("Initial Numberic condition") &
-              SaturateTactic(andL('L)) &
-              IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
-              done,
-            SaturateTactic(allR(1)) &
-              SaturateTactic(implyR(1)) &
-              SaturateTactic(andL('L)) &
-              debugTac("Numberic condition") &
-              IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
-              done
+      val initialConditionPrv = (Seq(t0) ++ initialStateEqs).reduceRight(mkAndPrv)
+      val rightTmDomainPrv = rIntervals.map(rIvl => rIvl._3).reduceRight(mkAndPrv)
+      val numbericConditionPrv = proveBy(Sequent(context, IndexedSeq(numbericCondition1)),
+        andR(1) & Idioms.<(
+          debugTac("Initial Numberic condition") &
+            SaturateTactic(andL('L)) &
+            IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
+            done,
+          SaturateTactic(allR(1)) &
+            SaturateTactic(implyR(1)) &
+            SaturateTactic(andL('L)) &
+            debugTac("Numberic condition") &
+            IntervalArithmeticV2.intervalArithmeticBool(options.precision, qeTool)(1) &
+            done
+        ))
+      val numericAssumptionPrv = mkAndPrv(mkAndPrv(initialConditionPrv, rightTmDomainPrv), numbericConditionPrv)
+
+      /*** computes a concrete Taylor Model in the variables r of the right Taylor model
+        * [{x'=ode(x)&t0<=t&t<=t0+h}]x=TM(r)
+        */
+      def timeStepLemma : ProvableSig = proveBy(Sequent(context, IndexedSeq(boxTMEnclosure1)),
+        useAt(lemma(instantiation), PosInExpr(1 :: Nil))(1) & by(numericAssumptionPrv)
+      )
+
+      require(0 <= h, "nonnegative time step")
+      val nonnegativeTimeStep = {
+        val fml = LessEqual(Number(0), Number(h))
+        weakenWith(context, proveBy(fml,
+          useAt(ProvableSig.proveArithmetic(BigDecimalQETool, fml), PosInExpr(0::Nil))(1) & closeT))
+      }
+
+      val (timeFml, taylorModelsFml) = boxTMEnclosure1 match {
+        case Box(program, Exists(s, And(timeFml, taylorModelsFml))) if s.length == 1 => (timeFml, taylorModelsFml)
+        case _ => throw new RuntimeException("timeStepLemma of unexpected shape")
+      }
+      val (timeEq, localTime, timebounds) = timeFml match {
+        case And(telt@Equal(a, Plus(b, lt)), And(l@LessEqual(c, d), u@LessEqual(e, Number(f))))
+          if a == time && b == rhsOf(t0) && c == b && d == lt && e == lt && f.compareTo(h) == 0 =>
+          (telt, lt, IndexedSeq(l, u))
+      }
+
+      val t1Prv = ofTerm(Plus(rhsOf(t0), Number(h))).prettyRepresentation
+      val t1 = rhsOf(t1Prv)
+      val t1Eq = Equal(time, t1)
+
+      val taylorModelsIvl = FormulaTools.conjuncts(taylorModelsFml).map(refineTaylorModelFormula(_, timebounds))
+
+      /**
+        * Computes concrete Taylor models to perform a time step on an (unbounded time) ode evolution:
+        * @return (provable, TM_ivl, (TM_h, t1_eq))
+        * where provable:
+        *
+        *             ivlContext          |-                                          eqContext      |-
+        *                 "                                                              "
+        * Γ, s ∈ [0, h], x = TM_ivl(s, r) |- P()              ;;              Γ, t=t0+h, x = TM_h(r) |- [{x'=ode(x)}]P
+        * --------------------------------------------------------------------------------------------------------------
+        *                                   Γ, t=t0, x=TM0(r) |- [{x'=ode(x)}]P
+        *
+        * TM_ivl.context = ivlContext
+        * TM_h.context = eqContext
+        * t1_eq: eqContext |- t=t0+h
+        *
+        */
+      def timeStepLemma(P: Formula) : (ProvableSig, Seq[TM], (Seq[TM], ProvableSig)) = {
+        val timeStepLemma1 = timestepLemma(instantiation)
+        val taylorModelsFml1 = SubstitutionHelper.replaceFree(taylorModelsFml)(localTime, Number(h))
+        val taylorModelsEq = FormulaTools.conjuncts(taylorModelsFml1).map (refineTaylorModelFormula(_, IndexedSeq()))
+        val hideOldInitialState =
+          context.zipWithIndex.flatMap{ case(fml, i) => if(vars.exists(subtermOf(_, fml))) Some(hideL(-i-1)) else None }.
+            reverse.reduceLeftOption[BelleExpr](_ & _).getOrElse(skip)
+        val prv = proveBy(Sequent(context, IndexedSeq(Box(ODESystem(ode, True), P))),
+          useAt(timeStepLemma1, PosInExpr(1::Nil))(1) &
+            andR(1) & Idioms.<(
+            andR(1) & Idioms.<(
+              andR(1) & Idioms.<(
+                by(numericAssumptionPrv),
+                by(nonnegativeTimeStep)
+              ),
+              cut(t0.conclusion.succ(0)) & Idioms.<(eqL2R(-context.length - 1)(1) & hideL('Llast), hideR(1) & by(t0)) &
+                // new initial state
+                hideOldInitialState &
+                allR(1) * vars.length &
+                implyR(1) &
+                andL('Llast) &
+                cutL(taylorModelsIvl.map(_._1).reduceRight(And))('Llast) &
+                Idioms.<(
+                  SaturateTactic(andL('L)) & skip,
+                  cohideOnlyR(2) &
+                    taylorModelsIvl.init.foldRight[BelleExpr](
+                      useAt(taylorModelsIvl.last._3, PosInExpr(1::Nil))(1) & closeId){ case ((_, _, implyPrv, _), tac) =>
+                      useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
+                        useAt(implyPrv, PosInExpr(1::Nil))(1) & closeId,
+                        tac
+                      )
+                    } & done
+                )
+            ),
+            // property throughout the time interval
+            hideOldInitialState &
+              allR(1) * vars.length &
+              implyR(1) &
+              cutL((t1Eq+:taylorModelsEq.map(_._1)).reduceRight(And))('Llast) & Idioms.<(
+                SaturateTactic(andL('L)) & skip,
+                cohideR(2) &
+                  useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
+                    implyR(1) & useAt(t1Prv, PosInExpr(1::Nil))(1, 1::Nil) & closeId,
+                    taylorModelsEq.init.foldRight[BelleExpr](
+                      by(taylorModelsEq.last._3)){ case ((_, _, implyPrv, _), tac) =>
+                      useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
+                        by(implyPrv),
+                        tac
+                      )
+                    }
+                  )
+              )
           )
         )
-      )
+        val contextIvl = prv.subgoals(0).ante
+        val contextEq = prv.subgoals(1).ante
+        val tmIvls = taylorModelsIvl.map{case (tmFml, tmRepFml, _, (elem, poly, l, u, iffPrv)) =>
+          TM(elem, poly, l, u, proveBy(Sequent(contextIvl, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & closeId))}
+        val tmEqs = taylorModelsEq.map{case (tmFml, tmRepFml, _, (elem, poly, l, u, iffPrv)) =>
+          TM(elem, poly, l, u, proveBy(Sequent(contextEq, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & closeId))}
+        val t1 = proveBy(Sequent(contextEq, IndexedSeq(t1Eq)), closeId)
+        (prv, tmIvls, (tmEqs, t1))
+      }
+
     }
 
   }

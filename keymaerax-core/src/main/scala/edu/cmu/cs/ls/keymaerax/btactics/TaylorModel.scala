@@ -359,7 +359,7 @@ object TaylorModelTactics extends Logging {
     private val ringsODE = ringsLib.ODE(localTime, state, names.right_vars(dim),
       DifferentialHelper.atomicOdes(ode).flatMap(aode => if (state.contains (aode.xp.x)) aode.e::Nil else Nil))
 
-    private val initial_condition =
+    val initial_condition =
       And(Equal(time, time0),
         (state, templateTmCompose(names, dim)).zipped.map { case (v, tm) => Equal(v, tm) }.reduceRight(And))
 
@@ -437,7 +437,7 @@ object TaylorModelTactics extends Logging {
     private val hornerFprPp = (fpr, pp).zipped.map{case (a, b) => ringsLib.toHorner(a - b, horner_orderR)}
     private [btactics] val innerNumbericCondition =
       hornerFprPp.zipWithIndex.map { case (diff, i) => And(Less(tdL(i), diff), Less(diff, tdU(i))) }.reduceRight(And)
-    private [btactics] val numbericCondition =
+    val numbericCondition =
       And(
         initialNumbericCondition,
         FormulaTools.quantifyForall(localTime :: remainders,
@@ -484,7 +484,7 @@ object TaylorModelTactics extends Logging {
     private def boxODETimeStep(post: Formula) =
       Box(ODESystem(ode, And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep)))), post)
 
-    private val boxTMEnclosure = boxODETimeStep(
+    val boxTMEnclosure = boxODETimeStep(
       (Exists(Seq(localTime),
         (And(Equal(time, Plus(time0, localTime)),
           And(LessEqual(Number(0), localTime), LessEqual(localTime, timestep)))
@@ -530,9 +530,18 @@ object TaylorModelTactics extends Logging {
     private val domain_rewrite = proveBy(Equiv(And(LessEqual(time0, time), LessEqual(time, Plus(time0, timestep))),
       And(LessEqual(Number(0), Minus(time, time0)), LessEqual(Minus(time, time0), timestep))), QE & done)
 
+    val numericAssumption =
+      And(And(
+      // t=0, x = A*r + A_c
+      initial_condition,
+      // r : [rL, rU]
+      right_tm_domain),
+      // condition for valid TM conclusion
+      numbericCondition)
+
     val lemma: ProvableSig = proveBy(
       Imply(
-        And(And(initial_condition, right_tm_domain), numbericCondition),
+        numericAssumption,
         boxTMEnclosure),
       debugTac("start") &
         implyR(1) &
@@ -596,13 +605,9 @@ object TaylorModelTactics extends Logging {
     val timestepLemma = {
       proveBy(
         Imply(
-          And(And(And(And(And(
-            // t=0, x = A*r + A_c
-            initial_condition,
-            // r : [rL, rU]
-            right_tm_domain),
-            // condition for valid TM conclusion
-            numbericCondition),
+          And(And(And(
+            numericAssumption
+            ,
             // nonnegative time step
             LessEqual(Number(0), timestep)),
             // \forall t x ( x = TM(x,t) -> P(t, x))

@@ -213,17 +213,23 @@ class TaylorModelArithTests extends TacticTestBase {
       Seq("x()".asTerm, "y()".asTerm)).loneElement shouldBe "x<=y".asFormula
   }
 
-  "timeStep" should "van der Pol" in withMathematica { qeTool =>
+  // TODO: generate a context like this from "x : [1.25, 1.55]" and "y : [2.35, 2.45]"?!
+  val vdpContext = "t = 0, x = 1.4 + 0.15 * e0, y = 2.4 + 0.05 * e1, -1 <= e0, e0 <= 1, -1 <= e1, e1 <= 1".split(',').map(_.asFormula).toIndexedSeq
+  val vdpProgram = "{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram
+  lazy val vdpX = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), vdpContext, QE)
+  lazy val vdpY = TaylorModelArith.TM("y".asTerm, PolynomialArithV2.ofTerm("2.4 + 0.05 * e1".asTerm), Number(0), Number(0), vdpContext, QE)
+  def vdpLemmas(order: Int) = new TaylorModelArith.TemplateLemmas(vdpProgram, order)
+
+  "timeStepLemma" should "van der Pol" in withMathematica { qeTool =>
     withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
-      // TODO: generate a context like this from "x : [1.25, 1.55]" and "y : [2.35, 2.45]"?!
-      val context = "t = 0, x = 1.4 + 0.15 * e0, y = 2.4 + 0.05 * e1, -1 <= e0, e0 <= 1, -1 <= e1, e1 <= 1".split(',').map(_.asFormula).toIndexedSeq
-      val vdp = new TaylorModelArith.TemplateLemmas("{x' = y, y' = (1 - x^2)*y - x,t'=1}".asDifferentialProgram, 3)
-      val x = TaylorModelArith.TM("x".asTerm, PolynomialArithV2.ofTerm("1.4 + 0.15 * e0".asTerm), Number(0), Number(0), context, QE)
-      val y = TaylorModelArith.TM("y".asTerm, PolynomialArithV2.ofTerm("2.4 + 0.05 * e1".asTerm), Number(0), Number(0), context, QE)
+      val context = vdpContext
+      val vdp = vdpLemmas(3)
+      val x = vdpX
+      val y = vdpY
       val r0 = TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
       val r1 = TaylorModelArith.TM("e1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
       val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
-      val res = vdp.timeStepPreconditionedODE(Seq(x, y), Seq(r0, r1), t, 0.01)
+      val res = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res.conclusion.succ.loneElement))
       res.conclusion.succ.loneElement shouldBe
         """[{x'=y, y'=(1 - x^2) * y - x, t'=1 & 0 <= t & t <= 0 + 0.01}]
@@ -257,4 +263,39 @@ class TaylorModelArithTests extends TacticTestBase {
           |    )""".stripMargin.asFormula
     }
   }
+
+  "timeStepLemma(P)" should "van der Pol" in withMathematica { qeTool =>
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val context = vdpContext
+      val vdp = vdpLemmas(1)
+      val x = vdpX
+      val y = vdpY
+      val r0 = TaylorModelArith.TM("e0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
+      val r1 = TaylorModelArith.TM("e1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val (res, tmIvls, (tmEqs, t1Eq)) = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma("Safe(t, y, x)".asFormula)
+      // println(new KeYmaeraXPrettierPrinter(100).stringify(res))
+      val contextE = "(-1) <= e0, e0 <= 1, (-1) <= e1, e1 <= 1".split(',').toIndexedSeq.map(_.asFormula)
+      res.subgoals.length shouldBe 2
+      res.conclusion.ante shouldBe context
+      res.conclusion.succ.loneElement shouldBe "[{x'=y, y'=(1 - x^2) * y - x, t'=1}]Safe(t,y,x)".asFormula
+
+      res.subgoals(0).ante shouldBe (contextE ++
+        IndexedSeq(
+          "0 <= s",
+          "s <= 0.01",
+          "\\exists err_(x = 1.4 + 2.4 * s + 0.15 * e0 + err_ & (-1020) * 10 ^ (-6) <= err_ & err_ <= 6286 * 10 ^ (-7))",
+          "\\exists err_ (y = 2.4 + -(3.704 * s) + 0.05 * e1 + err_ & (-1467) * 10 ^ (-5) <= err_ & err_ <= 1258 * 10 ^ (-5))").map(_.asFormula))
+      res.subgoals(0).succ.loneElement shouldBe "Safe(0 + s,y,x)".asFormula
+
+      res.subgoals(1).ante shouldBe (contextE ++
+        IndexedSeq("t = 0.01",
+          "\\exists err_ (x = 1.424 + 0.15 * e0 + err_ & (-1020) * 10 ^ (-6) <= err_ & err_ <= 6286 * 10 ^ (-7))",
+          "\\exists err_ (y = 2.36296 + 0.05 * e1 + err_ & (-1467) * 10 ^ (-5) <= err_ & err_ <= 1258 * 10 ^ (-5))").map(_.asFormula)
+        )
+      res.subgoals(1).succ.loneElement shouldBe
+        "[{x'=y, y'=(1 - x^2) * y - x, t'=1}]Safe(t,y,x)".asFormula
+    }
+  }
+
 }
