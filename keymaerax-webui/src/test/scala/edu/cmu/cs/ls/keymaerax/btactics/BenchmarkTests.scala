@@ -195,7 +195,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     }
   }
 
-  it should "prove benchmarks with proof hints and Mathematica" ignore withMathematica { tool => setTimeouts(tool) {
+  it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool => setTimeouts(tool) {
     val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.lastOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_withhints.csv")
     writer.write(
