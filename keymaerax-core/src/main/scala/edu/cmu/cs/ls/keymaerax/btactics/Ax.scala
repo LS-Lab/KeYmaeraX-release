@@ -303,7 +303,13 @@ object Ax extends Logging {
         "edu.cmu.cs.ls.keymaerax.btactics.Ax.divideRat",
         "edu.cmu.cs.ls.keymaerax.btactics.Ax.normalizeCoeff0",
         "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerEven",
-        "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerOdd"
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.taylorModelPowerOdd",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormAdd",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormMinus",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormTimes",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.ratFormDivide",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideEven",
+        "edu.cmu.cs.ls.keymaerax.btactics.Ax.powerDivideOdd"
       )
       case _ => Set.empty
     }
