@@ -463,7 +463,7 @@ object ODEInvariance {
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
         useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
-      case _ => (dgDbxAuto(1) | dgBarrier(1)) & done
+      case _ => (diffInd()(1) | dgDbxAuto(1) | dgBarrier(1)) & done
     })
   }
 

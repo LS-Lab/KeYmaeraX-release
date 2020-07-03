@@ -1900,7 +1900,6 @@ private object DifferentialTactics extends Logging {
     val invTactic =
       if(tryHard)
       {
-        diffInd()(pos) | //@todo should not be necessary but much faster on some examples, see ODETests "prove STTT Example 9b subgoal fast"
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
@@ -1908,7 +1907,6 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
-        diffInd()(pos) | //@todo should not be necessary but much faster on some examples, see ODETests "prove STTT Example 9b subgoal fast"
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
         ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE & done,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
