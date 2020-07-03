@@ -9,13 +9,12 @@ import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup, StringToVersion}
+import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.launcher.{LoadingDialogFactory, SystemWebBrowser}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration._
@@ -44,7 +43,7 @@ object NonSSLBoot extends App with Logging {
     "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
 
   //Initialize all tools.
-  HyDRAInitializer(args, HyDRAServerConfig.database)
+  val url = HyDRAInitializer(args, HyDRAServerConfig.database)
 
   //Some boilerplate code that I don't understand.
   implicit val system: ActorSystem = ActorSystem("hydraloader") //Not sure what the significance of this name is?
@@ -75,7 +74,7 @@ object NonSSLBoot extends App with Logging {
           "**********************************************************\n"
       )
       LoadingDialogFactory().close()
-      SystemWebBrowser(s"http://${HyDRAServerConfig.host}:${HyDRAServerConfig.port}/")
+      SystemWebBrowser(s"http://${HyDRAServerConfig.host}:${HyDRAServerConfig.port}/" + url)
     }
   } recover {
     case _ =>
@@ -108,9 +107,9 @@ object SSLBoot extends App with Logging {
   //Initialize all tools.
   HyDRAInitializer(args, HyDRAServerConfig.database)
 
-  assert(Configuration.getOption(Configuration.Keys.JKS).isDefined,
+  assert(Configuration.get[String](Configuration.Keys.JKS).isDefined,
     "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
-  if(HyDRAServerConfig.host != "0.0.0.0")
+  if (HyDRAServerConfig.host != "0.0.0.0")
     logger.warn("WARNING: Expecting host 0.0.0.0 in SSL mode.")
 
   //Some boilerplate code that I don't understand.
@@ -150,14 +149,12 @@ object SSLBoot extends App with Logging {
 object HyDRAInitializer extends Logging {
   private type OptionMap = Map[Symbol, Any]
 
-  def apply(args : Array[String], database: DBAbstraction): Unit = {
+  /** Initializes the server using arguments `args` and `database`. Returns the page to open. */
+  def apply(args: Array[String], database: DBAbstraction): String = {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     KeYmaeraXTool.init(Map.empty)
-
-//    val axioms = Provable.axioms
-//    LoadingDialogFactory().addToStatus(5, Some("Starting with " + axioms.size + " axioms ..."))
 
     DerivationInfoRegistry.init
     //@note setup interpreter
@@ -190,6 +187,38 @@ object HyDRAInitializer extends Logging {
     LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
     KeYmaeraXStartup.initLemmaCache(logger.warn(_, _))
+
+    def proofUrl(userId: String, proofId: Int): String = {
+      database.getUser(userId) match {
+        case Some(u) =>
+          SessionManager.defaultUserTokenKey = Some(SessionManager.add(u))
+          "dashboard.html?#/proofs/" + proofId
+        case None => ""
+      }
+    }
+
+    options.get('open) match {
+      case None => "" //@note start with model list
+      case Some(archive) =>
+        if (Configuration.get[String](Configuration.Keys.USE_DEFAULT_USER).contains("true")) {
+          Configuration.get[String](Configuration.Keys.DEFAULT_USER) match {
+            case None =>
+              logger.warn("Unable to import archive: no default user configured")
+              ""
+            case Some(user) =>
+              LoadingDialogFactory().addToStatus(15, Some("Importing archive..."))
+              val result = DatabasePopulator.importKya(database, user, archive.toString, prove = false, List.empty)
+              result.succeeded.headOption match {
+                case Some((_, id)) =>
+                  database.getProofsForModel(id).headOption match {
+                    case Some(p) => proofUrl(user, p.proofId)
+                    case None => proofUrl(user, database.createProofForModel(id, "", "", "", None))
+                  }
+                case None => ""
+              }
+          }
+        } else ""
+    }
   }
 
   @tailrec
@@ -198,6 +227,7 @@ object HyDRAInitializer extends Logging {
     case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
     case "-ui" :: tail => nextOption(map, tail)
     case "-launch" :: tail => nextOption(map, tail)
+    case "-open" :: value :: tail => nextOption(map ++ Map('open -> value), tail)
     case option :: tail => logger.warn("[Warning] Unknown option " + option + "\n\n" /*+ usage*/); nextOption(map, tail)
   }
 
@@ -226,7 +256,7 @@ object HyDRAInitializer extends Logging {
   }
 
   private def preferredToolFromConfig: String = {
-    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
+    Configuration.get[String](Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
   }
 
   def mathematicaConfig: ToolProvider.Configuration = {
@@ -250,34 +280,34 @@ object HyDRAInitializer extends Logging {
   }
 
   private def getMathematicaLinkName: Option[String] = {
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME)
+    Configuration.get[String](Configuration.Keys.MATHEMATICA_LINK_NAME)
   }
 
   private def getMathematicaLibDir: Option[String] = {
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+    Configuration.get[String](Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
   }
 
   private def getMathematicaTcpip: String = {
-    Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
+    Configuration.get[String](Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
   }
 
   private def getWolframEngineLinkName: Option[String] = {
-    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_LINK_NAME)
+    Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_LINK_NAME)
   }
 
   private def getWolframEngineLibDir: Option[String] = {
-    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)
+    Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR)
   }
 
   private def getWolframEngineTcpip: String = {
-    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("false")
+    Configuration.get[String](Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("false")
   }
 }
 
 /** Config vars needed for server setup. */
 object HyDRAServerConfig {
   // we need an ActorSystem to host our application in
-  var system = ActorSystem("on-spray-can")
+  val system: ActorSystem = ActorSystem("on-spray-can")
   val database: DBAbstraction = DBAbstractionObj.defaultDatabase
 //  var service = system.actorOf(Props[RestApiActor], "hydra")
 
