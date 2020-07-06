@@ -184,10 +184,25 @@ trait DifferentialEquationCalculus {
     * }}}
     * @see [[HilbertCalculus.DG]]
     */
-//  @Tactic(premises = "Γ |- ∃y [x'=f(x),E&Q]P, Δ",
-//    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true, inputs = "E:differentialprogram")
-  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic =
-  anon {(pos:Position) => DifferentialTactics.dG(ghost, r)(pos)}
+  @Tactic("Differential Ghost",
+    premises = "Γ |- ∃y [x'=f(x),E&Q]P, Δ",
+    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true, inputs = "E[y,x,y']:expression;; P[y]:option[formula]")
+  def dG(E: Expression, P: Option[Formula]): DependentPositionTactic = anon {(pos:Position) =>
+    E match {
+      case Equal(l: DifferentialSymbol, r) =>
+        DifferentialTactics.dG(AtomicODE(l, r), P)(pos)
+      case dp: DifferentialProgram =>
+        DifferentialTactics.dG(dp, P)(pos)
+      case _ =>
+        throw new IllegalArgumentException("Expected a differential program y′=f(y), but got " + E.prettyString)
+    }
+  }
+
+  @Tactic("Differential Ghost", conclusion = "Γ |- [{x′=f(x) & Q}]P, Δ",
+    premises = "Γ |- ∃y [{x′=f(x),y′=a(x)*y+b(x) & Q}]P, Δ",
+    inputs = "y[y]:variable;;a(x):term;;b(x):term;;P[y]:option[formula]")
+  def dGold(y: Variable, t1: Term, t2: Term, p: Option[Formula]): BelleExpr =
+    TactixLibrary.dG(AtomicODE(DifferentialSymbol(y), Plus(Times(t1, y), t2)), p)
 
 
   // more DI/DC/DG variants

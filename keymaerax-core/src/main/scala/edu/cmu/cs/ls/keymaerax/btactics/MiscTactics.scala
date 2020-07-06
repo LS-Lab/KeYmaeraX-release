@@ -52,11 +52,16 @@ object DebuggingTactics {
     }
   }
 
+  @Tactic(("Debug", "debug"), codeName = "debug")
+  def debugX(msg: String): BelleExpr = debug(msg)
+
   /** print is a no-op tactic that prints a message and the current provable, regardless of DEBUG being true or false */
   def print(message: => String): BuiltInTactic = debug(message, doPrint=true)
   /** printIndexed is a no-op tactic that prints a message and the current provable (verbose sequent with formula indices),
     * regardless of DEBUG being true or false */
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
+  @Tactic(("Print", "print"), codeName = "print")
+  def printX(msg: String): BelleExpr = printIndexed(msg)
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") with NoOpTactic {
@@ -185,9 +190,14 @@ object DebuggingTactics {
   }
   /** assertE is a no-op tactic that raises a tactic assertion error if the provable has not the expected expression at the specified position. */
   def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic = assertE(expected, message, new TacticAssertionError(_))
+  @Tactic(("Assert", "assert"), codeName = "assert")
+  def assertX(expected: Expression, msg: String): BelleExpr = DebuggingTactics.assertE(expected, msg)
+
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
+  @Tactic(("Done","done"), codeName = "done")
+  def doneX(msg: Option[String], lemmaName: Option[String]): BelleExpr = done(msg.getOrElse(""), lemmaName)
   def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
       if (msg.nonEmpty && storeLemma.isDefined) msg::storeLemma.get::Nil
       else if (msg.nonEmpty) msg::Nil
@@ -202,6 +212,7 @@ object DebuggingTactics {
   }
 
   /** Placeholder for a tactic string that is not executed. */
+  @Tactic("pending")
   def pending(tactic: String): BelleExpr = new StringInputTactic("pending",
       // escape " but avoid double-escape
       tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\"") :: Nil) {
@@ -494,6 +505,8 @@ object TacticFactory {
       }
     }
 
+    def by(t: ((ProvableSig, Position, Position) => BelleExpr)): DependentTwoPositionTactic = byTactic(t)
+
     /** A position tactic with multiple inputs. */
     def byWithInputs(inputs: Seq[Any], t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -687,6 +700,7 @@ object TacticFactory {
   def anon(t: ((ProvableSig, AntePosition) => ProvableSig)): BuiltInLeftTactic = "ANON" by t
   def anon(t: ((ProvableSig, SuccPosition) => ProvableSig)): BuiltInRightTactic = "ANON" by t
   def anon(t: ((ProvableSig, Position, Position) => ProvableSig)): BuiltInTwoPositionTactic = "ANON" by t
+  def anon(t: ((ProvableSig, Position, Position) => BelleExpr)): DependentTwoPositionTactic = "ANON" byTactic t
   def anon(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anon(t: (Position => BelleExpr)): DependentPositionTactic = "ANON" by t
   def anonLR(t: ((AntePosition, SuccPosition) => BelleExpr)): DependentTwoPositionTactic = "ANON" byLR t

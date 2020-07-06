@@ -1038,6 +1038,8 @@ object IntervalArithmeticV2 {
       intervalArithmeticBool(precision, ToolProvider.qeTool().get, true)(1)
   }
 
+  @Tactic("intervalArithmetic")
+  def intervalArithmetic(trm: Term): BelleExpr = IntervalArithmeticV2.intervalArithmetic
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "intervalCutTerms")
@@ -1060,6 +1062,7 @@ object IntervalArithmeticV2 {
 
   @Tactic("Interval Arithmetic Cut",
     codeName = "intervalCutTerms" /* @todo old codeName */,
+    // @TODO: closed premise
     premises = "Γ, lowerBound(trm) <= trm, trm <= upperBound(trm) |- Δ",
     conclusion = "Γ |- Δ",
     displayLevel = "menu"

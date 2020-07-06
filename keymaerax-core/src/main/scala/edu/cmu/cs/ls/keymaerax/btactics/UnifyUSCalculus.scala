@@ -21,6 +21,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.core
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable._
@@ -256,6 +257,18 @@ trait UnifyUSCalculus {
   private[btactics]
   def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
 
+  @Tactic(("US", "byUS"), codeName = "byUS", conclusion = "|- S(P)", premises = "|- P")
+  def byUSX(P: String, S: Option[Formula]): BelleExpr =
+    S match {
+      case None => TactixLibrary.byUS(AxiomInfo(P), us=>us)
+      case Some(substFml: Formula) =>
+        val subst = RenUSubst(FormulaTools.conjuncts(substFml).map({
+          case Equal(l, r) => (l, r)
+          case Equiv(l, r) => (l, r)
+          case s => throw new IllegalArgumentException("Expected substitution of the shape t=s or p<->q, but got " + s.prettyString)
+        }))
+        TactixLibrary.byUS(AxiomInfo(P), (_: UnificationMatch.Subst) => subst)
+    }
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
@@ -267,6 +280,20 @@ trait UnifyUSCalculus {
 
     /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: ProvableInfo): DependentPositionTactic = useAtImpl(axiom)
+  //@note serializes as useAt({`axiomName`},{`k`})
+  @Tactic("useAt")
+  def useAtX(axiom: String, key: Option[String]): BelleExpr = anon {(pos: Position) =>
+    key match {
+      case None => TactixLibrary.useAt(AxiomInfo(axiom)) //@note serializes as codeName
+      case Some(k) =>
+        val key = PosInExpr(k.split("\\.").map(Integer.parseInt).toList)
+        val defaultKey = AxiomInfo(axiom).key
+        if (key != defaultKey) {
+            val ax = ProvableInfo(axiom)
+            TactixLibrary.useAt(ax.provable, key)(pos)
+        } else TactixLibrary.useAt(AxiomInfo(axiom)) //@note serializes as codeName
+    }
+  }
 
   /**
     * useAt(axiom)(pos) uses the given axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence/implicational rewriting).
@@ -467,6 +494,9 @@ trait UnifyUSCalculus {
   /** @see [[US()]] */
   def uniformSubstitute(subst: USubst): InputTactic = "US" byWithInputs(subst.subsDefsInput.
     map(p => p.what.prettyString + "~>" + p.repl.prettyString), US(subst))
+
+  @Tactic(("US", "US"), conclusion = "|- S(P)", premises = "|- P")
+  def USX(S: SubstitutionPair): BelleExpr = TactixLibrary.uniformSubstitute(USubst(Seq(S)))
 
 
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =

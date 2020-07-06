@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core.{And, Compose, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.List
@@ -614,6 +615,28 @@ object ComponentSystem {
        |""".stripMargin
 
   /** Proves system safety from isolated component and compatibility proofs. */
+  @Tactic("proveComponentSystem", codeName = "proveComponentSystem",
+    inputs = """System Name:string;;
+      C1 Base: Om & A1 -> I1:string;;
+      C1 Use:  Om & I1 -> G1 & P1:string;;
+      C1 Step: Om & I1 -> [mem1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1:string;;
+      C2 Base: Om & A2 -> I2:string;;
+      C2 Use:  Om & I2 -> G2 & P2:string;;
+      C2 Step: Om & I2 -> [mem2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2:string;;
+      Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin)):string;;
+      Com Safety:   [xin:=xo;]Z:string;;Com Liveness: <xin:=xo;>true:string""",
+    conclusion = "Γ|- t=t0 & Om & A1 & A2 -> [{ {mem1;mem2};{ctrl1;ctrl2};to:=t;{t'=1,plant1,plant2};{in1open;in2open};{cp1;cp2;con};}*]((G1&P1) & (G2&P2)), Δ",
+    premises =
+      """|- C1 Base: Om & A1 -> I1;;
+         |- Om & I1 -> G1 & P1;;
+         |- C1 Step: Om & I1 -> [mem1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1;;
+         |- C2 Base: Om & A2 -> I2;;
+         |- C2 Use:  Om & I2 -> G2 & P2;;
+         |- C2 Step: Om & I2 -> [mem2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2;;
+         |- Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin));;
+         |- Com Safety:   [xin:=xo;]Z;;
+         |- Com Liveness: <xin:=xo;>true"""
+  )
   def proveSystem(systemName: String,
                   c1baseLemma: String, c1useLemma: String, c1stepLemma: String,
                   c2baseLemma: String, c2useLemma: String, c2stepLemma: String,

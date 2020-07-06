@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -23,6 +24,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.{List, _}
+import scala.util.Try
 
 /**
   * Tactix: Main tactic library with simple interface.
@@ -110,7 +112,8 @@ object TactixLibrary extends HilbertCalculus
     |! assignb(pos))
 
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
-  lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
+  @Tactic("normalize", revealInternalSteps = true)
+  lazy val normalize: BelleExpr =  normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
   def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by allTacticChase(
     new DefaultTacticIndex {
@@ -217,6 +220,12 @@ object TactixLibrary extends HilbertCalculus
     })))
   )
 
+  @Tactic("chaseAt", codeName = "chaseAt")
+  def chaseAtX: DependentPositionTactic = chaseAt()(
+    TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
+    TactixLibrary.existsL, TacticIndex.existsRStutter,
+    ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
+  )
   /** Chases program operators according to [[AxIndex]] or tactics according to `tacticIndex` (restricted to tactics
     * in `restrictTo`) at a position. */
   def chaseAt(tacticIndex: TacticIndex = new DefaultTacticIndex)
@@ -334,7 +343,7 @@ object TactixLibrary extends HilbertCalculus
    * master: master tactic that tries hard to prove whatever it could.
    * @see [[auto]] */
   @Tactic(codeName = "master")
-  def masterTactic(generator: Generator[GenProduct]): BelleExpr = anon { master(generator) }
+  def masterX(generator: Generator[GenProduct]): BelleExpr = anon { master(generator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
@@ -343,8 +352,9 @@ object TactixLibrary extends HilbertCalculus
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
-  def explore(gen: ConfigurableGenerator[GenProduct]): BelleExpr = "explore" by master("ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
-    case Some(Box(prg@Loop(_), _)) if gen.products.contains(prg) =>
+  @Tactic("explore", revealInternalSteps = true)
+  def explore(gen: Generator[GenProduct]): BelleExpr = "explore" by master("ANON" by ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
+    case (cgen: ConfigurableGenerator[GenProduct], Some(Box(prg@Loop(_), _))) if cgen.products.contains(prg) =>
       logger.info("Explore uses loop with annotated invariant")
       //@note bypass all other invariant generators except the annotated invariants, pass on to loop
       ChooseSome(
@@ -357,6 +367,7 @@ object TactixLibrary extends HilbertCalculus
         },
         (inv: Formula) => loop(inv)(pos) & onAll(explore(gen))
       )
+    case (_, Some(Box(prg@Loop(_), _))) => throw new IllegalArgumentException("Explore requires a configurable generator.")
     case _ => throw new InputFormatFailure("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
   }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
 
@@ -425,6 +436,9 @@ object TactixLibrary extends HilbertCalculus
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
+  @Tactic("loopAuto", codeName = "loopAuto", conclusion = "Γ |- [a*]P, Δ")
+  def loopautoX(gen: Generator[GenProduct]): DependentPositionTactic = loopauto(gen)
+
   /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * @see [[HybridProgramCalculus.loop(Formula)]] */
   def loopauto(gen: Generator[GenProduct] = loopInvGenerator): DependentPositionTactic =
@@ -520,6 +534,7 @@ object TactixLibrary extends HilbertCalculus
     * @see [[dW]]
     * @see [[dG]]
     */
+  @Tactic("Auto", revealInternalSteps = true)
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     // use and check invSupplier (user-defined annotations from input file)
     val invs = invSupplier(seq, pos).toList
@@ -557,6 +572,7 @@ object TactixLibrary extends HilbertCalculus
     * but is currently unprovable.
     * @see [[odeInvariant]]
     */
+  @Tactic("odeInvC", codeName = "odeInvC")
   lazy val odeInvariantComplete: DependentPositionTactic = DifferentialTactics.odeInvariantComplete
 
   // more
@@ -652,6 +668,17 @@ object TactixLibrary extends HilbertCalculus
       case _ => tactic
     }
   }
+
+  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
+  def QEX(tool: Option[String], timeout: Option[Number]): BelleExpr = {
+    (tool, timeout) match {
+      case (Some(toolName), Some(time)) => QE(Nil, Some(toolName), Some(time.value.toInt))
+      case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
+      case (Some(toolName), _) =>  TactixLibrary.QE(Nil, Some(toolName))
+      case (_, Some(time)) => TactixLibrary.QE(Nil, None, Some(time.value.toInt))
+      case (_, _) => QE
+    }
+  }
   def QE: BelleExpr = QE()
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
@@ -721,6 +748,15 @@ object TactixLibrary extends HilbertCalculus
   //@todo missing AxiomInfo for tactic extraction
   def eqL2R(eqPos: Int): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
   def eqL2R(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  /** eXternal wrapper for eqL2R */
+  @Tactic("Apply equality", codeName = "L2R", conclusion = "Γ, x=y, P(x) |- Q(x), Δ",
+    premises = "Γ, x=y, P(y) |- Q(y), Δ")
+  val eqL2RX: DependentTwoPositionTactic = anon ({(pr:ProvableSig, ante: Position, pos: Position) => {
+    if (!pos.isAnte)
+      throw new IllegalArgumentException("First positional argument to eqL2R must be antecedent")
+    eqL2R(ante.checkAnte)(pos)
+  }})
+
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side at a specific position ([[EqualityTactics.eqR2L]]). */
   def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
@@ -775,12 +811,14 @@ object TactixLibrary extends HilbertCalculus
     *           -------------------------------transform("c".asFormula)(1, 1::Nil)
     *           a<c |- a<c+0
     * }}}
-    * @param to The transformed formula or term that is desired as the result of this transformation.
+    * @param Q The transformed formula or term that is desired as the result of this transformation.
     */
-  def transform(to: Expression): DependentPositionTactic = ToolTactics.transform(to)
+  @Tactic("trafo", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ")
+  def transform(Q: Expression): DependentPositionTactic = ToolTactics.transform(Q)
 
   /** Determines difference between expression at position and expression `to` and turns diff.
     * into transformations and abbreviations. */
+  @Tactic("edit")
   def edit(to: Expression): DependentPositionTactic = ToolTactics.edit(to)
 
   //
@@ -937,6 +975,9 @@ object TactixLibrary extends HilbertCalculus
    */
   def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
+  @Tactic("useLemma", codeName = "useLemma")
+  def useLemmaX (lemma: String, tactic: Option[String]): BelleExpr = TactixLibrary.useLemma(lemma, tactic.map(BelleParser(_)))
+
   /** useLemma(lemmaName, tactic) applies the lemma identified by `lemmaName`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
   def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr = "useLemma" byWithInputs(
@@ -965,14 +1006,15 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** Applies the lemma by matching `key` in the lemma with the tactic position. */
-  def useLemmaAt(lemmaName: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
-    if (key.isDefined) lemmaName::key.get.prettyString.substring(1)::Nil else lemmaName::Nil, //@note remove leading . from PosInExpr
+  @Tactic("useLemmaAt")
+  def useLemmaAt(lemma: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
+    if (key.isDefined) lemma::key.get.prettyString.substring(1)::Nil else lemma::Nil, //@note remove leading . from PosInExpr
     (pos: Position, _: Sequent) => {
-      val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
+      val userLemmaName = "user" + File.separator + lemma //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
-        val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
-        useAt(lemma, key.getOrElse(if (pos.isAnte) PosInExpr(0::Nil) else PosInExpr(1::Nil)))(pos)
-      } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
+        val lem = LemmaDBFactory.lemmaDB.get(userLemmaName).get
+        useAt(lem, key.getOrElse(if (pos.isAnte) PosInExpr(0::Nil) else PosInExpr(1::Nil)))(pos)
+      } else throw new BelleAbort("Missing lemma " + lemma, "Please prove lemma " + lemma + " first")
     })
 
   /** Finds a counter example, indicating that the specified formula is not valid. */

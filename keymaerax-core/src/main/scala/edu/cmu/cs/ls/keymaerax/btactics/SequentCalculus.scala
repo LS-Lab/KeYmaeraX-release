@@ -151,6 +151,9 @@ trait SequentCalculus {
     */
   def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = PropositionalTactics.implyRi(keep)
   val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
+  /** eXternal wrapper for implyRi */
+  @Tactic("implyRi", codeName = "implyRi")
+  val implyRiX: BuiltInTwoPositionTactic = PropositionalTactics.implyRi(keep = false)
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   @Tactic(("↔L", "<->L"), premises = "P∧Q, Γ |- Δ ;; ¬P∧¬Q, Γ |- Δ",
     conclusion = "P↔Q, Γ |- Δ")

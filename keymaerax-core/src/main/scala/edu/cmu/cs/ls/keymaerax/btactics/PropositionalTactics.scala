@@ -196,42 +196,43 @@ private object PropositionalTactics extends Logging {
     *   \forall x. p(x) <-> q(z), p(x) |-
     * }}}
     */
-    val equivRewriting: DependentTwoPositionTactic = "equivRewriting" byTactic ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
-      assert(p.subgoals.length == 1, "Assuming one subgoal.")
-      val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
-      p.subgoals(0)(equivPos) match {
-        case Equiv(_,_) => builtInEquivRewriting(equivPos, targetPos)
-        case fa: Forall =>
-          /*
-           * Game plan:
-           *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
-           *   2. Cut in a new quantified equivalence
-           *   3. Perform instantiations on this new quantified equivalence.
-           *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
-           *   5. Hide the instantiated equivalence OR the original assumption.
-           */
-          //1
-          val instantiation = computeInstantiation(fa, target)
+  @Tactic("equivRewriting", conclusion = "Γ, ∀X p(X) <-> q(X) |- p(Z), Δ", premises = "Γ, ∀X p(X) <-> q(X) |- q(Z), Δ")
+  val equivRewriting: DependentTwoPositionTactic =  anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
+    assert(p.subgoals.length == 1, "Assuming one subgoal.")
+    val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
+    p.subgoals(0)(equivPos) match {
+      case Equiv(_,_) => builtInEquivRewriting(equivPos, targetPos)
+      case fa: Forall =>
+        /*
+         * Game plan:
+         *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
+         *   2. Cut in a new quantified equivalence
+         *   3. Perform instantiations on this new quantified equivalence.
+         *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
+         *   5. Hide the instantiated equivalence OR the original assumption.
+         */
+        //1
+        val instantiation = computeInstantiation(fa, target)
 
-          //2: input is p and output is postCut
-          val cutPos = AntePos(p.subgoals.head.ante.length) //Position of equivalence to instantiate.
-          val cutExpr = TactixLibrary.cut(fa) <(
-            Idioms.nil,
-            TactixLibrary.close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
-          )
+        //2: input is p and output is postCut
+        val cutPos = AntePos(p.subgoals.head.ante.length) //Position of equivalence to instantiate.
+        val cutExpr = TactixLibrary.cut(fa) <(
+          Idioms.nil,
+          TactixLibrary.close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
+        )
 
-          //3: input is postCut and output is instantiatedEquivalence
-          val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e: BelleExpr, x: Variable) => {
-            e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
-          })
+        //3: input is postCut and output is instantiatedEquivalence
+        val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e: BelleExpr, x: Variable) => {
+          e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
+        })
 
-          //step 5.
-          val hidingTactic = if (targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
+        //step 5.
+        val hidingTactic = if (targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
 
-          //4 & 5
-          instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
-      }
-    })
+        //4 & 5
+        instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
+    }
+  })
 
   private def computeInstantiation(fa: Forall, target: Formula): RenUSubst = {
     val equiv = bodyOf(fa)
@@ -297,7 +298,7 @@ private object PropositionalTactics extends Logging {
     *   P<->Q, Q |-
     * }}}
     */
-  private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position) = {
+  private def instantiatedEquivRewritingImpl(p: ProvableSig, equivPos: Position, targetPos: Position): ProvableSig = {
     import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
 
@@ -372,7 +373,8 @@ private object PropositionalTactics extends Logging {
         .apply(HideLeft(AntePos(postCut.subgoals(1).ante.length-2)), 0)
     }
   }
-  val instantiatedEquivRewriting = "instantiatedEquivRewriting" by ((p: ProvableSig, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
+  @Tactic("instantiatedEquivRewriting")
+  val instantiatedEquivRewriting: BuiltInTwoPositionTactic = anon ((p: ProvableSig, equivPos: Position, targetPos: Position) => instantiatedEquivRewritingImpl(p, equivPos, targetPos))
   /** @todo explain why this exists and maybe find a better name. */
   private def builtInEquivRewriting(equivPos: Position, targetPos: Position) = new BuiltInTactic("") {
     override def result(p:ProvableSig) = instantiatedEquivRewritingImpl(p, equivPos, targetPos)

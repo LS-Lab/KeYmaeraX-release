@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, MathematicaInapplicableMethodException, SMTQeException, SMTTimeoutException, ToolInternalException}
@@ -31,19 +32,20 @@ private object ToolTactics {
 
   private val namespace = "tooltactics"
 
-  def switchSolver(name: String): BelleExpr = "useSolver" byWithInput(name, {
-    val config = ToolConfiguration.config(name)
-    name.toLowerCase match {
+    @Tactic("useSolver", codeName = "useSolver")
+  def switchSolver(tool: String): BelleExpr = {
+    val config = ToolConfiguration.config(tool)
+    tool.toLowerCase match {
       case "mathematica" =>
         ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
       case "wolframengine" =>
         Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
         ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
       case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
-      case _ => throw new InputFormatFailure("Unknown tool " + name + "; please use one of mathematica|wolframengine|z3")
+      case _ => throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
     }
     nil
-  })
+  }
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   lazy val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {

@@ -180,7 +180,6 @@ object DerivationInfoRegistry {
           (List("&Gamma;"), List("R", "&Delta;"))))
       , _ => DifferentialTactics.inverseDiffCut),
     {
-      // @TODO: Is converter necessary?
       val converter = (e: Expression) => e match {
         case n: Number => Left(n)
         case _ => Right("Expected a number but got " + e.prettyString)
@@ -256,7 +255,7 @@ object DerivationInfoRegistry {
         case dp: DifferentialProgram => Left(dp)
         case _ => Right("Expected a differential program y′=f(y), but got " + e.prettyString)
       }
-      // @TODO
+      // @Tactic-ified
       InputPositionTacticInfo("dG",
         RuleDisplayInfo(
           "Differential Ghost",
@@ -320,7 +319,7 @@ object DerivationInfoRegistry {
       ),
       _ => ODEInvariance.dRI
     ),
-    // @TODO
+    // @Tactic-ified
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",
@@ -396,7 +395,7 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("implyR"
       , RuleDisplayInfo(("→R", "->R"), (List("&Gamma;"),List("P→Q", "&Delta;")), List((List("&Gamma;","P"),List("Q","&Delta;"))))
       , {case () => SequentCalculus.implyR}),
-    new TwoPositionTacticInfo("implyRi", "implyRi", _ => SequentCalculus.implyRi()),  //@Tactic-fied
+    new TwoPositionTacticInfo("implyRi", "implyRi", _ => SequentCalculus.implyRi()),
     new PositionTacticInfo("implyL"
       , RuleDisplayInfo(("→L", "->L"), (List("P→Q","&Gamma;"),List("&Delta;")),
         List((List("&Gamma;"),List("&Delta;","P")),
@@ -481,11 +480,11 @@ object DerivationInfoRegistry {
       ,List(StringArg("inEqPos")), _ => ((inEqPos: String) => TactixLibrary.CE(PosInExpr.parse(inEqPos))): TypedFunc[String, BelleExpr]),
 
     // proof management tactics
-    //@TODO
+    //@Tactic-ified
     InputTacticInfo("debug"
       , SimpleDisplayInfo("Debug","debug")
       ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
-    //@TODO
+    //@Tactic-ified
     InputTacticInfo("done"
       , SimpleDisplayInfo("Done","done")
       ,List(StringArg("msg"),StringArg("lemmaName")), _ =>
@@ -493,7 +492,7 @@ object DerivationInfoRegistry {
           ((lemmaName: Option[String]) =>
             DebuggingTactics.done(msg.getOrElse(""), lemmaName)): TypedFunc[Option[String], BelleExpr]): TypedFunc[Option[String], _]
     ),
-    //@TODO
+    //@Tactic-ified
     InputTacticInfo("pending"
       , SimpleDisplayInfo("pending", "pending")
       ,List(StringArg("tactic")), _ =>
@@ -505,9 +504,9 @@ object DerivationInfoRegistry {
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
-    // @TODO
+    // @Tactic-ified
     new TwoPositionTacticInfo("equivRewriting", RuleDisplayInfo("equivRewriting", (List("&Gamma;", "∀X p(X) <-> q(X)"), List("p(Z)", "&Delta;")), List((List("&Gamma;", "∀X p(X) <-> q(X)"), List("q(Z)", "&Delta;")))), {case () => PropositionalTactics.equivRewriting}),
-    // @TODO
+    // @Tactic-ifed
     new TwoPositionTacticInfo("instantiatedEquivRewriting", "instantiatedEquivRewriting", {case () => PropositionalTactics.instantiatedEquivRewriting}),
     //    new TwoPositionTacticInfo("exchangeL", "X", {case () => ProofRuleTactics.exchangeL}),
     //    new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
@@ -523,7 +522,7 @@ object DerivationInfoRegistry {
     new TacticInfo("close", // @Tactic-ified
       RuleDisplayInfo("Close by ⊥/⊤", (List("&Gamma;", "P", "⊥"), List("⊤", "P", "&Delta;")), Nil),
       {case () => TactixLibrary.close}),
-    //@TODO
+    //@Tactic-ified
     new TwoPositionTacticInfo("L2R",
       RuleDisplayInfo("Apply equality",
         /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
@@ -559,9 +558,9 @@ object DerivationInfoRegistry {
           (List("J"),List("P"))))
       , List(FormulaArg("J")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]
       , revealInternalSteps = true),
-    // @TODO
-    new PositionTacticInfo("loopAuto", "loopAuto",
-      {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
+    // Duplicate?  @Tactic-ified
+    //new PositionTacticInfo("loopAuto", "loopAuto",
+    //{case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
     new InputPositionTacticInfo("throughout", //@Tactic-fied
       RuleDisplayInfo("Loop Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
         List(
@@ -580,7 +579,7 @@ object DerivationInfoRegistry {
       , List(VariableArg("x", allowsFresh = "x" :: Nil), FormulaArg("j(x)", allowsFresh = "x" :: Nil)), _ =>
         ((x: Variable) =>
           ((fml: Formula) => DLBySubst.con(x, fml)): TypedFunc[Formula, BelleExpr]): TypedFunc[Variable, _]),
-    // @TODO
+    // @Tactic-ified
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => (gen: Generator.Generator[GenProduct]) => TactixLibrary.loopauto(gen)}, needsGenerator = true),
     new InputPositionTacticInfo("MR", // @Tactic-ified
@@ -589,7 +588,7 @@ object DerivationInfoRegistry {
           (List("&Gamma;"),List("[a]Q", "&Delta;")),
           (List("Q"),List("P"))))
       , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr], revealInternalSteps = true),
-    // @TODO
+    // @Tactic-ified
     InputPositionTacticInfo("transform",
       RuleDisplayInfo("trafo",
         //@todo suggests formulas, but also works with terms
@@ -597,7 +596,7 @@ object DerivationInfoRegistry {
         /* premises */ List((List("&Gamma;"),List("Q", "&Delta;")))),
       List(new ExpressionArg("Q")),
       _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
-    // @TODO
+    // @Tactic-ified
     new InputPositionTacticInfo("edit", "edit", List(new ExpressionArg("to")),
       _ => ((expr:Expression) => TactixLibrary.edit(expr)): TypedFunc[Expression, BelleExpr]),
     new TacticInfo("expandAll", "expandAll", _ => EqualityTactics.expandAll, revealInternalSteps = true), //@Tactic-fied
@@ -639,13 +638,13 @@ object DerivationInfoRegistry {
     // TactixLibrary tactics
     PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
     PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
-    // @TODO
+    // @Tactic-ified
     PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}, revealInternalSteps = true),
     PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}, revealInternalSteps = true),  //@Tactic-fied
     PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}, revealInternalSteps = true),  //@Tactic-fied
     PositionTacticInfo("propAuto", "propAuto", {case () => TactixLibrary.propAuto}, revealInternalSteps = true),  //@Tactic-fied
     PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),  //@Tactic-fied
-    // @TODO
+    // @Tactic-ified
     PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(
       TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
       TactixLibrary.existsL, TacticIndex.existsRStutter,
@@ -654,19 +653,20 @@ object DerivationInfoRegistry {
     PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}), //@Tactic-fied
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     // @TODO: Simplify codeName
+    // @Tactic-ified
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true, revealInternalSteps = true),
-    // @TODO
+    // @Tactic-ified
     new TacticInfo("explore", "explore", {case () => (gen:Generator.Generator[GenProduct]) => gen match {
       case cgen: ConfigurableGenerator[GenProduct] => TactixLibrary.explore(cgen)
       case _ => ??? // extract annotated invariants into a configurable generator
     } }, needsGenerator = true, revealInternalSteps = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true, revealInternalSteps = true),  //@Tactic-fied
-    // @TODO
+    // @Tactic-ified
     InputTacticInfo("useSolver"
       , "useSolver"
       , List(StringArg("tool"))
       , _ => ((tool: String) => ToolTactics.switchSolver(tool)): TypedFunc[String, BelleExpr]),
-    // @TODO
+    // @Tactic-ified
     InputTacticInfo("QE", "QE",
       List(OptionArg(StringArg("tool")), OptionArg(new TermArg("timeout"))),
       _ => { case Some(toolName: String) => {
@@ -685,7 +685,7 @@ object DerivationInfoRegistry {
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}),  //@Tactic-fied
     //@todo universal closure may come with list of named symbols
     new PositionTacticInfo("universalClosure", SimpleDisplayInfo("∀Cl", "allClosure"), {case () => FOQuantifierTactics.universalClosure}), //@Tactic-fied
-    // @TODO
+    // @Tactic-ified
     InputPositionTacticInfo("useAt"
       , "useAt"
       , List(StringArg("axiom"), StringArg("key"))
@@ -703,14 +703,14 @@ object DerivationInfoRegistry {
           } else TactixLibrary.useAt(AxiomInfo(axiomName)) //@note serializes as codeName
       }: TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
-    // @TODO
+    // @Tactic-ified
     InputTacticInfo("useLemma"
       , "useLemma"
       , List(StringArg("lemma"), StringArg("tactic"))
       , _ => ((lemmaName: String) => ((tactic: Option[String]) =>
         TactixLibrary.useLemma(lemmaName, tactic.map(_.asTactic))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
-    // @TODO
+    // @Tactic-ified
     InputTacticInfo("byUS"
       , RuleDisplayInfo(("US", "byUS"), (List(),List("S(P)")),
         List((List(), List("P"))))
@@ -725,14 +725,14 @@ object DerivationInfoRegistry {
           }))
           TactixLibrary.byUS(AxiomInfo(axiomName), (_: UnificationMatch.Subst) => subst)
       }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
-    // @TODO
+    // @Tactic-ified
     InputTacticInfo("US"
       , RuleDisplayInfo(("US", "US"), (List(),List("S(P)")),
         List((List(), List("P"))))
       , List(SubstitutionArg("S"))
       , _ => ((subst: USubst) => TactixLibrary.uniformSubstitute(subst)): TypedFunc[USubst, BelleExpr]),
 
-    // @TODO
+    // @Tactic-ified
     InputPositionTacticInfo("useLemmaAt"
       , "useLemmaAt"
       , List(StringArg("lemma"), StringArg("key"))
@@ -746,7 +746,7 @@ object DerivationInfoRegistry {
           (List("&Gamma;"),List("&Delta;", "C{repl}→C{c}"))))
       , List(FormulaArg("repl"))
       , _ => ((fml: Formula) => TactixLibrary.cutAt(fml)): TypedFunc[Formula, BelleExpr]),
-    //@TODO
+    // @Tactic-ified
     InputPositionTacticInfo("proveComponentSystem"
       , RuleDisplayInfo("proveComponentSystem",
         /* conclusion */ (List("&Gamma;"), List("""t=t0 & Om & A1 & A2
@@ -789,11 +789,11 @@ object DerivationInfoRegistry {
 
     // Differential tactics
     new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}), //@Tactic-fied
-    // @TODO
+    // @Tactic-ified
     new PositionTacticInfo("ODE",
       "Auto",
       {case () => TactixLibrary.ODE}, revealInternalSteps = true),
-    // @TODO
+    // @Tactic-ified
     new PositionTacticInfo("odeInvC",
       "odeInvC",
       {case () => TactixLibrary.odeInvariantComplete}),
@@ -838,7 +838,7 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("decomposeController","decomposeController",{case () => {HybridProgramTactics.decomposeController}}), // @Tactic-ified
 
     // numerical bound tactics
-    //@TODO
+    // @Tactic-ified
     new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}),
     InputTacticInfo("intervalCutTerms", // @Tactic-ified (@TODO cutTerm vs cutTerms, which one is needed?)
       RuleDisplayInfo(("Interval Arithmetic Cut","intervalCutTerms"),
@@ -855,11 +855,11 @@ object DerivationInfoRegistry {
     new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}), //@Tactic-fied
 
     // assertions and messages
-    // @TODO
+    // @Tactic-ified
     InputTacticInfo("print"
       , SimpleDisplayInfo("Print","print")
       ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.printIndexed(msg)): TypedFunc[String, BelleExpr]),
-    // @TODO
+    // @Tactic-ified
     InputPositionTacticInfo("assert"
       , SimpleDisplayInfo("Assert","assert")
       , List(new ExpressionArg("expected"), StringArg("msg"))
