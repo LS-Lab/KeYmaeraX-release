@@ -133,7 +133,7 @@ class TacticImpl(val c: blackbox.Context) {
     // Return type of tactic definition
     def isTactic(tRet: Tree): Boolean = {
       tRet match {
-        case tq"DependentTactic" | tq"DependentPositionTactic" | tq"InputPositionTactic"
+        case tq"DependentTactic" | tq"DependentPositionTactic" | tq"DependentTwoPositionTactic" | tq"InputPositionTactic"
              | tq"BuiltInLeftTactic" | tq"BuiltInRightTactic" | tq"BuiltInTactic" | tq"BuiltInPositionTactic"
              | tq"CoreLeftTactic" | tq"CoreRightTactic"
              | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic" | tq"InputTactic"
@@ -188,7 +188,7 @@ class TacticImpl(val c: blackbox.Context) {
             case tq"""Variable""" => VariableArg(v.name.decodedName.toString)
             case tq"""String""" => StringArg(v.name.decodedName.toString)
             case tq"""PosInExpr""" => PosInExprArg(v.name.decodedName.toString)
-            case tq"""Substitution""" => SubstitutionArg(v.name.decodedName.toString)
+            case tq"""SubstitutionPair""" => SubstitutionArg(v.name.decodedName.toString)
             case tq"""Option[$t]""" =>
               val vd = ValDef(v.mods, v.name, t, v.rhs)
               new OptionArg(getInput(vd))
@@ -216,7 +216,7 @@ class TacticImpl(val c: blackbox.Context) {
         case _: NumberArg => tq"edu.cmu.cs.ls.keymaerax.core.Number"
         case _: VariableArg => tq"edu.cmu.cs.ls.keymaerax.core.Variable"
         case _: TermArg => tq"edu.cmu.cs.ls.keymaerax.core.Term"
-        case _: SubstitutionArg => tq"edu.cmu.cs.ls.keymaerax.core.Subst"
+        case _: SubstitutionArg => tq"edu.cmu.cs.ls.keymaerax.core.SubstitutionPair"
         case _: ExpressionArg => tq"edu.cmu.cs.ls.keymaerax.core.Expression"
         case _: PosInExprArg => tq"edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr"
         case OptionArg(ai) => tq"scala.Option[${typeName(ai)}]"
