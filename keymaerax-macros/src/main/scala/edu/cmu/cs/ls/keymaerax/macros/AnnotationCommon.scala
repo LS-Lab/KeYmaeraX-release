@@ -30,23 +30,25 @@ object AnnotationCommon {
     }
   }
   def parseAI(s: String)(implicit c: blackbox.Context): ArgInfo = {
-    s.split(":").toList match {
-      case id :: tpe :: Nil =>
-        val first = id.indexOf('[')
-        val last = id.lastIndexOf(']')
-        val (name, allowFresh) =
-          if (first != -1 && last != -1)
-            (id.slice(0, first).trim, id.slice(first+1, last).split(',').toList.map(_.trim))
-          else (id.trim, Nil)
+    val iCln = s.lastIndexOf(':')
+    if(iCln < 0)
+      c.abort(c.enclosingPosition, "Invalid argument type descriptor:" + s)
+    val (id, tpe) = (s.take(iCln), s.takeRight(s.length - (iCln + 1)))
+    val first = id.indexOf('[')
+    val last = id.lastIndexOf(']')
+    val (name, allowFresh) =
+      if (first != -1 && last != -1)
+        (id.slice(0, first).trim, id.slice(first+1, last).split(',').toList.map(_.trim))
+      else (id.trim, Nil)
         toArgInfo(name, tpe.trim, allowFresh)
-      case ss => c.abort(c.enclosingPosition, "Invalid argument type descriptor:" + s)
-    }
   }
-  def parseAIs(s: String)(implicit c: blackbox.Context): List[ArgInfo] = {
+  def parseAIs(str: String)(implicit c: blackbox.Context): List[ArgInfo] = {
+    val s = str.filter(c => !(c == '\n' || c == '\r'))
     if (s.isEmpty) Nil
     else s.split(";;").toList.map(s => parseAI(s.trim))
   }
-  def parseSequent(str: String)(implicit c: blackbox.Context): SequentDisplay = {
+  def parseSequent(string: String)(implicit c: blackbox.Context): SequentDisplay = {
+    val str = string.filter(c => !(c == '\n' || c == '\r'))
     if(str == "*") {
       SequentDisplay(Nil, Nil, isClosed = true)
     } else {
