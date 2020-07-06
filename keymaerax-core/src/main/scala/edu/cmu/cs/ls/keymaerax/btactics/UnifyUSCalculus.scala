@@ -257,7 +257,10 @@ trait UnifyUSCalculus {
   private[btactics]
   def byUS(lemma: Lemma, inst: Subst=>Subst): BelleExpr = byUS(lemma.fact, inst)
 
+  /** Do-not-call: exclusively for internal tactic interpreter usage. */
+  @deprecated("Exclusively use for tactic interpreters")
   @Tactic(("US", "byUS"), codeName = "byUS", conclusion = "|- S(P)", premises = "|- P")
+  private[btactics]
   def byUSX(P: String, S: Option[Formula]): BelleExpr =
     S match {
       case None => TactixLibrary.byUS(AxiomInfo(P), us=>us)
@@ -280,8 +283,11 @@ trait UnifyUSCalculus {
 
     /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: ProvableInfo): DependentPositionTactic = useAtImpl(axiom)
+  /** Do-not-call: exclusively for internal tactic interpreter usage. */
   //@note serializes as useAt({`axiomName`},{`k`})
+  @deprecated("Exclusively use for tactic interpreters")
   @Tactic("useAt")
+  private[btactics]
   def useAtX(axiom: String, key: Option[String]): BelleExpr = anon {(pos: Position) =>
     key match {
       case None => TactixLibrary.useAt(AxiomInfo(axiom)) //@note serializes as codeName
