@@ -108,6 +108,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "fail inapplicable builtin-rules with legible error messages" in {
     the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should have message
+    // @TODO: Platform-dependent/line ending-dependent
       """Tactic andR applied at 1 on a non-matching expression in ElidingProvable(Provable{
         |==> 1:  x=5	Equal
         |  from
@@ -341,10 +342,11 @@ class SequentialInterpreterTests extends TacticTestBase {
     })
   }
 
+  // @TODO: Failing because left branch raises a throwable that is no longer handled by | operator, test expects it to be handled.
   "Let" should "fail (but not horribly) when inner proof cannot be started" in {
     val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
     the [Throwable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
-      "Unable to start inner proof in let: edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to edu.cmu.cs.ls.keymaerax.core.Variable"
+      "Unable to start inner proof in let: class edu.cmu.cs.ls.keymaerax.core.FuncOf cannot be cast to class edu.cmu.cs.ls.keymaerax.core.Variable (edu.cmu.cs.ls.keymaerax.core.FuncOf and edu.cmu.cs.ls.keymaerax.core.Variable are in unnamed module of loader 'app')"
     val result = proveBy(fml, BelleParser("let ({`f()=f`}) in (nil) | nil"))
     result.subgoals.loneElement shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
   }
