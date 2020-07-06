@@ -162,7 +162,7 @@ object KeYmaeraX {
       //@note 'commandLine is only passed in to preserve evidence of what generated the output.
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
-      if(!options.contains('mode)) {
+      if (!options.contains('mode)) {
         //@note this should be a bad state but apparently it happens.
         launchUI(args)
       } else if (options.get('mode).contains(Modes.CODEGEN)) {

@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import java.net.URLEncoder
 import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
@@ -11,6 +12,7 @@ import org.apache.logging.log4j.scala.Logging
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
+import scala.annotation.tailrec
 import scala.collection.immutable._
 
 /**
@@ -40,10 +42,14 @@ object DatabasePopulator extends Logging {
 
   /** Reads a .kyx archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
   def readKyx(url: String): List[TutorialEntry] = {
-    val kyx = loadResource(url)
-    val archiveEntries = KeYmaeraXArchiveParser.parse(kyx, parseTactics = false)
-    archiveEntries.map(toTutorialEntry)
-
+    val entries = url.split('#').toList match {
+      case contentUrl :: Nil => KeYmaeraXArchiveParser.parse(loadResource(contentUrl))
+      case contentUrl :: entryName :: Nil =>
+        KeYmaeraXArchiveParser.getEntry(entryName, loadResource(contentUrl)).
+          getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+      case _ => throw new IllegalArgumentException("Entry URLs are allowed to contain at most 1 '#', but got " + url)
+    }
+    entries.map(toTutorialEntry)
   }
 
   /** Converts a parsed archive entry into a tutorial entry as expected by this importer. */
@@ -77,21 +83,17 @@ object DatabasePopulator extends Logging {
   }
 
   /** Loads the specified resource, either from the JAR if URL starts with 'classpath:' or from the URL. */
+  @tailrec
   def loadResource(url: String): String =
     if (url.startsWith("classpath:")) {
       val resource = getClass.getResourceAsStream(url.substring("classpath:".length))
-      if (resource != null) io.Source.fromInputStream(resource).mkString
+      if (resource != null) io.Source.fromInputStream(resource, "ISO-8859-1").mkString
       else if (url.startsWith("classpath:/keymaerax-projects")) loadResource(GITHUB_PROJECTS_RAW_PATH + url.substring("classpath:/keymaerax-projects".length))
       else throw new Exception(s"Example '$url' neither included in build nor available in projects repository")
+    } else if (url.startsWith("file://")) {
+      resource.managed(io.Source.fromFile(url.stripPrefix("file://"), "ISO-8859-1")).apply(_.mkString)
     } else {
-      try {
-        val src = io.Source.fromURL(url)
-        val result = src.mkString
-        src.close()
-        result
-      } catch {
-        case _: java.net.MalformedURLException => throw new Exception(s"Malformed URL $url")
-      }
+        resource.managed(io.Source.fromURL(url, "ISO-8859-1")).apply(_.mkString)
     }
 
   /** Imports a model with info into the database; optionally records a proof obtained using `tactic`.
