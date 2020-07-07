@@ -881,7 +881,7 @@ object TactixLibrary extends HilbertCalculus
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
         useLemma(lemma, adapt)
-      } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
+      } else label(BelleLabels.lemmaUnproved(lemmaName))
     }
   )
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
