@@ -44,7 +44,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, ParsedArchiveEntry, Signature}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{InputSignature, Name, ParsedArchiveEntry, Signature}
 import edu.cmu.cs.ls.keymaerax.tools.ext.{Mathematica, QETacticTool, TestSynthesis, WolframScript, Z3}
 import edu.cmu.cs.ls.keymaerax.tools.install.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.qe.{DefaultSMTConverter, KeYmaeraToMathematica}
@@ -1373,6 +1373,74 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
   }
 }
 
+class OpenOrCreateLemmaProofRequest(db: DBAbstraction, userId: String, lemmaName: String,
+                                    parentProofId: String, parentTaskId: String)
+  extends UserRequest(userId) with WriteRequest {
+  def resultingResponses(): List[Response] = {
+    val modelId: Int = db.getModelList(userId).find(_.name == lemmaName) match {
+      case Some(model) => model.modelId
+      case None =>
+        val tree: ProofTree = DbProofTree(db, parentProofId)
+        tree.locate(parentTaskId) match {
+          case None => return new ErrorResponse("Unknown node " + parentTaskId + " in proof " + parentProofId) :: Nil
+          case Some(node) if node.goal.isEmpty => return new ErrorResponse("Node " + parentTaskId + " does not have a goal") :: Nil
+          case Some(node) if node.goal.isDefined =>
+            def defsStringsOf(defs: Map[Name, Signature]): List[String] = {
+              defs.map({
+                case ((name, index), (domain, sort, interpretation, _)) =>
+                  sort.toString + " " + name +
+                    (index match { case Some(i) => "_" + i case None => "" }) +
+                    (domain match {
+                      case Some(Unit) => ""
+                      case Some(d: Tuple) => d.toString
+                      case Some(d) => "(" + d.toString + ")"
+                      case None => ""
+                    }) +
+                    (interpretation match {
+                      case Some(i) => (if (sort == Real) " = " else " <-> ") + "(" + i.prettyString + ")"
+                      case None => ""
+                    }) + ";"
+              }).toList
+            }
+
+            val goal = node.goal.get.toFormula
+            val bv = StaticSemantics.boundVars(goal).toSet
+            val symbols = StaticSemantics.symbols(goal) -- bv
+            val vars = bv.map(v => "Real " + v.prettyString + ";").mkString("\n  ")
+            val proofSession = session(parentProofId).asInstanceOf[ProofSession]
+            val usedParentDefs = proofSession.defs.decls.filter({ case ((n, i), _) => symbols.exists(s => s.name == n && s.index == i) })
+            val defs= defsStringsOf(usedParentDefs).mkString("\n  ")
+            val fileContents =
+              s"""Lemma "$lemmaName"
+                 |
+                 |Definitions
+                 |  $defs
+                 |End.
+                 |
+                 |ProgramVariables
+                 |  $vars
+                 |End.
+                 |
+                 |Problem
+                 |  ${goal.prettyString}
+                 |End.
+                 |End.""".stripMargin
+
+            db.createModel(userId, lemmaName, fileContents, currentDate(), None, None, None).get
+        }
+    }
+    val modelProofs = db.getProofsForModel(modelId)
+    val proofId = modelProofs.find(_.closed) match {
+      case Some(proof) => proof.proofId
+      case None => modelProofs match {
+        case head :: _ => head.proofId
+        case Nil => db.createProofForModel(modelId, "Proof of " + lemmaName, "", currentDate(), None)
+      }
+    }
+    new CreatedIdResponse(proofId.toString) :: Nil
+  }
+}
+
 class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) with WriteRequest {
   def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
@@ -1791,7 +1859,7 @@ class GetApplicableDefinitionsRequest(db: DBAbstraction, userId: String, proofId
         val expansions: List[(NamedSymbol, Expression, Option[Expression], Option[InputSignature])] = applicable.toList.map({
           // functions, predicates, and programs with definition
           case (s: Function, ((domain, sort, repl, _), insig)) if repl.isDefined =>
-            val arg = insig.map(_._1.map(_.asInstanceOf[Variable]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
+            val arg = insig.map(_._1.map(_.asInstanceOf[Term]).reduceRightOption(Pair).getOrElse(Nothing)).getOrElse(domain.getOrElse(Unit).toDots(0)._1)
             sort match {
               case Real => (s, FuncOf(s, arg), repl, insig)
               case Bool => (s, PredOf(s, arg), repl, insig)

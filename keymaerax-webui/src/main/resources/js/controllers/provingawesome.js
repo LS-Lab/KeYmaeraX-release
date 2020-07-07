@@ -892,6 +892,25 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       if (newName !== oldName) $scope.doInputTactic(undefined, "label", [{ param: "label", type: "string", value: newName }]);
     }
 
+    $scope.openLemmaProof = function(taskId) {
+      var lemmaName = $scope.taskPostfixLabel(taskId).substring(6)
+      var uri     = 'models/users/' + sessionService.getUser() + '/model/' + encodeURIComponent(lemmaName) + '/openOrCreateLemmaProof'
+      var dataObj = {
+        parentProofId: $scope.proofId,
+        parentTaskId: taskId
+      }
+
+      $http.post(uri, dataObj).
+        success(function(data) {
+          var proofid = data.id
+          // we may want to switch to ui.router
+          $location.path('proofs/' + proofid);
+        }).
+        error(function(data, status, headers, config) {
+          console.log('Error starting new proof for model ' + $routeParams.modelId)
+        });
+    }
+
     $scope.openModelEditor = function (modelId) {
       var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeldialog.html',

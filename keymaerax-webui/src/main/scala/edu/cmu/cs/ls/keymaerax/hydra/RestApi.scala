@@ -460,6 +460,19 @@ object RestApi extends Logging {
       }
     }}}
 
+    val openOrCreateLemmaProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "openOrCreateLemmaProof") { (userId, modelName) => { pathEnd {
+      post {
+        entity(as[String]) { x => {
+          val obj = x.parseJson
+          val parentProofId = obj.asJsObject.getFields("parentProofId").last.asInstanceOf[JsString].value
+          val parentTaskId = obj.asJsObject.getFields("parentTaskId").last.asInstanceOf[JsString].value
+
+          val request = new OpenOrCreateLemmaProofRequest(database, userId, modelName, parentProofId, parentTaskId)
+          completeRequest(request, t)
+        }}
+      }
+    }}}
+
     val createModelTacticProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createTacticProof") { (userId, modelId) => { pathEnd {
       post {
         entity(as[String]) { _ => {
@@ -1237,6 +1250,7 @@ object RestApi extends Logging {
     userModel2            ::
     deleteModel           ::
     createProof           ::
+    openOrCreateLemmaProof ::
     createModelTacticProof::
     initProofFromTactic   ::
     importExampleRepo     ::
