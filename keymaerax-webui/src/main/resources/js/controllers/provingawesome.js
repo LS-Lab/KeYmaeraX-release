@@ -114,15 +114,72 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       $scope.stepCount= data.stepCount;
       $scope.date = data.date;
       if (data.stepCount == 0 && data.tactic !== undefined && data.tactic !== null) {
-        // imported but not yet executed proof
         spinnerService.show('tacticExecutionSpinner')
-        $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
-          .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
-                                     $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
-          .catch(function(err) {
-            spinnerService.hide('tacticExecutionSpinner');
-            $rootScope.$broadcast("proof.message", err.data);
+        $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/usedLemmas').then(function(response) {
+          var usedLemmas = response.data.lemmas
+          var modalInstance = $uibModal.open({
+            templateUrl: 'templates/modalMessageTemplate.html',
+            controller: 'ModalMessageCtrl',
+            size: 'md',
+            resolve: {
+              title: function() { return "Prove lemmas"; },
+              message: function() { return "The proof uses " + usedLemmas.length + " lemmas; do you want to check them now?"; },
+              mode: function() { return "yesno"; }
+            }
           });
+
+          modalInstance.result.then(
+          function() {
+            // yes: prove all lemmas and on success prove theorem
+            var lemmaLoader = $q.defer();
+            usedLemmas.reduce(function(result, lemma) {
+              return result.then(function(response) {
+                console.log("Opening lemma: " + lemma.name + "(" + lemma.proofId + ")");
+                return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId);
+              }).then(function(response) {
+                console.log("Proving lemma: " + lemma.name + "(" + lemma.proofId + ")");
+                return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId + '/initfromtactic')
+              }).then(function(response) {
+                return $scope.runningTask.start(lemma.proofId, '()', response.data.taskId, response.data.info,
+                  function(taskResult) {
+                    console.log("Done proving: " + lemma.name + "(" + lemma.proofId + ")")
+                  },
+                  function(taskError) {
+                    console.log("Failed proving: " + lemma.name + "(" + lemma.proofId + ")")
+                  },
+                  undefined
+                );
+              }).then(function(response) {
+                console.log("Validating proof: " + lemma.name + "(" + lemma.proofId + ")");
+                return $http.get("proofs/user/" + $scope.userId + "/" + lemma.proofId + "/validatedStatus");
+              }).then(function(response) {
+                console.log("Done validating proof: " + lemma.name + "(" + lemma.proofId + ")");
+              });
+            }, lemmaLoader.promise).then(function(response) {
+              // finally open imported but not yet executed proof
+              console.log("Now proving theorem " + $scope.proofId);
+              $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
+                .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
+                                           $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+                .catch(function(err) {
+                  spinnerService.hide('tacticExecutionSpinner');
+                  $rootScope.$broadcast("proof.message", err.data);
+                });
+            });
+            lemmaLoader.resolve();
+          },
+          function() {
+            // no: open imported but not yet executed proof, run tactic with unproved lemmas remaining open
+            $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
+              .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
+                                         $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+              .catch(function(err) {
+                spinnerService.hide('tacticExecutionSpinner');
+                $rootScope.$broadcast("proof.message", err.data);
+              });
+          }
+        );
+        });
       } else {
         spinnerService.show('proofLoadingSpinner');
         sequentProofData.fetchAgenda($scope.userId, $scope.proofId);
@@ -232,9 +289,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       $scope.runningTask.info = info;
       $scope.runningTask.taskStepwiseRequest = taskStepwiseRequest;
       $scope.runningTask.future = $q.defer();
-      $scope.runningTask.future.promise.then(
+      var runningTaskPromise = $scope.runningTask.future.promise.then(
         /* future resolved */ function(taskId) {
-          $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
+          return $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
             .then(function(response) { onTaskComplete(response.data); })
             .catch(function(err) { onTaskError(err); })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
@@ -244,9 +301,11 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           spinnerService.hide('tacticExecutionSpinner');
           if (reason !== 'stopped') showMessage($uibModal, reason);
           else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId);
+          return reason;
         }
       );
       $scope.runningTask.poll(taskId, 0);
+      return runningTaskPromise;
     },
     poll: function(taskId, elapsed) {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
@@ -350,9 +409,9 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
       $scope.runningTask.info = info;
       $scope.runningTask.taskStepwiseRequest = taskStepwiseRequest;
       $scope.runningTask.future = $q.defer();
-      $scope.runningTask.future.promise.then(
+      var runningTaskPromise = $scope.runningTask.future.promise.then(
         /* future resolved */ function(taskId) {
-          $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
+          return $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
             .then(function(response) { onTaskComplete(response.data); })
             .catch(function(err) { onTaskError(err); })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
@@ -362,9 +421,11 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
           spinnerService.hide('tacticExecutionSpinner');
           if (reason !== 'stopped') showMessage($uibModal, reason);
           else if (sequentProofData.agenda.items().length <= 0) sequentProofData.fetchAgenda($scope.userId, $scope.runningTask.proofId);
+          return reason;
         }
       );
       $scope.runningTask.poll(taskId, 0);
+      return runningTaskPromise;
     },
     poll: function(taskId, elapsed) {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')

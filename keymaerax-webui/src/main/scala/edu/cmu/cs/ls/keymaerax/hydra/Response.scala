@@ -521,6 +521,15 @@ class ProofTreeResponse(tree: String) extends Response {
   )
 }
 
+case class ProofLemmasResponse(lemmas: List[(String, Int)]) extends Response {
+  def getJson: JsValue = JsObject({
+    "lemmas" -> JsArray(lemmas.map(l => JsObject(
+      "name" -> JsString(l._1),
+      "proofId" -> JsNumber(l._2)
+    )):_*)
+  })
+}
+
 class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Response {
   override val schema = Some("proof.js")
   def getJson = JsObject(

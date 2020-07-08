@@ -1462,6 +1462,33 @@ class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String)
   }
 }
 
+class GetProofLemmasRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    def collectLemmaNames(tactic: String): List[String] = {
+      """useLemma\("([^"]+)"""".r("lemmaName").findAllMatchIn(tactic).toList.map(m => m.group("lemmaName"))
+    }
+
+    /** Recursively required lemmas in the order they ought to be proved. */
+    def recCollectRequiredLemmaNames(proofId: Int, collectedLemmas: List[(String, Int)]): List[(String, Int)] = {
+      val proofInfo = db.getProofInfo(proofId)
+      val lemmaNames = (proofInfo.tactic.map(collectLemmaNames).getOrElse(Nil).toSet -- collectedLemmas.map(_._1).toSet).toList
+      val models = db.getModelList(userId).filter(m => lemmaNames.contains(m.name))
+      val lemmaProofs: List[(ModelPOJO, ProofPOJO)] = models.flatMap(m => {
+        val proofs = db.getProofsForModel(m.modelId)
+        proofs.find(_.tactic.isDefined) match {
+          case None => proofs.headOption.map(m -> _)
+          case p => p.map(m -> _)
+        }
+      })
+      (lemmaProofs.foldRight(collectedLemmas)({ case ((m, p), cl) => recCollectRequiredLemmaNames(p.proofId, cl) ++ cl }) ++
+        lemmaProofs.map({ case (m, p) => (m.name, p.proofId) })).distinct
+    }
+
+    val lemmaNames = recCollectRequiredLemmaNames(proofId.toInt, Nil)
+    ProofLemmasResponse(lemmaNames) :: Nil
+  }
+}
+
 class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait: Boolean = false) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val proofInfo = db.getProofInfo(proofId)

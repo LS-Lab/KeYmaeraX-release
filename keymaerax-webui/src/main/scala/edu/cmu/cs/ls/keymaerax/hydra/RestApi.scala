@@ -517,6 +517,13 @@ object RestApi extends Logging {
       }
     }}}
 
+    val getProofLemmas: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "usedLemmas") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new GetProofLemmasRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
     val browseProofRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "browseagenda") { (userId, proofId) => { pathEnd {
       get {
         val request = new GetProofRootAgendaRequest(database, userId, proofId)
@@ -1253,6 +1260,7 @@ object RestApi extends Logging {
     openOrCreateLemmaProof ::
     createModelTacticProof::
     initProofFromTactic   ::
+    getProofLemmas        ::
     importExampleRepo     ::
     deleteProof           ::
     proofListForModel     ::
