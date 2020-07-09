@@ -2498,7 +2498,11 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
     val entry = KeYmaeraXArchiveParser.parse(model.keyFile, parseTactics=false).head
-    val conclusionFormula = entry.defs.exhaustiveSubst[Formula](entry.model.asInstanceOf[Formula])
+    val substs = db.getExecutionSteps(proofId.toInt).
+      filter(_.ruleName.startsWith("US(")).
+      map(_.ruleName.stripPrefix("US(\"").stripSuffix("\")").asSubstitutionPair).
+      sortBy(entry.defs.substs.indexOf) //@note entry.defs.substs are topologically sorted
+    val conclusionFormula = entry.model.exhaustiveSubst(USubst(substs)).asInstanceOf[Formula]
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val provable = tree.root.provable
     if (!provable.isProved) new ErrorResponse("Proof verification failed: proof " + proofId + " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString)::Nil
