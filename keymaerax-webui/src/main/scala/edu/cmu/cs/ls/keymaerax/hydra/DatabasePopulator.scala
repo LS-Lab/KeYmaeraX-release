@@ -98,34 +98,48 @@ object DatabasePopulator extends Logging {
     * Returns Left(modelName, ID) on success, Right(modelName) on failure */
   def importModel(db: DBAbstraction, user: String, prove: Boolean)(entry: TutorialEntry): Either[(String, Int), String] = {
     val now = Calendar.getInstance()
-    backupPriorModel(db, user, entry.name)
-    logger.info("Importing model " + entry.name + "...")
-    val result = db.createModel(user, entry.name, entry.model, now.getTime.toString, entry.description,
-      entry.link, entry.title, entry.tactic.headOption.map(_._2)) match {
-      case Some(modelId) =>
-        entry.tactic.foreach({ case (tname, ttext, _) =>
-          logger.info("Importing proof...")
-          val proofId = db.createProofForModel(modelId, tname, "Proof from archive", now.getTime.toString, Some(ttext))
-          if (prove) executeTactic(db, entry.model, proofId, ttext)
-          logger.info("...done")
-        })
-        Left(entry.name -> modelId)
-      case None => Right(entry.name)
+
+    def doImport(entry: TutorialEntry): Either[(String, Int), String] = {
+      logger.info("Importing model " + entry.name + "...")
+      val result = db.createModel(user, entry.name, entry.model, now.getTime.toString, entry.description,
+        entry.link, entry.title, entry.tactic.headOption.map(_._2)) match {
+        case Some(modelId) =>
+          entry.tactic.foreach({ case (tname, ttext, _) =>
+            logger.info("Importing proof...")
+            val proofId = db.createProofForModel(modelId, tname, "Proof from archive", now.getTime.toString, Some(ttext))
+            if (prove) executeTactic(db, entry.model, proofId, ttext)
+            logger.info("...done")
+          })
+          Left(entry.name -> modelId)
+        case None => Right(entry.name)
+      }
+      logger.info("...done")
+      result
     }
-    logger.info("...done")
-    result
+
+    db.getModelList(user).find(_.name == entry.name) match {
+      case Some(e) =>
+        if (backupPriorModel(db, user, e, entry)) doImport(entry)
+        else Left(e.name -> e.modelId)
+      case None => doImport(entry)
+    }
   }
 
-  /** Creates a backup if a model with name `entryName` already exists in the database. */
-  private def backupPriorModel(db: DBAbstraction, user: String, entryName: String): Unit = {
-    val backupName = db.getUniqueModelName(user, entryName)
-    db.getModelList(user).find(_.name == entryName) match {
-      case Some(e) => db.updateModel(e.modelId, backupName,
-        if (e.title != "") Some(e.title) else None,
-        if (e.description != "") Some(e.description) else None,
-        if (e.keyFile != "") Some(e.keyFile) else None)
-      case None => // nothing to do
-    }
+  /** Creates a backup if a different model with the same name as `entry` already exists in the database. Returns false
+    * if the entry already exists verbatim in the database, true otherwise. */
+  private def backupPriorModel(db: DBAbstraction, user: String, oldEntry: ModelPOJO, newEntry: TutorialEntry): Boolean = {
+    val backupName = db.getUniqueModelName(user, newEntry.name)
+    val oldContent :: Nil = KeYmaeraXArchiveParser.parse(oldEntry.keyFile, parseTactics=false)
+    val newContent :: Nil = KeYmaeraXArchiveParser.parse(newEntry.model, parseTactics=false)
+    // update only on change
+    if (oldContent.defs.exhaustiveSubst(oldContent.model) != newContent.defs.exhaustiveSubst(newContent.model) ||
+      oldContent.tactics != newContent.tactics) {
+      db.updateModel(oldEntry.modelId, backupName,
+        if (oldEntry.title != "") Some(oldEntry.title) else None,
+        if (oldEntry.description != "") Some(oldEntry.description) else None,
+        if (oldEntry.keyFile != "") Some(oldEntry.keyFile) else None)
+      true // entry with same name but different model existed, do import
+    } else false // entry exists verbatim in the database, do not re-import
   }
 
   /** Prepares an interpreter for executing tactics. */
