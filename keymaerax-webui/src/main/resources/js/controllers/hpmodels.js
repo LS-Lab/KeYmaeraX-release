@@ -76,12 +76,8 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                  });
              } else {
                //Update the models list -- this should result in the view being updated?
-               while (Models.getModels().length != 0) {
-                 Models.getModels().shift()
-               }
-               $http.get("models/users/" + sessionService.getUser()).success(function(data) {
-                 Models.addModels(data);
-                 $route.reload();
+               $http.get("models/users/" + sessionService.getUser() + "/").success(function(data) {
+                 Models.setModels(data);
                });
              }
            }
@@ -108,7 +104,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
 angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $uibModal, $route,
     $location, FileSaver, Blob, Models, spinnerService, sessionService, firstTime) {
-  $scope.models = [];
+  $scope.models = Models.getModels();
   $scope.userId = sessionService.getUser();
   $scope.intro.firstTime = firstTime;
   $scope.workingDir = [];
@@ -159,11 +155,11 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   $scope.readModelList = function(folder) {
     if (folder.length > 0) {
       $http.get("models/users/" + $scope.userId + "/" + encodeURIComponent(folder.join("/"))).then(function(response) {
-        $scope.models = response.data;
+        Models.setModels(response.data);
       });
     } else {
       $http.get("models/users/" + $scope.userId + "/").then(function(response) {
-        $scope.models = response.data;
+        Models.setModels(response.data);
       });
     }
   }
@@ -207,7 +203,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     spinnerService.show('caseStudyImportSpinner');
     var userId = sessionService.getUser();
     $http.post("models/users/" + userId + "/importRepo", repoUrl).success(function(data) {
-      $http.get("models/users/" + userId).success(function(data) {
+      $http.get("models/users/" + userId + "/").success(function(data) {
         Models.addModels(data);
         if($location.path() == "/models") {
           $route.reload();
@@ -235,10 +231,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
         showCaughtErrorMessage($uibModal, data, "Model Deleter")
       } else {
         console.log("Model " + modelId + " was deleted. Getting a new model list and reloading the route.")
-        $http.get("models/users/" + sessionService.getUser()).success(function(data) {
-          Models.addModels(data);
-          $route.reload();
-        });
+        $scope.readModelList($scope.workingDir);
       }
     })
   };
@@ -311,7 +304,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
         // modal ok
         spinnerService.show('modelDeleteAllSpinner');
         $http.get("/models/user/" + $scope.userId + "/delete/all").then(function(response) {
-           $route.reload();
+           Models.setModels([]);
         })
         .finally(function() { spinnerService.hide('modelDeleteAllSpinner'); });
       }, function () {
@@ -498,9 +491,8 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
 
   $scope.refreshModels = function() {
     // Update the models list
-    while (Models.getModels().length != 0) { Models.getModels().shift(); }
-    $http.get("models/users/" + userid).success(function(data) {
-      Models.addModels(data);
+    $http.get("models/users/" + userid + "/").success(function(data) {
+      Models.setModels(data);
     });
   };
 
