@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent, StaticSemantics, SubstitutionPair, USubst}
-import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.infrastruct.{Position, RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
@@ -141,16 +141,23 @@ trait ProofTreeNode {
 
   /** Applies derivation `sub` to subgoal  `i` of `goal` after applying substitutions `substs` exhaustively.
     * Returns `goal` if `sub` is not applicable at `i`. */
-  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]) = {
-    if (goal.subgoals(i) == sub.conclusion) goal(sub, i)
+  private def applyWithSubst(goal: ProvableSig, sub: ProvableSig, i: Int, substs: List[SubstitutionPair]): (ProvableSig, List[SubstitutionPair]) = {
+    if (goal.subgoals(i) == sub.conclusion) goal(sub, i) -> substs
     else if (substs.nonEmpty) {
       // apply only substitutions for difference between goal and sub
       val goalSig = StaticSemantics.signature(goal.subgoals(i)) ++ substs.flatMap(s => StaticSemantics.signature(s.repl))
       val subSig = StaticSemantics.signature(sub.conclusion)
       val sigDiff = goalSig -- subSig
       val applicableSubsts = substs.filter(s => sigDiff.intersect(StaticSemantics.signature(s.what)).nonEmpty)
-      exhaustiveSubst(goal, RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst)(sub, i)
-    } else goal
+      val subst = RenUSubst(applicableSubsts.map(sp => sp.what -> sp.repl)).usubst
+      val substGoal = exhaustiveSubst(goal, subst)
+      val substSub = exhaustiveSubst(sub, subst)
+      //@note sub may originate from a lemma that was proved with expanded definitions; find by unification,
+      // but can't just unify goal with sub, since both may have applied partial substitutions separately, e.g.,
+      // may have goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
+      val downSubst = UnificationMatch.apply(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
+      exhaustiveSubst(substGoal, downSubst)(substSub, i) -> (substs ++ downSubst.subsDefsInput)
+    } else goal -> substs
   }
 
 
@@ -159,7 +166,7 @@ trait ProofTreeNode {
   /** Merges all descendent provables into the local provable. */
   private lazy val theProvable: ProvableSig = {
     if (localProvable.isProved) localProvable
-    else (applyWithSubst(localProvable, _, goalIdx, _)).tupled(mergedDescendentProvable)
+    else (applyWithSubst(localProvable, _: ProvableSig, goalIdx, _: List[SubstitutionPair])._1).tupled(mergedDescendentProvable)
   }
 
   /** Creates intermediate provables for all descendents of the shape mergable into the local provable's subgoal. */
@@ -183,7 +190,7 @@ trait ProofTreeNode {
         val ms = makerSubst(subMaker)
         val preSubsts = (globalSubsts ++ subSubsts)
         val substs = (preSubsts ++ ms).distinct
-        applyWithSubst(global, sub, i, substs) -> substs
+        applyWithSubst(global, sub, i, substs)
       })
     }
   }
