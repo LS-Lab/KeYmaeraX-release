@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
 import org.apache.logging.log4j.scala.Logger
 
@@ -889,7 +889,17 @@ object TactixLibrary extends HilbertCalculus
   def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { _ =>
     adapt match {
       case Some(t) =>
-        cut(lemma.fact.conclusion.toFormula ) <(t, cohideR('Rlast) &
+        val substs = lemma.evidence.flatMap({
+          case ToolEvidence(info) =>
+            info.filter(_._1 == "tactic").map(_._2) match {
+              case tactic :: Nil =>
+                import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+                """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
+              case _ => Nil
+            }
+          case _ => Nil
+        })
+        ExpandAll(substs) & cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
           (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast)*(lemma.fact.conclusion.ante.size-1)
            else /* toFormula returns true->conclusion */ implyR(1) & hideL('Llast)) &
           (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast)*(lemma.fact.conclusion.succ.size-1)
