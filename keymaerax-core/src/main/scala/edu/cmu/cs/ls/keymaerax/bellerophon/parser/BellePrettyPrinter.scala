@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.macros.TacticInfo
 import edu.cmu.cs.ls.keymaerax.core.{Equal, Expression, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 
 import scala.util.Try
 
@@ -83,7 +84,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         }
         case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
         case it : InputTactic =>
-          val eargs = it.inputs.map(input => argPrinter(Left(input))).filter(_.isEmpty).mkString(", ")
+          val eargs = it.inputs.map(input => argPrinter(Left(input))).filter(_.nonEmpty).mkString(", ")
           it.name + "(" + eargs + ")"
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
         case NamedTactic(name, _) if name != "ANON" => name
@@ -99,13 +100,16 @@ object BellePrettyPrinter extends (BelleExpr => String) {
     "(" + args.map(argPrinter).reduce(_ + ", " + _) + ")"
   }
 
-  private def argPrinter(arg: BelleParser.TacticArg) = arg match {
-    case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
-    case Left(Some(expr: Expression)) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
-    case Left(Some(expr)) => "\"" + expr + "\""
-    case Left(expr) => "\"" + expr + "\""
-    case Left(None) => ""
-    case Right(loc) => loc.prettyString
+  private def argPrinter(arg: BelleParser.TacticArg) = {
+    arg match {
+      case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
+      case Left(Some(expr: Expression)) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
+      case Left(Some(expr)) => "\"" + expr + "\""
+      case Left(pie: PosInExpr) => "\"" + pie + "\""
+      case Left(expr) => "\"" + expr + "\""
+      case Left(None) => ""
+      case Right(loc) => loc.prettyString
+    }
   }
 
   private val TAB = "  "
