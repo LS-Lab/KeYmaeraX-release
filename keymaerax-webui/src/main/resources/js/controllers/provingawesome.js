@@ -117,59 +117,70 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         spinnerService.show('tacticExecutionSpinner')
         $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/usedLemmas').then(function(response) {
           var usedLemmas = response.data.lemmas
-          var modalInstance = $uibModal.open({
-            templateUrl: 'templates/modalMessageTemplate.html',
-            controller: 'ModalMessageCtrl',
-            size: 'md',
-            resolve: {
-              title: function() { return "Prove lemmas"; },
-              message: function() { return "The proof uses " + usedLemmas.length + " lemmas; do you want to check them now?"; },
-              mode: function() { return "yesno"; }
-            }
-          });
-
-          modalInstance.result.then(
-          function() {
-            // yes: prove all lemmas and on success prove theorem
-            var lemmaLoader = $q.defer();
-            usedLemmas.reduce(function(result, lemma) {
-              return result.then(function(response) {
-                console.log("Opening lemma: " + lemma.name + "(" + lemma.proofId + ")");
-                return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId);
-              }).then(function(response) {
-                console.log("Proving lemma: " + lemma.name + "(" + lemma.proofId + ")");
-                return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId + '/initfromtactic')
-              }).then(function(response) {
-                return $scope.runningTask.start(lemma.proofId, '()', response.data.taskId, response.data.info,
-                  function(taskResult) {
-                    console.log("Done proving: " + lemma.name + "(" + lemma.proofId + ")")
-                  },
-                  function(taskError) {
-                    console.log("Failed proving: " + lemma.name + "(" + lemma.proofId + ")")
-                  },
-                  undefined
-                );
-              }).then(function(response) {
-                console.log("Validating proof: " + lemma.name + "(" + lemma.proofId + ")");
-                return $http.get("proofs/user/" + $scope.userId + "/" + lemma.proofId + "/validatedStatus");
-              }).then(function(response) {
-                console.log("Done validating proof: " + lemma.name + "(" + lemma.proofId + ")");
-              });
-            }, lemmaLoader.promise).then(function(response) {
-              // finally open imported but not yet executed proof
-              console.log("Now proving theorem " + $scope.proofId);
-              $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
-                .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
-                                           $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
-                .catch(function(err) {
-                  spinnerService.hide('tacticExecutionSpinner');
-                  $rootScope.$broadcast("proof.message", err.data);
-                });
+          if (usedLemmas.length > 0) {
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/modalMessageTemplate.html',
+              controller: 'ModalMessageCtrl',
+              size: 'md',
+              resolve: {
+                title: function() { return "Prove lemmas"; },
+                message: function() { return "The proof uses " + usedLemmas.length + " lemmas; do you want to check them now?"; },
+                mode: function() { return "yesno"; }
+              }
             });
-            lemmaLoader.resolve();
-          },
-          function() {
-            // no: open imported but not yet executed proof, run tactic with unproved lemmas remaining open
+
+            modalInstance.result.then(
+              function() {
+                // yes: prove all lemmas and on success prove theorem
+                var lemmaLoader = $q.defer();
+                usedLemmas.reduce(function(result, lemma) {
+                  return result.then(function(response) {
+                    console.log("Opening lemma: " + lemma.name + "(" + lemma.proofId + ")");
+                    return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId);
+                  }).then(function(response) {
+                    console.log("Proving lemma: " + lemma.name + "(" + lemma.proofId + ")");
+                    return $http.get('proofs/user/' + $scope.userId + '/' + lemma.proofId + '/initfromtactic')
+                  }).then(function(response) {
+                    return $scope.runningTask.start(lemma.proofId, '()', response.data.taskId, response.data.info,
+                      function(taskResult) {
+                        console.log("Done proving: " + lemma.name + "(" + lemma.proofId + ")")
+                      },
+                      function(taskError) {
+                        console.log("Failed proving: " + lemma.name + "(" + lemma.proofId + ")")
+                      },
+                      undefined
+                    );
+                  }).then(function(response) {
+                    console.log("Validating proof: " + lemma.name + "(" + lemma.proofId + ")");
+                    return $http.get("proofs/user/" + $scope.userId + "/" + lemma.proofId + "/validatedStatus");
+                  }).then(function(response) {
+                    console.log("Done validating proof: " + lemma.name + "(" + lemma.proofId + ")");
+                  });
+                }, lemmaLoader.promise).then(function(response) {
+                  // finally open imported but not yet executed proof
+                  console.log("Now proving theorem " + $scope.proofId);
+                  $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
+                    .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
+                                               $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+                    .catch(function(err) {
+                      spinnerService.hide('tacticExecutionSpinner');
+                      $rootScope.$broadcast("proof.message", err.data);
+                    });
+                });
+                lemmaLoader.resolve();
+              },
+              function() {
+                // no: open imported but not yet executed proof, run tactic with unproved lemmas remaining open
+                $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
+                  .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
+                                             $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+                  .catch(function(err) {
+                    spinnerService.hide('tacticExecutionSpinner');
+                    $rootScope.$broadcast("proof.message", err.data);
+                  });
+              }
+            );
+          } else {
             $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
               .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
                                          $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
@@ -178,7 +189,6 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                 $rootScope.$broadcast("proof.message", err.data);
               });
           }
-        );
         });
       } else {
         spinnerService.show('proofLoadingSpinner');
