@@ -390,7 +390,7 @@ object Kaisar {
         case Auto() => TactixLibrary.master()
         case RCF() => TactixLibrary.QE()
         case SmartQE() => ArithmeticSpeculativeSimplification.speculativeQE
-        case CloseId() => TactixLibrary.closeId
+        case CloseId() => TactixLibrary.id
       }
     interpret(e, pr)
   }

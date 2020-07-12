@@ -147,7 +147,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     "(a^7*b^6+c^9*a^6*b^5+a^4*c^8)<=38945*10^16").asSequent
 
   "seq0" should "prove with interval arithmetic" in withMathematica { _ =>
-    val res = proveBy(seq0, intervalCut(1, 0::Nil) & closeId)
+    val res = proveBy(seq0, intervalCut(1, 0::Nil) & id)
     res shouldBe 'proved
   }
 
@@ -156,7 +156,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     "(a^7*b^6+c^9*a^6*b^5+a^4*c^8)<=39577*10^43").asSequent
 
   "seq1" should "prove with interval arithmetic" in withMathematica { _ =>
-    val res = proveBy(seq1, intervalCut(1, 0::Nil) & closeId)
+    val res = proveBy(seq1, intervalCut(1, 0::Nil) & id)
     res shouldBe 'proved
   }
 

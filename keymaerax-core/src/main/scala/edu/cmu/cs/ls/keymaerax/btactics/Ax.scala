@@ -1543,7 +1543,7 @@ object Ax extends Logging {
         useAt(diamond, PosInExpr(1::Nil))(-1) & notL(-1) &
         useAt(notAnd)(-2, 1::Nil) & useAt(implyExpand, PosInExpr(1::Nil))(-2, 1::Nil) &
         useAt(converseImply)(-2, 1::Nil) & useAt(doubleNegation)(-2, 1::0::Nil) &
-        useAt(K, PosInExpr(0::Nil))(-2) & implyL(-2) <(HilbertCalculus.V('Rlast) & closeId, closeId)
+        useAt(K, PosInExpr(0::Nil))(-2) & implyL(-2) <(HilbertCalculus.V('Rlast) & id, id)
         ,
         useAt(diamond, PosInExpr(1::Nil))(-1) & useAt(notAnd)(-1, 0::1::Nil) &
         useAt(implyExpand, PosInExpr(1::Nil))(-1, 0::1::Nil) & notL(-1) &
@@ -1553,7 +1553,7 @@ object Ax extends Logging {
           useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS(boxTrue)
           ,
           useAt(proveBy("!q_() -> (p_() -> !q_())".asFormula, prop), PosInExpr(1::Nil))(2, 1::Nil) &
-          HilbertCalculus.V(2) & notR(2) & closeId
+          HilbertCalculus.V(2) & notR(2) & id
         )
       )
   )
@@ -2118,7 +2118,7 @@ object Ax extends Logging {
       equivR(1) <(
         useAt(diamond, PosInExpr(1::Nil))(1) & useAt(loopMergeb, PosInExpr(1::Nil))(1, 0::Nil) &
           useAt(box, PosInExpr(1::Nil))(1, 0::1::Nil) & useAt(diamond)(1) &
-          useAt(doubleNegation)(1, 1::1::Nil) & closeId & done,
+          useAt(doubleNegation)(1, 1::1::Nil) & id & done,
         useAt(iterated)(1) & prop & done
       )
     )
@@ -2659,7 +2659,7 @@ object Ax extends Logging {
     implyR(1) &
       useAt(existsGeneralize, PosInExpr(1::Nil))(1) &
       useAt(allInst)(-1) &
-      closeId
+      id
   )
 
   /**
@@ -2844,7 +2844,7 @@ object Ax extends Logging {
     Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
     implyR(1) &
       useAt(DMP, PosInExpr(1::Nil))(1) &
-      useAt(DW, PosInExpr(1::Nil))(1) & closeId
+      useAt(DW, PosInExpr(1::Nil))(1) & id
   )
 
   /**
@@ -3239,8 +3239,8 @@ object Ax extends Logging {
         cut("[{c_{|t_|}&q_(|t_|)}]p_(|t_|)>=0".asFormula) & Idioms.<(
           dC("p_(|t_|)>=0".asFormula)(-2)& Idioms.<(
             useAt(DWd)(-2) & useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & notR(1) & notL(-2) &
-              generalize("(!p_(|t_|)=0)".asFormula)(1) & Idioms.<(closeId, useAt(equalExpand)(-1, 0::Nil) & useAt(flipGreaterEqual)(1, 0::0::1::Nil) & prop & done),
-            closeId
+              generalize("(!p_(|t_|)=0)".asFormula)(1) & Idioms.<(id, useAt(equalExpand)(-1, 0::Nil) & useAt(flipGreaterEqual)(1, 0::0::1::Nil) & prop & done),
+            id
           ),
           useAt(diamond, PosInExpr(1::Nil))(1) & notR(1) &
             useAt(RIclosedgeq, PosInExpr(0::Nil))(1) & prop & HilbertCalculus.composeb(1) &
@@ -3261,12 +3261,12 @@ object Ax extends Logging {
                 prop &
                 done
             ),
-            closeId)
+            id)
         ),
         dR("q_(|t_|)".asFormula)(-2) & Idioms.<(
           useAt(diamond, PosInExpr(1::Nil))(1) & notR(1) &
             useAt(diamond, PosInExpr(1::Nil))(-2) & notL(-2) &
-            TactixLibrary.generalize("!p_(|t_|)<=0".asFormula)(1) & Idioms.<(closeId, useAt(lessEqual)(-1,0::Nil) & prop & done),
+            TactixLibrary.generalize("!p_(|t_|)<=0".asFormula)(1) & Idioms.<(id, useAt(lessEqual)(-1,0::Nil) & prop & done),
           useAt(DW)(1) &
             TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & HilbertCalculus.boxTrue(1), prop & done) /* TODO: Goedel? */)
       )
@@ -3289,12 +3289,12 @@ object Ax extends Logging {
         prop & Idioms.<(
         useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(1) & Idioms.<(
           useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & prop &
-            HilbertCalculus.DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) & Idioms.<(closeId, useAt(greaterEqual)(1, 0::1::Nil) & prop & done),
-          closeId),
+            HilbertCalculus.DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) & Idioms.<(id, useAt(greaterEqual)(1, 0::1::Nil) & prop & done),
+          id),
         useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(-2) & Idioms.<(
           useAt(diamond, PosInExpr(1::Nil))(1) & useAt(diamond, PosInExpr(1::Nil))(-2) & prop &
-            generalize("!!p_(|t_|)>0".asFormula)(1) & Idioms.<(closeId, useAt(gtzImpNez)(-1,0::0::Nil) & useAt(notNotEqual)(-1,0::Nil) & closeId),
-          closeId)
+            generalize("!!p_(|t_|)>0".asFormula)(1) & Idioms.<(id, useAt(gtzImpNez)(-1,0::0::Nil) & useAt(notNotEqual)(-1,0::Nil) & id),
+          id)
       )
     )
 
@@ -3434,13 +3434,13 @@ object Ax extends Logging {
       useAt(geNormalize)(-2, 1::0::Nil) &
       useAt(IVT, PosInExpr(0 :: Nil))(-2) & implyL(-2) &
       Idioms.<(
-        useAt(metricLe)(-1) & closeId,
+        useAt(metricLe)(-1) & id,
         useAt(box, PosInExpr(1 :: Nil))(1, 1 :: 1 :: 0 :: Nil) &
           useAt(doubleNegation, PosInExpr(0 :: Nil))(1, 1 :: 1 :: Nil) &
           useAt(notImply, PosInExpr(0 :: Nil))(1, 1 :: 1 :: 1 :: Nil) &
           useAt(eqNormalize)(1, 1::0::Nil) &
           useAt(geNormalize)(1, 1::1::1::0::Nil) &
-          closeId
+          id
       )
   )
 
@@ -3452,7 +3452,7 @@ object Ax extends Logging {
     generalize(True)(1) & Idioms.<(useAt(boxTrue)(1),
       implyR(1) & useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(-2) &
         useAt(Ax.notLessEqual, PosInExpr(0 :: Nil))(1, 1 :: Nil)) &
-      useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(closeId,
+      useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(id,
       derive(1, 1 :: Nil) &
         cohideR(1) & useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
         generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), useAt(Dassignb)(1) & cohideR(1) & by(oneGeZero))
@@ -3467,18 +3467,18 @@ object Ax extends Logging {
           useAt(boxAnd)(1) & andR(1) &
             Idioms.<(
               useAt(Ax.dualIVT, PosInExpr(1 :: Nil))(1) & andR(1) &
-                Idioms.<(closeId,
+                Idioms.<(id,
                   useAt(boxAnd)(-2) & andL(-2) & hideL(-2) &
                     cutR("[{x_'=1, c{|x_|} & q(||)}](x_ <= h() -> x_ = h() -> [{x_'=1, c{|x_|} & q(||)}](x_ >= h() -> p(||)))".asFormula)(1) &
                     Idioms.<(
                       useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
                         DLBySubst.boxElim(1) & prop & useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) &
-                          Idioms.<(closeId, hideL(-1) & HilbertCalculus.DC("x_>=h()".asFormula)(1) &
+                          Idioms.<(id, hideL(-1) & HilbertCalculus.DC("x_>=h()".asFormula)(1) &
                             Idioms.<(
                               useAt(DW)(1) & generalize(True)(1) & Idioms.<(cohideR(1) & useAt(boxTrue)(1), prop & done),
                               useAt(DI)(1) & implyR(1) & andR(1) & Idioms.<(
                                 hideL(-2) & useAt(Ax.equalExpand, PosInExpr(0::Nil))(-1) & andL(-1) &
-                                  useAt(Ax.flipLessEqual, PosInExpr(0::Nil))(-2) & closeId & done,
+                                  useAt(Ax.flipLessEqual, PosInExpr(0::Nil))(-2) & id & done,
                                 useAt(Ax.DEs, PosInExpr(0 :: Nil))(1) &
                                   generalize(True)(1) &
                                   Idioms.<(cohideR(1) & useAt(boxTrue)(1),
@@ -3487,13 +3487,13 @@ object Ax extends Logging {
                       ),
                       cohideR(1) & implyR(1) & DLBySubst.boxElim(1) & implyR(1) & implyL(-1) &
                         Idioms.<(
-                          hideR(1) & useAt(Ax.equalExpand, PosInExpr(0::Nil))(-1) & andL(-1) & closeId,
+                          hideR(1) & useAt(Ax.equalExpand, PosInExpr(0::Nil))(-1) & andL(-1) & id,
                           prop & done)
                     )
                 ),
               useAt(boxAnd)(-2) & andL(-2) &
                 useAt(Ax.DCC, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
-                DLBySubst.boxElim(1) & closeId,
+                DLBySubst.boxElim(1) & id,
                 cohideR(1) & by(timeCond)
               )
             ),
@@ -3660,8 +3660,8 @@ object Ax extends Logging {
     equivR(1) <(
       implyRi & byUS(Uniq),
       andR(1) <(
-        dR("q(||)&r(||)".asFormula)(1)<( closeId, HilbertCalculus.DW(1) & G(1) & prop),
-        dR("q(||)&r(||)".asFormula)(1)<( closeId, HilbertCalculus.DW(1) & G(1) & prop)
+        dR("q(||)&r(||)".asFormula)(1)<( id, HilbertCalculus.DW(1) & G(1) & prop),
+        dR("q(||)&r(||)".asFormula)(1)<( id, HilbertCalculus.DW(1) & G(1) & prop)
         )
     )
   )
@@ -4727,8 +4727,8 @@ object Ax extends Logging {
         useExpansionAt(diamond)(-2) &
         notL(-2) & notR(1) & implyRi()(-1,1) &
         useAt(DR, PosInExpr(1::Nil))(1) & TactixLibrary.boxAnd(1) & andR(1) <(
-        HilbertCalculus.DW(1) & G(1) & implyR(1) & closeId,
-        closeId
+        HilbertCalculus.DW(1) & G(1) & implyR(1) & id,
+        id
       )
     )
 
@@ -4976,7 +4976,7 @@ object Ax extends Logging {
     implyR(1) & andL(-1) &
       eqL2R(-1)(1, 0::1::Nil) &
       hideL(-1) &
-      closeId
+      id
   )
 
   // Lemmas for division
@@ -5139,9 +5139,9 @@ object Ax extends Logging {
       useAt(Ax.powerEven, PosInExpr(1::Nil), (subst: Option[Subst]) =>
         subst.getOrElse(RenUSubst(Seq()))++RenUSubst(Seq(("p_()".asTerm, "x_()^m_()/y_()^m_()".asTerm))))(1) &
       andR(1) & Idioms.<(
-      useAt(Ax.equivTrue)(1) & closeId,
+      useAt(Ax.equivTrue)(1) & id,
       andR(1) & Idioms.<(
-        closeId,
+        id,
         useAt(Ax.ratFormTimes, PosInExpr(1::Nil), (subst: Option[Subst]) =>
           subst.getOrElse(RenUSubst(Seq()))++RenUSubst(Seq(
             ("nx_()".asTerm, "x_()^m_()".asTerm),
@@ -5177,9 +5177,9 @@ object Ax extends Logging {
       useAt(Ax.powerOdd, PosInExpr(1 :: Nil), (subst: Option[Subst]) =>
         subst.getOrElse(RenUSubst(Seq())) ++ RenUSubst(Seq(("p_()".asTerm, "x_()^m_()/y_()^m_()".asTerm))))(1) &
       andR(1) & Idioms.<(
-      useAt(Ax.equivTrue)(1) & closeId,
+      useAt(Ax.equivTrue)(1) & id,
       andR(1) & Idioms.<(
-        closeId,
+        id,
         cut(("x_()^m_()/y_()^m_()*(x_()^m_()/y_()^m_())*(x_()/y_()) =" +
           "(x_()^m_()*x_()^m_()*x_())/(y_()^m_()*y_()^m_()*y_())").asFormula) &
           Idioms.<(
@@ -5395,7 +5395,7 @@ object Ax extends Logging {
       "elem1_()/elem2_() = elem1_() * inv_()" +
       ") ->" +
       "\\exists err_ (elem1_() / elem2_() = poly_() + err_ & l_() <= err_ & err_ <= u_())").asFormula,
-    implyR(1) & andL(-1) & eqL2R(-2)(1) & closeId
+    implyR(1) & andL(-1) & eqL2R(-2)(1) & id
   )
 
   @Axiom("taylorModelSquarePrv")
@@ -5513,7 +5513,7 @@ object Ax extends Logging {
 
   @Axiom("unfoldExistsLemma")
   lazy val unfoldExistsLemma = derivedFormula("unfoldExistsLemma","\\exists x_ (r_() = s_() + x_ & P_(x_)) <-> P_(r_()-s_())".asFormula, prop & Idioms.<(
-    existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms.<(QE & done, implyR(1) & eqL2R(-3)(1) & closeId),
+    existsL(-1) & andL(-1) & cutR("r_() - s_() = x_".asFormula)(1) & Idioms.<(QE & done, implyR(1) & eqL2R(-3)(1) & id),
     existsR("r_() - s_()".asTerm)(1) & prop & QE & done))
 
   @Axiom("foldAndLessEqExistsLemma")

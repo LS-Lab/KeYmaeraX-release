@@ -222,7 +222,7 @@ object Approximator extends Logging {
       TactixLibrary.proveBy(fact,
         DebuggingTactics.debug(s"Trying to prove lemma $fact", DEBUG) &
         TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(1) <(
-          DebuggingTactics.debug("lemma branch 1: closeId", DEBUG) & TactixLibrary.closeId & DebuggingTactics.done,
+          DebuggingTactics.debug("lemma branch 1: closeId", DEBUG) & TactixLibrary.id & DebuggingTactics.done,
           DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", DEBUG) & TactixLibrary.hideL(-1) & cutProof & DebuggingTactics.debug("should've been done",true) & DebuggingTactics.done
         ) & DebuggingTactics.debug(s"Successfully proved lemma $fact", DEBUG)
       )

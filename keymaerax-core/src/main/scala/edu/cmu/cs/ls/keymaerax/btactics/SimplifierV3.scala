@@ -224,11 +224,11 @@ object SimplifierV3 {
     val rimp = "B_() -> (R_() = RR_())".asFormula
     val lhs = ctor("L_()".asTerm,"R_()".asTerm)
     val lAx = remember(Imply(limp,Imply( "A_()".asFormula ,Equiv(lhs, ctor("LL_()".asTerm,"R_()".asTerm)))),
-      implyR(1) & implyR(1) & implyL(-1) <(closeId,exhaustiveEqL2R(-1) & cohideR(1) & byUS(Ax.equivReflexive)), namespace).fact
+      implyR(1) & implyR(1) & implyL(-1) <(id,exhaustiveEqL2R(-1) & cohideR(1) & byUS(Ax.equivReflexive)), namespace).fact
     val rAx = remember(Imply(rimp,Imply( "B_()".asFormula ,Equiv(lhs, ctor("L_()".asTerm,"RR_()".asTerm)))),
-      implyR(1) & implyR(1)  & implyL(-1)<(closeId,exhaustiveEqL2R(-1) & cohideR(1) & byUS(Ax.equivReflexive)), namespace).fact
+      implyR(1) & implyR(1)  & implyL(-1)<(id,exhaustiveEqL2R(-1) & cohideR(1) & byUS(Ax.equivReflexive)), namespace).fact
     val lrAx = remember(Imply(And(limp,rimp),Imply( "A_() & B_()".asFormula ,Equiv(lhs, ctor("LL_()".asTerm,"RR_()".asTerm)))),
-      implyR(1) & implyR(1) & andL(-1) & implyL(-2) <(andL(-1) & closeId, implyL(-3) <(andL(-1) & closeId, exhaustiveEqL2R(-2) & exhaustiveEqL2R(-3) & cohideR(1) & byUS(Ax.equivReflexive)) ), namespace).fact
+      implyR(1) & implyR(1) & andL(-1) & implyL(-2) <(andL(-1) & id, implyL(-3) <(andL(-1) & id, exhaustiveEqL2R(-2) & exhaustiveEqL2R(-3) & cohideR(1) & byUS(Ax.equivReflexive)) ), namespace).fact
     (lAx,rAx,lrAx)
   }
 
@@ -591,7 +591,7 @@ object SimplifierV3 {
   private def fastCloser(hs:context,f:Formula): BelleExpr = {
     //todo: auto close for NNF
     if (f.equals(True)) closeT
-    else if (hs.contains(f)) closeId
+    else if (hs.contains(f)) id
     else {
       f match {
         case And(l, r) =>

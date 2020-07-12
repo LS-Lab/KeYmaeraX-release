@@ -250,7 +250,7 @@ class TaylorModelArithTests extends TacticTestBase {
       val y = vdpY
       val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
       val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
-      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
       val res = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res.conclusion.succ.loneElement))
       res.conclusion.succ.loneElement shouldBe
@@ -294,7 +294,7 @@ class TaylorModelArithTests extends TacticTestBase {
       val y = vdpY
       val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
       val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
-      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
       val (res, tmIvls, rIvls, (tmEqs, rEqs, t1Eq)) = new vdp.TimeStep(Seq(x, y), Seq(r0, r1), t, 0.01).timeStepLemma("Safe(t, y, x)".asFormula)
       // println(new KeYmaeraXPrettierPrinter(100).stringify(res))
       val contextE = ("r0=e0, r1=e1, (-1)<=e0, e0<=1, (-1)<=e1, e1<=1, (-1)<=r0, r0<=1, (-1)<=r1, r1<=1," +
@@ -391,7 +391,7 @@ class TaylorModelArithTests extends TacticTestBase {
       val y = vdpY
       val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
       val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
-      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
       val prv = proveBy(Sequent(context, IndexedSeq(Box(ODESystem(vdpProgram, True), "y < 3 & x < 3 & t >= 0".asFormula))), skip)
       val (xs, rs, t1, prv1) = vdp.timeStepAndPrecondition(Seq(x, y), Seq(r0, r1), t, 0.01, prv)
 
@@ -423,7 +423,7 @@ class TaylorModelArithTests extends TacticTestBase {
       val y = vdpY
       val r0 = TaylorModelArith.TM("r0".asTerm, PolynomialArithV2.ofTerm("e0".asTerm), Number(0), Number(0), context, QE)
       val r1 = TaylorModelArith.TM("r1".asTerm, PolynomialArithV2.ofTerm("e1".asTerm), Number(0), Number(0), context, QE)
-      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), closeId)
+      val t = proveBy(Sequent(context, IndexedSeq("t = 0".asFormula)), id)
       val prv = proveBy(Sequent(context, IndexedSeq(Box(ODESystem(vdpProgram, True), "y < 3 & x < 3 & t >= 0".asFormula))), skip)
       val (xs, rs, t1, prv1) = vdp.iterateTimeSteps(Seq(x, y), Seq(r0, r1), t, 0.025, prv, 40)
       prv1.conclusion shouldBe prv.conclusion

@@ -548,8 +548,8 @@ object AxiomaticODESolver {
   private def simplifyEvolutionDomain(odeSize: Int) = "domSimplify" by ((pos: Position, _: Sequent) => {
     lazy val simplFact = remember(
       "p_(f(x_)) & x_=f(x_) <-> p_(x_) & x_=f(x_)".asFormula, TactixLibrary.equivR(1) <(
-        TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqL2R(-2)(1) & TactixLibrary.closeId, TactixLibrary.closeId),
-        TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqR2L(-2)(1) & TactixLibrary.closeId, TactixLibrary.closeId)
+        TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqL2R(-2)(1) & TactixLibrary.id, TactixLibrary.id),
+        TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqR2L(-2)(1) & TactixLibrary.id, TactixLibrary.id)
         ), namespace)
 
     val step = "domSimplifyStep" by ((pp: Position, ss: Sequent) => {
@@ -576,7 +576,7 @@ object AxiomaticODESolver {
         TactixLibrary.eqL2R(-3)(-2) & TactixLibrary.prop & TactixLibrary.done, namespace)
     lazy val rewrite2 = remember("(q_(x_) & x_=f(x_)) & p_(x_) -> q_(f(x_)) & p_(f(x_))".asFormula,
       TactixLibrary.implyR(1) & TactixLibrary.andL(-1) * 2 & TactixLibrary.andR(1) &
-        OnAll(TactixLibrary.eqR2L(-3)(1) & TactixLibrary.closeId), namespace)
+        OnAll(TactixLibrary.eqR2L(-3)(1) & TactixLibrary.id), namespace)
     lazy val rewrite3 = remember("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop, namespace)
 
     //@note compute substitution fresh on each step, single pass unification match does not work because q_(x_) before x_=f

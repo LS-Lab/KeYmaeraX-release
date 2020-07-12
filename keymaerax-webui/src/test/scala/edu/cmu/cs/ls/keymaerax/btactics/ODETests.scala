@@ -586,7 +586,7 @@ class ODETests extends TacticTestBase {
         cut("[{t'=1,x'=1*x+0 & true}] 0 > (x0-x1)+x0*t".asFormula) <(
           useAt(Ax.box, PosInExpr(1::Nil))(-6) & notL(-6) &
             chase(1, 1::Nil) & implyRi()(AntePos(2),SuccPos(0)) & cohideR(1) & byUS(pr2),
-          dC("x-x1 < 0".asFormula)(1) < ( closeId,closeId) )
+          dC("x-x1 < 0".asFormula)(1) < ( id,id) )
         ,
         hideR(1) & dC("x >= x0".asFormula)(1)
         <( dC("x-x1 >= (x0-x1)+x0*t".asFormula)(1) <(dW(1)&QE,dI('full)(1)), ODE(1))

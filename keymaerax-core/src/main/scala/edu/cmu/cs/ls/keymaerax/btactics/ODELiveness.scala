@@ -86,7 +86,7 @@ object ODELiveness {
           byUS(Ax.ally)
         ,
         useAt(Ax.DGa,PosInExpr(0::Nil))(1) &
-          useAt(Ax.existsey, PosInExpr(1::Nil))(1) & closeId
+          useAt(Ax.existsey, PosInExpr(1::Nil))(1) & id
       ),
       namespace
     )
@@ -561,7 +561,7 @@ object ODELiveness {
         val concl = finalrw.conclusion.succ(0).sub(PosInExpr(1::1::Nil)).get.asInstanceOf[Formula]
 
         cutL(concl)(pos) <( cont,
-          cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & closeId
+          cohideOnlyR('Rlast) & useAt(finalrw,PosInExpr(1::Nil))(1) & id
         )
     }
   })
@@ -748,7 +748,7 @@ object ODELiveness {
             //DebuggingTactics.print("before") &
             tac &
             //DebuggingTactics.print("after") &
-            dR(dom)(1) <( closeId,
+            dR(dom)(1) <( id,
             DifferentialTactics.diffWeakenG(1) & implyR(1) & by(pr) )
         )
       }
@@ -1022,7 +1022,7 @@ object ODELiveness {
       implyR(pos) & existsL('Llast) & andL('Llast) & dV(eps,true)(pos) &
         andR(pos) <(
           andR(pos) <(
-            closeId,
+            id,
             odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & (byUScaught(baseGExge)|byUScaught(baseGExgt)))), // existence
           compatCuts(pos) &
             dR(lie,false)(pos) <(
@@ -1030,11 +1030,11 @@ object ODELiveness {
             // add the quantified assumption manually
             dC(quantliecheck)(pos) <(
               DifferentialTactics.diffWeakenG(pos) & implyR(1) & andL(-1) & (allL('Llast)*bvs.length) & implyL('Llast) <(
-                closeId,
-                closeId
+                id,
+                id
               )
               ,
-              V(pos) & closeId
+              V(pos) & id
             )
           )  // derivative lower bound
         )
@@ -1121,7 +1121,7 @@ object ODELiveness {
           cutR("[{t'=1,c&(q_(||)&!(t>-p(||)/e()&e()>0)) & e() > 0}](!t>-p(||)/e())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & closeId
+              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & id
           ) ,
         cohideR(1) & implyR(1) & mond & byUS(proveBy("t>-p()/e()&e()>0 ==> p()+e()*t>0".asSequent,QE))
       ),
@@ -1135,7 +1135,7 @@ object ODELiveness {
           cutR("[{t'=1,c&(q_(||)&!(t>=-p(||)/e()&e()>0)) & e() > 0}](!t>=-p(||)/e())".asFormula)(1)<(
             DW(1) & G(1) & prop,
             equivifyR(1) & commuteEquivR(1) &
-              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & closeId
+              useAt(Ax.DC,PosInExpr(1::Nil))(1) & V(1) & id
           ) ,
         cohideR(1) & implyR(1) & mond & byUS(proveBy("t>=-p()/e()&e()>0 ==> p()+e()*t>=0".asSequent,QE))
       ),
@@ -1150,7 +1150,7 @@ object ODELiveness {
       DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>=0  ==>  f_()>=0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
-        useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+        useAt(Ax.notGreaterEqual,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
     ), namespace
   )
 
@@ -1162,7 +1162,7 @@ object ODELiveness {
       DW(1) & G(1) & prop & hideL(-2) & byUS(proveBy("f_()>=p()+e()*t, p()+e()*t>0  ==>  f_()>0".asSequent,QE)),
       equivifyR(1) & commuteEquivR(1) &
         useAt(Ax.DC,PosInExpr(1::Nil))(1) &
-        useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & closeId
+        useAt(Ax.notGreater,PosInExpr(0::Nil))(1,0::1::1::Nil) & id
     ), namespace
   )
 
@@ -1261,7 +1261,7 @@ object ODELiveness {
 
     cut(Box(tarsys,Not(tarpost))) <(
       skip,
-      useAt(Ax.diamond,PosInExpr(1::Nil))(pos) & notR(pos) & closeId
+      useAt(Ax.diamond,PosInExpr(1::Nil))(pos) & notR(pos) & id
     )
   })
 

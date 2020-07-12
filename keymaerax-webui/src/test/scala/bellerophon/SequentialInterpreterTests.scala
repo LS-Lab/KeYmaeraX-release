@@ -285,9 +285,9 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
 
     a [BelleThrowable] should be thrownBy proveBy("x>0 -> x>5 & x>0 & [?x>1;]x>1".asFormula, implyR(1) & andR(1) <(
-      DebuggingTactics.printIndexed("Branch 1") & closeId & /* not reached */ logDone(1),
+      DebuggingTactics.printIndexed("Branch 1") & id & /* not reached */ logDone(1),
       andR(1) <(
-        DebuggingTactics.printIndexed("Branch 2") & closeId & logDone(2)
+        DebuggingTactics.printIndexed("Branch 2") & id & logDone(2)
         ,
         DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
       )
@@ -308,9 +308,9 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
 
     the [BelleThrowable] thrownBy proveBy("x>0 -> x>5 & x>2 & [?x>1;]x>1".asFormula, implyR(1) & andR(1) <(
-      DebuggingTactics.printIndexed("Branch 1") & closeId & /* not reached */ logDone(1),
+      DebuggingTactics.printIndexed("Branch 1") & id & /* not reached */ logDone(1),
       andR(1) <(
-        DebuggingTactics.printIndexed("Branch 2") & closeId & /* not reached */ logDone(2)
+        DebuggingTactics.printIndexed("Branch 2") & id & /* not reached */ logDone(2)
         ,
         DebuggingTactics.printIndexed("Branch 3") & testb(1) & prop & logDone(3)
       )
@@ -464,7 +464,7 @@ class SequentialInterpreterTests extends TacticTestBase {
   it should "try until one succeeds" in {
     val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula, (implyR(1)&done)::prop::Nil, 1000)
     result shouldBe 'proved
-    recorded should contain theSameElementsInOrderAs("(implyR(1)&done())" :: "prop" :: Nil)
+    recorded should contain theSameElementsInOrderAs("(implyR(1);done())" :: "prop" :: Nil)
   }
 
   it should "stop trying on timeout" in {
@@ -644,14 +644,14 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy(entry.model.asInstanceOf[Formula],
       ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "==> x>0 -> [y:=x;]y>0".asSequent, "Unexpected expand result") &
-        implyR(1) & assignb(1) & closeId) shouldBe 'proved
+        implyR(1) & assignb(1) & id) shouldBe 'proved
 
     proveBy(entry.model.asInstanceOf[Formula],
       implyR(1) & assignb(1) &
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
         ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
-        closeId) shouldBe 'proved
+        id) shouldBe 'proved
   }
 
   it should "replay when expanded on branches" in {
@@ -665,7 +665,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     proveBy(entry.model.asInstanceOf[Formula],
       ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "==> x>0 -> [y:=x; ++ ?y>0;]y>0".asSequent, "Unexpected expand result") &
-        implyR(1) & choiceb(1) & andR(1) <(assignb(1) & closeId, testb(1) & implyR(1) & closeId)) shouldBe 'proved
+        implyR(1) & choiceb(1) & andR(1) <(assignb(1) & id, testb(1) & implyR(1) & id)) shouldBe 'proved
 
     proveBy(entry.model.asInstanceOf[Formula],
       implyR(1) & choiceb(1) & andR(1) <(
@@ -673,13 +673,13 @@ class SequentialInterpreterTests extends TacticTestBase {
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
         ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
-        closeId
+        id
         ,
         testb(1) & implyR(1) &
         DebuggingTactics.assert(_ == "p(x),q(y) ==> q(y)".asSequent, "Unexpected result prior to expand") &
         ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0,y>0 ==> y>0".asSequent, "Unexpected expand result") &
-        closeId)
+        id)
         ) shouldBe 'proved
   }
 
@@ -697,21 +697,21 @@ class SequentialInterpreterTests extends TacticTestBase {
           DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
           ExpandAll(entry.defs.substs) &
           DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
-          closeId
+          id
         ,
-        testb(1) & implyR(1) & closeId)
+        testb(1) & implyR(1) & id)
     ) shouldBe 'proved
 
     // branches in reverse order
     proveBy(entry.model.asInstanceOf[Formula],
       implyR(1) & choiceb(1) & useAt(Ax.andCommute)(1) & andR(1) <(
-        testb(1) & implyR(1) & closeId
+        testb(1) & implyR(1) & id
         ,
         assignb(1) &
         DebuggingTactics.assert(_ == "p(x) ==> q(x)".asSequent, "Unexpected result prior to expand") &
         ExpandAll(entry.defs.substs) &
         DebuggingTactics.assert(_ == "x>0 ==> x>0".asSequent, "Unexpected expand result") &
-        closeId)
+        id)
     ) shouldBe 'proved
   }
 }

@@ -67,8 +67,8 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
   
   it should "accept id as well as closeId" in {
-    BelleParser("closeId") shouldBe (round trip TactixLibrary.closeId)
-    BelleParser("id") shouldBe (round trip TactixLibrary.closeId)
+    BelleParser("closeId") shouldBe (round trip TactixLibrary.id)
+    BelleParser("id") shouldBe (round trip TactixLibrary.id)
   }
 
   it should "parse a built-in tactic with arguments" in {
@@ -395,27 +395,27 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   "doall combinator parser" should "parse doall(closeId)" in {
     val tactic = BelleParser("doall(closeId)")
-    tactic shouldBe (round trip OnAll(TactixLibrary.closeId))
+    tactic shouldBe (round trip OnAll(TactixLibrary.id))
   }
 
   it should "parse combined tactics with parameters doall(closeId | closeTrue | andL(1))" in {
     val tactic = BelleParser("doall(closeId | closeTrue | andL(1))")
-    tactic shouldBe (round trip OnAll(TactixLibrary.closeId | (TactixLibrary.closeT | TactixLibrary.andL(1))))
+    tactic shouldBe (round trip OnAll(TactixLibrary.id | (TactixLibrary.closeT | TactixLibrary.andL(1))))
   }
 
   "Optional combinator" should "parse ?(closeId)" in {
     val tactic = BelleParser("?(closeId)")
-    tactic shouldBe (round trip Idioms.?(TactixLibrary.closeId))
+    tactic shouldBe (round trip Idioms.?(TactixLibrary.id))
   }
 
   it should "bind stronger than seq. combinator" in {
     val tactic = BelleParser("andR(1) & ?(closeId)")
-    tactic shouldBe (round trip SeqTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.closeId)))
+    tactic shouldBe (round trip SeqTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
   }
 
   it should "bind stronger than alt. combinator" in {
     val tactic = BelleParser("andR(1) | ?(closeId)")
-    tactic shouldBe (round trip EitherTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.closeId)))
+    tactic shouldBe (round trip EitherTactic(TactixLibrary.andR(1), Idioms.?(TactixLibrary.id)))
   }
 
   it should "bind stronger than saturation" in {
@@ -426,7 +426,7 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "work in the beginning of a branch" in {
     val tactic = BelleParser("andR(1) & <(?(closeId), ?(orR(1)))")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.closeId), Idioms.?(TactixLibrary.orR(1))))
+    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(Idioms.?(TactixLibrary.id), Idioms.?(TactixLibrary.orR(1))))
   }
 
 
@@ -498,7 +498,7 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   "done tactic parser" should "parse closeId & done" in {
     val tactic = BelleParser("closeId & done")
-    tactic shouldBe (round trip TactixLibrary.closeId & TactixLibrary.done)
+    tactic shouldBe (round trip TactixLibrary.id & TactixLibrary.done)
   }
 
   it should "parse done" in {
@@ -523,7 +523,7 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse in a branch" in {
     val tactic = BelleParser("andR(1) & <(closeId & done, done)")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(TactixLibrary.closeId & TactixLibrary.done, TactixLibrary.done))
+    tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(TactixLibrary.id & TactixLibrary.done, TactixLibrary.done))
   }
 
   //endregion
@@ -549,7 +549,7 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse let as part of a larger tactic" in {
     val tactic = BelleParser("implyR(1) ; let ({`a()=a`}) in (nil) ; closeId")
-    tactic shouldBe (round trip TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.skip) & TactixLibrary.closeId))
+    tactic shouldBe (round trip TactixLibrary.implyR(1) & (Let("a()".asTerm, "a".asTerm, TactixLibrary.skip) & TactixLibrary.id))
   }
 
   "def tactic parser" should "parse a simple example" in {

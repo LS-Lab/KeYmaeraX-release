@@ -860,7 +860,7 @@ object PolynomialArith extends Logging {
     val tac =
       l.foldRight(cohideR(1) & by(Ax.oneGreaterZero):BelleExpr)((e, n)=>
       {
-        useAt(neGtSquared,PosInExpr(1::Nil))(1) & andR(1) <( closeId, n)
+        useAt(neGtSquared,PosInExpr(1::Nil))(1) & andR(1) <( id, n)
       })
     (ineqP,cut(Greater(ineqP,Number(0))) <( ident,tac))
   }
@@ -874,7 +874,7 @@ object PolynomialArith extends Logging {
 
     (trm,
       proveBy(Imply(Greater(gtz,Number(0)),Greater(trm,Number(0))),
-        implyR(1) & useAt(plusGtMono,PosInExpr(1::Nil))(1) & andR(1) <(closeId, cohideR(1) & by(geZ) )))
+        implyR(1) & useAt(plusGtMono,PosInExpr(1::Nil))(1) & andR(1) <(id, cohideR(1) & by(geZ) )))
 
   }
 
@@ -902,7 +902,7 @@ object PolynomialArith extends Logging {
 
       //g >0 -> g+s_i^2 != 0
       cut(pf.conclusion.succ.head) < (
-        implyL('Llast) < (tac & closeId,ident)&
+        implyL('Llast) < (tac & id,ident)&
         notL('Llast) &
           //Run the instructions
           inst.foldRight(ident)(

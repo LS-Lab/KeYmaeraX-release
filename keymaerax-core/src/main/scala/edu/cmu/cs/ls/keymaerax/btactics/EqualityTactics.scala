@@ -252,8 +252,8 @@ private object EqualityTactics {
       cutAt(cutFml)(pos) <(
         /* use */ skip,
         /* show */ cohidePos & CMon(pos.inExpr) & implyR(1) &
-        (if (polarity >= 0) allL(e)(-1) & implyL(-1) <(cohide(2) & byUS(Ax.equalReflexive), closeId)
-         else existsR(e)(1) & andR(1) <(cohide(1) & byUS(Ax.equalReflexive), closeId)) &
+        (if (polarity >= 0) allL(e)(-1) & implyL(-1) <(cohide(2) & byUS(Ax.equalReflexive), id)
+         else existsR(e)(1) & andR(1) <(cohide(1) & byUS(Ax.equalReflexive), id)) &
         done
       )
   })
@@ -309,15 +309,15 @@ private object EqualityTactics {
       val proveAbs = if (polarity >= 0) {
         abs(afterCMonPos) & orL(-1) <(
           orL(-2) <(
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId,
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
             andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF),
           orL(-2) <(
             andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF,
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId))
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
       } else {
         abs(afterCMonPos) & orR(1) & orL(-2) <(
-          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(closeId),
-          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(closeId))
+          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(id),
+          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(id))
       }
 
       cutAt(expanded)(parentPos) <(
@@ -392,15 +392,15 @@ private object EqualityTactics {
       val proveMinMax = if (polarity >= 0) {
         minmax(afterCMonPos) & orL(-1) <(
           orL(-2) <(
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId,
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & id,
             andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
           orL(-2) <(
             andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
-            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId))
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & id))
       } else {
         minmax(afterCMonPos) & orR(1) & orL(-2) <(
-          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(closeId),
-          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(closeId))
+          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(id),
+          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(id))
       }
 
       cutAt(expanded)(parentPos) <(

@@ -314,7 +314,8 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   @Tactic("Close by ⊥/⊤", premises = "*", conclusion = "Γ, P |- P, Δ")
-  val close: BelleExpr = anon {(seq: Sequent) => findClose(seq)}
+  val close: DependentTactic = anon {(seq: Sequent) => findClose(seq)}
+
   // alternative implementation
   //@todo optimizable seems like complicated and possibly slow code???
   /*anon {(seq: Sequent) => {
@@ -352,7 +353,9 @@ trait SequentCalculus {
       for (j <- ante.indices) {
         ante(j) match {
           case False => return ProofRuleTactics.closeFalse(AntePos(j))
-          case other => if (fml0 == other) return close(AntePos(j), SuccPos(0))
+          case other =>
+            if (fml0 == other)
+              return closeId(AntePos(j), SuccPos(0))
         }
       }
       for (i <- succ.indices.tail) {
@@ -360,7 +363,7 @@ trait SequentCalculus {
           case True => return ProofRuleTactics.closeTrue(SuccPos(i))
           case fml =>
             for (j <- ante.indices) {
-              if (fml == ante(j)) return close(AntePos(j), SuccPos(i))
+              if (fml == ante(j)) return closeId(AntePos(j), SuccPos(i))
             }
         }
       }
@@ -369,28 +372,27 @@ trait SequentCalculus {
   }
 
   /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  def close(a: AntePos, s: SuccPos): BelleExpr = //cohide2(a, s) & ProofRuleTactics.trivialCloser
-    //@note same name (closeId) as SequentCalculus.closeId for serialization
-    new BuiltInTactic("closeId") {
-      override def result(provable: ProvableSig): ProvableSig = {
-        ProofRuleTactics.requireOneSubgoal(provable, "closeId(" + a + "," + s + ")")
-        try {
-          provable(Close(a, s), 0)
-        } catch {
-          case ex: NoncriticalCoreException => throw new TacticInapplicableFailure("Tactic " + name +
-            " applied at " + a + " and " + s + " is inapplicable in " + provable.prettyString, ex)
-        }
-      }
-    }
-  def close(a: Int, s: Int): BelleExpr = close(Position(a).checkAnte.top, Position(s).checkSucc.top)
+    // @TODO @Tactic-ify
+  // @TODO: Check/ is outdated with @Tactic
+  //@note same name (closeId) as SequentCalculus.closeId for serialization
+    @Tactic(codeName = "closeId")
+  val closeId: BuiltInTwoPositionTactic = anon ((provable: ProvableSig, a: Position, s: Position) => {
+    ProofRuleTactics.requireOneSubgoal(provable, "closeId(" + a + "," + s + ")")
+    try {
+      provable(Close(a.checkAnte.checkTop, s.checkSucc.checkTop), 0)
+    } catch {
+      case ex: NoncriticalCoreException => throw new TacticInapplicableFailure("Tactic " + "closeId" +
+        " applied at " + a + " and " + s + " is inapplicable in " + provable.prettyString, ex)
+    }})
+  def close(a: Int, s: Int): BelleExpr = closeId(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeIdWith: closes the branch with the formula at the given position when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   @Tactic(premises = "*",
     conclusion = "Γ, P |- P, Δ",
     codeName = "idWith")
   val closeIdWith: DependentPositionTactic = anon {(pos: Position, s: Sequent) =>
     pos.top match {
-      case p: AntePos => close(p, SuccPos(closeIdFound(pos, s.succ.indexOf(s(p)))))
-      case p: SuccPos => close(AntePos(closeIdFound(pos, s.ante.indexOf(s(p)))), p)
+      case p: AntePos => closeId(p, SuccPos(closeIdFound(pos, s.succ.indexOf(s(p)))))
+      case p: SuccPos => closeId(AntePos(closeIdFound(pos, s.ante.indexOf(s(p)))), p)
     }
   }
   @inline
@@ -403,7 +405,7 @@ trait SequentCalculus {
   //@note do not forward to closeIdWith (performance)
   @Tactic("Close by identity", premises = "*",
     conclusion = "Γ, P |- P, Δ", codeName = "id")
-  val closeId: DependentTactic = anon {(seq: Sequent) => close}
+  val id: DependentTactic = anon { (seq: Sequent) => findClose(seq)}
   // alternative implementation
   /*anon {(seq: Sequent) =>
     //@todo optimizable performance avoiding the repeated search

@@ -34,56 +34,56 @@ class UnifyUSCalculusTest extends TacticTestBase {
   val rand = new RandomFormula() //(-4317240407825764493L)
 
   "useAt" should "prove ([a;][b;]p(x)) ==> [a;b;]p(x)" in {
-    proveBy("([a;][b;]p(x)) ==> [a;b;]p(x)".asSequent, useAt(Ax.composeb)(1) & closeId) shouldBe 'proved
+    proveBy("([a;][b;]p(x)) ==> [a;b;]p(x)".asSequent, useAt(Ax.composeb)(1) & id) shouldBe 'proved
   }
 
   it should "prove ([a;][b;]p(x)) -> [a;b;]p(x)" in {
-    proveBy("([a;][b;]p(x)) -> [a;b;]p(x)".asFormula, useAt(Ax.composeb)(1, 1::Nil) & implyR(1) & closeId) shouldBe 'proved
+    proveBy("([a;][b;]p(x)) -> [a;b;]p(x)".asFormula, useAt(Ax.composeb)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
   it should "prove [a;b;]p(x) ==> ([a;][b;]p(x))" in {
-    proveBy("[a;b;]p(x) ==> ([a;][b;]p(x))".asSequent, useAt(Ax.composeb)(-1) & closeId) shouldBe 'proved
+    proveBy("[a;b;]p(x) ==> ([a;][b;]p(x))".asSequent, useAt(Ax.composeb)(-1) & id) shouldBe 'proved
   }
 
   it should "prove [a;b;]p(x) -> ([a;][b;]p(x))" in {
-    proveBy("[a;b;]p(x) -> ([a;][b;]p(x))".asFormula, useAt(Ax.composeb)(1, 0::Nil) & implyR(1) & closeId) shouldBe 'proved
+    proveBy("[a;b;]p(x) -> ([a;][b;]p(x))".asFormula, useAt(Ax.composeb)(1, 0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
   it should "prove (p()->q()) ==> [?p();]q()" in {
-    proveBy("(p()->q()) ==> [?p();]q()".asSequent, useAt(Ax.testb)(1) & closeId) shouldBe 'proved
+    proveBy("(p()->q()) ==> [?p();]q()".asSequent, useAt(Ax.testb)(1) & id) shouldBe 'proved
   }
 
   it should "prove (p()->q()) -> [?p();]q()" in {
-    proveBy("(p()->q()) -> [?p();]q()".asFormula, useAt(Ax.testb)(1, 1::Nil) & implyR(1) & closeId) shouldBe 'proved
+    proveBy("(p()->q()) -> [?p();]q()".asFormula, useAt(Ax.testb)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
   it should "prove [?p();]q() ==> (p()->q())" in {
-    proveBy("[?p();]q() ==> (p()->q())".asSequent, useAt(Ax.testb)(-1) & closeId) shouldBe 'proved
+    proveBy("[?p();]q() ==> (p()->q())".asSequent, useAt(Ax.testb)(-1) & id) shouldBe 'proved
   }
 
   it should "prove [?p();]q() -> (p()->q())" in {
-    proveBy("[?p();]q() -> (p()->q())".asFormula, useAt(Ax.testb)(1, 0::Nil) & implyR(1) & closeId) shouldBe 'proved
+    proveBy("[?p();]q() -> (p()->q())".asFormula, useAt(Ax.testb)(1, 0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
   it should "prove (1>=1) ==> 1+0>=1" in {
-    proveBy("(1>=1) ==> 1+0>=1".asSequent, useAt(Ax.plusZero)(1,0::Nil) & closeId) shouldBe 'proved
+    proveBy("(1>=1) ==> 1+0>=1".asSequent, useAt(Ax.plusZero)(1,0::Nil) & id) shouldBe 'proved
   }
 
   it should "prove (1>=1) -> 1+0>=1" in {
-    proveBy("(1>=1) -> 1+0>=1".asFormula, useAt(Ax.plusZero)(1,1::0::Nil) & implyR(1) & closeId) shouldBe 'proved
+    proveBy("(1>=1) -> 1+0>=1".asFormula, useAt(Ax.plusZero)(1,1::0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
   it should "prove 1+0>=1 ==> 1>=1" in {
-    proveBy("1+0>=1 ==> 1>=1".asSequent, useAt(Ax.plusZero)(-1,0::Nil) & closeId) shouldBe 'proved
+    proveBy("1+0>=1 ==> 1>=1".asSequent, useAt(Ax.plusZero)(-1,0::Nil) & id) shouldBe 'proved
   }
 
   it should "prove 1+0>=1 -> 1>=1" in {
-    proveBy("1+0>=1 -> 1>=1".asFormula, useAt(Ax.plusZero)(1,0::0::Nil) & implyR(1) & closeId) shouldBe 'proved
+    proveBy("1+0>=1 -> 1>=1".asFormula, useAt(Ax.plusZero)(1,0::0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
 
   it should "prove x+1>0 -> [x:=x+1;]x>0" in {
-    proveBy("x+1>0 -> [x:=x+1;]x>0".asFormula, useAt(Ax.assignbAxiom)(1, 1::Nil) & implyR(1) & closeId) shouldBe 'proved
+    proveBy("x+1>0 -> [x:=x+1;]x>0".asFormula, useAt(Ax.assignbAxiom)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
   "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in {

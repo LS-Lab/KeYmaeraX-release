@@ -237,8 +237,8 @@ class ProofTermCheckerTests extends TacticTestBase {
     val t =
       implyR(1) &
         loop("d >= 0".asFormula)(1)  <(
-          closeId,
-          closeId,
+          id,
+          id,
           composeb(1) & composeb(1) & choiceb(1) & andR(1) <(
             composeb(1) & testb(1) & implyR(1) & composeb(1) & randomb(1) & allR(1) & testb(1) & implyR(1) &
               assignb(1) & dC("d>=V()*(ep()-t)".asFormula)(1) <(

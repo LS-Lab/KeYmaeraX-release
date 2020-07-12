@@ -73,7 +73,7 @@ object SOSSolve {
       case Equal(Plus(p, q), Number(n)) if n.compareTo(0) == 0 =>
         useAt(plusEqZeroIntro, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(eqZeroTac, eqZeroTac)
       case Equal(Times(c, p), Number(n)) if n.compareTo(0) == 0 =>
-        useAt(timesEqZeroIntro, PosInExpr(1::Nil))(1) & closeId
+        useAt(timesEqZeroIntro, PosInExpr(1::Nil))(1) & id
       case fml => throw new IllegalArgumentException("sosPos must be applied to 1 > 0 or x + y^2 > 0 but got " + fml)
     }
   }
@@ -312,7 +312,7 @@ object SOSSolve {
               }
               cutL(cmp.reapply(n, Number(0)))(pos) & Idioms.<(
                 skip,
-                useAt(prv, PosInExpr(1 :: Nil))(1) & closeId
+                useAt(prv, PosInExpr(1 :: Nil))(1) & id
               )
             } else skip
           case _ => skip
@@ -348,7 +348,7 @@ object SOSSolve {
               }
               cutL(flip(cmp).reapply(n, Number(0)))(pos) & Idioms.<(
                 skip,
-                useAt(prv, PosInExpr(1::Nil))(1) & closeId
+                useAt(prv, PosInExpr(1::Nil))(1) & id
               )
             } else skip
           case _ => skip
@@ -373,7 +373,7 @@ object SOSSolve {
                   }
                   cutL(cmp.reapply(n, Number(0)))(pos) & Idioms.<(
                     skip,
-                    useAt(prv, PosInExpr(1::Nil))(1) & closeId
+                    useAt(prv, PosInExpr(1::Nil))(1) & id
                   )
                 } else skip
               case _ => skip

@@ -122,10 +122,10 @@ class Compbased extends TacticTestBase {
           useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::0::0::Nil) & useAt(falseImplies, PosInExpr(1::Nil))(1, 1::0::Nil) &
           useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::1::0::0::Nil) & useAt(notTrue, PosInExpr(0::Nil))(1, 1::1::0::0::Nil) &
           useAt(Ax.doubleNegation)(1, 1::1::0::Nil) & useAt(Ax.trueImply, PosInExpr(0::Nil))(1, 1::1::Nil) &
-          useAt(Ax.trueAnd, PosInExpr(0::Nil))(1, 1::Nil) & closeId
+          useAt(Ax.trueAnd, PosInExpr(0::Nil))(1, 1::Nil) & id
         ,
         assignb(1) & choiceb(1) & andR(1) <(
-          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::Nil) & useAt(Ax.trueImply)(1) & closeId
+          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::Nil) & useAt(Ax.trueImply)(1) & id
           ,
           composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::0::Nil) &
             useAt(notTrue, PosInExpr(1::Nil))(1, 0::Nil) &

@@ -438,7 +438,7 @@ object TaylorModelArith {
           existsL(-1) & existsR("err_".asTerm)(1) & andL(-1) & andL(-2) & andR(1) &
           Idioms.<(
             cohideOnlyL(-1) &
-              useAt(prettyRepresentation, PosInExpr(1::Nil))(1, 1::0::Nil) & closeId
+              useAt(prettyRepresentation, PosInExpr(1::Nil))(1, 1::0::Nil) & id
             ,
             hideL(-1) & IntervalArithmeticV2.intervalArithmeticBool(options.precision, new BigDecimalTool)(1)
           )
@@ -669,7 +669,7 @@ object TaylorModelArith {
         useAt(refineTmExists, PosInExpr(1::Nil))(1) &
         allR(1) &
         useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
-        useAt(polyPrettyPrv, PosInExpr(0::Nil))(1, 0:: 1 :: 0 :: Nil) & implyR(1) & closeId,
+        useAt(polyPrettyPrv, PosInExpr(0::Nil))(1, 0:: 1 :: 0 :: Nil) & implyR(1) & id,
         useAt(refineConjunction, PosInExpr(1 :: Nil))(1) & andR(1) & Idioms.<(
           useAt(refineLe2, PosInExpr(1 :: Nil))(1) & by(lPrv),
           useAt(refineLe1, PosInExpr(1 :: Nil))(1) & by(uPrv)
@@ -838,9 +838,9 @@ object TaylorModelArith {
                   SaturateTactic(andL('L)) & skip,
                   cohideOnlyR(2) &
                     taylorModelsIvl.init.foldRight[BelleExpr](
-                      useAt(taylorModelsIvl.last._3, PosInExpr(1::Nil))(1) & closeId){ case ((_, _, implyPrv, _), tac) =>
+                      useAt(taylorModelsIvl.last._3, PosInExpr(1::Nil))(1) & id){ case ((_, _, implyPrv, _), tac) =>
                       useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
-                        useAt(implyPrv, PosInExpr(1::Nil))(1) & closeId,
+                        useAt(implyPrv, PosInExpr(1::Nil))(1) & id,
                         tac
                       )
                     } & done
@@ -855,7 +855,7 @@ object TaylorModelArith {
                 SaturateTactic(andL('L)) & skip,
                 cohideR(2) &
                   useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
-                    implyR(1) & useAt(t1Prv, PosInExpr(1::Nil))(1, 1::Nil) & closeId,
+                    implyR(1) & useAt(t1Prv, PosInExpr(1::Nil))(1, 1::Nil) & id,
                     taylorModelsEq.init.foldRight[BelleExpr](
                       by(taylorModelsEq.last._3)){ case ((_, _, implyPrv, _), tac) =>
                       useAt(refineConjunction, PosInExpr(1::Nil))(1) & andR(1) & Idioms.<(
@@ -870,12 +870,12 @@ object TaylorModelArith {
         val contextIvl = prv.subgoals(0).ante
         val contextEq = prv.subgoals(1).ante
         val tmIvls = taylorModelsIvl.map{case (tmFml, tmRepFml, _, (elem, poly, l, u, iffPrv)) =>
-          TM(elem, poly, l, u, proveBy(Sequent(contextIvl, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & closeId))}
-        val rTmIvls = r0.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, contextIvl, closeId))
+          TM(elem, poly, l, u, proveBy(Sequent(contextIvl, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & id))}
+        val rTmIvls = r0.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, contextIvl, id))
         val tmEqs = taylorModelsEq.map{case (tmFml, tmRepFml, _, (elem, poly, l, u, iffPrv)) =>
-          TM(elem, poly, l, u, proveBy(Sequent(contextEq, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & closeId))}
-        val rTmEqs = r0.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, contextEq, closeId))
-        val t1 = proveBy(Sequent(contextEq, IndexedSeq(t1Eq)), closeId)
+          TM(elem, poly, l, u, proveBy(Sequent(contextEq, IndexedSeq(tmRepFml)), useAt(iffPrv, PosInExpr(1::Nil))(1) & id))}
+        val rTmEqs = r0.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, contextEq, id))
+        val t1 = proveBy(Sequent(contextEq, IndexedSeq(t1Eq)), id)
         (prv, tmIvls, rTmIvls, (tmEqs, rTmEqs, t1))
       }
 
@@ -906,7 +906,7 @@ object TaylorModelArith {
 
       // prepare next step with preconditioning
       val (x1, r1, prvEq1) = identityPrecondition(tmEqs, rEqs, prvEq)
-      val tEq1 = proveBy(Sequent(prvEq1.subgoals(0).ante, IndexedSeq(tEq.conclusion.succ(0))), closeId)
+      val tEq1 = proveBy(Sequent(prvEq1.subgoals(0).ante, IndexedSeq(tEq.conclusion.succ(0))), id)
       val prv3 = prv.apply(prv2, 0).apply(prvEq1, 1)
 
       // solve safety for the last step
@@ -995,7 +995,7 @@ object TaylorModelArith {
     // partition x = Id(r) & r = ...
     val context2 = onlyEvals.subgoals(0).ante
     val r1s = r.map(_.elem)
-    val x1s = x1.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context2, closeId))
+    val x1s = x1.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context2, id))
     val (nxs, nrs, newEqs) = partition(x1s, r1s,  (n: BigDecimal, d: BigDecimal, pp: PowerProduct) => pp.degree == 0)
 
     val prv3 = newEqs.foldLeft(onlyEvals)(cutEq)
@@ -1004,11 +1004,11 @@ object TaylorModelArith {
     val prv4 = cutSeq((nxs++nrs).map(_.prv), prv3)
     val context4 = prv4.subgoals(0).ante
 
-    val x4s = x1.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context4, closeId))
+    val x4s = x1.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context4, id))
     val argumentMap = x4s.map(tm => (tm.elem, tm)).toMap
     val intervals = newEqs.map{fml =>
       val i = context4.indexOf(fml)
-      val eqPrv = proveBy(Sequent(context4, IndexedSeq(fml)), cohideOnlyL(-i - 1) & closeId)
+      val eqPrv = proveBy(Sequent(context4, IndexedSeq(fml)), cohideOnlyL(-i - 1) & id)
       (i, evalTerm(fml.right, context4, argumentMap).transElem(eqPrv).interval)
     }.sortBy{case (i, _) => -i}.toIndexedSeq
     val prv5 = hideAntes(intervals.map(_._1), cutSeq(intervals.map(_._2._3), prv4))
@@ -1019,8 +1019,8 @@ object TaylorModelArith {
     val prv7 = hideAntes((context2.length - x1.length until context2.length).reverse, prv6)
     val context7 = prv7.subgoals(0).ante
 
-    (nxs.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context7, closeId)),
-      nrs.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context7, closeId)),
+    (nxs.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context7, id)),
+      nrs.map(tm => TM(tm.elem, tm.poly, tm.lower, tm.upper, context7, id)),
       prv7)
   }
 

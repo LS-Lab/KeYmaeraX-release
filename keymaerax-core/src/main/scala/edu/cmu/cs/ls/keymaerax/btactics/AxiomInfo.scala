@@ -515,7 +515,7 @@ object DerivationInfoRegistry {
     //@note deprecated use id instead
     new TacticInfo("id",
       RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
-      {case () => TactixLibrary.closeId}), //@Tactic-fied
+      {case () => TactixLibrary.id}), //@Tactic-fied
     PositionTacticInfo("idWith", // @Tactic-ified
       RuleDisplayInfo("Close by identity", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => TactixLibrary.closeIdWith}),

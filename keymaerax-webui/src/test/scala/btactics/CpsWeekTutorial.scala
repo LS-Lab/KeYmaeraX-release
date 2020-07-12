@@ -75,7 +75,7 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "prove with a manually written searchy tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
     val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("v^2<=2*b()*(m()-x)".asFormula)('R) <(
-      print("Base case") & closeId,
+      print("Base case") & id,
       print("Use case") & QE,
       print("Step") & normalize & solve('R) & QE
       )
@@ -173,7 +173,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { _ =>
     def tactic(j: Formula) = implyR('R) & SaturateTactic(andL('L)) & loop(j)('R) <(
-      print("Base case") & closeId,
+      print("Base case") & id,
       print("Use case") & QE,
       print("Step") & normalize & OnAll(solve('R) & QE)
       )

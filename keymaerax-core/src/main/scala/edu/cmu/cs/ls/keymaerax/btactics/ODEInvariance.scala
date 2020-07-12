@@ -199,7 +199,7 @@ object ODEInvariance {
         orL('Llast) <(
           //Strict case
           //DebuggingTactics.print("Cont STEP") &
-          useAt(contAx,PosInExpr(1::Nil))(pos) & closeId,
+          useAt(contAx,PosInExpr(1::Nil))(pos) & id,
           //Integral case
           //DebuggingTactics.print("DI STEP") &
           dR(GreaterEqual(lie,Number(0)),false)(pos) <(
@@ -210,7 +210,7 @@ object ODEInvariance {
               cohideOnlyR(pos) &
               Dconstify(
                 diffInd('diffInd)(1) <(
-                  useAt(geq)(1) & orR(1) & closeId,
+                  useAt(geq)(1) & orR(1) & id,
                   cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
                   useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
               ))(1)
@@ -221,12 +221,12 @@ object ODEInvariance {
   // Helper tactic proving p*>0 -> <x'=f(x)& p*>=0>O
   private def lpgeq(bound:Int) : BelleExpr =
     if (bound <= 0)
-      useAt(contAx,PosInExpr(1::Nil))(1) & closeId
+      useAt(contAx,PosInExpr(1::Nil))(1) & id
     else //Could also make this fallback to the continuity step for early termination
       //DebuggingTactics.print("start "+bound) &
       andL(-1) & lpstep(1)< (
-        hideL(-2) & useAt(geq)(-1) & closeId,
-        hideL(-1) & implyL(-1) & <(closeId, hideL(-2) & lpgeq(bound-1))
+        hideL(-2) & useAt(geq)(-1) & id,
+        hideL(-1) & implyL(-1) & <(id, hideL(-2) & lpgeq(bound-1))
       )
 
   private def lpclosed(inst:Inst) : BelleExpr = {
@@ -346,7 +346,7 @@ object ODEInvariance {
         DebuggingTactics.debug("Real Induction",doPrint = debugTactic) &
         andR(pos) <(
           //G |- P
-          implyR(pos) & tac21 & ?(closeId) & timeoutQE & done
+          implyR(pos) & tac21 & ?(id) & timeoutQE & done
           ,
           cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
           implyR(1) &
@@ -789,7 +789,7 @@ object ODEInvariance {
         dC(gtz)(pos) < (
           // Do the vdbx case manually
           boxAnd(pos) & andR(pos) < (
-            diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
+            diffWeakenG(pos) & implyR(1) & andL('Llast) & id,
             //QE can't handle this alone: diffInd('full)(pos)
             Dconstify
             (
@@ -1468,7 +1468,7 @@ object ODEInvariance {
       //@todo always check with doIfElse vs. trycatch space compatible exception?
       starter & Idioms.doIfElse(_.subgoals.forall(s => !StaticSemantics.symbols(s(pos.top)).contains("t_".asVariable)))(
         useAt(Ax.RIclosedgeq)(pos) & andR(pos)<(
-        implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
+        implyR(pos) & r1 & ?(id) & timeoutQE & done, //common case?
         cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
           implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
           & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)

@@ -243,7 +243,7 @@ object TaylorModelTactics extends Logging {
                     Idioms.<(skip,
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
-                        andR(1) & Idioms.<(closeId, closeId),
+                        andR(1) & Idioms.<(id, id),
                         cohideR(1) &
                           useAt(Ax.leTimesMonoLemma, PosInExpr(Nil))(1) & // TODO: in high-order (>=4), nonlinear ODE, a QE at this point is very slow (8s), but QE on the subgoal in a separate test is fast(<1s)
                           done
@@ -270,7 +270,7 @@ object TaylorModelTactics extends Logging {
                     Idioms.<( skip,
                       cohideOnlyR('Rlast) &
                         cutR(And(nonneg, ub_fml))(1) & Idioms.<(
-                        andR(1) & Idioms.<(closeId, closeId),
+                        andR(1) & Idioms.<(id, id),
                         cohideR(1) & useAt(Ax.timesLeMonoLemma, PosInExpr(Nil))(1) & done
                       )
                     )
@@ -505,17 +505,17 @@ object TaylorModelTactics extends Logging {
               useAt(Ax.eqAddIff, PosInExpr(0 :: Nil))(p) & eqL2R(p)(l)
             : BelleExpr}.reduceLeft(_ & _) &
             hideL(-1) * dim &
-            (andR(1) & Idioms.<(closeId, skip))*(dim - 1) & closeId,
+            (andR(1) & Idioms.<(id, skip))*(dim - 1) & id,
           existsR(Minus(time, time0))(1) &
             andLstable(-1) &
             andR(1) & Idioms.<(andR(1) & Idioms.<(
                 cohideR(1) & byUS(Ax.plusDiffRefl),
-                closeId
+                id
               ), hideL(-1)) &
             andLstable('Llast) * (dim - 1) &
             (andR(1) & Idioms.<(
-              useAt(Ax.unfoldExistsLemma)(1) & closeId, skip)) * (dim - 1) &
-            useAt(Ax.unfoldExistsLemma)(1) & closeId
+              useAt(Ax.unfoldExistsLemma)(1) & id, skip)) * (dim - 1) &
+            useAt(Ax.unfoldExistsLemma)(1) & id
         )
     )
 
@@ -650,7 +650,7 @@ object TaylorModelTactics extends Logging {
                 // safety throughout first step
                 andL(-1) & hideL(-2) & andL(-1) & andL(-1) & hideL(-3) & cutR(boxTMEnclosure)(1) /* TODO: does a dC here yield better structure and less overhead? */ &
                 Idioms.<(
-                  useAt(lemma, PosInExpr(1::Nil))(1) & closeId,
+                  useAt(lemma, PosInExpr(1::Nil))(1) & id,
                   andL(-2) & hideL(-3) &
                     SaturateTactic(andL(-2) & hideL(-3)) /* extract t=t0() */ &
                     eqL2R(-2)(-1) & hideL(-2) &
@@ -668,10 +668,10 @@ object TaylorModelTactics extends Logging {
                         hideR(1) & andR(1) &
                         Idioms.<(
                           hideL(-3) & QE & done,
-                          closeId
+                          id
                         ),
-                        closeId),
-                    closeId
+                        id),
+                    id
                   )
                 ),
                 // safety for next step
@@ -694,10 +694,10 @@ object TaylorModelTactics extends Logging {
                             implyR(1) & eqL2R(-4)(-3) &
                             prop & done
                           ),
-                          closeId
+                          id
                         ),
                         cohideR(1) & boxTrue(1) & done),
-                    useAt(lemma, PosInExpr(1::Nil))(1) & closeId)
+                    useAt(lemma, PosInExpr(1::Nil))(1) & id)
               )
           )
       )
@@ -846,7 +846,7 @@ object TaylorModelTactics extends Logging {
             Idioms.<(skip,
               useAt(lemma2, PosInExpr(1 :: Nil))(1) &
                 debugTac("Used Lemma") &
-                andR(1) & Idioms.<(closeId,
+                andR(1) & Idioms.<(id,
                 andR(1) & Idioms.<(
                   debugTac("Initial Numberic condition") &
                     SaturateTactic(andL('L)) &

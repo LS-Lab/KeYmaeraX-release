@@ -178,31 +178,31 @@ class ArithmeticTests extends TacticTestBase {
   "transform" should "prove a simple example" in withQE { _ =>
     proveBy(
       "a<b ==> b>a".asSequent,
-      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "prove a simple example with modalities in other formulas" in withQE { _ =>
     proveBy(
       "a<b ==> b>a, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "keep enough context around to prove the transformation" in withQE { _ =>
     proveBy(
       "a+b<c, b>=0&[y:=3;]y=3, y>4 ==> a<c, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "work with division by zero" in withQE { _ =>
     proveBy(
       "a/b<c, b>0 ==> c>a/b".asSequent,
-      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   it should "work with division by zero even with modalities somewhere" in withQE { _ =>
     proveBy(
       "a/b<c, b>0&[y:=3;]y=3 ==> c>a/b, [x:=2;]x>0".asSequent,
-      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
+      TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.id) shouldBe 'proved
   }
 
   "simulate" should "simulate a simple example" in withMathematica { tool =>

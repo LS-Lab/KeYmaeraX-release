@@ -132,7 +132,7 @@ private object PropositionalTactics extends Logging {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
       //@note adapted to use implyL instead of implyLOld
       implyL(implication) <(
-        close(p, SuccPos(sequent.succ.length))
+        closeId(p, SuccPos(sequent.succ.length))
         //cohide2(p, SuccPos(sequent.succ.length)) & close
         //@todo optimizable shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
         ,
@@ -218,7 +218,7 @@ private object PropositionalTactics extends Logging {
         val cutPos = AntePos(p.subgoals.head.ante.length) //Position of equivalence to instantiate.
         val cutExpr = TactixLibrary.cut(fa) <(
           Idioms.nil,
-          TactixLibrary.close(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
+          TactixLibrary.closeId(equivPos.checkAnte.top, SuccPos(p.subgoals.head.succ.length))
         )
 
         //3: input is postCut and output is instantiatedEquivalence

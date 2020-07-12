@@ -49,11 +49,11 @@ class BTacticExamples extends TacticTestBase  {
       equivR(SuccPos(0)) <(
         (notL(AntePos(0)) &
             notR(SuccPos(1)) &
-            closeId)
+            id)
         ,
         (notR(SuccPos(0)) &
           notL(AntePos(1)) &
-          closeId)
+          id)
       )
     )
     proof shouldBe 'proved
@@ -68,11 +68,11 @@ class BTacticExamples extends TacticTestBase  {
       equivR(1) <(
         (notL(-1) &
           notR(2) &
-          closeId)
+          id)
         ,
         (notR(1) &
           notL(-2) &
-          closeId)
+          id)
         )
     )
     proof shouldBe 'proved

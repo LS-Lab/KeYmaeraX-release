@@ -484,8 +484,8 @@ private object DifferentialTactics extends Logging {
       val newDom = constCtxt.foldRight(dom)((x, y) => And(x, y))
       dR(newDom)(pos) <( skip,
          //propositional proof should be sufficient here
-        (boxAnd(1) & andR(1)<(V(1) & closeId,skip))*constCtxt.length &
-         diffWeakenG(1) & implyR(1) & closeId)
+        (boxAnd(1) & andR(1)<(V(1) & id,skip))*constCtxt.length &
+         diffWeakenG(1) & implyR(1) & id)
     }
   })
 
@@ -697,7 +697,7 @@ private object DifferentialTactics extends Logging {
             ,
             (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
               TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
-              TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
+              TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.id
           )
       case Some(e) if polarity == 0 => throw new TacticInapplicableFailure("dGi only applicable in positive or negative polarity contexts")
       case Some(e) => throw new TacticInapplicableFailure("dGi only applicable to box ODEs, but got " + e.prettyString)
@@ -2131,10 +2131,10 @@ private object DifferentialTactics extends Logging {
           hideR(2) & interiorImplication,
           hideR(1) & interiorImplication
         )
-      case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt(Ax.lessEqual)(1) & orR(1) & closeId
-      case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(Ax.greaterEqual)(1) & orR(1) & closeId
+      case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt(Ax.lessEqual)(1) & orR(1) & id
+      case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(Ax.greaterEqual)(1) & orR(1) & id
       case (False, _) => closeF
-      case (x, y) if x == y => closeId
+      case (x, y) if x == y => id
       case _ =>
         throw new TacticInapplicableFailure("strengthenInequalities expected ante and succ of same shape, but got " + seq)
     }
@@ -2214,7 +2214,7 @@ private object DifferentialTactics extends Logging {
               backGt & backGe1 & hideL('Llast),
               backGe2 &
                 (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
-                else closeId)
+                else id)
             )
           ),
           DebuggingTactics.error("Inapplicable: t_ occurs")
@@ -2297,7 +2297,7 @@ private object DifferentialTactics extends Logging {
             DW(1) &
             TactixLibrary.generalize(pos(q(vars)))(1) &
             Idioms.<(
-              closeId,
+              id,
               implyR(1) &
                 assignb(1) &
                 implyR(1) &
@@ -2309,7 +2309,7 @@ private object DifferentialTactics extends Logging {
                   useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & prop & done,
                   dR(And(r(vars), nonneg(q(vars))), hide=false)(1) & Idioms.<(
                     useAt(Ax.UniqIff, PosInExpr(1 :: Nil))(1) &
-                    andR(1) & Idioms.<(closeId, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & closeId)
+                    andR(1) & Idioms.<(id, useAt(ODEInvariance.contAx, PosInExpr(1 :: Nil))(1) & id)
                     ,
                     andL('L) &
                     TactixLibrary.generalize(P(vars))(1) & Idioms.<(skip, andL(-1) & FOQuantifierTactics.allLs(vars)('Llast) & prop & done) &
@@ -2320,7 +2320,7 @@ private object DifferentialTactics extends Logging {
                       FOQuantifierTactics.allLs(vars)(-1) &
                       DifferentialTactics.inverseDiffGhost(1) &
                       derive(1, 1 :: Nil) &
-                      closeId
+                      id
                     )
                   )
                 )

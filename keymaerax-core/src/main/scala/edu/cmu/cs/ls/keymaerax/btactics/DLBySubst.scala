@@ -87,7 +87,7 @@ private object DLBySubst {
           /* use */ implyL('Llast) <(hideR(pos.topLevel) /* result remains open */ , closeIdWith('Llast)),
           /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
           assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
-          topAbstraction(1) & closeId
+          topAbstraction(1) & id
           )
       case (_, e) => throw new TacticInapplicableFailure("GV only applicable to box properties, but got " + e.prettyString)
     }
@@ -186,7 +186,7 @@ private object DLBySubst {
                   case _ => false
                 }
                 case _ => true
-              }, "abstractionb: foralls must match") & closeId
+              }, "abstractionb: foralls must match") & id
             )),
           /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
         )
@@ -512,7 +512,7 @@ private object DLBySubst {
           val x2 = Variable(x1.name, Some(x1.index.get+1))          //@note result after assigndEquality
           val v0 = Variable(v.name, Some(v.index.getOrElse(-1)+1))  //@note want v__0 in result instead of x2
 
-          def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(closeId, skip))*(consts.size-1) & close)
+          def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(id, skip))*(consts.size-1) & close)
           val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(Ax.andTrue)('Llast)
 
           val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
@@ -718,7 +718,7 @@ private object DLBySubst {
           case _ => false
         }.getOrElse(throw new TacticInapplicableFailure("boxElim without matching assumption in the antecedent"))
         val fml2 = b.asInstanceOf[Box].child
-        TactixLibrary.generalize(fml2)(pos) & Idioms.<(closeId, skip)
+        TactixLibrary.generalize(fml2)(pos) & Idioms.<(id, skip)
       case Some(e) => throw new TacticInapplicableFailure("boxElim not on Box but on " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
     }

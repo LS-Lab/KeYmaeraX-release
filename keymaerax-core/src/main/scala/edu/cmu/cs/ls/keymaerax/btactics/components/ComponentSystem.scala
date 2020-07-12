@@ -31,7 +31,7 @@ object ComponentSystem {
   )
   private lazy val assignmentIndependence2 = AnonymousLemmas.remember(
     "[x_:=*;][y_:=t_();]p_(x_,y_) <-> [y_:=t_();][x_:=*;]p_(x_,y_)".asFormula,
-    master() & allL('Llast) & closeId & done,
+    master() & allL('Llast) & id & done,
     namespace
   )
   private lazy val assignmentIndependence3 = AnonymousLemmas.remember(
@@ -48,7 +48,7 @@ object ComponentSystem {
     "[x_:=*;][?q_();]p_(x_) <-> [?q_();][x_:=*;]p_(x_)".asFormula,
     chase(1, 0::Nil) & chase(1, 1::Nil) & equivR(1) <(
       implyR(1) & allR(1) & allL(-1) & prop & done,
-      allR(1) & implyR(1) & implyL(-1) <(closeId, allL(-1) & closeId) & done
+      allR(1) & implyR(1) & implyL(-1) <(id, allL(-1) & id) & done
     ) & done,
     namespace
   )
@@ -131,16 +131,16 @@ object ComponentSystem {
       case Some(have@Box(a, Box(b, p))) if
       StaticSemantics.freeVars(p).intersect(StaticSemantics.boundVars(b)).isEmpty &&
         StaticSemantics.freeVars(a).intersect(StaticSemantics.boundVars(b)).isEmpty =>
-        proveBy(Imply(Box(a, p), have), implyR(1) & monb & abstractionb(1) & closeId & done)
+        proveBy(Imply(Box(a, p), have), implyR(1) & monb & abstractionb(1) & id & done)
       case Some(have@Box(b, Box(a, p))) if
       StaticSemantics.freeVars(p).intersect(StaticSemantics.boundVars(b)).isEmpty &&
         StaticSemantics.freeVars(a).intersect(StaticSemantics.boundVars(b)).isEmpty =>
-        proveBy(Imply(Box(a, p), have), implyR(1) & abstractionb(1) & closeId & done)
+        proveBy(Imply(Box(a, p), have), implyR(1) & abstractionb(1) & id & done)
       case Some(have@Box(a, p)) if
       p.isFOL &&
         StaticSemantics.freeVars(p).intersect(StaticSemantics.boundVars(a)).isEmpty &&
         StaticSemantics.freeVars(a).intersect(StaticSemantics.boundVars(a)).isEmpty =>
-        proveBy(Imply(p, have), implyR(1) & abstractionb(1) & closeId & done)
+        proveBy(Imply(p, have), implyR(1) & abstractionb(1) & id & done)
       case Some(e) => throw new TacticInapplicableFailure("dropControl only applicable to box properties, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
@@ -170,18 +170,18 @@ object ComponentSystem {
                     implyR(1) &
                       //sort ys into reverse order because we apply DGi outside in (innermost universal quantifier first)
                       AxiomaticODESolver.selectionSort(h, p, ode, ys.map(_.xp.x)++xs.map(_.xp.x), SuccPosition(1)) &
-                      closeId)
+                      id)
                 proveBy(Imply(Box(ODESystem(xsys, h), p), have),
                   implyR(1) & DifferentialTactics.diffRefine(h)(1) <(
                     cut(universalXClosure) <(
-                      allL('Llast)*ys.size & closeId & done
+                      allL('Llast)*ys.size & id & done
                       ,
                       hideR(1) & useAt(partitionedOdeLemma, PosInExpr(1::Nil))(1, List.fill(ys.size)(0)) &
                         ys.indices.reverse.
                           map(i => PosInExpr(List.fill(i)(0))).
                           map(useAt(Ax.DGi, PosInExpr(1::Nil))(1, _)).
                           reduceOption[BelleExpr](_ & _).getOrElse(skip) &
-                        closeId & done
+                        id & done
                     ),
                     cohideR(1) & dW(1) & prop & done
                   )
@@ -202,15 +202,15 @@ object ComponentSystem {
                     implyR(1) &
                       //sort ys into reverse order because we apply DGi outside in (innermost universal quantifier first)
                       AxiomaticODESolver.selectionSort(h, p, ode, ys.map(_.xp.x)++xs.map(_.xp.x), SuccPosition(1)) &
-                      closeId)
+                      id)
                 proveBy(Imply(Box(Test(h), p), have),
                   implyR(1) & DifferentialTactics.diffRefine(h)(1) <(
                     cut(universalXClosure) <(
-                      allL('Llast)*ys.size & closeId & done
+                      allL('Llast)*ys.size & id & done
                       ,
                       hideR(1) & useAt(partitionedOdeLemma, PosInExpr(1::Nil))(1, List.fill(ys.size)(0)) &
                         allR(1)*ys.size & dW(1) & useAt(Ax.testb, PosInExpr(1::Nil))(1) &
-                        closeId & done
+                        id & done
                     ),
                     cohideR(1) & dW(1) & prop & done
                   )
@@ -237,7 +237,7 @@ object ComponentSystem {
           map(useAt(Ax.composeb)(-1, _)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
         val lemma4 = proveBy(
           Imply(Box(abv.map(AssignAny).reduceRightOption(Compose).getOrElse(Test(True)), p), have),
-          implyR(1) & abstractionb(1) & approximate & decompose & closeId)
+          implyR(1) & abstractionb(1) & approximate & decompose & id)
         useAt(lemma4, PosInExpr(1::Nil))(pos)
       case Some(e) => throw new TacticInapplicableFailure("higherdV only applicable to box properties, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)

@@ -667,7 +667,7 @@ object SimplifierV2 {
           cut(Equiv(l,lf)) <(
             cut(Imply(lf,Equiv(r,rf))) <(
               useAt(andLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
-                closeId,closeId
+                id,id
                 ),
               hideL('Llast) & hideR(SuccPos(0)) & implyR(1)  & tac & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
@@ -691,7 +691,7 @@ object SimplifierV2 {
           cut(Equiv(l,lf)) <(
             cut(Imply(lf,Equiv(r,rf))) <(
               useAt(implyLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
-                closeId,closeId
+                id,id
                 ),
               hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & tac & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
@@ -715,7 +715,7 @@ object SimplifierV2 {
           cut(Equiv(l,lf)) <(
             cut(Imply(Not(lf),Equiv(r,rf))) <(
               useAt(orLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
-                closeId,closeId
+                id,id
                 ),
               hideL('Llast) & hideR(SuccPos(0)) & implyR(1) & tac & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
@@ -729,7 +729,7 @@ object SimplifierV2 {
           cut(Equiv(l,lf)) <(
             cut(Equiv(r,rf)) <(
               useAt(equivLemma,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
-                closeId,closeId
+                id,id
                 ),
               hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
             hideR(SuccPos(0))& by(lpr)
@@ -740,7 +740,7 @@ object SimplifierV2 {
         val nf = Not(uf)
         (nf,proveBy(Sequent(ctx, IndexedSeq(Equiv(f, nf))),
           cut(Equiv(u,uf)) < (
-            useAt(notLemma,PosInExpr(1::Nil))(SuccPos(0)) & closeId,
+            useAt(notLemma,PosInExpr(1::Nil))(SuccPos(0)) & id,
             hideR(SuccPos(0))&by(upr))))
       case cf:ComparisonFormula =>
         val l = cf.left
@@ -760,7 +760,7 @@ object SimplifierV2 {
           cut(Equal(l,lt))<(
             cut(Equal(r,rt))<(
               useAt(lem,PosInExpr(1::Nil))(SuccPos(0)) & andR(1) <(
-                closeId,closeId
+                id,id
                 ),
               hideL('Llast) & hideR(SuccPos(0)) & by(rpr)),
             hideR(SuccPos(0))& by(lpr))))

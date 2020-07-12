@@ -18,8 +18,8 @@ class EquivalenceTests extends TacticTestBase {
     val f = "((A()<->B()) & A()) -> B()".asFormula
     val equivPos = -1
     val t = TactixLibrary.implyR(1) & TactixLibrary.andL(-1) /*end setup*/ & TactixLibrary.equivL(equivPos) <(
-      TactixLibrary.andL(equivPos) & TactixLibrary.closeId,
-      TactixLibrary.andL(equivPos) & TactixLibrary.notL('Llast).*(2) & TactixLibrary.closeId
+      TactixLibrary.andL(equivPos) & TactixLibrary.id,
+      TactixLibrary.andL(equivPos) & TactixLibrary.notL('Llast).*(2) & TactixLibrary.id
     )
 
     proveBy(f,t) shouldBe 'proved

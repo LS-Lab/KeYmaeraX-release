@@ -181,7 +181,7 @@ class StttTutorial extends TacticTestBase {
 
     val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)('R) <(
-      print("Base Case") & andR('R) & OnAll(closeId),
+      print("Base Case") & andR('R) & OnAll(id),
       print("Use Case") & QE,
       print("Step") & andL('L) & composeb('R) & assignb('R) & plant & QE
     )
@@ -206,7 +206,7 @@ class StttTutorial extends TacticTestBase {
 
     val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)('R) <(
-        printIndexed("Base case") & andR('R) & OnAll(closeId),
+        printIndexed("Base case") & andR('R) & OnAll(id),
         printIndexed("Use case") & QE,
         printIndexed("Step") & chase('R) & printIndexed("After chase") & normalize & printIndexed("Normalized") &
           OnAll(solveEnd('R)) & printIndexed("After diffSolve") & OnAll(QE)
@@ -269,7 +269,7 @@ class StttTutorial extends TacticTestBase {
 
     val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2".asFormula)('R) <(
-        print("Base case") & SaturateTactic(andR('R) <(closeId, skip)) & closeId,
+        print("Base case") & SaturateTactic(andR('R) <(id, skip)) & id,
         print("Use case") & QE,
         print("Step") & SaturateTactic(andL('L)) & chase('R) & andR('R) <(
           allR('R) & SaturateTactic(implyR('R)) & ode & implyR('R) & SaturateTactic(andL('L)) & QE,

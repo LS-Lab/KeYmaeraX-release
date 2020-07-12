@@ -42,7 +42,7 @@ object Transitivity {
       }).reduce(_ & _) & TactixLibrary.implyL('Llast) <(
         closeIds(transitiveInequalities)
         ,
-        TactixLibrary.closeId
+        TactixLibrary.id
       )
       ,
       TactixLibrary.cohideR('Rlast) & TactixLibrary.QE
@@ -51,8 +51,8 @@ object Transitivity {
   })
 
   def closeIds(formulas: List[Formula]) : BelleExpr = formulas match {
-    case e :: Nil => TactixLibrary.closeId
-    case e :: es => TactixLibrary.andR('Rlast) <(closeIds(es),TactixLibrary.closeId)
+    case e :: Nil => TactixLibrary.id
+    case e :: es => TactixLibrary.andR('Rlast) <(closeIds(es),TactixLibrary.id)
   }
 
   /** Computes the sequence of variable ~> term instantiations for the transitivity lemma.

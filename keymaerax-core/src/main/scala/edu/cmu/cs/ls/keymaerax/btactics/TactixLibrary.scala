@@ -146,10 +146,10 @@ object TactixLibrary extends HilbertCalculus
       else s.sub(pos) match {
         case Some(fml) =>
           val si = s.succ.indexOf(fml)
-          if (pos.isAnte && si >= 0) close(pos.checkAnte.top, SuccPos(si))
+          if (pos.isAnte && si >= 0) closeId(pos.checkAnte.top, SuccPos(si))
           else {
             val ai = s.ante.indexOf(fml)
-            if (pos.isSucc && ai >= 0) close(AntePos(ai), pos.checkSucc.top)
+            if (pos.isSucc && ai >= 0) closeId(AntePos(ai), pos.checkSucc.top)
             else {
               val (ta, ts) = tacticIndex.tacticsFor(fml)
               if (pos.isAnte) ta.intersect(restrictions).map(applyAndRecurse(_, pos, s)).reduceOption(_ | _).getOrElse(skip)
