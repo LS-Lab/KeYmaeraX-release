@@ -566,7 +566,13 @@ abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExp
       case input: Expression => "\"" + input.prettyString + "\""
       case input: USubst => input.subsDefsInput.map(p => "\"" + p.what.prettyString + "~>" + p.repl.prettyString + "\"").mkString(",")
       case input: SubstitutionPair => "\"" + input.what.prettyString + "~>" + input.repl.prettyString + "\""
+      case input: String => "\"" + input + "\""
       case input => "\"" + input.toString + "\""}).mkString(",")})"
+
+  override def equals(other: Any): Boolean = other match {
+    case o: InputTactic => name == o.name && inputs == o.inputs
+    case _ => false
+  }
 }
 abstract class StringInputTactic(override val name: String, val inputs: Seq[String]) extends BuiltInTactic(name) {
   override def prettyString: String =
