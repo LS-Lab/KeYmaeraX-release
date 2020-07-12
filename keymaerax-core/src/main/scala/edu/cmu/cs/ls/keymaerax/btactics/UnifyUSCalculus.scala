@@ -115,7 +115,7 @@ trait UnifyUSCalculus {
   val skip : BelleExpr = Idioms.ident
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
-  val nil : BelleExpr = skip
+  val nil : BelleExpr = Idioms.ident
   /** fail is a tactic that always fails as being inapplicable
     * @see [[skip]] */
   @Tactic()
@@ -195,8 +195,8 @@ trait UnifyUSCalculus {
     * @param subst what substitution `s` to use for instantiating the fact `pi`.
     * @see [[byUS()]]
     */
-  def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst))
-  def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable))
+  def by(pi: ProvableInfo, subst: USubst): BelleExpr = by(pi.provable(subst), pi.codeName)
+  def by(pi: ProvableInfo, subst: Subst): BelleExpr = by(subst.toForward(pi.provable), pi.codeName)
 
   def by(lemma: Lemma, subst: USubst): BelleExpr = by(lemma.fact(subst))
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
