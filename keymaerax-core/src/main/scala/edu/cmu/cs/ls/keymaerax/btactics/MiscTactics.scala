@@ -211,13 +211,11 @@ object DebuggingTactics {
     }
   }
 
+  import TacticFactory._
   /** Placeholder for a tactic string that is not executed. */
-  @Tactic("pending")
-  def pending(tactic: String): BelleExpr = new StringInputTactic("pending",
-      // escape " but avoid double-escape
-      tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\"") :: Nil) {
-    override def result(provable: ProvableSig): ProvableSig = provable
-  }
+  @Tactic("pending", codeName = "pending")
+  def pendingX(tactic: String): StringInputTactic = inputanonP {(ps: ProvableSig) => ps}
+  def pending(tactic: String): StringInputTactic = pendingX(tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\""))
 }
 
 case class Case(fml: Formula, simplify: Boolean = true) {
@@ -231,7 +229,7 @@ object Idioms {
   import TacticFactory._
 
   @Tactic()
-  lazy val nil: BelleExpr = anons {(provable: ProvableSig) => provable} 
+  lazy val nil: BelleExpr = anons {(provable: ProvableSig) => provable}
 
   /** no-op nil */
   lazy val ident: BelleExpr = nil
@@ -538,14 +536,18 @@ object TacticFactory {
 
     /** A named tactic with a single input. */
     def byWithInput(input: Any, t: => BelleExpr): InputTactic = byWithInputs(input :: Nil, t)
+    def byWithInput(input: String, t: (ProvableSig => ProvableSig)): StringInputTactic = byWithInputsS(input :: Nil, t)
 
     /** Creates a dependent tactic, which can inspect the sole sequent */
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
-    def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInput(input, new SingleGoalDependentTactic(name) {
+    def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInputs(input, new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     })
+    def byWithInputsS(input: Seq[String], t: ProvableSig => ProvableSig): StringInputTactic = new StringInputTactic(name, input) {
+      override def result(ps: ProvableSig): ProvableSig = t(ps)
+    }
     def byWithInputsP(input: Seq[Any], t: ProvableSig => ProvableSig): InputTactic = byWithInputs(input, new BuiltInTactic(name) {
       override def result(provable : ProvableSig): ProvableSig = {
         t(provable)
@@ -712,7 +714,8 @@ object TacticFactory {
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
    * will transform them to the correct byWithInputs */
   def inputanon(t: Sequent => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
-  def inputanonP(t: ProvableSig => ProvableSig): InputTactic = "ANON" byWithInputsP(Nil, t)
+  def inputanonP(t: ProvableSig => ProvableSig): StringInputTactic = "ANON" byWithInputsS(Nil, t)
+  def inputanonS(t: ProvableSig => ProvableSig): InputTactic = "ANON" byWithInputsP(Nil, t)
   def inputanon(t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanon(t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanonP(t: ((ProvableSig, Position) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputsP(Nil:Seq[Any], t)

@@ -136,7 +136,7 @@ class TacticImpl(val c: blackbox.Context) {
         case tq"DependentTactic" | tq"DependentPositionTactic" | tq"DependentTwoPositionTactic" | tq"InputPositionTactic"
              | tq"BuiltInLeftTactic" | tq"BuiltInRightTactic" | tq"BuiltInTactic" | tq"BuiltInPositionTactic"
              | tq"CoreLeftTactic" | tq"CoreRightTactic"
-             | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic" | tq"InputTactic"
+             | tq"BuiltInTwoPositionTactic" | tq"InputTwoPositionTactic" | tq"InputTactic" | tq"StringInputTactic"
              | tq"DependentPositionWithAppliedInputTactic"
              | tq"AppliedBuiltInTwoPositionTactic"
              | tq"BelleExpr" => true
@@ -231,6 +231,7 @@ class TacticImpl(val c: blackbox.Context) {
         case tq"" =>
           (args, pos) match {
             case (Nil, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentTactic"
+            case ((_: StringArg) :: _, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.StringInputTactic"
             case (_ :: _, _: NoPos | _: SequentArg) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.InputTactic"
             case (Nil, _: AntePos | _: OnePos | _: SuccPos) => tq"edu.cmu.cs.ls.keymaerax.bellerophon.DependentPositionTactic"
             case (_ :: _, _: OnePos | _: AntePos | _: SuccPos) =>
@@ -280,7 +281,9 @@ class TacticImpl(val c: blackbox.Context) {
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)"""
         case (_::_, NoPos(None)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)"""
-        case (_::_, NoPos(Some(pname))) =>
+        case ((_: StringArg) ::_, NoPos(Some(pname))) =>
+          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsS($argExpr, ($pname) => $acc)"""
+        case (_ ::_, NoPos(Some(pname))) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname) => $acc)"""
         case (_::_, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)"""
