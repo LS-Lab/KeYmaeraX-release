@@ -112,7 +112,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           } catch {
             case e: BelleThrowable =>
               if (convertPending) right match {
-                case t: StringInputTactic if t.name == "pending" =>
+                case t: InputTactic if t.name == "pending" =>
                   return runTactic(DebuggingTactics.pending(BellePrettyPrinter(left) + "; " + t.inputs.head), goal, level, ctx,
                     strict, convertPending = false, executePending = false)
                 case _ =>
