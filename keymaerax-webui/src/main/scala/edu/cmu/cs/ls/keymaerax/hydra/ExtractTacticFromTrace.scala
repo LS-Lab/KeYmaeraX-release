@@ -48,8 +48,8 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   private def tacticAt(gen: Option[Generator.Generator[GenProduct]], node: ProofTreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), gen)
 
   private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {
-    case ("nil", _) => ts2
-    case (_, "nil") => ts1
+    case ("nil", _) | ("skip", _)=> ts2
+    case (_, "nil") | (_, "skip") => ts1
     case ("" | "()", "" | "()") => ""
     case (_, "" | "()") => ts1
     case ("" | "()", _) => ts2

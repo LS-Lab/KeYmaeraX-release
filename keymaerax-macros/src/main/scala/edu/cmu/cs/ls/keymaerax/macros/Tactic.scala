@@ -411,7 +411,7 @@ class TacticImpl(val c: blackbox.Context) {
     }
     def anonSort(s: String): Option[AnonSort] = {
       s match {
-        case "anon"  | "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" | "inputanonP" => Some(SimpleAnonSort)
+        case "anon"  | "anonL" | "anonR" | "anonLR" | "inputanon" | "inputanonL"| "inputanonP" | "inputanonR" | "inputanonS" => Some(SimpleAnonSort)
         case  "anons" => Some(UnguardedAnonSort)
         case "coreanon" => Some(CoreAnonSort)
         case _ => None

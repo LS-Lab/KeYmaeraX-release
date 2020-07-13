@@ -576,7 +576,7 @@ abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExp
 }
 abstract class StringInputTactic(override val name: String, val inputs: Seq[String]) extends BuiltInTactic(name) {
   override def prettyString: String =
-    s"$name(${inputs.map(input => "\"" + input + "\"").mkString(",")})"
+    s"$name(${inputs.map(input => "\"" + input.flatMap({case '"' => "\"" case c => c.toString}) + "\"").mkString(",")})"
 
   override def equals(other: Any): Boolean = other match {
     case o: StringInputTactic => name == o.name && inputs == o.inputs

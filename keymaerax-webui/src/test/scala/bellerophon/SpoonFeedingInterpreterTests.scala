@@ -285,7 +285,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     n31.goal shouldBe Some("x>0 ==> x>=0".asSequent)
     n31.children shouldBe empty
 
-    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, skip)")
+    tree.tactic shouldBe BelleParser("implyR(1) ; andR(1) ; <(id, nil)")
   }
 
   it should "work top-level and support complicated branch tactics" taggedAs(SlowTest) in withMathematica { _ => withDatabase { db =>
@@ -388,7 +388,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(2,0)").flatMap(_.goal) shouldBe Some("x>1 ==> x>0".asSequent)
     tree.locate("(2,1)").flatMap(_.goal) shouldBe Some("x>0 ==> x>0".asSequent)
     tree.openGoals should have size 1
-    tree.tactic shouldBe BelleParser("implyR(1) & orL(-1) & <(skip, id)")
+    tree.tactic shouldBe BelleParser("implyR(1) & orL(-1) & <(nil, id)")
   }
 
   it should "work with nested branching when branches stay open 1" in withDatabase { db =>
@@ -402,7 +402,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
-    tree.tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(skip, id), skip)")
+    tree.tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(nil, id), nil)")
   }
 
   it should "work with nested branching when branches stay open 2" in withDatabase { db =>
@@ -416,7 +416,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
-    tree.tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(id, skip), skip)")
+    tree.tactic shouldBe BelleParser("implyR(1) & andR(1) & <(orL(-1) & <(id, nil), nil)")
   }
 
   it should "work with nested branching when branching stay open 3" in withDatabase { db =>
@@ -430,7 +430,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(close, skip), andR(1) ; <(nil, nil))")
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(id, nil), andR(1) ; <(nil, nil))")
   }
 
   it should "work with nested branching when branching stay open 4" in withDatabase { db =>
@@ -444,7 +444,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 2
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(close, nil), andR(1) ; <(nil, close))")
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(andR(1) ; <(id, nil), andR(1) ; <(nil, id))")
   }
 
   it should "work with nested branching and repeat" in withDatabase { db =>
@@ -458,7 +458,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
-    tree.tactic shouldBe BelleParser("implyR(1); orL(-1); <(andR(1); <(close, andR(1); <(close, nil)), andR(1); <(nil, andR(1); <(nil, close)))")
+    tree.tactic shouldBe BelleParser("implyR(1); orL(-1); <(andR(1); <(id, ((andR(1); <(id, nil)))), andR(1); <(nil, andR(1); <(nil, id)))")
   }
 
   it should "work with loop tactic" in withDatabase { db =>
@@ -476,7 +476,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     //println("What: " + tree.tactic.length  + " vs. " + bp)
     val tl = tree.tactic
     val tr = BelleParser(
-      """implyR(1) ; skip; cutR("[{x:=x+1;}*](x>=0&!false)", 1) ; <(
+      """implyR(1) ; cutR("[{x:=x+1;}*](x>=0&!false)", 1) ; <(
         |I(1) ; andR(1) ; <(
         |andR(1) ; <(
         |  label("Init"),
@@ -506,7 +506,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 3
     val (tl, tr) = (tree.tactic,
-      BelleParser("""implyR(1) ; andL('L) ; andL('L) ; andL('L) ; skip; cutR("[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)", 1) ; <(
+      BelleParser("""implyR(1) ; andL('L) ; andL('L) ; andL('L) ; cutR("[{x:=x+B;}*](x>=0&A>0&B>0&C>0&!false)", 1) ; <(
         |I(1) ; andR(1) ; <(
         |andR(1) ; <(
         |  label("Init"),
@@ -1091,7 +1091,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(implyR('R) & diffInvariant("x>=old(x)".asFormula)(1), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("""implyR('R) ; dC("x>=old(x)",1) ; <(skip, dI(1))""")
+    tree.tactic shouldBe BelleParser("""implyR('R) ; dC("x>=old(x)",1) ; <(nil, dI(1))""")
   }}
 
   //@todo nil;nil?
@@ -1163,9 +1163,10 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
     trace.steps.map(_.rule) should contain theSameElementsInOrderAs List("implyR(1)", "andL('Llast)", "andL('Llast)",
-      "dC(\"y>=0&z>=0\",1)", "V(1)", "prop", "nil", "DW(1)", "G(1)")
+      "dC(\"y>=0&z>=0\",1)", "V('Rlast)", "prop", "skip", "DW(1)", "G(1)")
+
     tree.tactic shouldBe BelleParser(
-      "implyR(1) ; (andL('Llast) ; (andL('Llast) ; (dC(\"y>=0&z>=0\",1) ; <( DW(1) ; G(1), V(1) ; prop ))))")
+      "implyR(1) ; (andL('Llast) ; (andL('Llast) ; (dC(\"y>=0&z>=0\",1) ; <( DW(1) ; G(1), V('Rlast) ; prop ))))")
   }}
 
   it should "should work for Bouncing Ball diffWeaken" in withMathematica { _ => withDatabase { db =>
@@ -1178,12 +1179,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     val trace = db.db.getExecutionTrace(proofId)
+
     trace.steps.map(_.rule) should contain theSameElementsInOrderAs List("implyR(1)", "andL('Llast)", "andL('Llast)",
       "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "andL('Llast)", "dC(\"g>0&1>=c&c>=0&r>=0\",1)",
-      "V(1)", "prop", "nil", "DW(1)", "G(1)")
+      "V('Rlast)", "prop", "skip", "DW(1)", "G(1)")
     tree.tactic shouldBe BelleParser(
       """implyR(1) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ; (andL('Llast) ;
-        |(andL('Llast) ; (dC("g>0&1>=c&c>=0&r>=0",1) ; <( DW(1) ; G(1), V(1) ; prop )))))))))""".stripMargin)
+        |(andL('Llast) ; (dC("g>0&1>=c&c>=0&r>=0",1) ; <( DW(1) ; G(1), V('Rlast) ; prop )))))))))""".stripMargin)
   }}
 
   it should "work with assertions/print/debug on multi-subgoal provables" in withDatabase { db =>
@@ -1195,14 +1197,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(implyR(1) & orL(-1) & DebuggingTactics.assertProvableSize(2) <(id, nil), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId, nil)")
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(id, nil)")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
-    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId, notL(-1))")
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId(-1,1), notL(-1))")
   }
 
   it should "work for prop on a simple example" in withDatabase { db =>
@@ -1215,14 +1217,14 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     //@todo tactic extraction must be strict too (now removes nil)
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; id")
+    tree.tactic shouldBe BelleParser("implyR(1) ; closeId(-1, 1)")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
-    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; id")
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; closeId(-1, 1)")
   }
 
   it should "work with onAll without branches" in withDatabase { db =>
@@ -1245,7 +1247,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(master(), BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; id")
+    tree.tactic shouldBe BelleParser("implyR(1) ; closeId(-1,1)")
   }}
 
   it should "should work for prop on a left-branching example" in withDatabase { db =>
@@ -1257,13 +1259,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(id, notL(-1))")
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId(-1,1), notL(-1))")
 
     val proofId2 = db.createProof(modelContent, "proof2")
     registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 2, strict=false))(
       prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
-    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(id, notL(-1))")
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId(-1,1), notL(-1))")
   }
 
   it should "should work for prop with nested branching" in withDatabase { db =>
@@ -1277,13 +1279,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     DbProofTree(db.db, proofId.toString).tactic shouldBe BelleParser(
       """implyR(1) ; orL(-1) ; <(
         |  andR(1) ; <(
-        |    id,
+        |    closeId(-1,1),
         |    nil
         |  )
         |  ,
         |  andR(1) ; <(
         |    nil,
-        |    id
+        |    closeId(-1, 1)
         |  )
         |)
       """.stripMargin)
@@ -1299,7 +1301,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some("==> false".asSequent)
-    tree.tactic shouldBe BelleParser("implyR(1) ; QE")
+    tree.tactic shouldBe BelleParser("implyR(1) ; applyEqualities; QE")
   }}
 
   private def stepInto(node: ProofTreeNode, expectedStep: String, depth: Int = 1)(db: DBAbstraction): (Int, BelleExpr) = {
@@ -1328,13 +1330,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         tactic shouldBe BelleParser(
           """andR(1) ; <(
             |  orL(-1) ; <(
-            |    id,
+            |    closeId(-1,1),
             |    nil
             |  )
             |  ,
             |  orL(-1) ; <(
             |    nil,
-            |    id
+            |    closeId(-1,1)
             |  )
             |)
           """.stripMargin)
@@ -1357,13 +1359,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         tactic shouldBe BelleParser(
           """andR(1) ; <(
             |  orL(-1) ; <(
-            |    id,
+            |    closeId(-1,1),
             |    nil
             |  )
             |  ,
             |  orL(-1) ; <(
             |    nil,
-            |    id
+            |    closeId(-1,1)
             |  )
             |)
           """.stripMargin)
@@ -1388,7 +1390,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         tactic shouldBe BelleParser(
           """
             |andR(1) ; <(
-            |  id,
+            |  closeId(-1,1),
             |  nil
             |)
           """.stripMargin)
@@ -1401,7 +1403,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
           """
             |andR(1) & <(
             |  nil,
-            |  id
+            |  closeId(-1,1)
             |)
           """.stripMargin)
     }
@@ -1602,7 +1604,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val p = ProvableSig.startProof(problem)
     val pId = sql.createProof(modelFile, "model1")
     val tactic = prop & done
-    intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("[Bellerophon Runtime] expected to have proved, but got open goals")
+    intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("expected to have proved, but got open goals")
     sql.extractTactic(pId) shouldBe BelleParser("nil")
 
     implicit val db: DBAbstraction = new InMemoryDB()

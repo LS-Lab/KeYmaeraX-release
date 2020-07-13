@@ -110,9 +110,10 @@ trait UnifyUSCalculus {
   // utility tactics
 
   /** skip is a no-op tactic that has no effect
+    * Identical to [[nil]] but different name
     * @see [[TactixLibrary.done]] */
   @Tactic()
-  val skip : BelleExpr = Idioms.ident
+  val skip : BelleExpr = anons {(provable: ProvableSig) => provable}
   /** nil=skip is a no-op tactic that has no effect */
   @Tactic()
   val nil : BelleExpr = Idioms.ident

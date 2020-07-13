@@ -214,8 +214,14 @@ object DebuggingTactics {
   import TacticFactory._
   /** Placeholder for a tactic string that is not executed. */
   @Tactic("pending", codeName = "pending")
-  def pendingX(tactic: String): StringInputTactic = inputanonP {(ps: ProvableSig) => ps}
-  def pending(tactic: String): StringInputTactic = pendingX(tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\""))
+  def pending(tactic: String): StringInputTactic = {
+    val t =  tactic.replaceAllLiterally("\"", "\\\"").replaceAllLiterally("\\\\\"", "\\\"")
+    pendingX(t)
+  }
+
+  @Tactic("pendingX", codeName = "pendingX")
+  def pendingX(tactic: String): StringInputTactic =
+    inputanonS {(ps: ProvableSig) => ps}
 }
 
 case class Case(fml: Formula, simplify: Boolean = true) {
@@ -436,6 +442,7 @@ object TacticFactory {
     def by(t: BelleExpr): BelleExpr = NamedTactic(name, t)
     // Renamed version of by(BelleExpr): BelleExpr for name consistency
     def forward(t: BelleExpr): BelleExpr = name by t
+    def forward(t: StringInputTactic): StringInputTactic = name byWithInputsS(t.inputs, (ps => t.result(ps)))
     def forward(t: BuiltInTactic): BuiltInTactic = name by ((ps: ProvableSig) => t.result(ps))
     def forward(t: BuiltInPositionTactic): BuiltInPositionTactic =  by ((pr: ProvableSig, pos: Position) => t.computeResult(pr, pos))
     def forward(t: BuiltInLeftTactic): BuiltInLeftTactic = by ((pr: ProvableSig, pos: AntePosition) => t.computeResult(pr, pos))
@@ -650,13 +657,13 @@ object TacticFactory {
     def by(t: ProvableSig => ProvableSig): BuiltInTactic =
       new BuiltInTactic(name) {
         @inline override def result(provable: ProvableSig): ProvableSig = {
+          requireOneSubgoal(provable, name)
           t(provable)
         }
       }
     def bys(t: ProvableSig => ProvableSig): BuiltInTactic =
       new BuiltInTactic(name) {
         @inline override def result(provable: ProvableSig): ProvableSig = {
-          requireOneSubgoal(provable, name)
           t(provable)
         }
       }
@@ -721,8 +728,8 @@ object TacticFactory {
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
    * will transform them to the correct byWithInputs */
   def inputanon(t: Sequent => BelleExpr): InputTactic = "ANON" byWithInputs(Nil, t)
-  def inputanonP(t: ProvableSig => ProvableSig): StringInputTactic = "ANON" byWithInputsS(Nil, t)
-  def inputanonS(t: ProvableSig => ProvableSig): InputTactic = "ANON" byWithInputsP(Nil, t)
+  def inputanonS(t: ProvableSig => ProvableSig): StringInputTactic = "ANON" byWithInputsS(Nil, t)
+  def inputanonP(t: ProvableSig => ProvableSig): InputTactic = "ANON" byWithInputsP(Nil, t)
   def inputanon(t: (Position => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanon(t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputs(Nil, t)
   def inputanonP(t: ((ProvableSig, Position) => ProvableSig)): DependentPositionWithAppliedInputTactic = "ANON" byWithInputsP(Nil:Seq[Any], t)

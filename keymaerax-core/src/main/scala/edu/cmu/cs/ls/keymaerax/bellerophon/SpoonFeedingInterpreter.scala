@@ -112,7 +112,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           } catch {
             case e: BelleThrowable =>
               if (convertPending) right match {
-                case t: InputTactic if t.name == "pending" =>
+                case t: StringInputTactic if t.name == "pending" =>
                   return runTactic(DebuggingTactics.pending(BellePrettyPrinter(left) + "; " + t.inputs.head), goal, level, ctx,
                     strict, convertPending = false, executePending = false)
                 case _ =>
@@ -345,8 +345,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           runTactic(t, goal, level - levelDecrement, ctx, strict, convertPending, executePending)
 
         case t: StringInputTactic if t.name == "pending" && executePending =>
-          runTactic(BelleParser(t.inputs.head.replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, strict, convertPending, executePending)
-
+          runTactic(BelleParser(t.inputs.head.asInstanceOf[String].replaceAllLiterally("\\\"", "\"")), goal, level-1, ctx, strict, convertPending, executePending)
         case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
           case Some(alt) =>
             val c = Cancellable(runTactic(alt, goal, level, ctx, strict, convertPending, executePending))
