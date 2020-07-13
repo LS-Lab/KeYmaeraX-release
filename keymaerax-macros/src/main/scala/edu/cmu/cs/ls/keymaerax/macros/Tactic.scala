@@ -272,7 +272,11 @@ class TacticImpl(val c: blackbox.Context) {
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
           }
         case (Nil, NoPos(Some(arg))) =>
-          q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($arg) => $acc)"""
+          if(anonSort.contains(UnguardedAnonSort)) {
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).bys(($arg) => $acc)"""
+          } else {
+            q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($arg) => $acc)"""
+          }
         case (Nil, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)"""
         case (Nil, OnePos(pname, None, _)) =>

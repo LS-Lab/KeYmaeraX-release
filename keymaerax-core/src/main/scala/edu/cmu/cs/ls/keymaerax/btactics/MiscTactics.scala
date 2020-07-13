@@ -542,6 +542,12 @@ object TacticFactory {
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     }
+    def bys(t: ProvableSig => BelleExpr): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v : BelleValue): BelleExpr = {
+        v match {case BelleProvable(provable, _) =>
+          t(provable)}
+      }
+    }
     def byWithInputs(input: Seq[Any], t: Sequent => BelleExpr): InputTactic = byWithInputs(input, new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = t(sequent)
     })
@@ -709,6 +715,7 @@ object TacticFactory {
   def anonL(t: (AntePosition => BelleExpr)): DependentPositionTactic = "ANON" byL t
   def anonR(t: (SuccPosition => BelleExpr)): DependentPositionTactic = "ANON" byR t
   def anon(t: (Sequent => BelleExpr)): DependentTactic = "ANON" by t
+  def anons(t: (ProvableSig => BelleExpr)): DependentTactic = "ANON" bys t
   def coreanon(t: (ProvableSig, AntePosition) => ProvableSig): CoreLeftTactic = "ANON" coreby t
   def coreanon(t: (ProvableSig, SuccPosition) => ProvableSig): CoreRightTactic = "ANON" coreby t
   /* Function [[inputanon]]  should never be executed. Write these in @Tactic tactics and @Tactic
