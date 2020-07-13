@@ -1438,6 +1438,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }}
 
+  //@TODO: Needs updated because of TryCatch addition in dI
   it should "work for dC+DI" in withMathematica { _ =>
     val problem =
       """
@@ -1462,7 +1463,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         DbProofTree(db, id1.toString).locate("(2,0)") match {
           case Some(n2) =>
             val (_, tactic2) = stepInto(n2, """dC("d>=0", 1)""")(db)
-            val tacticString = "DC(1) ; <(nil, nil)"
+            val tacticString = "dC(\"d>=0\", 1) ; <(nil, nil)"
             tactic2 shouldBe BelleParser(tacticString)
             BellePrettyPrinter(tactic2) should equal (tacticString) (after being whiteSpaceRemoved)
         }
@@ -1532,6 +1533,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }
 
+  // @TODO: Tactic extraction skips some steps
   it should "work for simple dI with non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "x>a -> [{x'=5}]x>a".asFormula
     val p = ProvableSig.startProof(problem)
@@ -1555,6 +1557,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     }
   }
 
+  // @TODO: Tactic extraction skips some steps
   it should "work when dI fails with non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "[{x'=5}]x>a".asFormula
     val p = ProvableSig.startProof(problem)
@@ -1577,6 +1580,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
   }
 
+  // @TODO: Tactic extraction skips some steps
   it should "work when dI fails with multiple non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "[{x'=5}]x>a+b".asFormula
     val p = ProvableSig.startProof(problem)

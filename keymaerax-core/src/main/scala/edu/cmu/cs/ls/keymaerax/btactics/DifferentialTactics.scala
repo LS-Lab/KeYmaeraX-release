@@ -322,8 +322,8 @@ private object DifferentialTactics extends Logging {
   }
   /** @see [[TactixLibrary.dC()]] */
   //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.dC(Formula)
-  private[btactics] def diffCut(formula: Formula): DependentPositionTactic = diffCut(List(formula))
-  private[btactics] def diffCut(formulas: List[Formula]): DependentPositionTactic =
+  private[btactics] def diffCut(formula: Formula): DependentPositionWithAppliedInputTactic = diffCut(List(formula))
+  private[btactics] def diffCut(formulas: List[Formula]): DependentPositionWithAppliedInputTactic =
     "dC" byWithInputs (formulas, (pos: Position, sequent: Sequent) => {
       formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut &
         Idioms.doIf(_.subgoals.size == 2)(<(all, skip)))
@@ -394,9 +394,7 @@ private object DifferentialTactics extends Logging {
 
   /** @see [[TactixLibrary.diffInvariant]] */
   //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.diffInvariant(Formula)
-  @Tactic(premises = "Γ |- [x'=f(x)&R]P'",
-      conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true)
-  private[btactics] def diffInvariant(R: List[Formula]): DependentPositionTactic =
+  private[btactics] def diffInvariant(R: List[Formula]): DependentPositionWithAppliedInputTactic =
     inputanon {(pos: Position, sequent: Sequent) =>
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position

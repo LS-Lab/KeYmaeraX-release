@@ -93,11 +93,11 @@ trait DifferentialEquationCalculus {
     * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[HilbertCalculus.DC]]
     */
-  def dC(R: Formula)       : DependentPositionTactic = DifferentialTactics.diffCut(R)
   @Tactic("Differential Cut", conclusion = "&Gamma; |- [{x′=f(x) & Q}]P, &Delta;",
     premises = "&Gamma; |- [{x′=f(x) & Q}]R, &Delta; ;; &Gamma; |- [{x′=f(x) & (Q∧R)}]P, &Delta;",
     revealInternalSteps = true)
-  def dC(R: List[Formula]) : DependentPositionTactic = DifferentialTactics.diffCut(R)
+  def dC(R: Formula)       : DependentPositionWithAppliedInputTactic = anon {(pos: Position) => DifferentialTactics.diffCut(R)(pos)}
+  def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = DifferentialTactics.diffCut(R)
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant).
     * (uses DI, DW, DE, QE)
@@ -232,8 +232,11 @@ trait DifferentialEquationCalculus {
     * @see [[dC]]
     * @see [[dI]]
     */
-  def diffInvariant(invariants: Formula): DependentPositionTactic = DifferentialTactics.diffInvariant(List(invariants))
-  def diffInvariant(invariants: List[Formula]): DependentPositionTactic = DifferentialTactics.diffInvariant(invariants)
+  // NB: Annotate diffInvariant(Formula) rather than DifferentialTactics.diffInvariant(List[Formula]) for compatibility
+  @Tactic(premises = "Γ |- [x'=f(x)&R]P'",
+    conclusion = "Γ |- [x'=f(x)&Q]P, Δ", revealInternalSteps = true)
+  def diffInvariant(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position) => DifferentialTactics.diffInvariant(List(invariant))(pos)}
+  def diffInvariant(invariants: List[Formula]): DependentPositionWithAppliedInputTactic = DifferentialTactics.diffInvariant(invariants)
 
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * openDiffInd: proves an inequality to be an invariant of a differential equation (by DIo, DW, DE, QE)
