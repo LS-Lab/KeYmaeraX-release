@@ -372,10 +372,8 @@ trait SequentCalculus {
   }
 
   /** close: closes the branch when the same formula is in the antecedent and succedent at the indicated positions ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-    // @TODO @Tactic-ify
-  // @TODO: Check/ is outdated with @Tactic
   //@note same name (closeId) as SequentCalculus.closeId for serialization
-    @Tactic(codeName = "closeId")
+  @Tactic(codeName = "closeId")
   val closeId: BuiltInTwoPositionTactic = anon ((provable: ProvableSig, a: Position, s: Position) => {
     ProofRuleTactics.requireOneSubgoal(provable, "closeId(" + a + "," + s + ")")
     try {
@@ -384,6 +382,7 @@ trait SequentCalculus {
       case ex: NoncriticalCoreException => throw new TacticInapplicableFailure("Tactic " + "closeId" +
         " applied at " + a + " and " + s + " is inapplicable in " + provable.prettyString, ex)
     }})
+
   def close(a: Int, s: Int): BelleExpr = closeId(Position(a).checkAnte.top, Position(s).checkSucc.top)
   /** closeIdWith: closes the branch with the formula at the given position when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   @Tactic(premises = "*",
@@ -403,9 +402,21 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   //@note do not forward to closeIdWith (performance)
+  //@TODO: Currently needs to be new DependentTactic() for some crazy reason: SpoonFeedingInterpreter serializes as "closeId()"
+  // if we use  anons {...}, even though the implementation is literally new DependentTactic(...). Mysterious.
+  // Maybe the interpreter is checking type equality of anonymous classes somewhere...
   @Tactic("Close by identity", premises = "*",
     conclusion = "Γ, P |- P, Δ", codeName = "id")
-  val id: DependentTactic = anon { (seq: Sequent) => findClose(seq)}
+  val id: DependentTactic = new DependentTactic("id") {
+    override def computeExpr(v : BelleValue): BelleExpr = v match {
+      case BelleProvable(provable, _) =>
+        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+        val s = provable.subgoals.head
+        val fmls = s.ante.intersect(s.succ)
+        val fml = fmls.headOption.getOrElse(throw new TacticInapplicableFailure("Expects same formula in antecedent and succedent. Found:\n" + s.prettyString))
+        closeId(AntePos(s.ante.indexOf(fml)), SuccPos(s.succ.indexOf(fml)))
+    }
+  }
   // alternative implementation
   /*anon {(seq: Sequent) =>
     //@todo optimizable performance avoiding the repeated search
