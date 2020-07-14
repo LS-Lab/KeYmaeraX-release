@@ -1258,8 +1258,7 @@ class UniformSubstitutionTests extends TacticTestBase with PrivateMethodTester {
   }
   
   // uniform substitution of rules
-  //@todo solve initialization order issue here
-  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in withMathematica { _ =>
     val conc = Sequent(IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = USubst(
       SubstitutionPair(UnitPredicational("p_", AnyArg), "(-x)^2>=0".asFormula) ::
