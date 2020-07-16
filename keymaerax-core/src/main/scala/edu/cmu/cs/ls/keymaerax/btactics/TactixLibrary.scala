@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.tools.ext.QETacticTool
@@ -891,11 +892,29 @@ object TactixLibrary extends HilbertCalculus
       case Some(t) =>
         val substs = lemma.evidence.flatMap({
           case ToolEvidence(info) =>
-            info.filter(_._1 == "tactic").map(_._2) match {
-              case tactic :: Nil =>
-                import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+            import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+            val tactic = info.find(_._1 == "tactic").map(_._2)
+            val model = info.find(_._1 == "model")
+            (model, tactic) match {
+              case (Some(model), Some(tactic)) =>
+                val defs = KeYmaeraXArchiveParser(model._2).head.defs
+                if (tactic.contains("expandAllDefs")) {
+                  defs.substs
+                } else {
+                  val subst1 = """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
+                  val expandedSymbols = """expand "([^"]+)"""".r("symbol").findAllMatchIn(tactic).map(_.group("symbol")).toList
+                  subst1 ++ defs.substs.filter({
+                    case SubstitutionPair(FuncOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
+                    case SubstitutionPair(PredOf(fn, _), _) => expandedSymbols.contains(fn.prettyString)
+                    case SubstitutionPair(PredicationalOf(fn, _), _) =>  expandedSymbols.contains(fn.prettyString)
+                    case _ => false
+                  })
+                }
+              case (None, Some(tactic)) =>
                 """US\("([^"]+)"\)""".r("subst").findAllMatchIn(tactic).map(_.group("subst").asSubstitutionPair).toList
-              case _ => Nil
+              case (_, None) =>
+                //@todo unify sequent with lemma conclusion
+                Nil
             }
           case _ => Nil
         })
