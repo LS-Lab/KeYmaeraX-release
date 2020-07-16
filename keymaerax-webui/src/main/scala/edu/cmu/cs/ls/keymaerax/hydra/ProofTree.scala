@@ -155,8 +155,14 @@ trait ProofTreeNode {
       //@note sub may originate from a lemma that was proved with expanded definitions; find by unification,
       // but can't just unify goal with sub, since both may have applied partial substitutions separately, e.g.,
       // may have goal gt(x,y^2) |- gt(x,y^2) and sub x>sq(y) |- x>sq(y)
-      val downSubst = UnificationMatch.apply(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
-      exhaustiveSubst(substGoal, downSubst)(substSub, i) -> (substs ++ downSubst.subsDefsInput)
+      try {
+        val downSubst = UnificationMatch.apply(substGoal.sub(i).subgoals.head, substSub.conclusion).usubst
+        exhaustiveSubst(substGoal, downSubst)(substSub, i) -> (substs ++ downSubst.subsDefsInput)
+      } catch {
+        case _: UnificationException =>
+          val upSubst = UnificationMatch.apply(substSub.conclusion, substGoal.sub(i).subgoals.head).usubst
+          substGoal(exhaustiveSubst(substSub, upSubst), i) -> (substs ++ upSubst.subsDefsInput)
+      }
     } else goal -> substs
   }
 
