@@ -32,13 +32,13 @@ import scala.reflect.runtime.{universe => ru}
 import scala.util.Try
 
 /**
-  * Since axioms are always referred to by their names (which are strings), we have the following problems:
-  * 1) It's hard to keep everything up to date when a new axiom is added
-  * 2) We don't get any static exhaustiveness checking when we case on an axiom
+  * Table of metadeta for all axioms, rules, and tactics in the prover.
+  * This table is now dynamically generated during startup by reflecting data generated in @Tactic and related macros.
+  * The old hard-coded table is no longer used, it is left here temporarily as a comment, as a courtesy for anyone who
+  * might debug the new initialization code.
+  * @TODO delete commented-out table after further testing
+  * @see [[DerivationInfoRegistry.init]]
   *
-  * AxiomInfo exists to help fix that. An AxiomInfo is just a collection of per-axiom information. The tests for
-  * this object dynamically ensure it is exhaustive with respect to AxiomBase and Ax. By adding a new
-  * field to AxiomInfo you can ensure that all new axioms will have to have that field.
   * Created by bbohrer on 12/28/15.
   */
 
@@ -126,7 +126,7 @@ object DerivationInfoRegistry extends Logging {
   //<editor-fold desc="modalities">
 
   /** Modality cases of [[allInfo]] */
-  private[this] val modalityInfos: List[DerivationInfo] = List(
+  private[this] val modalityInfos: List[DerivationInfo] = List(/*
     // [a] modalities and <a> modalities
     PositionTacticInfo("diamondd" //@Tactic-fied
       , AxiomDisplayInfo(("<·>d", "<.>d"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ &not;[a]&not;P")
@@ -148,12 +148,12 @@ object DerivationInfoRegistry extends Logging {
       List(new TermArg("e")),
       _ => ((e: Term) => DLBySubst.assignbExists(e)): TypedFunc[Term, BelleExpr]
     ),
-  )
+  */)
   //</editor-fold>
 
   //<editor-fold desc="ODEs">
   /** Differential equation cases of [[allInfo]] */
-  private[this] lazy val odeInfos: List[DerivationInfo] = List(
+  private[this] lazy val odeInfos: List[DerivationInfo] = List(/*
     /*new CoreAxiomInfo("DW base", "DWbase", "DWbase", 'linear, {case () => HilbertCalculus.DW}),*/
     PositionTacticInfo("dW" // @Tactic-fied
       , RuleDisplayInfo("Differential Weaken"
@@ -343,19 +343,19 @@ object DerivationInfoRegistry extends Logging {
               ): TypedFunc[Term, TypedFunc[Option[Formula], BelleExpr]]
             ): TypedFunc[Term, TypedFunc[Term, TypedFunc[Option[Formula], BelleExpr]]]
           ): TypedFunc[Variable, TypedFunc[Term, TypedFunc[Term, TypedFunc[Option[Formula], BelleExpr]]]]
-    )
+    )*/
   )
   //</editor-fold>
 
   //<editor-fold desc="Differentials">
   /** Differential cases of [[allInfo]] */
-  private[this] lazy val differentialInfos: List[DerivationInfo] = List(
+  private[this] lazy val differentialInfos: List[DerivationInfo] = List(/*
     new PositionTacticInfo("Dvariable" //@Tactic-fied
       ,  AxiomDisplayInfo(("x′","x'"), "<span class=\"k4-axiom-key\">(x)′</span>=x′")
       , {case () => DifferentialTactics.Dvariable}),
 
     //@Tactic-fied
-    new PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)
+    new PositionTacticInfo("derive", "()'", {case () => HilbertCalculus.derive} , revealInternalSteps = false /* uninformative as forward proof */)*/
   )
   //</editor-fold>
 
@@ -376,7 +376,7 @@ object DerivationInfoRegistry extends Logging {
 
   //<editor-fold desc="Sequent Calculus">
   /** Sequent calculus cases of [[allInfo]] */
-  private[this] lazy val sequentCalculusInfos: List[DerivationInfo] = List(
+  private[this] lazy val sequentCalculusInfos: List[DerivationInfo] = List(/*
     new PositionTacticInfo("notL"
       , RuleDisplayInfo(("¬L", "!L"), (List("¬P", "&Gamma;"),List("&Delta;")), List((List("&Gamma;"),List("&Delta;","P"))))
       , {case () => SequentCalculus.notL}),
@@ -871,21 +871,13 @@ object DerivationInfoRegistry extends Logging {
       , SimpleDisplayInfo("Assert","assert")
       , List(new ExpressionArg("expected"), StringArg("msg"))
       , _ => ((expr: Expression) => ((msg: String) => DebuggingTactics.assertE(expr, msg)): TypedFunc[String, BelleExpr]): TypedFunc[Expression, TypedFunc[String, BelleExpr]]
-    )
+    )*/
   )
   //</editor-fold>
 
   ////////////////////////////////////////////////////////
   // Assemble above derivation infos in [[allInfo]] registry
   ////////////////////////////////////////////////////////
-
-  /**
-    * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
-    * Transferred into subsequent maps etc for efficiency reasons.
-    */
-  var allInfo: List[DerivationInfo] = (modalityInfos ++ odeInfos ++
-    differentialInfos ++ foInfos ++ miscInfos ++ derivedAxiomsInfos ++ sequentCalculusInfos) ensures (
-    consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
   /** We need to force the right-hand side of every tactic definition to evaluate, which requires passing in arguments
     * to every "def" of a tactic. Subtly, it's ok for these arguments to be dummies, because we're not actually
