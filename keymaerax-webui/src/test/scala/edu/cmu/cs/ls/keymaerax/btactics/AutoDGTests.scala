@@ -117,7 +117,7 @@ class AutoDGTests extends TacticTestBase {
 
   //region helper methods
 
-  "TacticHelper.transformMonomial" should "work" in {
+  "TacticHelper.transformMonomial" should "work" in withTactics {
     val result = TacticHelper.transformMonomials("2*x^2 + 3*x^3".asTerm, (t:Term) => t match {
       case Times(coeff, Power(v,exp)) => Times(coeff, Power(v, Minus(exp, Number(1))))
     })

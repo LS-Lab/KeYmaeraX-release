@@ -75,7 +75,7 @@ class PropositionalProver extends TacticTestBase  {
     "(p()->q())|(q()->p())" ::
     Nil
 
-  "prop" should "prove list of simple propositional tautologies" in {
+  "prop" should "prove list of simple propositional tautologies" in withTactics {
     for (s <- propFacts) {
       val fact = KeYmaeraXParser.formulaParser(s)
       TactixLibrary.proveBy(fact, prop) shouldBe 'proved

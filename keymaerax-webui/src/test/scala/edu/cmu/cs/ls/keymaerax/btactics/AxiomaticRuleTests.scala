@@ -15,7 +15,7 @@ import scala.collection.immutable
 @SummaryTest
 class AxiomaticRuleTests extends TacticTestBase {
 
-  "[] monotone" should "work" in {
+  "[] monotone" should "work" in withTactics {
     val result = proveBy(
       Sequent(immutable.IndexedSeq("[x:=1;]x>0".asFormula), immutable.IndexedSeq("[x:=1;]x>-1".asFormula)),
       TactixLibrary.monb)
@@ -25,7 +25,7 @@ class AxiomaticRuleTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>-1".asFormula
   }
 
-  "<> monotone" should "work" in {
+  "<> monotone" should "work" in withTactics {
     val result = proveBy(
       Sequent(immutable.IndexedSeq("<x:=1;>x>0".asFormula), immutable.IndexedSeq("<x:=1;>x>-1".asFormula)),
       TactixLibrary.mond)
@@ -35,7 +35,7 @@ class AxiomaticRuleTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>-1".asFormula
   }
 
-  "G" should "work" in {
+  "G" should "work" in withTactics {
     val result = proveBy("[x:=1;]x>0".asFormula, TactixLibrary.G(1))
 
     result.subgoals should have size 1

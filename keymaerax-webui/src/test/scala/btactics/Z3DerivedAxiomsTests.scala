@@ -182,7 +182,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove + commute" in withZ3 { qeTool => check(plusCommute)}
   it should "prove * commute" in withZ3 { qeTool => check(timesCommute)}
   it should "prove distributive" in withZ3 { qeTool => check(distributive)}
-  it should "prove + identity" in withZ3 { qeTool => check(plusIdentity)}
+  it should "prove + identity" in withZ3 { qeTool => check(zeroPlus)}
   it should "prove * identity" in withZ3 { qeTool => check(timesIdentity)}
   it should "prove + inverse" in withZ3 { qeTool => check(plusInverse)}
   it should "prove * inverse" in withZ3 { qeTool => check(timesInverse)}

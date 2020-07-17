@@ -453,22 +453,22 @@ class TactixLibraryTests extends TacticTestBase {
     i shouldBe 2 /* decomposeToODE calls ODE, and so is master after decomposeToODE is done */
   }
 
-  it should "exhaustively apply propositional" in {
+  it should "exhaustively apply propositional" in withTactics {
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
 
-  it should "chase at position" in {
+  it should "chase at position" in withTactics {
     val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, tacticChase()(implyR,step)(None)(2))
     result.subgoals.loneElement shouldBe "y>2 ==> x>1 -> x>0, y+2+1>5".asSequent
   }
 
-  it should "search for expected formula if positions shifted" in {
+  it should "search for expected formula if positions shifted" in withTactics {
     val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
       implyR(1) & tacticChase()(implyR,step)(Some("y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula))(2))
     result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }
 
-  it should "chase everywhere" in {
+  it should "chase everywhere" in withTactics {
     val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, allTacticChase()(implyR,step))
     result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
   }

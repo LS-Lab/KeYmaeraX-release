@@ -16,7 +16,7 @@ import scala.collection.immutable._
 @SlowTest
 class TaylorModelTests extends TacticTestBase {
 
-  "existsLstable" should "work" in {
+  "existsLstable" should "work" in withTactics {
     proveBy("P(), \\exists x Q(x), R() ==> S(), T()".asSequent,
       existsLstable(-2)).subgoals.loneElement shouldBe
       "P(), Q(x), R()\n  ==>  S(), T()".asSequent

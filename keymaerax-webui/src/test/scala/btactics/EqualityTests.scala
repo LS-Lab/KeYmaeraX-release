@@ -12,52 +12,52 @@ import org.scalatest.LoneElement._
  */
 class EqualityTests extends TacticTestBase {
 
-  "eqL2R" should "rewrite x*y=0 to 0*y=0 using x=0" in {
+  "eqL2R" should "rewrite x*y=0 to 0*y=0 using x=0" in withTactics {
     val result = proveBy("x=0 ==> x*y=0".asSequent, eqL2R(-1)(1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0".asSequent
   }
 
-  it should "rewrite entire formula" in {
+  it should "rewrite entire formula" in withTactics {
     val result = proveBy("x=0 ==> x*y=x&x+1=1, x+1>0".asSequent, eqL2R(-1)(1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0&0+1=1, x+1>0".asSequent
   }
 
-  it should "rewrite entire subformula" in {
+  it should "rewrite entire subformula" in withTactics {
     val result = proveBy("x=0 ==> x*y=x&(x+1=1|x-1=-1), x+1>0".asSequent, eqL2R(-1)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "x=0 ==> x*y=x&(0+1=1|0-1=-1), x+1>0".asSequent
   }
 
-  it should "not rewrite bound occurrences" in {
+  it should "not rewrite bound occurrences" in withTactics {
     val result = proveBy("x=0 ==> x*y=x&(x+1=1|[x:=-1;]x=-1), x+1>0".asSequent, eqL2R(-1)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "x=0 ==> x*y=x&(0+1=1|[x:=-1;]x=-1), x+1>0".asSequent
   }
 
-  it should "rewrite entire formula at specified position" in {
+  it should "rewrite entire formula at specified position" in withTactics {
     val result = proveBy("x=0 ==> x*y=x&x+1=1, x+1>0".asSequent, eqL2R(-1)(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0&x+1=1, x+1>0".asSequent
   }
 
-  it should "rewrite entire term at specified position" in {
+  it should "rewrite entire term at specified position" in withTactics {
     val result = proveBy("x=0 ==> x*x*y=x, x+1>0".asSequent, eqL2R(-1)(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*0*y=x, x+1>0".asSequent
   }
 
-  it should "rewrite only at very specified position" in {
+  it should "rewrite only at very specified position" in withTactics {
     val result = proveBy("x=0 ==> x*y=x, x+1>0".asSequent, eqL2R(-1)(1, 0::0::Nil))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=x, x+1>0".asSequent
   }
 
-  it should "keep positions stable" in {
+  it should "keep positions stable" in withTactics {
     val result = proveBy("x=0 ==> x*y=0, x+1>0".asSequent, eqL2R(-1)(1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, x+1>0".asSequent
   }
 
-  it should "rewrite complicated" in {
+  it should "rewrite complicated" in withTactics {
     val result = proveBy("x=0 ==> x*y=0 & x+3>2 | \\forall y y+x>=0".asSequent, eqL2R(-1)(1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0 & 0+3>2 | \\forall y y+0>=0".asSequent
   }
 
-  it should "rewrite complicated exhaustively" in {
+  it should "rewrite complicated exhaustively" in withTactics {
     val result = proveBy("x=0 ==> x*y=0 & x+3>2 | \\forall y y+x>=0 & \\exists x x>0".asSequent, eqL2R(-1)(1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0 & 0+3>2 | \\forall y y+0>=0 & \\exists x x>0".asSequent
   }
@@ -103,70 +103,70 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
   }
 
-  "Exhaustive eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in {
+  "Exhaustive eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withTactics {
     val result = proveBy("0=x ==> x*y=0".asSequent, exhaustiveEqR2L(-1))
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
   }
 
-  it should "hide when there are no more free occurrences after rewriting" in {
+  it should "hide when there are no more free occurrences after rewriting" in withTactics {
     StaticSemantics.freeVars("[x:=0+1;]x>=1".asFormula)
     proveBy("0=x ==> [x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).
       subgoals.loneElement shouldBe " ==> [x:=0+1;]x>=1".asSequent
   }
 
-  it should "not hide when there are still free occurrences after rewriting" in {
+  it should "not hide when there are still free occurrences after rewriting" in withTactics {
     proveBy("0=x ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).
       subgoals.loneElement shouldBe "0=x ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent
     proveBy("0=x ==> [x:=x+1; ++ y:=2;]x>=0".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).
       subgoals.loneElement shouldBe "0=x ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
   }
 
-  "Exhaustive eqL2R" should "rewrite a single formula exhaustively" in {
+  "Exhaustive eqL2R" should "rewrite a single formula exhaustively" in withTactics {
     val result = proveBy("x=0 ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, z>2, z<0+1".asSequent
   }
 
-  it should "not fail when there are no applicable positions" in {
+  it should "not fail when there are no applicable positions" in withTactics {
     val result = proveBy("x=0 ==> z>2".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "x=0 ==> z>2".asSequent
   }
 
-  it should "rewrite a single formula exhaustively for a single applicable position" in {
+  it should "rewrite a single formula exhaustively for a single applicable position" in withTactics {
     val result = proveBy("x=0 ==> x*y=0, z>2".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, z>2".asSequent
   }
 
-  it should "rewrite formulas exhaustively" in {
+  it should "rewrite formulas exhaustively" in withTactics {
     val result = proveBy("x=0, z=x ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "x=0, z=0 ==> 0*y=0, z>2, z<0+1".asSequent
   }
 
-  it should "rewrite formulas exhaustively everywhere" in {
+  it should "rewrite formulas exhaustively everywhere" in withTactics {
     val result = proveBy("z=x, x=0 ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-2))
     result.subgoals.loneElement shouldBe "z=0, x=0 ==> 0*y=0, z>2, z<0+1".asSequent
   }
 
-  it should "work even if there is only one other formula" in {
+  it should "work even if there is only one other formula" in withTactics {
     val result = proveBy("x<5, x=0 ==> ".asSequent, exhaustiveEqL2R(-2))
     result.subgoals.loneElement shouldBe "0<5, x=0 ==> ".asSequent
   }
 
-  it should "replace arbitary terms" in {
+  it should "replace arbitary terms" in withTactics {
     val result = proveBy("a+b<5, a+b=c ==> ".asSequent, exhaustiveEqL2R(-2))
     result.subgoals.loneElement shouldBe "c<5, a+b=c ==> ".asSequent
   }
 
   // rewriting numbers is disallowed, because otherwise we run into endless rewriting
-  it should "not rewrite numbers" in {
+  it should "not rewrite numbers" in withTactics {
     a [BelleThrowable] should be thrownBy proveBy("0<5, 0=0 ==> ".asSequent, exhaustiveEqL2R(-2))
   }
 
-  it should "not try to rewrite bound occurrences" in {
+  it should "not try to rewrite bound occurrences" in withTactics {
     val result = proveBy("a=1 ==> [a:=2;]a=1".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "a=1 ==> [a:=2;]a=1".asSequent
   }
 
-  it should "rewrite multiple occurrences of a term in one shot" in {
+  it should "rewrite multiple occurrences of a term in one shot" in withTactics {
     val result = proveBy("x+2<=x+3, x=y ==> ".asSequent, exhaustiveEqL2R(-2))
     result.subgoals.loneElement shouldBe "y+2<=y+3, x=y ==> ".asSequent
   }
@@ -176,14 +176,14 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y=x ==> x=2 & \\exists y y<3, \\forall y y>4, x=5".asSequent
   }
 
-  it should "hide when there are no more free occurrences after rewriting" in {
+  it should "hide when there are no more free occurrences after rewriting" in withTactics {
     proveBy("x=0 ==> [x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
       subgoals.loneElement shouldBe " ==> [x:=0+1;]x>=1".asSequent
     proveBy("x=0 ==> [x:=x+1;]x>=1".asSequent, EqualityTactics.atomExhaustiveEqL2R(-1)).
       subgoals.loneElement shouldBe " ==> [x:=0+1;]x>=1".asSequent
   }
 
-  it should "not hide when there are still free occurrences after rewriting" in {
+  it should "not hide when there are still free occurrences after rewriting" in withTactics {
     proveBy("x=0 ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
       subgoals.loneElement shouldBe "x=0 ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent
     proveBy("x=0 ==> [x:=x+1; ++ y:=2;]x>=0".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
@@ -194,7 +194,7 @@ class EqualityTests extends TacticTestBase {
       subgoals.loneElement shouldBe "x=0 ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
   }
 
-  it should "bound rename when right-handside names clash" in {
+  it should "bound rename when right-handside names clash" in withTactics {
     proveBy("y=x ==> \\forall x x<y".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
       subgoals.loneElement shouldBe "==> \\forall x_0 x_0<x".asSequent
     proveBy("y=x ==> [x:=x+y;]x>y".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
@@ -205,12 +205,12 @@ class EqualityTests extends TacticTestBase {
       subgoals.loneElement shouldBe "==> \\forall x_0 (x_0<x -> \\exists x_1 x_1>x)".asSequent
   }
 
-  "Apply Equalities" should "rewrite all plain equalities" in {
+  "Apply Equalities" should "rewrite all plain equalities" in withTactics {
     proveBy("x=2, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "2+3>=4 ==> 3-2<=1, 2=2".asSequent
     proveBy("x=x+2, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=x+2, x+2+3>=4 ==> 3-(x+2)<=1, x+2=2".asSequent
   }
 
-  it should "not endless rewrite equalities when LHS and RHS are the same" in {
+  it should "not endless rewrite equalities when LHS and RHS are the same" in withTactics {
     proveBy("x=x, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=x, x+3>=4 ==> 3-x<=1, x=2".asSequent
   }
 
