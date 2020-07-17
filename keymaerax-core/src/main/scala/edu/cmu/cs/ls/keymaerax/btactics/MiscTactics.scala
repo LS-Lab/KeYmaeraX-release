@@ -30,6 +30,7 @@ object DebuggingTactics {
   }
 
   /** Indicates a failed attempt that triggers proof search. */
+  // @TODO: No AxiomInfo for "Error" due to funny type.
   def error(s: => String): BuiltInTactic = new BuiltInTactic("Error") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       throw new TacticInapplicableFailure(s + "\n" + provable.underlyingProvable.prettyString)
@@ -149,7 +150,8 @@ object DebuggingTactics {
   }
 
   /** asserts that the provable has `provableSize` many subgoals. */
-  def assertProvableSize(provableSize: Int, ex: String => Throwable = new TacticAssertionError(_)): BuiltInTactic = new BuiltInTactic(s"assertProvableSize($provableSize)") with NoOpTactic {
+  /* This still uses "new BuiltinTactic ()" syntax because "anon" does not have a syntax for NoOpTactic*/
+  def assertProvableSize(provableSize: Int, ex: String => Throwable = new TacticAssertionError(_)): BuiltInTactic = new BuiltInTactic(s"ANON") with NoOpTactic {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.length != provableSize)
         throw ex(s"assertProvableSize failed: Expected to have $provableSize open goals but found an open goal with ${provable.subgoals.size} subgoals:\n" + provable.prettyString)

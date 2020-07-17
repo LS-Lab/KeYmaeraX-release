@@ -95,13 +95,11 @@ private object ProofRuleTactics extends Logging {
         TactixLibrary.CEat(side)(pos)
     }}
 
-  private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = new BuiltInPositionTactic("BoundRenaming") {
-    override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
-      require(pos.isTopLevel, "bound renaming rule only at top-level")
-      provable(core.BoundRenaming(what, repl, pos.top), 0)
-    }
-  }
+  private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = anon { (provable: ProvableSig, pos: Position) => {
+    requireOneSubgoal(provable, "BoundRenaming(" + what + "~~>" + repl + ")")
+    require(pos.isTopLevel, "bound renaming rule only at top-level")
+    provable(core.BoundRenaming(what, repl, pos.top), 0)
+  }}
 
   /** contextualize(t) lifts (standard) top-level tactic `t` to also work on subpositions in any formula context C{_}.
     *
@@ -152,16 +150,12 @@ private object ProofRuleTactics extends Logging {
   /** @throws SkolemClashException if the quantified variable that is to be Skolemized already occurs free in the sequent.
     *                              Use [[BoundRenaming]] to resolve.
     */
-  //@todo@Tactic("skolem")
   @Tactic(premises = "Γ |- p(x), Δ",
     conclusion = "Γ |- ∀x p(x), Δ", codeName = "skolem")
-  val skolemizeR: BuiltInRightTactic = new BuiltInRightTactic("skolemizeR") {
-    override def computeResult(provable: ProvableSig, pos: SuccPosition): ProvableSig = {
-      requireOneSubgoal(provable, name)
-      require(pos.isTopLevel, "Skolemization only at top-level")
-      provable(core.Skolemize(pos.top), 0)
-    }
-  }
+  val skolemizeR: BuiltInRightTactic = anon {(provable: ProvableSig, pos: SuccPosition) => {
+    require(pos.isTopLevel, "Skolemization only at top-level")
+    provable(core.Skolemize(pos.top), 0)
+  }}
 
   @deprecated("Use SequentCalculus.closeT instead")
   @Tactic()

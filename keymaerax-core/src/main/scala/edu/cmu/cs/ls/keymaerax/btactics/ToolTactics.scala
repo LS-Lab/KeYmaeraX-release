@@ -33,19 +33,21 @@ private object ToolTactics {
   private val namespace = "tooltactics"
 
     @Tactic("useSolver", codeName = "useSolver")
-  def switchSolver(tool: String): BelleExpr = {
-    val config = ToolConfiguration.config(tool)
-    tool.toLowerCase match {
-      case "mathematica" =>
-        ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
-      case "wolframengine" =>
-        Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
-        ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
-      case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
-      case _ => throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
-    }
-    nil
-  }
+    // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
+    // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
+    def switchSolver(tool: String): BelleExpr = anon { (_seq: Sequent) => {
+      val config = ToolConfiguration.config(tool)
+      tool.toLowerCase match {
+        case "mathematica" =>
+          ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
+        case "wolframengine" =>
+          Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
+          ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
+        case "z3" => ToolProvider.setProvider(new Z3ToolProvider)
+        case _ => throw new InputFormatFailure("Unknown tool " + tool + "; please use one of mathematica|wolframengine|z3")
+      }
+      nil
+    }}
 
   /** Assert that there is no counter example. skip if none, error if there is. */
   lazy val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {

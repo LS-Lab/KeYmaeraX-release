@@ -138,82 +138,76 @@ private object DifferentialTactics extends Logging {
   }
 
   /** @see [[TactixLibrary.dI]] */
-  def diffInd(auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("dI") {
+  def diffInd(auto: Symbol = 'full): DependentPositionTactic = {
     if (!(auto == 'full || auto == 'none || auto == 'diffInd || auto == 'cex)) throw new TacticRequirementError("Expected one of ['none, 'diffInd, 'full, 'cex] automation values, but got " + auto)
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        if (!pos.isSucc) throw new IllFormedTacticApplicationException("diffInd only applicable to succedent positions, but got " + pos.prettyString)
-        val diFml: Formula = sequent.sub(pos) match {
-          case Some(b@Box(_: ODESystem, p)) =>
-            if (p.isFOL) b
-            else throw new TacticInapplicableFailure("diffInd only applicable to FOL postconditions, but got " + p.prettyString)
-          case Some(e) => throw new TacticInapplicableFailure("diffInd only applicable to box ODEs in succedent, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
+    anon { (pos: Position, sequent: Sequent) => {
+      if (!pos.isSucc) throw new IllFormedTacticApplicationException("diffInd only applicable to succedent positions, but got " + pos.prettyString)
+      val diFml: Formula = sequent.sub(pos) match {
+        case Some(b@Box(_: ODESystem, p)) =>
+          if (p.isFOL) b
+          else throw new TacticInapplicableFailure("diffInd only applicable to FOL postconditions, but got " + p.prettyString)
+        case Some(e) => throw new TacticInapplicableFailure("diffInd only applicable to box ODEs in succedent, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+      }
 
-        val expand: BelleExpr = diFml match {
-          case Box(_, post) if StaticSemantics.symbols(post).exists(
-            { case Function(_, _, _, _, interpreted) => interpreted case _ => false }) =>
-            // expand all interpreted function symbols below pos.1
-            EqualityTactics.expandAllAt(pos ++ PosInExpr(1::Nil))
-          case _ => skip
-        }
+      val expand: BelleExpr = diFml match {
+        case Box(_, post) if StaticSemantics.symbols(post).exists(
+          { case Function(_, _, _, _, interpreted) => interpreted case _ => false }) =>
+          // expand all interpreted function symbols below pos.1
+          EqualityTactics.expandAllAt(pos ++ PosInExpr(1::Nil))
+        case _ => skip
+      }
 
-        if (pos.isTopLevel) {
-          val t = expand & DI(pos) &
-            //@note implyR moves RHS to end of succedent
-            implyR(pos) & andR('Rlast) & Idioms.<(
-              if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
-              else if (auto == 'cex) ToolTactics.hideNonFOL & ?(QE) & label(BelleLabels.dIInit)
-              else skip
-              ,
-              if (auto != 'none) {
-                //@note derive before DE to keep positions easier
-                derive('Rlast, PosInExpr(1 :: Nil)) &
-                DE('Rlast) &
-                (if (auto == 'full || auto == 'cex)
-                  TryCatch(Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(sequent, pos), classOf[SubstitutionClashException],
-                    (_: SubstitutionClashException) =>
-                      DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")
-                  ) &
+      if (pos.isTopLevel) {
+        val t = expand & DI(pos) &
+          //@note implyR moves RHS to end of succedent
+          implyR(pos) & andR('Rlast) & Idioms.<(
+            if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
+            else if (auto == 'cex) ToolTactics.hideNonFOL & ?(QE) & label(BelleLabels.dIInit)
+            else skip
+            ,
+            if (auto != 'none) {
+              //@note derive before DE to keep positions easier
+              derive('Rlast, PosInExpr(1 :: Nil)) &
+              DE('Rlast) &
+              (if (auto == 'full || auto == 'cex)
+                TryCatch(Dassignb('Rlast, PosInExpr(1::Nil))*getODEDim(sequent, pos), classOf[SubstitutionClashException],
+                  (_: SubstitutionClashException) =>
+                    DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")
+                ) &
+                //@note DW after DE to keep positions easier
+                (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
+                  (if (auto == 'full) QE & done | DebuggingTactics.done("Differential invariant must be preserved")
+                   else ?(QE) & label(BelleLabels.dIStep))
+               else {
+                assert(auto == 'diffInd)
+                (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) &
+                abstractionb('Rlast) & SaturateTactic(allR('Rlast)) & ?(implyR('Rlast)) })
+            } else skip
+            )
+        if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
+        else t
+      } else {
+        val t = expand & DI(pos) &
+          (if (auto != 'none) {
+            shift(PosInExpr(1 :: 1 :: Nil), "ANON" by ((pos: Position, sequent: Sequent) =>
+              //@note derive before DE to keep positions easier
+              shift(PosInExpr(1 :: Nil), derive)(pos) &
+                DE(pos) &
+                (if (auto == 'full || auto == 'cex) shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) & abstractionb('Rlast) & ToolTactics.hideNonFOL &
-                    (if (auto == 'full) QE & done | DebuggingTactics.done("Differential invariant must be preserved")
-                     else ?(QE) & label(BelleLabels.dIStep))
-                 else {
-                  assert(auto == 'diffInd)
-                  (if (hasODEDomain(sequent, pos)) DW('Rlast) else skip) &
-                  abstractionb('Rlast) & SaturateTactic(allR('Rlast)) & ?(implyR('Rlast)) })
-              } else skip
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                  abstractionb(pos)
+                else abstractionb(pos))
               )
-          if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
-          else t
-        } else {
-          val t = expand & DI(pos) &
-            (if (auto != 'none) {
-              shift(PosInExpr(1 :: 1 :: Nil), "ANON" by ((pos: Position, sequent: Sequent) =>
-                //@note derive before DE to keep positions easier
-                shift(PosInExpr(1 :: Nil), derive)(pos) &
-                  DE(pos) &
-                  (if (auto == 'full || auto == 'cex) shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
-                    //@note DW after DE to keep positions easier
-                    (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                    abstractionb(pos)
-                  else abstractionb(pos))
-                )
-              )(pos)
-            } else ident)
-          if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
-          else t
-        }
+            )(pos)
+          } else ident)
+        if (auto == 'full || auto == 'cex) Dconstify(t)(pos)
+        else t
       }
     }
-  }
+  }}
 
-  @Tactic(names="Differential Invariant",
-    premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
-    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
-    displayLevel="all", revealInternalSteps = true)
   val dI: DependentPositionTactic = anon ((pos:Position) => diffInd('cex)(pos))
 
   /**
@@ -288,33 +282,30 @@ private object DifferentialTactics extends Logging {
     * TODO: deprecate this
     * */
   @deprecated
-  val diffVar: DependentPositionTactic = new DependentPositionTactic("diffVar") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        //require(pos.isSucc, "diffVar only at ODE system in succedent")
-        val greater = sequent.sub(pos) match {
-          case Some(Diamond(ODESystem(_,True), _: GreaterEqual)) => true
-          case Some(Diamond(ODESystem(_,True), _: LessEqual)) => false
-          case Some(e) => throw new TacticInapplicableFailure("diffVar currently only implemented at ODE system with postcondition f>=g or f<=g and domain true, but got " + e.prettyString)
-          case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-        }
-        //@todo these axioms don't exist?
-        val t = (if (greater)
-          ??? //useAt("DV differential variant >=")
-        else
-          ??? /* useAt("DV differential variant <="))(pos) & (
-          // \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
-          derive(pos ++ PosInExpr(0::1::1::1::0::Nil)) &
-            derive(pos ++ PosInExpr(0::1::1::1::1::0::Nil)) &
-            DE(pos ++ PosInExpr(0::1::Nil)) &
-            (Dassignb(pos ++ PosInExpr(0::1::1::Nil))*getODEDim(sequent, pos) &
-              abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE & done
-              )*/
-          )
+  val diffVar: DependentPositionTactic = anon {(pos: Position, sequent: Sequent) =>  {
+      //require(pos.isSucc, "diffVar only at ODE system in succedent")
+      val greater = sequent.sub(pos) match {
+        case Some(Diamond(ODESystem(_,True), _: GreaterEqual)) => true
+        case Some(Diamond(ODESystem(_,True), _: LessEqual)) => false
+        case Some(e) => throw new TacticInapplicableFailure("diffVar currently only implemented at ODE system with postcondition f>=g or f<=g and domain true, but got " + e.prettyString)
+        case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
+      }
+      //@todo these axioms don't exist?
+      val t = (if (greater)
+        ??? //useAt("DV differential variant >=")
+      else
+        ??? /* useAt("DV differential variant <="))(pos) & (
+        // \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
+        derive(pos ++ PosInExpr(0::1::1::1::0::Nil)) &
+          derive(pos ++ PosInExpr(0::1::1::1::1::0::Nil)) &
+          DE(pos ++ PosInExpr(0::1::Nil)) &
+          (Dassignb(pos ++ PosInExpr(0::1::1::Nil))*getODEDim(sequent, pos) &
+            abstractionb(pos ++ PosInExpr(0::1::Nil)) & QE & done
+            )*/
+        )
         t
       }
     }
-  }
 
   /** @see [[TactixLibrary.dCC()]] */
   val dCC: DependentPositionTactic = "dCC" by { (pos: Position, seq: Sequent) =>
@@ -323,11 +314,10 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dC()]] */
   //@todo performance faster implementation for very common single invariant Formula, e.g. DifferentialEquationCalculus.dC(Formula)
   private[btactics] def diffCut(formula: Formula): DependentPositionWithAppliedInputTactic = diffCut(List(formula))
-  private[btactics] def diffCut(formulas: List[Formula]): DependentPositionWithAppliedInputTactic =
-    "dC" byWithInputs (formulas, (pos: Position, sequent: Sequent) => {
+  private[btactics] def diffCut(formulas: List[Formula]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, sequent: Sequent) => {
       formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut &
         Idioms.doIf(_.subgoals.size == 2)(<(all, skip)))
-    })
+    }}
 
   /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
   private def ghostDC(f: Formula, origPos: Position, origSeq: Sequent): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
@@ -398,8 +388,8 @@ private object DifferentialTactics extends Logging {
     inputanon {(pos: Position, sequent: Sequent) =>
       //@note assumes that first subgoal is desired result, see diffCut
       //@note UnifyUSCalculus leaves prereq open at last succedent position
-      val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => diffInd()(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
-      diffCut(R)(pos) <(diffIndAllButFirst:_*)
+      val diffIndAllButFirst = skip +: Seq.tabulate(R.length)(_ => DifferentialEquationCalculus.dIX(SuccPosition.base0(sequent.succ.size-1, pos.inExpr)) & QE & done)
+      TactixLibrary.dC(R)(pos) <(diffIndAllButFirst:_*)
     }
 
   /** Inverse differential cut, removes the last conjunct from the evolution domain constraint.
@@ -787,7 +777,7 @@ private object DifferentialTactics extends Logging {
           if (pos.isAnte) FormulaTools.conjuncts(fml)
           else FormulaTools.conjuncts(fml).map(Not)
       }).filter(f => StaticSemantics.freeVars(f).intersect(primedVars).isEmpty).reduceRightOption(And)
-      constFacts.map(diffCut(_)(pos) &
+      constFacts.map(DifferentialEquationCalculus.dC(_)(pos) &
         // diffCut may not introduce the cut if it is already in there; diffCut changes the position in the show branch to 'Rlast
         Idioms.doIf(_.subgoals.size == 2)(<(skip, V('Rlast) & prop & done))).getOrElse(skip) & DW(pos) & G(pos)
     case Some(e) => throw new TacticInapplicableFailure("dW only applicable to box ODEs, but got " + e.prettyString)
@@ -934,7 +924,8 @@ private object DifferentialTactics extends Logging {
     * @return Leaves False as the only subgoal if it finds a counterexample to the ODE question at the position it is called
     *         Succeeds in all other cases (including when the sequent or position are not of the expected shape)
     */
-  val cexODE: DependentPositionTactic = "cexODE" by ((pos: Position, seq:Sequent) => {
+  @Tactic("cexODE")
+  val cexODE: DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
     if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
       //todo: currently only works if there is exactly one succedent
       logger.warn("ODE counterexample not called at top-level succedent")

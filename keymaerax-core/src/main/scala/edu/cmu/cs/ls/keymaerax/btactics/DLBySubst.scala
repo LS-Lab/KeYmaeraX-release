@@ -140,7 +140,7 @@ private object DLBySubst {
   })
 
   /** Top-level abstraction: basis for abstraction tactic */
-  val topAbstraction: DependentPositionTactic = "Top-level abstraction" by ((pos: Position, sequent: Sequent) => {
+  val topAbstraction: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     require(!pos.isAnte, "Abstraction only in succedent")
     sequent.sub(pos) match {
       case Some(b@Box(prg, phi)) =>
@@ -710,7 +710,8 @@ private object DLBySubst {
     * ----------------------------------- boxElim(pos)
     * Γ1, [a]Q, Γ2  |- Δ1, pos: [a]P, Δ2
     * */
-  val boxElim = "boxElim" by { (pos: Position, sequent: Sequent) =>
+  @Tactic("boxElim", premises = "Q |- P", conclusion = "Γ1, [a]Q, Γ2  |- Δ1, [a]P, Δ2")
+  val boxElim: DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
       case Some(Box(prg, _)) =>
         val b = sequent.ante.find {
