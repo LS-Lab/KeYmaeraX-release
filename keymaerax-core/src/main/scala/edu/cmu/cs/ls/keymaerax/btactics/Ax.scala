@@ -318,7 +318,10 @@ object Ax extends Logging {
     fieldMirrors.indices.foreach(idx => {
       try {
         val fm = fieldMirrors(idx)
-        if (!exclude.contains(fm.symbol.fullName)) fm()
+        if (!exclude.contains(fm.symbol.fullName)) {
+          val res = fm()
+          DerivationInfo.seeName(fm.symbol.name.toString)
+        }
       } catch {
         case e: Throwable =>
           failures += (fns(idx) -> e)
@@ -2874,8 +2877,9 @@ object Ax extends Logging {
     * @Derived
     * }}}
     */
+  // @TODO: Reconsider names for all the variants of DC
   @Axiom("DC", conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R", displayLevel = "menu",
-    key = "1.0", recursor = "*", unifier = "surjlinear", inputs = "R:formula")
+    key = "1.0", recursor = "*", unifier = "surjlinear", inputs = "R:formula", codeName = "DCaxiom")
   lazy val DC = derivedAxiom("DC differential cut",
     Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
     implyR(1) & equivR(1) <(
@@ -3904,14 +3908,6 @@ object Ax extends Logging {
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable), ("h_()".asTerm, "z".asVariable))(1) &
     byUS(proveBy("\\forall z \\forall y \\forall x (x*(y+z) = x*y + x*z)".asFormula, TactixLibrary.RCF))
   )
-
-  /**
-    * {{{Axiom "+ identity".
-    *    f()+0 = f()
-    * End.
-    * }}}
-    */
-  lazy val plusIdentity = zeroPlus
 
   /**
     * {{{Axiom "* identity".
