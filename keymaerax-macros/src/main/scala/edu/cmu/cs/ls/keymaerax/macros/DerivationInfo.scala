@@ -37,24 +37,55 @@ case class AxiomNotFoundException(axiomName: String) extends Exception("(Derived
  * @see [[TacticInfo]]
  */
 object DerivationInfo {
+  /** Status of DerivationInfo initialization process. This is used to control error reporting: New @Tactic's should
+    * only be found during initialization. */
+  sealed trait InitStatus
+  case object InitNotStarted extends InitStatus
+  case object InitInProgress extends InitStatus
+  case object InitComplete extends InitStatus
+  var _initStatus: InitStatus = InitNotStarted
+  /** Global list of all DerivationInfos. Most readers should use the allInfo accessor. */
   var _allInfo: List[DerivationInfo] = List()
+  /** Global list of BelleExpr names seen in any tactic expression constructor. Used to improve error-checking. */
+  var _seenNames: Set[String] = Set()
+  def seeName(name: String): Unit = _seenNames = _seenNames.+(name)
+  /** Access allInfo with proper error-checking */
   def allInfo: List[DerivationInfo] =
-    _allInfo match {
-      case Nil => throw new Exception("Need to initialize DerivationInfo.allInfo by calling [[]] ")
-      case dis => dis
+    _initStatus match {
+      case InitNotStarted => throw new Exception("Need to initialize DerivationInfo.allInfo by calling DerivationInfoRegistry.init ")
+      case _ => _allInfo
     }
+
+  /** Report error if new @Tactics are registered outside of global initialization routine. */
+  private def requireInitInProgress(di: DerivationInfo): Unit = {
+    _initStatus match {
+      case InitInProgress => ()
+      case InitNotStarted => throw new Exception(s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has not started. This error usually means you forgot to initialize DerivationInfo, e.g. using withMathematica in a test suite")
+      case InitComplete =>
+        // Allow anonymous tactic creation any time, and allow idempotent re-registration of existing tactic.
+        if (di.codeName == "ANON" || _allInfo.exists(other => other.codeName == di.codeName))
+          ()
+        else
+          throw new Exception(s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has finished. This error usually means you forgot to add a class to the list in DerivationInfoRegistry")
+    }
+  }
 
   // Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
   // it can look up a stored name rather than computing it. The actual solution is a simple refactor but it touches lots
-  // of code so just delay [[value == derivedAxiom(...)]] execution till after info
+  // of code so just delay [[value == derivedAxiom(...)]] execution till after info/
   def registerR[T, R <: DerivationInfo](value: => T, p: R): R = {
-    _allInfo = p :: allInfo
+    // Note: We don't require DerivationInfo initialization to be "in progress" for registerR because it used for axioms rather than tactics.
+    if (!_allInfo.exists(di => di.codeName == p.codeName))
+      _allInfo = p :: _allInfo
     val _ = value
     p
   }
 
+  // @TODO: Faster info lookups
   def registerL[T, R <: DerivationInfo](value: => T, p: R): T = {
-    _allInfo = p :: allInfo
+    requireInitInProgress(p)
+    if (!_allInfo.exists(di => di.codeName == p.codeName))
+      _allInfo = p :: _allInfo
     val _ = value
     value
   }
@@ -71,7 +102,8 @@ object DerivationInfo {
 
   /** canonical name mapped to derivation information */
   def byCanonicalName: Map[String, DerivationInfo] =
-  //@todo optimizable performance bottle neck: this folding shouldn't be done every time
+  //@todo optimizable performance bottle neck: this folding shouldn't be done every time, and can safely
+  // be cached/finalized when initialization finishes
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
       acc + ((info.canonicalName, info))
     }
@@ -145,6 +177,8 @@ sealed trait DerivationInfo {
 
   /** Specification of inputs (other than positions) to the derivation, along with names to use when displaying in the UI. */
   val inputs: List[ArgInfo] = Nil
+  /** Inputs which should be serialized in tactic strings. For example, Generator args are left out.*/
+  val persistentInputs: List[ArgInfo] = inputs.filter{case (_: GeneratorArg) => false case _ => true}
 
   /** Bellerophon tactic implementing the derivation. For non-input tactics this is simply a BelleExpr. For input tactics
    * it is (curried) function which accepts the inputs and produces a BelleExpr. */
