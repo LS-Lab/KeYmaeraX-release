@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.macros
 
-import scala.annotation.StaticAnnotation
+import scala.annotation.{ClassfileAnnotation, StaticAnnotation}
 import scala.collection.immutable.Nil
 import scala.language.experimental.macros
 import scala.reflect.macros.{Universe, blackbox}
@@ -377,7 +377,7 @@ class TacticImpl(val c: blackbox.Context) {
                  , anonSort: Option[AnonSort]): c.Expr[Any] = {
       val (codeName, display, displayLevel, parsedArgs, revealInternalSteps) = getParams(declName)
       val (generatorOpt, defArgs) = getInputs(inArgs)
-      val displayInputs = if (parsedArgs.nonEmpty) parsedArgs else defArgs
+      val displayInputs: List[ArgInfo] = if (parsedArgs.nonEmpty) parsedArgs else defArgs
       val needsGenerator = generatorOpt.isDefined
       if (codeName.exists(c => c =='\"'))
         c.abort(c.enclosingPosition, "Identifier " + codeName + " must not contain escape characters")
@@ -385,28 +385,32 @@ class TacticImpl(val c: blackbox.Context) {
       val codeString = Literal(Constant(codeName))
       val (curriedTermTree, argSeq, argTySeq, (base, baseType)) = argue(codeName, rhs, positions, defArgs, generatorOpt, tRet, anonSort)
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
-      val info = (displayInputs, positions) match {
-        case (Nil, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case (_ :: _, _: NoPos | _: SequentArg) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)},  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case (Nil, _: OnePos | _: AntePos | _: SuccPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case (_ :: _, _: OnePos | _: AntePos | _: SuccPos) => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case (Nil, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
-        case (_ :: _, (_: AnteSuccPos | _: TwoPos)) => q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
-        case (x, y) => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: ($x, $y)")
+      val inferredRetType = show(inferType(tRet, defArgs, positions, anonSort)).split('.').last
+      val info = inferredRetType match {
+        case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "InputTactic" | "StringInputTactic" => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)},  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "DependentPositionTactic"  | "BuiltInLeftTactic" | "BuiltInRightTactic" | "BuiltInPositionTactic" | "CoreLeftTactic" | "CoreRightTactic" => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
+        case "AppliedBuiltInTwoPositionTactic" => q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
+        case ty => c.abort(c.enclosingPosition, s"Unsupported return type in @Tactic: $ty")
       }
       missingInput(displayLevel, displayInputs, display).
         map(ai => c.abort(c.enclosingPosition, s"Tactic $declName must mention every input in DisplayInfo, but argument $ai is not mentioned in DisplayInfo $display"))
+      /** Save a classfile annotation which helps runtime reflection identify the annotated declarations */
+      val ann = q"new edu.cmu.cs.ls.keymaerax.macros.InternalAnnotation()"// codeName = $codeName, inputs = ${convAIs(displayInputs)(c)}
+      val mds = mods match {case Modifiers(flags, privateWithin, annotations) => Modifiers(flags, privateWithin, ann :: annotations)}
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
       if(isDef) {
         val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
         if (defArgs.isEmpty)
-          c.Expr(q"""$mods def $declName: $baseType = $application""")
+          c.Expr(q"""$mds def $declName: $baseType = $application""")
         else
-        c.Expr(q"""$mods def $declName (..$argSeq): $baseType = $application""")
+        c.Expr(q"""$mds def $declName (..$argSeq): $baseType = $application""")
       } else {
         val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
-        c.Expr(q"""$mods val $declName: $baseType = $application""")
+        c.Expr(q"""$mds val $declName: $baseType = $application""")
       }
     }
     def anonSort(s: String): Option[AnonSort] = {
@@ -461,7 +465,7 @@ class TacticImpl(val c: blackbox.Context) {
     val positions = getPositioning(params)
     val res = assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
     // Print debug info when applied to any tactic in this set
-    val debugTactics: Set[String] = Set()
+    val debugTactics: Set[String] = Set(  )
     if(debugTactics.contains(codeName.decodedName.toString)) {
       println(s"DEBUG (${codeName}): \n$res\n")
     }
