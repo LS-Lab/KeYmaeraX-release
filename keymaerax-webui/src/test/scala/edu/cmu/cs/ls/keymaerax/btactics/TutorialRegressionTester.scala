@@ -141,14 +141,14 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
 
   /** Parse a problem file to find declarations and invariant annotations */
   private def parseProblem(model: String): (Declaration, Generator[GenProduct]) = {
-    TactixLibrary.invSupplier = FixedGenerator(Nil)
+    TactixInit.invSupplier = FixedGenerator(Nil)
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
     val entry = KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false)
-    TactixLibrary.invSupplier = generator
-    TactixLibrary.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
-    TactixLibrary.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
+    TactixInit.invSupplier = generator
+    TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     (entry.defs, generator)
   }

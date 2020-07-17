@@ -68,7 +68,7 @@ class ODETests extends TacticTestBase {
         | ] (x - 4*y < 8)
       """.stripMargin.asFormula
 
-    TactixLibrary.differentialInvGenerator = new FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])](
+    TactixInit.differentialInvGenerator = new FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])](
       ("x^2 + x*y + y^2 - 111/59 <= 0".asFormula -> Some(AnnotationProofHint(tryHard = false))) :: Nil)
     proveBy(fml, implyR(1) & ODE(1)) shouldBe 'proved
   }
