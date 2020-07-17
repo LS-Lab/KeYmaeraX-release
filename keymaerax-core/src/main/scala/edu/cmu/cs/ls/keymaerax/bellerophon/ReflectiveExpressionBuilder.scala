@@ -40,7 +40,7 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe =>
         println(s)
         expr(s)
-      case (expr: TypedFunc[PosInExpr, _], (pie: String) :: Nil) if expr.argType.tpe <:< typeTag[PosInExpr].tpe => expr(PosInExpr.parse(pie))
+      case (expr: TypedFunc[PosInExpr, _], (pie: PosInExpr) :: Nil) if expr.argType.tpe <:< typeTag[PosInExpr].tpe => expr(pie)
       case (expr: TypedFunc[Formula, _], (fml: Formula) :: Nil) if expr.argType.tpe <:< typeTag[Formula].tpe => expr(fml)
       case (expr: TypedFunc[Variable, _], (y: Variable) :: Nil) if expr.argType.tpe <:< typeTag[Variable].tpe => expr(y)
       case (expr: TypedFunc[Term, _], (term: Term) :: Nil) if expr.argType.tpe <:< typeTag[Term].tpe => expr(term)
@@ -52,6 +52,7 @@ object ReflectiveExpressionBuilder extends Logging {
       case (expr: TypedFunc[Option[Expression], _], (ex: Expression) :: Nil) if expr.argType.tpe <:< typeTag[Option[Expression]].tpe => expr(Some(ex))
       case (expr: TypedFunc[Option[String], _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[Option[String]].tpe => expr(Some(s))
       case (expr: TypedFunc[Seq[Expression], _], fmls: Seq[Expression]) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(fmls)
+      case (expr: TypedFunc[Seq[Expression], _], fml: Expression) if expr.argType.tpe <:< typeTag[Seq[Expression]].tpe => expr(Seq(fml))
       case (expr: TypedFunc[_, _], _) => throw new ReflectiveExpressionBuilderExn(s"Expected argument of type ${expr.argType}, but got " + expr.getClass.getSimpleName)
       case _ => throw new ReflectiveExpressionBuilderExn("Expected a TypedFunc (cannot match due to type erasure)")
     }
