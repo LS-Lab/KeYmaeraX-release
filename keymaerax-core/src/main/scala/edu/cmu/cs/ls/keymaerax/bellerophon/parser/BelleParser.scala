@@ -499,7 +499,8 @@ object BelleParser extends TacticParser with Logging {
       try {
         ReflectiveExpressionBuilder(name, newArgs, g, defs)
       } catch {
-        case e: ReflectiveExpressionBuilderExn => throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
+        case e: ReflectiveExpressionBuilderExn =>
+          throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
       }
     }
   }
@@ -536,8 +537,8 @@ object BelleParser extends TacticParser with Logging {
         case Nil => Nil
         case (tok@BelleToken(_: EXPRESSION, loc))::tail =>
           assert(DerivationInfo.hasCodeName(codeName), s"DerivationInfo should contain code name $codeName because it is called with expression arguments.")
-          assert(nonPosArgCount < DerivationInfo(codeName).inputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).inputs.length} but found at least ${nonPosArgCount+1})")
-          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).inputs(nonPosArgCount)))(tok, loc) match {
+          assert(nonPosArgCount < DerivationInfo(codeName).persistentInputs.length, s"Too many expr arguments were passed to $codeName (Expected ${DerivationInfo(codeName).persistentInputs.length} but found at least ${nonPosArgCount+1})")
+          val theArg = parseArgumentToken(Some(DerivationInfo(codeName).persistentInputs(nonPosArgCount)))(tok, loc) match {
             case Left(v: Expression) => Left(expand(v))
             case v => v
           }
@@ -600,11 +601,13 @@ object BelleParser extends TacticParser with Logging {
         import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
         //Use the parsed result if it matches the expected type. Otherwise re-parse using a grammar-specific parser.
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
-        val unwrappedExpectedType = expectedType match {
-          case Some(OptionArg(argType)) => argType
-          case Some(argType) => argType
+        def unwrappedExpectedType(ai: ArgInfo): ArgInfo = ai match {
+          case ListArg(argType) => unwrappedExpectedType(argType)
+          case OptionArg(argType) => unwrappedExpectedType(argType)
+          case argType => argType
         }
-        unwrappedExpectedType match {
+        unwrappedExpectedType(expectedType.get) match {
+          case _:PosInExprArg => Left(PosInExpr(tok.undelimitedExprString.split('.').filter(_ != "").map(_.toInt).toList))
           case _:StringArg => Left(tok.undelimitedExprString)
           case _:SubstitutionArg if tok.expression.isRight => Left(tok.expression.right.get)
           case _:SubstitutionArg => throw ParseException(s"Could not parse ${tok.exprString} as a substitution pair, when a substitution pair was expected.", loc)
