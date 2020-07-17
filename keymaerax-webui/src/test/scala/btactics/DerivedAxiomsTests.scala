@@ -72,7 +72,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
       getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
         // delete all stored lemmas
         LemmaDBFactory.lemmaDB.deleteDatabase()
-        DerivationInfoRegistry.init
+        DerivationInfoRegistry.init()
         // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
         val c = Ax.getClass.getDeclaredConstructor()
         c.setAccessible(true)
@@ -256,7 +256,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove + commute" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusCommute)})
   it should "prove * commute" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesCommute)})
   it should "prove distributive" in withMathematica(initLibrary =  false, testcode =  { _ => check(distributive)})
-  it should "prove + identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusIdentity)})
+  it should "prove + identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(zeroPlus)})
   it should "prove * identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesIdentity)})
   it should "prove + inverse" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusInverse)})
   it should "prove * inverse" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesInverse)})
