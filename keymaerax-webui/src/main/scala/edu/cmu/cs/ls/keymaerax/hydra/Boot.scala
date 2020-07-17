@@ -156,7 +156,6 @@ object HyDRAInitializer extends Logging {
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     KeYmaeraXTool.init(Map.empty)
 
-    DerivationInfoRegistry.init()
     //@note setup interpreter
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     // connect invariant generator to tactix library
