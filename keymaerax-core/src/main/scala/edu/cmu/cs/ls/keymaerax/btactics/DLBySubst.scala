@@ -128,7 +128,7 @@ private object DLBySubst {
     conclusion = "Γ |- P, Δ",
     displayLevel = "browse"
   )
-  def stutter(x: Variable): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  def stutter(x: Variable): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, f: Formula) =>
       val (hidePos, commute) = if (pos.isAnte) (SuccPosition.base0(sequent.succ.size), commuteEquivR(1)) else (pos.topLevel, skip)
       cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
@@ -330,7 +330,7 @@ private object DLBySubst {
     conclusion = "Γ |- [a]P, Δ",
     displayLevel = "browse"
   )
-  def postCut(C: Formula): DependentPositionTactic = anon (useAt(Ax.K, PosInExpr(1::1::Nil),
+  def postCut(C: Formula): DependentPositionWithAppliedInputTactic = inputanon (useAt(Ax.K, PosInExpr(1::1::Nil),
     (us: Option[Subst]) => us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in postCut")) ++ RenUSubst(("p(||)".asFormula, C)::Nil))(_: Position))
 
   private def constAnteConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
@@ -446,7 +446,7 @@ private object DLBySubst {
     //  loopRule -----------------------------------
     conclusion = "Γ |- [a<sup>*</sup>]P, Δ"
   )
-  def loopRule(invariant: Formula): DependentPositionTactic = anon {(pos: Position, seq: Sequent) =>
+  def loopRule(invariant: Formula): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, seq: Sequent) =>
     //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(seq(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
@@ -468,8 +468,8 @@ private object DLBySubst {
     conclusion =  "Γ |- [{a;b}<sup>*</sup>]P, Δ",
     displayLevel = "browse"
   )
-  def throughout(J: Formula): DependentPositionTactic = anon (throughout(J, SaturateTactic(alphaRule))(_: Position))
-  def throughout(invariant: Formula, pre: BelleExpr): DependentPositionTactic = anon ((pos: Position) => {
+  def throughout(J: Formula): DependentPositionWithAppliedInputTactic = inputanon (throughout(J, SaturateTactic(alphaRule))(_: Position))
+  def throughout(invariant: Formula, pre: BelleExpr): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position) => {
     require(pos.isTopLevel && pos.isSucc, "throughout only at top-level in succedent, but got " + pos)
     lazy val split: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(Compose(_, _), _)) => composeb(pos) & generalize(invariant)(pos) & Idioms.<(skip, split(pos))
@@ -491,8 +491,8 @@ private object DLBySubst {
     inputs = "x[x]:variable;;J(x)[x]:formula",
     displayLevel = "all"
   )
-  def con(x: Variable, J: Formula): DependentPositionTactic = anon (con(x, J, SaturateTactic(alphaRule))(_: Position))
-  def con(v: Variable, variant: Formula, pre: BelleExpr): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  def con(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = inputanon (con(x, J, SaturateTactic(alphaRule))(_: Position))
+  def con(v: Variable, variant: Formula, pre: BelleExpr): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
@@ -561,7 +561,7 @@ private object DLBySubst {
     inputs = "x:variable;;J[x]:formula",
     displayLevel = "browse"
   )
-  def conRule(x: Variable, J: Formula): DependentPositionTactic = anon((pos: Position, sequent: Sequent) => {
+  def conRule(x: Variable, J: Formula): DependentPositionWithAppliedInputTactic = inputanon((pos: Position, sequent: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
     val ur = URename(Variable("x_",None,Real), x)
@@ -586,7 +586,7 @@ private object DLBySubst {
     conclusion = "Γ |- P, Δ",
     inputs = "e:term;;x:option[variable]"
   )
-  private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionTactic = anon (discreteGhost(e, x, assignInContext = true)(_: Position))
+  private[btactics] def discreteGhost(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon (discreteGhost(e, x, assignInContext = true)(_: Position))
   /** @see [[TactixLibrary.discreteGhost]] */
   def discreteGhost(e: Term, x: Option[Variable], assignInContext: Boolean = true): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     require(x match { case Some(g) => g != e case None => true }, "Expected ghost different from t, use stutter instead")
@@ -665,7 +665,7 @@ private object DLBySubst {
     conclusion =          "Γ |- ∃t [x:=t]P, Δ",
     displayLevel = "browse"
   )
-  def assignbExists(e: Term): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def assignbExists(e: Term): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Exists(vars, _)) =>
       require(vars.size == 1, "Cannot handle existential lists")
       val subst = (s: Option[Subst]) =>
@@ -694,7 +694,7 @@ private object DLBySubst {
     conclusion =       "Γ, ∀t [x:=t]P |- Δ",
     displayLevel = "browse"
   )
-  def assignbAll(e: Term): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def assignbAll(e: Term): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(Forall(vars, _)) =>
       require(vars.size == 1, "Cannot handle universal lists")
       val subst = (s: Option[Subst]) =>

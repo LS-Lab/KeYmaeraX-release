@@ -238,14 +238,14 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val DWd                 : DependentPositionTactic = useAt(Ax.DWd)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   @Tactic(conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R", inputs = "R:formula", revealInternalSteps = true)
-  def DC(invariant: Formula)  : DependentPositionTactic = anon {(pos: Position) =>
+  def DC(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
     useAt(Ax.DC,
       (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DC"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)
   }
   /** DCd: Diamond Differential Cut a new invariant for a differential equation `<{x'=f(x)&q(x)}>p(x)` reduces to `<{x'=f(x)&q(x)&C(x)}>p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   @Tactic(conclusion = "(__<x'=f(x)&Q>P__↔<x'=f(x)&Q∧R>P)←[x'=f(x)&Q]R", inputs = "R:formula", revealInternalSteps = true)
-  def DCd(invariant: Formula)  : DependentPositionTactic = anon {(pos: Position) =>
+  def DCd(invariant: Formula)  : DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
     useAt(Ax.DCd,
       (us:Option[Subst])=>us.getOrElse(throw new UnsupportedTacticFeature("Unexpected missing substitution in DCd"))++RenUSubst(Seq((UnitPredicational("r",AnyArg), invariant)))
     )(pos)

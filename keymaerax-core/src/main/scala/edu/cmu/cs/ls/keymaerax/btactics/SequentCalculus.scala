@@ -278,7 +278,7 @@ trait SequentCalculus {
   @Tactic(premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
   def allL(e: Option[Term])              : DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
-  def allL(e: Term)                      : DependentPositionTactic = allL(Some(e))
+  def allL(e: Term)                      : DependentPositionWithAppliedInputTactic = allL(Some(e))
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
   val allL                          : DependentPositionTactic = allL(None)
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */

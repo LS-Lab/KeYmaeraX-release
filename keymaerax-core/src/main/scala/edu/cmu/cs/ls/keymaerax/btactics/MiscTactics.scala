@@ -53,8 +53,9 @@ object DebuggingTactics {
     }
   }
 
+  import TacticFactory._
   @Tactic(("Debug", "debug"), codeName = "debug")
-  def debugX(msg: String): BelleExpr = debug(msg)
+  def debugX(msg: String): InputTactic = inputanon { debug(msg) }
 
   /** print is a no-op tactic that prints a message and the current provable, regardless of DEBUG being true or false */
   def print(message: => String): BuiltInTactic = debug(message, doPrint=true)
@@ -62,7 +63,7 @@ object DebuggingTactics {
     * regardless of DEBUG being true or false */
   def printIndexed(message: => String): BuiltInTactic = debug(message, doPrint=true, _.prettyString)
   @Tactic(("Print", "print"), codeName = "print")
-  def printX(msg: String): BelleExpr = printIndexed(msg)
+  def printX(msg: String): InputTactic = inputanon { printIndexed(msg) }
 
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") with NoOpTactic {
@@ -193,13 +194,13 @@ object DebuggingTactics {
   /** assertE is a no-op tactic that raises a tactic assertion error if the provable has not the expected expression at the specified position. */
   def assertE(expected: => Expression, message: => String): DependentPositionWithAppliedInputTactic = assertE(expected, message, new TacticAssertionError(_))
   @Tactic(("Assert", "assert"), codeName = "assert")
-  def assertX(expected: Expression, msg: String): BelleExpr = DebuggingTactics.assertE(expected, msg)
+  def assertX(expected: Expression, msg: String): InputTactic = inputanon { DebuggingTactics.assertE(expected, msg) }
 
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
   @Tactic(("Done","done"), codeName = "done")
-  def doneX(msg: Option[String], lemmaName: Option[String]): BelleExpr = done(msg.getOrElse(""), lemmaName)
+  def doneX(msg: Option[String], lemmaName: Option[String]): InputTactic = inputanon { done(msg.getOrElse(""), lemmaName) }
   def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
       if (msg.nonEmpty && storeLemma.isDefined) msg::storeLemma.get::Nil
       else if (msg.nonEmpty) msg::Nil
