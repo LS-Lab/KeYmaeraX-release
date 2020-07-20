@@ -5560,9 +5560,9 @@ object Ax extends Logging {
     "<{c,d&q(||)}>p(||) <-> <{d,c&q(||)}>p(||)".asFormula,
     prop <(
       useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & useAt(Ax.diamond, PosInExpr(1::Nil))(1) &
-        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & closeId,
+        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & close,
       useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & useAt(Ax.diamond, PosInExpr(1::Nil))(1) &
-        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & closeId
+        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & close
     )
   )
 
