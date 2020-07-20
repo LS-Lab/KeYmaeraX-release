@@ -5549,4 +5549,21 @@ object Ax extends Logging {
   @Axiom("plusDiffRefl")
   lazy val plusDiffRefl = derivedFormula("plusDiffRefl","f_() = g_() + (f_() - g_())".asFormula, QE & done)
 
+  /** ODELiveness */
+  @Axiom("TExge")
+  lazy val TExge = derivedFormula("TExge","<{gextimevar_'=1}> (gextimevar_ >= p())".asFormula, solve(1) & QE & done)
+  @Axiom("TExgt")
+  lazy val TExgt = derivedFormula("TExgt","<{gextimevar_'=1}> (gextimevar_ > p())".asFormula, solve(1) & QE & done)
+
+  @Axiom(", commute diamond")
+  lazy val commaCommuteD = derivedFormula("commaCommuteD",
+    "<{c,d&q(||)}>p(||) <-> <{d,c&q(||)}>p(||)".asFormula,
+    prop <(
+      useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & useAt(Ax.diamond, PosInExpr(1::Nil))(1) &
+        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & closeId,
+      useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & useAt(Ax.diamond, PosInExpr(1::Nil))(1) &
+        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & closeId
+    )
+  )
+
 }
