@@ -1735,8 +1735,8 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
     val infos = axiomId match {
       case Some(aid) => (DerivationInfo.ofCodeName(aid), UIIndex.comfortOf(aid).map(DerivationInfo.ofCodeName)) :: Nil
       case None => DerivationInfo.allInfo.
-        filter(di => di.displayLevel != 'internal).
-        map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
+        filter({case (name, di) => di.displayLevel != 'internal}).
+        map({case (name, di) => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName))}).toList
     }
     ApplicableAxiomsResponse(infos, Map.empty) :: Nil
   }
@@ -1854,8 +1854,9 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
 class GetLemmasRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position,
                         partialLemmaName: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
-    val infos = ProvableInfo.allInfo.filter(i =>
-      (i.isInstanceOf[CoreAxiomInfo] || i.isInstanceOf[DerivedAxiomInfo]) && i.canonicalName.contains(partialLemmaName))
+    val infos = ProvableInfo.allInfo.filter({case (name, i) =>
+      (i.isInstanceOf[CoreAxiomInfo] || i.isInstanceOf[DerivedAxiomInfo]) && i.canonicalName.contains(partialLemmaName)})
+        .toList.map(_._2)
     LemmasResponse(infos)::Nil
   }
 }

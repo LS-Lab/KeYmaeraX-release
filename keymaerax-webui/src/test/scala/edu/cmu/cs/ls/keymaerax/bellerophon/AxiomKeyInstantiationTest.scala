@@ -220,7 +220,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
   "Random Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in instantiateRandomSchematic()
 
    private def instantiateRandomSchematic() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -244,7 +244,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
   it should "instantiate full schematic axioms to random schematic instantiations" in instantiateFullSchematic()
 
   private def instantiateFullSchematic() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials/5) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -265,7 +265,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
  "Random Renamed Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in instantiateRandomRenamed()
 
   private def instantiateRandomRenamed() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -290,7 +290,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
   //@todo it should "UniformMatcher: instantiate full schematic axioms to random schematic instantiations" in instantiateFullRandom(UniformMatcher)
 
   private def instantiateFullRandom() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials/5) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -312,7 +312,7 @@ class AxiomKeyInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
   "Random Renamed Instance Unification optimistic" should "instantiate keys of all axioms to random schematic instantiations" in instantiateRandomKey()
 
   private def instantiateRandomKey() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {
         try {

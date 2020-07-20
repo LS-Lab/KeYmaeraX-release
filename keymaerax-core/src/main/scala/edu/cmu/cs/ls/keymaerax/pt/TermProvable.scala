@@ -513,10 +513,10 @@ case class TermProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSi
         // @TODO: Add derived axioms
         val coreAxiom = TermProvable.axioms.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
         val axinfos = DerivedAxiomInfo.allInfo
-        val derivedAxiom = axinfos.find(info => info.provable.underlyingProvable == subprovable.underlyingProvable)
+        val derivedAxiom = axinfos.find({case (name, info) => info.provable.underlyingProvable == subprovable.underlyingProvable}).map(_._2)
         val rule = TermProvable.rules.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
         val ruleInfos = DerivedRuleInfo.allInfo
-        val derivedRule = ruleInfos.find(info => info.provable.underlyingProvable == subprovable.underlyingProvable)
+        val derivedRule = ruleInfos.find({case (name, info) => info.provable.underlyingProvable == subprovable.underlyingProvable}).map(_._2)
 
         //If such an axiom exists, create evidence using the axiom's associated proof certificate.
         if (coreAxiom.isDefined) {

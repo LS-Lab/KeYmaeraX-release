@@ -129,7 +129,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
   "Random Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in withQE {_ => instantiateRandomSchematic()}
 
    private def instantiateRandomSchematic() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax)
       for (i <- 1 to randomTrials) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -152,7 +152,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
  "Random Renamed Instance Unification" should "instantiate keys of schematic axioms to random schematic instantiations" in withQE {_ => instantiateRandomRenamed()}
 
   private def instantiateRandomRenamed() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {
         val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
@@ -176,7 +176,7 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
   "Random Renamed Instance Unification optimistic" should "instantiate keys of all axioms to random schematic instantiations" in withQE {_ => instantiateRandomKey()}
 
   private def instantiateRandomKey() {
-    for (ax <- AxiomInfo.allInfo) {
+    for ((name, ax) <- AxiomInfo.allInfo) {
       println("Axiom " + ax.canonicalName)
       for (i <- 1 to randomTrials) {
         try {

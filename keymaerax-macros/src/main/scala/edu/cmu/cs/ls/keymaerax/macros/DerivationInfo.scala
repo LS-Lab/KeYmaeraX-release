@@ -44,13 +44,23 @@ object DerivationInfo {
   case object InitInProgress extends InitStatus
   case object InitComplete extends InitStatus
   var _initStatus: InitStatus = InitNotStarted
-  /** Global list of all DerivationInfos. Most readers should use the allInfo accessor. */
-  var _allInfo: List[DerivationInfo] = List()
+  /** Global map of all DerivationInfos indexed by codeName. Most readers should use the allInfo accessor. */
+  var _allInfo: Map[String, DerivationInfo] = Map()
+  /* All infos indexed by canonical name */
+  var _byCanonicalName: Map[String, DerivationInfo] = Map()
+  /* Storable infos by stored name */
+  var _byStoredName: Map[String, StorableInfo] = Map()
+  /* Infos for specific subclasses. These are all submaps of_allInfo and exist solely for faster access. */
+  var _axiomInfo: Map[String, AxiomInfo] = Map()
+  var _coreAxiomInfo: Map[String, CoreAxiomInfo] = Map()
+  var _derivedAxiomInfo: Map[String, DerivedAxiomInfo] = Map()
+  var _derivedRuleInfo: Map[String, DerivedRuleInfo] = Map()
+  var _provableInfo: Map[String, ProvableInfo] = Map()
   /** Global list of BelleExpr names seen in any tactic expression constructor. Used to improve error-checking. */
   var _seenNames: Set[String] = Set()
   def seeName(name: String): Unit = _seenNames = _seenNames.+(name)
   /** Access allInfo with proper error-checking */
-  def allInfo: List[DerivationInfo] =
+  def allInfo: Map[String, DerivationInfo] =
     _initStatus match {
       case InitNotStarted => throw new Exception("Need to initialize DerivationInfo.allInfo by calling DerivationInfoRegistry.init ")
       case _ => _allInfo
@@ -63,11 +73,24 @@ object DerivationInfo {
       case InitNotStarted => throw new Exception(s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has not started. This error usually means you forgot to initialize DerivationInfo, e.g. using withMathematica in a test suite")
       case InitComplete =>
         // Allow anonymous tactic creation any time, and allow idempotent re-registration of existing tactic.
-        if (di.codeName == "ANON" || _allInfo.exists(other => other.codeName == di.codeName))
+        if (di.codeName == "ANON" || _allInfo.contains(di.codeName))
           ()
         else
           throw new Exception(s"Tried to register ${di.codeName}, but can only register new @Tactic, @Axiom, etc. during AxiomInfo init process, but init has finished. This error usually means you forgot to add a class to the list in DerivationInfoRegistry")
     }
+  }
+
+  /** Adds di to all info tables. Assumes di is new. */
+  private def addInfo(di: DerivationInfo): Unit = {
+    _allInfo = _allInfo.+(di.codeName -> di)
+    _byCanonicalName = _byCanonicalName.+(di.canonicalName -> di)
+    // Note: independent pattern-matches so we don't miss infos that belong in multiple tables.
+    di match {case (ai: AxiomInfo) => _axiomInfo = _axiomInfo.+(ai.codeName -> ai) case _ => ()}
+    di match {case (ai: CoreAxiomInfo) => _coreAxiomInfo = _coreAxiomInfo.+(ai.codeName -> ai) case _ => ()}
+    di match {case (ai: DerivedAxiomInfo) => _derivedAxiomInfo = _derivedAxiomInfo.+(ai.codeName -> ai) case _ => ()}
+    di match {case (ai: DerivedRuleInfo) => _derivedRuleInfo = _derivedRuleInfo.+(ai.codeName -> ai) case _ => ()}
+    di match {case (ai: ProvableInfo) => _provableInfo = _provableInfo.+(ai.codeName -> ai) case _ => ()}
+    di match {case (si: StorableInfo) => _byStoredName = _byStoredName.+(si.storedName -> si) case _ => ()}
   }
 
   // Hack: derivedAxiom function expects its own derivedaxiominfo to be present during evaluation so that
@@ -75,38 +98,27 @@ object DerivationInfo {
   // of code so just delay [[value == derivedAxiom(...)]] execution till after info/
   def registerR[T, R <: DerivationInfo](value: => T, p: R): R = {
     // Note: We don't require DerivationInfo initialization to be "in progress" for registerR because it used for axioms rather than tactics.
-    if (!_allInfo.exists(di => di.codeName == p.codeName))
-      _allInfo = p :: _allInfo
+    if (!_allInfo.contains(p.codeName))
+      addInfo(p)
     val _ = value
     p
   }
 
-  // @TODO: Faster info lookups
   def registerL[T, R <: DerivationInfo](value: => T, p: R): T = {
     requireInitInProgress(p)
-    if (!_allInfo.exists(di => di.codeName == p.codeName))
-      _allInfo = p :: _allInfo
+    if (!_allInfo.contains(p.codeName))
+      addInfo(p)
     val _ = value
     value
   }
 
   /** code name mapped to derivation information */
-  def byCodeName: Map[String, DerivationInfo] =
-  /* @todo Decide on a naming convention. Until then, making everything case insensitive */
-    allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-      acc + ((info.codeName, info))
-    }
+  def byCodeName: Map[String, DerivationInfo] = allInfo
 
   /** Check whether the given `codeName` is a code name of any of the listed DerivationInfos. */
   def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName)
 
-  /** canonical name mapped to derivation information */
-  def byCanonicalName: Map[String, DerivationInfo] =
-  //@todo optimizable performance bottle neck: this folding shouldn't be done every time, and can safely
-  // be cached/finalized when initialization finishes
-    allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-      acc + ((info.canonicalName, info))
-    }
+  def byCanonicalName: Map[String, DerivationInfo] = _byCanonicalName
 
   /** Throw an AssertionError if id does not conform to the rules for code names. */
   def assertValidIdentifier(id: String): Unit = { assert(id.forall(_.isLetterOrDigit), "valid code name: " + id)}
@@ -134,20 +146,6 @@ object DerivationInfo {
   def apply(axiomName: String): DerivationInfo = byCanonicalName.getOrElse(axiomName,
     ofBuiltinName(axiomName).getOrElse(throw AxiomNotFoundException(axiomName)))
 
-
-  /*/** code name mapped to derivation information */
-  private val byCodeName: Map[String, DerivationInfo] =
-  /* @todo Decide on a naming convention. Until then, making everything case insensitive */
-    allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-      acc + ((info.codeName, info))
-    }*/
-
-  /*
-  /** canonical name mapped to derivation information */
-  private val byCanonicalName: Map[String, DerivationInfo] =
-    allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-      acc + ((info.canonicalName, info))
-    }*/
 }
 
 /** Typed functions to circumvent type erasure of arguments and return types. */
@@ -410,7 +408,7 @@ object DerivedAxiomInfo {
   }
 
   def toStoredName(codeName: String): String = codeName.toLowerCase
-  def allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
+  def allInfo: Map[String, DerivedAxiomInfo] = DerivationInfo._derivedAxiomInfo
 }
 
 // axiomatic proof rules
@@ -429,7 +427,7 @@ object DerivedRuleInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived rule")
     }
 
-  def allInfo:List[DerivedRuleInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedRuleInfo]).map(_.asInstanceOf[DerivedRuleInfo])
+  def allInfo: Map[String, DerivedRuleInfo] =  DerivationInfo._derivedRuleInfo
 }
 
 // tactics
@@ -465,19 +463,18 @@ object ProvableInfo {
   }
 
   /** True if ProvableInfo with `storedName` exists, false otherwise. */
-  def existsStoredName(storedName: String): Boolean =
-    DerivationInfo.allInfo.exists({case si: StorableInfo => si.storedName == storedName case _ => false})
+  def existsStoredName(storedName: String): Boolean = DerivationInfo._byStoredName.contains(storedName)
 
   /** Retrieve meta-information on an inference by the given stored name `storedName` */
   def ofStoredName(storedName: String): ProvableInfo = {
-    DerivationInfo.allInfo.find({case si: StorableInfo => si.storedName == storedName case _ => false}) match {
+    DerivationInfo._byStoredName.get(storedName) match {
       case Some(info: ProvableInfo) => info
       case Some(info) => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
       case _ => throw new Exception("Derivation \"" + storedName + "\" is not a derived axiom or rule.")
     }
   }
 
-  def allInfo:List[ProvableInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[ProvableInfo]).map(_.asInstanceOf[ProvableInfo])
+  def allInfo:Map[String, ProvableInfo] =  DerivationInfo._provableInfo
 }
 
 // axioms
@@ -497,7 +494,7 @@ object AxiomInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
     }
 
-  def allInfo:List[AxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[AxiomInfo]).map(_.asInstanceOf[AxiomInfo])
+  def allInfo: Map[String, AxiomInfo] =  DerivationInfo._axiomInfo
 }
 
 
@@ -517,7 +514,7 @@ object CoreAxiomInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
     }
 
-  def allInfo:List[CoreAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[CoreAxiomInfo]).map(_.asInstanceOf[CoreAxiomInfo])
+  def allInfo: Map[String, CoreAxiomInfo] =  DerivationInfo._coreAxiomInfo
 }
 
 

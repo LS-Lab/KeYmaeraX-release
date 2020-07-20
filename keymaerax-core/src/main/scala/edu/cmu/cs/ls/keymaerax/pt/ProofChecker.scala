@@ -107,7 +107,7 @@ object ProofChecker {
           if(ProvableSig.rules.contains(name))
             ProvableSig.rules(name)
          else
-            DerivedRuleInfo.allInfo.find(info => info.storedName == name).get.provable
+            ProvableInfo.ofStoredName(name).asInstanceOf[DerivedRuleInfo].provable
 
         case ForwardNewConsequenceTerm(child, con, rule) =>
           val pschild = apply(child)

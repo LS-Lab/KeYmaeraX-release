@@ -57,10 +57,10 @@ object Lemma {
     val fact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
         TermProvable(ElidingProvable(provable), name match { case Some(n) =>
-          DerivedAxiomInfo.allInfo.find(_.storedName == n) match {
+          DerivedAxiomInfo.allInfo.get(n) match {
             case Some(info) => AxiomTerm(info.canonicalName)
             case None =>
-              if (DerivedRuleInfo.allInfo.exists(_.storedName == n)) RuleTerm(n)
+              if (DerivedRuleInfo.allInfo.contains(n)) RuleTerm(n)
               else NoProof()
           }
         case None => FOLRConstant(provable.conclusion.succ.head) })

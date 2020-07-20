@@ -27,7 +27,7 @@ class CodeNameChecker extends TacticTestBase with Matchers {
   //@todo also reflect through all DerivedAxioms to check they've been added to AxiomInfo
   "Tactic codeNames versus AxiomInfo codeNames" should "agree" in withMathematica { _ =>
     val all = DerivationInfo.allInfo
-    for (info <- all) {
+    for ((name, info) <- all) {
       //println("Checking " + info.codeName)
       instantiateSomeBelle(info) match {
           // made compile by reflection or generalizing type hierarchy for some BelleExpr
