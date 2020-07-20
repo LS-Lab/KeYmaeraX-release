@@ -47,7 +47,7 @@ object Approximator extends Logging {
     conclusion = "Γ |- [{X'=F}], Δ",
     premises = "Γ |- [{X'=F & Α(n)}], Δ"
   )
-  def autoApproximate(n: Number) : DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
+  def autoApproximate(n: Number) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
       case Some(m:Modal) if(m.program.isInstanceOf[ODESystem]) => {
         val system = m.program.asInstanceOf[ODESystem]
@@ -76,7 +76,7 @@ object Approximator extends Logging {
     premises = "Γ |- [{c1,exp'=exp,c2 & approximate(n)}], Δ",
     inputs = "exp:variable;;n:number"
   )
-  def expApproximate(e: Variable, n: Number): DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
+  def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, sequent: Sequent) =>
     val t = timeVarInModality(sequent.sub(pos))
 
     val N = n.value.toInt
@@ -115,7 +115,7 @@ object Approximator extends Logging {
     conclusion = "Γ |- [{c1,sin'=cos,cos'=-sin,c2}], Δ",
     premises = "Γ |- [{c1,sin'=cos,cos'=-sin,c2 & approximate(num)}], Δ",
     inputs = "sin[sin]:variable;;cos[cos]:variable;;num:number")
-  def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionTactic = anon {(pos: Position, sequent: Sequent) =>
+  def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, sequent: Sequent) =>
     val t = timeVarInModality(sequent.sub(pos))
 
     //Get the number of terms we should expand.

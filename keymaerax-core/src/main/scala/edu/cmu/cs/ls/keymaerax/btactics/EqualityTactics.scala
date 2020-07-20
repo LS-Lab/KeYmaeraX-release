@@ -223,7 +223,7 @@ private object EqualityTactics {
     * @return The tactic.
     */
   @Tactic(displayLevel = "internal")
-  def abbrvAt(e: Term, x: Option[Variable]): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
+  def abbrvAt(e: Term, x: Option[Variable]): DependentPositionWithAppliedInputTactic = inputanon ((pos: Position, sequent: Sequent) => {
       val inFml = sequent.sub(pos) match {
         case Some(p: Formula) => p
         case Some(t: Term) => throw new TacticInapplicableFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)

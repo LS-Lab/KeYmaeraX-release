@@ -35,7 +35,7 @@ private object ToolTactics {
     @Tactic("useSolver", codeName = "useSolver")
     // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
     // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
-    def switchSolver(tool: String): BelleExpr = anon { (_seq: Sequent) => {
+    def switchSolver(tool: String): InputTactic = inputanon { (_seq: Sequent) => {
       val config = ToolConfiguration.config(tool)
       tool.toLowerCase match {
         case "mathematica" =>

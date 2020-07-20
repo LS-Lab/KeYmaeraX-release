@@ -265,7 +265,7 @@ trait UnifyUSCalculus {
   private[btactics]
   // NB: anon (Sequent) is necessary even though argument "seq" is not referenced:
   // this ensures that TacticInfo initialization routine can initialize byUSX without executing the body
-  def byUSX(P: String, S: Option[Formula]): BelleExpr = anon { (_seq: Sequent) =>
+  def byUSX(P: String, S: Option[Formula]): InputTactic = inputanon { (_seq: Sequent) =>
     S match {
       case None => TactixLibrary.byUS(AxiomInfo(P), us=>us)
       case Some(substFml: Formula) =>
@@ -292,7 +292,7 @@ trait UnifyUSCalculus {
   @deprecated("Exclusively use for tactic interpreters")
   @Tactic("useAt")
   private[btactics]
-  def useAtX(axiom: String, key: Option[String]): BelleExpr = anon {(pos: Position) =>
+  def useAtX(axiom: String, key: Option[String]): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position) =>
     key match {
       case None => TactixLibrary.useAt(AxiomInfo(axiom)) //@note serializes as codeName
       case Some(k) =>
@@ -501,7 +501,7 @@ trait UnifyUSCalculus {
   def uniformSubstitute(subst: USubst): InputTactic = inputanon { US(subst)}
 
   @Tactic(("US", "US"), conclusion = "|- S(P)", premises = "|- P")
-  def USX(S: SubstitutionPair): BelleExpr = TactixLibrary.uniformSubstitute(USubst(Seq(S)))
+  def USX(S: SubstitutionPair): InputTactic = inputanon { TactixLibrary.uniformSubstitute(USubst(Seq(S))) }
 
 
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
@@ -1350,7 +1350,7 @@ trait UnifyUSCalculus {
     */
   @Tactic(premises = "Γ |- C{repl}, Δ ;; Γ |- C{repl}→C{c}, Δ",
     conclusion = "Γ |- C{c}, Δ")
-  def cutAt(repl: Expression): DependentPositionTactic = anon {(pos:Position, seq:Sequent) => {
+  def cutAt(repl: Expression): DependentPositionWithAppliedInputTactic = inputanon {(pos:Position, seq:Sequent) => {
     require(seq.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + seq)
     val (ctx, _) = seq.at(pos)
     cutLR(ctx(repl))(pos.top)

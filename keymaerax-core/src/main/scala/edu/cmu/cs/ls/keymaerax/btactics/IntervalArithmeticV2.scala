@@ -1039,7 +1039,7 @@ object IntervalArithmeticV2 {
   }
 
   @Tactic("intervalArithmetic")
-  def intervalArithmetic(trm: Term): BelleExpr = IntervalArithmeticV2.intervalArithmetic
+  def intervalArithmetic(trm: Term): InputTactic = inputanon { IntervalArithmeticV2.intervalArithmetic }
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, "intervalCutTerms")
@@ -1067,7 +1067,7 @@ object IntervalArithmeticV2 {
     conclusion = "Γ |- Δ",
     displayLevel = "menu"
   )
-  def intervalCutTerm(trm: Term): BelleExpr = anon { intervalCutTerms(Seq(trm)) }
+  def intervalCutTerm(trm: Term): InputTactic = inputanon { intervalCutTerms(Seq(trm)) }
 
   private def terms_of(fml: Formula) : List[Term] = fml match {
     case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)

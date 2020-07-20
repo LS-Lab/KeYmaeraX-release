@@ -261,7 +261,7 @@ object TactixLibrary extends HilbertCalculus
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
   def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
-             keepQEFalse: Boolean): BelleExpr = "ANON" by {
+             keepQEFalse: Boolean): BelleExpr = anon {
     /** Tactic index that hands out loop tactics and configurable ODE tactics. */
     val autoTacticIndex = new DefaultTacticIndex {
       override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
@@ -346,17 +346,17 @@ object TactixLibrary extends HilbertCalculus
    * master: master tactic that tries hard to prove whatever it could.
    * @see [[auto]] */
   @Tactic(codeName = "master")
-  def masterX(generator: Generator[GenProduct]): BelleExpr = anon { master(generator) }
+  def masterX(generator: Generator[GenProduct]): InputTactic = inputanon { master(generator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   @Tactic()
-  def auto: BelleExpr = anon {master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done}
+  def auto: DependentTactic = anon { (seq: Sequent) => master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done }
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
   @Tactic("explore", revealInternalSteps = true)
-  def explore(gen: Generator[GenProduct]): BelleExpr = "explore" by master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
+  def explore(gen: Generator[GenProduct]): InputTactic = inputanon {master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
     case (cgen: ConfigurableGenerator[GenProduct], Some(Box(prg@Loop(_), _))) if cgen.products.contains(prg) =>
       logger.info("Explore uses loop with annotated invariant")
       //@note bypass all other invariant generators except the annotated invariants, pass on to loop
@@ -372,7 +372,7 @@ object TactixLibrary extends HilbertCalculus
       )
     case (_, Some(Box(prg@Loop(_), _))) => throw new IllegalArgumentException("Explore requires a configurable generator.")
     case _ => throw new InputFormatFailure("Explore requires a loop invariant to explore. Please use @invariant annotation in the input model")
-  }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)
+  }), /*@todo restrict ODE invariant generator */ ODE, keepQEFalse=false)}
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -440,7 +440,7 @@ object TactixLibrary extends HilbertCalculus
     }
   }
   @Tactic("loopAuto", codeName = "loopAuto", conclusion = "Γ |- [a*]P, Δ")
-  def loopautoX(gen: Generator[GenProduct]): DependentPositionTactic = loopauto(gen)
+  def loopautoX(gen: Generator[GenProduct]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) => loopauto(gen)(pos) }
 
   /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * @see [[HybridProgramCalculus.loop(Formula)]] */
@@ -672,8 +672,7 @@ object TactixLibrary extends HilbertCalculus
     }
   }
 
-  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
-  def QEX(tool: Option[String], timeout: Option[Number]): BelleExpr = {
+  def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
     (tool, timeout) match {
       case (Some(toolName), Some(time)) => QE(Nil, Some(toolName), Some(time.value.toInt))
       case (Some(toolName), None) if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
@@ -682,6 +681,7 @@ object TactixLibrary extends HilbertCalculus
       case (_, _) => QE
     }
   }
+  @Tactic("QE", codeName = "QE", revealInternalSteps = true)
   def QE: BelleExpr = QE()
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.
@@ -737,7 +737,7 @@ object TactixLibrary extends HilbertCalculus
     conclusion = "Γ(e) |- Δ(e)",
     inputs = "e:term;;x[x]:option[variable]"
   )
-  def abbrvAll(e: Term, x: Option[Variable]): BelleExpr = anon { EqualityTactics.abbrv(e, x) }
+  def abbrvAll(e: Term, x: Option[Variable]): InputTactic = inputanon { EqualityTactics.abbrv(e, x) }
 
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position.
     * @example {{{
@@ -817,12 +817,12 @@ object TactixLibrary extends HilbertCalculus
     * @param Q The transformed formula or term that is desired as the result of this transformation.
     */
   @Tactic("trafo", conclusion = "Γ |- P, Δ", premises = "Γ |- Q, Δ")
-  def transform(Q: Expression): DependentPositionTactic = ToolTactics.transform(Q)
+  def transform(Q: Expression): DependentPositionWithAppliedInputTactic = ToolTactics.transform(Q)
 
   /** Determines difference between expression at position and expression `to` and turns diff.
     * into transformations and abbreviations. */
   @Tactic("edit")
-  def edit(to: Expression): DependentPositionTactic = ToolTactics.edit(to)
+  def edit(to: Expression): DependentPositionWithAppliedInputTactic = ToolTactics.edit(to)
 
   //
   /** OnAll(e) == <(e, ..., e) runs tactic `e` on all current branches. */
@@ -892,7 +892,7 @@ object TactixLibrary extends HilbertCalculus
     //    pQE -----------
     conclusion="Γ<sub>rcf</sub> |- Δ<sub>rcf</sub>",
     displayLevel="browse")
-  def RCF: BelleExpr = ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))
+  def RCF: BelleExpr = anon { ToolTactics.rcf(ToolProvider.qeTool().getOrElse(throw new ProverSetupException("RCF requires a QETool, but got None")))}
 
 //  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
 //  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
@@ -979,7 +979,7 @@ object TactixLibrary extends HilbertCalculus
   def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
 
   @Tactic("useLemma", codeName = "useLemma")
-  def useLemmaX (lemma: String, tactic: Option[String]): BelleExpr = TactixLibrary.useLemma(lemma, tactic.map(BelleParser(_)))
+  def useLemmaX (lemma: String, tactic: Option[String]): InputTactic = inputanon { TactixLibrary.useLemma(lemma, tactic.map(BelleParser(_)))}
 
   /** useLemma(lemmaName, tactic) applies the lemma identified by `lemmaName`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */

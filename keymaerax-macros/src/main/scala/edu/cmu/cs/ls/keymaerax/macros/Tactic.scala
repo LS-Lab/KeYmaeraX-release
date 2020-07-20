@@ -143,6 +143,14 @@ class TacticImpl(val c: blackbox.Context) {
         case _ => false
       }
     }
+    // Any tactic type which indicates an input, not literally the class InputTactic
+    def isTacticWithInput(tRet: Tree): Boolean = {
+      tRet match {
+        case tq"InputPositionTactic" | tq"InputTwoPositionTactic" | tq"InputTactic" | tq"StringInputTactic"
+             | tq"DependentPositionWithAppliedInputTactic" => true
+        case _ => false
+      }
+    }
     // Scrape position argument info from declaration
     def getPositioning(params: Seq[Tree]): PosArgs = {
       val supportedArgs = "Unit, Position, Sequent, (Position, Sequent), or (ProvableSig, Position, Position)"
@@ -254,74 +262,82 @@ class TacticImpl(val c: blackbox.Context) {
               c.abort(c.enclosingPosition, "Argument combination not yet supported")
             case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos; $defaultType")
           }
-        case _ => defaultType
+        case _ =>
+          val retHasInput = isTacticWithInput(defaultType)
+          val argHasInput = args.nonEmpty
+          // If def has arguments, force return type to express arguments. Return type is used to drive serialization and
+          // an incorrect return type would lead to incorrect serialization.
+          if (argHasInput && !retHasInput) {
+            c.abort(c.enclosingPosition, "@Tactic detected tactic with inputs. Annotated return type must be an input tactic type (e.g. InputTactic)")
+          }
+          defaultType
       }
     }
-    def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, anonSort: Option[AnonSort]): Tree = {
+    def arguePos(funStr: Literal, argExpr: Tree, args: List[ArgInfo], pos: PosArgs, acc: Tree, anonSort: Option[AnonSort], hasInputs: Boolean): Tree = {
       // [[isCoreAnon]] represents "which anon function" was on the RHS of the definition.
       // If this is empty, the @Tactic is a forward to another BelleExpr. [[forward]] has overloads for most (@TODO all)
       // tactic classes, so in each case we just call [[forward]]
       if (anonSort.isEmpty) {
         return q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).forward($acc)"""
       }
-      (args, pos) match {
-        case (Nil, NoPos(None)) =>
+      (hasInputs, pos) match {
+        case (false, NoPos(None)) =>
           if(anonSort.contains(UnguardedAnonSort)) {
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).bys($acc)"""
           } else {
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by($acc)"""
           }
-        case (Nil, NoPos(Some(arg))) =>
+        case (false, NoPos(Some(arg))) =>
           if(anonSort.contains(UnguardedAnonSort)) {
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).bys(($arg) => $acc)"""
           } else {
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($arg) => $acc)"""
           }
-        case (Nil, SequentArg(sequentName)) =>
+        case (false, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sequentName) => $acc)"""
-        case (Nil, OnePos(pname, None, _)) =>
+        case (false, OnePos(pname, None, _)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname) =>  $acc)"""
-        case (Nil, OnePos(pname, Some(sname), _)) =>
+        case (false, OnePos(pname, Some(sname), _)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($pname, $sname) =>  $acc)"""
-        case (_::_, NoPos(None)) =>
+        case (true, NoPos(None)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, $acc)"""
-        case ((_: StringArg) ::_, NoPos(Some(pname))) =>
+        case (true, NoPos(Some(pname))) if args.nonEmpty && args.head.isInstanceOf[StringArg] =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsS($argExpr, ($pname) => $acc)"""
-        case (_ ::_, NoPos(Some(pname))) =>
+        case (true, NoPos(Some(pname))) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname) => $acc)"""
-        case (_::_, SequentArg(sequentName)) =>
+        case (true, SequentArg(sequentName)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($sequentName) => $acc)"""
-        case (_::_, OnePos(pname, None, _)) =>
+        case (true, OnePos(pname, None, _)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname) =>  $acc)"""
-        case (_::_, OnePos(pname, Some(sname), false)) =>
+        case (true, OnePos(pname, Some(sname), false)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, ($pname, $sname) =>  $acc)"""
-        case (_::_, OnePos(pname, Some(sname), true)) =>
+        case (true, OnePos(pname, Some(sname), true)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputsP($argExpr, ($pname, $sname) =>  $acc)"""
-        case (Nil, AntePos(None, pname)) =>
+        case (false, AntePos(None, pname)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byL(($pname) =>  $acc)"""
-        case (Nil, AntePos(Some(sname), pname)) =>
+        case (false, AntePos(Some(sname), pname)) =>
           if (anonSort.contains(CoreAnonSort))
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)"""
           else
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)"""
-        case (_::_, AntePos(Some(sname), pname)) =>
+        case (true, AntePos(Some(sname), pname)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsL($argExpr, ($sname, $pname) =>  $acc)"""
-        case (Nil, SuccPos(None, pname)) =>
+        case (false, SuccPos(None, pname)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byR(($pname) =>  $acc)"""
-        case (Nil, SuccPos(Some(sname), pname)) =>
+        case (false, SuccPos(Some(sname), pname)) =>
           if (anonSort.contains(CoreAnonSort))
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).coreby(($sname, $pname) =>  $acc)"""
           else
             q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by(($sname, $pname) =>  $acc)"""
-        case (_::_, SuccPos(Some(sname), pname)) =>
+        case (true, SuccPos(Some(sname), pname)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).corebyWithInputsR($argExpr, ($sname, $pname) =>  $acc)"""
-        case (Nil, AnteSuccPos(sname, pname)) =>
+        case (false, AnteSuccPos(sname, pname)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byLR(($sname, $pname) =>  $acc)"""
-        case (Nil, TwoPos(provable, pos1, pos2)) =>
+        case (false, TwoPos(provable, pos1, pos2)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).by((($provable, $pos1, $pos2) =>  $acc))"""
-        case (_::_, TwoPos(provable, pos1, pos2)) =>
+        case (true, TwoPos(provable, pos1, pos2)) =>
           q"""new edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory ($funStr).byWithInputs($argExpr, (($provable, $pos1, $pos2) =>  $acc))"""
-        case (_::_, _: SuccPos | _: AntePos | _: AnteSuccPos) =>
+        case (true, _: SuccPos | _: AntePos | _: AnteSuccPos) =>
           c.abort(c.enclosingPosition, "Argument combination not yet supported")
         case t => c.abort(c.enclosingPosition, s"Unsupported argument combination in @Tactic: $args; $pos; ")
       }
@@ -334,8 +350,9 @@ class TacticImpl(val c: blackbox.Context) {
         case _ => args.foldRight[Tree](q"Nil")({case (ai, acc) => q"${Ident(TermName(ai.name))} :: $acc"})
       }
       // if no "anon" function present, then tactic is a simple forwarding expression like val e: BelleExpr = <tac>
+      val hasInputs = args.nonEmpty || isTacticWithInput(tRet)
       val baseType = inferType(tRet, args, pos, anonSort)
-      val baseTerm = arguePos(funStr, argExpr, args, pos, acc, anonSort)
+      val baseTerm = arguePos(funStr, argExpr, args, pos, acc, anonSort, hasInputs)
       val base = (baseTerm, baseType)
       def aiToVal(ai: ArgInfo): ValDef = {
         val name = ai.name
@@ -465,7 +482,7 @@ class TacticImpl(val c: blackbox.Context) {
     val positions = getPositioning(params)
     val res = assemble(mods, codeName, inArgs, positions, rhs, tRet, isDef, isCoreAnon)
     // Print debug info when applied to any tactic in this set
-    val debugTactics: Set[String] = Set(  )
+    val debugTactics: Set[String] = Set()
     if(debugTactics.contains(codeName.decodedName.toString)) {
       println(s"DEBUG (${codeName}): \n$res\n")
     }

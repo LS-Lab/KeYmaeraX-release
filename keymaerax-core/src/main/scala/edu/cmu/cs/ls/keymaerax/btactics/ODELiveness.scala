@@ -1381,7 +1381,7 @@ object ODELiveness {
     premises="Γ |- [y'=g(x,y),x'=f(x)&Q](||y||^2)' <= L||y||+M ;; Γ |- <x'=f(x)&Q>P, Δ",
     conclusion="Γ |- <y'=g(x,y),x'=f(x)&Q>P, Δ",
     displayLevel="internal")
-  def dDDG(L:Term, M: Term) : DependentPositionTactic = anon ((pos : Position, sequent: Sequent) =>
+  def dDDG(L:Term, M: Term) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
     dDDGInternal(L, M, 1)(pos, sequent)
   )
 
@@ -1435,7 +1435,7 @@ object ODELiveness {
     premises="Γ |- [y'=g(x,y),x'=f(x)&Q]||y||^2 <= p(x) ;; Γ |- <x'=f(x)&Q>P, Δ",
     conclusion="Γ |- <y'=g(x,y),x'=f(x)&Q>P, Δ",
     displayLevel="internal")
-  def dBDG(p: Term) : DependentPositionTactic = anon ((pos : Position, sequent: Sequent) =>
+  def dBDG(p: Term) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
     dBDGInternal(p, 1)(pos, sequent)
   )
 

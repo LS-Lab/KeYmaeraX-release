@@ -380,7 +380,7 @@ private object DifferentialTactics extends Logging {
     premises="Γ |- [x'=f(x)&Q]R ;; Γ |- [x'=f(x)&R]P, Δ",
     conclusion="Γ |- [x'=f(x)&Q]P, Δ",
     displayLevel="browse")
-  def diffRefine(R:Formula) : DependentPositionTactic = anon ((pos : Position, sequent: Sequent) =>
+  def diffRefine(R:Formula) : DependentPositionWithAppliedInputTactic = inputanon ((pos : Position, sequent: Sequent) =>
     diffRefineInternal(R, true)(pos, sequent)
   )
 
@@ -1743,7 +1743,7 @@ private object DifferentialTactics extends Logging {
     conclusion="Γ |- [x'=f(x)&Q]p≳0, Δ",
     inputs="g:option[term]",
     displayLevel="browse")
-  def dbx(g : Option[Term]) : DependentPositionTactic = anon ({ pos: Position =>
+  def dbx(g : Option[Term]) : DependentPositionWithAppliedInputTactic = inputanon ({ pos: Position =>
     g match {
       case None => dgDbxAuto(pos)
       case Some(cof) => dgDbx(cof)(pos)
