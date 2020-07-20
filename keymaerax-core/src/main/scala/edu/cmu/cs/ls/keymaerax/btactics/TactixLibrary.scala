@@ -140,11 +140,11 @@ object TactixLibrary extends HilbertCalculus
     * @see [[chase]] */
   def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)
                  (restrictTo: AtPosition[_ <: BelleExpr]*)
-                 (expected: Option[Formula]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+                 (expected: Option[Formula]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
-    def atPos(except: Option[Position]): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
+    def atPos(except: Option[Position]): DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
       if (except.contains(pos)) skip
       else s.sub(pos) match {
         case Some(fml) =>
@@ -164,7 +164,7 @@ object TactixLibrary extends HilbertCalculus
     })
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
-    def atOrSearch(p: PositionLocator): DependentTactic = "ANON" by ((s: Sequent) => p match {
+    def atOrSearch(p: PositionLocator): DependentTactic = anon ((s: Sequent) => p match {
       case Fixed(pp, Some(fml), exact) =>
         if (( exact && s.sub(pp).contains(fml)) ||
             (!exact && s.sub(pp).exists(UnificationMatch.unifiable(fml, _).isDefined))) atPos(None)(Fixed(pp))
@@ -213,11 +213,11 @@ object TactixLibrary extends HilbertCalculus
     * @see [[tacticChase]] */
   def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic(
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
+    Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
       //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
       ss.succ.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.succ.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }))) &
-    Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
+    Idioms.doIf(!_.isProved)(onAll(anon ((ss: Sequent) => {
       //@note prevent access of undefined positions if earlier chase moved formulas; subgoals.forall since tactic chase is a singlegoal tactic
       ss.ante.zipWithIndex.map({ case (fml, i) => ?(Idioms.doIf(_.subgoals.forall(i < _.ante.size))(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i)))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     })))
@@ -232,7 +232,7 @@ object TactixLibrary extends HilbertCalculus
   /** Chases program operators according to [[AxIndex]] or tactics according to `tacticIndex` (restricted to tactics
     * in `restrictTo`) at a position. */
   def chaseAt(tacticIndex: TacticIndex = new DefaultTacticIndex)
-             (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = "chaseAt" by ((pos: Position, seq: Sequent) => {
+             (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(e) =>
         if (AxIndex.axiomsFor(e).nonEmpty) {
@@ -356,7 +356,7 @@ object TactixLibrary extends HilbertCalculus
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
   @Tactic("explore", revealInternalSteps = true)
-  def explore(gen: Generator[GenProduct]): BelleExpr = "explore" by master("ANON" by ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
+  def explore(gen: Generator[GenProduct]): BelleExpr = "explore" by master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
     case (cgen: ConfigurableGenerator[GenProduct], Some(Box(prg@Loop(_), _))) if cgen.products.contains(prg) =>
       logger.info("Explore uses loop with annotated invariant")
       //@note bypass all other invariant generators except the annotated invariants, pass on to loop
@@ -665,9 +665,9 @@ object TactixLibrary extends HilbertCalculus
     }
     lazy val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
     (requiresTool, timeout) match {
-      case (Some(toolName), Some(t)) => "QE" byWithInputs (Variable(toolName)::Number(t)::Nil, tactic)
-      case (Some(toolName), None) => "QE" byWithInputs (Variable(toolName)::Nil, tactic)
-      case (None, Some(t)) => "QE" byWithInputs (Number(t)::Nil, tactic)
+      case (Some(toolName), Some(t)) => tactic
+      case (Some(toolName), None) => tactic
+      case (None, Some(t)) => tactic
       case _ => tactic
     }
   }
@@ -767,7 +767,7 @@ object TactixLibrary extends HilbertCalculus
   @Tactic(names = "L=R all", codeName = "allL2R")
   val exhaustiveEqL2R: DependentPositionTactic = anon { pos: Position => exhaustiveEqL2R(false)(pos) }
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
-    if (hide) "allL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(l, _)) =>
         val lvars = StaticSemantics.freeVars(l)
         EqualityTactics.exhaustiveEqL2R(pos) &
@@ -780,7 +780,7 @@ object TactixLibrary extends HilbertCalculus
   @Tactic(names = "R=L all", codeName = "allR2L")
   val exhaustiveEqR2L: DependentPositionTactic = anon { pos: Position => exhaustiveEqR2L(false)(pos) }
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
-    if (hide) "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    if (hide) anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(_, r)) =>
         val rvars = StaticSemantics.freeVars(r)
         EqualityTactics.exhaustiveEqR2L(pos) &
@@ -930,7 +930,7 @@ object TactixLibrary extends HilbertCalculus
   }
 
   /** ifThenElse(cond,thenT,elseT) runs `thenT` if `cond` holds at position and `elseT` otherwise. */
-  def ifThenElse(cond: (Sequent, Position)=>Boolean, thenT: BelleExpr, elseT: BelleExpr): DependentPositionTactic = "ifThenElse" by ((pos:Position,seq:Sequent) =>
+  def ifThenElse(cond: (Sequent, Position)=>Boolean, thenT: BelleExpr, elseT: BelleExpr): DependentPositionTactic = anon ((pos:Position,seq:Sequent) =>
     if (cond(seq, pos))
       thenT
     else
@@ -983,19 +983,17 @@ object TactixLibrary extends HilbertCalculus
 
   /** useLemma(lemmaName, tactic) applies the lemma identified by `lemmaName`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr = "useLemma" byWithInputs(
-    if (adapt.isDefined) lemmaName::adapt.get.prettyString::Nil else lemmaName::Nil,
-    anon { (_, _) =>
+  def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr =
+    anon { (_: Position, _: Sequent) =>
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
         useLemma(lemma, adapt)
       } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
     }
-  )
   /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
     * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
-  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_, _) =>
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { (_: Position, _: Sequent) =>
     adapt match {
       case Some(t) =>
         cut(lemma.fact.conclusion.toFormula ) <(t, cohideR('Rlast) &
@@ -1010,8 +1008,7 @@ object TactixLibrary extends HilbertCalculus
 
   /** Applies the lemma by matching `key` in the lemma with the tactic position. */
   @Tactic("useLemmaAt")
-  def useLemmaAt(lemma: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
-    if (key.isDefined) lemma::key.get.prettyString.substring(1)::Nil else lemma::Nil, //@note remove leading . from PosInExpr
+  def useLemmaAt(lemma: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = inputanon (
     (pos: Position, _: Sequent) => {
       val userLemmaName = "user" + File.separator + lemma //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {

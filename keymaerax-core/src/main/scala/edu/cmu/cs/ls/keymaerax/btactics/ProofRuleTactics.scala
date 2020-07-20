@@ -109,7 +109,7 @@ private object ProofRuleTactics extends Logging {
     * @author Andre Platzer
     * @note Implementation analogous to [[ProofRuleTactics.boundRename()]]
     */
-  def contextualize[T <: BelleExpr](tactic: AtPosition[T], predictor: Formula=>Formula): DependentPositionTactic = "contextualize(" + tactic.prettyString + ")" by ((pos:Position, sequent:Sequent) =>
+  def contextualize[T <: BelleExpr](tactic: AtPosition[T], predictor: Formula=>Formula): DependentPositionTactic = anon ((pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)
       tactic(pos)
     else {

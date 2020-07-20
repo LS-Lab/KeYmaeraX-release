@@ -1025,7 +1025,7 @@ object DerivationInfoRegistry extends Logging {
     // Instead, check the names after everything is initialized.
     var overimplemented: Set[String] = Set()
     DerivationInfo._seenNames.foreach((n:String) => {
-      if(!DerivationInfo.hasCodeName(n))
+      if(n != "Error" && !DerivationInfo.hasCodeName(n))
         overimplemented = overimplemented.+(n)
     })
     assert(overimplemented.isEmpty, s"@Tactic init failed: NamedBelleExpr(s) named ${overimplemented.toList.mkString(", ")} but this name does not appear in DerivationInfo's list of codeNames.")

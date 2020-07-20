@@ -352,7 +352,7 @@ private object DLBySubst {
       val oldified = SubstitutionHelper.replaceFn("old", invariant, ghosts.map(_._1).toMap)
       val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) &
-        ("ANON" byWithInput(oldified, (pos, sequent) => {
+        (inputanon {(pos, sequent) => {
           sequent.sub(pos) match {
             case Some(b@Box(Loop(a), p)) =>
               if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
@@ -386,13 +386,13 @@ private object DLBySubst {
               }
             case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
             case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-          }}))(afterGhostsPos)
+          }}})(afterGhostsPos)
     }
     pre & discreteGhosts(ov, sequent, doloop)(pos)
   })
 
   /** Analyzes a loop for counterexamples. */
-  def cexLoop(inv: Formula): DependentPositionTactic = "cexLoop" by ((pos: Position, seq: Sequent) => {
+  def cexLoop(inv: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val cexProgram = unfoldProgramNormalize & OnAll(
       Idioms.doIfElse(_.subgoals.forall(_.isFOL))(
         //@todo nested loops, loops in postcondition, ODEs in postcondition
@@ -496,7 +496,7 @@ private object DLBySubst {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
-    pre & ("doCon" byWithInput(variant, (pp, seq) => {
+    pre & (inputanon {(pp, seq) => {
       seq.sub(pp) match {
         case Some(Diamond(prg: Loop, _)) if !FormulaTools.dualFree(prg) => conRule(v, variant)(pos)
         case Some(d@Diamond(prg@Loop(a), p)) if  FormulaTools.dualFree(prg) =>
@@ -540,7 +540,7 @@ private object DLBySubst {
             )
           )
       }
-    }))(pos)
+    }})(pos)
   })
 
   /**

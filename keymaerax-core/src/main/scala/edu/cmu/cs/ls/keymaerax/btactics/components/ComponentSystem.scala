@@ -59,7 +59,7 @@ object ComponentSystem {
   )
 
   /** STTT Lemma 1 */
-  def programIndependence(swapCompose: Boolean = true): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  def programIndependence(swapCompose: Boolean = true): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(Box(Assign(x, s), Box(Assign(y, t), p))) =>
         val rensubst = (_: Option[Subst]) => RenUSubst(
@@ -125,7 +125,7 @@ object ComponentSystem {
   })
 
   /** STTT Lemma 2 */
-  lazy val dropControl: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  lazy val dropControl: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     require(pos.isSucc, "Drop control only in succedent")
     val lemma2 = seq.sub(pos) match {
       case Some(have@Box(a, Box(b, p))) if
@@ -148,7 +148,7 @@ object ComponentSystem {
   })
 
   /** STTT Lemma 3 */
-  def dropPlant(keep: Set[Variable]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  def dropPlant(keep: Set[Variable]): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     require(pos.isSucc, "Drop plant only in succedent")
     val lemma3 = seq.sub(pos) match {
       case Some(have@Box(ODESystem(ode, hq), p)) =>
@@ -225,7 +225,7 @@ object ComponentSystem {
   })
 
   /** STTT Lemma 4 */
-  def overapproximateProgram: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  def overapproximateProgram: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(have@Box(a, p)) =>
         val abv = StaticSemantics.boundVars(a).intersect(StaticSemantics.freeVars(p)).toSet.toList
@@ -252,7 +252,7 @@ object ComponentSystem {
       testb(1, 1::Nil)
     ) & onAll(implyRi()(-2, 1) & useAt(Ax.K, PosInExpr(1::Nil))(1) & monb & prop & done), namespace)
 
-  def introduceTest(f: Formula): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  def introduceTest(f: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(Box(a, p)) =>
         val subst = (_: Option[Subst]) => RenUSubst(
@@ -272,7 +272,7 @@ object ComponentSystem {
     testb(1, 1::0::Nil) & testb(1, 1::1::Nil) & prop & done,
     namespace)
 
-  def weakenTest(f: Formula): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  def weakenTest(f: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(Box(Test(r), p)) =>
         val subst = (_: Option[Subst]) => RenUSubst(
@@ -287,7 +287,7 @@ object ComponentSystem {
   })
 
   /** STTT Fig. 12 */
-  private def useCompatibility(compatibility: Lemma, plant1Vars: Set[Variable]) = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  private def useCompatibility(compatibility: Lemma, plant1Vars: Set[Variable]) = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(delta, Box(ctrl, Box(Assign(told,t), Box(plant, Box(in1star, Box(cons, Imply(pi2out, pi1in)))))))) =>
       DebuggingTactics.print("Using compatibility") &
       useAt(compatibility, PosInExpr(1::Nil))(pos ++ PosInExpr(List.fill(5)(1))) & DebuggingTactics.print("Applied compatibility lemma") &
@@ -306,7 +306,7 @@ object ComponentSystem {
 
   private def proveSystemCompStep4(inputAssumptions: Map[Set[Variable],Formula], outputGuarantees: Map[Set[Variable],Formula],
                                    plant1Vars: Set[Variable],
-                                   compatibility: Lemma, remainingCons: Int): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+                                   compatibility: Lemma, remainingCons: Int): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(_) if remainingCons <= 0 => skip
     case Some(Box(cons, _)) if remainingCons > 0 =>
       val headConVars: Set[Variable] = leftAssignments(cons, remainingCons).flatMap(p => StaticSemantics.boundVars(p).toSet).toSet
@@ -356,7 +356,7 @@ object ComponentSystem {
   }
 
   /** STTT Fig. 13 */
-  private def justifyFout(fout: Formula, keepPlantVars: Set[Variable], comGuaranteeLiveness: Lemma, c2use: Lemma, c2step: Lemma) = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  private def justifyFout(fout: Formula, keepPlantVars: Set[Variable], comGuaranteeLiveness: Lemma, c2use: Lemma, c2step: Lemma) = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(_: Imply) =>
       val Imply(_ , Box(_, Box(_, Box(_, Box(_, foutSafety))))) = fout
       val Box(Compose(_, Compose(_, Compose(_, Compose(plant2, Compose(in2, cp2))))), c2inv) = c2step.fact.conclusion.succ.head
@@ -415,7 +415,7 @@ object ComponentSystem {
 
   /** STTT Fig. 11: Component 1 */
   private def proveSystemCompStep(c1step: Lemma, c2use: Lemma, c2step: Lemma,
-                                  compatibility: Lemma, comGuaranteeLiveness: Lemma, fout: Formula) = "ANON" by ((pos: Position, seq: Sequent) => {
+                                  compatibility: Lemma, comGuaranteeLiveness: Lemma, fout: Formula) = anon ((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel)
     seq.sub(pos) match {
       case Some(Box(delta3, Box(Compose(ctrl1,ctrl2), Box(rememberStart@Assign(told, t), Box(ODESystem(DifferentialProduct(time, plant3), q3), Box(Compose(in3,cp3), inv1)))))) =>
@@ -469,7 +469,7 @@ object ComponentSystem {
               composeb(pos) & dropControl(pos ++ PosInExpr(1::Nil)) & DebuggingTactics.print("Step 2.13 done") & // drop delta2
               hideL('Llast) &
               // use step lemma
-              ("ANON" by ((pp: Position, ss: Sequent) => ss.sub(pp) match {
+              (anon ((pp: Position, ss: Sequent) => ss.sub(pp) match {
                 case Some(have@Box(_, p)) =>
                   useAt(proveBy(Equiv(Box(in1, p), have), chase(1, 0::Nil) & chase(1, 1::Nil) & QE), PosInExpr(1::Nil))(pp)
               }))(pos ++ PosInExpr(1::1::1::1::Nil)) &
@@ -502,7 +502,7 @@ object ComponentSystem {
                               c2use: Lemma, c2step: Lemma,
                               pi1Out: Formula, pi2Out: Formula,
                               compatibility: Lemma,
-                              comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+                              comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(Compose(delta3, Compose(ctrl3, Compose(rememberStart@Assign(told, t), Compose(plant3@ODESystem(DifferentialProduct(_, _), q3), Compose(in3, Compose(cp1, Compose(cp2, con))))))), inv3@And(inv1, And(inv2, zeta)))) =>
       //@todo check program shapes in lemmas
       val cr1 :: cr2 :: Nil = (0 to 3) :: (4 to 6) :: Nil
@@ -553,7 +553,7 @@ object ComponentSystem {
                           c1base: Lemma, c1use: Lemma, c1step: Lemma,
                           c2base: Lemma, c2use: Lemma, c2step: Lemma,
                           compatibility: Lemma,
-                          comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+                          comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = anon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Imply(And(timeInit, And(globalFacts, And(init1, And(init2, zeta)))), Box(Loop(sys), And(post1, post2)))) =>
       //@todo check lemma shapes
       val inv1 = c1base.fact.conclusion.succ.head
@@ -642,10 +642,8 @@ object ComponentSystem {
                   c2baseLemma: String, c2useLemma: String, c2stepLemma: String,
                   compatibilityLemma: String,
                   comGuaranteeSafetyLemma: String,
-                  comGuaranteeLivenessLemma: String): DependentPositionWithAppliedInputTactic = "proveComponentSystem" byWithInputs (
-      systemName :: c1baseLemma :: c1useLemma :: c1stepLemma :: c2baseLemma :: c2useLemma :: c2stepLemma ::
-        compatibilityLemma :: comGuaranteeSafetyLemma :: comGuaranteeLivenessLemma :: Nil,
-      (pos: Position, seq: Sequent) => seq.sub(pos) match {
+                  comGuaranteeLivenessLemma: String): DependentPositionWithAppliedInputTactic =
+    inputanon ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Imply(asys, Box(Loop(prgsys), gsys))) =>
       
       val And(tbootstrap, And(omega, And(a1, a2))) = asys

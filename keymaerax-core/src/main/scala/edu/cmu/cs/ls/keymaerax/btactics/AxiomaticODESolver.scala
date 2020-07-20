@@ -56,7 +56,8 @@ object AxiomaticODESolver {
 
   /** [[DifferentialEquationCalculus.solve]] and [[DifferentialEquationCalculus.solveEnd]]. */
   private[btactics] def axiomaticSolve(instEnd: Boolean = false): DependentPositionTactic =
-      (if (instEnd) "solveEnd" else "solve") by ((pos: Position, s: Sequent) => {
+  // name was (if (instEnd) "solveEnd" else "solve")
+      anon ((pos: Position, s: Sequent) => {
     s.sub(pos) match {
       case Some(Diamond(ODESystem(_, True), _)) =>
         useAt(Ax.diamond, PosInExpr(1::Nil))(pos) &
@@ -68,7 +69,7 @@ object AxiomaticODESolver {
         boxAxiomaticSolve(instEnd)(pos ++ PosInExpr(0::Nil)) &
         pushNegation(pos) &
         // pushNegation may turn disjunction into implication
-        ("ANON" by ((p: Position, s: Sequent) => s.sub(p) match {
+        (anon ((p: Position, s: Sequent) => s.sub(p) match {
           case Some(Or(_, _)) => useAt(Ax.PC10, PosInExpr(1::Nil))(p)
           case Some(Imply(_, _)) => useAt(Ax.implyExpand)(p) & useAt(Ax.PC10, PosInExpr(1::Nil))(p)
           case _ => skip
@@ -79,7 +80,7 @@ object AxiomaticODESolver {
   })
 
   /** Normalize into expected shape for diamond solve, after solving dual box ODE. */
-  private def pushNegation: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
+  private def pushNegation: DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     s.sub(pos) match {
       case Some(Not(Not(_))) => useAt(Ax.doubleNegation)(pos)
       case Some(Not(Forall(x, p))) if  StaticSemantics.boundVars(p).intersect(x.toSet).isEmpty => useAt(Ax.notAll)(pos) & pushNegation(pos ++ PosInExpr(0::Nil))
@@ -99,7 +100,7 @@ object AxiomaticODESolver {
       case Some(Not(And(_, _))) => useAt(Ax.notAnd)(pos) &
         pushNegation(pos ++ PosInExpr(0::Nil)) & pushNegation(pos ++ PosInExpr(1::Nil)) &
         // heuristic: turn !p|q into -> to create more natural assign equality look \forall x (x=y -> q(x)) instead of \forall x (x!=y | q(x))
-        ("ANON" by ((p: Position, s: Sequent) => s.sub(p) match {
+        (anon ((p: Position, s: Sequent) => s.sub(p) match {
           case Some(Or(Not(Equal(_, _)), q)) if !q.isInstanceOf[Not] => useAt(Ax.implyExpand, PosInExpr(1::Nil))(p)
           case _ => skip
         }))(pos)
@@ -110,7 +111,7 @@ object AxiomaticODESolver {
   })
 
   /** Axiomatic solver for box ODEs. */
-  private def boxAxiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
+  private def boxAxiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val (ode, q, post) = s.sub(pos) match {
       case Some(Box(ODESystem(o, qq), pp)) => (o, qq, pp)
       case Some(f) => throw new TacticInapplicableFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
@@ -171,7 +172,7 @@ object AxiomaticODESolver {
     lazy val imply2 = remember("(p_()->s_()&r_()) -> (p_()->(q_()->r_())->s_())".asFormula, prop & done, namespace)
 
     //@todo preserve consts when solving in context (requires closing const as last step of DI in context - let fails otherwise)
-    val simpConsts: DependentPositionTactic = "ANON" by ((pp: Position, ss: Sequent) =>
+    val simpConsts: DependentPositionTactic = anon ((pp: Position, ss: Sequent) =>
       if (consts != True && pos.isTopLevel) ss.sub(pp) match {
         case Some(False) => TactixLibrary.skip
         case Some(_) =>
@@ -496,7 +497,7 @@ object AxiomaticODESolver {
   })
 
   /** Augment ODE with formula `cut`, consider context of size `contextSize` when proving with DI. */
-  def cutAndProveFml(cut: Formula, contextSize: Int = 0): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
+  def cutAndProveFml(cut: Formula, contextSize: Int = 0): DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(contextSize))
 
@@ -546,7 +547,8 @@ object AxiomaticODESolver {
 
   //region Simplify post-condition and evolution domain constraint
 
-  private def simplifyEvolutionDomain(odeSize: Int) = "domSimplify" by ((pos: Position, _: Sequent) => {
+  // was "domSimplify"
+  private def simplifyEvolutionDomain(odeSize: Int) = anon ((pos: Position, _: Sequent) => {
     lazy val simplFact = remember(
       "p_(f(x_)) & x_=f(x_) <-> p_(x_) & x_=f(x_)".asFormula, TactixLibrary.equivR(1) <(
         TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqL2R(-2)(1) & TactixLibrary.id, TactixLibrary.id),
@@ -583,7 +585,8 @@ object AxiomaticODESolver {
     lazy val rewrite3 = remember("p_() -> (q_() -> p_())".asFormula, TactixLibrary.prop, namespace)
 
     //@note compute substitution fresh on each step, single pass unification match does not work because q_(x_) before x_=f
-    ("postSimplifyStep" by ((pp: Position, ss: Sequent) => {
+    // was "postSimplifyStep"
+    (anon ((pp: Position, ss: Sequent) => {
       val (xx, subst, rewrite) = ss.sub(pp) match {
         case Some(Imply(And(q, Equal(x: Variable, f)), p)) => (x, (_: Option[TactixLibrary.Subst]) => RenUSubst(
           ("x_".asVariable, x) ::
@@ -614,7 +617,8 @@ object AxiomaticODESolver {
   //region Inverse diff cuts
 
   //@todo @see DifferentialTactics.inverseDiffCut duplication?
-  private def inverseDiffCut(odeSize: Int): DependentPositionTactic = "dCi2" by ((pos: Position, s: Sequent) => {
+  // was "dCi2"
+  private def inverseDiffCut(odeSize: Int): DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
     val fact = s.sub(withInitialsPos) match {

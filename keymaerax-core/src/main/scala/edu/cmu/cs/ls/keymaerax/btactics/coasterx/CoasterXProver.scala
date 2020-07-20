@@ -71,7 +71,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val (cx,cy) = spec.iCenter(iSection)
     val r = spec.iRadius(iSection)
     val ((x0,y0),(x1,y1)) = (p1,p2)
-    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+    def selectDefs:PositionalTactic = anon ((pr:ProvableSig,pos:AntePosition) =>
       coHideLPr(pos.index0+1, pr)
       )
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
@@ -103,7 +103,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val (cx,cy) = spec.iCenter(iSection)
     val r = spec.iRadius(iSection)
     val ((x0,y0),(x1,y1)) = (p1,p2)
-    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+    def selectDefs:PositionalTactic = anon ((pr:ProvableSig,pos:AntePosition) =>
       coHideLPr(pos.index0+1, pr)
       )
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
@@ -141,7 +141,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // Sequent is
     // gConst, defs0, defs1, global, J_i |- post
     // where defs_i = r_i & (cx_i & cy_i) & (dx_i & dy_i)
-    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+    def selectDefs:PositionalTactic = anon ((pr:ProvableSig,pos:AntePosition) =>
       coHideLPr(pos.index0+1, pr)
       )
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
@@ -179,7 +179,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // Sequent is
     // gConst, defs0, defs1, global, J_i |- post
     // where defs_i = r_i & (cx_i & cy_i) & (dx_i & dy_i)
-    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+    def selectDefs:PositionalTactic = anon ((pr:ProvableSig,pos:AntePosition) =>
       coHideLPr(pos.index0+1, pr)
       )
     val (selectR, selectCx, selectCy) = (nil,nil,nil)

@@ -50,7 +50,8 @@ private object ToolTactics {
     }}
 
   /** Assert that there is no counter example. skip if none, error if there is. */
-  lazy val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
+  // was  "assertNoCEX"
+  lazy val assertNoCex: BelleExpr = anon ((sequent: Sequent) => {
     Try(findCounterExample(sequent.toFormula)) match {
       case Success(Some(cex)) => throw BelleCEX("Counterexample", cex, sequent)
       case Success(None) => skip
@@ -91,14 +92,14 @@ private object ToolTactics {
         ),
       //@note does not evaluate qeTool since NamedTactic's tactic argument is evaluated lazily
       "qecache/" + qeTool.getClass.getSimpleName
-    ) & Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
+    ) & Idioms.doIf(!_.isProved)(anon ((s: Sequent) =>
       if (s.succ.head == False) label(BelleLabels.QECEX)
       else DebuggingTactics.done("QE was unable to prove: invalid formula"))
     )
   })
 
   /** Hides duplicate formulas (expensive because needs to sort positions). */
-  private val hideDuplicates = "ANON" by ((seq: Sequent) => {
+  private val hideDuplicates = anon ((seq: Sequent) => {
     val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
       filter({ case (_, l) => l.size > 1 })
     val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t => (t._3, hide(t._3))) }).toList
@@ -106,7 +107,7 @@ private object ToolTactics {
   })
 
   /** Hides useless trivial true/false formulas. */
-  private val hideTrivialFormulas = "ANON" by ((seq: Sequent) => {
+  private val hideTrivialFormulas = anon ((seq: Sequent) => {
     val hidePos = seq.zipWithPositions.filter({
       case (True, pos) => pos.isAnte
       case (False, pos) => pos.isSucc
@@ -230,7 +231,7 @@ private object ToolTactics {
           (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
           hidePredicates &
           toSingleFormula & orderedClosure(po) & rcf(qeTool) &
-            (done | ("ANON" by ((s: Sequent) =>
+            (done | (anon ((s: Sequent) =>
               if (s.succ.head == False) label(BelleLabels.QECEX)
               else DebuggingTactics.done("QE was unable to prove: invalid formula")))
               ))))
@@ -239,7 +240,8 @@ private object ToolTactics {
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(qeTool: => QETacticTool): BelleExpr = "pQE" by ((s: Sequent) => {
+  // was "pQE"
+  def partialQE(qeTool: => QETacticTool): BelleExpr = anon ((s: Sequent) => {
     // dependent tactic so that qeTool is evaluated only when tactic is executed, but not when tactic is instantiated
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     hidePredicates & toSingleFormula & rcf(qeTool) &
@@ -252,7 +254,7 @@ private object ToolTactics {
   })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: => QETacticTool): BelleExpr = "rcf" by ((sequent: Sequent) => {
+  def rcf(qeTool: => QETacticTool): BelleExpr = anon ((sequent: Sequent) => {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
@@ -276,7 +278,7 @@ private object ToolTactics {
   })
 
   /** @see [[TactixLibrary.transform()]] */
-  def transform(to: Expression): DependentPositionWithAppliedInputTactic = "transform" byWithInput (to, (pos: Position, sequent: Sequent) => {
+  def transform(to: Expression): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, sequent: Sequent) => {
     require(sequent.sub(pos) match {
       case Some(fml: Formula) => fml.isFOL && to.kind == fml.kind
       case Some(t: Term) => to.kind == t.kind
@@ -288,10 +290,10 @@ private object ToolTactics {
       case t: Term => transformTerm(t, sequent, pos)
       case _ => assert(false, "Precondition already checked that other types cannot occur " + to); ???
     }
-  })
+  }}
 
   /** @see [[TactixLibrary.edit()]] */
-  def edit(to: Expression): DependentPositionWithAppliedInputTactic = "edit" byWithInput (to, (pos: Position, sequent: Sequent) => {
+  def edit(to: Expression): DependentPositionWithAppliedInputTactic = inputanon {(pos: Position, sequent: Sequent) => {
     val srcExpr = sequent.sub(pos) match {
       case Some(e) if e.kind == to.kind => e
       case Some(e) if e.kind != to.kind => throw new TacticInapplicableFailure("edit only applicable to terms or formulas of same kind, but " + e.prettyString + " of kind " + e.kind + " is not " + to.kind)
@@ -301,7 +303,7 @@ private object ToolTactics {
     val (abbrvTo: Expression, abbrvTactic: BelleExpr) = createAbbrvTactic(to, sequent)
     val (expandTo: Expression, expandTactic: BelleExpr) = createExpandTactic(abbrvTo, sequent, pos)
 
-    val transformTactic = "ANON" by (sequent.sub(pos) match {
+    val transformTactic = anon (sequent.sub(pos) match {
       case Some(e) =>
         try {
           //@note skip transformation if diff is abbreviations only (better performance on large formulas)
@@ -332,7 +334,7 @@ private object ToolTactics {
     })
 
     abbrvTactic & expandTactic & transformTactic
-  })
+  }}
 
   /** Parses `to` for occurrences of `abbrv` to create a tactic. Returns `to` with `abbrv(...)` replaced by the
     * abbreviations and the tactic to turn `to` into the returned expression by proof. */
@@ -454,7 +456,7 @@ private object ToolTactics {
     lazy val existsDistribute = remember("(\\forall x_ (p(x_)->q(x_))) -> ((\\exists x_ p(x_))->(\\exists x_ q(x_)))".asFormula,
       implyR(1) & implyR(1) & existsL(-2) & allL(-1) & existsR(1) & prop & done, namespace).fact
 
-    def pushIn(remainder: PosInExpr): DependentPositionTactic = "ANON" by ((pp: Position, ss: Sequent) => (ss.sub(pp) match {
+    def pushIn(remainder: PosInExpr): DependentPositionTactic = anon ((pp: Position, ss: Sequent) => (ss.sub(pp) match {
       case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.left==right.left =>
         useAt(propPushLeftIn(left.reapply), PosInExpr(1::Nil))(pp)
       case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.right ==right.right =>
@@ -491,14 +493,14 @@ private object ToolTactics {
   }
 
   /** Ensures that the formula at position `pos` is available at that position from the assumptions. */
-  private def ensureAt: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  private def ensureAt: DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     lazy val ensuredFormula = seq.sub(pos) match {
       case Some(fml: Formula) => fml
       case Some(e) => throw new TacticInapplicableFailure("ensureAt only applicable to formulas, but got " + e.prettyString)
       case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
     }
     lazy val ensuredFree = StaticSemantics.freeVars(ensuredFormula).toSet
-    lazy val skipAt = "ANON" by ((_: Position, _: Sequent) => skip)
+    lazy val skipAt = anon ((_: Position, _: Sequent) => skip)
 
     lazy val step = seq(pos.top) match {
       case Box(ODESystem(_, _), _) => diffInvariant(ensuredFormula)(pos.top) & dW(pos.top) & implyR(pos.top)
@@ -522,14 +524,14 @@ private object ToolTactics {
   })
 
   /* Hides all predicates (QE cannot handle predicate symbols) */
-  private def hidePredicates: DependentTactic = "ANON" by ((sequent: Sequent) =>
+  private def hidePredicates: DependentTactic = anon ((sequent: Sequent) =>
     (  sequent.ante.zipWithIndex.filter({ case (_: PredOf, _) => true case _ => false}).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
     ++ sequent.succ.zipWithIndex.filter({ case (_: PredOf, _) => true case _ => false}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
       ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   )
 
   /** Hides all non-FOL formulas from the sequent. */
-  def hideNonFOL: DependentTactic = "ANON" by ((sequent: Sequent) =>
+  def hideNonFOL: DependentTactic = anon ((sequent: Sequent) =>
     (  sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
     ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
       ).reduceOption[BelleExpr](_ & _).getOrElse(skip)

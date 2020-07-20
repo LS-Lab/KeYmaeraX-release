@@ -47,7 +47,7 @@ object SOSSolve {
   private lazy val sosPosIntro = AnonymousLemmas.remember("x_() > 0 -> x_() + y_()^2 > 0".asFormula, QE & done)
   private lazy val sosPosCoeffIntro = AnonymousLemmas.remember("((c_() > 0<->true) & x_() > 0) -> x_() + c_()*y_()^2 > 0".asFormula, QE & done)
   private lazy val sosPosRatCoeffIntro = AnonymousLemmas.remember("(((c_() > 0 & d_() > 0)<->true) & x_() > 0) -> x_() + c_()/d_()*y_()^2 > 0".asFormula, QE & done)
-  private def sosPosTac : DependentTactic = "sosPosTac" by { (seq: Sequent) =>
+  private def sosPosTac : DependentTactic = anon { (seq: Sequent) =>
     require(seq.succ.length==1, "sosPosTac requires exactly one succedent")
     require(seq.ante.isEmpty, "sosPosTac requires empty antecedent")
     seq.succ(0) match {
@@ -67,7 +67,7 @@ object SOSSolve {
 
   private lazy val plusEqZeroIntro = AnonymousLemmas.remember("(p_() = 0 & q_() = 0) -> p_() + q_() = 0".asFormula, QE & done)
   private lazy val timesEqZeroIntro = AnonymousLemmas.remember("p_() = 0 -> c_()*p_() = 0".asFormula, QE & done)
-  private def eqZeroTac : DependentTactic = "eqZeroTac" by { (seq: Sequent) =>
+  private def eqZeroTac : DependentTactic = anon { (seq: Sequent) =>
     require(seq.succ.length==1, "eqZeroTac requires exactly one succedent")
     seq.succ(0) match {
       case Equal(Plus(p, q), Number(n)) if n.compareTo(0) == 0 =>
@@ -90,7 +90,7 @@ object SOSSolve {
 
   private def witnessSOSaux(sos :Term, cofactors: List[Term],witnessTimer: Timer) : DependentTactic = {
     val name = "witnessSOSaux"
-    name by { (seq: Sequent) =>
+    anon { (seq: Sequent) =>
 
       val polys = seq.ante.map{
         case Equal(p, Number(n)) if n.compareTo(0) == 0 => p
@@ -160,7 +160,7 @@ object SOSSolve {
   }
 
   // clear succedent and normalize antecedent to negation normal form
-  val normalizeNNF = "ANON" by { (seq: Sequent) =>
+  val normalizeNNF = anon { (seq: Sequent) =>
     (seq.zipAnteWithPositions.flatMap { case(fml, pos) =>
       SimplifierV3.baseNormalize(fml) match {
         case (_, Some(prv)) => Some(useAt(prv, PosInExpr(0::Nil))(pos))

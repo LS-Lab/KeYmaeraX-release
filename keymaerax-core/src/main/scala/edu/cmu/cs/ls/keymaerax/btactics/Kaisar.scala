@@ -758,7 +758,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
           else {
           def rot(pr:ProvableSig,p:SuccPosition):ProvableSig = ElidingProvable(rotAnte(pr.underlyingProvable))
           val e =
-            TacticFactory.TacticForNameFactory("ANON").by((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})(1)
+            TacticFactory.anon((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})(1)
           e
         }
       val e:BelleExpr =

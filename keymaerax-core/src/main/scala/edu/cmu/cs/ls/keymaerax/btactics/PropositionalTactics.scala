@@ -25,8 +25,7 @@ private object PropositionalTactics extends Logging {
    * @see [[SequentCalculus.implyR]]
    */
   private[btactics] lazy val implyRi: AppliedBuiltinTwoPositionTactic = implyRi()(AntePos(0), SuccPos(0))
-  //@todo @Tactic()
-  private[btactics] def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = "implyRi" by ((p: ProvableSig, a: Position, s: Position) => {
+  private[btactics] def implyRi(keep: Boolean = false): BuiltInTwoPositionTactic = anon ((p: ProvableSig, a: Position, s: Position) => {
     assert(p.subgoals.length == 1, "Assuming one subgoal.")
     val sequent = p.subgoals.head
     require(a.isIndexDefined(sequent) && s.isIndexDefined(sequent),

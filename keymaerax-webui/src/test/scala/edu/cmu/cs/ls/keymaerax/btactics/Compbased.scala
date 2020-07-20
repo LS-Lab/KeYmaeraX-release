@@ -145,7 +145,7 @@ class Compbased extends TacticTestBase {
     compileRegionTest shouldBe 'proved
     
     //@todo wrong sign (returns a formula with <= safe, > unsafe)
-    def toMetric = "toMetric" by ((pos: Position, seq: Sequent) =>
+    def toMetric = anon ((pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
       case Some(Diamond(Choice(Compose(Test(p: Equal), _), Compose(Test(Not(q: Equal)), Test(False))), _)) if p==q =>
         val metric = proveBy(Equiv(False, "<margin:=1;>margin<=0".asFormula), assignd(1, 1::Nil) & QE & done)

@@ -467,7 +467,7 @@ class ODETests extends TacticTestBase {
   it should "interpret implications as differential invariants in simple ODE" in withMathematica { _ =>
     //@note unprovable, so that automation doesn't run off
     val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
-    val cutAnnotatedInvs = "ANON" by ((pos: Position, seq: Sequent) => {
+    val cutAnnotatedInvs = anon ((pos: Position, seq: Sequent) => {
       dC(InvariantGenerator.differentialInvariantGenerator(seq, pos).map(_._1).toList)(1) <(skip, dI()(1))
     })
     val result = proveBy(g, chase(1) & andR(1) <(cutAnnotatedInvs(1), andR(1) <(cutAnnotatedInvs(1), cutAnnotatedInvs(1))))
@@ -478,7 +478,7 @@ class ODETests extends TacticTestBase {
 
   it should "interpret implications as differential invariants on multiple occurrences of substituted variable" in withMathematica { _ =>
     val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a,w'=a/r}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
-    val cutAnnotatedInvs = "ANON" by ((pos: Position, seq: Sequent) => {
+    val cutAnnotatedInvs = anon ((pos: Position, seq: Sequent) => {
       dC(InvariantGenerator.differentialInvariantGenerator(seq, pos).map(_._1).toList)(1) <(skip, dI()(1))
     })
     val result = proveBy(g, chase(1) & andR(1) <(cutAnnotatedInvs(1), andR(1) <(cutAnnotatedInvs(1), cutAnnotatedInvs(1))))

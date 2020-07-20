@@ -442,7 +442,7 @@ class TactixLibraryTests extends TacticTestBase {
 
   "Tactic chase" should "not infinite recurse" in withQE { _ =>
     var i = 0
-    val count = "ANON" by ((_: Position, _: Sequent) => { i=i+1; skip })
+    val count = anon ((_: Position, _: Sequent) => { i=i+1; skip })
 
     failAfter(2 seconds) {
       val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto(), count, keepQEFalse=false))

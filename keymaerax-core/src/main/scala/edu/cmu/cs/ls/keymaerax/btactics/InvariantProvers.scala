@@ -40,7 +40,7 @@ object InvariantProvers {
     * @see [[loopauto]]
     * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
-  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+  def loopSR(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val cand: Iterator[Formula] = gen(seq, pos).iterator.map(_._1)
       val bounds: List[Variable] =
@@ -82,7 +82,7 @@ object InvariantProvers {
 
 
   /** [[TactixLibrary.loopPostMaster()]]. */
-  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+  def loopPostMaster(gen: Generator[GenProduct]): DependentPositionTactic = anon ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       // extra information occasionally thrown in to help direct invariant generation
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
@@ -117,7 +117,7 @@ object InvariantProvers {
         OnAll(ifThenElse(DifferentialTactics.isODE,
           DifferentialTactics.mathematicaODE(pos) |
             // augment loop invariant to local ODE invariant if possible
-            ("ANON" by ((pos: Position, seq: Sequent) => {
+            (anon ((pos: Position, seq: Sequent) => {
               val odePost = seq.sub(pos++PosInExpr(1::Nil))
               // no need to try same invariant again if odeInvariant(pos) already failed
               //@todo optimize: if the invariant generator were correct, could restrict to its first element

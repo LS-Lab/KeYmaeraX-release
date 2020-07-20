@@ -749,12 +749,12 @@ object SimplifierV3 {
 
     private val simps = simpTac(ths,faxs,taxs)
 
-    private lazy val hideTrues = "ANON" by ((seq: Sequent) => {
+    private lazy val hideTrues = anon ((seq: Sequent) => {
       seq.ante.zipWithIndex.filter(_._1 == True).map(t => hideL(AntePosition.base0(t._2), True)).reverse.
         reduceRightOption[BelleExpr](_ & _).getOrElse(ident)
     })
 
-    private lazy val hideFalses = "ANON" by ((seq: Sequent) => {
+    private lazy val hideFalses = anon ((seq: Sequent) => {
       seq.succ.zipWithIndex.filter(_._1 == False).map(t => hideR(SuccPosition.base0(t._2), False)).reverse.
         reduceRightOption[BelleExpr](_ & _).getOrElse(ident)
     })

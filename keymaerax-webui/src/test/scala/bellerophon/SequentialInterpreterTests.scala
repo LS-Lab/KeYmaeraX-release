@@ -413,7 +413,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     import TacticFactory._
 
-    val tactic = "chooseSomeTest" by ((pos: Position, seq: Sequent) => { ChooseSome(
+    val tactic = anon ((pos: Position, seq: Sequent) => { ChooseSome(
         () => ("x>0".asFormula::Nil).iterator,
         (inv: Formula) => loop(inv)(pos)
       ) & Idioms.<(close, close, master())

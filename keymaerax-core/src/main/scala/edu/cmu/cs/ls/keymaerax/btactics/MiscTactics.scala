@@ -319,7 +319,8 @@ object Idioms {
   }
 
   /** Repeats t while condition at position is true. */
-  def repeatWhile(condition: Expression => Boolean)(t: BelleExpr): DependentPositionTactic = "loopwhile" by {(pos: Position) =>
+  // was "loopwhile"
+  def repeatWhile(condition: Expression => Boolean)(t: BelleExpr): DependentPositionTactic = anon {(pos: Position) =>
     SaturateTactic(DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition, new TacticInapplicableFailure(_))(pos) & t)
   }
 

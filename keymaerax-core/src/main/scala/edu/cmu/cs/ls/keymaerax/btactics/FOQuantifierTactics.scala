@@ -271,7 +271,8 @@ protected object FOQuantifierTactics {
    *            \forall x x^2 >= -(y+5)^2
    * }}}
    */
-  def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = "allGeneralize" by ((pos: Position, sequent: Sequent) => {
+  // was named "allGeneralize"
+  def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     val quantified: Variable = x match {
       case Some(xx) => xx
       case None =>

@@ -96,7 +96,7 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "Unable to create dependent tactic 'rcf', cause: Name conversion of differential symbols not allowed: x'"
+      TactixLibrary.QE) should have message "Unable to create dependent tactic 'ANON', cause: Name conversion of differential symbols not allowed: x'"
   }
 
   it should "not prove differential symbols by some hidden assumption in Z3" in withZ3 { _ =>

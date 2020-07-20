@@ -41,7 +41,7 @@ private object EqualityTactics {
 
         val freeRhs = StaticSemantics.freeVars(rhs).toSet
 
-        val renameBoundRhs = "ANON" by ((pos: Position, seq: Sequent) => {
+        val renameBoundRhs = anon ((pos: Position, seq: Sequent) => {
           val fml = seq(pos.top)
           var nextSymbol: Option[Variable] = None
           def createNextSymbol(v: Variable): Variable = nextSymbol match {
@@ -416,7 +416,7 @@ private object EqualityTactics {
     case None => throw new IllFormedTacticApplicationException("Position " + pos.prettyString + " does not point to a valid position in " + sequent.prettyString)
   })
 
-  private def protectPos(tac : DependentPositionTactic) : DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
+  private def protectPos(tac : DependentPositionTactic) : DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     if(sequent.sub(pos).isDefined) tac(pos)
     else skip //todo: skip or throw a catchable failure?
   })

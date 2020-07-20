@@ -124,7 +124,7 @@ object TaylorModelTactics extends Logging {
 
   // Equality
 
-  def rewriteAnte(hide: Boolean) = "rewriteAnte" by { (pos: Position, seq: Sequent) =>
+  def rewriteAnte(hide: Boolean) = anon { (pos: Position, seq: Sequent) =>
     seq.ante.zipWithIndex.filter{ case (Equal(_, _), i) => true case _ => false }.foldLeft(skip){ case (t, (f, i)) =>
       eqL2R(- i - 1)(pos) & (if(hide) hideL(-i - 1) else skip) & t
     }
@@ -141,7 +141,7 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  private def rewriteFormula(prv: ProvableSig) = "rewriteFormula" by { (pos: Position, seq: Sequent) =>
+  private def rewriteFormula(prv: ProvableSig) = anon { (pos: Position, seq: Sequent) =>
     val failFast = new BuiltInTactic("ANON") with NoOpTactic {
       override def result(provable: ProvableSig): ProvableSig = throw new TacticInapplicableFailure("Fail")
     }
@@ -214,7 +214,7 @@ object TaylorModelTactics extends Logging {
   }
 
   // Specialized Tactics
-  private def foldAndLessEqExists(but: Seq[Variable] = Nil) = "foldAndLessEqExists" by { (pos: Position, seq: Sequent) =>
+  private def foldAndLessEqExists(but: Seq[Variable] = Nil) = anon { (pos: Position, seq: Sequent) =>
     Idioms.mapSubpositions(pos, seq, {
       case (And(LessEqual(_, Minus(v1: Variable, _)), LessEqual(Minus(v2: Variable, _), _)), pos)
         if v1 == v2 && !but.contains(v1)
@@ -225,8 +225,8 @@ object TaylorModelTactics extends Logging {
     }).reduceLeft(_ & _)
   }
 
-  private[btactics] def coarsenTimesBounds(t: Term) = "coarsenTimesBounds" by { (seq: Sequent) =>
-    val leTimesMono = "leTimesMono" by { (pos: Position, seq: Sequent) =>
+  private[btactics] def coarsenTimesBounds(t: Term) = anon { (seq: Sequent) =>
+    val leTimesMono = anon { (pos: Position, seq: Sequent) =>
       pos.checkAnte
       seq.sub(pos) match {
         case Some(LessEqual(l, Plus(Times(t, g), c))) =>
@@ -256,7 +256,7 @@ object TaylorModelTactics extends Logging {
       }
     }
 
-    val timesLeMono = "timesLeMono" by { (pos: Position, seq: Sequent) =>
+    val timesLeMono = anon { (pos: Position, seq: Sequent) =>
       pos.checkAnte
       seq.sub(pos) match {
         case Some(LessEqual(Plus(Times(t, g), c), u)) =>
@@ -298,7 +298,7 @@ object TaylorModelTactics extends Logging {
     case _ => Nil
   })
 
-  private def solveTrivialInequalities : DependentPositionTactic = "solveTrivialInequalities" by { (pos: Position, seq: Sequent) =>
+  private def solveTrivialInequalities : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     val ssp = seq.sub(pos)
@@ -313,7 +313,8 @@ object TaylorModelTactics extends Logging {
     }
   }
 
-  private [btactics] def refineTrivialInequalities : DependentPositionTactic = "refineTrivialStrictInequalities" by { (pos: Position, seq: Sequent) =>
+  // was "refineTrivialStrictInequalities"
+  private [btactics] def refineTrivialInequalities : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     pos.checkTop
     pos.checkSucc
     val ssp = seq.sub(pos)
@@ -519,7 +520,7 @@ object TaylorModelTactics extends Logging {
         )
     )
 
-    private val instLeq = "ANON" by { (pos: Position, seq: Sequent) =>
+    private val instLeq = anon { (pos: Position, seq: Sequent) =>
       seq.sub(pos) match {
         case Some(Exists(vs, And(Equal(v: Variable, _), _))) if vs.length == 1 =>
           ProofRuleTactics.boundRename(vs.head, remainder(state.indexOf(v)))(pos) & existsL(pos)
@@ -818,7 +819,7 @@ object TaylorModelTactics extends Logging {
     def cutTM(prec: Integer, antepos: AntePosition,
               qeTool: QETacticTool,
               remainder_estimation : IndexedSeq[(BigDecimal, BigDecimal)] = (0 until dim).map(_ => (BigDecimal(-0.001),BigDecimal(0.001))))
-    : DependentPositionTactic = "cutTM" by { (pos: Position, seq: Sequent) =>
+    : DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
       pos.checkSucc
       pos.checkTop
       seq.sub(pos) match {
