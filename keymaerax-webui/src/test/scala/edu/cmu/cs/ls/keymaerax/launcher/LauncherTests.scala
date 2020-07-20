@@ -152,18 +152,21 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
 
     val (output, _, exitVal) = runKeYmaeraX("-tool", "Mathematica", "-prove", inputFileName, "-out", outputFileName)
-    exitVal shouldBe 254 //@note -2 since one entry disproved
+    exitVal shouldBe 255 //@note -1 since unfinished entries
     // JDK 11 requires explicit StringOps due to Scala bug:  https://github.com/scala/bug/issues/11125
     val proofStatOutputs = (output: StringOps).lines.toList.takeRight(4)
     proofStatOutputs(0) should startWith ("PROVED")
     proofStatOutputs(1) should startWith ("UNFINISHED")
-    proofStatOutputs(2) should startWith ("DISPROVED")
+    proofStatOutputs(2) should startWith ("UNFINISHED (CEX)")
     proofStatOutputs(3) should startWith ("PROVED")
 
-    val (_, errorZ3, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
-    exitValZ3 shouldBe 1 // Z3 throws an exception on bouncing-ball-cex.kyx
-    errorZ3 should startWith ("""Exception in thread "main" [Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:
-                                |\forall v \forall h \forall g \forall c \forall H (v^2<=2*g*(H-h)&h>=-2&g>0&H>=0&0<=c&c < 1->v^2<=2*g*(H-h)&h>=-1)""".stripMargin)
+    val (outputZ3, _, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
+    exitValZ3 shouldBe 255 // Z3 throws an exception on bouncing-ball-cex.kyx (failed)
+    val proofStatOutputsZ3 = (outputZ3: StringOps).lines.toList.takeRight(4)
+    proofStatOutputsZ3(0) should startWith ("PROVED")
+    proofStatOutputsZ3(1) should startWith ("UNFINISHED")
+    proofStatOutputsZ3(2) should startWith ("FAILED")
+    proofStatOutputsZ3(3) should startWith ("PROVED")
   }
 
   it should "FEATURE_REQUEST: prove entries without tactics with auto" taggedAs (TodoTest, SlowTest) ignore {
@@ -191,8 +194,8 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val outputFileName = outputFile.getAbsolutePath
 
     val (output, _, exitVal) = runKeYmaeraX("-tool", "Mathematica", "-prove", inputFileName, "-out", outputFileName)
-    exitVal shouldBe 254 //@note -2
-    output should include ("DISPROVED")
+    exitVal shouldBe 255 //@note -1 since unfinished entry
+    output should include ("UNFINISHED (CEX)")
     outputFile should not (exist)
 
     val (_, errorZ3, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)

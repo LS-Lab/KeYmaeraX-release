@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io._
 
 import javax.swing.JOptionPane
-import edu.cmu.cs.ls.keymaerax.{Configuration, StringToVersion, UpdateChecker, core}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Version, UpdateChecker, core}
 import edu.cmu.cs.ls.keymaerax.core.Ensures
 import edu.cmu.cs.ls.keymaerax.hydra._
 
@@ -124,7 +124,7 @@ object Main {
       val cacheVersion = source.mkString.replace("\n", "")
       source.reader().close() //Ensure that the associated reader is closed so that we can delete the file if need to.
       try {
-        if (StringToVersion(cacheVersion) != StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
+        if (Version(cacheVersion) != Version(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
           assert(cacheVersionFile.delete(), s"Could not delete the cache version file in ${cacheVersionFile.getAbsolutePath }")
           clearCache(cacheDirectory)
         }

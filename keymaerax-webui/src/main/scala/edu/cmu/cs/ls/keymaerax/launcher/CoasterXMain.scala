@@ -1,20 +1,17 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.{Configuration, StringToVersion}
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.{Configuration, Version}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib.{CoasterStats, ComponentStats, countVars, doStats}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec, CoasterXTestLib}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.launcher._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.hydra.HyDRAInitializer._
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInitializer}
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX.shutdownProver
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import edu.cmu.cs.ls.keymaerax.tools.install.DefaultConfiguration
@@ -219,7 +216,7 @@ object CoasterXMain {
     try {
       //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
       val cacheVersion = LemmaDBFactory.lemmaDB.version()
-      if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
+      if (Version(cacheVersion) < Version(edu.cmu.cs.ls.keymaerax.core.VERSION))
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
       Ax.prepopulateDerivedLemmaDatabase()
