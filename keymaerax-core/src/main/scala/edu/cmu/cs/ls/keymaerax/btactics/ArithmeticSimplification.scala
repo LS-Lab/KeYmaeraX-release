@@ -96,7 +96,7 @@ object ArithmeticSimplification {
     //    transformEquality(equality f=g) -----------
     conclusion="Γ |- P(equalityLHS), Δ",
     displayLevel="browse")
-  def transformEquality(equality:Formula) : DependentPositionTactic = anon ((pos:Position, sequent:Sequent) => {
+  def transformEquality(equality:Formula) : DependentPositionWithAppliedInputTactic = inputanon ((pos:Position, sequent:Sequent) => {
       assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
       val what = equality.asInstanceOf[Equal].left
       val to   = equality.asInstanceOf[Equal].right

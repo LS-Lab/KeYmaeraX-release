@@ -277,7 +277,7 @@ trait SequentCalculus {
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
   @Tactic(premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
-  def allL(e: Option[Term])              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
+  def allL(e: Option[Term])              : DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
   def allL(e: Term)                      : DependentPositionTactic = allL(Some(e))
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
   val allL                          : DependentPositionTactic = allL(None)
@@ -483,7 +483,7 @@ trait SequentCalculus {
     * @see [[sublabel()]]
     */
   @Tactic()
-  def label(s: String): BelleExpr = anon { label(BelleTopLevelLabel(s)) }
+  def label(s: String): InputTactic = inputanon { label(BelleTopLevelLabel(s)) }
 
   /** Mark the current proof branch and all subbranches `s``
     *
