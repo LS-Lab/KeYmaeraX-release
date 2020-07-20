@@ -171,8 +171,8 @@ trait SequentCalculus {
     * }}}
     */
   @Tactic(premises = "Γ, C |- Δ ;; Γ |- Δ, C", conclusion = "Γ |- Δ", inputs = "C:formula")
-  def cut(f: Formula): InputTactic = inputanon {rawCut(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))}
-  private def rawCut(f: Formula): BuiltInTactic = "rawCut" by { (provable: ProvableSig) => provable(core.Cut(f), 0)}
+  def cut(f: Formula): InputTactic = inputanon {cutX(f) & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))}
+  private def cutX(f: Formula): BuiltInTactic = anon { (provable: ProvableSig) => provable(core.Cut(f), 0)}
 
   /** cut a formula in in place of pos on the right to prove its implication on the second branch and assume it on the first. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]).
     * {{{
@@ -277,13 +277,14 @@ trait SequentCalculus {
   /** all left: instantiate a universal quantifier in the antecedent by the concrete instance `e` (itself if None). */
   @Tactic(premises = "p(e), Γ |- Δ",
     conclusion = "∀x p(x), Γ |- Δ")
-  def allL(e: Option[Term])              : DependentPositionTactic = anon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
+  def allL(e: Option[Term])              : DependentPositionWithAppliedInputTactic = inputanon { FOQuantifierTactics.allInstantiate(None, e)(_: Position) }
   def allL(e: Term)                      : DependentPositionTactic = allL(Some(e))
   /** all left: instantiate a universal quantifier in the antecedent by itself. */
   val allL                          : DependentPositionTactic = allL(None)
   /** all left: instantiate a universal quantifier in the antecedent by the term obtained from position `instPos`. */
   //@todo turn this into a more general function that obtains data from the sequent.
-  def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
+  // was  "all instantiate pos"
+  def allLPos(instPos: Position)    : DependentPositionTactic = anon ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => allL(t)(pos)
     case Some(e) => throw new TacticInapplicableFailure("all instantiate pos only applicable to terms, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -302,7 +303,8 @@ trait SequentCalculus {
     conclusion = "Γ |- ∃x p(x), Δ")
   val existsR                         : DependentPositionTactic = anon {(pos: Position) => FOQuantifierTactics.existsInstantiate(None, None)(pos)}
   /** exists right: instantiate an existential quantifier in the succedent by a concrete term obtained from position `instPos`. */
-  def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
+  // was "exists instantiate pos"
+  def existsRPos(instPos: Position)   : DependentPositionTactic = anon ((pos:Position, sequent:Sequent) => sequent.sub(instPos) match {
     case Some(t: Term) => existsR(t)(pos)
     case Some(e) => throw new TacticInapplicableFailure("exists instantiate pos only applicable to terms, but got " + e.prettyString)
     case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
@@ -481,7 +483,7 @@ trait SequentCalculus {
     * @see [[sublabel()]]
     */
   @Tactic()
-  def label(s: String): BelleExpr = anon { label(BelleTopLevelLabel(s)) }
+  def label(s: String): InputTactic = inputanon { label(BelleTopLevelLabel(s)) }
 
   /** Mark the current proof branch and all subbranches `s``
     *

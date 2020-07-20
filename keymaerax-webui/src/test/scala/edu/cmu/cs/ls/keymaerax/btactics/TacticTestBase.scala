@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint,
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
@@ -127,6 +128,34 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** For tests that want to record proofs in the database. */
   def withDatabase(testcode: TempDBTools => Any): Unit = testcode(dbTester())
 
+  def withTactics(testcode: => Any): Unit = {
+    if (DerivationInfoRegistry.isInit) return
+    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    val common = Map(
+      Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
+      Configuration.Keys.QE_TOOL -> "mathematica")
+    val interp = common.+(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")
+    val oldProvider = ToolProvider.provider
+    val provider = mathematicaProvider()
+    ToolProvider.setProvider(provider)
+    val tool = provider.defaultTool() match {
+      case Some(m: Mathematica) => m
+      case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
+    }
+    withTemporaryConfig(interp) {
+      DerivationInfoRegistry.init()
+    }
+    tool.cancel()
+    tool.shutdown() // let testcode know it should stop (forEvery catches all exceptions)
+    mathematicaProvider.synchronized {
+      mathematicaProvider().doShutdown() //@note see [[afterAll]]
+      provider.shutdown()
+      mathematicaProvider = new Lazy(new DelayedShutdownToolProvider(new MathematicaToolProvider(configFileMathematicaConfig)))
+    }
+    ToolProvider.setProvider(oldProvider)
+    testcode
+  }
+
   /**
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
    * axioms that are proved by QE.
@@ -150,10 +179,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         case Some(m: Mathematica) => m
         case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
       }
-      if(initLibrary) {
-        withTemporaryConfig(interp) {
-          Ax.prepopulateDerivedLemmaDatabase()
-        }
+      withTemporaryConfig(interp) {
+        DerivationInfoRegistry.init(initLibrary = initLibrary)
       }
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
@@ -193,10 +220,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       ToolProvider.setProvider(provider)
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
-      if(initLibrary) {
-        withTemporaryConfig(interp) {
-          Ax.prepopulateDerivedLemmaDatabase()
-        }
+      withTemporaryConfig(interp) {
+        DerivationInfoRegistry.init(initLibrary = initLibrary)
       }
       withTemporaryConfig(uninterp) {
         val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
@@ -271,16 +296,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
       (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
     dbTester = new Lazy(new TempDBTools(listeners))
-    DerivationInfoRegistry.init
     BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true)))).distinct))
-    TactixLibrary.invSupplier = generator
+    TactixInit.invSupplier = generator
     // reinitialize with empty caches for test case separation
-    TactixLibrary.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
-    TactixLibrary.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
+    TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     //@note Mathematica is expected to shut down only in afterAll(), but setting provider shuts down the current provider
     if (!mathematicaProvider.isInitialized) ToolProvider.setProvider(new NoneToolProvider())
     LemmaDBFactory.lemmaDB.removeAll("user/tests")
@@ -302,9 +326,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         dbTester().db.session.close()
         dbTester = null
       }
-      TactixLibrary.invSupplier = FixedGenerator(Nil)
-      TactixLibrary.differentialInvGenerator = FixedGenerator(Nil)
-      TactixLibrary.loopInvGenerator = FixedGenerator(Nil)
+      TactixInit.invSupplier = FixedGenerator(Nil)
+      TactixInit.differentialInvGenerator = FixedGenerator(Nil)
+      TactixInit.loopInvGenerator = FixedGenerator(Nil)
     }
   }
 

@@ -56,7 +56,7 @@ class ArithmeticTests extends TacticTestBase {
 
   //@todo AdvocatusTest that inserts a broken tool by reflection.
 
-  "fullQE" should "apply equalities, transform to implication, and compute universal closure" in {
+  "fullQE" should "apply equalities, transform to implication, and compute universal closure" in withTactics {
     val tool = new MockTool(
       "\\forall x_0 \\forall v_0 \\forall t \\forall s (-1*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0&v_0>0&x_0 < s->1/2*(-1*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+(-1*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
@@ -73,7 +73,7 @@ class ArithmeticTests extends TacticTestBase {
       TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "only apply equalities for variables" in {
+  it should "only apply equalities for variables" in withTactics {
     val tool = new MockTool(
       "\\forall y \\forall x \\forall r (x^2+y^2=r^2&r>0->y<=r)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
@@ -96,7 +96,7 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
-      TactixLibrary.QE) should have message "Unable to create dependent tactic 'rcf', cause: Name conversion of differential symbols not allowed: x'"
+      TactixLibrary.QE) should have message "Unable to create dependent tactic 'ANON', cause: Name conversion of differential symbols not allowed: x'"
   }
 
   it should "not prove differential symbols by some hidden assumption in Z3" in withZ3 { _ =>

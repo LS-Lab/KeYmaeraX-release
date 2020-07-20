@@ -318,7 +318,10 @@ object Ax extends Logging {
     fieldMirrors.indices.foreach(idx => {
       try {
         val fm = fieldMirrors(idx)
-        if (!exclude.contains(fm.symbol.fullName)) fm()
+        if (!exclude.contains(fm.symbol.fullName)) {
+          val res = fm()
+          DerivationInfo.seeName(fm.symbol.name.toString)
+        }
       } catch {
         case e: Throwable =>
           failures += (fns(idx) -> e)
@@ -1624,7 +1627,7 @@ object Ax extends Logging {
     */
   @Axiom("<:=>", conclusion = "__<x:=e>P__↔∃x(x=e∧P)", displayLevel = "all",
     key = "0", recursor = "0.1;*")
-  lazy val assigndEquality = derivedAxiom("<:=> assign equality",
+  lazy val assigndEqualityAxiom = derivedAxiom("<:=> assign equality",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(existsDual, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -1647,7 +1650,7 @@ object Ax extends Logging {
   lazy val assignbequalityexists = derivedFormula("[:=] assign equality exists",
     "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
     useAt(assignDual2, PosInExpr(1::Nil))(1, 0::Nil) &
-      byUS(assigndEquality)
+      byUS(assigndEqualityAxiom)
     //      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
     //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
     //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL
@@ -2874,8 +2877,9 @@ object Ax extends Logging {
     * @Derived
     * }}}
     */
+  // @TODO: Reconsider names for all the variants of DC
   @Axiom("DC", conclusion = "(__[x'=f(x)&Q]P__↔[x'=f(x)&Q∧R]P)←[x'=f(x)&Q]R", displayLevel = "menu",
-    key = "1.0", recursor = "*", unifier = "surjlinear", inputs = "R:formula")
+    key = "1.0", recursor = "*", unifier = "surjlinear", inputs = "R:formula", codeName = "DCaxiom")
   lazy val DC = derivedAxiom("DC differential cut",
     Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
     implyR(1) & equivR(1) <(
@@ -3904,14 +3908,6 @@ object Ax extends Logging {
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable), ("h_()".asTerm, "z".asVariable))(1) &
     byUS(proveBy("\\forall z \\forall y \\forall x (x*(y+z) = x*y + x*z)".asFormula, TactixLibrary.RCF))
   )
-
-  /**
-    * {{{Axiom "+ identity".
-    *    f()+0 = f()
-    * End.
-    * }}}
-    */
-  lazy val plusIdentity = zeroPlus
 
   /**
     * {{{Axiom "* identity".
@@ -5552,5 +5548,22 @@ object Ax extends Logging {
   lazy val eqAddIff = derivedFormula("eqAddIff","f_() = g_() + h_() <-> h_() = f_() - g_()".asFormula, QE & done)
   @Axiom("plusDiffRefl")
   lazy val plusDiffRefl = derivedFormula("plusDiffRefl","f_() = g_() + (f_() - g_())".asFormula, QE & done)
+
+  /** ODELiveness */
+  @Axiom("TExge")
+  lazy val TExge = derivedFormula("TExge","<{gextimevar_'=1}> (gextimevar_ >= p())".asFormula, solve(1) & QE & done)
+  @Axiom("TExgt")
+  lazy val TExgt = derivedFormula("TExgt","<{gextimevar_'=1}> (gextimevar_ > p())".asFormula, solve(1) & QE & done)
+
+  @Axiom(", commute diamond")
+  lazy val commaCommuteD = derivedFormula("commaCommuteD",
+    "<{c,d&q(||)}>p(||) <-> <{d,c&q(||)}>p(||)".asFormula,
+    prop <(
+      useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & useAt(Ax.diamond, PosInExpr(1::Nil))(1) &
+        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & close,
+      useAt(Ax.diamond, PosInExpr(1::Nil))(-1) & useAt(Ax.diamond, PosInExpr(1::Nil))(1) &
+        notL(-1) & notR(1) & useAt(Ax.commaCommute)(1) & close
+    )
+  )
 
 }

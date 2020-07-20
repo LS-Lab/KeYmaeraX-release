@@ -41,7 +41,7 @@ class BTacticExamples extends TacticTestBase  {
   }
 
 
-  "Explicit Proof" should "prove !!p() <-> p()" in {
+  "Explicit Proof" should "prove !!p() <-> p()" in withTactics {
     import TactixLibrary._
     // Explicit proof tactic for |- !!p() <-> p()
     val proof = TactixLibrary.proveBy(
@@ -60,7 +60,7 @@ class BTacticExamples extends TacticTestBase  {
     proof.proved shouldBe "==> !!p() <-> p()".asSequent
   }
 
-  it should "prove !!p() <-> p() with modern index" in {
+  it should "prove !!p() <-> p() with modern index" in withTactics {
     import TactixLibrary._
     // Explicit proof tactic for |- !!p() <-> p()
     val proof = TactixLibrary.proveBy(
@@ -81,7 +81,7 @@ class BTacticExamples extends TacticTestBase  {
 
 
   //@todo more tests like this because this is one of the few simple tests that fails when master/prop have the * inside the OnAll instead of outside the OnAll.
-  "Proof by Search" should "prove (p() & q()) & r() <-> p() & (q() & r())" in {
+  "Proof by Search" should "prove (p() & q()) & r() <-> p() & (q() & r())" in withTactics {
     import TactixLibrary._
     // Proof by search of |- (p() & q()) & r() <-> p() & (q() & r())
     val proof = TactixLibrary.proveBy(
@@ -93,7 +93,7 @@ class BTacticExamples extends TacticTestBase  {
   }
 
 
-  "Proof by Pointing" should "prove <v:=2*v+1;>q(v) <-> q(2*v+1)" in {
+  "Proof by Pointing" should "prove <v:=2*v+1;>q(v) <-> q(2*v+1)" in withTactics {
     import TactixLibrary._
     import Ax._
     // Proof by pointing of  |- <v:=2*v+1;>v!=0 <-> 2*v+1!=0
@@ -116,7 +116,7 @@ class BTacticExamples extends TacticTestBase  {
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula))
   }
 
-  it should "prove <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in {
+  it should "prove <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in withTactics {
     import TactixLibrary._
     // Proof by pointing of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
     val proof = TactixLibrary.proveBy(
@@ -141,7 +141,7 @@ class BTacticExamples extends TacticTestBase  {
     proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
   }
 
-  it should "prove with steps <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in {
+  it should "prove with steps <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in withTactics {
     import TactixLibrary._
     // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
     val proof = TactixLibrary.proveBy(

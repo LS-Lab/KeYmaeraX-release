@@ -38,7 +38,7 @@ class HilbertTests extends TacticTestBase {
   val randomComplexity = 3
   val rand = new RandomFormula() //(-4317240407825764493L)
 
-  "Hilbert calculus" should "prove x>=5 -> [{x'=2&x<=9}]x<=9" in {
+  "Hilbert calculus" should "prove x>=5 -> [{x'=2&x<=9}]x<=9" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}]x<=9".asFormula)),
       implyR(1) &
         DW(1) &
@@ -247,48 +247,48 @@ class HilbertTests extends TacticTestBase {
     proveBy("x>0 -> [x:=x+1;]x>0".asFormula, step(1, 1::Nil) & QE) shouldBe 'proved
   }
 
-  "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in {
+  "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in withTactics {
     proveBy("[x:=x+1;x:=2*x;]x>1".asFormula, useAt(Ax.composeb)(1)).subgoals should contain only
       Sequent(IndexedSeq(), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula))
   }
 
-  it should "reduce x>5 |- [x:=x+1;][x:=2*x;]x>1 to x>5 |- [x:=x+1;x:=2*x;]x>1 by useAt backwards" in {
+  it should "reduce x>5 |- [x:=x+1;][x:=2*x;]x>1 to x>5 |- [x:=x+1;x:=2*x;]x>1 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
   }
 
-  it should "reduce [x:=x+1;x:=2*x;]x>1 |- x>5 to [x:=x+1;][x:=2*x;]x>1 |- x>5 by useAt" in {
+  it should "reduce [x:=x+1;x:=2*x;]x>1 |- x>5 to [x:=x+1;][x:=2*x;]x>1 |- x>5 by useAt" in withTactics {
     proveBy(Sequent(IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb)(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
-  it should "reduce [x:=x+1;][x:=2*x;]x>1 |- x>5 to [x:=x+1;x:=2*x;]x>1 |- x>5 by useAt backwards" in {
+  it should "reduce [x:=x+1;][x:=2*x;]x>1 |- x>5 to [x:=x+1;x:=2*x;]x>1 |- x>5 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
 
-  it should "reduce x>5 |- [c;d;]x>1 to x>5 |- [c;][d;]x>1 by useAt" in {
+  it should "reduce x>5 |- [c;d;]x>1 to x>5 |- [c;][d;]x>1 by useAt" in withTactics {
     proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula)),
       useAt(Ax.composeb)(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula))
   }
 
-  it should "reduce x>5 |- [c;][d;]x>1 to x>5 |- [c;d;]x>1 by useAt backwards" in {
+  it should "reduce x>5 |- [c;][d;]x>1 to x>5 |- [c;d;]x>1 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula))
   }
 
-  it should "reduce [c;d;]x>1 |- x>5 to [c;][d;]x>1 |- x>5 by useAt" in {
+  it should "reduce [c;d;]x>1 |- x>5 to [c;][d;]x>1 |- x>5 by useAt" in withTactics {
     proveBy(Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb)(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
-  it should "reduce [c;][d;]x>1 |- x>5 to [c;d;]x>1 |- x>5 by useAt backwards" in {
+  it should "reduce [c;][d;]x>1 |- x>5 to [c;d;]x>1 |- x>5 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
-  it should "reduce [ctrl;ode;](x>0&y<1) by composeb" in {
+  it should "reduce [ctrl;ode;](x>0&y<1) by composeb" in withTactics {
     proveBy("[ctrl{|^@|};ode{|^@|};](x>0&y<1)".asFormula,
       useAt(Ax.boxAnd)(1)).subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("([ctrl{|^@|};ode{|^@|};]x>0)&([ctrl{|^@|};ode{|^@|};]y<1)".asFormula))
     proveBy("[ctrl{|^@|};ode{|^@|};](x>0&y<1)".asFormula,
@@ -300,19 +300,19 @@ class HilbertTests extends TacticTestBase {
     useAt(Ax.boxAnd)(1)).subgoals should contain only Sequent(IndexedSeq(), IndexedSeq("([ctrl{|^@|};][ode{|^@|};]x>0)&([ctrl{|^@|};][ode{|^@|};]y<1)".asFormula))
   }
 
-  "Chase" should "prove [?p();?(p()->q());]p() by chase" in {
+  "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q());]p()".asFormula)),
       chase(1) & prop
     ) shouldBe 'proved
   } 
     
-  it should "prove [?p();?(p()->q()); ++ ?r();?q();]q() by chase" in {
+  it should "prove [?p();?(p()->q()); ++ ?r();?q();]q() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q();]q()".asFormula)),
       chase(1) & prop
     ) shouldBe 'proved
   }
 
-  it should "prove [?p();?(p()->q()); ++ ?!p();](p()->q()) by chase" in {
+  it should "prove [?p();?(p()->q()); ++ ?!p();](p()->q()) by chase" in withTactics {
     //assert(AxIndex.axiomIndex(Ax.composeb)._1==PosInExpr(0::Nil))
     //assert(AxIndex.axiomIndex(Ax.composeb)._2==PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?!p();](p()->q())".asFormula)),
@@ -320,7 +320,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
   
-  it should "prove [?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q()) by chase" in {
+  it should "prove [?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q()) by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q())".asFormula)),
       chase(1,Nil) & prop
     ) shouldBe 'proved
@@ -381,7 +381,7 @@ class HilbertTests extends TacticTestBase {
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
   }
 
-  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" taggedAs KeYmaeraXTestTags.CheckinTest in {
+  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" taggedAs KeYmaeraXTestTags.CheckinTest in withTactics {
     proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
@@ -397,7 +397,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in {
+  "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in withTactics {
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (ProvableSig.startProof(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
     done.subgoals shouldBe List(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
     done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
@@ -557,7 +557,7 @@ class HilbertTests extends TacticTestBase {
     shouldReduceTo("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula, 1, PosInExpr(), "x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula, basicEquiv, C)
   }
 
-  "useFor" should "use DX to forward (true&x=y) to <{x'=2}>x=y" in {
+  "useFor" should "use DX to forward (true&x=y) to <{x'=2}>x=y" in withTactics {
     useFor(Ax.Dskipd, PosInExpr(0::Nil),
       (us:RenUSubst) => us++RenUSubst(Seq((DifferentialProgramConst("c", AnyArg), KeYmaeraXParser.differentialProgramParser("x'=2"))))
     )(SuccPosition(1, Nil)) (
@@ -565,13 +565,13 @@ class HilbertTests extends TacticTestBase {
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y".asFormula))
   }
 
-  it should "use DX to forward <{x'=2}>x=y -> bla() to (true&x=y) -> bla()" in {
+  it should "use DX to forward <{x'=2}>x=y -> bla() to (true&x=y) -> bla()" in withTactics {
     useFor(Ax.Dskipd)(SuccPosition(1, 0::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
 
-  it should "use DX to forward <{x'=2}>x=y <-> bla() to (true&x=y) -> bla()" in {
+  it should "use DX to forward <{x'=2}>x=y <-> bla() to (true&x=y) -> bla()" in withTactics {
     useFor(Ax.Dskipd)(SuccPosition(1, 0::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
@@ -579,85 +579,85 @@ class HilbertTests extends TacticTestBase {
 
   // with context
 
-  it should "use <*> approx to forward <x:=x+1;>x=y to <{x:=x+1;}*>x=y" in {
+  it should "use <*> approx to forward <x:=x+1;>x=y to <{x:=x+1;}*>x=y" in withTactics {
     useFor(Ax.loopApproxd, PosInExpr(0::Nil))(SuccPosition(1, Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y".asFormula))
   }
 
-  it should "use <*> approx to forward <{x:=x+1;}*>x=y -> bla() to <x:=x+1;>x=y -> bla()" in {
+  it should "use <*> approx to forward <{x:=x+1;}*>x=y -> bla() to <x:=x+1;>x=y -> bla()" in withTactics {
     useFor(Ax.loopApproxd)(SuccPosition(1, 0::Nil)) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
   }
 
-  it should "use <*> approx to forward <{x:=x+1;}*>x=y <-> bla() to <x:=x+1;>x=y -> bla()" in {
+  it should "use <*> approx to forward <{x:=x+1;}*>x=y <-> bla() to <x:=x+1;>x=y -> bla()" in withTactics {
     useFor(Ax.loopApproxd)(SuccPosition(1, (0::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<{x:=x+1;}*>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
   }
 
-  it should "use <*> approx to forward bla() <-> <{x:=x+1;}*>x=y to <x:=x+1;>x=y -> bla()" in {
+  it should "use <*> approx to forward bla() <-> <{x:=x+1;}*>x=y to <x:=x+1;>x=y -> bla()" in withTactics {
     useFor(Ax.loopApproxd)(SuccPosition(1, (1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("bla() <-> <{x:=x+1;}*>x=y".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
   }
 
-  it should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in {
+  it should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in withTactics {
     useFor(Ax.Dskipd, PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{c}>x=y".asFormula))
   }
 
-  it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in {
+  it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in withTactics {
     useFor(Ax.Dskipd)(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
 
-  it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in {
+  it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in withTactics {
     useFor(Ax.Dskipd)(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula))
   }
 
-  it should "use <*> approx to forward <x:=1;>x=1 to <{x:=1;}*>x=1" in {
+  it should "use <*> approx to forward <x:=1;>x=1 to <{x:=1;}*>x=1" in withTactics {
     useFor(Ax.loopApproxd, PosInExpr(0::Nil))(SuccPosition(1, (Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;>x=1".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<{x:=1;}*>x=1".asFormula))
   }
 
-  it should "use <*> approx to forward <x:=1;><x:=x+1;>x=y to <x:=1;><{x:=x+1;}*>x=y" in {
+  it should "use <*> approx to forward <x:=1;><x:=x+1;>x=y to <x:=1;><{x:=x+1;}*>x=y" in withTactics {
     useFor(Ax.loopApproxd, PosInExpr(0::Nil))(SuccPosition(1, (1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y".asFormula))
   }
 
-  it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y -> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in {
+  it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y -> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in withTactics {
     useFor(Ax.loopApproxd, PosInExpr(1::Nil))(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y -> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))
   }
 
-  it should "use <*> approx to forward bla() -> <x:=1;><x:=x+1;>x=y to bla() -> <x:=1;><{x:=x+1;}*>x=y" in {
+  it should "use <*> approx to forward bla() -> <x:=1;><x:=x+1;>x=y to bla() -> <x:=1;><{x:=x+1;}*>x=y" in withTactics {
     useFor(Ax.loopApproxd, PosInExpr(0::Nil))(SuccPosition(1, (1::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("bla() -> <x:=1;><x:=x+1;>x=y".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("bla() -> <x:=1;><{x:=x+1;}*>x=y".asFormula))
   }
 
-  it should "use <*> approx to forward bla() -> (<x:=1;><{x:=x+1;}*>x=y -> foo()) to bla() -> (<x:=1;><x:=x+1;>x=y -> foo())" in {
+  it should "use <*> approx to forward bla() -> (<x:=1;><{x:=x+1;}*>x=y -> foo()) to bla() -> (<x:=1;><x:=x+1;>x=y -> foo())" in withTactics {
     useFor(Ax.loopApproxd, PosInExpr(1::Nil))(SuccPosition(1, (1::0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("bla() -> (<x:=1;><{x:=x+1;}*>x=y -> foo())".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("bla() -> (<x:=1;><x:=x+1;>x=y -> foo())".asFormula))
   }
 
-  it should "use <*> approx to forward (<x:=1;><x:=x+1;>x=y -> bla()) -> foo() to (<x:=1;><{x:=x+1;}*>x=y -> bla()) -> foo()" in {
+  it should "use <*> approx to forward (<x:=1;><x:=x+1;>x=y -> bla()) -> foo() to (<x:=1;><{x:=x+1;}*>x=y -> bla()) -> foo()" in withTactics {
     useFor(Ax.loopApproxd, PosInExpr(0::Nil))(SuccPosition(1, (0::0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(<x:=1;><x:=x+1;>x=y -> bla()) -> foo()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("(<x:=1;><{x:=x+1;}*>x=y -> bla()) -> foo()".asFormula))
   }
 
-  it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y <-> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in {
+  it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y <-> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in withTactics {
     useFor(Ax.loopApproxd)(SuccPosition(1, (0::1::Nil))) (
       ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y <-> bla()".asFormula)))
     ).conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))

@@ -137,7 +137,7 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
         case _: Compose => Ax.composed :: Nil
         case _: Choice => Ax.choiced :: Nil
           //@todo optimizable the last two seem redundant
-        case Assign(_: BaseVariable, _) => Ax.assigndAxiom :: Ax.assigndEqualityAll :: Ax.assigndEquality :: Nil
+        case Assign(_: BaseVariable, _) => Ax.assigndAxiom :: Ax.assigndEqualityAll :: Ax.assigndEqualityAxiom :: Nil
         case Assign(_: DifferentialSymbol, _) => Ax.Dassignd :: Nil
         case _: AssignAny => Ax.randomd :: Nil
         case _: Test => Ax.testd :: Nil

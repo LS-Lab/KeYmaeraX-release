@@ -1399,7 +1399,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
             generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
           val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
           session += proofId -> ProofSession(proofId, generator, problem.defs)
-          TactixLibrary.invSupplier = generator //@todo should not store invariant generator globally for all users
+          TactixInit.invSupplier = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
     }

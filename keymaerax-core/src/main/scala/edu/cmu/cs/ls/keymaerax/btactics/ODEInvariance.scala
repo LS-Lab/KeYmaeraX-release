@@ -179,7 +179,7 @@ object ODEInvariance {
    *
    * @note uses Dconstify internally instead of an external wrapper because it leaves open goals afterwards
    */
-  def lpstep: DependentPositionTactic = "lpstep" by ((pos:Position,seq:Sequent) => {
+  def lpstep: DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "LP step currently only in top-level succedent")
 
     val (p: Term, ode: DifferentialProgram) = seq.sub(pos) match {
@@ -292,7 +292,8 @@ object ODEInvariance {
     *         2) it is not invariant
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIclosed : DependentPositionTactic = "sAIc" by ((pos:Position,seq:Sequent) => {
+  // was "sAIc"
+  def sAIclosed : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAIc is only applicable at a top-level succedent")
     require(ToolProvider.algebraTool().isDefined,"sAIc needs an algebra tool (and Mathematica)")
 
@@ -370,7 +371,7 @@ object ODEInvariance {
   //as above, assumes local progress for q is in antecedent (-1) and the progress in succedent (1)
   //additionally, the domain is assumed to be exactly g>0 | t=0
   //Unfortunately, this tactic has to prove the power bounds on the fly but hopefully remember() can store them
-  private def lpgt(bound:Int): DependentTactic = "lpgt" by ((seq: Sequent) => {
+  private def lpgt(bound:Int): DependentTactic = anon ((seq: Sequent) => {
     val boundPr = remember(("f_()-g_()^"+(2*bound).toString()+">=0 -> f_()>0 | g_()=0").asFormula, QE, namespace)
     val (p,t) = seq.succ(0).sub(PosInExpr(0::1::Nil)) match {
       case Some(Or(Greater(p,_),Equal(t,_))) => (p,t)
@@ -484,7 +485,8 @@ object ODEInvariance {
     *                   The option only applies if doReorder = true
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
+  // was "sAIR1"
+  def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
     if (ToolProvider.algebraTool().isEmpty) throw new ProverSetupException("ODE invariance tactic needs an algebra tool (and Mathematica)")
 
@@ -534,7 +536,7 @@ object ODEInvariance {
         cohideR(pos) & implyR(1) & recRankOneTac(f3)
       )
     }
-  })
+  }}
 
   /**
     * Event stuck tactics: roughly, [x'=f(x)&Q]P might be true in a state if:
@@ -552,7 +554,7 @@ object ODEInvariance {
     * t=d requires d to be a constant number, which forces the whole ODE to be frozen
     * (of course, P should be true initially)
     */
-  def timeBound : DependentPositionTactic = "timeBound" by ((pos:Position,seq:Sequent) => {
+  def timeBound : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
@@ -626,7 +628,7 @@ object ODEInvariance {
           cohideR(2) & implyR(1) & mond & prop)
       , namespace)
 
-  def domainStuck : DependentPositionTactic = "domainStuck" by ((pos:Position,seq:Sequent) => {
+  def domainStuck : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel, "domain stuck only at top-level")
     val (ode, dom, post) = seq.sub(pos) match {
       //needs to be dualized
@@ -722,7 +724,7 @@ object ODEInvariance {
   private val one = Number(1)
   private val two = Number(2)
 
-  def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
+  def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
     val dim = ps.length
     require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")
@@ -838,7 +840,7 @@ object ODEInvariance {
             )
         )
     )
-  })
+  }}
 
   /**
     * Implements (conjunctive) differential radical invariants
@@ -1416,7 +1418,8 @@ object ODEInvariance {
     *         one of tactic limitations is met
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
+  // was "sAIc"
+  def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = anon {(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
     require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
@@ -1476,7 +1479,7 @@ object ODEInvariance {
       ,
       DebuggingTactics.error("Inapplicable: t_ occurs")
     )
-  })
+  }}
 
   private def simplify_mat(m:List[List[Term]]) :List[List[Term]] = {
     m.map(ls => ls.map (t => simpWithTool(ToolProvider.simplifierTool(),t)))
@@ -1611,7 +1614,7 @@ object ODEInvariance {
   // TODO: hacky communication of global time marker for nilpotentSolve
   val nilpotentSolveTimeVar = "time_".asVariable
 
-  def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
+  def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
 
     val (ode,dom,post) = seq.sub(pos) match {
@@ -1728,7 +1731,7 @@ object ODEInvariance {
 
   private lazy val trichotomy = remember("f_()=0 | (f_() > 0 | f_() < 0)".asFormula, QE, namespace)
 
-  def diffDivConquer(p : Term, cofactor : Option[Term] = None) : DependentPositionTactic = "diffDivConquer" by ((pos:Position,seq:Sequent) => {
+  def diffDivConquer(p : Term, cofactor : Option[Term] = None) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "DDC only applicable in top-level succedent")
 
     val (ode,dom,post) = seq.sub(pos) match {

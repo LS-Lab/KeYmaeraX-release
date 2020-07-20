@@ -44,14 +44,15 @@ object ArithmeticSpeculativeSimplification {
     (DebuggingTactics.debug("Non-Bound", DEBUG) & smartHide & QE & done)
 
   /** QE without handling abs */
-  private lazy val speculativeQENoAbs: BelleExpr = "QE" by ((_: Sequent) => {
+  // was "QE"
+  private lazy val speculativeQENoAbs: BelleExpr = anon ((_: Sequent) => {
     (DebuggingTactics.debug("Trying orIntro and smart hiding...", DEBUG) & orIntro(smartHideQE) & DebuggingTactics.debug("... orIntro and smart hiding successful", DEBUG)) |
     (DebuggingTactics.debug("orIntro failed, trying smart hiding...", DEBUG) & smartHideQE & DebuggingTactics.debug("...smart hiding successful", DEBUG)) |
     (DebuggingTactics.debug("All simplifications failed, falling back to ordinary QE", DEBUG) & QE & done)
   })
 
   /** Uses the disjunction introduction proof rule to prove a disjunctions by proving any 1 of the disjuncts. */
-  def orIntro(finish: BelleExpr): BelleExpr = "orIntro" by ((sequent: Sequent) => {
+  def orIntro(finish: BelleExpr): BelleExpr = anon ((sequent: Sequent) => {
     def toSingleSucc(retain: Int): BelleExpr = {
       sequent.succ.indices.patch(retain, List.empty, 1).reverse.map(i => hideR(SuccPos(i))).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
     }
@@ -60,14 +61,15 @@ object ArithmeticSpeculativeSimplification {
   })
 
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
-  lazy val proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
+  lazy val proveOrRefuteAbs: BelleExpr = anon ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
     if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll((SaturateTactic(hideR('R)) & ToolTactics.assertNoCex & QE & done) | speculativeQENoAbs)
     else throw new TacticInapplicableFailure("Sequent does not contain abs")
   })
 
   /** Splits absolute value functions to create more, but hopefully simpler, goals. */
-  def exhaustiveAbsSplit: BelleExpr = "absSplit" by ((sequent: Sequent) => {
+  // was "absSplit"
+  def exhaustiveAbsSplit: BelleExpr = anon ((sequent: Sequent) => {
     val absTerms = scala.collection.mutable.Set[Term]() // remember which abs are expanded already (absExp tactic expands same term everywhere)
 
     def absPos(fml: Formula): List[PosInExpr] = {
@@ -103,16 +105,16 @@ object ArithmeticSpeculativeSimplification {
   })
 
   /** Hides formulas with non-matching bounds. */
-  def hideNonmatchingBounds: BelleExpr = "hideNonmatchingBounds" by ((sequent: Sequent) => {
+  def hideNonmatchingBounds: BelleExpr = anon ((sequent: Sequent) => {
     SignAnalysis.boundHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
   })
 
-  def hideInconsistentSigns: BelleExpr = "hideInconsistentBounds" by ((sequent: Sequent) => {
+  def hideInconsistentSigns: BelleExpr = anon ((sequent: Sequent) => {
     SignAnalysis.signHideCandidates(sequent).sortBy(_.getIndex).reverse.map(hide(_)).reduceLeftOption[BelleExpr](_&_).getOrElse(skip)
   })
 
   /** Auto-transforms formulas from upper/lower bounds to concrete value (e.g., t<=ep, transform d>=A*ep to d>=A*t. */
-  def autoMonotonicityTransform: BelleExpr = "autoMonotonicityTransform" by ((sequent: Sequent) => {
+  def autoMonotonicityTransform: BelleExpr = anon ((sequent: Sequent) => {
     //@todo "dependency" clustering and try to transform in a way that removes symbols from the sequent
     val signs = SignAnalysis.computeSigns(sequent)
     def transformOnConsistentSign(v: Variable, b: Term, i: Int) = {

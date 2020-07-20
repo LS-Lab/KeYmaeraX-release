@@ -34,7 +34,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     useFor(minusCancel, PosInExpr(0 :: Nil))(SuccPosition(1, 0 :: Nil))(minusReflex)
   }
 
-  "Unifier" should "unify DG key with universal postcondition" in {
+  "Unifier" should "unify DG key with universal postcondition" in withTactics {
     val y = Variable("y_", None, Real)
     val fact = Ax.DGCd.formula match {case Equiv(l,_) => l}
     val goal = "<{t'=1}>\\forall x x^2>=0".asFormula
@@ -45,7 +45,7 @@ class SomeUnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
     )
   }
 
-  it should "unify DG with universal postcondition" ignore {
+  it should "unify DG with universal postcondition" ignore withTactics {
     val y = Variable("y_", None, Real)
     val fact = AxiomInfo("DGd diamond differential ghost constant").formula
     val goal = "<{t'=1}>\\forall x x^2>=0<->\\forall x <{t'=1,x'=1&true}>\\forall x x^2>=0".asFormula

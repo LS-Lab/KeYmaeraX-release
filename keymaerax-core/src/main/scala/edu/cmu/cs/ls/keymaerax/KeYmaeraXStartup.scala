@@ -21,8 +21,7 @@ object KeYmaeraXStartup {
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database
       Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-      Ax.prepopulateDerivedLemmaDatabase()
-      DerivationInfoRegistry.init
+      DerivationInfoRegistry.init()
     } catch {
       case e: Exception =>
         val msg =

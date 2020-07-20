@@ -14,9 +14,8 @@ import scala.collection.immutable.Nil
 
 class ODELivenessTests extends TacticTestBase {
 
-  //todo: move
-  "vdg" should "return raw VDGs" in withQE { _ =>
-    val ax = (1 to 4).map(Provable.vectorialDG)
+  "DGs" should "return raw VDGs" in withQE { _ =>
+      val ax = (1 to 4).map(Provable.vectorialDG)
     println(ax)
 
     ax(0)._1.conclusion shouldBe "==> [{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]y__1*y__1<=f_(|y__1|)->[{y__1'=g1(||),c{|y__1|}&q(|y__1|)}]p(|y__1|)->[{c{|y__1|}&q(|y__1|)}]p(|y__1|)".asSequent
@@ -216,122 +215,7 @@ class ODELivenessTests extends TacticTestBase {
     pr.subgoals(0) shouldBe "==> b*x^2<=v+c+a()&x+v<=a()".asSequent
   }
 
-  "liveness" should "support liveness proofs by hand (1)" in withMathematica { _ =>
-    // FM'19 linear ODE example
-    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
-
-    val pr = proveBy(fml,
-      implyR(1) &
-        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
-          skip,
-          ODE(1)
-          // ODE is smart enough to do this in one step without an IVT argument (but that can be done too)
-        ) &
-        cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
-        vDG("t'=1".asDifferentialProgram)(1) &
-        // same, actually p = 1
-        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
-
-        // Not great
-        kDomainDiamond("t > 2*p".asFormula)(1) <(
-          skip,
-          dC("p-1/2*t >= u^2+v^2-1/4".asFormula)(1) <( ODE(1), ODE(1) )
-        ) &
-
-        //Wrap into global existence tactic:
-        odeReduce(strict = true)(1) &
-        solve(1) & QE
-    )
-    println(pr)
-
-    pr shouldBe 'proved
-  }
-
-  it should "support liveness proofs by hand (2)" in withQE { _ =>
-    // FM'19 nonlinear ODE example
-    val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
-
-    val pr = proveBy(fml,
-      implyR(1) &
-        //Keep compactness assumption around, wrap into tactic
-        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
-          skip,
-          useAt(Ax.diamond,PosInExpr(1::Nil))(1) & prop
-        ) &
-
-        // cut some extra information that will get auto DC-ed in K<&>
-        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) <(
-          skip,
-          hideL(-2) & cohideOnlyR(2) & ODE(1)
-        ) &
-        // Wrap into tactic
-        cut("\\exists t t=0".asFormula) <( existsL(-4) , cohideR(2) & QE) &
-        vDG("t'=1".asDifferentialProgram)(1) &
-        // same, actually p = 1
-        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-5) , cohideR(2) & QE) &
-        // Not great
-        kDomainDiamond("t > 2/3*p".asFormula)(1)
-          <(
-          skip,
-          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <(
-            hideL(-3) & hideL(-2) & ODE(1),
-            hideL(-3) & hideL(-2) & ODE(1)) //todo: ODE fix! ignore box stuff in antecedents
-          )
-        &
-        // Not great either: nasty ODE order!
-        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
-          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
-          cohideOnlyR(2) &
-          compatCuts(1) & dW(1) & QE
-        )
-
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "add liveness support (1)" in withMathematica { _ =>
-    // FM'19 linear ODE example
-    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
-
-    val pr = proveBy(fml,
-      implyR(1) &
-        // This rephrasing seems neessary
-        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
-          skip,
-          ODE(1)
-        ) &
-        dV("1/2".asTerm)(1)
-    )
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "add liveness support (2)" in withQE { _ =>
-    // FM'19 nonlinear ODE example
-    val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
-
-    val pr = proveBy(fml,
-      implyR(1) &
-        //Keep compactness assumption around
-        saveBox(1) &
-        // cut some extra information that will get auto DC-ed in K<&>
-        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) <(
-          skip,
-          hideL(-2) & cohideOnlyR(2) & ODE(1)
-        ) &
-        dV("3/2".asTerm)(1) &
-        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),timevar_'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) <(
-          odeReduce(strict = true)(1) & cohideR(1) & solve(1) & QE,
-          cohideOnlyR(2) & compatCuts(1) & dW(1) & QE
-        )
-    )
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "work on simple examples (1)" in withQE { _ =>
+  "dV" should "work on simple examples (1)" in withQE { _ =>
     val pr = proveBy("a>0 ==> <{x'=a,y'=z}>x>=b()".asSequent,
       dV("a".asTerm)(1))
 
@@ -381,7 +265,411 @@ class ODELivenessTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
-  it should "work on FM'15 Example 11" in withMathematica { _ =>
+  it should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
+    val pr = proveBy("a()>0 ==> <{x'=a()}>x>=b()".asSequent, dVAuto(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "diff var flat flight progress [function]" in withQE { _ =>
+    val pr = proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula,
+      implyR(1) &
+        existsR("b".asTerm)(1) &
+        andR(1) <( QE , dVAuto(1))
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "diff var flat flight progress [variable]" in withQE { _ =>
+    val pr = proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula,
+      implyR(1) &
+        allR(1) &
+        existsR("b".asTerm)(1) &
+        andR(1) <( QE , dVAuto(1)))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+    it should "support higher derivatives" in withQE { _ =>
+      // note: postcondition x > j fails because of a renaming bug
+      val pr = proveBy("j > 0 ==> <{d'=c, x'=v, v'=a, a'=j, c'=-d}> x > 100".asSequent,
+        // Should be old(x), etc.
+        higherdV(List("x-100","v","a/2","j/6").map(_.asTerm))(1) &
+        // This is manual by design, although this is probably the main way to do it
+        dC("a>=2*coeff2+6*coeff3*timevar_".asFormula)(1) <( skip, dI('full)(1) ) &
+        dC("v>=coeff1+2*coeff2*timevar_+3*coeff3*timevar_^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
+      )
+
+      println(pr)
+      pr shouldBe 'proved
+    }
+
+    it should "support semialgebraic dV (disjunctive)" in withMathematica { _ =>
+      val pr = proveBy("v!=0 -> <{x'=v}> (x>100 | x < 100)".asFormula,
+        implyR(1) &
+          //encode abs(v)
+          cut("\\exists absv (absv = abs(v))".asFormula) < (
+            existsL(-2),
+            hideR(1) & QE
+          ) &
+          semialgdV("absv".asTerm)(1)
+      )
+
+      println(pr)
+      pr shouldBe 'proved
+    }
+
+  "cor" should "refine a closed domain" in withQE { _ =>
+    val seq = "x^2+y^2=1/2 ==> <{x'=x, y'=y & -1 <= x & x <= 1 & -1 <=y & y<=1}> (x=1|y=1|x=-1|y=-1)".asSequent
+
+    val pr = proveBy(seq,
+      // Helpful cut that is used twice
+      cut("[{x'=x,y'=y&true&!(x=1|y=1|x=-1|y=-1)}](x<1&y<1&x>-1&y>-1)".asFormula) <(
+        skip,
+        hideR(1) & ODE(1)
+      ) &
+        closedRef("true".asFormula)(1) <(
+          skip,
+          hideL(-2) & QE, // initial circle is in the interior
+          dW(1) & QE //using compatible cut
+        ) &
+        kDomainDiamond("x^2+y^2 > 2".asFormula)(1) <(
+          skip,
+          dW(1) & QE //using compatible cut
+        ) &
+        // Another helpful cut (could be just old(.) for the RHS)
+        cut("[{x'=x,y'=y}](x^2+y^2 >= 1/2)".asFormula) <(
+          // dV("1".asTerm)(1),
+          dVAuto(1),
+          hideL(-2) & hideR(1) & ODE(1)
+        )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  "univariate" should "automatically odeReduce univariate" in withQE { _ =>
+    val fml = "b() > 0 & k > 0 & v > 0 -> <{x'=v, v' = -k* v^3 -v^2 - b() * v + 1, y'=y, t'=1}> t > 1000".asFormula
+
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "not try univariate removal when inapplicable (1)" taggedAs IgnoreInBuildTest in withQE { _ =>
+    val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=a^2*v, t'=1}> t > 1000".asFormula
+
+    // In this case, the univariate reduction should never fire
+    // and things should fallback to the nonlinear case
+    val pr = proveBy(fml, prop & odeReduce()(1))
+    println(pr)
+
+    // should throw this error
+    // "because odeReduce failed to autoremove: {a'=a^2*v,v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]a*a+v*v<=f_(|a,v|) or this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]2*(a*(a^2*v)+v*(-v^2*a))<=a_(|y_,z_,a,v|)*(a*a+v*v)+b_(|y_,z_,a,v|)"
+  }
+
+  it should "not try univariate removal when inapplicable (2)" taggedAs IgnoreInBuildTest in withQE { _ =>
+    val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=1, t'=1}> t > 1000".asFormula
+
+    // In this case, the univariate reduction should never fire
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1))
+    println(pr)
+
+    // should throw this error
+    // "because odeReduce failed to autoremove: {v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{v'=-v^2*a,a'=1,t'=1&true}]v*v<=f_(|v|) or this form: [{v'=-v^2*a,a'=1,t'=1&true}]2*(v*(-v^2*a))<=a_(|y_,z_,v|)*(v*v)+b_(|y_,z_,v|)"
+  }
+
+  it should "work on a hard symbolic case" in withQE { _ =>
+    val fml = "a > 0 & b() < 0 & x<= a& x>= b()-> <{x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
+
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "work with interleaved cases" in withQE { _ =>
+    val fml = "a > 0 & b() < 0 & x<= a& x>= b()& y^2 = 0 -> <{k'=z+x+k,  y'=y*(y-a)*(y-b()),z'=x+z, x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
+
+    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "try manual univariate boundedness proof" in withQE { _ =>
+    val fml = "a*r^2+b*r+c = 0 & (v-r=0 | v-r < 0 & a*v0^2+b*v0+c > 0 | a*v0^2+b*v0+c < 0 & v-r > 0 ) & v=v0 -> [{v' = a*v^2+b*v+c}] v^2 <= v0^2+r^2".asFormula
+    val pr = proveBy(fml,
+      implyR(1) & cut("\\exists d \\exists e \\forall v a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula) <(
+        existsL('Llast) & existsL('Llast) &
+          dC("a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula)(1) <(
+            ODEInvariance.diffDivConquer("v-r".asTerm, Some("d*v+e".asTerm))(1)
+              <(
+              dW(1) & QE,
+              // Should just do DDC manually to avoid this cut
+              cut("a*v0^2+b*v0+c < 0".asFormula) <( dC("v<=v0".asFormula)(1) <(dW(1) & QE, ODE(1)), cohideOnlyR(2) & QE),
+              cut("a*v0^2+b*v0+c > 0".asFormula) <( dC("v>=v0".asFormula)(1) <(dW(1) & QE, ODE(1)), cohideOnlyR(2) & QE),
+            )
+            , ODE(1)
+          ),
+        cohideOnlyR(2) & QE
+      )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  "FAOC" should "prove Example 1 (manual)" in withMathematica { _ =>
+    val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula,
+      implyR(1) & allR(1) &
+      dDDG("0".asTerm,"0".asTerm)(1) <(
+        ODE(1),
+        cohideR(1) & byUS(Ax.TExgt)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 1 (automatic)" in withMathematica { _ =>
+    val pr = proveBy("v > 0 & k > 0 -> \\forall tau <{v'=-k * v^2, t'=1}> t > tau".asFormula,
+      implyR(1) & allR(1) & gEx(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 2 (manual)" in withMathematica { _ =>
+    // Note: the u,v ODEs are swapped here for a simpler manual proof
+    // The automatic proof below does this swapping automatically
+    val pr = proveBy("\\forall tau <{v'=u*v, u'=u, t'=1}> t > tau".asFormula,
+      allR(1) &
+      dDDG("2*u".asTerm,"0".asTerm)(1) <(
+        ODE(1),
+        dDDG("2".asTerm,"0".asTerm)(1) <(
+          ODE(1),
+          byUS(Ax.TExgt)
+        )
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 2 (automatic)" in withMathematica { _ =>
+    val pr = proveBy("\\forall tau <{u'=u, v'=u*v, t'=1}> t > tau".asFormula,
+      allR(1) & gEx(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 3 (manual)" in withMathematica { _ =>
+    val pr = proveBy("u^2 + v^2 <= 1/4 -> \\forall tau <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2), t'=1}> t > tau".asFormula,
+      implyR(1) & allR(1) &
+      dBDG("1/4".asTerm,2)(1) <(
+        ODE(1),
+        cohideR(1) & byUS(Ax.TExgt)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 3 (automatic)" in withMathematica { _ =>
+    val pr = proveBy("u^2 + v^2 <= 1/4 -> \\forall tau <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2), t'=1}> t > tau".asFormula,
+      implyR(1) & allR(1) &
+      // If gEx(1) is called here, it should fail with a helpful error:
+      // odeReduce failed to autoremove: {u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2)}.
+      // Try to add an assumption to the antecedents of either this form: [{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]u*u+v*v<=f_(|u,v|) or this form: [{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=a_(|y_,z_,u,v|)*(u*u+v*v)+b_(|y_,z_,u,v|)
+      cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),t'=1&true}]u*u+v*v<=1/4".asFormula) <(
+        gEx(1), //this call succeeds automatically
+        hideR(1) & ODE(1)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 5 (manual)" in withMathematica { _ =>
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+        // Replace the postcondition
+        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
+          skip,
+          ODE(1) // ODE is smart enough to do two steps at once here
+        ) &
+        // This is a manual implementation of dV
+        cut("\\exists t t=0".asFormula) <( existsL(-2) , cohideR(2) & QE) &
+        vDG("t'=1".asDifferentialProgram)(1) &
+        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-3) , cohideR(2) & QE) &
+        kDomainDiamond("t > 2*p".asFormula)(1) <(
+          skip,
+          dC("p-1/2*t >= u^2+v^2-1/4".asFormula)(1) <( ODE(1), ODE(1) )
+        ) &
+        // Global existence:
+        useAt(Ax.commaCommuteD)(1) &
+        dDDG("0".asTerm,"0".asTerm,2)(1) <(
+          ODE(1),
+          cohideR(1) & byUS(Ax.TExgt)
+        )
+    )
+    println(pr)
+
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 5 (automatic) " in withMathematica { _ =>
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u, v'=u-v}> (1/4 <= max(abs(u),abs(v)) & max(abs(u),abs(v)) <= 1/2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+        // Replace the postcondition
+        kDomainDiamond("u^2+v^2<=1/4".asFormula)(1) <(
+          dVAuto(1), //dV("1/2".asTerm)(1)
+          ODE(1)
+        )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 6 and 7 (manual) " in withMathematica { _ =>
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+        // "Assume" for contradiction that goal is not reached, then solution is trapped in compact set
+        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] !(u^2+v^2 >= 2)".asFormula) <(
+          skip,
+          useAt(Ax.diamond,PosInExpr(1::Nil))(1) & prop
+        ) &
+        // Manual dV
+        cut("\\exists t t=0".asFormula) <( existsL(-3) , cohideR(2) & QE) &
+        vDG("t'=1".asDifferentialProgram)(1) &
+        cut("\\exists p u^2+v^2=p".asFormula) <( existsL(-4) , cohideR(2) & QE) &
+        kDomainDiamond("t > 2/3*p".asFormula)(1)
+          <(
+          skip,
+          dC("p-3/2*t >= 2- (u^2+v^2)".asFormula)(1) <(
+            hideL(-2) & ODE(1),
+            hideL(-2) &
+              dC("u^2+v^2>=1".asFormula)(1) <(
+                ODE(1),
+                ODE(1)
+              )
+          )
+        ) &
+        // Global existence
+        useAt(Ax.commaCommuteD)(1) &
+        dBDG("2".asTerm,2)(1) <(
+          cohideOnlyL(-2) & vDG("t'=1".asDifferentialProgram)(-1) &
+            useAt(Ax.commaCommute)(-1) &
+            monb & QE
+          ,
+          cohideR(1) & byUS(Ax.TExgt)
+        )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+
+    val fml2 = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2) & 1 <= u^2+v^2 & u^2+v^2 <= 2}> (u^2+v^2 >= 2)".asFormula
+
+    val pr2 = proveBy(fml2,
+      implyR(1) &
+        dDR("u^2+v^2 <= 2".asFormula)(1) <(
+          skip,
+          ODE(1)
+        ) &
+        closedRef("true".asFormula)(1) <(
+          implyRi & byUS(pr),
+          QE,
+          ODE(1)
+        )
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
+  }
+
+  it should "prove Example 6 and 7 (automatic) " in withMathematica { _ =>
+    val fml = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}> (u^2+v^2 >= 2)".asFormula
+
+    val pr = proveBy(fml,
+      implyR(1) &
+        // "Assume" for contradiction that goal is not reached
+        saveBox(1) &
+        cut("[{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2)}] u^2+v^2>=1".asFormula) < (
+          dVAuto(1), //dV("3/2".asTerm)(1)
+          hideL(-2) & cohideOnlyR(2) & ODE(1)
+        ) &
+        cut("[{u'=-v-u*(1/4-u^2-v^2),v'=u-v*(1/4-u^2-v^2),timevar_'=1&true}]2*(u*(-v-u*(1/4-u^2-v^2))+v*(u-v*(1/4-u^2-v^2)))<=0*(u*u+v*v)+8".asFormula) < (
+          gEx(1),
+          hideR(1) & compatCuts(1) & dW(1) & QE
+        )
+    )
+
+    println(pr)
+    pr shouldBe 'proved
+
+    val fml2 = "u^2+v^2 = 1 -> <{u'=-v-u*(1/4-u^2-v^2), v'=u-v*(1/4-u^2-v^2) & 1 <= u^2+v^2 & u^2+v^2 <= 2}> (u^2+v^2 >= 2)".asFormula
+
+    val pr2 = proveBy(fml2,
+      implyR(1) &
+        dDR("u^2+v^2 <= 2".asFormula)(1) <(
+          skip,
+          ODE(1)
+        ) &
+        closedRef("true".asFormula)(1) <(
+          implyRi & byUS(pr),
+          QE,
+          ODE(1)
+        )
+    )
+
+    println(pr2)
+    pr2 shouldBe 'proved
+  }
+
+  it should "prove Example 8 (manual)" in withMathematica { _ =>
+    val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula,
+      kDomainDiamond("u^2 <= 1".asFormula)(1) <(
+        skip,
+        ODE(1)
+      ) &
+      // This is a manual implementation of dV
+      cut("\\exists t t=0".asFormula) <( existsL(-1) , cohideR(2) & QE) &
+      vDG("t'=1".asDifferentialProgram)(1) &
+      cut("\\exists p u^2=p".asFormula) <( existsL(-2) , cohideR(2) & QE) &
+      kDomainDiamond("t > p".asFormula)(1) <(
+        skip,
+        dC("p-t >= u^2-1".asFormula)(1) <( ODE(1), ODE(1) )
+      ) &
+      // Global existence:
+      useAt(Ax.commaCommuteD)(1) &
+      dDDG("0".asTerm,"0".asTerm)(1) <(
+        ODE(1),
+        cohideR(1) & byUS(Ax.TExgt)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Example 8 (automatic)" in withMathematica { _ =>
+    val pr = proveBy("<{u'=-u}> (-1 <= u & u <= 1)".asFormula,
+      semialgdV("1".asTerm)(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove Sogokon & Jackson FM'15 Example 11" in withMathematica { _ =>
     val X0 = "x2 > 0 & x1 >= -1/4 & x1 <= 1/4 & (x1^2+x2^2-1)^2<=1/30".asFormula
     val XT = "x2 < 0 & x1 >= -1/4 & x1 <= 1/4 & (x1^2+x2^2-1)^2<=1/30".asFormula
     val ode = "{x1'=x2-x1*(x1^2+x2^2-1), x2'=-x1-x2*(x1^2+x2^2-1)}".asDifferentialProgram
@@ -470,7 +758,7 @@ class ODELivenessTests extends TacticTestBase {
     pr2 shouldBe 'proved
   }
 
-  it should "work on FM'15 Example 12" in withMathematica { _ =>
+  it should "prove Sogokon & Jackson FM'15 Example 12" in withMathematica { _ =>
     val X0 = "x2 - x1 < 0".asFormula
     val XT = "x2 - x1 = 0".asFormula
     val ode = "{x1'=-1, x2'=(x2-x1)^2}".asDifferentialProgram
@@ -506,38 +794,9 @@ class ODELivenessTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "support higher derivatives" in withQE { _ =>
-    // note: postcondition x > j fails because of a renaming bug
-    val pr = proveBy("j > 0 ==> <{d'=c, x'=v, v'=a, a'=j, c'=-d}> x > 100".asSequent,
-      // Should be old(x), etc.
-      higherdV(List("x-100","v","a/2","j/6").map(_.asTerm))(1) &
-      // This is manual by design, although this is probably the main way to do it
-      dC("a>=2*coeff2+6*coeff3*timevar_".asFormula)(1) <( skip, dI('full)(1) ) &
-      dC("v>=coeff1+2*coeff2*timevar_+3*coeff3*timevar_^2".asFormula)(1) <( dI('full)(1), dI('full)(1) )
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "support semialgebraic dV (FM'15, Ex 15)" in withMathematica { _ =>
+  it should "prove Sogokon & Jackson FM'15 Example 15" in withMathematica { _ =>
     val pr = proveBy("<{x1'=-x1,x2'=-x2}> (x1<=1 & x1>=-1 & x2<=1 &x2>=-1)".asFormula,
       semialgdV("1".asTerm)(1)
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "support semialgebraic dV (disjunctive)" in withMathematica { _ =>
-    val pr = proveBy("v!=0 -> <{x'=v}> (x>100 | x < 100)".asFormula,
-      implyR(1) &
-        //encode abs(v)
-        cut("\\exists absv (absv = abs(v))".asFormula) < (
-          existsL(-2),
-          hideR(1) & QE
-        ) &
-        semialgdV("absv".asTerm)(1)
     )
 
     println(pr)
@@ -633,133 +892,6 @@ class ODELivenessTests extends TacticTestBase {
       )
     )
 
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  "cor" should "refine a closed domain" in withQE { _ =>
-    val seq = "x^2+y^2=1/2 ==> <{x'=x, y'=y & -1 <= x & x <= 1 & -1 <=y & y<=1}> (x=1|y=1|x=-1|y=-1)".asSequent
-
-    val pr = proveBy(seq,
-      // Helpful cut that is used twice
-      cut("[{x'=x,y'=y&true&!(x=1|y=1|x=-1|y=-1)}](x<1&y<1&x>-1&y>-1)".asFormula) <(
-        skip,
-        hideR(1) & ODE(1)
-      ) &
-      closedRef("true".asFormula)(1) <(
-        skip,
-        hideL(-2) & QE, // initial circle is in the interior
-        dW(1) & QE //using compatible cut
-      ) &
-      kDomainDiamond("x^2+y^2 > 2".asFormula)(1) <(
-        skip,
-        dW(1) & QE //using compatible cut
-      ) &
-      // Another helpful cut (could be just old(.) for the RHS)
-      cut("[{x'=x,y'=y}](x^2+y^2 >= 1/2)".asFormula) <(
-        // dV("1".asTerm)(1),
-        dVAuto(1),
-        hideL(-2) & hideR(1) & ODE(1)
-      )
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  "univariate" should "automatically odeReduce univariate" in withQE { _ =>
-    val fml = "b() > 0 & k > 0 & v > 0 -> <{x'=v, v' = -k* v^3 -v^2 - b() * v + 1, y'=y, t'=1}> t > 1000".asFormula
-
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "not try univariate removal when inapplicable (1)" taggedAs IgnoreInBuildTest in withQE { _ =>
-    val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=a^2*v, t'=1}> t > 1000".asFormula
-
-    // In this case, the univariate reduction should never fire
-    // and things should fallback to the nonlinear case
-    val pr = proveBy(fml, prop & odeReduce()(1))
-    println(pr)
-
-    // should throw this error
-    // "because odeReduce failed to autoremove: {a'=a^2*v,v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]a*a+v*v<=f_(|a,v|) or this form: [{a'=a^2*v,v'=-v^2*a,t'=1&true}]2*(a*(a^2*v)+v*(-v^2*a))<=a_(|y_,z_,a,v|)*(a*a+v*v)+b_(|y_,z_,a,v|)"
-  }
-
-  it should "not try univariate removal when inapplicable (2)" taggedAs IgnoreInBuildTest in withQE { _ =>
-    val fml = "a > 0 & v > 0 -> <{v'=-v^2 * a,a'=1, t'=1}> t > 1000".asFormula
-
-    // In this case, the univariate reduction should never fire
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1))
-    println(pr)
-
-    // should throw this error
-    // "because odeReduce failed to autoremove: {v'=-v^2*a}. Try to add an assumption to the antecedents of either this form: [{v'=-v^2*a,a'=1,t'=1&true}]v*v<=f_(|v|) or this form: [{v'=-v^2*a,a'=1,t'=1&true}]2*(v*(-v^2*a))<=a_(|y_,z_,v|)*(v*v)+b_(|y_,z_,v|)"
-  }
-
-  it should "work on a hard symbolic case" in withQE { _ =>
-    val fml = "a > 0 & b() < 0 & x<= a& x>= b()-> <{x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
-
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "work with interleaved cases" in withQE { _ =>
-    val fml = "a > 0 & b() < 0 & x<= a& x>= b()& y^2 = 0 -> <{k'=z+x+k,  y'=y*(y-a)*(y-b()),z'=x+z, x'=x*(x-a)*(x-b()), t'=1}> t > 1000".asFormula
-
-    val pr = proveBy(fml, implyR(1) & odeReduce()(1) & solve(1) & QE)
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "try manual univariate boundedness proof" in withQE { _ =>
-    val fml = "a*r^2+b*r+c = 0 & (v-r=0 | v-r < 0 & a*v0^2+b*v0+c > 0 | a*v0^2+b*v0+c < 0 & v-r > 0 ) & v=v0 -> [{v' = a*v^2+b*v+c}] v^2 <= v0^2+r^2".asFormula
-    val pr = proveBy(fml,
-      implyR(1) & cut("\\exists d \\exists e \\forall v a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula) <(
-        existsL('Llast) & existsL('Llast) &
-        dC("a*v^2+b*v+c=(v-r)*(d*v+e)".asFormula)(1) <(
-          ODEInvariance.diffDivConquer("v-r".asTerm, Some("d*v+e".asTerm))(1)
-          <(
-            dW(1) & QE,
-            // Should just do DDC manually to avoid this cut
-            cut("a*v0^2+b*v0+c < 0".asFormula) <( dC("v<=v0".asFormula)(1) <(dW(1) & QE, ODE(1)), cohideOnlyR(2) & QE),
-            cut("a*v0^2+b*v0+c > 0".asFormula) <( dC("v>=v0".asFormula)(1) <(dW(1) & QE, ODE(1)), cohideOnlyR(2) & QE),
-          )
-          , ODE(1)
-        ),
-        cohideOnlyR(2) & QE
-      )
-    )
-
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
-    val pr = proveBy("a()>0 ==> <{x'=a()}>x>=b()".asSequent, dVAuto(1))
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "diff var flat flight progress [function]" in withQE { _ =>
-    val pr = proveBy("b>0 -> \\exists d (d^2<=b^2 & <{x'=d}>x>=p())".asFormula,
-      implyR(1) &
-      existsR("b".asTerm)(1) &
-      andR(1) <( QE , dVAuto(1))
-    )
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "diff var flat flight progress [variable]" in withQE { _ =>
-    val pr = proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula,
-      implyR(1) &
-      allR(1) &
-      existsR("b".asTerm)(1) &
-      andR(1) <( QE , dVAuto(1)))
     println(pr)
     pr shouldBe 'proved
   }

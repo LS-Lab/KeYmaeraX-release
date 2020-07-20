@@ -81,7 +81,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
 
   private val content = DatabasePopulator.loadResource(url)
 
-  it should "export KeYmaera X legacy format" ignore {
+  it should "export KeYmaera X legacy format" ignore withTactics {
     val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
     val printer = new KeYmaeraXLegacyArchivePrinter()
     val printedContent = entries.map(printer(_)).mkString("\n\n")
@@ -94,7 +94,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
     pw.close()
   }
 
-  it should "export KeYmaera X stripped" ignore {
+  it should "export KeYmaera X stripped" ignore withTactics {
     def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry = e.copy(defs = Declaration(Map.empty), tactics = Nil, annotations = Nil)
 
     val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
@@ -108,7 +108,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
     pws.close()
   }
 
-  it should "export KeYmaera 3 format" in {
+  it should "export KeYmaera 3 format" in withTactics {
     val printer = KeYmaera3PrettyPrinter
     val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
     val printedEntries = entries.map(e =>
@@ -276,7 +276,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
             println(s"Done generating (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
             if (candidates.nonEmpty) {
               println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))
-              TactixLibrary.invSupplier = FixedGenerator(candidates)
+              TactixInit.invSupplier = FixedGenerator(candidates)
               val checkStart = System.currentTimeMillis()
               val proof = proveBy(seq, TactixLibrary.master())
               val checkEnd = System.currentTimeMillis()
@@ -356,23 +356,23 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 
   /** Parse model and add proof hint annotations to invariant generator. */
   private def parseWithHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
-    TactixLibrary.invSupplier = FixedGenerator(Nil)
+    TactixInit.invSupplier = FixedGenerator(Nil)
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
     val entry = KeYmaeraXArchiveParser(modelContent).head
-    TactixLibrary.invSupplier = generator
-    TactixLibrary.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
-    TactixLibrary.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
+    TactixInit.invSupplier = generator
+    TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
   /** Parse model but ignore all proof hints. */
   private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
-    TactixLibrary.invSupplier = FixedGenerator(Nil)
-    TactixLibrary.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
-    TactixLibrary.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
+    TactixInit.invSupplier = FixedGenerator(Nil)
+    TactixInit.differentialInvGenerator = InvariantGenerator.cached(InvariantGenerator.differentialInvariantGenerator)
+    TactixInit.loopInvGenerator = InvariantGenerator.cached(InvariantGenerator.loopInvariantGenerator)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
     val entry = KeYmaeraXArchiveParser(modelContent).head
     (entry.model.asInstanceOf[Formula], entry.defs)

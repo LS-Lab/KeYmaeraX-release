@@ -30,7 +30,7 @@ object Bifurcation {
     }
 
   /** Splits the proof using the [[bifurcationTool]] and does nothing on each of the branches. */
-  val biSplit = "biSplit" by ((pos: Position, seq: Sequent) => {
+  val biSplit = anon ((pos: Position, seq: Sequent) => {
     val odes = seq.sub(pos) match {
       case s : ODESystem => s
       case Some(e) => throw new TacticInapplicableFailure("biSplit only applicable to ODEs, but got " + e.prettyString)
@@ -41,7 +41,7 @@ object Bifurcation {
   })
 
   /** Splits the proof using the [[bifurcationTool]] and runs [[TactixLibrary.ODE]] on each of the remaining branches. */
-  val biSplitAuto = "biSplitAuto" by ((pos: Position, seq: Sequent) => {
+  val biSplitAuto = anon ((pos: Position, seq: Sequent) => {
     val odes = seq.sub(pos) match {
       case s : ODESystem => s
       case Some(e) => throw new TacticInapplicableFailure("biSplitAuto only applicable to ODEs, but got " + e.prettyString)

@@ -15,7 +15,9 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.implyRi
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
+import edu.cmu.cs.ls.keymaerax.macros.{ProvableInfo, Tactic}
 
 import scala.collection.immutable
 import scala.collection.immutable.Nil
@@ -299,7 +301,8 @@ object ODELiveness {
 
   /** Single use of DE system */
   //todo: copied and tweaked from DifferentialTactics
-  private lazy val DESystemCustom: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+  // was "DE system step"
+  private lazy val DESystemCustom: DependentPositionTactic = new DependentPositionTactic("ANON") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) => {
@@ -313,7 +316,8 @@ object ODELiveness {
 
   /** Repeated use of Dassignb */
   //todo: copied and tweaked from DifferentialTactics
-  private lazy val DassignbCustom: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+  // was "DE system step"
+  private lazy val DassignbCustom: DependentPositionTactic = new DependentPositionTactic("ANON") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Box(Assign(xp@DifferentialSymbol(x),f0), p)) => {
@@ -406,7 +410,7 @@ object ODELiveness {
     }
     )
 
-    var pr = baseGExgt.fact //baseGExge.fact for the >= version
+    var pr = Ax.TExgt.provable //Ax.TExge for the >= version
     var curode = timeode
 
     for(odeG <- odeGroups) {
@@ -437,7 +441,7 @@ object ODELiveness {
   // Helper to remove a nonlinear univariate ODE.
   // This is a bit different from the others in that it needs to inspect the current sequent in order to
   // correctly remove the univariate ODE. Thus, it throws BelleThrowables for errors
-  private def removeODEUnivariate(ode : List[DifferentialProgram], cont:BelleExpr): DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
+  private def removeODEUnivariate(ode : List[DifferentialProgram], cont:BelleExpr): DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
 
     val (sys,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys,post)
@@ -529,7 +533,7 @@ object ODELiveness {
   })
 
   //Helper to remove a nonlinear ODE
-  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr) : DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
+  private def removeODENonLin(ode : DifferentialProgram, strict:Boolean, cont:BelleExpr) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
 
     val vdgpre = getVDGinst(ode)._1
     val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(1::0::Nil)).get, seq.sub(pos).get).usubst
@@ -587,7 +591,7 @@ object ODELiveness {
     * @param strict whether to throw an error when it meets a nonlinear ODE that can't be reduced
     * @return reduces away all irrelevant ODEs
     */
-  def odeReduce(strict: Boolean = true) : DependentPositionTactic = "odeReduce" by ((pos:Position,seq:Sequent) => {
+  def odeReduce(strict: Boolean = true) : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "odeReduce is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -699,7 +703,7 @@ object ODELiveness {
     * ---
     * G, [x'=f(x)&A]B |- [x'=f(x)&Q]P
     */
-  def compatCuts : DependentPositionTactic = "compatCuts" by ((pos:Position, seq:Sequent) => {
+  def compatCuts : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "compatCuts is only applicable at a top-level succedent")
 
     val (tarsys,tarpost) = seq.sub(pos) match {
@@ -766,7 +770,8 @@ object ODELiveness {
     * @param target the formula R to refine the postcondition
     * @return two premises, as shown above when applied to a top-level succedent diamond
     */
-  def kDomainDiamond(target: Formula): DependentPositionTactic = "kDomD" byWithInput (target,(pos: Position, seq:Sequent) => {
+  // was kDomD
+  def kDomainDiamond(target: Formula): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "kDomD is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -781,7 +786,7 @@ object ODELiveness {
       skip,
       useAt(Ax.KDomD,PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
-  })
+  }}
 
   /** Implements DR<.> rule
     * Note: uses auto cuts for the later premise
@@ -794,7 +799,7 @@ object ODELiveness {
     * @param target the formula R to refine the domain constraint
     * @return two premises, as shown above when applied to a top-level succedent diamond
     */
-  def dDR(target: Formula): DependentPositionTactic = "dDR" byWithInput (target,(pos: Position, seq:Sequent) => {
+  def dDR(target: Formula): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dDR is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -809,7 +814,7 @@ object ODELiveness {
       skip,
       useAt(Ax.DRd,PosInExpr(1::Nil))(pos) & compatCuts(pos)
     )
-  })
+  }}
 
   /** Implements vDG rule that adds ghosts to an ODE on the left or right, in either modality
     * For boxes on the right and diamonds on the left, the ODE must be affine
@@ -828,7 +833,7 @@ object ODELiveness {
     * @param ghost the ODEs to ghost in
     * @return the sequent with ghosts added in requested position
     */
-  def vDG(ghost: DifferentialProgram): DependentPositionTactic = "vDG" byWithInput (ghost,(pos: Position, seq:Sequent) => {
+  def vDG(ghost: DifferentialProgram): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel, "vDG is only applicable at a top-level position")
 
     val (sys,post,isBox) = seq.sub(pos) match {
@@ -853,9 +858,11 @@ object ODELiveness {
       else //diamond in antecedent
         useAt(flipModality(vdg),PosInExpr(0::Nil))(pos)
     }
-  })
+  }}
 
   // Flips a proved [a]p(||) -> [b]p(||) into <b>p(||) -> <a>p(||) or vice versa, possibly with bananas for p(||)
+  // Also works under 1 level of nesting and curries the result so that it is easy to apply backwards e.g.
+  // foo -> [a]p(||) -> [b]p(||) into foo & <b>p(||) -> <a>p(||)
   private def flipModality(pr:ProvableSig) : ProvableSig = {
 
     val fml = pr.conclusion.succ(0)
@@ -877,6 +884,22 @@ object ODELiveness {
             implyRi & byUS(pr)
         )
       }
+      case Imply(outer,Imply(Box(proga,post),Box(progb,post2))) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+        proveBy(Imply(And(outer,Diamond(progb,post)),Diamond(proga,post)),
+          implyR(1) & andL(-1) &
+            useAt(Ax.diamond, PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt(Ax.diamond, PosInExpr(1 :: Nil))(-2) & notL(-2) &
+            implyRi()(AntePos(1), SuccPos(0)) & implyRi & byUS(pr)
+        )
+      }
+      case Imply(outer,Imply(Diamond(proga,post),Diamond(progb,post2))) if post==post2 && post.isInstanceOf[UnitPredicational] => {
+        proveBy(Imply(And(outer,Box(progb,post)),Box(proga,post)),
+          implyR(1) & andL(-1) &
+            useAt(Ax.box, PosInExpr(1 :: Nil))(1) & notR(1) &
+            useAt(Ax.box, PosInExpr(1 :: Nil))(-2) & notL(-2) &
+            implyRi()(AntePos(1), SuccPos(0)) & implyRi & byUS(pr)
+        )
+      }
       case _ => ???
     }
   }
@@ -885,6 +908,9 @@ object ODELiveness {
     TryCatch(byUS(p), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with: " + p+ " Exception:"+ ex))
 
   private def byUScaught(p:Lemma) =
+    TryCatch(byUS(p), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with: " + p+ " Exception:"+ ex))
+
+  private def byUScaught(p:ProvableInfo) =
     TryCatch(byUS(p), classOf[UnificationException], (ex: UnificationException) => throw new TacticInapplicableFailure("Un-unifiable with: " + p+ " Exception:"+ ex))
 
   /** Implements dV rule for atomic postconditions
@@ -906,7 +932,7 @@ object ODELiveness {
     * @param manual whether to try closing automatically
     * @return closes (or partially so)
     */
-  def dV(bnd: Term, manual:Boolean = false): DependentPositionTactic = "dV" byWithInput (bnd,(pos: Position, seq:Sequent) => {
+  def dV(bnd: Term, manual:Boolean = false): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -947,8 +973,8 @@ object ODELiveness {
     val axren = ax(URename(timevar,"t".asVariable,semantic=true))
 
     val ex = property match {
-      case Greater(_, _) => baseGExgt.fact
-      case GreaterEqual(_, _) => baseGExge.fact
+      case Greater(_, _) => Ax.TExgt
+      case GreaterEqual(_, _) => Ax.TExge
       case _ => ??? //impossible
     }
 
@@ -966,9 +992,10 @@ object ODELiveness {
         compatCuts(pos) & dI('full)(pos)  // derivative lower bound
       )
     )
-  })
+  }}
 
-  def dVAuto: DependentPositionTactic = "dV" by ((pos: Position, seq:Sequent) => {
+  // was "dV"
+  def dVAuto: DependentPositionTactic = anon ((pos: Position, seq:Sequent) => {
     require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -1023,7 +1050,7 @@ object ODELiveness {
         andR(pos) <(
           andR(pos) <(
             id,
-            odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & (byUScaught(baseGExge)|byUScaught(baseGExgt)))), // existence
+            odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)))), // existence
           compatCuts(pos) &
             dR(lie,false)(pos) <(
                   cohideOnlyR(pos) & (hideL(-1) * (seq.ante.length + 2)) & dI('full)(1),
@@ -1042,7 +1069,7 @@ object ODELiveness {
   })
 
   // Semialgebraic dV
-  def semialgdV(bnd: Term): DependentPositionTactic = "semialgdV" byWithInput (bnd,(pos: Position, seq:Sequent) => {
+  def semialgdV(bnd: Term): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel, "dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -1100,7 +1127,7 @@ object ODELiveness {
     kDomainDiamond(oldpbound)(pos) <(
       useAt(axren,PosInExpr(1::Nil))(pos)& andR(pos) <(
         ToolTactics.hideNonFOL & QE,
-        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUScaught(baseGExgt)) ), // existence
+        odeReduce(strict = false)(pos) & Idioms.?(cohideR(pos) & byUScaught(Ax.TExgt)) ), // existence
       dC(inv)(pos) <(
         DW(pos) & G(pos) & ToolTactics.hideNonFOL & QE, //can be proved manually
         DifferentialTactics.DconstV(pos) & sAIclosed(pos) //ODE does a boxand split, which is specifically a bad idea here
@@ -1108,12 +1135,9 @@ object ODELiveness {
 
     )
 
-  })
+  }}
 
   /** some of these should morally be in DerivedAxioms but have weird dependencies */
-  private lazy val baseGExge = remember("<{gextimevar_'=1}> (gextimevar_ >= p())".asFormula, solve(1) & QE & done, namespace)
-  private lazy val baseGExgt = remember("<{gextimevar_'=1}> (gextimevar_ > p())".asFormula, solve(1) & QE & done, namespace)
-
   private lazy val exRWgt = remember("e() > 0 & <{t'=1, c &q_(||)}> t > -p(||)/e() -> <{t'=1, c &q_(||)}> p(||) + e() * t > 0".asFormula,
     implyR(1) & andL(-1) &
       cutR("<{t'=1,c&q_(||)}>(t>-p(||)/e() & e() > 0)".asFormula)(1) <(
@@ -1179,7 +1203,7 @@ object ODELiveness {
     * @param bnds the lower bound on derivatives
     * @return two subgoals, shown above
     */
-  def higherdV(bnds: List[Term]): DependentPositionTactic = "higherdV" byWithInput (bnds,(pos: Position, seq:Sequent) => {
+  def higherdV(bnds: List[Term]): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel, "Higher dV is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -1216,8 +1240,8 @@ object ODELiveness {
     val series = coefflist.tail.zipWithIndex.foldLeft(coefflist.head:Term) { (h,fe) => Plus(h,Times(fe._1, Power(timevar, Number(fe._2+1)))) }
 
     val ex = property match {
-      case Greater(_, _) => baseGExgt.fact
-      case GreaterEqual(_, _) => baseGExge.fact
+      case Greater(_, _) => Ax.TExgt
+      case GreaterEqual(_, _) => Ax.TExge
       case _ => ??? //impossible
     }
 
@@ -1240,7 +1264,7 @@ object ODELiveness {
 //          compatCuts(pos) & dI('full)(pos)  // derivative lower bound
 //        )
 //      )
-  })
+  }}
 
   /** Saves a (negated) box version of the liveness postcondition.
     * This is a helpful pattern because of compat cuts
@@ -1249,7 +1273,7 @@ object ODELiveness {
     * ---- (saveBox)
     * G |- <ODE & Q> P
     */
-  def saveBox : DependentPositionTactic = "saveBox" by ((pos:Position, seq:Sequent) => {
+  def saveBox : DependentPositionTactic = anon ((pos:Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "saveBox is only applicable at a top-level succedent")
 
     val (tarsys, tarpost) = seq.sub(pos) match {
@@ -1285,7 +1309,7 @@ object ODELiveness {
     *
     * @todo: succeeds but probably unexpectedly when Q is not closed. Best to error instead.
     */
-  def closedRef(target: Formula): DependentPositionTactic = "closedRef" byWithInput (target,(pos: Position, seq:Sequent) => {
+  def closedRef(target: Formula): DependentPositionTactic = anon {(pos: Position, seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "closedRef is only applicable at a top-level succedent")
 
     val (sys,post) = seq.sub(pos) match {
@@ -1301,8 +1325,127 @@ object ODELiveness {
       DifferentialTactics.dCClosure(pos)<(
         hideL('Llast) & skip , compatCuts(pos) & hideL('Llast) )
     )
-  })
+  }}
 
+  /** dDDG rule
+    *
+    * G |- [ghosts, ODE] (||ghosts||)' <= L ||ghosts|| + M
+    * G |- <ODE & R> P
+    * ---- (dDDG)
+    * G |- <ghosts , ODE & p>=0> P
+    *
+    * @param L, M as above
+    * @param dim The first dim ODEs at the given position are treated as ghosts
+    */
+  private def dDDGInternal(L:Term, M: Term, dim:Int = 1) (pos:Position, seq:Sequent) = {
+    require(pos.isTopLevel && pos.isSucc, "dDDG is only applicable at a top-level succedent")
+    require(dim >= 1, "dDDG must remove at least 1 ghost ODE")
 
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("dDDG only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
 
+    val odels = DifferentialProduct.listify(sys.ode).map {
+      case AtomicODE(x,e) => AtomicODE(x,e)
+      case ode => throw new TacticInapplicableFailure("dDDG only applicable to concrete ODEs, but got " + ode.prettyString)
+    }
+
+    // Must have at least 1 ODE left after ghosting
+    if( odels.length < dim + 1)
+      throw new IllFormedTacticApplicationException("Too few ghost ODEs to remove: " + sys.ode.prettyString)
+
+    val ghosts = odels.take(dim)
+
+    // todo: refactor this code out somehow to reduce duplication
+    val ddgpre = getDDGinst(ghosts.reduce(DifferentialProduct.apply))
+
+    val lipsLsub = ddgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::0::0::Nil)).get
+    val lipsMsub = ddgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::1::Nil)).get
+
+    val lipsLunif = UnificationMatch.unifiable(lipsLsub,L).get.usubst
+    val lipsMunif = UnificationMatch.unifiable(lipsMsub,M).get.usubst
+    val ddg = (ddgpre(lipsLunif))(lipsMunif)
+    val ddgf = flipModality(ddg)
+
+    useAt(ddgf,PosInExpr(1::Nil))(pos) & andR(pos)
+  }
+
+  def dDDG(L:Term, M: Term, dim:Int) : DependentPositionTactic = anon ((pos : Position, sequent: Sequent) =>
+    dDDGInternal(L, M, dim)(pos, sequent)
+  )
+
+  @Tactic(names="Differentially-bounded Diff Ghost",
+    codeName="dDDG", // todo: rename the tactic directly
+    premises="Γ |- [y'=g(x,y),x'=f(x)&Q](||y||^2)' <= L||y||+M ;; Γ |- <x'=f(x)&Q>P, Δ",
+    conclusion="Γ |- <y'=g(x,y),x'=f(x)&Q>P, Δ",
+    displayLevel="internal")
+  def dDDG(L:Term, M: Term) : DependentPositionTactic = anon ((pos : Position, sequent: Sequent) =>
+    dDDGInternal(L, M, 1)(pos, sequent)
+  )
+
+  /** dBDG rule
+    *
+    * G |- [ghosts, ODE] (||ghosts||)^2 <= p
+    * G |- <ODE & R> P
+    * ---- (dBDG)
+    * G |- <ghosts , ODE & p>=0> P
+    *
+    * @param p as above
+    * @param dim The first dim ODEs at the given position are treated as ghosts
+    */
+  private def dBDGInternal(p: Term, dim:Int = 1) (pos:Position, seq:Sequent) = {
+    require(pos.isTopLevel && pos.isSucc, "dBDG is only applicable at a top-level succedent")
+    require(dim >= 1, "dBDG must remove at least 1 ghost ODE")
+
+    val (sys,post) = seq.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (sys,post)
+      case Some(e) => throw new TacticInapplicableFailure("dBDG only applicable to diamond ODEs, but got " + e.prettyString)
+      case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + seq.prettyString)
+    }
+
+    val odels = DifferentialProduct.listify(sys.ode).map {
+      case AtomicODE(x,e) => AtomicODE(x,e)
+      case ode => throw new TacticInapplicableFailure("dBDG only applicable to concrete ODEs, but got " + ode.prettyString)
+    }
+
+    // Must have at least 1 ODE left after ghosting
+    if( odels.length < dim + 1)
+      throw new IllFormedTacticApplicationException("Too few ghost ODEs to remove: " + sys.ode.prettyString)
+
+    val ghosts = odels.take(dim)
+
+    // todo: refactor this code out somehow to reduce duplication
+    val vdgpre = getVDGinst(ghosts.reduce(DifferentialProduct.apply))._1
+    val vdgsubst = UnificationMatch(vdgpre.conclusion.succ(0).sub(PosInExpr(0::1::1::Nil)).get, p).usubst
+    // the concrete vdg instance
+    val vdg = vdgpre(vdgsubst)
+    val vdgf = flipModality(vdg)
+
+    useAt(vdgf,PosInExpr(1::Nil))(pos) & andR(pos)
+  }
+
+  def dBDG(p:Term, dim:Int) : DependentPositionTactic = anon ((pos : Position, sequent: Sequent) =>
+    dBDGInternal(p, dim)(pos, sequent)
+  )
+
+  @Tactic(names="Bounded Diff Ghost",
+    codeName="dBDG", // todo: rename the tactic directly
+    premises="Γ |- [y'=g(x,y),x'=f(x)&Q]||y||^2 <= p(x) ;; Γ |- <x'=f(x)&Q>P, Δ",
+    conclusion="Γ |- <y'=g(x,y),x'=f(x)&Q>P, Δ",
+    displayLevel="internal")
+  def dBDG(p: Term) : DependentPositionTactic = anon ((pos : Position, sequent: Sequent) =>
+    dBDGInternal(p, 1)(pos, sequent)
+  )
+
+  // Convenient wrapper for GEx
+  @Tactic(names="Global Existence",
+    codeName="gEx",
+    premises="*",
+    conclusion="Γ |- <x'=f(x),t'=1,&Q>t>tau(), Δ",
+    displayLevel="internal")
+  def gEx : DependentPositionTactic = anon ((pos : Position,seq:Sequent) =>
+    odeReduce(strict = true)(pos) & cohideR(pos) & (byUScaught(Ax.TExge)|byUScaught(Ax.TExgt)) & done
+  )
 }

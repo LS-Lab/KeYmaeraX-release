@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
-import edu.cmu.cs.ls.keymaerax.macros.TacticInfo
+import edu.cmu.cs.ls.keymaerax.macros.{GeneratorArg, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.core.{Equal, Expression, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
@@ -53,7 +53,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
         case SaturateTactic(t) => sanitizeUnary(wrapLeft(e, t, indent), op(e).terminal.img)
         case it: StringInputTactic if it.inputs.nonEmpty =>
-          val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
+          val eargs = BelleExpr.persistable(it.inputs).map(input => argPrinter(Left(input))).mkString(", ")
           it.name + "(" + eargs + ")"
         case it: StringInputTactic if it.inputs.isEmpty => it.name
         case BuiltInTactic(name) if name != "ANON" => name
@@ -77,14 +77,15 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case DependentPositionTactic(name) => name // name of a DependentPositionTactic is the codeName
         case adp: AppliedDependentPositionTactic => adp.pt match {
           case e: DependentPositionWithAppliedInputTactic =>
-            val eargs = e.inputs.map(input => argPrinter(Left(input))).mkString(", ")
-            val sep = if (e.inputs.isEmpty) "" else ", "
+            val ins = BelleExpr.persistable(e.inputs)
+            val eargs = ins.map(input => argPrinter(Left(input))).mkString(", ")
+            val sep = if (ins.isEmpty) "" else ", "
             e.name + "(" + eargs + sep + argPrinter(Right(adp.locator)) + ")"
           case e: DependentPositionTactic => e.name + "(" + argPrinter(Right(adp.locator)) + ")" //@todo not sure about this.
         }
         case ap : AppliedPositionTactic => pp(ap.positionTactic, indent) + argListPrinter(Right(ap.locator) :: Nil)
         case it : InputTactic =>
-          val eargs = it.inputs.map(input => argPrinter(Left(input))).filter(_.nonEmpty).mkString(", ")
+          val eargs = BelleExpr.persistable(it.inputs).map(input => argPrinter(Left(input))).filter(_.nonEmpty).mkString(", ")
           it.name + "(" + eargs + ")"
         case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
         case NamedTactic(name, _) if name != "ANON" => name
@@ -97,11 +98,15 @@ object BellePrettyPrinter extends (BelleExpr => String) {
   }
 
   private def argListPrinter(args: List[BelleParser.TacticArg]) = {
-    "(" + args.map(argPrinter).reduce(_ + ", " + _) + ")"
+    // Some arguments (Generators) will be automatically instantiated by the interpreter and so should not be persisted explicitly
+    val persistentArgs = args.filter{case (Left(_: GeneratorArg)) => false case _ => true}
+    "(" + persistentArgs.map(argPrinter).reduce(_ + ", " + _) + ")"
   }
 
-  private def argPrinter(arg: BelleParser.TacticArg) = {
+  // @TODO: Print substitution as subst.subsDefsInput.map(p => p.what.prettyString + "~>" + p.repl.prettyString)
+  private def argPrinter(arg: BelleParser.TacticArg): String = {
     arg match {
+      case Left(x :: xs) => (x :: xs).map(c => argPrinter(Left(c))).mkString(",")
       case Left(expr: Expression) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
       case Left(Some(expr: Expression)) => "\"" + KeYmaeraXPrettyPrinter(expr) + "\""
       case Left(Some(expr)) => "\"" + expr + "\""

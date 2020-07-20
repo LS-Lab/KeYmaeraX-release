@@ -8,7 +8,7 @@ import java.util.concurrent.{CancellationException, ExecutionException}
 
 import edu.cmu.cs.ls.keymaerax.infrastruct.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, FixedGenerator, InvariantGenerator, TactixInit, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{RenUSubst, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -272,7 +272,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
     case Expand(_, s) =>
       val subst = USubst(s :: Nil)
-      TactixLibrary.invSupplier = substGenerator(TactixLibrary.invSupplier, subst :: Nil)
+      TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, subst :: Nil)
       apply(TactixLibrary.US(subst), v) match {
         case p: BelleDelayedSubstProvable => new BelleDelayedSubstProvable(p.p, p.label, p.subst ++ subst)
         case p: BelleProvable => new BelleDelayedSubstProvable(p.p, p.label, subst)
@@ -281,7 +281,7 @@ abstract class BelleBaseInterpreter(val listeners: scala.collection.immutable.Se
 
     case ExpandAll(defs) =>
       val substs = defs.map(s => USubst(s :: Nil))
-      TactixLibrary.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
+      TactixInit.invSupplier = substGenerator(TactixLibrary.invSupplier, substs)
       val foo =
       apply(defs.map(s => TactixLibrary.US(USubst(s :: Nil))).
         reduceOption[BelleExpr](_ & _).getOrElse(TactixLibrary.skip), v);

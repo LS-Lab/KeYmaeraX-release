@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
@@ -17,6 +18,14 @@ import scala.annotation.tailrec
 
 object BelleExpr {
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
+  private[bellerophon] def flattenArgs(args: Seq[Any]): Seq[Any] = {
+    args.flatMap{case arg: List[_] => flattenArgs(arg) case arg => Seq(arg) }
+  }
+  // Don't persist generator arguments
+  private[bellerophon] def persistable(args: Seq[Any]): Seq[Any] = {
+    val filtered = args.filter{case (_: Generator[_]) => false case _ => true}
+    flattenArgs(filtered)
+  }
 }
 
 /**
@@ -77,6 +86,7 @@ trait NamedBelleExpr extends BelleExpr {
   val name: String
 
   override def prettyString: String = name
+  if (name != "ANON") DerivationInfo.seeName(name)
 }
 
 
@@ -139,9 +149,7 @@ object NoOpTactic {
 }
 
 /** Give a code name to the given tactic `tactic` for serialization purposes. */
-case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
-  assert(name == "ANON" || DerivationInfo.hasCodeName(name), s"WARNING: NamedTactic was named $name but this name does not appear in DerivationInfo's list of codeNames.")
-}
+case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr
 
 /** ⎵: Placeholder for tactics in tactic contexts. Reserved tactic expression that cannot be executed. */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }
@@ -562,7 +570,7 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
 abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExpr with NamedBelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String =
-    s"$name(${inputs.map({
+    s"$name(${BelleExpr.persistable(inputs).map({
       case input: Expression => "\"" + input.prettyString + "\""
       case input: USubst => input.subsDefsInput.map(p => "\"" + p.what.prettyString + "~>" + p.repl.prettyString + "\"").mkString(",")
       case input: SubstitutionPair => "\"" + input.what.prettyString + "~>" + input.repl.prettyString + "\""
@@ -587,7 +595,7 @@ abstract class StringInputTactic(override val name: String, val inputs: Seq[Stri
 abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: Seq[Any]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
   //@note non-serializable pretty-string, only applied tactic is serializable. @see AppliedDependendPositionTacticWithAppliedInput
-  override def prettyString: String = super.prettyString + "(" + inputs.mkString(",") + ")"
+  override def prettyString: String = super.prettyString + "(" + BelleExpr.persistable(inputs).mkString(",") + ")"
 
   override def equals(other: Any): Boolean = other match {
     case o: DependentPositionWithAppliedInputTactic => o.n == n && o.inputs == inputs
@@ -597,7 +605,7 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
 }
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
-    if (pt.inputs.nonEmpty) s"${pt.name}(${pt.inputs.map({ case input: Expression => "\"" + input.prettyString + "\"" case input => "\"" + input.toString + "\""}).mkString(",")},${locator.prettyString})"
+    if (pt.inputs.nonEmpty) s"${pt.name}(${BelleExpr.persistable(pt.inputs).map({ case input: Expression => "\"" + input.prettyString + "\"" case input => "\"" + input.toString + "\""}).mkString(",")},${locator.prettyString})"
     else pt.name + "(" + locator.prettyString + ")"
 
   override def equals(other: Any): Boolean = other match {

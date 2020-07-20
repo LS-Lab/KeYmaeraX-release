@@ -118,7 +118,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
 //  it should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
   it should "prove exists and" in {check(existsAnd)}
   it should "prove [:=] assign exists" in {check(assignbexists)}
-  it should "prove <:=> assign equality" in {check(assigndEquality)}
+  it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignb)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssignd)}
   //@todo it should "prove [':=] differential assign" in {check(assignDAxiomb)}
@@ -182,7 +182,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove + commute" in withZ3 { qeTool => check(plusCommute)}
   it should "prove * commute" in withZ3 { qeTool => check(timesCommute)}
   it should "prove distributive" in withZ3 { qeTool => check(distributive)}
-  it should "prove + identity" in withZ3 { qeTool => check(plusIdentity)}
+  it should "prove + identity" in withZ3 { qeTool => check(zeroPlus)}
   it should "prove * identity" in withZ3 { qeTool => check(timesIdentity)}
   it should "prove + inverse" in withZ3 { qeTool => check(plusInverse)}
   it should "prove * inverse" in withZ3 { qeTool => check(timesInverse)}

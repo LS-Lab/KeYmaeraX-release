@@ -18,26 +18,26 @@ import scala.collection.immutable._
   * Created by bbohrer on 11/23/15.
   */
 @Ignore
-class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
+class TraceRecordingTests extends TacticTestBase   {
   val db = DBAbstractionObj.testDatabase
   //@todo fill in reasonable data, this is bogus
   private val u = 999
   val listener = new TraceRecordingListener(db, 1337, Some(u), ProvableSig.startProof(True), 0, false, "TODO")
-  val theInterpreter = new ExhaustiveSequentialInterpreter(Seq(listener))
+  override val theInterpreter = new ExhaustiveSequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
   override def beforeEach() = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
-  private def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
+  override def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(s))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
-  "IOListener" should "Not Crash" in {
+  "IOListener" should "Not Crash" in withTactics {
     val t1 = System.nanoTime()
     proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
         TestLib.useAt(Ax.composeb, PosInExpr(1 :: Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
@@ -48,13 +48,13 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
 
   /* Same sequent and proof as the mockup for the new proof tree UI. Should give us a good sense of whether this code
   * can support the new UI or not. */
-  it should "handle branching proofs" in {
+  it should "handle branching proofs" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
       implyR(SuccPos(0)) & andR(SuccPos(0)))
       db.printStats()
   }
 
-  it should "support multiple proof steps" in {
+  it should "support multiple proof steps" in withTactics {
     val provable =
       proveBy(Sequent(IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
         implyR(SuccPos(0)))

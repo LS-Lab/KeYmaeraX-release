@@ -63,55 +63,55 @@ class AxiomRecursorTest extends TacticTestBase with BeforeAndAfterAll {
     matchKey(Ax.diamond, "![x:=x+1;{x'=55}]!x>=99".asFormula)
   }
 
-  it should "instantiate [:=] assign 1" in {
+  it should "instantiate [:=] assign 1" in withTactics {
     matchKey(Ax.assignbAxiom, "[x:=z;]x^2>=9".asFormula)
   }
 
-  it should "instantiate [:=] assign equality 1" in {
+  it should "instantiate [:=] assign equality 1" in withTactics {
     matchKey(Ax.assignbeq, "[x:=1;][x:=2;]x>0".asFormula)
   }
 
-  it should "instantiate [:=] assign equality 2" in {
+  it should "instantiate [:=] assign equality 2" in withTactics {
     matchKey(Ax.assignbeq, "[x:=1;][{x:=x+1;}*]x>0".asFormula)
   }
 
-  it should "instantiate [:=] assign equality 3" in {
+  it should "instantiate [:=] assign equality 3" in withTactics {
     matchKey(Ax.assignbeq, "[z1:=1;]<z1:=*;>1>=1".asFormula)
   }
 
-  it should "instantiate [:=] assign equality 4" in {
+  it should "instantiate [:=] assign equality 4" in withTactics {
     matchKey(Ax.assignbeq, "[z1:=98+1;][z1:=*;][?true;]true".asFormula)
   }
 
-  it should "instantiate [++]" in {
+  it should "instantiate [++]" in withTactics {
     matchKey(Ax.choiceb, "[x:=x+1;++{x:=0;{y'=-2}}]x>=y".asFormula)
   }
 
-  it should "instantiate DI" in {
+  it should "instantiate DI" in withTactics {
     matchKey(Ax.DIequiv, "[{x'=5&x>9}]x>=10".asFormula)
   }
 
-  it should "instantiate DC" in {
+  it should "instantiate DC" in withTactics {
     matchKey(Ax.DC, "[{x'=5&x>9}]x>=10".asFormula)
   }
 
-  it should "instantiate DG" in {
+  it should "instantiate DG" in withTactics {
     matchKey(Ax.DGa, "[{x'=5&x>9}]x>=10".asFormula)
   }
 
-  it should "instantiate DG crazy" in {
+  it should "instantiate DG crazy" in withTactics {
     matchKey(Ax.DGa, "[{z2'=1&<z2:=z2+z1;{{?true;++?true;}++?true;?true;}>(\\forall z1 \\forall z1 true->\\forall z2 (true&true))}]true".asFormula)
   }
 
-  it should "instantiate DG crazy 2" in {
+  it should "instantiate DG crazy 2" in withTactics {
     matchKey(Ax.DGa, "[{z1'=1&<z2:=z1;>\\exists z1 [z1:=z2+1;]z1>=1}]<z1:=-64;>[?true;?true;++?true;]z2>=1+1".asFormula)
   }
 
-  it should "instantiate DG crazy 3" in {
+  it should "instantiate DG crazy 3" in withTactics {
     matchKey(Ax.DGa, "[{z1'=1&<z2:=z1;>\\exists z1 z1>=z2}]z1>=5".asFormula)
   }
 
-  it should "instantiate DS&" in {
+  it should "instantiate DS&" in withTactics {
     matchKey(Ax.DS, "[{y1'=z0+31&q(y1)}]\\exists z1 z1>y1".asFormula)
   }
   

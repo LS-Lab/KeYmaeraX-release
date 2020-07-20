@@ -847,7 +847,8 @@ object SimplifierV2 {
   }
 
   //Simplifies a formula including sub-terms occuring in the formula
-  lazy val simpTac:DependentPositionTactic = "simplify" by ((pos: Position, sequent: Sequent) => {
+  // was named "simplify"
+  lazy val simpTac:DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match
     {
       case Some(f:Formula) =>
@@ -913,7 +914,8 @@ object SimplifierV2 {
   // 3) Moves the implications back
 
   // This might be slightly too unpredictable for some purposes, so use simpTac instead
-  lazy val fullSimpTac:DependentTactic = "fullSimplify" by ((seq: Sequent) => {
+  // was "fullSimplify"
+  lazy val fullSimpTac:DependentTactic = anon ((seq: Sequent) => {
     val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
     val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
     val (ff,pr) = formulaSimp(Imply(anteAnd,succOr), IndexedSeq())

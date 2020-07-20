@@ -72,7 +72,8 @@ object ArithmeticSimplification {
     * @author Stefan Mistch
     * @note Same as smartHide except does both the succedent and the antecedent, and assumes that a list of irrelevant names is already available.
     */
-  def hideFactsAbout(irrelevant: String*): BelleExpr = "hideIrrelevant" by ((sequent: Sequent) => {
+  // was "hideIrrelevant"
+  def hideFactsAbout(irrelevant: String*): BelleExpr = anon ((sequent: Sequent) => {
     val irrelevantSet = irrelevant.map(_.asNamedSymbol).toSet
     val hideAnte = sequent.ante.zipWithIndex.filter(p => StaticSemantics.symbols(p._1).intersect(irrelevantSet).nonEmpty).
       sortWith((l,r) => l._2 <= r._2).reverse.map {
@@ -95,7 +96,7 @@ object ArithmeticSimplification {
     //    transformEquality(equality f=g) -----------
     conclusion="Γ |- P(equalityLHS), Δ",
     displayLevel="browse")
-  def transformEquality(equality:Formula) : DependentPositionTactic = anon ((pos:Position, sequent:Sequent) => {
+  def transformEquality(equality:Formula) : DependentPositionWithAppliedInputTactic = inputanon ((pos:Position, sequent:Sequent) => {
       assert(equality.isInstanceOf[Equal], s"Expected equality but found ${equality.prettyString}")
       val what = equality.asInstanceOf[Equal].left
       val to   = equality.asInstanceOf[Equal].right

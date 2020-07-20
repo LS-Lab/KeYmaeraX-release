@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixLibrary, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, TactixLibrary, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
@@ -92,7 +92,7 @@ object KeYmaeraX {
     implicit val ec: ExecutionContext = ExecutionContext.global
     Await.ready(Future { ToolProvider.shutdown() }, Duration(5, TimeUnit.SECONDS))
     ToolProvider.setProvider(new NoneToolProvider())
-    TactixLibrary.invSupplier = FixedGenerator(Nil)
+    TactixInit.invSupplier = FixedGenerator(Nil)
     KeYmaeraXTool.shutdown()
     //@note do not System.exit in here, which causes Runtime shutdown hook to re-enter this method and block
   }

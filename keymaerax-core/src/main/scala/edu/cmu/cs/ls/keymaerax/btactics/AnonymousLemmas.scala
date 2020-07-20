@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-
+import TacticFactory._
 import scala.collection.immutable
 
 /**
@@ -23,12 +23,10 @@ object AnonymousLemmas {
   private val lemmaDB = LemmaDBFactory.lemmaDB
 
   /** A tactic `t` that caches its result in the lemma cache. */
-  def cacheTacticResult(t: => BelleExpr, namespace: String): BuiltInTactic = new BuiltInTactic("CacheTacticResult") {
-    override def result(provable: ProvableSig): ProvableSig = {
-      val subderivations = provable.subgoals.map(remember(_, t, namespace).fact).zipWithIndex
-      subderivations.foldRight(provable)({ case ((sub, i), p) => p(sub, i) })
-    }
-  }
+  def cacheTacticResult(t: => BelleExpr, namespace: String): BuiltInTactic = anons ((provable: ProvableSig) => {
+    val subderivations = provable.subgoals.map(remember(_, t, namespace).fact).zipWithIndex
+    subderivations.foldRight(provable)({ case ((sub, i), p) => p(sub, i) })
+  })
 
   /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). */
   def remember(fml: Formula, t: BelleExpr, namespace: String = ""): Lemma =

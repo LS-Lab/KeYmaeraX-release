@@ -25,13 +25,13 @@ class ContinuousInvariantTests extends TacticTestBase {
   val randomComplexity = 6
   val rand = new RandomFormula()
 
-  "Continuous invariant lookup" should "provide a simple invariant from annotations" in {
+  "Continuous invariant lookup" should "provide a simple invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1)]x>0".asSequent
     TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
       ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
-  it should "provide a conditional invariant from annotations" in {
+  it should "provide a conditional invariant from annotations" in withTactics {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1, (x'=2 -> x>2), (x'=3 -> x>5))]x>0".asSequent
     TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
       ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
@@ -59,7 +59,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     val annotatedInvariants: ConfigurableGenerator[GenProduct] = TactixLibrary.invSupplier match {
       case gen: ConfigurableGenerator[GenProduct] => gen
     }
-    TactixLibrary.invSupplier = FixedGenerator(Nil)
+    TactixInit.invSupplier = FixedGenerator(Nil)
     withTemporaryConfig(Map(
       Configuration.Keys.Pegasus.INVGEN_TIMEOUT -> "120",
       Configuration.Keys.Pegasus.HeuristicInvariants.TIMEOUT -> "20",
@@ -155,9 +155,9 @@ class ContinuousInvariantTests extends TacticTestBase {
             val invariants = InvariantGenerator.pegasusInvariants(
               Sequent(IndexedSeq(assumptions), IndexedSeq(goal)), SuccPos(0))
             println("  generated: " + invariants.toList.map(i => i._1 + "(" + i._2 + ")").mkString(", "))
-            TactixLibrary.invSupplier = FixedGenerator(Nil)
-            TactixLibrary.loopInvGenerator = FixedGenerator(Nil)
-            TactixLibrary.differentialInvGenerator = FixedGenerator(invariants.toList)
+            TactixInit.invSupplier = FixedGenerator(Nil)
+            TactixInit.loopInvGenerator = FixedGenerator(Nil)
+            TactixInit.differentialInvGenerator = FixedGenerator(invariants.toList)
             proveBy(model.asInstanceOf[Formula], implyR(1) & ODE(1)) shouldBe 'proved
             println(name + " done")
           }

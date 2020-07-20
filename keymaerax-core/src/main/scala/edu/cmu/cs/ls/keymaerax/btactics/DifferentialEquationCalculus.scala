@@ -93,11 +93,11 @@ trait DifferentialEquationCalculus {
     * @note diffCut is often needed when FV(post) depend on BV(ode) that are not in FV(constraint).
     * @see[[HilbertCalculus.DC]]
     */
+  def dC(R: Formula)       : DependentPositionWithAppliedInputTactic = dC(List(R))
   @Tactic("Differential Cut", conclusion = "&Gamma; |- [{x′=f(x) & Q}]P, &Delta;",
     premises = "&Gamma; |- [{x′=f(x) & Q}]R, &Delta; ;; &Gamma; |- [{x′=f(x) & (Q∧R)}]P, &Delta;",
     revealInternalSteps = true)
-  def dC(R: Formula)       : DependentPositionWithAppliedInputTactic = anon {(pos: Position) => DifferentialTactics.diffCut(R)(pos)}
-  def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = DifferentialTactics.diffCut(R)
+  def dC(R: List[Formula]) : DependentPositionWithAppliedInputTactic = inputanon { (pos: Position ) => DifferentialTactics.diffCut(R)(pos)}
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant).
     * (uses DI, DW, DE, QE)
@@ -151,10 +151,12 @@ trait DifferentialEquationCalculus {
     * @see [[HilbertCalculus.DI]]
     */
   def dI(auto: Symbol = 'full): DependentPositionTactic = DifferentialTactics.diffInd(auto)
-//@todo@Tactic(premises = "Γ,Q |- [x':=f(x)](P)', Δ ;; Γ, Q |- P, Δ",
-//    conclusion = "Γ |- [x'=f(x)&Q]p(x), Δ", revealInternalSteps = true)
   //@todo 'auto or 'cex
-//  val dI: DependentPositionTactic = DifferentialTactics.diffInd('full)
+  @Tactic(names="Differential Invariant",
+    premises="Γ, Q |- P, Δ ;; Q |- [x':=f(x)](P)'", //todo: how to indicate closed premise?
+    conclusion="Γ |- [x'=f(x)&Q]P, Δ",
+    displayLevel="all", revealInternalSteps = true, codeName = "dI")
+  def   dIX: DependentPositionTactic = DifferentialTactics.diffInd('cex)
 
   /** dG(ghost,r): Differential Ghost add auxiliary differential equations with extra variables
     * ghost of the form y'=a*y+b and the postcondition replaced by r, if provided.

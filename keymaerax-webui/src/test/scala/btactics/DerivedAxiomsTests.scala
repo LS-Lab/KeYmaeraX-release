@@ -41,7 +41,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     useToClose(lemma)
     lemma.fact.conclusion
   }
-  private def check(pi: ProvableInfo): Sequent = {
+  private def check(pi: => ProvableInfo): Sequent = {
+    DerivationInfoRegistry.init(initLibrary = false)
     println(pi.codeName + "\n" + pi.provable.conclusion)
     pi.provable shouldBe 'proved
     useToClose(pi)
@@ -72,7 +73,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
       getDerivedAxiomsMirrors.foreach({ case (name, fm) =>
         // delete all stored lemmas
         LemmaDBFactory.lemmaDB.deleteDatabase()
-        DerivationInfoRegistry.init
+        DerivationInfoRegistry.init(initLibrary = false)
         // re-initialize DerivedAxioms singleton object to forget lazy vals of previous iterations
         val c = Ax.getClass.getDeclaredConstructor()
         c.setAccessible(true)
@@ -163,7 +164,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove [:=] assign equality exists" in {check(assignbequalityexists)}
   it should "prove exists and" in {check(existsAnd)}
   it should "prove [:=] assign implies exists" in {check(assignbexists)}
-  it should "prove <:=> assign equality" in {check(assigndEquality)}
+  it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
   it should "prove <:=> assign dual 2" in {check(assignDual2)}
   it should "prove <:=> assign equality all" in {check(assigndEqualityAll)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignb)}
@@ -228,6 +229,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove DWd diamond differential weakening" in {check(DWd)}
   it should "prove DWd2 diamond differential weakening" in {check(DWd2)}
   it should "prove comma commute diamond" in {check(commaCommuted)}
+  it should "prove comma commute diamond 2" in {check(commaCommuteD)}
   it should "prove DGd diamond inverse differential ghost implicational" in {check(DGdi)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(DvariableAxiom)}
@@ -256,7 +258,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove + commute" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusCommute)})
   it should "prove * commute" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesCommute)})
   it should "prove distributive" in withMathematica(initLibrary =  false, testcode =  { _ => check(distributive)})
-  it should "prove + identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusIdentity)})
+  it should "prove + identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(zeroPlus)})
   it should "prove * identity" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesIdentity)})
   it should "prove + inverse" in withMathematica(initLibrary =  false, testcode =  { _ => check(plusInverse)})
   it should "prove * inverse" in withMathematica(initLibrary =  false, testcode =  { _ => check(timesInverse)})

@@ -237,12 +237,12 @@ object Simplifier {
     }
   }
 
-  def simpOnce(simps:List[Simplification]= defaultSimps):DependentPositionTactic = "simpOnce" by ((pos, sequent) => sequent.sub(pos) match {
+  def simpOnce(simps:List[Simplification]= defaultSimps):DependentPositionTactic = anon ((pos, sequent) => sequent.sub(pos) match {
     case Some(fml : Formula) => makeCE(fml, simp(simps, fml), pos)
     case None => TactixLibrary.nil
   })
 
-  def simp(simps:List[Simplification] = defaultSimps):DependentPositionTactic = "simp" by ((pos, sequent) =>
+  def simp(simps:List[Simplification] = defaultSimps):DependentPositionTactic = anon ((pos, sequent) =>
     SaturateTactic(simpOnce(simps)(pos)))
 }
 

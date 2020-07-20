@@ -944,7 +944,7 @@ object IntervalArithmeticV2 {
   private lazy val equalIff = proveBy("(f()=g())<->f()<=g()&f()>=g()".asFormula, QE & done)
   private lazy val notEqual = proveBy("(!f()=g())<->f()<g()|f()>g()".asFormula, QE & done)
 
-  private[btactics] def intervalArithmeticPreproc: DependentPositionTactic = "intervalArithmeticPreproc" by { (pos: Position, seq: Sequent) =>
+  private[btactics] def intervalArithmeticPreproc: DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     def unsupportedError(e: Expression) = throw new TacticInapplicableFailure("Interval Arithmetic does not support " + e.getClass.getSimpleName)
     seq.sub(pos) match {
       case Some(e) =>
@@ -1009,7 +1009,7 @@ object IntervalArithmeticV2 {
   }
 
   private[btactics] def intervalArithmeticBool(precision: Int, qeTool: => QETacticTool, doSSA: Boolean = true) : BuiltInRightTactic =
-    "intervalArithmeticBool" by { (prv: ProvableSig, pos: SuccPosition) =>
+    anon { (prv: ProvableSig, pos: SuccPosition) =>
       requireOneSubgoal(prv, "intervalArithmeticBool")
       pos.checkTop
       val seq = prv.subgoals(0)
@@ -1197,18 +1197,21 @@ object IntervalArithmeticV2 {
     def lessBoth(F: Term, gg: Term) =
       useAt(Ax.intervalLBoth, PosInExpr(1::Nil), usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
 
-    def eqL2R_dep = "eqL2R_last" by { (pos: Position) =>
+    //Note: Tactic previously named eqL2R_last
+    def eqL2R_dep = anon { (pos: Position) =>
       eqL2R(pos.checkAnte)(1) // TODO: what about that subgoal 1?
     }
 
-    val intervalArithmetic = "slowIntervalArithmetic" by { seq: Sequent =>
+    //Note: Tactic previously slowIntervalArithmetic
+    val intervalArithmetic = anon { seq: Sequent =>
       requireOneSucc (seq, "slowIntervalArithmetic")
       val prec = 5
       val bounds = collect_bounds(prec,DecimalBounds(), seq.ante)
 
       // TODO: should be cacheing bounds for subterms, but it seems we can easily afford excessive BigDecimal computations
       // recurse to find a lower bound for the expression on the rhs
-      def recurseLower: BelleExpr = "slowIntervalArithmetic.recurseLower" by {
+      // Note: previously named "slowIntervalArithmetic.recurseLower"
+      def recurseLower: BelleExpr = anon {
         seq: Sequent =>
           seq.succ(0) match {
             case LessEqual(_, Plus(a, b)) =>
@@ -1234,7 +1237,8 @@ object IntervalArithmeticV2 {
           }
       }
       // recurse to find an upper bound for the expression on the lhs
-      def recurseUpper: BelleExpr = "slowIntervalArithmetic.recurseUpper" by {
+      // Note: Previously named "slowIntervalArithmetic.recurseUpper"
+      def recurseUpper: BelleExpr = anon {
         seq: Sequent =>
           seq.succ(0) match {
             case LessEqual(Plus(a, b), _) =>
@@ -1260,7 +1264,8 @@ object IntervalArithmeticV2 {
             case _ => throw new TacticInapplicableFailure("recurseUpper went wrong")
           }
       }
-      def recurseFormula: BelleExpr = "slowIntervalArithmetic.recurseFormula" by {
+      // Note: previously named "slowIntervalArithmetic.recurseFormula"
+      def recurseFormula: BelleExpr = anon {
         (seq: Sequent) =>
           (seq.succ(0) match {
             case And(_, _) => andR(1) & Idioms.<(recurseFormula, recurseFormula)

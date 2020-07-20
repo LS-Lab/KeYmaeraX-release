@@ -140,7 +140,7 @@ private object DLBySubst {
   })
 
   /** Top-level abstraction: basis for abstraction tactic */
-  val topAbstraction: DependentPositionTactic = "Top-level abstraction" by ((pos: Position, sequent: Sequent) => {
+  val topAbstraction: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
     require(!pos.isAnte, "Abstraction only in succedent")
     sequent.sub(pos) match {
       case Some(b@Box(prg, phi)) =>
@@ -154,14 +154,14 @@ private object DLBySubst {
 
         val qPhi = if (vars.isEmpty) phi else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
 
-        val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
+        val diffRenameStep: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => sequent(AntePos(0)) match {
             case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
               stutter(x0)(pos) & ProofRuleTactics.boundRename(x0, x)(pos.topLevel) & DebuggingTactics.print("Zee") &
                 eqR2L(-1)(pos.topLevel) & useAt(Ax.selfassignb)(pos.topLevel) & hide(-1)
             case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
           })
 
-        val diffRename: DependentPositionTactic = "diffRename" by ((pos: Position, sequent: Sequent) => {
+        val diffRename: DependentPositionTactic = anon ((pos: Position, sequent: Sequent) => {
           //@note allL may introduce equations of the form x=x_0, but not necessarily for all variables
           if (sequent.ante.size == 1 && sequent.succ.size == 1 && sequent.ante.head == sequent.succ.head) ident
           else if (sequent.ante.size <= 1 + vars.size && sequent.succ.size == 1) sequent(AntePos(0)) match {
@@ -260,7 +260,7 @@ private object DLBySubst {
       val y = TacticHelper.freshNamedSymbol(x, sequent)
       val universal = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) >= 0
       ProofRuleTactics.boundRename(x, y)(pos) &
-      (if (universal) useAt(Ax.assigndEqualityAll)(pos) else useAt(Ax.assigndEquality)(pos)) &
+      (if (universal) useAt(Ax.assigndEqualityAll)(pos) else useAt(Ax.assigndEqualityAxiom)(pos)) &
       ProofRuleTactics.uniformRename(y, x) &
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
        else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
@@ -352,7 +352,7 @@ private object DLBySubst {
       val oldified = SubstitutionHelper.replaceFn("old", invariant, ghosts.map(_._1).toMap)
       val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) &
-        ("ANON" byWithInput(oldified, (pos, sequent) => {
+        (inputanon {(pos, sequent) => {
           sequent.sub(pos) match {
             case Some(b@Box(Loop(a), p)) =>
               if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
@@ -386,13 +386,13 @@ private object DLBySubst {
               }
             case Some(e) => throw new TacticInapplicableFailure("loop only applicable to box loop [{}*] properties, but got " + e.prettyString)
             case None => throw new IllFormedTacticApplicationException("Position " + pos + " does not point to a valid position in sequent " + sequent.prettyString)
-          }}))(afterGhostsPos)
+          }}})(afterGhostsPos)
     }
     pre & discreteGhosts(ov, sequent, doloop)(pos)
   })
 
   /** Analyzes a loop for counterexamples. */
-  def cexLoop(inv: Formula): DependentPositionTactic = "cexLoop" by ((pos: Position, seq: Sequent) => {
+  def cexLoop(inv: Formula): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val cexProgram = unfoldProgramNormalize & OnAll(
       Idioms.doIfElse(_.subgoals.forall(_.isFOL))(
         //@todo nested loops, loops in postcondition, ODEs in postcondition
@@ -496,7 +496,7 @@ private object DLBySubst {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
-    pre & ("doCon" byWithInput(variant, (pp, seq) => {
+    pre & (inputanon {(pp, seq) => {
       seq.sub(pp) match {
         case Some(Diamond(prg: Loop, _)) if !FormulaTools.dualFree(prg) => conRule(v, variant)(pos)
         case Some(d@Diamond(prg@Loop(a), p)) if  FormulaTools.dualFree(prg) =>
@@ -540,7 +540,7 @@ private object DLBySubst {
             )
           )
       }
-    }))(pos)
+    }})(pos)
   })
 
   /**
@@ -710,7 +710,8 @@ private object DLBySubst {
     * ----------------------------------- boxElim(pos)
     * Γ1, [a]Q, Γ2  |- Δ1, pos: [a]P, Δ2
     * */
-  val boxElim = "boxElim" by { (pos: Position, sequent: Sequent) =>
+  @Tactic("boxElim", premises = "Q |- P", conclusion = "Γ1, [a]Q, Γ2  |- Δ1, [a]P, Δ2")
+  val boxElim: DependentPositionTactic = anon { (pos: Position, sequent: Sequent) =>
     sequent.sub(pos) match {
       case Some(Box(prg, _)) =>
         val b = sequent.ante.find {

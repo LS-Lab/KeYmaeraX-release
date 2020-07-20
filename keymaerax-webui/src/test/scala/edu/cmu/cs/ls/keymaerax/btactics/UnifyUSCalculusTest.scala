@@ -33,113 +33,113 @@ class UnifyUSCalculusTest extends TacticTestBase {
   val randomComplexity = 3
   val rand = new RandomFormula() //(-4317240407825764493L)
 
-  "useAt" should "prove ([a;][b;]p(x)) ==> [a;b;]p(x)" in {
+  "useAt" should "prove ([a;][b;]p(x)) ==> [a;b;]p(x)" in withTactics {
     proveBy("([a;][b;]p(x)) ==> [a;b;]p(x)".asSequent, useAt(Ax.composeb)(1) & id) shouldBe 'proved
   }
 
-  it should "prove ([a;][b;]p(x)) -> [a;b;]p(x)" in {
+  it should "prove ([a;][b;]p(x)) -> [a;b;]p(x)" in withTactics {
     proveBy("([a;][b;]p(x)) -> [a;b;]p(x)".asFormula, useAt(Ax.composeb)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
-  it should "prove [a;b;]p(x) ==> ([a;][b;]p(x))" in {
+  it should "prove [a;b;]p(x) ==> ([a;][b;]p(x))" in withTactics {
     proveBy("[a;b;]p(x) ==> ([a;][b;]p(x))".asSequent, useAt(Ax.composeb)(-1) & id) shouldBe 'proved
   }
 
-  it should "prove [a;b;]p(x) -> ([a;][b;]p(x))" in {
+  it should "prove [a;b;]p(x) -> ([a;][b;]p(x))" in withTactics {
     proveBy("[a;b;]p(x) -> ([a;][b;]p(x))".asFormula, useAt(Ax.composeb)(1, 0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
-  it should "prove (p()->q()) ==> [?p();]q()" in {
+  it should "prove (p()->q()) ==> [?p();]q()" in withTactics {
     proveBy("(p()->q()) ==> [?p();]q()".asSequent, useAt(Ax.testb)(1) & id) shouldBe 'proved
   }
 
-  it should "prove (p()->q()) -> [?p();]q()" in {
+  it should "prove (p()->q()) -> [?p();]q()" in withTactics {
     proveBy("(p()->q()) -> [?p();]q()".asFormula, useAt(Ax.testb)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
-  it should "prove [?p();]q() ==> (p()->q())" in {
+  it should "prove [?p();]q() ==> (p()->q())" in withTactics {
     proveBy("[?p();]q() ==> (p()->q())".asSequent, useAt(Ax.testb)(-1) & id) shouldBe 'proved
   }
 
-  it should "prove [?p();]q() -> (p()->q())" in {
+  it should "prove [?p();]q() -> (p()->q())" in withTactics {
     proveBy("[?p();]q() -> (p()->q())".asFormula, useAt(Ax.testb)(1, 0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
-  it should "prove (1>=1) ==> 1+0>=1" in {
+  it should "prove (1>=1) ==> 1+0>=1" in withTactics {
     proveBy("(1>=1) ==> 1+0>=1".asSequent, useAt(Ax.plusZero)(1,0::Nil) & id) shouldBe 'proved
   }
 
-  it should "prove (1>=1) -> 1+0>=1" in {
+  it should "prove (1>=1) -> 1+0>=1" in withTactics {
     proveBy("(1>=1) -> 1+0>=1".asFormula, useAt(Ax.plusZero)(1,1::0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
-  it should "prove 1+0>=1 ==> 1>=1" in {
+  it should "prove 1+0>=1 ==> 1>=1" in withTactics {
     proveBy("1+0>=1 ==> 1>=1".asSequent, useAt(Ax.plusZero)(-1,0::Nil) & id) shouldBe 'proved
   }
 
-  it should "prove 1+0>=1 -> 1>=1" in {
+  it should "prove 1+0>=1 -> 1>=1" in withTactics {
     proveBy("1+0>=1 -> 1>=1".asFormula, useAt(Ax.plusZero)(1,0::0::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
 
-  it should "prove x+1>0 -> [x:=x+1;]x>0" in {
+  it should "prove x+1>0 -> [x:=x+1;]x>0" in withTactics {
     proveBy("x+1>0 -> [x:=x+1;]x>0".asFormula, useAt(Ax.assignbAxiom)(1, 1::Nil) & implyR(1) & id) shouldBe 'proved
   }
 
-  "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in {
+  "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in withTactics {
     proveBy("[x:=x+1;x:=2*x;]x>1".asFormula, useAt(Ax.composeb)(1)).subgoals should contain only
       Sequent(IndexedSeq(), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula))
   }
 
-  it should "reduce x>5 |- [x:=x+1;][x:=2*x;]x>1 to x>5 |- [x:=x+1;x:=2*x;]x>1 by useAt backwards" in {
+  it should "reduce x>5 |- [x:=x+1;][x:=2*x;]x>1 to x>5 |- [x:=x+1;x:=2*x;]x>1 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
   }
 
-  it should "reduce [x:=x+1;x:=2*x;]x>1 |- x>5 to [x:=x+1;][x:=2*x;]x>1 |- x>5 by useAt" in {
+  it should "reduce [x:=x+1;x:=2*x;]x>1 |- x>5 to [x:=x+1;][x:=2*x;]x>1 |- x>5 by useAt" in withTactics {
     proveBy(Sequent(IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb)(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
-  it should "reduce [x:=x+1;][x:=2*x;]x>1 |- x>5 to [x:=x+1;x:=2*x;]x>1 |- x>5 by useAt backwards" in {
+  it should "reduce [x:=x+1;][x:=2*x;]x>1 |- x>5 to [x:=x+1;x:=2*x;]x>1 |- x>5 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
 
-  it should "reduce x>5 |- [c;d;]x>1 to x>5 |- [c;][d;]x>1 by useAt" in {
+  it should "reduce x>5 |- [c;d;]x>1 to x>5 |- [c;][d;]x>1 by useAt" in withTactics {
     proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula)),
       useAt(Ax.composeb)(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula))
   }
 
-  it should "reduce x>5 |- [c;][d;]x>1 to x>5 |- [c;d;]x>1 by useAt backwards" in {
+  it should "reduce x>5 |- [c;][d;]x>1 to x>5 |- [c;d;]x>1 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula))
   }
 
-  it should "reduce [c;d;]x>1 |- x>5 to [c;][d;]x>1 |- x>5 by useAt" in {
+  it should "reduce [c;d;]x>1 |- x>5 to [c;][d;]x>1 |- x>5 by useAt" in withTactics {
     proveBy(Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb)(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
-  it should "reduce [c;][d;]x>1 |- x>5 to [c;d;]x>1 |- x>5 by useAt backwards" in {
+  it should "reduce [c;][d;]x>1 |- x>5 to [c;d;]x>1 |- x>5 by useAt backwards" in withTactics {
     proveBy(Sequent(IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
       useAt(Ax.composeb, PosInExpr(1::Nil))(AntePos(0))).subgoals should contain only Sequent(IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
   }
 
-  "Chase" should "prove [?p();?(p()->q());]p() by chase" in {
+  "Chase" should "prove [?p();?(p()->q());]p() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q());]p()".asFormula)),
       chase(1) & prop
     ) shouldBe 'proved
   } 
     
-  it should "prove [?p();?(p()->q()); ++ ?r();?q();]q() by chase" in {
+  it should "prove [?p();?(p()->q()); ++ ?r();?q();]q() by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q();]q()".asFormula)),
       chase(1) & prop
     ) shouldBe 'proved
   }
 
-  it should "prove [?p();?(p()->q()); ++ ?!p();](p()->q()) by chase" in {
+  it should "prove [?p();?(p()->q()); ++ ?!p();](p()->q()) by chase" in withTactics {
     //assert(AxIndex.axiomIndex(Ax.composeb)._1==PosInExpr(0::Nil))
     //assert(AxIndex.axiomIndex(Ax.composeb)._2==PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?!p();](p()->q())".asFormula)),
@@ -147,7 +147,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     ) shouldBe 'proved
   }
   
-  it should "prove [?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q()) by chase" in {
+  it should "prove [?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q()) by chase" in withTactics {
     proveBy(Sequent(IndexedSeq(), IndexedSeq("[?p();?(p()->q()); ++ ?r();?q(); ++ ?!p()&!r();](p()|r()->q())".asFormula)),
       chase(1,Nil) & prop
     ) shouldBe 'proved
@@ -191,7 +191,7 @@ class UnifyUSCalculusTest extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in {
+  "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in withTactics {
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (ProvableSig.startProof(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
     done.subgoals shouldBe List(Sequent(IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
     done.conclusion shouldBe Sequent(IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))

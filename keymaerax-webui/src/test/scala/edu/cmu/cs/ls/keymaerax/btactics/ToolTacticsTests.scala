@@ -275,7 +275,7 @@ class ToolTacticsTests extends TacticTestBase {
   }
 
   "Use solver" should "switch to Z3" in withMathematica { _ =>
-    def checkTool(name: String) = "ANON" by ((_: Sequent) => {
+    def checkTool(name: String) = anon ((_: Sequent) => {
       ToolProvider.tools().head.name shouldBe name
       nil
     })

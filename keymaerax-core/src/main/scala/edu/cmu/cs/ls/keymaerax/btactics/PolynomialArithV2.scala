@@ -351,7 +351,7 @@ object PolynomialArithV2Helpers {
       impliesElim(PsQ, conjPrv)
     }
 
-  def byExact(assm: ProvableSig) = "byExact" by { (prv: ProvableSig, pos: SuccPosition) =>
+  def byExact(assm: ProvableSig) = anon { (prv: ProvableSig, pos: SuccPosition) =>
     assert(prv.subgoals.length==1, "require one subgoal byExact")
     prv.apply(assm, 0)
   }

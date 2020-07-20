@@ -53,7 +53,7 @@ object CoasterXMain {
     val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
-    TactixLibrary.invSupplier = generator
+    TactixInit.invSupplier = generator
     ToolProvider.setProvider(new NoneToolProvider())
   }
 
@@ -191,7 +191,7 @@ object CoasterXMain {
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[GenProduct]()
-    TactixLibrary.invSupplier = generator
+    TactixInit.invSupplier = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
 
@@ -219,8 +219,7 @@ object CoasterXMain {
       if (Version(cacheVersion) < Version(edu.cmu.cs.ls.keymaerax.core.VERSION))
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
-      Ax.prepopulateDerivedLemmaDatabase()
-      DerivationInfoRegistry.init
+      DerivationInfoRegistry.init()
     } catch {
       case e : Exception =>
         println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")

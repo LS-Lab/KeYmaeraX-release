@@ -287,7 +287,7 @@ class RingsLibrary(terms: Traversable[Term]) {
 
   /** a<=b to 0<=a-b, with the standard representation of a-b (distributive and according to the variable order of [[ring]],
     * also distributes over conjunctions... */
-  def normalizeLessEquals(qeTac: BelleExpr): DependentPositionTactic = "normalizeLessEquals" by { (pos: Position, seq: Sequent) =>
+  def normalizeLessEquals(qeTac: BelleExpr): DependentPositionTactic = anon { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       // TODO: generalize, chase?
       case Some(And(f1, f2)) =>

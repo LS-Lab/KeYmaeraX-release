@@ -427,7 +427,7 @@ class Robix extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  def passiveOrientationDI(a: String): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+  def passiveOrientationDI(a: String): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val diHide = a match {
       case "-b()" =>
         hideL('Llike, "v=0|abs(beta)+v^2/(2*b()*abs(r)) < gamma()&(isVisible < 0|abs(x-ox)>v^2/(2*b())+V()*(v/b())|abs(y-oy)>v^2/(2*b())+V()*(v/b()))".asFormula)
