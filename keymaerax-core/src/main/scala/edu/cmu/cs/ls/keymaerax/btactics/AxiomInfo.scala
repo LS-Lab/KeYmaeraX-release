@@ -981,7 +981,7 @@ object DerivationInfoRegistry extends Logging {
   *
   * Sanity checks ensure a runtime error is raised if @Tactic is used outside the allowed classes.
   * */
-  def init(tool: String = "mathematica", initLibrary: Boolean = true): Unit = {
+  def init(tool: String = "z3", initLibrary: Boolean = true): Unit = {
     /* Initialization is relatively slow, so only initialize once*/
     if(isInit) return
     // Remember that initialization is in progress,
