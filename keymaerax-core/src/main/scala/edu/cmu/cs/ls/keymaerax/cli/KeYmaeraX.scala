@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import edu.cmu.cs.ls.keymaerax.{Configuration, KeYmaeraXStartup}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, TactixLibrary, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
+import edu.cmu.cs.ls.keymaerax.btactics.{FixedGenerator, MathematicaToolProvider, MultiToolProvider, NoneToolProvider, TactixInit, ToolProvider, WolframEngineToolProvider, WolframScriptToolProvider, Z3ToolProvider}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool

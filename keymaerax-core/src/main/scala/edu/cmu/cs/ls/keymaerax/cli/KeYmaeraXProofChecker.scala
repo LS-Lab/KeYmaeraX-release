@@ -125,13 +125,7 @@ object KeYmaeraXProofChecker {
         // prove did not work
         assert(!witness.isProved)
         assert(witness.subgoals.nonEmpty)
-        //@note instantiating PrintWriter above has already emptied the output file
-        (pw, outputFileName) match {
-          case (Some(w), Some(outName)) =>
-            w.close()
-            File(outName).delete()
-          case _ =>
-        }
+        deleteOutput(pw, outputFileName)
 
         if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
           ProofStatistics(name, tacticName, "unfinished (cex)", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
@@ -142,10 +136,12 @@ object KeYmaeraXProofChecker {
     } catch {
       case _: TimeoutException =>
         BelleInterpreter.kill()
+        deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
         ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1)
       case _: Throwable =>
         BelleInterpreter.kill()
+        deleteOutput(pw, outputFileName)
         // prover shutdown cleanup is done when KeYmaeraX exits
         ProofStatistics(name, tacticName, "failed", None, timeout, -1, -1, -1, -1)
     }
@@ -225,7 +221,9 @@ object KeYmaeraXProofChecker {
     val statisticsLogger = Logger(getClass)
     statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"), csvStatistics)
 
-    if (statistics.exists(_.status=="disproved")) sys.exit(-2)
+    if (statistics.exists(_.status=="disproved")) sys.exit(-3)
+    if (statistics.exists(_.status=="failed")) sys.exit(-2)
+    if (statistics.exists(_.status=="unfinished (cex)")) sys.exit(-1)
     if (statistics.exists(_.status=="unfinished")) sys.exit(-1)
   }
 
@@ -337,6 +335,17 @@ object KeYmaeraXProofChecker {
       }
       Files.walkFileTree(dir, finder)
       finder.files.toList
+    }
+  }
+
+  /** Deletes the output file and closes the printwriter. */
+  private def deleteOutput(pw: Option[PrintWriter], outputFileName: Option[String]): Unit = {
+    //@note instantiating PrintWriter above has already emptied the output file
+    (pw, outputFileName) match {
+      case (Some(w), Some(outName)) =>
+        w.close()
+        File(outName).delete()
+      case _ =>
     }
   }
 }

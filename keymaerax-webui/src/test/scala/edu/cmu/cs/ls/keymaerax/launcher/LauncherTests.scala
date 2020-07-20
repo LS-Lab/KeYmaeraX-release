@@ -4,9 +4,10 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Sequent}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXArchivePrinter, KeYmaeraXExtendedLemmaParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaeraXTool, ToolEvidence}
 import resource._
 import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
@@ -14,7 +15,7 @@ import scala.collection.immutable._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import org.scalatest.LoneElement._
 
-class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class LauncherTests extends TacticTestBase {
 
   "Launcher" should "prove the bouncing ball from command line" in {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyx"
@@ -45,7 +46,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val ("tool", "KeYmaera X") :: ("model", model) :: ("tactic", tactic) :: ("proof", proof) :: Nil =
       exported._3.loneElement.asInstanceOf[ToolEvidence].info
     KeYmaeraXArchiveParser(model).loneElement.expandedModel shouldBe conjecture.expandedModel
-    tactic shouldBe "master"
+    tactic shouldBe "master()"
     proof shouldBe empty // proof term not exported
   }
 
@@ -61,18 +62,18 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     new File(outputFileName) should not (exist)
   }
 
-  it should "prove multiple bouncing ball entries with matching conjectures from command line" in {
+  it should "prove multiple bouncing ball entries with matching conjectures from command line" in withZ3 { _ =>
     val sourceFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyx"
     val inputFile = File.createTempFile("bouncing-ball-tout", ".kyx")
     val inputFileName = inputFile.getAbsolutePath
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
     val conjectureFileName = File.createTempFile("bouncing-ball-notac", ".kyx").getAbsolutePath
 
+    KeYmaeraXTool.init(Map.empty)
     val sourceEntries = List.fill(3)(KeYmaeraXArchiveParser.parseFromFile(sourceFileName).head).zipWithIndex.map({
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(_.copy(tactics = Nil))
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
     Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter).mkString("\n").getBytes(StandardCharsets.UTF_8))
 
@@ -92,12 +93,12 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       val entry = KeYmaeraXArchiveParser(model).loneElement
       entry.name shouldBe conjecture.name
       entry.expandedModel shouldBe conjecture.expandedModel
-      tactic shouldBe "master"
+      tactic shouldBe "master()"
       proof shouldBe empty // proof term not exported
     })
   }
 
-  it should "complain about non-matching conjectures from command line" in {
+  it should "complain about non-matching conjectures from command line" in withZ3 { _ =>
     val sourceFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyx"
     val inputFile = File.createTempFile("bouncing-ball-tout", ".kyx")
     val inputFileName = inputFile.getAbsolutePath
@@ -108,7 +109,6 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(_.copy(tactics = Nil)).take(2)
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
     Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter).mkString("\n").getBytes(StandardCharsets.UTF_8))
 
@@ -122,7 +122,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     outputFileNames.foreach(new File(_) should not (exist))
   }
 
-  it should "complain about non-matching conjecture names from command line" in {
+  it should "complain about non-matching conjecture names from command line" in withZ3 { _ =>
     val sourceFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-tout.kyx"
     val inputFile = File.createTempFile("bouncing-ball-tout", ".kyx")
     val inputFileName = inputFile.getAbsolutePath
@@ -133,7 +133,6 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       case (e, i) => e.copy(name = e.name + i)
     })
     val conjectureEntries = sourceEntries.map(e => e.copy(name = e.name + "Mismatch", tactics = Nil))
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     Files.write(Paths.get(inputFileName), sourceEntries.map(new KeYmaeraXArchivePrinter(withComments = true)).mkString("\n").getBytes(StandardCharsets.UTF_8))
     Files.write(Paths.get(conjectureFileName), conjectureEntries.map(new KeYmaeraXArchivePrinter).mkString("\n").getBytes(StandardCharsets.UTF_8))
 
@@ -161,7 +160,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     proofStatOutputs(3) should startWith ("PROVED")
 
     val (outputZ3, _, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
-    exitValZ3 shouldBe 255 // Z3 throws an exception on bouncing-ball-cex.kyx (failed)
+    exitValZ3 shouldBe 254 // Z3 throws an exception on bouncing-ball-cex.kyx (failed)
     val proofStatOutputsZ3 = (outputZ3: StringOps).lines.toList.takeRight(4)
     proofStatOutputsZ3(0) should startWith ("PROVED")
     proofStatOutputsZ3(1) should startWith ("UNFINISHED")
@@ -198,10 +197,10 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     output should include ("UNFINISHED (CEX)")
     outputFile should not (exist)
 
-    val (_, errorZ3, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
-    exitValZ3 shouldBe 1 //@note Z3 throws an exception
-    errorZ3 should startWith ("""Exception in thread "main" [Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:
-                                |\forall v \forall h \forall g \forall c \forall H (v^2<=2*g*(H-h)&h>=-2&g>0&H>=0&0<=c&c < 1->v^2<=2*g*(H-h)&h>=-1)""".stripMargin)
+    val (outputZ3, _, exitValZ3) = runKeYmaeraX("-tool", "Z3", "-prove", inputFileName, "-out", outputFileName)
+    exitValZ3 shouldBe 254 //@note Z3 fails to prove
+    outputZ3 should include ("FAILED")
+    outputFile should not (exist)
   }
 
   it should "have usage information, formatted to 80 characters width" in {
