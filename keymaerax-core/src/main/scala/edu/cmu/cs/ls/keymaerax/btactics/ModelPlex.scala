@@ -806,7 +806,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         ("<:*> nondet assign opt. 1" by ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
         useAt(Ax.testd) ::
         useAt(Ax.assigndAxiom) ::
-        ("<:=> assign opt. 1" by ((p: Position) => useAt(Ax.assigndEquality)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        ("<:=> assign opt. 1" by ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
         Nil)(pos))
 
   /**
@@ -825,7 +825,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         ("<:*> nondet assign opt. 1" by ((p: Position) => useAt(Ax.randomd)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
         useAt(Ax.testd) ::
         useAt(Ax.assigndAxiom) ::
-        ("<:=> assign opt. 1" by ((p: Position) => useAt(Ax.assigndEquality)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        ("<:=> assign opt. 1" by ((p: Position) => useAt(Ax.assigndEqualityAxiom)(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
         Nil)(pos))
 
   /**

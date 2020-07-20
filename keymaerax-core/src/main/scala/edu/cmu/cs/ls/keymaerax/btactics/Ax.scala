@@ -1627,7 +1627,7 @@ object Ax extends Logging {
     */
   @Axiom("<:=>", conclusion = "__<x:=e>P__↔∃x(x=e∧P)", displayLevel = "all",
     key = "0", recursor = "0.1;*")
-  lazy val assigndEquality = derivedAxiom("<:=> assign equality",
+  lazy val assigndEqualityAxiom = derivedAxiom("<:=> assign equality",
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f_();>p_(||) <-> \\exists x_ (x_=f_() & p_(||))".asFormula)),
     useAt(diamond, PosInExpr(1::Nil))(1, 0::Nil) &
       useAt(existsDual, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -1650,7 +1650,7 @@ object Ax extends Logging {
   lazy val assignbequalityexists = derivedFormula("[:=] assign equality exists",
     "[x_:=f();]p(||) <-> \\exists x_ (x_=f() & p(||))".asFormula,
     useAt(assignDual2, PosInExpr(1::Nil))(1, 0::Nil) &
-      byUS(assigndEquality)
+      byUS(assigndEqualityAxiom)
     //      useAt(assigndEqualityAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
     //        //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
     //        //      and [v:=t()]p(||) <-> <v:=t()>p(||) not derivable since clash in allL

@@ -163,7 +163,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove [:=] assign equality exists" in {check(assignbequalityexists)}
   it should "prove exists and" in {check(existsAnd)}
   it should "prove [:=] assign implies exists" in {check(assignbexists)}
-  it should "prove <:=> assign equality" in {check(assigndEquality)}
+  it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
   it should "prove <:=> assign dual 2" in {check(assignDual2)}
   it should "prove <:=> assign equality all" in {check(assigndEqualityAll)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignb)}
