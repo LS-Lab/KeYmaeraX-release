@@ -1007,6 +1007,7 @@ object DerivationInfoRegistry extends Logging {
       (HybridProgramTactics.getClass, ru.typeOf[HybridProgramTactics.type]),
       (IntervalArithmeticV2.getClass, ru.typeOf[IntervalArithmeticV2.type]),
       (ODEInvariance.getClass, ru.typeOf[ODEInvariance.type]),
+      (ODELiveness.getClass, ru.typeOf[ODELiveness.type]),
       (PropositionalTactics.getClass, ru.typeOf[PropositionalTactics.type]),
       (ProofRuleTactics.getClass, ru.typeOf[ProofRuleTactics.type]),
       (SequentCalculus.getClass, ru.typeOf[SequentCalculus.type]),
