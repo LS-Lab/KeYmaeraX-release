@@ -301,7 +301,8 @@ object ODELiveness {
 
   /** Single use of DE system */
   //todo: copied and tweaked from DifferentialTactics
-  private lazy val DESystemCustom: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+  // was "DE system step"
+  private lazy val DESystemCustom: DependentPositionTactic = new DependentPositionTactic("ANON") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) => {
@@ -315,7 +316,8 @@ object ODELiveness {
 
   /** Repeated use of Dassignb */
   //todo: copied and tweaked from DifferentialTactics
-  private lazy val DassignbCustom: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+  // was "DE system step"
+  private lazy val DassignbCustom: DependentPositionTactic = new DependentPositionTactic("ANON") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Box(Assign(xp@DifferentialSymbol(x),f0), p)) => {

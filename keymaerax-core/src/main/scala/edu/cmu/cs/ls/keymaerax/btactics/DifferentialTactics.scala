@@ -88,7 +88,8 @@ private object DifferentialTactics extends Logging {
 
     /** A single step of DE system (@todo replace with useAt when unification for this example works) */
     // semanticRenaming
-    private lazy val DESystemStep_SemRen: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+    // was "DE system step"
+    private lazy val DESystemStep_SemRen: DependentPositionTactic = new DependentPositionTactic("ANON") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
           case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
@@ -123,7 +124,8 @@ private object DifferentialTactics extends Logging {
 
     /** A single step of DE system */
     // !semanticRenaming
-    private lazy val DESystemStep_NoSemRen: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+    // was "DE system step"
+    private lazy val DESystemStep_NoSemRen: DependentPositionTactic = new DependentPositionTactic("ANON") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
           case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
@@ -481,7 +483,7 @@ private object DifferentialTactics extends Logging {
     * This uses the default simplifier configuration
     * @example Turns |- [v'=a & a>0](a>0&v>0) into |- [v'=a & a>0]v>0
     */
-  def domSimplify : DependentPositionTactic = "domSimplify" by ((pos:Position,seq:Sequent) => {
+  def domSimplify : DependentPositionTactic = anon ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "domSimplify currently only works at top-level succedents")
 
     val (ode,post) = seq.sub(pos) match {

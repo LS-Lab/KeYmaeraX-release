@@ -459,7 +459,8 @@ object AxiomaticODESolver {
 
   //region Cut in solutions
 
-  def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")): DependentPositionTactic = "solDC" by ((pos: Position, s: Sequent) => {
+  // was solDC
+  def cutInSoln(odeSize: Int, diffArg:Term = Variable("kyxtime")): DependentPositionTactic = anon ((pos: Position, s: Sequent) => {
     val system: ODESystem = s.sub(pos) match {
       case Some(Box(x: ODESystem, _)) => x
       case Some(e) => throw new TacticInapplicableFailure("solDC only applicable to box ODEs, but got " + e.prettyString)
@@ -552,7 +553,8 @@ object AxiomaticODESolver {
         TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqR2L(-2)(1) & TactixLibrary.id, TactixLibrary.id)
         ), namespace)
 
-    val step = "domSimplifyStep" by ((pp: Position, ss: Sequent) => {
+    // was domSimplifyStep
+    val step = anon ((pp: Position, ss: Sequent) => {
       val subst = (_: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
         case Some(And(p, Equal(x, f))) => RenUSubst(
           ("x_".asVariable, x) ::
@@ -568,7 +570,8 @@ object AxiomaticODESolver {
     (0 until odeSize).map(List.fill(_)(0)).map(i => step(pos ++ PosInExpr(i))).reduceRight[BelleExpr](_ & _)
   })
 
-  def simplifyPostCondition(odeSize: Int): DependentPositionTactic = "postSimplify" by ((pos: Position, seq: Sequent) => {
+  // was postSimplify
+  def simplifyPostCondition(odeSize: Int): DependentPositionTactic = anon ((pos: Position, seq: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(seq(pos.top), pos.inExpr)
 
     lazy val rewrite1 = remember("(q_(f(x_)) -> p_(f(x_))) -> (q_(x_) & x_=f(x_) -> p_(x_))".asFormula,
