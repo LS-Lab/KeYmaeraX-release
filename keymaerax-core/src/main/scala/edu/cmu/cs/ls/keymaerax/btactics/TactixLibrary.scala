@@ -261,7 +261,7 @@ object TactixLibrary extends HilbertCalculus
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
   def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
-             keepQEFalse: Boolean): BelleExpr = "ANON" by {
+             keepQEFalse: Boolean): BelleExpr = anon {
     /** Tactic index that hands out loop tactics and configurable ODE tactics. */
     val autoTacticIndex = new DefaultTacticIndex {
       override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
@@ -346,17 +346,17 @@ object TactixLibrary extends HilbertCalculus
    * master: master tactic that tries hard to prove whatever it could.
    * @see [[auto]] */
   @Tactic(codeName = "master")
-  def masterX(generator: Generator[GenProduct]): BelleExpr = anon { master(generator) }
+  def masterX(generator: Generator[GenProduct]): InputTactic = inputanon { master(generator) }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   @Tactic()
-  def auto: BelleExpr = anon {master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done}
+  def auto: DependentTactic = anon { (seq: Sequent) => master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done }
 
   /** explore: automatically explore a model with all annotated loop/differential invariants, keeping failed attempts
     * and only using ODE invariant generators in absence of annotated invariants and when they close goals. */
   @Tactic("explore", revealInternalSteps = true)
-  def explore(gen: Generator[GenProduct]): BelleExpr = anon {master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
+  def explore(gen: Generator[GenProduct]): InputTactic = inputanon {master(anon ((pos: Position, seq: Sequent) => (gen, seq.sub(pos)) match {
     case (cgen: ConfigurableGenerator[GenProduct], Some(Box(prg@Loop(_), _))) if cgen.products.contains(prg) =>
       logger.info("Explore uses loop with annotated invariant")
       //@note bypass all other invariant generators except the annotated invariants, pass on to loop
@@ -440,7 +440,7 @@ object TactixLibrary extends HilbertCalculus
     }
   }
   @Tactic("loopAuto", codeName = "loopAuto", conclusion = "Γ |- [a*]P, Δ")
-  def loopautoX(gen: Generator[GenProduct]): DependentPositionTactic = loopauto(gen)
+  def loopautoX(gen: Generator[GenProduct]): DependentPositionWithAppliedInputTactic = inputanon { (pos: Position, seq: Sequent) => loopauto(gen)(pos) }
 
   /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * @see [[HybridProgramCalculus.loop(Formula)]] */
