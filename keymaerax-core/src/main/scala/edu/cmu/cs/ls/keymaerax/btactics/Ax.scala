@@ -2734,7 +2734,7 @@ object Ax extends Logging {
     * @Derived
    */
   @Axiom(("⊥∧","false&"), conclusion = "__(⊥∧p)__↔⊥", unifier = "surjlinear")
-  lazy val falseAnd = derivedAxiom("true&", Sequent(IndexedSeq(), IndexedSeq("(false&p_()) <-> false".asFormula)), prop)
+  lazy val falseAnd = derivedAxiom("false&", Sequent(IndexedSeq(), IndexedSeq("(false&p_()) <-> false".asFormula)), prop)
 
   /**
    * {{{Axiom "0*".
