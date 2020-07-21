@@ -1030,7 +1030,7 @@ object DerivationInfoRegistry extends Logging {
     })
     assert(overimplemented.isEmpty, s"@Tactic init failed: NamedBelleExpr(s) named ${overimplemented.toList.mkString(", ")} but this name does not appear in DerivationInfo's list of codeNames.")
     var unimplemented: Set[String] = Set()
-    DerivationInfo._allInfo.foreach((di: DerivationInfo) => {
+    DerivationInfo._allInfo.foreach({case (name, di: DerivationInfo) => {
       if(!DerivationInfo._seenNames.contains(di.codeName)) {
         di match {
           // Axioms and rules are not tracked
@@ -1038,7 +1038,7 @@ object DerivationInfoRegistry extends Logging {
           case _ => unimplemented = unimplemented.+(di.codeName)
         }
       }
-    })
+    }})
     assert(unimplemented.isEmpty, s"@Tactic init failed: Following DerivationInfo never implemented as @Tactic: " + unimplemented.toList.mkString(", "))
     DerivationInfo._initStatus = DerivationInfo.InitComplete
   }

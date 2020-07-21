@@ -204,7 +204,8 @@ object IDMap extends Logging {
           catch {
             case _ : NoSuchElementException =>
               try {
-                DerivedRuleInfo.allInfo.find(info => info.codeName.toLowerCase() == name.toLowerCase()).get.provable.underlyingProvable
+                // @TODO: optimize speed
+                DerivedRuleInfo.allInfo.find({case (name, info) => info.codeName.toLowerCase() == name.toLowerCase()}).get._2.provable.underlyingProvable
               } catch {
                 case e : NoSuchElementException => logger.warn("Couldn't find rule: " + name, e)
                   throw e

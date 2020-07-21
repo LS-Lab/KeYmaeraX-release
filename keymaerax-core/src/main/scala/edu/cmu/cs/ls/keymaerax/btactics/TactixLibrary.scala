@@ -663,13 +663,7 @@ object TactixLibrary extends HilbertCalculus
       }
       case None => tool
     }
-    lazy val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
-    (requiresTool, timeout) match {
-      case (Some(toolName), Some(t)) => tactic
-      case (Some(toolName), None) => tactic
-      case (None, Some(t)) => tactic
-      case _ => tactic
-    }
+    resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
   }
 
   def QEX(tool: Option[String], timeout: Option[Number]): InputTactic = inputanon {
