@@ -30,8 +30,11 @@ class ProofRule(val names: Any = false, /* false is a sigil value, user value sh
                 val codeName: String = "",
                 val premises: String = "",
                 val conclusion: String = "",
+                val unifier: String = "full",
                 val displayLevel: String = "internal",
-                  ) extends StaticAnnotation {
+                val key: String = "",
+                val recursor: String = "*"
+               ) extends StaticAnnotation {
   // Annotation is implemented a macro; this is a necessary, reserved magic invocation which says DerivedAxiomAnnotation.impl is the macro body
   def macroTransform(annottees: Any*): Any = macro RuleImpl.apply
 }
@@ -46,21 +49,26 @@ class RuleImpl (val c: whitebox.Context) {
         case t => c.abort(c.enclosingPosition, "Expected string literal, got: " + t)
       }
     }
-    val paramNames = List("names", "codeName", "formula", "unifier", "displayLevel", "inputs", "key", "recursor")
+    val paramNames = List("names", "codeName", "premises", "conclusion", "unifier", "displayLevel", "key", "recursor")
     // Macro library does not allow directly passing arguments from annotation constructor to macro implementation.
     // Searching the prefix allows us to recover the arguments
-    def paramify (tn: TermName, params: Seq[Tree]) : (String, DisplayInfo, String) = {
+    def paramify (tn: TermName, params: Seq[Tree]) : (String, DisplayInfo, String, ExprPos, List[ExprPos], String) = {
       val defaultMap:Map[String, c.universe.Tree] = Map(
         "names"    -> Literal(Constant(false)),
+        "unifier" -> Literal(Constant("full")),
         "codeName" -> Literal(Constant("")),
         "premises" -> Literal(Constant("")),
         "conclusion" -> Literal(Constant("")),
-        "displayLevel" -> Literal(Constant("internal"))
+        "displayLevel" -> Literal(Constant("internal")),
+        "key" -> Literal(Constant("")),
+        "recursor" -> Literal(Constant("*"))
       )
       val (_idx, _wereNamed, paramMap) = params.foldLeft((0, false, defaultMap))({case (acc, x) => foldParams(c, paramNames)(acc, x)})
-      val (displayObject, premisesString, conclusionString, codeName, displayLevel) =
-        (paramMap("names"), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")),
-          getLiteral(paramMap("codeName")), getLiteral(paramMap("displayLevel")))
+      val (displayObject, premisesString, conclusionString, unifier, codeName, displayLevel, keyString, recursorString) =
+        (paramMap("names"), getLiteral(paramMap("premises")), getLiteral(paramMap("conclusion")), getLiteral(paramMap("unifier")),
+          getLiteral(paramMap("codeName")), getLiteral(paramMap("displayLevel")), getLiteral(paramMap("key")), getLiteral(paramMap("recursor")))
+      val key = parsePos(keyString)(c)
+      val recursor = parsePoses(recursorString)(c)
       val simpleDisplay = displayObject match {
         case q"""(${Literal(Constant(sl: String))}, ${Literal(Constant(sr: String))})""" => SimpleDisplayInfo(sl, sr)
         case Literal(Constant(s: String)) => SimpleDisplayInfo(s, s)
@@ -77,9 +85,9 @@ class RuleImpl (val c: whitebox.Context) {
         case (sd, p, Some(c)) => RuleDisplayInfo(sd, c, p)
         case _ => c.abort(c.enclosingPosition, "Expected both premises and conclusion")
       }
-      (codeName, displayInfo, displayLevel)
+      (codeName, displayInfo, displayLevel, key, recursor, unifier)
     }
-    def getParams (tn: TermName): (String, DisplayInfo, String) = {
+    def getParams (tn: TermName): (String, DisplayInfo, String, ExprPos, List[ExprPos], String) = {
       import c.universe._
       c.prefix.tree match {
         case q"new $annotation(..$params)" => paramify(tn, params)
@@ -126,7 +134,7 @@ class RuleImpl (val c: whitebox.Context) {
               c.abort(c.enclosingPosition, "Invalid annottee: Expected val name = <ruleFunction>(x1, x2, ..), got: " + functionName + " of type " + functionName.getClass())
             val (minParam, maxParam) = paramCount(c)(functionName)
             val isCore = (minParam == maxParam)
-            val (codeNameParam: String, display: DisplayInfo, displayLevel: String) = getParams(declName)
+            val (codeNameParam: String, display: DisplayInfo, displayLevel: String, key, recursor, unifier) = getParams(declName)
             if(params.length < minParam || params.length > maxParam)
               c.abort(c.enclosingPosition, s"Function $functionName had ${params.length} arguments, needs $minParam-$maxParam")
             // codeName is usually supplied, but can be taken from the bound identifier of the declaration by default
@@ -143,12 +151,18 @@ class RuleImpl (val c: whitebox.Context) {
             val expr = q"""({case () => edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt(ProvableInfo($canonString))})""" // : (Unit => Any)
             val dispLvl = displayLevel match {case "internal" => 'internal case "browse" => 'browse case "menu" => 'menu case "all" => 'all
             case s => c.abort(c.enclosingPosition, "Unknown display level " + s)}
-            //  DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, val theExpr: Unit => Any)
+            val unif = unifier match {
+              case "surjective" => 'surjective
+              case "surjlinear" => 'surlinear
+              case "full" => 'full
+              case "linear" => 'linear
+              case "surjlinearpretend" => 'surlinearpretend
+              case s => c.abort(c.enclosingPosition, "Unknown unifier " + s)}
             val info =
               if (isCore) {
-                q"""AxiomaticRuleInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, displayLevel = $dispLvl, theExpr = $expr)"""
+                q"""AxiomaticRuleInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, unifier = $unif, theExpr = $expr, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor)"""
               } else {
-                q"""DerivedRuleInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, displayLevel = $dispLvl, theExpr = $expr)"""
+                q"""DerivedRuleInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, unifier = $unif, theExpr = $expr, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor)"""
               }
             // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
             // the axiom info to the global axiom info table
@@ -159,7 +173,9 @@ class RuleImpl (val c: whitebox.Context) {
               }  else {
                 tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedRuleInfo"
               }
-            c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
+            val res = c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
+            println(show(res))
+            res
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedRule with 2-3 parameters, got:" + params.length)
 
         }
