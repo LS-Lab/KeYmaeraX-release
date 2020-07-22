@@ -178,10 +178,6 @@ sealed trait DerivationInfo {
   /** Inputs which should be serialized in tactic strings. For example, Generator args are left out.*/
   val persistentInputs: List[ArgInfo] = inputs.filter{case (_: GeneratorArg) => false case _ => true}
 
-  /** Bellerophon tactic implementing the derivation. For non-input tactics this is simply a BelleExpr. For input tactics
-   * it is (curried) function which accepts the inputs and produces a BelleExpr. */
-  //def theExpr: Any
-
   /** At what level to display this axiom/rule/tactic in the user interface.
     *  - 'internal not on UI at all
     *  - 'browse only show up when searching for it in browse
