@@ -578,9 +578,7 @@ object SimplifierV3 {
   }
 
   //Exhaustively split ONLY the last conjunct
-  private lazy val andSplit : DependentTactic = new SingleGoalDependentTactic("and split") {
-
-    override def computeExpr(sequent: Sequent): BelleExpr = {
+  private lazy val andSplit : DependentTactic = anon {(sequent: Sequent) => {
       val anteLen = sequent.ante.length
       assert(anteLen > 0)
       val finder = new Find(0, None, AntePosition(anteLen))
