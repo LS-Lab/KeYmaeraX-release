@@ -10,7 +10,7 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.reflect.runtime.universe.typeTag
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
+import DerivationInfoAugmentors._
 
 /**
   * Constructs a [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]] from a tactic name

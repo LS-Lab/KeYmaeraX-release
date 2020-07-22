@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
-import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArithV2.{NonPolynomialArithmeticException, NonSupportedDivisorException, NonSupportedExponentException, NonSupportedOperationException}
 import edu.cmu.cs.ls.keymaerax.tools.ext.RingsLibrary
 import edu.cmu.cs.ls.keymaerax.btactics.macros._

@@ -14,7 +14,7 @@ import scala.annotation.switch
 /**
   * Central Axiom Indexing data structures for canonical proof strategies, including
   * [[UnifyUSCalculus.chase]], [[UnifyUSCalculus.chaseFor()]]  and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
- *
+  *
   * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
   * @author Andre Platzer
   * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
@@ -35,10 +35,10 @@ object AxIndex extends (Expression => List[DerivationInfo]) with Logging {
     */
   type AxiomIndex = (PosInExpr, List[PosInExpr])
 
-  import DerivationInfoAugmentors._
+  import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
   /**
     * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., for chasing after useAt/useFor.
- *
+    *
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
     * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
     * @see [[AxiomInfo.theKey]]

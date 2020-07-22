@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{AxiomInfo, DerivationInfo, ProvableInfo, Tactic}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core
 import org.apache.logging.log4j.scala.Logger
 
@@ -283,7 +283,7 @@ trait UnifyUSCalculus {
 
   import TacticFactory._
 
-  import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors.AxiomInfoAugmentor
+  import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors.AxiomInfoAugmentor
 
     /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: ProvableInfo): DependentPositionTactic = useAtImpl(axiom)

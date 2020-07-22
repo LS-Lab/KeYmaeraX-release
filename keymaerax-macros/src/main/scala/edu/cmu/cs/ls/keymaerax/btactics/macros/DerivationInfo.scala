@@ -213,7 +213,7 @@ trait ProvableInfo extends DerivationInfo {
   /** The [[ProvableSig]] representing this (derived) axiom or (derived) axiomatic rule. Needs to be [[Any]] to avoid
    * type dependency between separate modules. Implicit method [[provable: ProvableSig]] in keymaerax-core project
    * recovers intended type */
-  //val theProvable: Option[Any]
+  //var theProvable: Option[Any]
   /** `true` indicates that the key of this axiom/axiomatic proof rule can be matched linearly [[LinearMatcher]].
    * For completeness, this linearity declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
    * @see [[LinearMatcher]] */

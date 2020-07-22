@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
+import DerivationInfoAugmentors._
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 

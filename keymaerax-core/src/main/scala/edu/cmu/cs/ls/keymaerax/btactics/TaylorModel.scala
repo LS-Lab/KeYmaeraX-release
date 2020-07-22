@@ -26,7 +26,7 @@ import rings.scaladsl._
 import syntax._
 
 import scala.collection.immutable._
-import DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 
 object TaylorModelTactics extends Logging {
 

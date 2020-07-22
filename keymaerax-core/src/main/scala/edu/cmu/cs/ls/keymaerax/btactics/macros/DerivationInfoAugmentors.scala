@@ -1,13 +1,11 @@
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, DependentPositionTactic, DependentTactic, NamedBelleExpr, SingleGoalDependentTactic}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-
-import scala.collection.immutable.HashMap
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.pt._
 
 object DerivationInfoAugmentors {
   /** Locally embed single string names into SimpleDisplayInfo. */
@@ -27,7 +25,6 @@ object DerivationInfoAugmentors {
   implicit def sequentDisplay(succAccClosed: (List[String], List[String], Boolean)): SequentDisplay = {
     SequentDisplay(succAccClosed._1, succAccClosed._2, succAccClosed._3)
   }
-
 
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
     def by(name: String, t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {

@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.pt
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.macros._
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
+import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import org.apache.logging.log4j.scala.Logging

@@ -5,7 +5,7 @@ import BelleOpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.macros.{GeneratorArg, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.core.{Equal, Expression, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.infrastruct.PosInExpr
 
 import scala.util.Try

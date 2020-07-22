@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleProvable
 import edu.cmu.cs.ls.keymaerax.btactics.Ax._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
