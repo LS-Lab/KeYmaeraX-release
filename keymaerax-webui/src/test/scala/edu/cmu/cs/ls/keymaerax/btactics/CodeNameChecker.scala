@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.NamedBelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
 import edu.cmu.cs.ls.keymaerax.tags.IgnoreInBuildTest
-import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
 import org.scalatest.Matchers
 

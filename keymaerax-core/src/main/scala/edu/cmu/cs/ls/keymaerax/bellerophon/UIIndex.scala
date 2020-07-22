@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraver
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
-import edu.cmu.cs.ls.keymaerax.macros.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
 import org.apache.logging.log4j.scala.Logger
 
 import scala.annotation.tailrec

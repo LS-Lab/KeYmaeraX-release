@@ -2,7 +2,7 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 /** Information on the arguments, their names and sorts, that an axiom/rule/tactic requires as input. */
 sealed trait ArgInfo {

@@ -19,8 +19,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ext.SimplificationTool
 import org.apache.logging.log4j.scala.Logging
-import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.macros.AxiomInfo
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomInfo
 
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform

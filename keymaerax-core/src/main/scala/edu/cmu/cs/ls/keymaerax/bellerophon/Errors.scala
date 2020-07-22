@@ -132,7 +132,7 @@ abstract class BelleTacticFailure(message: => String, cause: Throwable = null) e
 class TacticInapplicableFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
 
 /** Tactic was unable to unify with the given key and is, thus, inapplicable as indicated in the present sequent.
-  * Besides indicating genuine unifiable situations, this may indicate that the wrong key was chosen for the (derived) axiom in its [[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]].
+  * Besides indicating genuine unifiable situations, this may indicate that the wrong key was chosen for the (derived) axiom in its [[edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomInfo]].
   */
 class InapplicableUnificationKeyFailure(message: => String, cause: Throwable = null) extends BelleTacticFailure(message, cause)
 

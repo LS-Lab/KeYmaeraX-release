@@ -1,13 +1,11 @@
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, DependentPositionTactic, DependentTactic, NamedBelleExpr, SingleGoalDependentTactic}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.macros._
-import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-
-import scala.collection.immutable.HashMap
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.infrastruct._
+import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.pt._
 
 object DerivationInfoAugmentors {
   /** Locally embed single string names into SimpleDisplayInfo. */
@@ -27,7 +25,6 @@ object DerivationInfoAugmentors {
   implicit def sequentDisplay(succAccClosed: (List[String], List[String], Boolean)): SequentDisplay = {
     SequentDisplay(succAccClosed._1, succAccClosed._2, succAccClosed._3)
   }
-
 
   implicit class DerivationInfoAugmentor(val di: DerivationInfo) {
     def by(name: String, t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
@@ -59,25 +56,39 @@ object DerivationInfoAugmentors {
       derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
     }
 
-    //@todo performance really slow
+    // Compute provable corresponding to ProvableInfo if necessary, and cache the provable.
     def provable: ProvableSig = {
-      pi match {
-        case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
-        case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
-        case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName)
-        case dari: DerivedRuleInfo => derivedAxiomOrRule(dari.canonicalName)
+      pi.theProvable match {
+        case Some(provable) => provable.asInstanceOf[ProvableSig]
+        case None => {
+          val provable = pi match {
+            case cai: CoreAxiomInfo => ProvableSig.axioms(cai.canonicalName)
+            case cari: AxiomaticRuleInfo => ProvableSig.rules(cari.canonicalName)
+            case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName)
+            case dari: DerivedRuleInfo => derivedAxiomOrRule(dari.canonicalName)
+          }
+          pi.theProvable = Some(provable)
+          provable
+        }
       }
     }
 
-    //@todo performance really slow
+    // Compute and cache formula
     def formula: Formula = {
-      pi match {
-        case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
-        case cai: CoreAxiomInfo =>
-          ProvableSig.axiom.get(pi.canonicalName) match {
-            case Some(fml) => fml
-            case None => throw new AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
+      pi.theFormula match {
+        case Some(formula) => formula.asInstanceOf[Formula]
+        case None => {
+          val formula = pi match {
+            case dai: DerivedAxiomInfo => derivedAxiomOrRule(dai.canonicalName).conclusion.succ.head
+            case cai: CoreAxiomInfo =>
+              ProvableSig.axiom.get(pi.canonicalName) match {
+                case Some(fml) => fml
+                case None => throw new AxiomNotFoundException("No formula for core axiom " + pi.canonicalName)
+              }
           }
+          pi.theFormula = Some(formula)
+          formula
+        }
       }
     }
   }

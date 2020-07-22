@@ -8,8 +8,8 @@ import edu.cmu.cs.ls.keymaerax.infrastruct.{AntePosition, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
-import edu.cmu.cs.ls.keymaerax.macros._
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
+import DerivationInfoAugmentors._
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 

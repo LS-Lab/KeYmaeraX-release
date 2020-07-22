@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import scala.language.experimental.macros
 import AnnotationCommon._
@@ -152,12 +152,12 @@ class RuleImpl (val c: whitebox.Context) {
               }
             // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
             // the axiom info to the global axiom info table
-            val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerR($fullRhs, $info)"
+            val application = q"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerR($fullRhs, $info)"
             val lemmaType =
               if(isCore) {
-                tq"edu.cmu.cs.ls.keymaerax.macros.AxiomaticRuleInfo"
+                tq"edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomaticRuleInfo"
               }  else {
-                tq"edu.cmu.cs.ls.keymaerax.macros.DerivedRuleInfo"
+                tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedRuleInfo"
               }
             c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedRule with 2-3 parameters, got:" + params.length)

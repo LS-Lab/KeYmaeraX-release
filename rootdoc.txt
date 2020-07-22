@@ -63,7 +63,7 @@ Additional entry points and usage points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.btactics.AxIndex]]` - Axiom indexing data structures with keys and recursors for canonical proof strategies.
 
-  - `[[edu.cmu.cs.ls.keymaerax.macros.Axiom]` `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
+  - `[[edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom]` `[[edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo]]` - Meta-information on all derivation steps (axioms, derived axioms, proof rules, tactics) with user-interface info.
 
   - `[[edu.cmu.cs.ls.keymaerax.bellerophon.UIIndex]]` - Index determining which canonical reasoning steps to display on the KeYmaera X User Interface.
 

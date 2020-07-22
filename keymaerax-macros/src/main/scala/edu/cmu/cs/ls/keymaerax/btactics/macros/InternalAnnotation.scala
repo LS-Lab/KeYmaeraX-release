@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import scala.annotation.{ClassfileAnnotation, StaticAnnotation}
 

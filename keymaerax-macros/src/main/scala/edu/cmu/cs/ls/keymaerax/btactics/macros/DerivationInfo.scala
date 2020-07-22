@@ -2,9 +2,9 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
 
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
@@ -213,7 +213,9 @@ trait ProvableInfo extends DerivationInfo {
   /** The [[ProvableSig]] representing this (derived) axiom or (derived) axiomatic rule. Needs to be [[Any]] to avoid
    * type dependency between separate modules. Implicit method [[provable: ProvableSig]] in keymaerax-core project
    * recovers intended type */
-  //val theProvable: Option[Any]
+  private [macros] var theProvable: Option[Any] = None
+  /** Formula representing this axiom/rule, if any. */
+  private [macros] var theFormula: Option[Any] = None
   /** `true` indicates that the key of this axiom/axiomatic proof rule can be matched linearly [[LinearMatcher]].
    * For completeness, this linearity declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
    * @see [[LinearMatcher]] */

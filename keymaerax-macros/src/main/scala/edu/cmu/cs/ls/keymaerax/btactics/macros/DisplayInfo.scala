@@ -2,7 +2,7 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 /** UI display information on how to render an axiom, rule, or tactic application */
 sealed trait DisplayInfo {

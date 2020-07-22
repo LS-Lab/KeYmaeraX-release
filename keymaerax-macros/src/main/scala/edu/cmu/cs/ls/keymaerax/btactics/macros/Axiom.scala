@@ -2,9 +2,9 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
 
 import scala.annotation.StaticAnnotation
 import scala.collection.immutable.Nil
@@ -184,12 +184,12 @@ class AxiomImpl (val c: whitebox.Context) {
                 q"""DerivedAxiomInfo(canonicalName = $canonString, display = ${convDI(display)(c)}, codeName = $codeString, unifier = $unif, displayLevel = $dispLvl, theKey = $key, theRecursor = $recursor, theExpr = $expr)"""
             // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
             // the axiom info to the global axiom info table
-            val application = q"edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerR($fullRhs, $info)"
+            val application = q"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerR($fullRhs, $info)"
             val lemmaType =
               if(isCore) {
-                tq"edu.cmu.cs.ls.keymaerax.macros.CoreAxiomInfo"
+                tq"edu.cmu.cs.ls.keymaerax.btactics.macros.CoreAxiomInfo"
               }  else {
-                tq"edu.cmu.cs.ls.keymaerax.macros.DerivedAxiomInfo"
+                tq"edu.cmu.cs.ls.keymaerax.btactics.macros.DerivedAxiomInfo"
               }
             c.Expr[Nothing](q"""$mods val $declName: $lemmaType = $application""")
           case q"$mods val $cName: $tpt = $functionName( ..$params )" => c.abort(c.enclosingPosition, "Expected derivedAxiom with 3 parameters, got:" + params.length)

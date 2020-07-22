@@ -8,7 +8,7 @@ import java.lang.reflect.Method
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -981,7 +981,7 @@ object DerivationInfoRegistry extends Logging {
   *
   * Sanity checks ensure a runtime error is raised if @Tactic is used outside the allowed classes.
   * */
-  def init(tool: String = "z3", initLibrary: Boolean = true): Unit = {
+  def init(initLibrary: Boolean = true): Unit = {
     /* Initialization is relatively slow, so only initialize once*/
     if(isInit) return
     // Remember that initialization is in progress,

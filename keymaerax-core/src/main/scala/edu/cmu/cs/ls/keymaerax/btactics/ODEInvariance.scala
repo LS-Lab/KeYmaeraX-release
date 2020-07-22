@@ -20,7 +20,7 @@ import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 import edu.cmu.cs.ls.keymaerax.lemma._
-import edu.cmu.cs.ls.keymaerax.macros.Tactic
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Tactic
 import edu.cmu.cs.ls.keymaerax.tools.qe.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
 

@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Ax, DerivationInfoRegistry}
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoRegistry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 /**
