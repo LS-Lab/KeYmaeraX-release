@@ -231,8 +231,11 @@ trait ProvableInfo extends DerivationInfo {
 trait StorableInfo extends DerivationInfo {
   val storedName: String = DerivedAxiomInfo.toStoredName(codeName)
   /** Gives the [[Lemma]] stored for this derivation info (after initialization). */
-  //@todo write-protect except by Ax.scala.
-  var theLemma: Any = None
+  // We would like to make theLemma writable only by [[Ax.scala]], but putting Ax.scala in the [[macros]] package
+  // might be awkward. Instead, provide a public setter for private [[theLemma]]
+  private var theLemma: Any = None
+  def getLemma: Any = theLemma
+  def setLemma(lem: Any): Unit = { theLemma = lem }
 }
 
 // axioms
@@ -319,8 +322,6 @@ case class DerivedRuleInfo(override val canonicalName:String, override val displ
                           )
   extends ProvableInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  //def belleExpr = expr()
-  //lazy val provable: ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 0
 }
 
@@ -334,7 +335,6 @@ class BuiltinInfo(  override val codeName: String
                   , override val needsGenerator: Boolean = false
                   , override val revealInternalSteps: Boolean = false)
   extends DerivationInfo {
-  //def belleExpr: BelleExpr = BelleParser(codeName)
   val canonicalName: String = codeName
 }
 
@@ -347,7 +347,6 @@ class TacticInfo(  override val codeName: String
                  , override val revealInternalSteps: Boolean = false)
   extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
-  //def belleExpr = expr()
   val canonicalName = codeName
 }
 
