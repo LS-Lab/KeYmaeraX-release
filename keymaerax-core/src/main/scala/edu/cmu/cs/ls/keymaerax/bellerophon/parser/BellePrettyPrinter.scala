@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import BelleOpSpec.op
-import edu.cmu.cs.ls.keymaerax.macros.{GeneratorArg, TacticInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{GeneratorArg, TacticInfo}
 import edu.cmu.cs.ls.keymaerax.core.{Equal, Expression, Formula, Term}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._

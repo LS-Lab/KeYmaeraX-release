@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax
 
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfoRegistry, Ax}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.macros.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo
 
 /**
   * Startup support functionality.

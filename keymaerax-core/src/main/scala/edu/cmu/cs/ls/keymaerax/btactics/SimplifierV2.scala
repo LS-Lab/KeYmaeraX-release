@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.infrastruct._
 import DerivationInfoAugmentors._
-import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
+import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
 
 /**
   * Created by yongkiat on 9/29/16.

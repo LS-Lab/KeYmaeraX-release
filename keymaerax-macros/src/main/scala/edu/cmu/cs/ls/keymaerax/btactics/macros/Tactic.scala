@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
 import scala.annotation.{ClassfileAnnotation, StaticAnnotation}
 import scala.collection.immutable.Nil
@@ -361,7 +361,7 @@ class TacticImpl(val c: blackbox.Context) {
       }
       val (curried, typeTree) = args.foldRight[(Tree, Tree)](base)({case (arg, (acc, accTy)) =>
         val argTy = typeName(arg)
-        val funTy = tq"""edu.cmu.cs.ls.keymaerax.macros.TypedFunc[$argTy, $accTy]"""
+        val funTy = tq"""edu.cmu.cs.ls.keymaerax.btactics.macros.TypedFunc[$argTy, $accTy]"""
         val vd = aiToVal(arg)
         if(vd.rhs.nonEmpty)
           c.abort(c.enclosingPosition, "Nonempty val")
@@ -404,29 +404,29 @@ class TacticImpl(val c: blackbox.Context) {
       val expr = q"""((_: Unit) => ($curriedTermTree))"""
       val inferredRetType = show(inferType(tRet, defArgs, positions, anonSort)).split('.').last
       val info = inferredRetType match {
-        case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => (q"""new edu.cmu.cs.ls.keymaerax.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case "InputTactic" | "StringInputTactic" => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)},  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case "DependentPositionTactic"  | "BuiltInLeftTactic" | "BuiltInRightTactic" | "BuiltInPositionTactic" | "CoreLeftTactic" | "CoreRightTactic" => (q"""new edu.cmu.cs.ls.keymaerax.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => (q"""new edu.cmu.cs.ls.keymaerax.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
-        case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => q"""new edu.cmu.cs.ls.keymaerax.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
-        case "AppliedBuiltInTwoPositionTactic" => q"""new edu.cmu.cs.ls.keymaerax.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
+        case "DependentTactic" | "BuiltInTactic" | "BelleExpr" => (q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "InputTactic" | "StringInputTactic" => (q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)},  needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "DependentPositionTactic"  | "BuiltInLeftTactic" | "BuiltInRightTactic" | "BuiltInPositionTactic" | "CoreLeftTactic" | "CoreRightTactic" => (q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.PositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "InputPositionTactic" | "DependentPositionWithAppliedInputTactic" => (q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, inputs = ${convAIs(displayInputs)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator, revealInternalSteps = $revealInternalSteps)""")
+        case "DependentTwoPositionTactic" | "InputTwoPositionTactic" | "BuiltInTwoPositionTactic" => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
+        case "AppliedBuiltInTwoPositionTactic" => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputTwoPositionTacticInfo(codeName = $codeString, display = ${convDI(display)(c)}, theExpr = $expr, displayLevel = ${convSymbol(displayLevel)(c)}, needsGenerator = $needsGenerator)"""
         case ty => c.abort(c.enclosingPosition, s"Unsupported return type in @Tactic: $ty")
       }
       missingInput(displayLevel, displayInputs, display).
         map(ai => c.abort(c.enclosingPosition, s"Tactic $declName must mention every input in DisplayInfo, but argument $ai is not mentioned in DisplayInfo $display"))
       /** Save a classfile annotation which helps runtime reflection identify the annotated declarations */
-      val ann = q"new edu.cmu.cs.ls.keymaerax.macros.InternalAnnotation()"// codeName = $codeName, inputs = ${convAIs(displayInputs)(c)}
+      val ann = q"new edu.cmu.cs.ls.keymaerax.btactics.macros.InternalAnnotation()"// codeName = $codeName, inputs = ${convAIs(displayInputs)(c)}
       val mds = mods match {case Modifiers(flags, privateWithin, annotations) => Modifiers(flags, privateWithin, ann :: annotations)}
       // Macro cannot introduce new statements or declarations, so introduce a library call which achieves our goal of registering
       // the tactic info to the global derivation info table
       if(isDef) {
-        val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
+        val application = q"""edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerL($base, $info)"""
         if (defArgs.isEmpty)
           c.Expr(q"""$mds def $declName: $baseType = $application""")
         else
         c.Expr(q"""$mds def $declName (..$argSeq): $baseType = $application""")
       } else {
-        val application = q"""edu.cmu.cs.ls.keymaerax.macros.DerivationInfo.registerL($base, $info)"""
+        val application = q"""edu.cmu.cs.ls.keymaerax.btactics.macros.DerivationInfo.registerL($base, $info)"""
         c.Expr(q"""$mds val $declName: $baseType = $application""")
       }
     }

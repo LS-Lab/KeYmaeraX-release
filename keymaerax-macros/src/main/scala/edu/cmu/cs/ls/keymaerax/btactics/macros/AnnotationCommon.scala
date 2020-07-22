@@ -1,6 +1,6 @@
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
 
 import scala.reflect.macros.blackbox
 
@@ -105,37 +105,37 @@ object AnnotationCommon {
   def convAI(ai: ArgInfo)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     ai match {
-      case GeneratorArg(name) => q"""new edu.cmu.cs.ls.keymaerax.macros.GeneratorArg(${literal(name)})"""
-      case VariableArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case NumberArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case StringArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.StringArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case PosInExprArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.PosInExprArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case SubstitutionArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case OptionArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.OptionArg(${convAI(arg)})"""
-      case FormulaArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.macros.FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""
-      case ListArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.macros.ListArg(${convAI(arg)})"""
-      case ta: TermArg => q"""new edu.cmu.cs.ls.keymaerax.macros.TermArg(${literal(ta.name)}, ${literals{ta.allowsFresh}})"""
-      case ea: ExpressionArg => q"""new edu.cmu.cs.ls.keymaerax.macros.ExpressionArg (${literal(ea.name)}, ${literals(ea.allowsFresh)})"""
+      case GeneratorArg(name) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.GeneratorArg(${literal(name)})"""
+      case VariableArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.VariableArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case NumberArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.NumberArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case StringArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.StringArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case PosInExprArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.PosInExprArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case SubstitutionArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SubstitutionArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case OptionArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.OptionArg(${convAI(arg)})"""
+      case FormulaArg(name, allowsFresh) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.FormulaArg(${literal(name)}, ${literals(allowsFresh)})"""
+      case ListArg(arg) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.ListArg(${convAI(arg)})"""
+      case ta: TermArg => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.TermArg(${literal(ta.name)}, ${literals{ta.allowsFresh}})"""
+      case ea: ExpressionArg => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.ExpressionArg (${literal(ea.name)}, ${literals(ea.allowsFresh)})"""
     }
   }
   def convSD(sd: SequentDisplay)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     val SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean) = sd
-    q"""new edu.cmu.cs.ls.keymaerax.macros.SequentDisplay($ante, $succ, $isClosed)"""
+    q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SequentDisplay($ante, $succ, $isClosed)"""
   }
   def convDI(di: DisplayInfo)(implicit c: blackbox.Context): c.universe.Tree = {
     import c.universe._
     di match {
-      case SimpleDisplayInfo(name, asciiName) => q"""new edu.cmu.cs.ls.keymaerax.macros.SimpleDisplayInfo(${literal(name)}, ${literal(asciiName)})"""
+      case SimpleDisplayInfo(name, asciiName) => q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.SimpleDisplayInfo(${literal(name)}, ${literal(asciiName)})"""
       case RuleDisplayInfo(names, conclusion, premises)  =>
         val namesTree = convDI(names)
         val conclusionTree = convSD(conclusion)
         val premiseTrees = premises.map((sd: SequentDisplay) => convSD(sd))
-        q"""new edu.cmu.cs.ls.keymaerax.macros.RuleDisplayInfo(${namesTree}, ${conclusionTree}, ${premiseTrees})"""
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.RuleDisplayInfo(${namesTree}, ${conclusionTree}, ${premiseTrees})"""
       case AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) =>
-        q"""new edu.cmu.cs.ls.keymaerax.macros.AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)})"""
       case InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) =>
-        q"""new edu.cmu.cs.ls.keymaerax.macros.InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
+        q"""new edu.cmu.cs.ls.keymaerax.btactics.macros.InputAxiomDisplayInfo(${convDI(names)}, ${literal(displayFormula)}, ${convAIs(input)})"""
     }
   }
   def sequentDisplayFromObj(a: Any)(implicit c: blackbox.Context): SequentDisplay = {

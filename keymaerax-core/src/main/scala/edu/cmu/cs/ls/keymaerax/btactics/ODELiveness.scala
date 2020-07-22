@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ext.Mathematica
 import DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.implyRi
 import edu.cmu.cs.ls.keymaerax.lemma.Lemma
-import edu.cmu.cs.ls.keymaerax.macros.{ProvableInfo, Tactic}
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{ProvableInfo, Tactic}
 
 import scala.collection.immutable
 import scala.collection.immutable.Nil

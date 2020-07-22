@@ -2,9 +2,9 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.macros
+package edu.cmu.cs.ls.keymaerax.btactics.macros
 
-import edu.cmu.cs.ls.keymaerax.macros.Axiom.ExprPos
+import edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom.ExprPos
 
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag

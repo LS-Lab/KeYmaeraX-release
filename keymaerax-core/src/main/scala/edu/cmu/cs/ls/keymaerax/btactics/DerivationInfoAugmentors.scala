@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AppliedBuiltinTwoPositionTactic, AppliedPositionTactic, BelleExpr, DependentPositionTactic, DependentTactic, NamedBelleExpr, SingleGoalDependentTactic}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 

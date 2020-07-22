@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.pt
 import java.io.{BufferedWriter, FileWriter, Writer}
 
 import edu.cmu.cs.ls.keymaerax.infrastruct.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.core.{DotFormula, _}
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ExpressionTraversal, PosInExpr}

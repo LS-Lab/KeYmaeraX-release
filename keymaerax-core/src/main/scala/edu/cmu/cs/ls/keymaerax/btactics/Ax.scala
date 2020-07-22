@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
-import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDB, LemmaDBFactory}
@@ -24,8 +24,8 @@ import scala.reflect.runtime.{universe => ru}
 /**
   * Central Database of Derived Axioms and Derived Axiomatic Rules,
   * including information about core axioms and axiomatic rules from [[[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
-  * This registry of [[[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]] also provides meta information for matching keys and recursors for unificiation and chasing
-  * using the [[[edu.cmu.cs.ls.keymaerax.macros.Axiom @Axiom]] annotation.
+  * This registry of [[[edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomInfo]] also provides meta information for matching keys and recursors for unificiation and chasing
+  * using the [[[edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom @Axiom]] annotation.
   *
   * = Using Axioms and Axiomatic Rules =
   *
@@ -74,8 +74,8 @@ import scala.reflect.runtime.{universe => ru}
   *
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
-  * @see [[edu.cmu.cs.ls.keymaerax.macros.AxiomInfo]]
-  * @see [[edu.cmu.cs.ls.keymaerax.macros.Axiom]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.macros.AxiomInfo]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.macros.Axiom]]
   * @see [[UnifyUSCalculus.matcherFor()]]
   * @note To simplify bootstrap and avoid dependency management, the proofs of the derived axioms are
   *       written with explicit reference to other scala-objects representing provables (which will be proved on demand)

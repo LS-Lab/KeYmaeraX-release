@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Ax._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfoAugmentors._
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.macros.ProvableInfo
+import edu.cmu.cs.ls.keymaerax.btactics.macros.ProvableInfo
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{CheckinTest, IgnoreInBuildTest, SummaryTest, UsualTest}

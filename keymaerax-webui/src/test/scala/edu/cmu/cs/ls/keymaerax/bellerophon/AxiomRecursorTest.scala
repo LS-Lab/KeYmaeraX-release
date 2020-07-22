@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
-import edu.cmu.cs.ls.keymaerax.macros._
+import edu.cmu.cs.ls.keymaerax.btactics.macros._
 import DerivationInfoAugmentors._
 
 /**
